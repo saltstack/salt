@@ -1576,7 +1576,7 @@ def is_proxy():
     TODO: Need to extend this for proxies that might run on
     other Unices
     '''
-    return not (is_linux() or is_windows())
+    return not (is_linux() or is_sunos() or is_windows())
 
 
 @real_memoize
@@ -1614,7 +1614,20 @@ def is_sunos():
     '''
     Simple function to return if host is SunOS or not
     '''
-    return sys.platform.startswith('sunos')
+    import __main__ as main
+    # This is a hack.  If a proxy minion is started by other
+    # means, e.g. a custom script that creates the minion objects
+    # then this will fail.
+    is_proxy = False
+    try:
+        if 'salt-proxy' in main.__file__:
+            is_proxy = True
+    except AttributeError:
+        pass
+    if is_proxy:
+        return False
+    else:
+        return sys.platform.startswith('sunos')
 
 
 @real_memoize
@@ -2867,24 +2880,3 @@ def invalid_kwargs(invalid_kwargs, raise_exc=True):
         raise SaltInvocationError(msg)
     else:
         return msg
-
-
-def itersplit(orig, sep=None):
-    '''
-    Generator function for iterating through large strings, particularly useful
-    as a replacement for str.splitlines() if the string is expected to contain
-    a lot of lines.
-
-    See http://stackoverflow.com/a/3865367
-    '''
-    exp = re.compile(r'\s+' if sep is None else re.escape(sep))
-    pos = 0
-    while True:
-        match = exp.search(orig, pos)
-        if not match:
-            if pos < len(orig) or sep is not None:
-                yield orig[pos:]
-            break
-        if pos < match.start() or sep is not None:
-            yield orig[pos:match.start()]
-        pos = match.end()

@@ -14,9 +14,11 @@ import logging
 import os
 import re
 import string
+from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
 import salt.utils
+import salt.utils.url
 from salt.exceptions import CommandExecutionError
 from salt.ext import six
 
@@ -427,11 +429,24 @@ def latest(name,
             .format(target)
         )
 
+    try:
+        desired_fetch_url = salt.utils.url.add_http_basic_auth(
+            name,
+            https_user,
+            https_pass,
+            https_only=True
+        )
+    except ValueError as exc:
+        return _fail(ret, exc.__str__())
+
+    redacted_fetch_url = \
+        salt.utils.url.redact_http_basic_auth(desired_fetch_url)
+
     if mirror:
         bare = True
 
     # Check to make sure rev and mirror/bare are not both in use
-    if rev and bare:
+    if rev != 'HEAD' and bare:
         return _fail(ret, ('\'rev\' is not compatible with the \'mirror\' and '
                            '\'bare\' arguments'))
 
@@ -520,6 +535,13 @@ def latest(name,
             'repository'.format(rev)
         )
 
+    git_ver = _LooseVersion(__salt__['git.version'](versioninfo=False))
+    if git_ver >= _LooseVersion('1.7.12'):
+        set_upstream = '--set-upstream-to'
+    else:
+        # Older git uses --track instead of --set-upstream-to
+        set_upstream = '--track'
+
     check = 'refs' if bare else '.git'
     gitdir = os.path.join(target, check)
     comments = []
@@ -561,7 +583,9 @@ def latest(name,
                             comments
                         )
 
-            remotes = __salt__['git.remotes'](target, user=user)
+            remotes = __salt__['git.remotes'](target,
+                                              user=user,
+                                              redact_auth=False)
 
             if remote_rev_type == 'sha1' and base_rev.startswith(remote_rev):
                 # Either we're already checked out to the branch we need and it
@@ -667,7 +691,8 @@ def latest(name,
                         target,
                         refs=[base_rev, remote_rev],
                         is_ancestor=True,
-                        user=user)
+                        user=user,
+                        ignore_retcode=True)
 
             if fast_forward is False:
                 if not force_reset:
@@ -715,16 +740,16 @@ def latest(name,
                 )
                 fetch_url = None
 
-            if name != fetch_url:
+            if desired_fetch_url != fetch_url:
                 if __opts__['test']:
                     ret['changes']['remotes/{0}'.format(remote)] = {
-                        'old': fetch_url,
-                        'new': name
+                        'old': salt.utils.url.redact_http_basic_auth(fetch_url),
+                        'new': redacted_fetch_url
                     }
                     actions = [
                         'Remote \'{0}\' would be set to {1}'.format(
                             remote,
-                            name
+                            redacted_fetch_url
                         )
                     ]
                     if not has_remote_rev:
@@ -760,11 +785,14 @@ def latest(name,
                                            https_user=https_user,
                                            https_pass=https_pass)
                 ret['changes']['remotes/{0}'.format(remote)] = {
-                    'old': fetch_url,
-                    'new': name
+                    'old': salt.utils.url.redact_http_basic_auth(fetch_url),
+                    'new': redacted_fetch_url
                 }
                 comments.append(
-                    'Remote \'{0}\' set to {1}'.format(remote, name)
+                    'Remote \'{0}\' set to {1}'.format(
+                        remote,
+                        redacted_fetch_url
+                    )
                 )
 
             if rev:
@@ -874,7 +902,7 @@ def latest(name,
                             desired_upstream
                         )
                     )
-                    branch_opts = ['--set-upstream-to', desired_upstream]
+                    branch_opts = [set_upstream, desired_upstream]
                 elif upstream and desired_upstream is False:
                     upstream_action = 'Tracking branch was unset'
                     branch_opts = ['--unset-upstream']
@@ -884,7 +912,7 @@ def latest(name,
                             desired_upstream
                         )
                     )
-                    branch_opts = ['--set-upstream-to', desired_upstream]
+                    branch_opts = [set_upstream, desired_upstream]
                 else:
                     branch_opts = None
 
@@ -1296,8 +1324,7 @@ def latest(name,
                                 desired_upstream
                             )
                         )
-                        branch_opts = \
-                            ['--set-upstream-to', desired_upstream]
+                        branch_opts = [set_upstream, desired_upstream]
                     elif upstream and desired_upstream is False:
                         upstream_action = 'Tracking branch was unset'
                         branch_opts = ['--unset-upstream']
@@ -1307,8 +1334,7 @@ def latest(name,
                                 desired_upstream
                             )
                         )
-                        branch_opts = \
-                            ['--set-upstream-to', desired_upstream]
+                        branch_opts = [set_upstream, desired_upstream]
                     else:
                         branch_opts = None
 
