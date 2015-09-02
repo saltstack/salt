@@ -1,3 +1,5 @@
+.. _proxy-minion:
+
 ===============================
 Salt Proxy Minion Documentation
 ===============================
@@ -243,7 +245,7 @@ and status; "package" installation, and a ping.
     # -*- coding: utf-8 -*-
     '''
     This is a simple proxy-minion designed to connect to and communicate with
-    the bottle-based web service contained in 
+    the bottle-based web service contained in
     https://github.com/saltstack/salt-contrib/proxyminion_rest_example
     '''
     from __future__ import absolute_import
@@ -276,12 +278,12 @@ and status; "package" installation, and a ping.
         log.debug('rest_sample proxy __virtual__() called...')
         return True
 
-    # Every proxy module needs an 'init', though you can 
+    # Every proxy module needs an 'init', though you can
     # just put a 'pass' here if it doesn't need to do anything.
     def init(opts):
         log.debug('rest_sample proxy init() called...')
 
-        # Save the REST URL 
+        # Save the REST URL
         DETAILS['url'] = opts['proxy']['url']
 
         # Make sure the REST URL ends with a '/'
@@ -292,7 +294,7 @@ and status; "package" installation, and a ping.
     def id(opts):
         '''
         Return a unique ID for this proxy minion.  This ID MUST NOT CHANGE.
-        If it changes while the proxy is running the salt-master will get 
+        If it changes while the proxy is running the salt-master will get
         really confused and may stop talking to this minion
         '''
         r = salt.utils.http.query(opts['proxy']['url']+'id', decode_type='json', decode=True)
@@ -479,7 +481,7 @@ Here is an excerpt from a module that was modified to support proxy-minions:
 .. code-block:: python
 
    __proxyenabled__ = ['*']
-   
+
    [...]
 
     def ping():

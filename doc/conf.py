@@ -386,6 +386,7 @@ man_pages = [
     ('ref/cli/salt-key', 'salt-key', 'salt-key Documentation', authors, 1),
     ('ref/cli/salt-cp', 'salt-cp', 'salt-cp Documentation', authors, 1),
     ('ref/cli/salt-call', 'salt-call', 'salt-call Documentation', authors, 1),
+    ('ref/cli/salt-proxy', 'salt-proxy', 'salt-proxy Documentation', authors, 1),
     ('ref/cli/salt-syndic', 'salt-syndic', 'salt-syndic Documentation', authors, 1),
     ('ref/cli/salt-run', 'salt-run', 'salt-run Documentation', authors, 1),
     ('ref/cli/salt-ssh', 'salt-ssh', 'salt-ssh Documentation', authors, 1),
