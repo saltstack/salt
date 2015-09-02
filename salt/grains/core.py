@@ -497,9 +497,7 @@ def _virtual(osdata):
             _cmds += ['lspci']
 
     # Add additional last resort commands
-    if osdata['kernel'] not in skip_cmds:
-        _cmds += ['dmesg']
-    else:
+    if osdata['kernel'] in skip_cmds:
         _cmds = ()
 
     failed_commands = set()
@@ -578,7 +576,7 @@ def _virtual(osdata):
             elif 'hyperv' in output:
                 grains['virtual'] = 'HyperV'
                 break
-        elif command == 'dmidecode' or command == 'dmesg':
+        elif command == 'dmidecode':
             # Product Name: VirtualBox
             if 'Vendor: QEMU' in output:
                 # FIXME: Make this detect between kvm or qemu
@@ -642,7 +640,7 @@ def _virtual(osdata):
     else:
         if osdata['kernel'] in skip_cmds:
             log.warn(
-                'The tools \'dmidecode\', \'lspci\' and \'dmesg\' failed to '
+                'The tools \'dmidecode\' and \'lspci\' failed to '
                 'execute because they do not exist on the system of the user '
                 'running this instance or the user does not have the '
                 'necessary permissions to execute them. Grains output might '
@@ -724,6 +722,21 @@ def _virtual(osdata):
             with salt.utils.fopen('/proc/cpuinfo', 'r') as fhr:
                 if 'QEMU Virtual CPU' in fhr.read():
                     grains['virtual'] = 'kvm'
+        if os.path.isfile('/sys/devices/virtual/dmi/id/product_name'):
+            try:
+                with salt.utils.fopen('/sys/devices/virtual/dmi/id/product_name', 'r') as fhr:
+                    if 'VirtualBox' in fhr.read():
+                        grains['virtual'] = 'VirtualBox'
+                    if 'RHEV Hypervisor' in fhr.read():
+                        grains['virtual'] = 'kvm'
+                        grains['virtual_subtype'] = 'rhev'
+                    if 'oVirt Node' in fhr.read():
+                        grains['virtual'] = 'kvm'
+                        grains['virtual_subtype'] = 'ovirt'
+                    if 'Google' in fhr.read():
+                        grains['virtual'] = 'gce'
+            except IOError:
+                pass
     elif osdata['kernel'] == 'FreeBSD':
         kenv = salt.utils.which('kenv')
         if kenv:
