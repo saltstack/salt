@@ -238,8 +238,6 @@ def query(url,
     if not auth:
         if username and password:
             auth = (username, password)
-        else:
-            auth = None
 
     if agent == USERAGENT:
         agent = '{0} http.query()'.format(agent)
