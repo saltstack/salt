@@ -672,6 +672,8 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
             '-oChallengeResponseAuthentication=no',
             # Make sure public key authentication is enabled
             '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
@@ -1746,6 +1748,8 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
             '-oChallengeResponseAuthentication=no',
             # Make sure public key authentication is enabled
             '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
@@ -1847,6 +1851,8 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
             '-oChallengeResponseAuthentication=no',
             # Make sure public key authentication is enabled
             '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
@@ -1982,6 +1988,8 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
             '-oChallengeResponseAuthentication=no',
             # Make sure public key authentication is enabled
             '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
