@@ -9,7 +9,7 @@ all package development will be done there.
 Installation
 ============
 
-Salt can be installed using ``zypper`` and is available in the standard openSUSE 13.1
+Salt can be installed using ``zypper`` and is available in the standard openSUSE
 repositories.
 
 Stable Release
@@ -100,6 +100,16 @@ For openSUSE Factory run the following as root:
     zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/openSUSE_Factory/devel:languages:python.repo
     zypper refresh
     zypper install salt salt-minion salt-master
+
+
+For openSUSE 13.2 run the following as root:
+
+.. code-block:: bash
+
+    zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/openSUSE_13.2/devel:languages:python.repo
+    zypper refresh
+    zypper install salt salt-minion salt-master
+
 
 For openSUSE 13.1 run the following as root:
 
