@@ -345,7 +345,7 @@ def create(vm_):
     # to use driver: "driver: <provider-engine>"
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
-        
+
     if _validate_name(vm_['name']) is False:
         return False
 
