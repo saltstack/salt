@@ -431,7 +431,7 @@ def create(vm_, call=None):
         'event', 'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
         {'name': vm_['name'], 'profile': profile,
-         'provider': vm_['provider'], },
+         'provider': vm_['driver'], },
         transport=__opts__['transport'])
     ret = {'name': vm_['name'], 'changes': {}, 'result': True, 'comment': ''}
     if 'pub_key' not in vm_ and 'priv_key' not in vm_:
