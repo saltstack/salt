@@ -7,6 +7,11 @@ Utility functions for SMB connections
 
 from __future__ import absolute_import
 
+# Import python libs
+import logging
+
+log = logging.getLogger(__name__)
+
 try:
     import impacket.smbconnection
     from impacket.smb3 import SessionError
