@@ -75,7 +75,7 @@ def _publish(
 
     arg = _parse_args(arg)
 
-    log.info('Publishing {0!r} to {master_uri}'.format(fun, **__opts__))
+    log.info('Publishing \'{0}\' to {master_uri}'.format(fun, **__opts__))
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'minion_pub',
@@ -93,7 +93,7 @@ def _publish(
     try:
         peer_data = channel.send(load)
     except SaltReqTimeoutError:
-        return '{0!r} publish timed out'.format(fun)
+        return '\'{0}\' publish timed out'.format(fun)
     if not peer_data:
         return {}
     # CLI args are passed as strings, re-cast to keep time.sleep happy
@@ -263,7 +263,7 @@ def runner(fun, arg=None, timeout=5):
 
     if 'master_uri' not in __opts__:
         return 'No access to master. If using salt-call with --local, please remove.'
-    log.info('Publishing runner {0!r} to {master_uri}'.format(fun, **__opts__))
+    log.info('Publishing runner \'{0}\' to {master_uri}'.format(fun, **__opts__))
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'minion_runner',
@@ -277,4 +277,4 @@ def runner(fun, arg=None, timeout=5):
     try:
         return channel.send(load)
     except SaltReqTimeoutError:
-        return '{0!r} runner publish timed out'.format(fun)
+        return '\'{0}\' runner publish timed out'.format(fun)
