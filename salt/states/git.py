@@ -568,7 +568,7 @@ def latest(name,
                 return _fail(
                     ret,
                     'Remote repository is empty, cannot update from a '
-                    'non-empty to an empty repository'.format(rev)
+                    'non-empty to an empty repository'
                 )
 
             # Base rev and branch are the ones from which any reset or merge
