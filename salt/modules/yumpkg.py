@@ -74,6 +74,28 @@ def __virtual__():
     return False
 
 
+def _yum():
+    '''
+    return yum or dnf depending on version
+    '''
+    contextkey = 'yum_bin'
+    if contextkey not in __context__:
+        try:
+            osrelease = int(__grains__['osrelease'])
+        except ValueError:
+            log.warning(
+                'Unexpected osrelease grain \'{0}\', please report this'
+                .format(__grains__['osrelease'])
+            )
+            __context__[contextkey] = 'yum'
+        else:
+            if 'fedora' in __grains__['os'].lower() and osrelease >= 22:
+                __context__[contextkey] = 'dnf'
+            else:
+                __context__[contextkey] = 'yum'
+    return __context__[contextkey]
+
+
 def _repoquery_pkginfo(repoquery_args):
     '''
     Wrapper to call repoquery and parse out all the tuples
@@ -96,7 +118,7 @@ def _check_repoquery():
     '''
     if not salt.utils.which('repoquery'):
         __salt__['cmd.run'](
-            ['yum', '-y', 'install', 'yum-utils'],
+            [_yum(), '-y', 'install', 'yum-utils'],
             python_shell=False,
             output_loglevel='trace'
         )
@@ -112,8 +134,14 @@ def _repoquery(repoquery_args,
     Runs a repoquery command and returns a list of namedtuples
     '''
     _check_repoquery()
+
+    if _yum() == 'dnf':
+        _query_format = query_format.replace('-%{VERSION}_', '-%{EPOCH}:%{VERSION}_')
+    else:
+        _query_format = query_format
+
     cmd = 'repoquery --plugins --queryformat {0} {1}'.format(
-        _cmd_quote(query_format), repoquery_args
+        _cmd_quote(_query_format), repoquery_args
     )
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     if call['retcode'] != 0:
@@ -130,7 +158,12 @@ def _repoquery(repoquery_args,
             '{0}'.format(comment)
         )
     else:
-        out = call['stdout']
+        if _yum() == 'dnf':
+            # Remove the epoch when it is zero to maintain backward compatibility
+            remove_zero_epoch = call['stdout'].replace('-0:', '-')
+            out = remove_zero_epoch
+        else:
+            out = call['stdout']
         return out.splitlines()
 
 
@@ -763,8 +796,8 @@ def refresh_db(branch_arg=None, repo_arg=None, exclude_arg=None, branch=None, re
         1: False,
     }
 
-    clean_cmd = ['yum', '-q', 'clean', 'expire-cache']
-    update_cmd = ['yum', '-q', 'check-update']
+    clean_cmd = [_yum(), '-q', 'clean', 'expire-cache']
+    update_cmd = [_yum(), '-q', 'check-update']
 
     if repo:
         clean_cmd.append(repo)
@@ -1029,7 +1062,8 @@ def install(name=None,
                 downgrade.append(pkgstr)
 
     if targets:
-        cmd = 'yum -y {repo} {exclude} {branch} {gpgcheck} install {pkg}'.format(
+        cmd = '{yum_command} -y {repo} {exclude} {branch} {gpgcheck} install {pkg}'.format(
+            yum_command=_yum(),
             repo=repo_arg,
             exclude=exclude_arg,
             branch=branch_arg,
@@ -1039,7 +1073,8 @@ def install(name=None,
         __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     if downgrade:
-        cmd = 'yum -y {repo} {exclude} {branch} {gpgcheck} downgrade {pkg}'.format(
+        cmd = '{yum_command} -y {repo} {exclude} {branch} {gpgcheck} downgrade {pkg}'.format(
+            yum_command=_yum(),
             repo=repo_arg,
             exclude=exclude_arg,
             branch=branch_arg,
@@ -1049,7 +1084,8 @@ def install(name=None,
         __salt__['cmd.run'](cmd, output_loglevel='trace')
 
     if to_reinstall:
-        cmd = 'yum -y {repo} {exclude} {branch} {gpgcheck} reinstall {pkg}'.format(
+        cmd = '{yum_command} -y {repo} {exclude} {branch} {gpgcheck} reinstall {pkg}'.format(
+            yum_command=_yum(),
             repo=repo_arg,
             exclude=exclude_arg,
             branch=branch_arg,
@@ -1117,7 +1153,8 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
         refresh_db(branch_arg, repo_arg, exclude_arg)
 
     old = list_pkgs()
-    cmd = 'yum -q -y {repo} {exclude} {branch} {gpgcheck} upgrade'.format(
+    cmd = '{yum_command} -q -y {repo} {exclude} {branch} {gpgcheck} upgrade'.format(
+        yum_command=_yum(),
         repo=repo_arg,
         exclude=exclude_arg,
         branch=branch_arg,
@@ -1169,7 +1206,9 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     if not targets:
         return {}
     quoted_targets = [_cmd_quote(target) for target in targets]
-    cmd = 'yum -q -y remove {0}'.format(' '.join(quoted_targets))
+    cmd = '{yum_command} -q -y remove {0}'.format(
+        ' '.join(quoted_targets),
+        yum_command=_yum())
     __salt__['cmd.run'](cmd, output_loglevel='trace')
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -1287,7 +1326,9 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
                 ret[target]['comment'] = ('Package {0} is set to be held.'
                                           .format(target))
             else:
-                cmd = 'yum -q versionlock {0}'.format(target)
+                cmd = '{yum_command} -q versionlock {0}'.format(
+                    target,
+                    yum_command=_yum())
                 out = __salt__['cmd.run_all'](cmd)
 
                 if out['retcode'] == 0:
@@ -1376,8 +1417,9 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
                                           .format(target))
             else:
                 quoted_targets = [_cmd_quote(item) for item in search_locks]
-                cmd = 'yum -q versionlock delete {0}'.format(
-                        ' '.join(quoted_targets)
+                cmd = '{yum_command} -q versionlock delete {0}'.format(
+                        ' '.join(quoted_targets),
+                        yum_command=_yum()
                         )
                 out = __salt__['cmd.run_all'](cmd)
 
@@ -1408,7 +1450,7 @@ def get_locked_packages(pattern=None, full=True):
 
         salt '*' pkg.get_locked_packages
     '''
-    cmd = 'yum -q versionlock list'
+    cmd = '{yum_command} -q versionlock list'.format(yum_command=_yum())
     ret = __salt__['cmd.run'](cmd).split('\n')
 
     if pattern:
@@ -1472,7 +1514,7 @@ def group_list():
         salt '*' pkg.group_list
     '''
     ret = {'installed': [], 'available': [], 'installed environments': [], 'available environments': [], 'available languages': {}}
-    cmd = 'yum grouplist'
+    cmd = '{yum_command} grouplist'.format(yum_command=_yum())
     out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace').splitlines()
     key = None
     for idx in range(len(out)):
