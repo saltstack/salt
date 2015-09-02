@@ -1705,6 +1705,14 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                   'systems, databases or applications.')
         )
         self.add_option(
+            '--module-executors',
+            dest='module_executors',
+            default=None,
+            metavar='EXECUTOR_LIST',
+            help=('Set an alternative list of executors to override the one '
+                  'set in minion config')
+        )
+        self.add_option(
             '-d', '--doc', '--documentation',
             dest='doc',
             default=False,

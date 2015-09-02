@@ -781,6 +781,16 @@ def netapi(opts):
                      )
 
 
+def executors(opts):
+    '''
+    Returns the executor modules
+    '''
+    return LazyLoader(_module_dirs(opts, 'executors', 'executor'),
+                      opts,
+                      tag='executor',
+                      )
+
+
 def _generate_module(name):
     if name in sys.modules:
         return

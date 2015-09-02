@@ -81,7 +81,7 @@ def salt_call(runas, fun, *args, **kwargs):
            '--',
            fun]
     for arg in args:
-        cmd.append(_cmd_quote(arg))
+        cmd.append(_cmd_quote(str(arg)))
     for key in kwargs:
         cmd.append(_cmd_quote('{0}={1}'.format(key, kwargs[key])))
 

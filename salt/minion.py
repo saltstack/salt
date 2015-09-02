@@ -538,6 +538,7 @@ class SMinion(MinionBase):
         self.rend = salt.loader.render(self.opts, self.functions)
         self.matcher = Matcher(self.opts, self.functions)
         self.functions['sys.reload_modules'] = self.gen_modules
+        self.executors = salt.loader.executors(self.opts)
 
 
 class MasterMinion(object):
@@ -749,7 +750,7 @@ class Minion(MinionBase):
             self.opts['environment'],
             pillarenv=self.opts.get('pillarenv')
         ).compile_pillar()
-        self.functions, self.returners, self.function_errors = self._load_modules()
+        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
@@ -868,7 +869,9 @@ class Minion(MinionBase):
         if modules_max_memory is True:
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
 
-        return functions, returners, errors
+        executors = salt.loader.executors(self.opts)
+
+        return functions, returners, errors, executors
 
     def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60):
         '''
@@ -914,7 +917,7 @@ class Minion(MinionBase):
 
         if isinstance(data['fun'], six.string_types):
             if data['fun'] == 'sys.reload_modules':
-                self.functions, self.returners, self.function_errors = self._load_modules()
+                self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
                 self.schedule.functions = self.functions
                 self.schedule.returners = self.returners
         if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
@@ -957,12 +960,13 @@ class Minion(MinionBase):
         if not minion_instance:
             minion_instance = cls(opts)
             if not hasattr(minion_instance, 'functions'):
-                functions, returners, function_errors = (
+                functions, returners, function_errors, executors = (
                     minion_instance._load_modules()
                     )
                 minion_instance.functions = functions
                 minion_instance.returners = returners
                 minion_instance.function_errors = function_errors
+                minion_instance.executors = executors
             if not hasattr(minion_instance, 'serial'):
                 minion_instance.serial = salt.payload.Serial(opts)
             if not hasattr(minion_instance, 'proc_dir'):
@@ -986,22 +990,29 @@ class Minion(MinionBase):
         function_name = data['fun']
         if function_name in minion_instance.functions:
             try:
-                func = minion_instance.functions[data['fun']]
+                func = minion_instance.functions[function_name]
                 args, kwargs = load_args_and_kwargs(
                     func,
                     data['arg'],
                     data)
                 minion_instance.functions.pack['__context__']['retcode'] = 0
+
+                executors = data.get('module_executors') or opts.get('module_executors', ['direct_call.get'])
+                if isinstance(executors, six.string_types):
+                    executors = [executors]
+                elif not isinstance(executors, list) or not executors:
+                    raise SaltInvocationError("Wrong executors specification: {0}. String or non-empty list expected".
+                        format(executors))
                 if opts.get('sudo_user', ''):
-                    sudo_runas = opts.get('sudo_user')
-                    if 'sudo.salt_call' in minion_instance.functions:
-                        return_data = minion_instance.functions['sudo.salt_call'](
-                                sudo_runas,
-                                data['fun'],
-                                *args,
-                                **kwargs)
-                else:
-                    return_data = func(*args, **kwargs)
+                    executors[-1] = 'sudo.get'
+                # Get the last one that is function executor
+                executor = minion_instance.executors[
+                    "{0}".format(executors.pop())](opts, data, func, *args, **kwargs)
+                # Instantiate others from bottom to the top
+                for executor_name in reversed(executors):
+                    executor = minion_instance.executors["{0}".format(executor_name)](opts, data, executor)
+                return_data = executor.execute()
+
                 if isinstance(return_data, types.GeneratorType):
                     ind = 0
                     iret = {}
@@ -1294,7 +1305,7 @@ class Minion(MinionBase):
         Refresh the functions and returners.
         '''
         log.debug('Refreshing modules. Notify={0}'.format(notify))
-        self.functions, self.returners, _ = self._load_modules(force_refresh, notify=notify)
+        self.functions, self.returners, _, self.executors = self._load_modules(force_refresh, notify=notify)
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
@@ -1516,7 +1527,7 @@ class Minion(MinionBase):
                         del self.pub_channel
                         self._connect_master_future = self.connect_master()
                         self.block_until_connected()  # TODO: remove
-                        self.functions, self.returners, self.function_errors = self._load_modules()
+                        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
                         self._fire_master_minion_start()
                         log.info('Minion is ready to receive requests!')
 
@@ -2476,7 +2487,7 @@ class ProxyMinion(Minion):
         self.opts['grains'] = salt.loader.grains(self.opts)
 
         self.opts['proxymodule'] = salt.loader.proxy(self.opts, None, loaded_base_name=fq_proxyname)
-        self.functions, self.returners, self.function_errors = self._load_modules()
+        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
         proxy_fn = self.opts['proxymodule'].loaded_base_name + '.init'
         self.opts['proxymodule'][proxy_fn](self.opts)
 

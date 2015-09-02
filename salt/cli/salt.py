@@ -134,6 +134,9 @@ class SaltCMD(parsers.SaltCMDOptionParser):
             if getattr(self.options, 'return_config'):
                 kwargs['ret_config'] = getattr(self.options, 'return_config')
 
+            if getattr(self.options, 'module_executors'):
+                kwargs['module_executors'] = yamlify_arg(getattr(self.options, 'module_executors'))
+
             if getattr(self.options, 'metadata'):
                 kwargs['metadata'] = yamlify_arg(
                         getattr(self.options, 'metadata'))
