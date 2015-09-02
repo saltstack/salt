@@ -6,6 +6,7 @@ involves preparing the three listeners and the workers needed by the master.
 
 # Import python libs
 from __future__ import absolute_import
+import copy
 import os
 import re
 import sys
@@ -420,13 +421,21 @@ class Master(SMaster):
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
 
-        if any('git' in ext_pillar
-               for ext_pillar in self.opts.get('ext_pillar', [])):
+        non_legacy_git_pillars = [
+            x for x in self.opts.get('ext_pillar', [])
+            if 'git' in x
+            and not isinstance(x['git'], six.string_types)
+        ]
+        if non_legacy_git_pillars:
+            new_opts = copy.deepcopy(self.opts)
+            new_opts['ext_pillar'] = non_legacy_git_pillars
             try:
                 # Init any values needed by the git ext pillar
-                salt.utils.gitfs.GitPillar(self.opts)
+                salt.utils.gitfs.GitPillar(new_opts)
             except FileserverConfigError as exc:
                 critical_errors.append(exc.strerror)
+            finally:
+                del new_opts
 
         if errors or critical_errors:
             for error in errors:
