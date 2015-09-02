@@ -251,7 +251,7 @@ class SaltStackVersion(object):
         match = cls.git_describe_regex.match(s)
         if not match:
             raise ValueError(
-                'Unable to parse version string: {0!r}'.format(version_string)
+                'Unable to parse version string: \'{0}\''.format(version_string)
             )
         return cls(*match.groups())
 
@@ -259,7 +259,7 @@ class SaltStackVersion(object):
     def from_name(cls, name):
         if name.lower() not in cls.LNAMES:
             raise ValueError(
-                'Named version {0!r} is not known'.format(name)
+                'Named version \'{0}\' is not known'.format(name)
             )
         return cls(*cls.LNAMES[name.lower()])
 
@@ -364,7 +364,7 @@ class SaltStackVersion(object):
                 other = SaltStackVersion(*other)
             else:
                 raise ValueError(
-                    'Cannot instantiate Version from type {0!r}'.format(
+                    'Cannot instantiate Version from type \'{0}\''.format(
                         type(other)
                     )
                 )
@@ -405,7 +405,7 @@ class SaltStackVersion(object):
     def __repr__(self):
         parts = []
         if self.name:
-            parts.append('name={0!r}'.format(self.name))
+            parts.append('name=\'{0}\''.format(self.name))
         parts.extend([
             'major={0}'.format(self.major),
             'minor={0}'.format(self.minor),
@@ -554,6 +554,15 @@ def dependency_information(include_salt_cloud=False):
         ('Tornado', 'tornado', 'version'),
         ('timelib', 'timelib', 'version'),
         ('dateutil', 'dateutil', '__version__'),
+        ('pygit2', 'pygit2', '__version__'),
+        ('smmap', 'smmap', '__version__'),
+        ('cffi', 'cffi', '__version__'),
+        ('pycparser', 'pycparser', '__version__'),
+        ('gitdb', 'gitdb', '__version__'),
+        ('gitpython', 'gitpython', '__version__'),
+        ('python-gnupg', 'python-gnupg', '__version__'),
+        ('mysql-python', 'mysql-python', '__version__'),
+        ('cherrypy', 'cherrypy', '__version__'),
     ]
 
     if include_salt_cloud:

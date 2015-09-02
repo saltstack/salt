@@ -49,7 +49,7 @@ class LinodeTest(integration.ShellCase):
         # check if appropriate cloud provider and profile files are present
         profile_str = 'linode-config'
         providers = self.run_cloud('--list-providers')
-        if profile_str + ':'not in providers:
+        if profile_str + ':' not in providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'

@@ -59,7 +59,6 @@ Setting up Service Account Authentication:
       ssh_interface: public_ips
 
 :maintainer: Eric Johnson <erjohnso@google.com>
-:maturity: new
 :depends: libcloud >= 0.14.1
 :depends: pycrypto >= 2.1
 '''
@@ -76,8 +75,6 @@ import msgpack
 from ast import literal_eval
 
 # Import 3rd-party libs
-import salt.ext.six as six
-# The import section is mostly libcloud boilerplate
 # pylint: disable=import-error
 try:
     from libcloud.compute.types import Provider
@@ -95,20 +92,20 @@ except ImportError:
 
 # Import salt libs
 from salt.utils import namespaced_function
-
-# Import saltcloud libs
+import salt.ext.six as six
 import salt.utils.cloud
 import salt.config as config
 from salt.utils import http
 from salt import syspaths
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
-    SaltCloudException,
     SaltCloudSystemExit,
 )
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'gce'
 
 # custom UA
 _UA_PRODUCT = 'salt-cloud'
@@ -130,37 +127,45 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for GCE configurations.
     '''
-    if not HAS_LIBCLOUD:
-        return False
-
     if get_configured_provider() is False:
         return False
 
+    if get_dependencies() is False:
+        return False
+
     for provider, details in six.iteritems(__opts__['providers']):
-        if 'provider' not in details or details['provider'] != 'gce':
+        if 'gce' not in details:
             continue
 
-        pathname = os.path.expanduser(details['service_account_private_key'])
+        parameters = details['gce']
+        pathname = os.path.expanduser(parameters['service_account_private_key'])
+
         if not os.path.exists(pathname):
-            raise SaltCloudException(
+            log.error(
                 'The GCE service account private key \'{0}\' used in '
                 'the \'{1}\' provider configuration does not exist\n'.format(
-                    details['service_account_private_key'], provider
+                    parameters['service_account_private_key'],
+                    provider
                 )
             )
-        keymode = str(
+            return False
+
+        key_mode = str(
             oct(stat.S_IMODE(os.stat(pathname).st_mode))
         )
-        if keymode not in ('0400', '0600'):
-            raise SaltCloudException(
+
+        if key_mode not in ('0400', '0600'):
+            log.error(
                 'The GCE service account private key \'{0}\' used in '
                 'the \'{1}\' provider configuration needs to be set to '
                 'mode 0400 or 0600\n'.format(
-                    details['service_account_private_key'], provider
+                    parameters['service_account_private_key'],
+                    provider
                 )
             )
+            return False
 
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -173,6 +178,16 @@ def get_configured_provider():
         ('project',
          'service_account_email_address',
          'service_account_private_key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBCLOUD}
     )
 
 

@@ -11,7 +11,7 @@ import time
 import salt.ext.six as six
 
 # Import Salt Libs
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 _DEFAULT_SPLAYTIME = 600
 _DEFAULT_SIZE = 8192
@@ -52,7 +52,7 @@ def calc_splay(hashable, splaytime=_DEFAULT_SPLAYTIME, size=_DEFAULT_SIZE):
     return int(splaytime * hash_val / float(size))
 
 
-def splay(*args, **kwargs):
+def splay(fun, *args, **kwargs):
     '''
     Splay a salt function call execution time across minions over
     a number of seconds (default: 600)
@@ -72,6 +72,12 @@ def splay(*args, **kwargs):
     # With specified splaytime (5 minutes) and timeout with 10 second buffer
       salt -t 310 '*' splay.splay 300 pkg.version cowsay
     '''
+    if fun == 'sudo.salt_call':
+        __context__['retcode'] = 1
+        raise SaltInvocationError('sudo.salt_call is not designed to be run '
+                                  'directly, but is used by the minion when '
+                                  'the sudo_user config is set.')
+
     # Convert args tuple to a list so we can pop the splaytime and func out
     args = list(args)
 

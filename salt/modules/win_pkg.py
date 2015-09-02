@@ -977,3 +977,10 @@ def _get_latest_pkg_version(pkginfo):
     if len(pkginfo) == 1:
         return next(six.iterkeys(pkginfo))
     return sorted(pkginfo, cmp=_reverse_cmp_pkg_versions).pop()
+
+
+def compare_versions(ver1='', oper='==', ver2=''):
+    '''
+    Compare software package versions
+    '''
+    return salt.utils.compare_versions(ver1, oper, ver2)

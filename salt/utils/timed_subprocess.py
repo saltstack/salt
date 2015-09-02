@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import subprocess
 import threading
 import salt.exceptions
+from salt.ext import six
 
 
 class TimedProc(object):
@@ -13,7 +14,6 @@ class TimedProc(object):
     '''
     def __init__(self, args, **kwargs):
 
-        self.command = args
         self.stdin = kwargs.pop('stdin', None)
         if self.stdin is not None:
             # Translate a newline submitted as '\n' on the CLI to an actual
@@ -22,7 +22,18 @@ class TimedProc(object):
             kwargs['stdin'] = subprocess.PIPE
         self.with_communicate = kwargs.pop('with_communicate', True)
 
-        self.process = subprocess.Popen(args, **kwargs)
+        try:
+            self.process = subprocess.Popen(args, **kwargs)
+        except TypeError:
+            str_args = []
+            for arg in args:
+                if not isinstance(arg, six.string_types):
+                    str_args.append(str(arg))
+                else:
+                    str_args.append(arg)
+            args = str_args
+            self.process = subprocess.Popen(args, **kwargs)
+        self.command = args
 
     def wait(self, timeout=None):
         '''

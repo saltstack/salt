@@ -196,7 +196,7 @@ def remove_key(pki_dir, id_):
     key = os.path.join(pki_dir, 'minions', id_)
     if os.path.isfile(key):
         os.remove(key)
-        log.debug('Deleted {0!r}'.format(key))
+        log.debug('Deleted \'{0}\''.format(key))
 
 
 def rename_key(pki_dir, id_, new_id):
@@ -308,7 +308,7 @@ def bootstrap(vm_, opts):
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined ssh_keyfile {0!r} does not exist'.format(
+            'The defined ssh_keyfile \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -688,7 +688,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         ' '.join(ssh_args), gateway['ssh_gateway_user'], ssh_gateway,
         ssh_gateway_port, pipes.quote(command)
     )
-    log.debug('SSH command: {0!r}'.format(cmd))
+    log.debug('SSH command: \'{0}\''.format(cmd))
 
     kwargs = {'display_ssh_output': False,
               'password': gateway.get('ssh_gateway_password', None)}
@@ -846,7 +846,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
             if key_filename:
                 if not os.path.isfile(key_filename):
                     raise SaltCloudConfigError(
-                        'The defined key_filename {0!r} does not exist'.format(
+                        'The defined key_filename \'{0}\' does not exist'.format(
                             key_filename
                         )
                     )
@@ -1113,7 +1113,7 @@ def deploy_script(host,
     deploy_command = os.path.join(tmp_dir, 'deploy.sh')
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined key_filename {0!r} does not exist'.format(
+            'The defined key_filename \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -1425,11 +1425,11 @@ def deploy_script(host,
                     )
                 if root_cmd(deploy_command, tty, sudo, **ssh_kwargs) != 0:
                     raise SaltCloudSystemExit(
-                        'Executing the command {0!r} failed'.format(
+                        'Executing the command \'{0}\' failed'.format(
                             deploy_command
                         )
                     )
-                log.debug('Executed command {0!r}'.format(deploy_command))
+                log.debug('Executed command \'{0}\''.format(deploy_command))
 
                 # Remove the deploy script
                 if not keep_tmp:
@@ -1699,7 +1699,7 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
         if proc.exitstatus != 0:
             if allow_failure is False:
                 raise SaltCloudSystemExit(
-                    'Command {0!r} failed. Exit code: {1}'.format(
+                    'Command \'{0}\' failed. Exit code: {1}'.format(
                         cmd, proc.exitstatus
                     )
                 )
@@ -1792,9 +1792,9 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
         )
     )
 
-    log.debug('SCP command: {0!r}'.format(cmd))
+    log.debug('SCP command: \'{0}\''.format(cmd))
     retcode = _exec_ssh_cmd(cmd,
-                            error_msg='Failed to upload file {0!r}: {1}\n{2}',
+                            error_msg='Failed to upload file \'{0}\': {1}\n{2}',
                             password_retries=3,
                             **kwargs)
     return retcode
@@ -1889,9 +1889,9 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
     cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{4[hostname]}'.format(
         ' '.join(put_args), tmppath, dest_path, ' '.join(ssh_args), kwargs
     )
-    log.debug('SFTP command: {0!r}'.format(cmd))
+    log.debug('SFTP command: \'{0}\''.format(cmd))
     retcode = _exec_ssh_cmd(cmd,
-                            error_msg='Failed to upload file {0!r}: {1}\n{2}',
+                            error_msg='Failed to upload file \'{0}\': {1}\n{2}',
                             password_retries=3,
                             **kwargs)
     return retcode
@@ -1910,7 +1910,7 @@ def win_cmd(command, **kwargs):
             stream_stds=kwargs.get('display_ssh_output', True),
         )
         log.debug(
-            'Executing command(PID {0}): {1!r}'.format(
+            'Executing command(PID {0}): \'{1}\''.format(
                 proc.pid, command
             )
         )
@@ -1919,7 +1919,7 @@ def win_cmd(command, **kwargs):
         return proc.returncode
     except Exception as err:
         log.error(
-            'Failed to execute command {0!r}: {1}\n'.format(
+            'Failed to execute command \'{0}\': {1}\n'.format(
                 command, err
             ),
             exc_info=True
@@ -2036,7 +2036,7 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
         if kwargs['hard_timeout'] == int(kwargs['hard_timeout']):
             cmd = 'timeout {0} {1}'.format(kwargs['hard_timeout'], cmd)
 
-    log.debug('SSH command: {0!r}'.format(cmd))
+    log.debug('SSH command: \'{0}\''.format(cmd))
     retcode = _exec_ssh_cmd(cmd, allow_failure=allow_failure, **kwargs)
     return retcode
 
@@ -2634,13 +2634,13 @@ def update_bootstrap(config, url=None):
                 os.makedirs(entry)
             except (OSError, IOError) as err:
                 log.info(
-                    'Failed to create directory {0!r}'.format(entry)
+                    'Failed to create directory \'{0}\''.format(entry)
                 )
                 continue
 
         if not is_writeable(entry):
             log.debug(
-                'The {0!r} is not writeable. Continuing...'.format(
+                'The \'{0}\' is not writeable. Continuing...'.format(
                     entry
                 )
             )

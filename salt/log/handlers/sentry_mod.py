@@ -81,6 +81,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+import salt.loader
 from salt.log import LOG_LEVELS
 
 # Import 3rd party libs
@@ -92,6 +93,8 @@ except ImportError:
     HAS_RAVEN = False
 
 log = logging.getLogger(__name__)
+__grains__ = {}
+__salt__ = {}
 
 # Define the module's virtual name
 __virtualname__ = 'sentry'
@@ -99,6 +102,8 @@ __virtualname__ = 'sentry'
 
 def __virtual__():
     if HAS_RAVEN is True:
+        __grains__ = salt.loader.grains(__opts__)
+        __salt__ = salt.loader.minion_mods(__opts__)
         return __virtualname__
     return False
 
@@ -139,7 +144,7 @@ def setup_handlers():
         if config_value is None and key not in options:
             log.debug(
                 'The required \'sentry_handler\' configuration key, '
-                '{0!r}, is not properly configured. Not configuring '
+                '\'{0}\', is not properly configured. Not configuring '
                 'the sentry logging handler.'.format(key)
             )
             return

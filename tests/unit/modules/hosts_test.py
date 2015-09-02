@@ -15,6 +15,7 @@ from salttesting.mock import (
 )
 # Import Salt Libs
 from salt.modules import hosts
+from salt.ext.six.moves import StringIO
 
 
 class HostsTestCase(TestCase):
@@ -85,7 +86,7 @@ class HostsTestCase(TestCase):
 
         self.assertFalse(hosts.has_pair('10.10.10.10', 'Salt3'))
 
-    # 'set_host' function tests: 2
+    # 'set_host' function tests: 3
 
     @patch('salt.modules.hosts.__get_hosts_filename',
            MagicMock(return_value='/etc/hosts'))
@@ -109,6 +110,48 @@ class HostsTestCase(TestCase):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
                 self.assertTrue(hosts.set_host('10.10.10.10', 'Salt1'))
+
+    @patch('salt.modules.hosts.__get_hosts_filename',
+           MagicMock(return_value='/etc/hosts'))
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    def test_set_host_true_remove(self):
+        '''
+        Test if an empty hosts value removes existing entries
+        '''
+        data = ['\n'.join((
+            '1.1.1.1 foo.foofoo foo',
+            '2.2.2.2 bar.barbar bar',
+            '3.3.3.3 asdf.asdfadsf asdf',
+            '1.1.1.1 foofoo.foofoo foofoo',
+        ))]
+
+        class TmpStringIO(StringIO):
+            def __init__(self, fn, mode='r'):
+                initial_value = data[0]
+                if 'w' in mode:
+                    initial_value = ''
+                StringIO.__init__(self, initial_value)
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                self.close()
+
+            def close(self):
+                data[0] = self.getvalue()
+                StringIO.close(self)
+
+        expected = '\n'.join((
+            '2.2.2.2 bar.barbar bar',
+            '3.3.3.3 asdf.asdfadsf asdf',
+        )) + '\n'
+
+        with patch('salt.utils.fopen', TmpStringIO):
+            mock_opt = MagicMock(return_value=None)
+            with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
+                self.assertTrue(hosts.set_host('1.1.1.1', ' '))
+        self.assertEqual(data[0], expected)
 
     # 'rm_host' function tests: 2
 

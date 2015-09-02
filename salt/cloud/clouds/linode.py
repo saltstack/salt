@@ -39,6 +39,7 @@ Cloning requires a post 2015-02-01 salt-bootstrap.
 from __future__ import absolute_import
 import logging
 import pprint
+import re
 import time
 
 # Import Salt Libs
@@ -109,7 +110,7 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'linode',
+        __active_provider_name__ or __virtualname__,
         ('apikey', 'password',)
     )
 
@@ -1036,6 +1037,41 @@ def list_nodes_full(call=None):
     return _list_linodes(full=True)
 
 
+def list_nodes_min(call=None):
+    '''
+    Return a list of the VMs that are on the provider. Only a list of VM names and
+    their state is returned. This is the minimum amount of information needed to
+    check for existing VMs.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_nodes_min my-linode-config
+        salt-cloud --function list_nodes_min my-linode-config
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_min function must be called with -f or --function.'
+        )
+
+    ret = {}
+    nodes = _query('linode', 'list')['DATA']
+
+    for node in nodes:
+        name = node['LABEL']
+        this_node = {
+            'id': str(node['LINODEID']),
+            'state': _get_status_descr_by_id(int(node['STATUS']))
+        }
+
+        ret[name] = this_node
+
+    return ret
+
+
 def reboot(name, call=None):
     '''
     Reboot a linode.
@@ -1241,8 +1277,8 @@ def update_linode(linode_id, update_args=None):
     update_args
         The args to update the Linode with. Must be in dictionary form.
     '''
-    if update_args is None:
-        update_args = {}
+    if _validate_name(linode_id) is False:
+        return False
 
     update_args.update({'LinodeID': linode_id})
 
@@ -1302,28 +1338,6 @@ def _list_linodes(full=False):
         ret[node['LABEL']] = this_node
 
     return ret
-
-
-def _check_and_set_node_id(name, linode_id):
-    '''
-    Helper function that checks against name and linode_id collisions and returns a node_id.
-    '''
-    node_id = ''
-    if linode_id and name is None:
-        node_id = linode_id
-    elif name:
-        node_id = get_linode_id_from_name(name)
-
-    if linode_id and (linode_id != node_id):
-        raise SaltCloudException(
-            'A name and a linode_id were provided, but the provided linode_id, {0}, '
-            'does not match the linode_id found for the provided '
-            'name: \'{1}\': \'{2}\'. Nothing was done.'.format(
-                linode_id, name, node_id
-            )
-        )
-
-    return node_id
 
 
 def _query(action=None,
@@ -1495,3 +1509,32 @@ def _get_status_id_by_name(status_name):
         internal linode VM status name
     '''
     return LINODE_STATUS.get(status_name, {}).get('code', None)
+
+
+def _validate_name(name):
+    '''
+    Checks if the provided name fits Linode's labeling parameters.
+
+    .. versionadded:: 2015.5.6
+
+    name
+        The VM name to validate
+    '''
+    name_length = len(name)
+    regex = re.compile(r'^[a-zA-Z0-9][A-Za-z0-9_-]*[a-zA-Z0-9]$')
+
+    if name_length < 3 or name_length > 48:
+        ret = False
+    elif not re.match(regex, name):
+        ret = False
+    else:
+        ret = True
+
+    if ret is False:
+        log.warning(
+            'A Linode label may only contain ASCII letters or numbers, dashes, and '
+            'underscores, must begin and end with letters or numbers, and be at least '
+            'three characters in length.'
+        )
+
+    return ret

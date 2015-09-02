@@ -490,14 +490,17 @@ VALID_OPTS = {
     # encountering duplicate values
     'pillar_source_merging_strategy': str,
 
-    # The ordering for environment merging
+    # How to merge multiple top files from multiple salt environments
+    # (saltenvs); can be 'merge' or 'same'
+    'top_file_merging_strategy': str,
+
+    # The ordering for salt environment merging, when top_file_merging_strategy
+    # is set to 'same'
     'env_order': list,
 
+    # The salt environment which provides the default top file when
+    # top_file_merging_strategy is set to 'same'; defaults to 'base'
     'default_top': str,
-
-    # Can be 'merge', 'same', 'preferred'
-    'top_file_merging_strategy': str,
-    'top_file_base': str,
 
     'ping_on_rotate': bool,
     'peer': dict,
@@ -587,8 +590,10 @@ VALID_OPTS = {
     'winrepo_source_dir': str,
 
     'winrepo_dir': str,
+    'winrepo_dir_ng': str,
     'winrepo_cachefile': str,
     'winrepo_remotes': list,
+    'winrepo_remotes_ng': list,
     'winrepo_branch': str,
     'winrepo_ssl_verify': bool,
     'winrepo_user': str,
@@ -779,11 +784,12 @@ DEFAULT_MINION_OPTS = {
     'file_client': 'remote',
     'use_master_when_local': False,
     'file_roots': {
-        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
+                 salt.syspaths.SPM_FORMULA_PATH]
     },
-    'default_top': 'base',
-    'env_order': [],
     'top_file_merging_strategy': 'merge',
+    'env_order': [],
+    'default_top': 'base',
     'fileserver_limit_traversal': False,
     'file_recv': False,
     'file_recv_max_size': 100,
@@ -793,7 +799,8 @@ DEFAULT_MINION_OPTS = {
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
     'pillar_roots': {
-        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
+                 salt.syspaths.SPM_PILLAR_PATH]
     },
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
@@ -878,10 +885,20 @@ DEFAULT_MINION_OPTS = {
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'random_reauth_delay': 10,
-    'winrepo_source_dir': 'salt://win/repo/',
+    'winrepo_source_dir': 'salt://win/repo-ng/',
     'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
+    'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
     'winrepo_cachefile': 'winrepo.p',
     'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
+    'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
+    'winrepo_branch': 'master',
+    'winrepo_ssl_verify': False,
+    'winrepo_user': '',
+    'winrepo_password': '',
+    'winrepo_insecure_auth': False,
+    'winrepo_privkey': '',
+    'winrepo_pubkey': '',
+    'winrepo_passphrase': '',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
     'tcp_keepalive': True,
@@ -941,17 +958,19 @@ DEFAULT_MASTER_OPTS = {
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
     'file_roots': {
-        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
+                 salt.syspaths.SPM_FORMULA_PATH]
     },
     'master_roots': {
         'base': [salt.syspaths.BASE_MASTER_ROOTS_DIR],
     },
     'pillar_roots': {
-        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
+                 salt.syspaths.SPM_PILLAR_PATH]
     },
-    'default_top': 'base',
-    'env_order': [],
     'top_file_merging_strategy': 'merge',
+    'env_order': [],
+    'default_top': 'base',
     'file_client': 'local',
     'git_pillar_base': 'master',
     'git_pillar_branch': 'master',
@@ -1086,8 +1105,10 @@ DEFAULT_MASTER_OPTS = {
     'permissive_pki_access': False,
     'default_include': 'master.d/*.conf',
     'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
+    'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
     'winrepo_cachefile': 'winrepo.p',
     'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
+    'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
     'winrepo_branch': 'master',
     'winrepo_ssl_verify': False,
     'winrepo_user': '',
@@ -1195,13 +1216,15 @@ DEFAULT_API_OPTS = {
 
 DEFAULT_SPM_OPTS = {
     # ----- Salt master settings overridden by SPM --------------------->
-    'reactor_roots': '/srv/reactor',
+    'formula_path': '/srv/spm/salt',
+    'pillar_path': '/srv/spm/pillar',
+    'reactor_path': '/srv/spm/reactor',
     'spm_logfile': '/var/log/salt/spm',
     # spm_repos_config also includes a .d/ directory
     'spm_repos_config': '/etc/salt/spm.repos',
     'spm_cache_dir': os.path.join(salt.syspaths.CACHE_DIR, 'spm'),
-    'spm_build_dir': '/srv/spm',
-    'spm_build_exclude': ['.git'],
+    'spm_build_dir': '/srv/spm_build',
+    'spm_build_exclude': ['CVS', '.hg', '.git', '.svn'],
     'spm_db': os.path.join(salt.syspaths.CACHE_DIR, 'spm', 'packages.db'),
     # <---- Salt master settings overridden by SPM ----------------------
 }
@@ -1355,9 +1378,8 @@ def _absolute_path(path, relative_to=None):
         _abspath = os.path.join(relative_to, path)
         if os.path.isfile(_abspath):
             log.debug(
-                'Relative path {0!r} converted to existing absolute path {1!r}'.format(
-                    path, _abspath
-                )
+                'Relative path \'{0}\' converted to existing absolute path '
+                '\'{1}\''.format(path, _abspath)
             )
             return _abspath
     return path
@@ -1381,9 +1403,9 @@ def load_config(path, env_var, default_path=None):
         import inspect
         previous_frame = inspect.getframeinfo(inspect.currentframe().f_back)
         log.warning(
-            'The function \'{0}()\' defined in {1!r} is not yet using the '
+            'The function \'{0}()\' defined in \'{1}\' is not yet using the '
             'new \'default_path\' argument to `salt.config.load_config()`. '
-            'As such, the {2!r} environment variable will be ignored'.format(
+            'As such, the \'{2}\' environment variable will be ignored'.format(
                 previous_frame.function, previous_frame.filename, env_var
             )
         )
@@ -1451,11 +1473,11 @@ def include_config(include, orig_path, verbose):
             if verbose:
                 log.warn(
                     'Warning parsing configuration file: "include" path/glob '
-                    '{0!r} matches no files'.format(path)
+                    '\'{0}\' matches no files'.format(path)
                 )
 
         for fn_ in sorted(glob.glob(path)):
-            log.debug('Including configuration from {0!r}'.format(fn_))
+            log.debug('Including configuration from \'{0}\''.format(fn_))
             configuration.update(_read_conf_file(fn_))
     return configuration
 
@@ -1868,18 +1890,22 @@ def apply_cloud_config(overrides, defaults=None):
                 for detail in details:
                     if 'provider' not in detail and 'driver' not in detail:
                         raise salt.exceptions.SaltCloudConfigError(
-                            'The cloud provider alias {0!r} has an entry missing the required setting of either'
-                            '\'provider\' or \'driver\'. Note that \'provider\' has been deprecated, so you should '
-                            'use the \'driver\' notation.'.format(
+                            'The cloud provider alias \'{0}\' has an entry '
+                            'missing the required setting of either '
+                            '\'provider\' or \'driver\'. Note that '
+                            '\'provider\' has been deprecated, so the '
+                            '\'driver\' notation should be used.'.format(
                                 alias
                             )
                         )
                     elif 'provider' in detail:
                         salt.utils.warn_until(
                             'Nitrogen',
-                            'The term \'provider\' is being deprecated in favor of \'driver\'. Support for '
-                            '\'provider\' will be removed in Salt Nitrogen. Please convert your cloud provider '
-                            'configuration files to use \'driver\'.'
+                            'The term \'provider\' is being deprecated in '
+                            'favor of \'driver\'. Support for \'provider\' '
+                            'will be removed in Salt Nitrogen. Please convert '
+                            'your cloud provider configuration files to use '
+                            '\'driver\'.'
                         )
                         driver = detail['provider']
                     elif 'driver' in detail:
@@ -1897,17 +1923,17 @@ def apply_cloud_config(overrides, defaults=None):
             elif isinstance(details, dict):
                 if 'provider' not in details and 'driver' not in details:
                     raise salt.exceptions.SaltCloudConfigError(
-                        'The cloud provider alias {0!r} has an entry missing the required setting of either'
-                        '\'provider\' or \'driver\''.format(
-                            alias
-                        )
+                        'The cloud provider alias \'{0}\' has an entry '
+                        'missing the required setting of either '
+                        '\'provider\' or \'driver\''.format(alias)
                     )
                 elif 'provider' in details:
                     salt.utils.warn_until(
                         'Nitrogen',
-                        'The term \'provider\' is being deprecated in favor of \'driver\' and support for '
-                        '\'provider\' will be removed in Salt Nitrogen. Please convert your cloud provider'
-                        'configuration files to use \'driver\'.'
+                        'The term \'provider\' is being deprecated in favor '
+                        'of \'driver\' and support for \'provider\' will be '
+                        'removed in Salt Nitrogen. Please convert your cloud '
+                        'provider  configuration files to use \'driver\'.'
                     )
                     driver = details['provider']
                 elif 'driver' in details:
@@ -2011,7 +2037,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
             continue
         if not isinstance(val, dict):
             raise salt.exceptions.SaltCloudConfigError(
-                'The VM profiles configuration found in {0[conf_file]!r} is '
+                'The VM profiles configuration found in \'{0[conf_file]}\' is '
                 'not in the proper format'.format(config)
             )
         val['profile'] = key
@@ -2024,10 +2050,13 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
                 alias, driver = details['provider'].split(':')
                 if alias not in providers or driver not in providers[alias]:
                     log.trace(
-                        'The profile {0!r} is defining {1[provider]!r} as the '
-                        'provider. Since there\'s no valid configuration for '
-                        'that provider, the profile will be removed from the '
-                        'available listing'.format(profile, details)
+                        'The profile \'{0}\' is defining \'{1[provider]}\' '
+                        'as the provider. Since there is no valid '
+                        'configuration for that provider, the profile will be '
+                        'removed from the available listing'.format(
+                            profile,
+                            details
+                        )
                     )
                     vms.pop(profile)
                     continue
@@ -2038,8 +2067,8 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
 
             if details['provider'] not in providers:
                 log.trace(
-                    'The profile {0!r} is defining {1[provider]!r} as the '
-                    'provider. Since there\'s no valid configuration for '
+                    'The profile \'{0}\' is defining \'{1[provider]}\' as the '
+                    'provider. Since there is no valid configuration for '
                     'that provider, the profile will be removed from the '
                     'available listing'.format(profile, details)
                 )
@@ -2057,8 +2086,8 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
         extends = details.pop('extends')
         if extends not in vms:
             log.error(
-                'The {0!r} profile is trying to extend data from {1!r} '
-                'though {1!r} is not defined in the salt profiles loaded '
+                'The \'{0}\' profile is trying to extend data from \'{1}\' '
+                'though \'{1}\' is not defined in the salt profiles loaded '
                 'data. Not extending and removing from listing!'.format(
                     profile, extends
                 )
@@ -2073,8 +2102,8 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
         if ':' not in extended['provider']:
             if extended['provider'] not in providers:
                 log.trace(
-                    'The profile {0!r} is defining {1[provider]!r} as the '
-                    'provider. Since there\'s no valid configuration for '
+                    'The profile \'{0}\' is defining \'{1[provider]}\' as the '
+                    'provider. Since there is no valid configuration for '
                     'that provider, the profile will be removed from the '
                     'available listing'.format(profile, extended)
                 )
@@ -2090,10 +2119,10 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
             alias, driver = extended['provider'].split(':')
             if alias not in providers or driver not in providers[alias]:
                 log.trace(
-                    'The profile {0!r} is defining {1[provider]!r} as the '
-                    'provider. Since there\'s no valid configuration for '
-                    'that provider, the profile will be removed from the '
-                    'available listing'.format(profile, extended)
+                    'The profile \'{0}\' is defining \'{1[provider]}\' as '
+                    'the provider. Since there is no valid configuration '
+                    'for that provider, the profile will be removed from '
+                    'the available listing'.format(profile, extended)
                 )
                 vms.pop(profile)
                 continue
@@ -2184,8 +2213,8 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         )
                     continue
 
-                # Since using "provider: <provider-engine>" is deprecated, alias provider
-                # to use driver: "driver: <provider-engine>"
+                # Since using "provider: <provider-engine>" is deprecated,
+                # alias provider to use driver: "driver: <provider-engine>"
                 if 'provider' in details:
                     details['driver'] = details.pop('provider')
 
@@ -2198,8 +2227,8 @@ def apply_cloud_providers_config(overrides, defaults=None):
                         'forth.'
                     )
                     raise salt.exceptions.SaltCloudConfigError(
-                        'The cloud provider alias {0!r} has multiple entries '
-                        'for the {1[driver]!r} driver.'.format(key, details)
+                        'The cloud provider alias \'{0}\' has multiple entries '
+                        'for the \'{1[driver]}\' driver.'.format(key, details)
                     )
                 handled_providers.add(details['driver'])
 
@@ -2209,8 +2238,9 @@ def apply_cloud_providers_config(overrides, defaults=None):
             if 'provider' in entry:
                 salt.utils.warn_until(
                     'Nitrogen',
-                    'The term \'provider\' is being deprecated in favor of \'driver\'. Support for '
-                    '\'provider\' will be removed in Salt Nitrogen. Please convert your cloud provider '
+                    'The term \'provider\' is being deprecated in favor of '
+                    '\'driver\'. Support for \'provider\' will be removed in '
+                    'Salt Nitrogen. Please convert your cloud provider '
                     'configuration files to use \'driver\'.'
                 )
                 entry['driver'] = entry.pop('provider')
@@ -2231,8 +2261,8 @@ def apply_cloud_providers_config(overrides, defaults=None):
         keep_looping = False
         for provider_alias, entries in six.iteritems(providers.copy()):
             for driver, details in six.iteritems(entries):
-                # Since using "provider: <provider-engine>" is deprecated, alias provider
-                # to use driver: "driver: <provider-engine>"
+                # Since using "provider: <provider-engine>" is deprecated,
+                # alias provider to use driver: "driver: <provider-engine>"
                 if 'provider' in details:
                     details['driver'] = details.pop('provider')
 
@@ -2248,10 +2278,10 @@ def apply_cloud_providers_config(overrides, defaults=None):
                     alias, provider = extends.split(':')
                     if alias not in providers:
                         raise salt.exceptions.SaltCloudConfigError(
-                            'The {0!r} cloud provider entry in {1!r} is '
-                            'trying to extend data from {2!r} though {2!r} '
-                            'is not defined in the salt cloud providers '
-                            'loaded data.'.format(
+                            'The \'{0}\' cloud provider entry in \'{1}\' is '
+                            'trying to extend data from \'{2}\' though '
+                            '\'{2}\' is not defined in the salt cloud '
+                            'providers loaded data.'.format(
                                 details['driver'],
                                 provider_alias,
                                 alias
@@ -2260,9 +2290,9 @@ def apply_cloud_providers_config(overrides, defaults=None):
 
                     if provider not in providers.get(alias):
                         raise salt.exceptions.SaltCloudConfigError(
-                            'The {0!r} cloud provider entry in {1!r} is '
+                            'The \'{0}\' cloud provider entry in \'{1}\' is '
                             'trying to extend data from \'{2}:{3}\' though '
-                            '{3!r} is not defined in {1!r}'.format(
+                            '\'{3}\' is not defined in \'{1}\''.format(
                                 details['driver'],
                                 provider_alias,
                                 alias,
@@ -2270,21 +2300,22 @@ def apply_cloud_providers_config(overrides, defaults=None):
                             )
                         )
                     details['extends'] = '{0}:{1}'.format(alias, provider)
-                    # change provider details '-only-extendable-' to extended provider name
+                    # change provider details '-only-extendable-' to extended
+                    # provider name
                     details['driver'] = provider
                 elif providers.get(extends):
                     raise salt.exceptions.SaltCloudConfigError(
-                        'The {0!r} cloud provider entry in {1!r} is trying '
-                        'to extend from {2!r} and no provider was specified. '
-                        'Not extending!'.format(
+                        'The \'{0}\' cloud provider entry in \'{1}\' is '
+                        'trying to extend from \'{2}\' and no provider was '
+                        'specified. Not extending!'.format(
                             details['driver'], provider_alias, extends
                         )
                     )
                 elif extends not in providers:
                     raise salt.exceptions.SaltCloudConfigError(
-                        'The {0!r} cloud provider entry in {1!r} is trying '
-                        'to extend data from {2!r} though {2!r} is not '
-                        'defined in the salt cloud providers loaded '
+                        'The \'{0}\' cloud provider entry in \'{1}\' is '
+                        'trying to extend data from \'{2}\' though \'{2}\' '
+                        'is not defined in the salt cloud providers loaded '
                         'data.'.format(
                             details['driver'], provider_alias, extends
                         )
@@ -2347,7 +2378,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 continue
 
             log.info(
-                'There\'s at least one cloud driver under the {0!r} '
+                'There\'s at least one cloud driver under the \'{0}\' '
                 'cloud provider alias which does not have the required '
                 '\'driver\' setting. Removing it from the available '
                 'providers listing.'.format(
@@ -2411,7 +2442,7 @@ def get_cloud_config_value(name, vm_, opts, default=None, search_global=True):
             # and there's more than one entry under the alias.
             # WARN the user!!!!
             log.error(
-                'The {0!r} cloud provider definition has more than one '
+                'The \'{0}\' cloud provider definition has more than one '
                 'entry. Your VM configuration should be specifying the '
                 'provider as \'driver: {0}:<driver-engine>\'. Since '
                 'it\'s not, we\'re returning the first definition which '
@@ -2458,16 +2489,16 @@ def is_provider_configured(opts, provider, required_keys=()):
             return False
         for key in required_keys:
             if opts['providers'][alias][driver].get(key, None) is None:
-                # There's at least one require configuration key which is not set.
+                # There's at least one require configuration key which is not
+                # set.
                 log.warning(
-                    'The required {0!r} configuration setting is missing from '
-                    'the {1!r} driver, which is configured under the {2!r} '
-                    'alias.'.format(
-                        key, provider, alias
-                    )
+                    'The required \'{0}\' configuration setting is missing '
+                    'from the \'{1}\' driver, which is configured under the '
+                    '\'{2}\' alias.'.format(key, provider, alias)
                 )
                 return False
-        # If we reached this far, there's a properly configured provider. Return it!
+        # If we reached this far, there's a properly configured provider.
+        # Return it!
         return opts['providers'][alias][driver]
 
     for alias, drivers in six.iteritems(opts['providers']):
@@ -2483,9 +2514,9 @@ def is_provider_configured(opts, provider, required_keys=()):
                     # This provider does not include all necessary keys,
                     # continue to next one.
                     log.warning(
-                        'The required {0!r} configuration setting is missing '
-                        'from the {1!r} driver, which is configured under the '
-                        '{2!r} alias.'.format(
+                        'The required \'{0}\' configuration setting is '
+                        'missing from the \'{1}\' driver, which is configured '
+                        'under the \'{2}\' alias.'.format(
                             key, provider, alias
                         )
                     )
@@ -2545,15 +2576,41 @@ def is_profile_configured(opts, provider, profile_name):
         if profile_key.get(item, None) is None:
             # There's at least one required configuration item which is not set.
             log.error(
-                'The required {0!r} configuration setting is missing from the '
-                '{1!r} profile, which is configured '
-                'under the {2!r} alias.'.format(
-                    item, profile_name, alias
-                )
+                'The required \'{0}\' configuration setting is missing from '
+                'the \'{1}\' profile, which is configured under the \'{2}\' '
+                'alias.'.format(item, profile_name, alias)
             )
             return False
 
     return True
+
+
+def check_driver_dependencies(driver, dependencies):
+    '''
+    Check if the driver's dependencies are available.
+
+    .. versionadded:: 2015.8.0
+
+    driver
+        The name of the driver.
+
+    dependencies
+        The dictionary of dependencies to check.
+    '''
+    ret = True
+    for key, value in six.iteritems(dependencies):
+        if value is False:
+            log.warning(
+                'Missing dependency: \'{0}\'. The {1} driver requires '
+                '\'{0}\' to be installed.'.format(
+                    key,
+                    driver
+                )
+            )
+            ret = False
+
+    return ret
+
 # <---- Salt Cloud Configuration Functions -----------------------------------
 
 
@@ -2821,8 +2878,8 @@ def apply_master_config(overrides=None, defaults=None):
     # to make `salt.modules.publish` not work under the test-suite.
     if opts['worker_threads'] < 3 and opts.get('peer', None):
         log.warning(
-            'The \'worker_threads\' setting on {0!r} cannot be lower than 3. '
-            'Resetting it to the default value of 3.'.format(
+            'The \'worker_threads\' setting on \'{0}\' cannot be lower than '
+            '3. Resetting it to the default value of 3.'.format(
                 opts['conf_file']
             )
         )

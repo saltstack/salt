@@ -8,10 +8,69 @@ from __future__ import absolute_import
 import base64
 import hashlib
 import hmac
+import StringIO
 
-# Import third-party libs
-import salt.utils
+# Import Salt libs
+import salt.exceptions
 import salt.ext.six as six
+import salt.utils
+
+
+def digest(instr, checksum='md5'):
+    '''
+    Return a checksum digest for a string
+
+    instr
+        A string
+    checksum : ``md5``
+        The hashing algorithm to use to generate checksums. Valid options: md5,
+        sha256, sha512.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hashutil.digest 'get salted'
+    '''
+    hashing_funcs = {
+        'md5': __salt__['hashutil.md5_digest'],
+        'sha256': __salt__['hashutil.sha256_digest'],
+        'sha512': __salt__['hashutil.sha512_digest'],
+    }
+    hash_func = hashing_funcs.get(checksum)
+
+    if hash_func is None:
+        raise salt.exceptions.CommandExecutionError(
+                "Hash func '{0}' is not supported.".format(checksum))
+
+    return hash_func(instr)
+
+
+def digest_file(infile, checksum='md5'):
+    '''
+    Return a checksum digest for a file
+
+    infile
+        A file path
+    checksum : ``md5``
+        The hashing algorithm to use to generate checksums. Wraps the
+        :py:func:`hashutil.digest <salt.modules.hashutil.digest>` execution
+        function.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hashutil.digest_file /path/to/file
+    '''
+    if not __salt__['file.file_exists'](infile):
+        raise salt.exceptions.CommandExecutionError(
+                "File path '{0}' not found.".format(infile))
+
+    with open(infile, 'rb') as f:
+        file_hash = __salt__['hashutil.digest'](f.read(), checksum)
+
+    return file_hash
 
 
 def base64_b64encode(instr):
@@ -81,6 +140,39 @@ def base64_encodestring(instr):
     return base64.encodestring(instr)
 
 
+def base64_encodefile(fname):
+    '''
+    Read a file from the file system and return as a base64 encoded string
+
+    .. versionadded:: Boron
+
+    Pillar example:
+
+    .. code-block:: yaml
+
+        path:
+          to:
+            data: |
+              {{ salt.hashutil.base64_encodefile('/path/to/binary_file') | indent(6) }}
+
+    The :py:func:`file.decode <salt.states.file.decode>` state function can be
+    used to decode this data and write it to disk.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hashutil.base64_encodefile /path/to/binary_file
+    '''
+    encoded_f = StringIO.StringIO()
+
+    with open(fname, 'rb') as f:
+        base64.encode(f, encoded_f)
+
+    encoded_f.seek(0)
+    return encoded_f.read()
+
+
 def base64_decodestring(instr):
     '''
     Decode a base64-encoded string using the "legacy" Python interface
@@ -91,7 +183,8 @@ def base64_decodestring(instr):
 
     .. code-block:: bash
 
-        salt '*' hashutil.base64_decodestring 'Z2V0IHNhbHRlZA==\\n'
+        salt '*' hashutil.base64_decodestring instr='Z2V0IHNhbHRlZAo='
+
     '''
     if six.PY3:
         b = salt.utils.to_bytes(instr)
@@ -101,6 +194,26 @@ def base64_decodestring(instr):
         except UnicodeDecodeError:
             return data
     return base64.decodestring(instr)
+
+
+def base64_decodefile(instr, outfile):
+    r'''
+    Decode a base64-encoded string and write the result to a file
+
+    .. versionadded:: 2015.2.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hashutil.base64_decodefile instr='Z2V0IHNhbHRlZAo=' outfile='/path/to/binary_file'
+    '''
+    encoded_f = StringIO.StringIO(instr)
+
+    with open(outfile, 'wb') as f:
+        base64.decode(encoded_f, f)
+
+    return True
 
 
 def md5_digest(instr):

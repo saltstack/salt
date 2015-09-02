@@ -171,7 +171,7 @@ build_type = 'develop'  # latest, previous, develop
 # - otherwise -
 # set release to 'latest_release' or 'previous_release'
 
-release = version  # version, latest_release, previous_release
+release = latest_release  # version, latest_release, previous_release
 
 # Set google custom search engine
 
@@ -179,6 +179,8 @@ if release == latest_release:
     search_cx = '004624818632696854117:yfmprrbw3pk'
 elif release.startswith('2014.7'):
     search_cx = '004624818632696854117:thhslradbru'
+elif release.startswith('2015.5'):
+    search_cx = '004624818632696854117:ovogwef29do'
 else:
     search_cx = '004624818632696854117:haj7bjntf4s'  # develop
 
@@ -226,8 +228,8 @@ rst_prolog = """\
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
 .. |windownload| raw:: html
 
-     <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-x86-Setup.exe"><strong>Salt-Minion-{release}-2-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-x86-Setup.exe.md5"><strong>md5</strong></a>
+     <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-2-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe.md5"><strong>md5</strong></a>
 
 """.format(release=release)
 

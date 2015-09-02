@@ -67,7 +67,7 @@ opts = salt.config.DEFAULT_MINION_OPTS
 ctx = {}
 utils = salt.loader.utils(opts, context=ctx, whitelist=['boto'])
 funcs = salt.loader.minion_mods(opts, context=ctx, utils=utils, whitelist=['boto_vpc'])
-salt_states = salt.loader.states(opts=opts, functions=funcs, whitelist=['boto_vpc'])
+salt_states = salt.loader.states(opts=opts, functions=funcs, utils=utils, whitelist=['boto_vpc'])
 
 
 def _has_required_boto():

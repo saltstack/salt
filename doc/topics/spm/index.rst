@@ -77,6 +77,21 @@ Optional Fields
 ```````````````
 The following fields may also be present.
 
+top_level_dir
+~~~~~~~~~~~~~
+This field is optional, but highly recommended. If it is not specified, the
+package name will be used.
+
+Formula repositories typically do not store ``.sls`` files in the root of the
+repository; instead they are stored in a subdirectory. For instance, an
+``apache-formula`` repository would contain a directory called ``apache``, which
+would contain an ``init.sls``, plus a number of other related files. In this
+instance, the ``top_level_dir`` should be set to ``apache``.
+
+Files outside the ``top_level_dir``, such as ``README.rst``, ``FORMULA``, and
+``LICENSE`` will not be installed. The exceptions to this rule are files that
+are already treated specially, such as ``pillar.example`` and ``_modules/``.
+
 dependencies
 ~~~~~~~~~~~~
 A list of packages which must be installed before this package can function.
@@ -166,7 +181,7 @@ Pillars
 =======
 Formula packages include a pillar.example file. Rather than being placed in the
 formula directory, this file is renamed to ``<formula name>.sls.orig`` and
-placed in the ``pillar_roots``, where it can be easily updated to meet the
+placed in the ``pillar_path``, where it can be easily updated to meet the
 user's needs.
 
 Loader Modules
@@ -262,3 +277,32 @@ option requires a list to be specified.
     spm_build_exclude:
       - .git
       - .svn
+
+
+Types of Packages
+=================
+SPM supports different types of formula packages. The function of each package
+is denoted by its name. For instance, packages which end in ``-formula`` are
+considered to be Salt States (the most common type of formula). Packages which
+end in ``-conf`` contain configuration which is to be placed in the
+``/etc/salt/`` directory. Packages which do not contain one of these names are
+treated as if they have a ``-formula`` name.
+
+formula
+-------
+By default, most files from this type of package live in the ``/srv/spm/salt/``
+directory. The exception is the ``pillar.example`` file, which will be renamed
+to ``<package_name>.sls`` and placed in the pillar directory (``/srv/spm/pillar/``
+by default).
+
+reactor
+-------
+By default, files from this type of package live in the ``/srv/spm/reactor/``
+directory.
+
+conf
+----
+The files in this type of package are configuration files for Salt, which
+normally live in the ``/etc/salt/`` directory. Configuration files for packages
+other than Salt can and should be handled with a Salt State (using a ``formula``
+type of package).
