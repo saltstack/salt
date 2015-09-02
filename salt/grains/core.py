@@ -725,15 +725,16 @@ def _virtual(osdata):
         if os.path.isfile('/sys/devices/virtual/dmi/id/product_name'):
             try:
                 with salt.utils.fopen('/sys/devices/virtual/dmi/id/product_name', 'r') as fhr:
-                    if 'VirtualBox' in fhr.read():
+                    output = fhr.read()
+                    if 'VirtualBox' in output:
                         grains['virtual'] = 'VirtualBox'
-                    if 'RHEV Hypervisor' in fhr.read():
+                    elif 'RHEV Hypervisor' in output:
                         grains['virtual'] = 'kvm'
                         grains['virtual_subtype'] = 'rhev'
-                    if 'oVirt Node' in fhr.read():
+                    elif 'oVirt Node' in output:
                         grains['virtual'] = 'kvm'
                         grains['virtual_subtype'] = 'ovirt'
-                    if 'Google' in fhr.read():
+                    elif 'Google' in output:
                         grains['virtual'] = 'gce'
             except IOError:
                 pass
