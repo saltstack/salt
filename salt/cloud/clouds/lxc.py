@@ -427,11 +427,16 @@ def create(vm_, call=None):
         'lxc_profile',
         vm_.get('container_profile', None))
 
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event', 'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
         {'name': vm_['name'], 'profile': profile,
-         'provider': vm_['provider'], },
+         'provider': vm_['driver'], },
         transport=__opts__['transport'])
     ret = {'name': vm_['name'], 'changes': {}, 'result': True, 'comment': ''}
     if 'pub_key' not in vm_ and 'priv_key' not in vm_:
