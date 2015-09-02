@@ -70,7 +70,7 @@ def _config_getter(get_opt,
     command = ['git', 'config']
     if global_:
         command.append('--global')
-    elif ver >= _LooseVersion('1.7.12'):
+    elif ver >= _LooseVersion('1.7.10.2'):
         command.append('--local')
 
     command.append(get_opt)
@@ -1132,7 +1132,7 @@ def config_unset(key,
     ver = _LooseVersion(version(versioninfo=False))
     if global_:
         command.append('--global')
-    elif ver >= _LooseVersion('1.7.12'):
+    elif ver >= _LooseVersion('1.7.10.2'):
         command.append('--local')
 
     if cwd is None:
