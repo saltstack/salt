@@ -547,7 +547,7 @@ def latest(name,
             )
 
     git_ver = _LooseVersion(__salt__['git.version'](versioninfo=False))
-    if git_ver >= _LooseVersion('1.7.12'):
+    if git_ver >= _LooseVersion('1.8.0'):
         set_upstream = '--set-upstream-to'
     else:
         # Older git uses --track instead of --set-upstream-to
