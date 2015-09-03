@@ -27,6 +27,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+HAS_MSGPACK = False
 try:
     # Attempt to import msgpack
     import msgpack
@@ -34,10 +35,12 @@ try:
     # for some msgpack bindings, check for it
     if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
         raise ImportError
+    HAS_MSGPACK = True
 except ImportError:
     # Fall back to msgpack_pure
     try:
         import msgpack_pure as msgpack  # pylint: disable=import-error
+        HAS_MSGPACK = True
     except ImportError:
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
@@ -49,7 +52,7 @@ except ImportError:
         #sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
-if not hasattr(msgpack, 'exceptions'):
+if HAS_MSGPACK and not hasattr(msgpack, 'exceptions'):
     class PackValueError(Exception):
         '''
         older versions of msgpack do not have PackValueError

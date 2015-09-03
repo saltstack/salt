@@ -19,12 +19,20 @@ import salt.utils
 import salt.loader
 import salt.template
 from salt.exceptions import CommandExecutionError, SaltRenderError
+
+# All the "unused" imports here are needed for the imported winrepo runner code
 # pylint: disable=unused-import
 from salt.runners.winrepo import (
     genrepo as _genrepo,
     update_git_repos as _update_git_repos,
     PER_REMOTE_PARAMS
 )
+from salt.ext import six
+try:
+    import msgpack
+except ImportError:
+    import msgpack_pure as msgpack  # pylint: disable=import-error
+import salt.utils.gitfs
 # pylint: enable=unused-import
 
 log = logging.getLogger(__name__)
