@@ -2064,13 +2064,19 @@ def wait_for_instance(
                     },
                     call='action',
                 )
-                log.debug(password_data)
                 win_passwd = password_data.get('password', None)
                 if win_passwd is None:
+                    log.debug(password_data)
                     # This wait is so high, because the password is unlikely to
                     # be generated for at least 4 minutes
                     time.sleep(60)
                 else:
+                    logging_data = password_data
+
+                    logging_data['password'] = 'XXX-REDACTED-XXX'
+                    logging_data['passwordData'] = 'XXX-REDACTED-XXX'
+                    log.debug(logging_data)
+
                     vm_['win_password'] = win_passwd
                     break
 
