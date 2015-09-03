@@ -59,6 +59,7 @@ class NonBlockingPopen(subprocess.Popen):
             'stderr_logger_name', self._stderr_logger_name_
         )
 
+        logging_command = kwargs.pop('logging_command', None)
         stderr = kwargs.get('stderr', None)
 
         super(NonBlockingPopen, self).__init__(*args, **kwargs)
@@ -87,9 +88,20 @@ class NonBlockingPopen(subprocess.Popen):
             self._stderr_logger_name_.format(pid=self.pid)
         )
 
-        log.info(
-            'Running command under pid {0}: \'{1}\''.format(self.pid, *args)
-        )
+        if logging_command is None:
+            log.info(
+                'Running command under pid {0}: {1!r}'.format(
+                    self.pid,
+                    *args
+                )
+            )
+        else:
+            log.info(
+                'Running command under pid {0}: {1!r}'.format(
+                    self.pid,
+                    logging_command
+                )
+            )
 
     def recv(self, maxsize=None):
         return self._recv('stdout', maxsize)

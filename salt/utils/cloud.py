@@ -737,17 +737,29 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
     start = time.time()
     log.debug(
         'Attempting winexe connection to host {0} on port {1}'.format(
-            host, port
+            host,
+            port
         )
     )
     creds = "-U '{0}%{1}' //{2}".format(
-            username, password, host)
-    trycount = 0
+        username,
+        password,
+        host
+    )
+    logging_creds = "-U '{0}%XXX-REDACTED-XXX' //{1}".format(
+        username,
+        host
+    )
+
+    try_count = 0
     while True:
-        trycount += 1
+        try_count += 1
         try:
             # Shell out to winexe to check %TEMP%
-            ret_code = win_cmd('winexe {0} "sc query winexesvc"'.format(creds))
+            ret_code = win_cmd(
+                'winexe {0} "sc query winexesvc"'.format(creds),
+                logging_command=logging_creds
+            )
             if ret_code == 0:
                 log.debug('winexe connected...')
                 return True
@@ -762,7 +774,9 @@ def wait_for_winexesvc(host, port, username, password, timeout=900):
             log.debug(
                 'Retrying winexe connection to host {0} on port {1} '
                 '(try {2})'.format(
-                    host, port, trycount
+                    host,
+                    port,
+                    try_count
                 )
             )
 
@@ -803,19 +817,33 @@ def wait_for_winrm(host, port, username, password, timeout=900):
             )
 
 
-def validate_windows_cred(host, username='Administrator', password=None, retries=10,
+def validate_windows_cred(host,
+                          username='Administrator',
+                          password=None,
+                          retries=10,
                           retry_delay=1):
     '''
     Check if the windows credentials are valid
     '''
+    cmd = "winexe -U '{0}%{1}' //{2} \"hostname\"".format(
+        username,
+        password,
+        host
+    )
+    logging_cmd = "winexe -U '{0}%XXX-REDACTED-XXX' //{2} \"hostname\"".format(
+        username,
+        host
+    )
+
     for i in xrange(retries):
-        retcode = win_cmd("winexe -U '{0}%{1}' //{2} \"hostname\"".format(
-            username, password, host
-        ))
-        if retcode == 0:
+        ret_code = win_cmd(
+            cmd,
+            logging_command=logging_cmd
+        )
+        if ret_code == 0:
             break
         time.sleep(retry_delay)
-    return retcode == 0
+    return ret_code == 0
 
 
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
@@ -957,7 +985,14 @@ def deploy_windows(host,
         smb_conn = salt.utils.smb.get_conn(host, username, password)
 
         creds = "-U '{0}%{1}' //{2}".format(
-            username, password, host)
+            username,
+            password,
+            host
+        )
+        logging_creds = "-U '{0}%XXX-REDACTED-XXX' //{2}".format(
+            username,
+            host
+        )
 
         salt.utils.smb.mkdirs('salttemp', conn=smb_conn)
         salt.utils.smb.mkdirs('salt/conf/pki/minion', conn=smb_conn)
@@ -998,9 +1033,19 @@ def deploy_windows(host,
             # Shell out to winexe to execute win_installer
             #  We don't actually need to set the master and the minion here since
             #  the minion config file will be set next via impacket
-            win_cmd('winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
-                creds, installer, master, name
-            ))
+            cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
+                creds,
+                installer,
+                master,
+                name
+            )
+            logging_cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
+                logging_creds,
+                installer,
+                master,
+                name
+            )
+            win_cmd(cmd, logging_command=logging_cmd)
 
         # Copy over minion_conf
         if minion_conf:
@@ -1044,13 +1089,21 @@ def deploy_windows(host,
             time.sleep(5)
             winrm_cmd(winrm_session, 'sc', ['start', 'salt-minion'])
         else:
-            win_cmd('winexe {0} "sc stop salt-minion"'.format(
-                creds,
-            ))
+            stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
+                creds
+            )
+            logging_stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
+                logging_creds
+            )
+            win_cmd(stop_cmd, logging_stop_cmd)
+
             time.sleep(5)
-            win_cmd('winexe {0} "sc start salt-minion"'.format(
-                creds,
-            ))
+
+            start_cmd = 'winexe {0} "sc start salt-minion"'.format(creds)
+            logging_start_cmd = 'winexe {0} "sc start salt-minion"'.format(
+                logging_creds
+            )
+            win_cmd(start_cmd, logging_start_cmd)
 
         # Fire deploy action
         fire_event(
@@ -1161,7 +1214,6 @@ def deploy_script(host,
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 ssh_kwargs['key_filename'] = key_filename
             elif password and kwargs.get('has_ssh_agent', False) is False:
-                log.debug('Using {0} as the password'.format(password))
                 ssh_kwargs['password'] = password
 
             if root_cmd('test -e \'{0}\''.format(tmp_dir), tty, sudo,
@@ -1607,7 +1659,6 @@ def run_inline_script(host,
                 log.debug('Using {0} as the key_filename'.format(key_filename))
                 ssh_kwargs['key_filename'] = key_filename
             elif password and 'has_ssh_agent' in kwargs and kwargs['has_ssh_agent'] is False:
-                log.debug('Using {0} as the password'.format(password))
                 ssh_kwargs['password'] = password
 
             # TODO: write some tests ???
@@ -1666,34 +1717,28 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
             stream_stderr=kwargs.get('display_ssh_output', True)
         )
         sent_password = 0
-        is_not_checked = True
         while proc.has_unread_data:
             stdout, stderr = proc.recv()
-            if stdout and is_not_checked:
-                if SSH_PASSWORD_PROMP_RE.search(stdout.split('\n')[0]):
-                    # if authenticating with an SSH key and 'sudo' is found
-                    # in the password prompt
-                    if ('key_filename' in kwargs and kwargs['key_filename']
-                        and SSH_PASSWORD_PROMP_SUDO_RE.search(stdout)
-                    ):
-                        # do nothing, as command already has adjustments to
-                        # echo out the sudo password as part of the ssh command
-                        # keep waiting for proc output
-                        continue
-                    # elif authenticating via password and haven't exhausted our
-                    # password_retires
-                    elif (
-                                kwargs.get('password', None)
-                            and (sent_password < password_retries)
-                    ):
-                        sent_password += 1
-                        proc.sendline(kwargs['password'])
-                    # else raise an error as we are not authenticating properly
-                    #  * not authenticating with an SSH key
-                    #  * not authenticating with a Password
-                    else:
-                        raise SaltCloudPasswordError(error_msg)
-                is_not_checked = False
+            if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
+                # if authenticating with an SSH key and 'sudo' is found
+                # in the password prompt
+                if ('key_filename' in kwargs and kwargs['key_filename']
+                    and SSH_PASSWORD_PROMP_SUDO_RE.search(stdout)
+                ):
+                    proc.sendline(kwargs['sudo_password', None])
+                # elif authenticating via password and haven't exhausted our
+                # password_retires
+                elif (
+                            kwargs.get('password', None)
+                        and (sent_password < password_retries)
+                ):
+                    sent_password += 1
+                    proc.sendline(kwargs['password'])
+                # else raise an error as we are not authenticating properly
+                #  * not authenticating with an SSH key
+                #  * not authenticating with a Password
+                else:
+                    raise SaltCloudPasswordError(error_msg)
             # 0.0125 is really too fast on some systems
             time.sleep(0.5)
         if proc.exitstatus != 0:
@@ -1901,6 +1946,8 @@ def win_cmd(command, **kwargs):
     '''
     Wrapper for commands to be run against Windows boxes
     '''
+    logging_command = kwargs.get('logging_command', None)
+
     try:
         proc = NonBlockingPopen(
             command,
@@ -1908,19 +1955,32 @@ def win_cmd(command, **kwargs):
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stream_stds=kwargs.get('display_ssh_output', True),
+            logging_command=logging_command,
         )
-        log.debug(
-            'Executing command(PID {0}): \'{1}\''.format(
-                proc.pid, command
+
+        if logging_command is None:
+            log.debug(
+                'Executing command(PID {0}): {1!r}'.format(
+                    proc.pid,
+                    command
+                )
             )
-        )
+        else:
+            log.debug(
+                'Executing command(PID {0}): {1!r}'.format(
+                    proc.pid,
+                    logging_command
+                )
+            )
+
         proc.poll_and_read_until_finish()
         proc.communicate()
         return proc.returncode
     except Exception as err:
         log.error(
-            'Failed to execute command \'{0}\': {1}\n'.format(
-                command, err
+            'Failed to execute command {0!r}: {1}\n'.format(
+                logging_command,
+                err
             ),
             exc_info=True
         )
@@ -1943,15 +2003,18 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     '''
     Wrapper for commands to be run as root
     '''
+    logging_command = command
+    sudo_password = kwargs.get('sudo_password', None)
+
     if sudo:
-        if 'sudo_password' in kwargs and kwargs['sudo_password'] is not None:
-            command = 'echo "{1}" | sudo -S {0}'.format(
-                command,
-                kwargs['sudo_password'],
-            )
-        else:
+        if sudo_password is None:
             command = 'sudo {0}'.format(command)
-        log.debug('Using sudo to run command {0}'.format(command))
+            logging_command = command
+        else:
+            logging_command = 'sudo -S "XXX-REDACTED-XXX" {0}'.format(command)
+            command = 'sudo -S {0}'.format(command)
+
+        log.debug('Using sudo to run command {0}'.format(logging_command))
 
     ssh_args = []
 
@@ -2028,15 +2091,21 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     if 'port' in kwargs:
         ssh_args.extend(['-p {0}'.format(kwargs['port'])])
 
-    cmd = 'ssh {0} {1[username]}@{1[hostname]} {2}'.format(
-        ' '.join(ssh_args), kwargs, pipes.quote(command)
+    cmd = 'ssh {0} {1[username]}@{1[hostname]} '.format(
+        ' '.join(ssh_args),
+        kwargs
     )
+    logging_command = cmd + logging_command
+    cmd = cmd + pipes.quote(command)
 
     if kwargs.get('hard_timeout', None) is not None:
         if kwargs['hard_timeout'] == int(kwargs['hard_timeout']):
+            logging_command = 'timeout {0} {1}'.format(kwargs['hard_timeout'],
+                                                       logging_command)
             cmd = 'timeout {0} {1}'.format(kwargs['hard_timeout'], cmd)
 
-    log.debug('SSH command: \'{0}\''.format(cmd))
+    log.debug('SSH command: \'{0}\''.format(logging_command))
+
     retcode = _exec_ssh_cmd(cmd, allow_failure=allow_failure, **kwargs)
     return retcode
 
