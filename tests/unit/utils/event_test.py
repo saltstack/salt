@@ -169,6 +169,28 @@ class TestSaltEvent(TestCase):
             evt1 = me.get_event(tag='evt1')
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
+    def test_event_single_no_block(self):
+        '''Test a single event is received, no block'''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            # This is too fast and will be None but assures we're not blocking
+            evt1 = me.get_event(wait=0, tag='evt1', no_block=True)
+            self.assertIsNone(evt1, None)
+            # A little sleep and we should get our event
+            time.sleep(0.01)
+            evt1 = me.get_event(wait=0, tag='evt1')
+            self.assertGotEvent(evt1, {'data': 'foo1'})
+
+    def test_event_single_wait_0_no_block_False(self):
+        '''Test a single event is received with wait=0 and no_block=False and doesn't spin the while loop'''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            # This is too fast and will be None but assures we're not blocking
+            evt1 = me.get_event(wait=0, tag='evt1', no_block=False)
+            self.assertGotEvent(evt1, {'data': 'foo1'})
+
     def test_event_timeout(self):
         '''Test no event is received if the timeout is reached'''
         with eventpublisher_process():
@@ -184,7 +206,7 @@ class TestSaltEvent(TestCase):
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
             with eventsender_process({'data': 'foo2'}, 'evt2', 5):
-                evt = me.get_event(tag='evt2', wait=0)
+                evt = me.get_event(tag='evt2', wait=0, no_block=False)
             self.assertGotEvent(evt, {'data': 'foo2'})
 
     def test_event_matching(self):
@@ -209,6 +231,14 @@ class TestSaltEvent(TestCase):
             me = event.MasterEvent(SOCK_DIR, listen=True)
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='')
+            self.assertGotEvent(evt1, {'data': 'foo1'})
+
+    def test_event_matching_all_when_tag_is_None(self):
+        '''Test event matching all when not passing a tag'''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            evt1 = me.get_event()
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
     def test_event_not_subscribed(self):
