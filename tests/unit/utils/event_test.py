@@ -211,6 +211,14 @@ class TestSaltEvent(TestCase):
             evt1 = me.get_event(tag='')
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
+    def test_event_matching_all_when_tag_is_None(self):
+        '''Test event matching all when not passing a tag'''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            evt1 = me.get_event()
+            self.assertGotEvent(evt1, {'data': 'foo1'})
+
     def test_event_not_subscribed(self):
         '''Test get_event drops non-subscribed events'''
         with eventpublisher_process():
