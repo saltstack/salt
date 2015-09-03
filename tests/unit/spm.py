@@ -32,7 +32,7 @@ __opts__ = {
     'spm_files_provider': 'local',
     'spm_db': os.path.join(_TMP_SPM, 'packages.db'),
     'extension_modules': os.path.join(_TMP_SPM, 'modules'),
-    'file_roots': {'base': [_TMP_SPM,]},
+    'file_roots': {'base': [_TMP_SPM, ]},
     'formula_path': os.path.join(_TMP_SPM, 'spm'),
     'pillar_path': os.path.join(_TMP_SPM, 'pillar'),
     'reactor_path': os.path.join(_TMP_SPM, 'reactor'),
