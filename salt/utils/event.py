@@ -797,13 +797,13 @@ class AsyncEventPublisher(object):
                     # We're already trying the default system path, stop now!
                     raise
 
-            if not os.path.isdir(default_minion_sock_dir):
-                try:
-                    os.makedirs(default_minion_sock_dir, 0o755)
-                except OSError as exc:
-                    log.error('Could not create SOCK_DIR: {0}'.format(exc))
-                    # Let's stop at this stage
-                    raise
+                if not os.path.isdir(default_minion_sock_dir):
+                    try:
+                        os.makedirs(default_minion_sock_dir, 0o755)
+                    except OSError as exc:
+                        log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                        # Let's stop at this stage
+                        raise
 
         # Create the pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
