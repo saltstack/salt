@@ -3,6 +3,9 @@
 Runner to manage Windows software repo
 '''
 
+# WARNING: Any modules imported here must also be added to
+# salt/modules/win_repo.py
+
 # Import python libs
 from __future__ import absolute_import, print_function
 import os

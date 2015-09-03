@@ -50,7 +50,11 @@ def __has_required_azure():
     '''
     Returns True/False if the required version of the Azure SDK is installed.
     '''
-    version = LooseVersion(azure.__version__)
+    if hasattr(azure, '__version__'):
+        version = LooseVersion(azure.__version__)
+    else:
+        import azure.common
+        version = LooseVersion(azure.common.__version__)
     if HAS_AZURE is True and REQUIRED_AZURE <= version:
         return True
     else:
