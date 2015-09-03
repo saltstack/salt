@@ -1715,12 +1715,14 @@ class ClearFuncs(object):
                 if not found:
                     log.warning('Authentication failure of type "eauth" occurred.')
                     return ''
-            if not self.loadauth.time_auth(clear_load):
-                log.warning('Authentication failure of type "eauth" occurred.')
-                return ''
 
             clear_load['groups'] = groups
-            return self.loadauth.mk_token(clear_load)
+            token = self.loadauth.mk_token(clear_load)
+            if not token:
+                log.warning('Authentication failure of type "eauth" occurred.')
+                return ''
+            else:
+                return token
         except Exception as exc:
             type_, value_, traceback_ = sys.exc_info()
             log.error(
