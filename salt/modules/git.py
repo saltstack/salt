@@ -66,13 +66,8 @@ def _config_getter(get_opt,
         # Ignore value_regex
         value_regex = None
 
-    ver = _LooseVersion(version(versioninfo=False))
     command = ['git', 'config']
-    if global_:
-        command.append('--global')
-    elif ver >= _LooseVersion('1.7.10.2'):
-        command.append('--local')
-
+    command.extend(_which_git_config(global_, cwd, user))
     command.append(get_opt)
     command.append(key)
     if value_regex is not None:
@@ -248,6 +243,37 @@ def _get_toplevel(path, user=None):
         cwd=path,
         runas=user
     )['stdout']
+
+
+def _git_config(cwd, user):
+    contextkey = 'git.config.' + cwd
+    if contextkey not in __context__:
+        git_dir = rev_parse(cwd,
+                            opts=['--git-dir'],
+                            user=user,
+                            ignore_retcode=True)
+        if not os.path.isabs(git_dir):
+            paths = (cwd, git_dir, 'config')
+        else:
+            paths = (git_dir, 'config')
+        __context__[contextkey] = os.path.join(*paths)
+    return __context__[contextkey]
+
+
+def _which_git_config(global_, cwd, user):
+    '''
+    Based on whether global or local config is desired, return a list of CLI
+    args to include in the git config command.
+    '''
+    if global_:
+        return ['--global']
+    version_ = _LooseVersion(version(versioninfo=False))
+    if version_ >= _LooseVersion('1.7.10.2'):
+        # --local added in 1.7.10.2
+        return ['--local']
+    else:
+        # For earlier versions, need to specify the path to the git config file
+        return ['--file', _git_config(cwd, user)]
 
 
 def add(cwd, filename, opts='', user=None, ignore_retcode=False):
@@ -925,6 +951,7 @@ config_get_regex = config_get_regexp
 
 def config_set(key,
                value=None,
+               add=False,
                multivar=None,
                cwd=None,
                user=None,
@@ -1046,7 +1073,10 @@ def config_set(key,
 
     if value is not None:
         command = copy.copy(command_prefix)
-        command.append('--add')
+        if add:
+            command.append('--add')
+        else:
+            command.append('--replace-all')
         command.extend([key, value])
         _git_run(command,
                  cwd=cwd,
@@ -1123,18 +1153,6 @@ def config_unset(key,
     if kwargs:
         salt.utils.invalid_kwargs(kwargs)
 
-    command = ['git', 'config']
-    if all_:
-        command.append('--unset-all')
-    else:
-        command.append('--unset')
-
-    ver = _LooseVersion(version(versioninfo=False))
-    if global_:
-        command.append('--global')
-    elif ver >= _LooseVersion('1.7.10.2'):
-        command.append('--local')
-
     if cwd is None:
         if not global_:
             raise SaltInvocationError(
@@ -1142,6 +1160,13 @@ def config_unset(key,
             )
     else:
         cwd = _expand_path(cwd, user)
+
+    command = ['git', 'config']
+    if all_:
+        command.append('--unset-all')
+    else:
+        command.append('--unset')
+    command.extend(_which_git_config(global_, cwd, user))
 
     if not isinstance(key, six.string_types):
         key = str(key)

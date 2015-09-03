@@ -1922,9 +1922,9 @@ def config_set(name,
     pre = __salt__['git.config_get'](
         cwd='global' if global_ else repo,
         key=name,
-        all=True,
         user=user,
-        ignore_retcode=True
+        ignore_retcode=True,
+        **{'all': True}
     )
 
     if desired == pre:
@@ -1947,7 +1947,7 @@ def config_set(name,
 
     try:
         # Set/update config value
-        __salt__['git.config_set'](
+        post = __salt__['git.config_set'](
             cwd='global' if global_ else repo,
             key=name,
             value=value,
@@ -1964,15 +1964,6 @@ def config_set(name,
                 _strip_exc(exc)
             )
         )
-
-    # Check value to make sure that it now matches the value we set
-    post = __salt__['git.config_get'](
-        cwd='global' if global_ else repo,
-        key=name,
-        all=True,
-        user=user,
-        ignore_retcode=True
-    )
 
     if pre != post:
         ret['changes'][name] = {'old': pre, 'new': post}

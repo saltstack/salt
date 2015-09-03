@@ -216,15 +216,12 @@ class GitTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.addCleanup(shutil.rmtree, name, ignore_errors=True)
         subprocess.check_call(['git', 'init', '--quiet', name])
 
-        config_key = 'user.name'
-        config_value = 'foo bar'
-
         ret = self.run_state(
-            'git.config',
-            name=config_key,
-            value=config_value,
+            'git.config_set',
+            name='user.name',
+            value='foo bar',
             repo=name,
-            is_global=False)
+            **{'global': False})
         self.assertSaltTrueReturn(ret)
 
 
