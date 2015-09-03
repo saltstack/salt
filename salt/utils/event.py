@@ -449,7 +449,7 @@ class SaltEvent(object):
     def get_event(self,
                   wait=5,
                   tag='',
-                  full=True,
+                  full=False,
                   use_pending=None,
                   pending_tags=None,
                   match_type=None,
