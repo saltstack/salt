@@ -852,7 +852,8 @@ def deploy_windows(host,
         # Shell out to smbclient to copy over minion keys
         # minion_pub, minion_pem
         kwargs = {'hostname': host,
-                  'creds': creds}
+                  'creds': creds,
+                  'logging_creds': logging_creds}
 
         if minion_pub:
             smb_file('salt\\conf\\pki\\minion\\minion.pub', minion_pub, kwargs)
@@ -867,9 +868,17 @@ def deploy_windows(host,
         comps = win_installer.split('/')
         local_path = '/'.join(comps[:-1])
         installer = comps[-1]
-        win_cmd('smbclient {0}/c$ -c "cd salttemp; prompt; lcd {1}; mput {2}; exit;"'.format(
-            creds, local_path, installer
-        ))
+        smb_cd_cmd = 'smbclient {0}/c$ -c "cd salttemp; prompt; lcd {1}; ' \
+                     'mput {2}; exit;"'.format(creds,
+                                               local_path,
+                                               installer)
+        logging_smb_cd_cmd = 'smbclient {0}/c$ -c "cd salttemp; prompt; ' \
+                             'lcd {1}; mput {2}; exit;"'.format(logging_creds,
+                                                                local_path,
+                                                                installer)
+
+        win_cmd(smb_cd_cmd, logging_cmd=logging_smb_cd_cmd)
+
         # Shell out to winexe to execute win_installer
         # We don't actually need to set the master and the minion here since
         # the minion config file will be set next via impacket
@@ -918,16 +927,24 @@ def deploy_windows(host,
                 salt_config_to_yaml(minion_conf, line_break='\r\n'),
                 kwargs
             )
+
         # Shell out to smbclient to delete C:\salttmp\ and installer file
-        ## Unless keep_tmp is True
+        # Unless keep_tmp is True
         if not keep_tmp:
-            win_cmd('smbclient {0}/c$ -c "del salttemp\\{1}; prompt; exit;"'.format(
-                creds,
-                installer,
-            ))
-            win_cmd('smbclient {0}/c$ -c "rmdir salttemp; prompt; exit;"'.format(
-                creds,
-            ))
+            cmd = 'smbclient {0}/c$ -c "del salttemp\\{1}; ' \
+                  'prompt; exit;"'.format(creds,
+                                          installer)
+            logging_cmd = 'smbclient {0}/c$ -c "del salttemp\\{1}; ' \
+                          'prompt; exit;"'.format(logging_creds,
+                                                  installer)
+            win_cmd(cmd, logging_command=logging_cmd)
+
+            cmd = 'smbclient {0}/c$ -c "rmdir salttemp; ' \
+                  'prompt; exit;"'.format(creds)
+            logging_cmd = 'smbclient {0}/c$ -c "rmdir salttemp; ' \
+                          'prompt; exit;"'.format(logging_creds)
+            win_cmd(cmd, logging_command=logging_cmd)
+
         # Shell out to winexe to ensure salt-minion service started
         stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
             creds,
@@ -1593,11 +1610,28 @@ def smb_file(dest_path, contents, kwargs):
     comps = dest_path.split('\\')
     dest_dir = '\\'.join(comps[:-1])
     dest_file = comps[-1]
-    cmd = 'smbclient {0}/c$ -c "cd {3}; prompt; lcd {1}; del {4}; mput {2}; rename {2} {4}; exit;"'.format(
-        kwargs['creds'], src_dir, src_file, dest_dir, dest_file
-    )
-    log.debug('SCP command: {0!r}'.format(cmd))
-    win_cmd(cmd)
+
+    cmd = 'smbclient {0}/c$ -c "cd {3}; prompt; lcd {1}; del {4}; mput {2}; ' \
+          'rename {2} {4}; exit;"'.format(kwargs['creds'],
+                                          src_dir,
+                                          src_file,
+                                          dest_dir,
+                                          dest_file)
+
+    logging_creds = kwargs.get('logging_creds', None)
+    if logging_creds is None:
+        logging_cmd = cmd
+    else:
+        logging_cmd = 'smbclient {0}/c$ -c "cd {3}; prompt; ' \
+                      'lcd {1}; del {4}; mput {2}; rename {2} {4}; ' \
+                      'exit;"'.format(logging_creds,
+                                      src_dir,
+                                      src_file,
+                                      dest_dir,
+                                      dest_file)
+    log.debug('SCP command: {0!r}'.format(logging_cmd))
+    
+    win_cmd(cmd, logging_command=logging_cmd)
 
 
 def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
