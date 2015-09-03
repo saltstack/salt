@@ -410,7 +410,7 @@ class SaltEvent(object):
         '''
         return fnmatch.fnmatch(event_tag, search_tag)
 
-    def _get_event(self, wait, tag, match_func=None, no_block=True):
+    def _get_event(self, wait, tag, match_func=None, no_block=False):
         if match_func is None:
             match_func = self._get_match_func()
         start = time.time()
@@ -453,7 +453,7 @@ class SaltEvent(object):
                   use_pending=None,
                   pending_tags=None,
                   match_type=None,
-                  no_block=True):
+                  no_block=False):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
@@ -480,7 +480,7 @@ class SaltEvent(object):
 
         no_block
             Define if getting the event should be a blocking call or not.
-            Defaults to True to keep backwards compatibility.
+            Defaults to False to keep backwards compatibility.
 
             .. versionadded:: Beryllium
 
