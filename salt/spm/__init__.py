@@ -211,18 +211,15 @@ class SPMClient(object):
             member.uname = uname
             member.gname = gname
 
-            file_ref = formula_tar.extractfile(member)
-            if member.isdir():
-                digest = ''
-            else:
-                file_hash = hashlib.sha1()
-                file_hash.update(file_ref.read())
-                digest = file_hash.hexdigest()
-
             out_path = self.pkgfiles['{0}.install_file'.format(self.files_prov)](
                 name, formula_tar, member, formula_def, self.files_conn
             )
             if out_path is not False:
+                if member.isdir():
+                    digest = ''
+                else:
+                    file_hash = hashlib.sha1()
+                    digest = self.pkgfiles['{0}.hash_file'.format(self.files_prov)](out_path, file_hash, self.files_conn)
                 self.pkgdb['{0}.register_file'.format(self.db_prov)](
                     name,
                     member,
