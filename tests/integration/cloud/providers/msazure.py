@@ -32,6 +32,7 @@ except ImportError:
 if HAS_AZURE and not hasattr(azure, '__version__'):
     import azure.common
 
+
 def __random_name(size=6):
     '''
     Generates a random cloud instance name
