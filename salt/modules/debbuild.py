@@ -320,8 +320,6 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
             cmd = 'chown {0} -R {1}'.format(runas, results_dir)
             __salt__['cmd.run'](cmd)
 
-            cmd = 'pbuilder --clean'
-            __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
             cmd = 'pbuilder --create'
             __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
             cmd = 'pbuilder --build --buildresult {1} {0}'.format(dsc, results_dir)
