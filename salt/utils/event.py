@@ -415,17 +415,20 @@ class SaltEvent(object):
             match_func = self._get_match_func()
         start = time.time()
         timeout_at = start + wait
-        while not wait or time.time() <= timeout_at:
+        run_once = False
+        if no_block is True:
+            wait = 0
+        while (run_once is False and not wait) or time.time() <= timeout_at:
+            if no_block is True:
+                # Trigger that at least a single iteration has gone through
+                run_once = True
             try:
                 # convert to milliseconds
                 socks = dict(self.poller.poll(wait * 1000))
                 if socks.get(self.sub) != zmq.POLLIN:
                     continue
 
-                if no_block is True:
-                    ret = self.get_event_noblock()
-                else:
-                    ret = self.get_event_block()
+                ret = self.get_event_block()
             except zmq.ZMQError as ex:
                 if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
                     continue
