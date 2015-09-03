@@ -275,7 +275,7 @@ class SaltEvent(object):
             if match_type is not None and match_type != 'fnmatch':
                 raise RuntimeError(
                     'When not passing a tag, make sure '
-                    '\'match_type\' is \'None\' or \'fnmatch\.'
+                    '\'match_type\' is \'None\' or \'fnmatch\'.'
                 )
             match_type = 'fnmatch'
         match_func = self._get_match_func(match_type)
@@ -290,7 +290,7 @@ class SaltEvent(object):
             if match_type is not None and match_type != 'fnmatch':
                 raise RuntimeError(
                     'When not passing a tag, make sure '
-                    '\'match_type\' is \'None\' or \'fnmatch\.'
+                    '\'match_type\' is \'None\' or \'fnmatch\'.'
                 )
             match_type = 'fnmatch'
         match_func = self._get_match_func(match_type)
@@ -451,7 +451,7 @@ class SaltEvent(object):
     def get_event(self,
                   wait=5,
                   tag='',
-                  full=None,
+                  full=True,
                   use_pending=None,
                   pending_tags=None,
                   match_type=None,
@@ -500,12 +500,6 @@ class SaltEvent(object):
         request, it MUST subscribe the result to ensure the response is not lost
         should other regions of code call get_event for other purposes.
         '''
-        if full is not None:
-            salt.utils.warn_until(
-                'Nitrogen',
-                'The \'full\' keyword argument is deprecated and is simply ignored. '
-                'Please stop using it since it\'s support will be removed in {version}.'
-            )
         if use_pending is not None:
             salt.utils.warn_until(
                 'Nitrogen',
