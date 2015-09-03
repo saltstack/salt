@@ -139,16 +139,19 @@ if [ -n "${DIST}" ]; then
   APTCACHE="/var/cache/pbuilder/$DIST/aptcache"
 fi
 HOOKDIR="${HOME}/.pbuilder-hooks"
-OTHERMIRROR="deb http://ftp.us.debian.org/debian/ testing main contrib non-free | deb http://ftp.us.debian.org/debian/ unstable main contrib non-free | deb http://ftp.us.debian.org/debian/ experimental main contrib non-free"
+OTHERMIRROR="deb http://ftp.us.debian.org/debian/ stable  main contrib non-free | deb http://ftp.us.debian.org/debian/ testing main contrib non-free | deb http://ftp.us.debian.org/debian/ unstable main contrib non-free"
 '''
     home = os.path.expanduser('~')
     pbuilder_hooksdir = os.path.join(home, '.pbuilder-hooks')
     if not os.path.isdir(pbuilder_hooksdir):
         os.makedirs(pbuilder_hooksdir)
 
-    d05hook = os.path.join(pbuilder_hooksdir, 'D05apt-preferences')
-    with salt.utils.fopen(d05hook, 'w') as fow:
+    g05hook = os.path.join(pbuilder_hooksdir, 'G05apt-preferences')
+    with salt.utils.fopen(g05hook, 'w') as fow:
         fow.write('{0}'.format(hook_text))
+
+    cmd = 'chmod 755 {0}'.format(g05hook)
+    __salt__['cmd.run'](cmd)
 
     pbuilderrc = os.path.join(home, '.pbuilderrc')
     with salt.utils.fopen(pbuilderrc, 'w') as fow:
@@ -317,7 +320,7 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
             cmd = 'chown {0} -R {1}'.format(runas, results_dir)
             __salt__['cmd.run'](cmd)
 
-            cmd = 'pbuilder create'
+            cmd = 'pbuilder --create'
             __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
             cmd = 'pbuilder --build --buildresult {1} {0}'.format(dsc, results_dir)
             __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
