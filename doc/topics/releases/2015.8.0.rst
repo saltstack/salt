@@ -15,7 +15,7 @@ Send Event on State Completion
 
 A `fire_event` global state keyword argument was added that allows any state to
 send an event upon completion. Useful for custom progress bars and checking in
-on long state runs.
+on long state runs. See :ref:`fire_event <requisites-fire-event>`.
 
 ZeroMQ socket monitoring
 ========================
@@ -35,7 +35,7 @@ A new :conf_master:`default_top` option was added to load the state top file
 from a single, specific environment, rather than merging top data across all
 environments. Additionally, new :conf_master:`top_file_merge_strategy` and
 :conf_master:`env_order` options were added for more control over top file
-merging.
+merging. See :ref:`The Top File <states-top>`.
 
 Tornado TCP Transport
 =====================
@@ -52,7 +52,7 @@ performance.
      - TCP tests show
        performance degredation over time (:issue:`26051`)
      - TCP transport stacktrace on windows minion: Future exception was never
-       retrieved (:issue:`25718)
+       retrieved (:issue:`25718`)
      - [freebsd] TCP transport not working in 2015.8.0rc3 (:issue:`26364`)
 
 Proxy Minion Enhancements
@@ -80,19 +80,16 @@ with :mod:`gitfs <salt.fileserver.gitfs>`. Support for pygit2_ has been added,
 bringing with it the ability to access authenticated repositories.
 
 Using the new features will require updates to the git ext_pillar
-configuration, further details can be found :ref:`here
-<git-pillar-2015-8-0-and-later>`.
+configuration, further details can be found in the :ref:`pillar.git_pillar
+<git-pillar-2015-8-0-and-later>` docs.
 
 Salt Cloud Improvements
 =======================
 
 - Pricing data from several cloud providers (GCE, DigitalOcean, SoftLayer_HW, EC2)
-- All cloud providers now use standardized bootstrapping code
+- All cloud providers now use standardized bootstrapping code.
 - Modified the Linode Salt Cloud driver to use Linode's native API instead of
   depending on apache-libcloud or linode-python.
-- When querying for VMs in ``digital_ocean.py``, the number of VMs to include in
-  a page was changed from 20 (default) to 200 to reduce the number of API calls
-  to Digital
 
 Salt Cloud Changes
 ------------------
@@ -103,9 +100,7 @@ Salt Cloud Changes
   duplicate names of VMs before trying to create a new VM. Will now throw an
   error similarly to other salt-cloud drivers when trying to create a VM of the
   same name, even if the VM is in the ``terminated`` state.
-- Modified the Linode Salt Cloud driver to use Linode's native API instead of
-  depending on apache-libcloud or linode-python.
-- When querying for VMs in ``ditigal_ocean.py``, the number of VMs to include in
+- When querying for VMs in ``digital_ocean.py``, the number of VMs to include in
   a page was changed from 20 (default) to 200 to reduce the number of API calls
   to Digital Ocean.Ocean.
 
@@ -125,7 +120,7 @@ State and Execution Module Improvements
 - Deprecate ``enabled`` argument in ``pkgrepo.managed`` in favor of ``disabled``.
 - Archive module changes: In the ``archive.tar`` and ``archive.cmd_unzip``
   module functions, remove the arbitrary prefixing of the options string with
-  ``-``.  An options string beginning with a ``--long-option``, would have
+  ``-``. An options string beginning with a ``--long-option``, would have
   uncharacteristically needed its first ``-`` removed under the former scheme.
   Also, tar will parse its options differently if short options are used with or
   without a preceding ``-``, so it is better to not confuse the user into
@@ -138,10 +133,12 @@ State and Execution Module Improvements
 Windows Improvements
 ====================
 
-- Templatize Windows Software package definitions
-- Added additional capabilities to the user module for windows
-- Added new module for managing windows updates (win_wua)
-- Turned on multi-processing by default for windows in minion conf
+- Enhanced the windows minion silent installation with command line parameters
+  to configure the salt master and minion name. See :ref:`Silent Installer
+  Options <windows-installer-options>`.
+- Improved user management with additional capabilities in the user module for Windows.
+- Improved patch management with a new module for managing windows updates (:mod:`win_wua <modules.win_wua>`).
+- Turned on multi-processing by default for windows in minion configuration.
 
 Windows Software Repo Changes
 -----------------------------
@@ -190,7 +187,6 @@ seconds by specifying ``in_seconds=True``.
 Other Improvements
 ==================
 
-- Python 3
 - Sanitize sensitive fields in http.query
 - Allow authorization to be read from Django and eauth
 - Add templating to SMTP returner

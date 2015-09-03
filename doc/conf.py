@@ -50,6 +50,7 @@ MOCK_MODULES = [
     'Crypto.PublicKey',
     'Crypto.Random',
     'Crypto.Signature',
+    'Crypto.Signature.PKCS1_v1_5',
     'M2Crypto',
     'msgpack',
     'yaml',
@@ -87,6 +88,7 @@ MOCK_MODULES = [
     'tornado.httpserver',
     'tornado.httputil',
     'tornado.ioloop',
+    'tornado.simple_httpclient',
     'tornado.web',
     'tornado.websocket',
 
@@ -104,7 +106,6 @@ MOCK_MODULES = [
     'MySQLdb.cursors',
     'nagios_json',
     'psutil',
-    'psutil.version_info',
     'pycassa',
     'pymongo',
     'rabbitmq_server',
