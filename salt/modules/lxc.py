@@ -840,7 +840,8 @@ def _network_conf(conf_tuples=None, **kwargs):
     # (lxc.network.ipv4.gateway: auto)
     if (
         distutils.version.LooseVersion(version()) <= '1.0.7' and
-        True not in ['lxc.network.ipv4.gateway' in a for a in ret]
+        True not in ['lxc.network.ipv4.gateway' in a for a in ret] and
+        True in ['lxc.network.ipv4' in a for a in ret]
     ):
         ret.append({'lxc.network.ipv4.gateway': 'auto'})
     return ret
