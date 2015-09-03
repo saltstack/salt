@@ -137,7 +137,7 @@ class SPMClient(object):
             raise SPMInvocationError('A package file must be specified')
 
         pkg_file = args[1]
-        if not self.pkgfiles['{0}.path_exists'.format(self.files_prov)](pkg_file):
+        if not os.path.exists(pkg_file):
             raise SPMInvocationError('Package file {0} not found'.format(pkg_file))
 
         comps = pkg_file.split('-')
@@ -413,16 +413,14 @@ class SPMClient(object):
             if self.pkgfiles['{0}.path_isdir'.format(self.files_prov)](filerow[0]):
                 dirs.append(filerow[0])
                 continue
-            with salt.utils.fopen(filerow[0], 'r') as fh_:
-                file_hash = hashlib.sha1()
-                file_hash.update(fh_.read())
-                digest = file_hash.hexdigest()
-                if filerow[1] == digest:
-                    log.trace('Removing file {0}'.format(filerow[0]))
-                    self.pkgfiles['{0}.remove_file'.format(self.files_prov)](filerow[0], self.files_conn)
-                else:
-                    log.trace('Not removing file {0}'.format(filerow[0]))
-                self.pkgdb['{0}.unregister_file'.format(self.db_prov)](filerow[0], package, self.db_conn)
+            file_hash = hashlib.sha1()
+            digest = self.pkgfiles['{0}.hash_file'.format(self.files_prov)](filerow[0], file_hash, self.files_conn)
+            if filerow[1] == digest:
+                log.trace('Removing file {0}'.format(filerow[0]))
+                self.pkgfiles['{0}.remove_file'.format(self.files_prov)](filerow[0], self.files_conn)
+            else:
+                log.trace('Not removing file {0}'.format(filerow[0]))
+            self.pkgdb['{0}.unregister_file'.format(self.db_prov)](filerow[0], package, self.db_conn)
 
         # Clean up directories
         for dir_ in sorted(dirs, reverse=True):
