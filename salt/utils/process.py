@@ -35,6 +35,13 @@ except ImportError:
     pass
 
 
+def systemd_notify_call(action):
+    process = subprocess.Popen(['systemd-notify', action], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process.communicate()
+    status = process.poll()
+    return status == 0
+
+
 def notify_systemd():
     '''
     Notify systemd that this process has started
@@ -42,7 +49,10 @@ def notify_systemd():
     try:
         import systemd.daemon
     except ImportError:
+        if salt.utils.which('systemd-notify') and systemd_notify_call('--booted'):
+            return systemd_notify_call('--ready')
         return False
+
     if systemd.daemon.booted():
         try:
             return systemd.daemon.notify('READY=1')
