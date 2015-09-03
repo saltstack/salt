@@ -422,8 +422,6 @@ class SaltEvent(object):
                 if socks.get(self.sub) != zmq.POLLIN:
                     continue
 
-                # Please do not use non-blocking mode here. Reliability is
-                # more important than pure speed on the event bus.
                 if no_block is True:
                     ret = self.get_event_noblock()
                 else:
