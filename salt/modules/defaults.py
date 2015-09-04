@@ -42,19 +42,21 @@ def _get_files(pillar_name):
 
 def _load(defaults_files):
     '''
-    Loads given defaults default_files with corresponding loader.
+    Loads given defaults files with corresponding loader.
     '''
 
     for file_ in defaults_files:
         if not file_:
+            # Skip empty string returned by cp.fileclient.cache_files.
             continue
 
         suffix = file_.rsplit('.', 1)[-1]
-        if suffix in ('yml', 'yaml'):
+        if suffix == 'yaml':
             loader = yaml
         elif suffix == 'json':
             loader = json
         else:
+            log.debug("Failed to determine loader for %r", file_)
             continue
 
         if os.path.exists(file_):
@@ -85,14 +87,17 @@ def get(key, default=''):
     ``salt://core/defaults.yaml`` and ``salt://core/defaults.json``.
     '''
 
+    # Determine formula namespace from query
     if ':' in key:
         namespace, key = key.split(':', 1)
     else:
         namespace, key = key, None
 
+    # Fetch and load defaults formula files from states.
     defaults_files = _get_files(namespace)
     defaults = _load(defaults_files)
 
+    # Fetch value
     if key:
         return salt.utils.traverse_dict_and_list(defaults, key, default)
     else:
