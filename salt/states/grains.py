@@ -66,7 +66,7 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
             ret['changes'] = {'new': name}
         else:
             ret['comment'] = 'Grain {0} is set to be changed'.format(name)
-            ret['changes'] = {'new': name}
+            ret['changes'] = {'changed': {name: value}}
         return ret
     ret = __salt__['grains.set'](name, value, force=force)
     if ret['result'] is True and ret['changes'] != {}:
