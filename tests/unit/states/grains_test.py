@@ -670,7 +670,7 @@ class GrainsTestCase(TestCase):
                                   + "- correct\n"
         )
 
-    # 'append' function tests: 5
+    # 'append' function tests: 6
 
     def test_append(self):
         # Append to an existing list
@@ -688,6 +688,26 @@ class GrainsTestCase(TestCase):
                                   + "foo:\n"
                                   + "- bar\n"
                                   + "- baz\n"
+        )
+
+    def test_append_nested(self):
+        # Append to an existing nested list
+        self.setGrains({'a': 'aval', 'foo': {'list': ['bar']}})
+        ret = grains.append(
+            name='foo,list',
+            value='baz',
+            delimiter=',')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value baz was added to grain foo:list')
+        self.assertEqual(ret['changes'], {'added': 'baz'})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'list': ['bar', 'baz']}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  list:\n"
+                                  + "  - bar\n"
+                                  + "  - baz\n"
         )
 
     def test_append_already(self):
