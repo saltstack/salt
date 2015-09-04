@@ -271,13 +271,7 @@ class SaltEvent(object):
         to get_event.
         '''
         if tag is None:
-            tag = '*'
-            if match_type is not None and match_type != 'fnmatch':
-                raise RuntimeError(
-                    'When not passing a tag, make sure '
-                    '\'match_type\' is \'None\' or \'fnmatch\'.'
-                )
-            match_type = 'fnmatch'
+            return
         match_func = self._get_match_func(match_type)
         self.pending_tags.append([tag, match_func])
 
@@ -286,13 +280,7 @@ class SaltEvent(object):
         Un-subscribe to events matching the passed tag.
         '''
         if tag is None:
-            tag = '*'
-            if match_type is not None and match_type != 'fnmatch':
-                raise RuntimeError(
-                    'When not passing a tag, make sure '
-                    '\'match_type\' is \'None\' or \'fnmatch\'.'
-                )
-            match_type = 'fnmatch'
+            return
         match_func = self._get_match_func(match_type)
 
         self.pending_tags.remove([tag, match_func])
