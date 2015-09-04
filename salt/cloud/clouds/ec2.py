@@ -1232,7 +1232,7 @@ def _create_eni_if_necessary(interface):
         _new_eip = _request_eip(interface)
         _associate_eip_with_interface(eni_id, _new_eip)
     elif interface.get('allocate_new_eips'):
-        addr_list = _list_interface_private_addresses(eni_desc)
+        addr_list = _list_interface_private_addrs(eni_desc)
         eip_list = []
         for idx, addr in enumerate(addr_list):
             eip_list.append(_request_eip(interface))
@@ -1257,7 +1257,7 @@ def _create_eni_if_necessary(interface):
             'NetworkInterfaceId': eni_id}
 
 
-def _list_interface_private_addresses(eni_desc):
+def _list_interface_private_addrs(eni_desc):
     '''
     Returns a list of all of the private IP addresses attached to a
     network interface. The 'primary' address will be listed first.
