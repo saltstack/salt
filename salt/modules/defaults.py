@@ -72,8 +72,6 @@ def get(key, default=''):
     a default value for a pillar from defaults.json or defaults.yaml
     files that are stored in the root of a salt formula.
 
-    When called from the CLI it works exactly like pillar.get.
-
     CLI Example:
 
     .. code-block:: bash
