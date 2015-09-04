@@ -258,7 +258,7 @@ def ssh_username(vm_):
     initial = usernames[:]
 
     # Add common usernames to the list to be tested
-    for name in ('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root'):
+    for name in 'ec2-user', 'ubuntu', 'admin', 'bitnami', 'root':
         if name not in usernames:
             usernames.append(name)
     # Add the user provided usernames to the end of the list since enough time

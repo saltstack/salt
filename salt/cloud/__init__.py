@@ -2275,7 +2275,7 @@ def run_parallel_map_providers_query(data, queue=None):
             exc_info_on_loglevel=logging.DEBUG
         )
         # Failed to communicate with the provider, don't list any nodes
-        return (data['alias'], data['driver'], ())
+        return data['alias'], data['driver'], ()
 
 
 # for pickle and multiprocessing, we can't use directly decorators
