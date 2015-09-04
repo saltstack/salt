@@ -316,6 +316,8 @@ class _LegacyGitPillar(object):
             branch = opts.get('environment') or 'base'
             if branch == 'base':
                 branch = opts.get('gitfs_base') or 'master'
+        elif ':' in branch:
+            branch = branch.split(':', 1)[0]
         return branch
 
     def update(self):
