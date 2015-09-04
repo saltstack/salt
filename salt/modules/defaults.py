@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
 import inspect
 import json
+import logging
 import os
 import yaml
 
 import salt.fileclient
 import salt.utils
-import salt.ext.six as six
+
 
 __virtualname__ = 'defaults'
+
+
+log = logging.getLogger(__name__)
 
 
 def _mk_client():
@@ -32,22 +35,35 @@ def _get_files(pillar_name):
 
     for ext in ('yaml', 'json'):
         source_url = 'salt://{0}/{1}'.format(pillar_name, 'defaults.' + ext)
+        log.debug("Catching %r", source_url)
         paths.append(source_url)
 
     return __context__['cp.fileclient'].cache_files(paths)
 
 
-def _load(defaults_path):
+def _load(defaults_files):
     '''
-    Given a pillar_name and the template cache location, attempt to load
-    the defaults.json from the cache location. If it does not exist, try
-    defaults.yaml.
+    Loads given defaults default_files with corresponding loader.
     '''
-    for loader in json, yaml:
-        defaults_file = os.path.join(defaults_path, 'defaults.' + loader.__name__)
-        if os.path.exists(defaults_file):
-            with salt.utils.fopen(defaults_file) as fhr:
+
+    for file_ in defaults_files:
+        if not file_:
+            continue
+
+        suffix = file_.rsplit('.', 1)[-1]
+        if suffix in ('yml', 'yaml'):
+            loader = yaml
+        elif suffix == 'json':
+            loader = json
+        else:
+            continue
+
+        if os.path.exists(file_):
+            log.debug("Reading defaults from %r", file_)
+            with salt.utils.fopen(file_) as fhr:
                 defaults = loader.load(fhr)
+                log.debug("Read defaults %r", defaults)
+
             return defaults
 
 
@@ -65,71 +81,22 @@ def get(key, default=''):
 
         salt '*' defaults.get core:users:root
 
-    When called from an SLS file, it works by first reading a defaults.json
-    and second a defaults.yaml file. If the key exists in these files and
-    does not exist in a pillar named after the formula, the value from the
-    defaults file is used.
+    The defaults is computed from pillar name. The first entry is considered as
+    the formula namespace. ``defaults.yaml`` and ``defaults.json`` are possible
+    filename for formula defaults.
 
-    Example core/defaults.json file for the 'core' formula:
-
-    .. code-block:: json
-
-        {
-            "users": {
-                "root": 0
-            }
-        }
-
-    With this, from a state file you can use salt['defaults.get']('users:root')
-    to read the '0' value from defaults.json if a core:users:root pillar
-    key is not defined.
+    For example, ``core:users:root`` will try to load
+    ``salt://core/defaults.yaml`` and ``salt://core/defaults.json``.
     '''
+    if ':' in key:
+        namespace, key = key.split(':', 1)
+    else:
+        namespace, key = key, None
 
-    sls = None
-    tmplpath = None
+    defaults_files = _get_files(namespace)
+    defaults = _load(defaults_files)
 
-    for frame in inspect.stack():
-        if sls is not None and tmplpath is not None:
-            break
-
-        frame_args = inspect.getargvalues(frame[0]).locals
-
-        for _sls in (
-            None if not isinstance(frame_args.get('context'), dict) else frame_args.get('context').get('__sls__'),
-            frame_args.get('mods', [None])[0],
-            frame_args.get('sls')
-        ):
-            if sls is not None:
-                break
-            sls = _sls
-
-        for _tmpl in (
-            frame_args.get('tmplpath'),
-            frame_args.get('tmplsrc')
-        ):
-            if tmplpath is not None:
-                break
-            tmplpath = _tmpl
-
-    if not sls:  # this is the case when called from CLI
-        return __salt__['pillar.get'](key, default)
-
-    pillar_name = sls.split('.')[0]
-    defaults_path = tmplpath.split(pillar_name)[0] + pillar_name
-
-    _get_files(pillar_name)
-
-    defaults = _load(defaults_path)
-
-    value = __salt__['pillar.get']('{0}:{1}'.format(pillar_name, key), None)
-
-    if value is None:
-        value = salt.utils.traverse_dict_and_list(defaults, key, None)
-
-    if value is None:
-        value = default
-
-    if isinstance(value, six.text_type):
-        value = str(value)
-
-    return value
+    if key:
+        return salt.utils.traverse_dict_and_list(defaults, key, default)
+    else:
+        return defaults
