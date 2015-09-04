@@ -1177,10 +1177,9 @@ def _create_eni_if_necessary(interface):
         if 'item' in subnet_query_result:
             if isinstance(subnet_query_result['item'], dict):
                 for key, value in subnet_query_result['item'].iteritems():
-                    if key == "subnetId":
-                        if value == interface['SubnetId']:
-                            found = True
-                            break
+                    if key == "subnetId" and value == interface['SubnetId']:
+                        found = True
+                        break
             else:
                 for subnet in subnet_query_result['item']:
                     if subnet['subnetId'] == interface['SubnetId']:
@@ -1651,11 +1650,10 @@ def request_instance(vm_=None, call=None):
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
     )
 
-    if set_del_root_vol_on_destroy is not None:
-        if not isinstance(set_del_root_vol_on_destroy, bool):
-            raise SaltCloudConfigError(
-                '\'del_root_vol_on_destroy\' should be a boolean value.'
-            )
+    if set_del_root_vol_on_destroy and not isinstance(set_del_root_vol_on_destroy, bool):
+        raise SaltCloudConfigError(
+            '\'del_root_vol_on_destroy\' should be a boolean value.'
+        )
 
     vm_['set_del_root_vol_on_destroy'] = set_del_root_vol_on_destroy
 
@@ -1737,11 +1735,10 @@ def request_instance(vm_=None, call=None):
         'del_all_vols_on_destroy', vm_, __opts__, search_global=False, default=False
     )
 
-    if set_del_all_vols_on_destroy is not None:
-        if not isinstance(set_del_all_vols_on_destroy, bool):
-            raise SaltCloudConfigError(
-                '\'del_all_vols_on_destroy\' should be a boolean value.'
-            )
+    if set_del_all_vols_on_destroy and not isinstance(set_del_all_vols_on_destroy, bool):
+        raise SaltCloudConfigError(
+            '\'del_all_vols_on_destroy\' should be a boolean value.'
+        )
 
     salt.utils.cloud.fire_event(
         'event',

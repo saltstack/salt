@@ -372,9 +372,10 @@ def create(vm_):
         '''
         node_info = pass_conn.getVirtualGuests(id=response['id'], mask=mask)
         for node in node_info:
-            if node['id'] == response['id']:
-                if 'passwords' in node['operatingSystem'] and len(node['operatingSystem']['passwords']) > 0:
-                    return node['operatingSystem']['passwords'][0]['password']
+            if node['id'] == response['id'] \
+                    and 'passwords' in node['operatingSystem'] \
+                    and len(node['operatingSystem']['passwords']) > 0:
+                return node['operatingSystem']['passwords'][0]['password']
         time.sleep(5)
         return False
 

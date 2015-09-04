@@ -637,9 +637,9 @@ class Cloud(object):
                 # If driver has function list_nodes_min, just replace it
                 # with query param to check existing vms on this driver
                 # for minimum information, Otherwise still use query param.
-                if 'selected_query_option' not in opts:
-                    if '{0}.list_nodes_min'.format(driver) in self.clouds:
-                        this_query = 'list_nodes_min'
+                if 'selected_query_option' not in opts and '{0}.list_nodes_min'.format(driver) in self.clouds:
+                    this_query = 'list_nodes_min'
+
                 fun = '{0}.{1}'.format(driver, this_query)
                 if fun not in self.clouds:
                     log.error(
@@ -697,12 +697,8 @@ class Cloud(object):
                 # the search returns the same instance for each provider
                 # because amazon returns all instances in a region, not
                 # availability zone.
-                if profile:
-                    if alias not in \
-                        self.opts['profiles'][profile]['provider'].split(
-                            ':'
-                            )[0]:
-                        continue
+                if profile and alias not in self.opts['profiles'][profile]['provider'].split(':')[0]:
+                    continue
 
                 for vm_name, details in six.iteritems(vms):
                     # XXX: The logic below can be removed once the aws driver
@@ -1048,17 +1044,15 @@ class Cloud(object):
                 salt.utils.cloud.remove_key(self.opts['pki_dir'], os.path.basename(key_file))
                 continue
 
-            if not os.path.isfile(key_file) and globbed_key_file:
-                # Since we have globbed matches, there are probably
-                # some keys for which their minion configuration has
-                # append_domain set.
-                if len(globbed_key_file) == 1:
-                    # Single entry, let's remove it!
-                    salt.utils.cloud.remove_key(
-                        self.opts['pki_dir'],
-                        os.path.basename(globbed_key_file[0])
-                    )
-                    continue
+            # Since we have globbed matches, there are probably some keys for which their minion
+            # configuration has append_domain set.
+            if not os.path.isfile(key_file) and globbed_key_file and len(globbed_key_file) == 1:
+                # Single entry, let's remove it!
+                salt.utils.cloud.remove_key(
+                    self.opts['pki_dir'],
+                    os.path.basename(globbed_key_file[0])
+                )
+                continue
 
             # Since we can't get the profile or map entry used to create
             # the VM, we can't also get the append_domain setting.
@@ -1208,22 +1202,21 @@ class Cloud(object):
         if 'append_domain' in minion_dict:
             key_id = '.'.join([key_id, minion_dict['append_domain']])
 
-        if make_master is True:
-            if 'master_pub' not in vm_ and 'master_pem' not in vm_:
-                log.debug(
-                    'Generating the master keys for {0[name]!r}'.format(
-                        vm_
-                    )
+        if make_master is True and 'master_pub' not in vm_ and 'master_pem' not in vm_:
+            log.debug(
+                'Generating the master keys for {0[name]!r}'.format(
+                    vm_
                 )
-                master_priv, master_pub = salt.utils.cloud.gen_keys(
-                    salt.config.get_cloud_config_value(
-                        'keysize',
-                        vm_,
-                        self.opts
-                    )
+            )
+            master_priv, master_pub = salt.utils.cloud.gen_keys(
+                salt.config.get_cloud_config_value(
+                    'keysize',
+                    vm_,
+                    self.opts
                 )
-                vm_['master_pub'] = master_pub
-                vm_['master_pem'] = master_priv
+            )
+            vm_['master_pub'] = master_pub
+            vm_['master_pem'] = master_priv
 
         if local_master is True and deploy is True:
             # Accept the key on the local master
@@ -1662,7 +1655,7 @@ class Map(Cloud):
                             'Only \'start\', \'stop\', and \'reboot\' are supported options.'.format(action)
                         )
                         raise SaltCloudException()
-                    if (vm_details != 'Absent') and (vm_details['state'].lower() in state_action):
+                    if vm_details != 'Absent' and vm_details['state'].lower() in state_action:
                         vm_names.append(vm_name)
         return vm_names
 
@@ -1845,16 +1838,17 @@ class Map(Cloud):
                         overrides[setting] = overrides.pop(deprecated)
 
                 # merge minion grains from map file
-                if 'minion' in overrides and 'minion' in nodedata:
-                    if 'grains' in overrides['minion']:
-                        if 'grains' in nodedata['minion']:
-                            nodedata['minion']['grains'].update(
-                                overrides['minion']['grains']
-                            )
-                            del overrides['minion']['grains']
-                            # remove minion key if now is empty dict
-                            if len(overrides['minion']) == 0:
-                                del overrides['minion']
+                if 'minion' in overrides and \
+                        'minion' in nodedata and \
+                        'grains' in overrides['minion'] and \
+                        'grains' in nodedata['minion']:
+                    nodedata['minion']['grains'].update(
+                        overrides['minion']['grains']
+                    )
+                    del overrides['minion']['grains']
+                    # remove minion key if now is empty dict
+                    if len(overrides['minion']) == 0:
+                        del overrides['minion']
 
                 nodedata.update(overrides)
                 # Add the computed information to the return data
@@ -1868,9 +1862,8 @@ class Map(Cloud):
             for alias, drivers in six.iteritems(pmap):
                 for driver, vms in six.iteritems(drivers):
                     for vm_name, details in six.iteritems(vms):
-                        if vm_name == name:
-                            if driver not in matches:
-                                matches[driver] = details['state']
+                        if vm_name == name and driver not in matches:
+                            matches[driver] = details['state']
             return matches
 
         for alias, drivers in six.iteritems(pmap):
