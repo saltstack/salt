@@ -325,7 +325,7 @@ class GrainsTestCase(TestCase):
             name='foo',
             value='newbar')
         self.assertEqual(ret['result'], None)
-        self.assertEqual(ret['changes'], {'new': 'foo'})
+        self.assertEqual(ret['changes'], {'changed': {'foo': 'newbar'}})
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': 'bar'})
