@@ -24,26 +24,22 @@ def _mk_client():
             salt.fileclient.get_file_client(__opts__)
 
 
-def _get_files(pillar_name):
+def _load(formula):
     '''
-    Generates a list of salt://<pillar_name>/defaults.(json|yaml) files
+    Generates a list of salt://<formula>/defaults.(json|yaml) files
     and fetches them from the Salt master.
+
+    Returns first defaults file as python dict.
     '''
+
+    # Compute possibilities
     _mk_client()
-    pillar_name = pillar_name.replace('.', '/')
     paths = []
-
     for ext in ('yaml', 'json'):
-        source_url = 'salt://{0}/{1}'.format(pillar_name, 'defaults.' + ext)
+        source_url = 'salt://{0}/{1}'.format(formula, 'defaults.' + ext)
         paths.append(source_url)
-
-    return __context__['cp.fileclient'].cache_files(paths)
-
-
-def _load(defaults_files):
-    '''
-    Loads given defaults files with corresponding loader.
-    '''
+    # Fetch files from master
+    defaults_files = __context__['cp.fileclient'].cache_files(paths)
 
     for file_ in defaults_files:
         if not file_:
@@ -65,7 +61,7 @@ def _load(defaults_files):
                 defaults = loader.load(fhr)
                 log.debug("Read defaults %r", defaults)
 
-            return defaults
+            return defaults or {}
 
 
 def get(key, default=''):
@@ -94,8 +90,7 @@ def get(key, default=''):
         namespace, key = key, None
 
     # Fetch and load defaults formula files from states.
-    defaults_files = _get_files(namespace)
-    defaults = _load(defaults_files)
+    defaults = _load(namespace)
 
     # Fetch value
     if key:
