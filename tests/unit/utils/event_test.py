@@ -173,12 +173,15 @@ class TestSaltEvent(TestCase):
         '''Test a single event is received, no block'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.fire_event({'data': 'foo1'}, 'evt1')
-            # This is too fast and will be None but assures we're not blocking
+            start = time.time()
+            finish = start + 5
             evt1 = me.get_event(wait=0, tag='evt1', no_block=True)
+            # We should get None and way before the 5 seconds wait since it's
+            # non-blocking, otherwise it would wait for an event which we
+            # didn't even send
             self.assertIsNone(evt1, None)
-            # A little sleep and we should get our event
-            time.sleep(0.01)
+            self.assertLess(start, finish)
+            me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(wait=0, tag='evt1')
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
