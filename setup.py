@@ -978,6 +978,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             data_files[0][1].extend(['doc/man/salt-cp.1',
                                      'doc/man/salt-minion.1',
+                                     'doc/man/salt-proxy.1',
                                      'doc/man/salt-unity.1'])
             return data_files
 
@@ -988,6 +989,7 @@ class SaltDistribution(distutils.dist.Distribution):
                                  'doc/man/salt-key.1',
                                  'doc/man/salt-master.1',
                                  'doc/man/salt-minion.1',
+                                 'doc/man/salt-proxy.1',
                                  'doc/man/salt-run.1',
                                  'doc/man/spm.1',
                                  'doc/man/salt-ssh.1',

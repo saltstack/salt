@@ -6,13 +6,13 @@ The Saltify module is designed to install Salt on a remote machine, virtual or
 bare metal, using SSH. This module is useful for provisioning machines which
 are already installed, but not Salted.
 
-Use of this module requires no configuration in the main cloud configuration
-file. However, profiles must still be configured, as described in the
-:ref:`core config documentation <config_saltify>`.
+Use of this module requires some configuration in cloud profile and provider
+files as described in the
+:ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs

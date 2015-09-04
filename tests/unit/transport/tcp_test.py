@@ -58,6 +58,7 @@ class BaseTCPReqCase(TestCase):
         cls.server_channel.pre_fork(cls.process_manager)
 
         cls.io_loop = tornado.ioloop.IOLoop()
+        cls.io_loop.make_current()
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
 
         cls.server_thread = threading.Thread(target=cls.io_loop.start)

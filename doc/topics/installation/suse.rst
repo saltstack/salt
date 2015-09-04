@@ -2,7 +2,7 @@
 SUSE Installation
 =================
 
-With openSUSE 13.1, Salt 0.16.4 has been available in the primary repositories.
+With openSUSE 13.2, Salt 2014.1.11 is available in the primary repositories.
 The devel:language:python repo will have more up to date versions of salt,
 all package development will be done there.
 
@@ -106,30 +106,6 @@ For openSUSE 13.1 run the following as root:
 .. code-block:: bash
 
     zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/openSUSE_13.1/devel:languages:python.repo
-    zypper refresh
-    zypper install salt salt-minion salt-master
-
-For openSUSE 12.3 run the following as root:
-
-.. code-block:: bash
-
-    zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/openSUSE_12.3/devel:languages:python.repo
-    zypper refresh
-    zypper install salt salt-minion salt-master
-
-For openSUSE 12.2 run the following as root:
-
-.. code-block:: bash
-
-    zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/openSUSE_12.2/devel:languages:python.repo
-    zypper refresh
-    zypper install salt salt-minion salt-master
-
-For openSUSE 12.1 run the following as root:
-
-.. code-block:: bash
-
-    zypper addrepo http://download.opensuse.org/repositories/devel:languages:python/openSUSE_12.1/devel:languages:python.repo
     zypper refresh
     zypper install salt salt-minion salt-master
 

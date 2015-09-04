@@ -56,6 +56,11 @@ performance.
        retrieved (:issue:`25718)
      - [freebsd] TCP transport not working in 2015.8.0rc3 (:issue:`26364`)
 
+Proxy Minion Enhancements
+=========================
+
+Proxy Minions have undergone a significant overhaul in 2015.8, see :ref:`Proxy Minion Enhancements <proxy-2015.8.0>`.
+
 Core Changes
 ============
 

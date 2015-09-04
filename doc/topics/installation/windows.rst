@@ -23,7 +23,7 @@ minion exe>` should match the contents of the corresponding md5 file.
 
 `Earlier builds from supported branches <https://repo.saltstack.com/windows/>`__
 
-`Archived builds from unsupported branches <https://repo.saltstack.com/archive/>`__
+`Archived builds from unsupported branches <https://repo.saltstack.com/windows/archive/>`__
 
 .. note::
 
