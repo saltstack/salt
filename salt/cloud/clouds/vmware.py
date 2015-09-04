@@ -103,6 +103,8 @@ except ImportError:
     except ImportError:
         HAS_SIX = False
 
+IP_RE = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -783,15 +785,14 @@ def _wait_for_ip(vm_ref, max_wait):
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting to retrieve IPv4 information [{1} s]".format(vm_ref.name, time_counter))
 
-        if vm_ref.summary.guest.ipAddress:
-            if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
-                log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
-                return vm_ref.summary.guest.ipAddress
+        if vm_ref.summary.guest.ipAddress and match(IP_RE, vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
+            log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
+            return vm_ref.summary.guest.ipAddress
 
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
-                    if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
+                    if match(IP_RE, current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
                         log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
                         return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
@@ -2381,24 +2382,24 @@ def create(vm_):
             config=config_spec
         )
 
-        if devices and 'network' in list(devices.keys()):
-            if "Windows" not in object_ref.config.guestFullName:
-                global_ip = vim.vm.customization.GlobalIPSettings()
-                if 'dns_servers' in list(vm_.keys()):
-                    global_ip.dnsServerList = vm_['dns_servers']
+        if devices and 'network' in list(devices.keys()) and 'Windows' not in object_ref.config.guestFullName:
+            global_ip = vim.vm.customization.GlobalIPSettings()
 
-                identity = vim.vm.customization.LinuxPrep()
-                hostName = vm_name.split('.')[0]
-                domainName = vm_name.split('.', 1)[-1]
-                identity.hostName = vim.vm.customization.FixedName(name=hostName)
-                identity.domain = domainName if hostName != domainName else domain
+            if 'dns_servers' in list(vm_.keys()):
+                global_ip.dnsServerList = vm_['dns_servers']
 
-                custom_spec = vim.vm.customization.Specification(
-                    globalIPSettings=global_ip,
-                    identity=identity,
-                    nicSettingMap=specs['nics_map']
-                )
-                clone_spec.customization = custom_spec
+            identity = vim.vm.customization.LinuxPrep()
+            hostName = vm_name.split('.')[0]
+            domainName = vm_name.split('.', 1)[-1]
+            identity.hostName = vim.vm.customization.FixedName(name=hostName)
+            identity.domain = domainName if hostName != domainName else domain
+
+            custom_spec = vim.vm.customization.Specification(
+                globalIPSettings=global_ip,
+                identity=identity,
+                nicSettingMap=specs['nics_map']
+            )
+            clone_spec.customization = custom_spec
 
         if not template:
             clone_spec.powerOn = power
