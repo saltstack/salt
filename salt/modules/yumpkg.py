@@ -1046,8 +1046,14 @@ def install(name=None,
                 downgrade.append(pkgstr)
 
     if targets:
-        cmd = '{yum_command} -y {repo} {exclude} {branch} {gpgcheck} install {pkg}'.format(
+        if _yum() == 'dnf':
+            dnf_args='--best --allowerasing'
+        else:
+            dnf_args=''
+
+        cmd = '{yum_command} -y {dnf} {repo} {exclude} {branch} {gpgcheck} install {pkg}'.format(
             yum_command=_yum(),
+            dnf=dnf_args,
             repo=repo_arg,
             exclude=exclude_arg,
             branch=branch_arg,
