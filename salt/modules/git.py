@@ -709,13 +709,20 @@ def clone(cwd,
         if not isinstance(name, six.string_types):
             name = str(name)
         command.append(name)
+        if not os.path.exists(cwd):
+            os.makedirs(cwd)
+        clone_cwd = cwd
     else:
         command.append(cwd)
-    # Use '/tmp' instead of $HOME (/root for root user) to work around upstream
-    # git bug. See the following comment on the Salt bug tracker for more info:
-    # https://github.com/saltstack/salt/issues/15519#issuecomment-128531310
+        # Use '/tmp' instead of $HOME (/root for root user) to work around
+        # upstream git bug. See the following comment on the Salt bug tracker
+        # for more info:
+        # https://github.com/saltstack/salt/issues/15519#issuecomment-128531310
+        # On Windows, just fall back to None (runs git clone command using the
+        # home directory as the cwd).
+        clone_cwd = '/tmp' if not salt.utils.is_windows() else None
     _git_run(command,
-             cwd='/tmp' if name is None else cwd,
+             cwd=clone_cwd,
              runas=user,
              identity=identity,
              ignore_retcode=ignore_retcode)
