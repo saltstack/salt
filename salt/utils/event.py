@@ -408,6 +408,8 @@ class SaltEvent(object):
             wait = 0
         while (run_once is False and not wait) or time.time() <= timeout_at:
             if no_block is True:
+                if run_once is True:
+                    break
                 # Trigger that at least a single iteration has gone through
                 run_once = True
             try:
