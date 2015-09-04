@@ -34,14 +34,16 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
     :param delimiter: A delimiter different from the default can be provided.
         .. versionadded:: FIXME
 
-    It is now capable to set a grain to a dict and supports nested grains.
+    It is now capable to set a grain to a complex value (ie. lists and dicts)
+    and supports nested grains as well.
 
     If the grain does not yet exist, a new grain is set to the given value. For
-    the grain is nested, the necessary keys are created if they don't exist. If
-    a given is an existing value, it will be converted, but an existing value
+    a nested grain, the necessary keys are created if they don't exist. If
+    a given key is an existing value, it will be converted, but an existing value
     different from the given key will fail the state.
+
     If the grain with the given name exists, its value is updated to the new
-    value unless its existing or provided type is a list or a dict. Use
+    value unless its existing or provided value is complex (list or dict). Use
     `force: True` to overwrite.
 
     .. code-block:: yaml
@@ -49,6 +51,13 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
       cheese:
         grains.present:
           - value: edam
+
+      nested_grain_with_complex_value:
+        grains.present:
+          - name: icinga:Apache SSL
+          - value:
+            - command: check_https
+            - params:  -H localhost -p 443 -S
     '''
     name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {'name': name,
