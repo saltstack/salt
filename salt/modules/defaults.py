@@ -35,7 +35,6 @@ def _get_files(pillar_name):
 
     for ext in ('yaml', 'json'):
         source_url = 'salt://{0}/{1}'.format(pillar_name, 'defaults.' + ext)
-        log.debug("Catching %r", source_url)
         paths.append(source_url)
 
     return __context__['cp.fileclient'].cache_files(paths)
