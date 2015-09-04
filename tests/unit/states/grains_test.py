@@ -78,7 +78,7 @@ class GrainsTestCase(TestCase):
         with open(grains_file, "w+") as grf:
             grf.write(cstr)
 
-    # 'present' function tests: 10
+    # 'present' function tests: 12
 
     def test_present_add(self):
         # Set a non existing grain
@@ -126,6 +126,24 @@ class GrainsTestCase(TestCase):
                                   + "  is:\n"
                                   + "    nested:\n"
                                   + "      bar: is a dict\n"
+        )
+
+    def test_present_add_key_to_existing(self):
+        self.setGrains({'a': 'aval', 'foo': {'k1': 'v1'}})
+        # Fails setting a grain to a dict
+        ret = grains.present(
+            name='foo:k2',
+            value='v2')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Set grain foo:k2 to v2')
+        self.assertEqual(ret['changes'], {'foo': {'k2': 'v2', 'k1': 'v1'}})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'k1': 'v1', 'k2': 'v2'}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  k1: v1\n"
+                                  + "  k2: v2\n"
         )
 
     def test_present_already_set(self):
@@ -309,6 +327,24 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
 
+    def test_present_fail_merge_dict(self):
+        self.setGrains({'a': 'aval', 'foo': {'k1': 'v1'}})
+        # Fails setting a grain to a dict
+        ret = grains.present(
+            name='foo',
+            value={'k2': 'v2'})
+        self.assertEqual(ret['result'], False)
+        self.assertEqual(ret['comment'], 'The key \'foo\' exists but '
+                                       + 'is a dict or a list. '
+                                       + 'Use \'force=True\' to overwrite.')
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'k1': 'v1'}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  k1: v1\n"
+        )
+
     def test_present_force_to_set_dict_or_list(self):
         self.setGrains({'a': 'aval', 'foo': 'bar'})
         # Force to overwrite a grain to a list
@@ -471,7 +507,7 @@ class GrainsTestCase(TestCase):
                                   + "foo: bar\n"
         )
 
-    # 'absent' function tests: 5
+    # 'absent' function tests: 6
 
     def test_absent_already(self):
         # Unset a non existent grain
@@ -547,6 +583,20 @@ class GrainsTestCase(TestCase):
                                   + "- order\n"
                                   + "- is: nested\n"
                                   + "- correct\n"
+        )
+
+    def test_absent_unset_test(self):
+        grains.__opts__['test'] = True
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
+        # Overwrite an existing grain
+        ret = grains.absent(name='foo')
+        self.assertEqual(ret['result'], None)
+        self.assertEqual(ret['changes'], {'grain': 'foo', 'value': None})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': 'bar'})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo: bar\n"
         )
 
     def test_absent_fails_nested_complex_grain(self):
