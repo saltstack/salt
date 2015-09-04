@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import inspect
+from __future__ import absolute_import
 import json
 import logging
 import os
@@ -81,13 +81,13 @@ def get(key, default=''):
 
         salt '*' defaults.get core:users:root
 
-    The defaults is computed from pillar name. The first entry is considered as
-    the formula namespace. ``defaults.yaml`` and ``defaults.json`` are possible
-    filename for formula defaults.
+    The defaults is computed from pillar key. The first entry is considered as
+    the formula namespace.
 
-    For example, ``core:users:root`` will try to load
+    For example, querying ``core:users:root`` will try to load
     ``salt://core/defaults.yaml`` and ``salt://core/defaults.json``.
     '''
+
     if ':' in key:
         namespace, key = key.split(':', 1)
     else:
