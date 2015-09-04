@@ -329,11 +329,17 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
     return setval(key, grains)
 
 
-def remove(key, val):
+def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.17.0
 
     Remove a value from a list in the grains config file
+
+    :param delimiter: The key can be a nested dict key. Use this parameter to
+        specify the delimiter you use.
+        You can now append values to a list in nested dictionnary grains. If the
+        list doesn't exist at this level, it will be created.
+        .. versionadded:: FIXME
 
     CLI Example:
 
@@ -341,12 +347,20 @@ def remove(key, val):
 
         salt '*' grains.remove key val
     '''
-    grains = get(key, [])
+    grains = get(key, [], delimiter)
     if not isinstance(grains, list):
         return 'The key {0} is not a valid list'.format(key)
     if val not in grains:
         return 'The val {0} was not in the list {1}'.format(val, key)
     grains.remove(val)
+
+    while delimiter in key:
+        key, rest = key.rsplit(delimiter, 1)
+        _grain = get(key, None, delimiter)
+        if isinstance(_grain, dict):
+            _grain.update({rest: grains})
+        grains = _grain
+
     return setval(key, grains)
 
 

@@ -801,7 +801,7 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval'})
 
-    # 'list_present' function tests: 6
+    # 'list_present' function tests: 7
 
     def test_list_present(self):
         self.setGrains({'a': 'aval', 'foo': ['bar']})
@@ -820,10 +820,12 @@ class GrainsTestCase(TestCase):
                                   + "- baz\n"
         )
 
+    def test_list_present_nested(self):
         self.setGrains({'a': 'aval', 'foo': {'is': {'nested': ['bar']}}})
         ret = grains.list_present(
-            name='foo:is:nested',
-            value='baz')
+            name='foo,is,nested',
+            value='baz',
+            delimiter=',')
         self.assertEqual(ret['result'], True)
         self.assertEqual(ret['comment'], 'Append value baz to grain foo:is:nested')
         self.assertEqual(ret['changes'], {'new': {'foo': {'is': {'nested': ['bar', 'baz']}}}})
@@ -921,7 +923,7 @@ class GrainsTestCase(TestCase):
                                   + "- bar\n"
         )
 
-    # 'list_absent' function tests: 4
+    # 'list_absent' function tests: 6
 
     def test_list_absent(self):
         self.setGrains({'a': 'aval', 'foo': ['bar']})
@@ -938,6 +940,22 @@ class GrainsTestCase(TestCase):
                                   + "foo: []\n"
         )
 
+    def test_list_absent_nested(self):
+        self.setGrains({'a': 'aval', 'foo': {'list': ['bar']}})
+        ret = grains.list_absent(
+            name='foo:list',
+            value='bar')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value bar was deleted from grain foo:list')
+        self.assertEqual(ret['changes'], {'deleted': 'bar'})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': {'list': []}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  list: []\n"
+        )
+
     def test_list_absent_inexistent(self):
         self.setGrains({'a': 'aval'})
         ret = grains.list_absent(
@@ -945,6 +963,19 @@ class GrainsTestCase(TestCase):
             value='baz')
         self.assertEqual(ret['result'], True)
         self.assertEqual(ret['comment'], 'Grain foo does not exist')
+        self.assertEqual(ret['changes'], {})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval'})
+        self.assertGrainFileContent("a: aval\n")
+
+    def test_list_absent_inexistent_nested(self):
+        self.setGrains({'a': 'aval'})
+        ret = grains.list_absent(
+            name='foo:list',
+            value='baz')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Grain foo:list does not exist')
         self.assertEqual(ret['changes'], {})
         self.assertEqual(
             grains.__grains__,
