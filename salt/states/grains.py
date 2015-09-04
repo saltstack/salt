@@ -301,7 +301,8 @@ def absent(name,
     return ret
 
 
-def append(name, value, convert=False):
+def append(name, value, convert=False,
+           delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 2014.7.0
 
@@ -317,17 +318,21 @@ def append(name, value, convert=False):
         If convert is False and the grain contains non-list contents, an error
         is given. Defaults to False.
 
+    :param delimiter: A delimiter different from the default can be provided.
+        .. versionadded:: FIXME
+
     .. code-block:: yaml
 
       grain_name:
         grains.append:
           - value: to_be_appended
     '''
+    name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
-    grain = __grains__.get(name)
+    grain = __salt__['grains.get'](name, None)
     if grain:
         if isinstance(grain, list):
             if value in grain:
