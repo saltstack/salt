@@ -641,7 +641,7 @@ def create_node(vm_):
     vmhost = vm_['host']
     newnode['vmid'] = _get_next_vmid()
 
-    for prop in ('cpuunits', 'description', 'memory', 'onboot'):
+    for prop in 'cpuunits', 'description', 'memory', 'onboot':
         if prop in vm_:  # if the property is set, use it for the VM request
             newnode[prop] = vm_[prop]
 
@@ -651,12 +651,12 @@ def create_node(vm_):
         newnode['ostemplate'] = vm_['image']
 
         # optional VZ settings
-        for prop in ('cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid'):
+        for prop in 'cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
-        for prop in ('acpi', 'cores', 'cpu', 'pool'):
+        for prop in 'acpi', 'cores', 'cpu', 'pool':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 

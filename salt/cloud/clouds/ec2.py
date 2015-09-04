@@ -1193,12 +1193,11 @@ def _create_eni_if_necessary(interface):
 
     params = {'SubnetId': interface['SubnetId']}
 
-    for k in ('Description', 'PrivateIpAddress',
-              'SecondaryPrivateIpAddressCount'):
+    for k in 'Description', 'PrivateIpAddress', 'SecondaryPrivateIpAddressCount':
         if k in interface:
             params[k] = interface[k]
 
-    for k in ('PrivateIpAddresses', 'SecurityGroupId'):
+    for k in 'PrivateIpAddresses', 'SecurityGroupId':
         if k in interface:
             params.update(_param_from_config(k, interface[k]))
 
@@ -1605,7 +1604,7 @@ def request_instance(vm_=None, call=None):
         if not isinstance(ex_securitygroupid, list):
             params[spot_prefix + 'SecurityGroupId.1'] = ex_securitygroupid
         else:
-            for (counter, sg_) in enumerate(ex_securitygroupid):
+            for counter, sg_ in enumerate(ex_securitygroupid):
                 params[
                     spot_prefix + 'SecurityGroupId.{0}'.format(counter)
                 ] = sg_
