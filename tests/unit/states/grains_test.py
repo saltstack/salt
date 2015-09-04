@@ -7,6 +7,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import os
+import yaml
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
@@ -50,11 +51,38 @@ class GrainsTestCase(TestCase):
         if not os.path.exists(os.path.join(integration.TMP, grains_test_dir)):
             os.mkdir(os.path.join(integration.TMP, grains_test_dir))
 
+    def assertGrainFileContent(self, grains_string):
+        if os.path.isdir(grains.__opts__['conf_file']):
+            grains_file = os.path.join(
+                grains.__opts__['conf_file'],
+                'grains')
+        else:
+            grains_file = os.path.join(
+                os.path.dirname(grains.__opts__['conf_file']),
+                'grains')
+        with open(grains_file, "r") as grf:
+            grains_data = grf.read()
+        self.assertMultiLineEqual(grains_string, grains_data)
+
+    def setGrains(self, grains_data):
+        grains.__grains__ = grainsmod.__grains__ = grains_data
+        if os.path.isdir(grains.__opts__['conf_file']):
+            grains_file = os.path.join(
+                grains.__opts__['conf_file'],
+                'grains')
+        else:
+            grains_file = os.path.join(
+                os.path.dirname(grains.__opts__['conf_file']),
+                'grains')
+        cstr = yaml.safe_dump(grains_data, default_flow_style=False)
+        with open(grains_file, "w+") as grf:
+            grf.write(cstr)
+
     # 'present' function tests: 10
 
     def test_present_add(self):
         # Set a non existing grain
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        self.setGrains({'a': 'aval'})
         ret = grains.present(
             name='foo',
             value='bar')
@@ -63,9 +91,12 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': 'bar'})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo: bar\n"
+        )
 
         # Set a non existing nested grain
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        self.setGrains({'a': 'aval'})
         ret = grains.present(
             name='foo:is:nested',
             value='bar')
@@ -74,9 +105,14 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  is:\n"
+                                  + "    nested: bar\n"
+        )
 
         # Set a non existing nested dict grain
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        self.setGrains({'a': 'aval'})
         ret = grains.present(
             name='foo:is:nested',
             value={'bar': 'is a dict'})
@@ -85,9 +121,15 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': {'bar': 'is a dict'}}}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  is:\n"
+                                  + "    nested:\n"
+                                  + "      bar: is a dict\n"
+        )
 
     def test_present_already_set(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         # Grain already set
         ret = grains.present(
             name='foo',
@@ -99,7 +141,7 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval', 'foo': 'bar'})
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
+        self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
         # Nested grain already set
         ret = grains.present(
             name='foo:is:nested',
@@ -111,7 +153,7 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
+        self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
         # Nested dict grain already set
         ret = grains.present(
             name='foo:is',
@@ -124,7 +166,7 @@ class GrainsTestCase(TestCase):
             {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
 
     def test_present_overwrite(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         # Overwrite an existing grain
         ret = grains.present(
             name='foo',
@@ -134,8 +176,11 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': 'newbar'})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo: newbar\n"
+        )
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         # Clear a grain (set to None)
         ret = grains.present(
             name='foo',
@@ -145,8 +190,11 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': None})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo: null\n"
+        )
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
+        self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
         # Overwrite an existing nested grain
         ret = grains.present(
             name='foo:is:nested',
@@ -156,8 +204,13 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': 'newbar'}}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  is:\n"
+                                  + "    nested: newbar\n"
+        )
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
         # Clear a nested grain (set to None)
         ret = grains.present(
             name='foo:is:nested',
@@ -167,9 +220,14 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': None}}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  is:\n"
+                                  + "    nested: null\n"
+        )
 
     def test_present_fail_overwrite(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'val'}}}
+        self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'val'}}})
         # Overwrite an existing grain
         ret = grains.present(
             name='foo:is',
@@ -181,7 +239,7 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': 'val'}}})
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'val'}}}
+        self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'val'}}})
         # Clear a grain (set to None)
         ret = grains.present(
             name='foo:is',
@@ -194,7 +252,7 @@ class GrainsTestCase(TestCase):
             {'a': 'aval', 'foo': {'is': {'nested': 'val'}}})
 
     def test_present_fails_to_set_dict_or_list(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         # Fails to overwrite a grain to a list
         ret = grains.present(
             name='foo',
@@ -208,7 +266,7 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval', 'foo': 'bar'})
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         # Fails setting a grain to a dict
         ret = grains.present(
             name='foo',
@@ -222,7 +280,7 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval', 'foo': 'bar'})
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
+        self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
         # Fails to overwrite a nested grain to a list
         ret = grains.present(
             name='foo,is,nested',
@@ -237,7 +295,7 @@ class GrainsTestCase(TestCase):
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
+        self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
         # Fails setting a nested grain to a dict
         ret = grains.present(
             name='foo:is:nested',
@@ -252,7 +310,7 @@ class GrainsTestCase(TestCase):
             {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
 
     def test_present_force_to_set_dict_or_list(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         # Force to overwrite a grain to a list
         ret = grains.present(
             name='foo',
@@ -264,8 +322,13 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['l1', 'l2']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- l1\n"
+                                  + "- l2\n"
+        )
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         # Force setting a grain to a dict
         ret = grains.present(
             name='foo',
@@ -277,8 +340,12 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'k1': 'v1'}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  k1: v1\n"
+        )
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
+        self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
         # Force to overwrite a nested grain to a list
         ret = grains.present(
             name='foo,is,nested',
@@ -291,8 +358,15 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': ['l1', 'l2']}}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  is:\n"
+                                  + "    nested:\n"
+                                  + "    - l1\n"
+                                  + "    - l2\n"
+        )
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': 'bar'}, 'and': 'other'}}
+        self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'bar'}, 'and': 'other'}})
         # Force setting a nested grain to a dict
         ret = grains.present(
             name='foo:is:nested',
@@ -304,9 +378,16 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': {'k1': 'v1'}}, 'and': 'other'}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  and: other\n"
+                                  + "  is:\n"
+                                  + "    nested:\n"
+                                  + "      k1: v1\n"
+        )
 
     def test_present_fails_to_convert_value_to_key(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         # Fails converting a value to a nested grain key
         ret = grains.present(
             name='foo:is:nested',
@@ -319,7 +400,7 @@ class GrainsTestCase(TestCase):
 
     def test_present_overwrite_test(self):
         grains.__opts__['test'] = True
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         # Overwrite an existing grain
         ret = grains.present(
             name='foo',
@@ -329,9 +410,12 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': 'bar'})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo: bar\n"
+        )
 
     def test_present_convert_value_to_key(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'is'}
+        self.setGrains({'a': 'aval', 'foo': 'is'})
         # Converts a value to a nested grain key
         ret = grains.present(
             name='foo:is:nested',
@@ -342,8 +426,14 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': {'k1': 'v1'}}}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  is:\n"
+                                  + "    nested:\n"
+                                  + "      k1: v1\n"
+        )
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['one', 'is', 'correct']}
+        self.setGrains({'a': 'aval', 'foo': ['one', 'is', 'correct']})
         # Converts a list element to a nested grain key
         ret = grains.present(
             name='foo:is:nested',
@@ -354,11 +444,19 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['one', {'is': {'nested': {'k1': 'v1'}}}, 'correct']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- one\n"
+                                  + "- is:\n"
+                                  + "    nested:\n"
+                                  + "      k1: v1\n"
+                                  + "- correct\n"
+        )
 
     @patch('salt.modules.grains.setval')
     def test_present_unknown_failure(self, mocked_setval):
         mocked_setval.return_value = 'Failed to set grain foo'
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         # Unknown reason failure
         ret = grains.present(
             name='foo',
@@ -369,12 +467,15 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': 'bar'})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo: bar\n"
+        )
 
     # 'absent' function tests: 5
 
     def test_absent_already(self):
         # Unset a non existent grain
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        self.setGrains({'a': 'aval'})
         ret = grains.absent(
             name='foo')
         self.assertEqual(ret['result'], True)
@@ -383,9 +484,10 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval'})
+        self.assertGrainFileContent("a: aval\n")
 
         # Unset a non existent nested grain
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        self.setGrains({'a': 'aval'})
         ret = grains.absent(
             name='foo:is:nested')
         self.assertEqual(ret['result'], True)
@@ -394,10 +496,11 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval'})
+        self.assertGrainFileContent("a: aval\n")
 
     def test_absent_unset(self):
         # Unset a grain
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         ret = grains.absent(
             name='foo')
         self.assertEqual(ret['result'], True)
@@ -406,9 +509,12 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': None})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo: null\n"
+        )
 
         # Unset a nested grain
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']}
+        self.setGrains({'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']})
         ret = grains.absent(
             name='foo,is,nested',
             delimiter=',')
@@ -418,9 +524,16 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['order', {'is': {'nested': None}}, 'correct']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- order\n"
+                                  + "- is:\n"
+                                  + "    nested: null\n"
+                                  + "- correct\n"
+        )
 
         # Unset a nested value don't change anything
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['order', {'is': 'nested'}, 'correct']}
+        self.setGrains({'a': 'aval', 'foo': ['order', {'is': 'nested'}, 'correct']})
         ret = grains.absent(
             name='foo:is:nested')
         self.assertEqual(ret['result'], True)
@@ -429,10 +542,16 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['order', {'is': 'nested'}, 'correct']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- order\n"
+                                  + "- is: nested\n"
+                                  + "- correct\n"
+        )
 
     def test_absent_fails_nested_complex_grain(self):
         # Unset a nested complex grain
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']}
+        self.setGrains({'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']})
         ret = grains.absent(
             name='foo:is')
         self.assertEqual(ret['result'], False)
@@ -441,10 +560,17 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- order\n"
+                                  + "- is:\n"
+                                  + "    nested: bar\n"
+                                  + "- correct\n"
+        )
 
     def test_absent_force_nested_complex_grain(self):
         # Unset a nested complex grain
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']}
+        self.setGrains({'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']})
         ret = grains.absent(
             name='foo:is',
             force=True)
@@ -454,10 +580,16 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['order', {'is': None}, 'correct']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- order\n"
+                                  + "- is: null\n"
+                                  + "- correct\n"
+        )
 
     def test_absent_delete(self):
         # Delete a grain
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         ret = grains.absent(
             name='foo',
             destructive=True)
@@ -467,9 +599,10 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval'})
+        self.assertGrainFileContent("a: aval\n")
 
         # Delete a nested grain
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']}
+        self.setGrains({'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar', 'other': 'value'}}, 'correct']})
         ret = grains.absent(
             name='foo:is:nested',
             destructive=True)
@@ -478,13 +611,20 @@ class GrainsTestCase(TestCase):
         self.assertEqual(ret['changes'], {'deleted': 'foo:is:nested'})
         self.assertEqual(
             grains.__grains__,
-            {'a': 'aval', 'foo': ['order', {'is': {}}, 'correct']})
+            {'a': 'aval', 'foo': ['order', {'is': {'other': 'value'}}, 'correct']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- order\n"
+                                  + "- is:\n"
+                                  + "    other: value\n"
+                                  + "- correct\n"
+        )
 
     # 'append' function tests: 5
 
     def test_append(self):
         # Append to an existing list
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        self.setGrains({'a': 'aval', 'foo': ['bar']})
         ret = grains.append(
             name='foo',
             value='baz')
@@ -494,10 +634,15 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['bar', 'baz']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- bar\n"
+                                  + "- baz\n"
+        )
 
     def test_append_already(self):
         # Append to an existing list
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        self.setGrains({'a': 'aval', 'foo': ['bar']})
         ret = grains.append(
             name='foo',
             value='bar')
@@ -508,10 +653,14 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['bar']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- bar\n"
+        )
 
     def test_append_fails_not_a_list(self):
         # Fail to append to an existing grain, not a list
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'bar': 'val'}}
+        self.setGrains({'a': 'aval', 'foo': {'bar': 'val'}})
         ret = grains.append(
             name='foo',
             value='baz')
@@ -524,7 +673,11 @@ class GrainsTestCase(TestCase):
 
     def test_append_convert_to_list(self):
         # Append to an existing grain, converting to a list
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'bar': 'val'}}
+        self.setGrains({'a': 'aval', 'foo': {'bar': 'val'}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  bar: val\n"
+        )
         ret = grains.append(
             name='foo',
             value='baz',
@@ -535,10 +688,39 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': [{'bar': 'val'}, 'baz']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- bar: val\n"
+                                  + "- baz\n"
+        )
+
+        # Append to an existing grain, converting to a list a multi-value dict
+        self.setGrains({'a': 'aval', 'foo': {'bar': 'val', 'other': 'value'}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  bar: val\n"
+                                  + "  other: value\n"
+        )
+        ret = grains.append(
+            name='foo',
+            value='baz',
+            convert=True)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value baz was added to grain foo')
+        self.assertEqual(ret['changes'], {'added': 'baz'})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': [{'bar': 'val', 'other': 'value'}, 'baz']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- bar: val\n"
+                                  + "  other: value\n"
+                                  + "- baz\n"
+        )
 
     def test_append_fails_inexistent(self):
         # Append to a non existing grain
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        self.setGrains({'a': 'aval'})
         ret = grains.append(
             name='foo',
             value='bar')
@@ -552,7 +734,7 @@ class GrainsTestCase(TestCase):
     # 'list_present' function tests: 6
 
     def test_list_present(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        self.setGrains({'a': 'aval', 'foo': ['bar']})
         ret = grains.list_present(
             name='foo',
             value='baz')
@@ -562,8 +744,13 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['bar', 'baz']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- bar\n"
+                                  + "- baz\n"
+        )
 
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': {'is': {'nested': ['bar']}}}
+        self.setGrains({'a': 'aval', 'foo': {'is': {'nested': ['bar']}}})
         ret = grains.list_present(
             name='foo:is:nested',
             value='baz')
@@ -573,9 +760,16 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': ['bar', 'baz']}}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  is:\n"
+                                  + "    nested:\n"
+                                  + "    - bar\n"
+                                  + "    - baz\n"
+        )
 
     def test_list_present_inexistent(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        self.setGrains({'a': 'aval'})
         ret = grains.list_present(
             name='foo',
             value='baz')
@@ -585,9 +779,13 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['baz']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- baz\n"
+        )
 
     def test_list_present_inexistent_nested(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        self.setGrains({'a': 'aval'})
         ret = grains.list_present(
             name='foo:is:nested',
             value='baz')
@@ -597,9 +795,15 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': {'is': {'nested': ['baz']}}})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "  is:\n"
+                                  + "    nested:\n"
+                                  + "    - baz\n"
+        )
 
     def test_list_present_not_a_list(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         ret = grains.list_present(
             name='foo',
             value='baz')
@@ -609,9 +813,12 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': 'bar'})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo: bar\n"
+        )
 
     def test_list_present_already(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        self.setGrains({'a': 'aval', 'foo': ['bar']})
         ret = grains.list_present(
             name='foo',
             value='bar')
@@ -621,9 +828,13 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['bar']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- bar\n"
+        )
 
     def test_list_present_unknown_failure(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        self.setGrains({'a': 'aval', 'foo': ['bar']})
         # Unknown reason failure
         grainsmod.__salt__['grains.append'] = MagicMock()
         ret = grains.list_present(
@@ -635,11 +846,15 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['bar']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- bar\n"
+        )
 
     # 'list_absent' function tests: 4
 
     def test_list_absent(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        self.setGrains({'a': 'aval', 'foo': ['bar']})
         ret = grains.list_absent(
             name='foo',
             value='bar')
@@ -649,9 +864,12 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': []})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo: []\n"
+        )
 
     def test_list_absent_inexistent(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval'}
+        self.setGrains({'a': 'aval'})
         ret = grains.list_absent(
             name='foo',
             value='baz')
@@ -661,9 +879,10 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval'})
+        self.assertGrainFileContent("a: aval\n")
 
     def test_list_absent_not_a_list(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': 'bar'}
+        self.setGrains({'a': 'aval', 'foo': 'bar'})
         ret = grains.list_absent(
             name='foo',
             value='bar')
@@ -673,9 +892,12 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': 'bar'})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo: bar\n"
+        )
 
     def test_list_absent_already(self):
-        grains.__grains__ = grainsmod.__grains__ = {'a': 'aval', 'foo': ['bar']}
+        self.setGrains({'a': 'aval', 'foo': ['bar']})
         ret = grains.list_absent(
             name='foo',
             value='baz')
@@ -685,6 +907,10 @@ class GrainsTestCase(TestCase):
         self.assertEqual(
             grains.__grains__,
             {'a': 'aval', 'foo': ['bar']})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo:\n"
+                                  + "- bar\n"
+        )
 
 
 if __name__ == '__main__':
