@@ -205,7 +205,7 @@ def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
            'changes': {},
            'result': True,
            'comment': ''}
-    grain = __grains__.get(name)
+    grain = __salt__['grains.get'](name, None)
     if grain:
         if isinstance(grain, list):
             if value not in grain:
