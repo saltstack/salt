@@ -117,3 +117,40 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
     Do any work necessary to prepare a JID, including sending a custom id
     '''
     return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()
+
+
+def save_load(jid, load):
+    '''
+    Save the load to the specified jid id
+    '''
+    index = 'salt-master-job-cache'
+    doc_type = __salt__['config.option']('elasticsearch:master_job_cache_doc_type', 'default')
+
+    index_exists = __salt__['elasticsearch.index_exists'](index)
+    if not index_exists:
+        number_of_shards = __salt__['config.option']('elasticsearch:number_of_shards', 1)
+        number_of_replicas = __salt__['config.option']('elasticsearch:number_of_replicas', 0)
+
+        index_definition = {'settings': {'number_of_shards': number_of_shards, 'number_of_replicas': number_of_replicas}}
+        __salt__['elasticsearch.index_create']('{0}-v1'.format(index), index_definition)
+        __salt__['elasticsearch.alias_create']('{0}-v1'.format(index), index)
+
+    data = {
+        'jid': jid,
+        'load': load,
+    }
+
+    ret = __salt__['elasticsearch.document_create'](index=index, doc_type=doc_type, id=jid, body=json.dumps(data))
+
+
+def get_load(jid):
+    '''
+    Return the load data that marks a specified jid
+    '''
+    index = 'salt-master_job_cache'
+    doc_type = __salt__['config.option']('elasticsearch:master_job_cache_doc_type', 'default')
+
+    data = __salt__['elasticsearch.document_get'](index=index, id=jid, doc_type=doc_type)
+    if data:
+        return json.loads(data)
+    return {}
