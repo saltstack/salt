@@ -34,5 +34,8 @@ EX_USAGE = 64
 
 # The Salt specific exit codes are defined below:
 
+# keepalive exit code is a hint that the process should be restarted
+SALT_KEEPALIVE = 99
+
 # SALT_BUILD_FAIL is used when salt fails to build something, like a container
 SALT_BUILD_FAIL = 101
