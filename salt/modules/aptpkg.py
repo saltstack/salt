@@ -1597,6 +1597,10 @@ def mod_repo(repo, saltenv='base', **kwargs):
     elif 'key_url' in kwargs:
         key_url = kwargs['key_url']
         fn_ = __salt__['cp.cache_file'](key_url, saltenv)
+        if not fn_:
+            raise CommandExecutionError(
+                'Error: file not found: {0}'.format(key_url)
+            )
         cmd = 'apt-key add {0}'.format(_cmd_quote(fn_))
         out = __salt__['cmd.run_stdout'](cmd, **kwargs)
         if not out.upper().startswith('OK'):
