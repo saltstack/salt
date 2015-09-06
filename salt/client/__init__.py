@@ -820,8 +820,7 @@ class LocalClient(object):
         '''
 
         while True:
-            # CHANGED(driskell): This was previously completely nonblocking.
-            raw = self.event.get_event(wait=0.01, tag=tag, match_type=match_type, full=True)
+            raw = self.event.get_event(wait=0.01, tag=tag, match_type=match_type, full=True, no_block=True)
             yield raw
 
     def get_iter_returns(

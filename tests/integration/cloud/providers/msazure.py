@@ -29,6 +29,9 @@ try:
 except ImportError:
     HAS_AZURE = False
 
+if HAS_AZURE and not hasattr(azure, '__version__'):
+    import azure.common
+
 
 def __random_name(size=6):
     '''
@@ -53,7 +56,6 @@ def __has_required_azure():
     if hasattr(azure, '__version__'):
         version = LooseVersion(azure.__version__)
     else:
-        import azure.common
         version = LooseVersion(azure.common.__version__)
     if HAS_AZURE is True and REQUIRED_AZURE <= version:
         return True

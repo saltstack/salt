@@ -791,6 +791,7 @@ class SaltDistribution(distutils.dist.Distribution):
         * salt-cp
         * salt-minion
         * salt-unity
+        * salt-proxy
 
     When packaged for salt-ssh, the following scripts should be installed:
         * salt-call
@@ -1031,6 +1032,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             scripts.extend(['scripts/salt-cp',
                             'scripts/salt-minion',
+                            'scripts/salt-proxy',
                             'scripts/salt-unity'])
             return scripts
 
@@ -1046,6 +1048,7 @@ class SaltDistribution(distutils.dist.Distribution):
                         'scripts/salt-ssh',
                         'scripts/salt-syndic',
                         'scripts/salt-unity',
+                        'scripts/salt-proxy',
                         'scripts/spm'])
         return scripts
 

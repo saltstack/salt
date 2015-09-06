@@ -123,6 +123,15 @@ def remove_file(path, conn=None):
     os.remove(path)
 
 
+def hash_file(path, hashobj, conn=None):
+    '''
+    Get the hexdigest hash value of a file
+    '''
+    with salt.utils.fopen(path, 'r') as f:
+        hashobj.update(f.read())
+        return hashobj.hexdigest()
+
+
 def path_exists(path):
     '''
     Check to see whether the file already exists
