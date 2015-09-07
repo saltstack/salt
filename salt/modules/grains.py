@@ -15,6 +15,7 @@ import collections
 from functools import reduce
 
 # Import 3rd-party libs
+from salt.utils.odict import OrderedDict
 import yaml
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -238,6 +239,8 @@ def setvals(grains, destructive=False):
             __grains__[key] = val
     # Cast defaultdict to dict; is there a more central place to put this?
     yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
+            yaml.representer.SafeRepresenter.represent_dict)
+    yaml.representer.SafeRepresenter.add_representer(OrderedDict,
             yaml.representer.SafeRepresenter.represent_dict)
     cstr = yaml.safe_dump(grains, default_flow_style=False)
     try:
