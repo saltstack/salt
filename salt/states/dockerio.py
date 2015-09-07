@@ -788,7 +788,7 @@ def run(name,
             if not onlyif:
                 return valid(comment='onlyif execution failed')
         elif isinstance(onlyif, string_types):
-            if retcode(cid, onlyif) != 0:
+            if not retcode(cid, onlyif):
                 return valid(comment='onlyif execution failed')
 
     if unless is not None:
@@ -796,7 +796,7 @@ def run(name,
             if unless:
                 return valid(comment='unless execution succeeded')
         elif isinstance(unless, string_types):
-            if retcode(cid, unless) == 0:
+            if retcode(cid, unless):
                 return valid(comment='unless execution succeeded')
 
     if docked_onlyif is not None:
@@ -804,7 +804,7 @@ def run(name,
             if not docked_onlyif:
                 return valid(comment='docked_onlyif execution failed')
         elif isinstance(docked_onlyif, string_types):
-            if retcode(cid, docked_onlyif) != 0:
+            if not retcode(cid, docked_onlyif):
                 return valid(comment='docked_onlyif execution failed')
 
     if docked_unless is not None:
@@ -812,8 +812,9 @@ def run(name,
             if docked_unless:
                 return valid(comment='docked_unless execution succeeded')
         elif isinstance(docked_unless, string_types):
-            if retcode(cid, docked_unless) == 0:
+            if retcode(cid, docked_unless):
                 return valid(comment='docked_unless execution succeeded')
+    # run only if the above did not bail
     result = drun_all(cid, name)
     if result['status']:
         return valid(comment=result['comment'])

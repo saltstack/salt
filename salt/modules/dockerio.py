@@ -2050,9 +2050,7 @@ def retcode(container, cmd):
         command to execute
 
     .. note::
-        The return is a bit different as we use the docker struct.
-        Output of the command is in 'out' and result is ``False`` if
-        command failed to execute.
+        The return is True or False depending on the commands success.
 
     .. warning::
         Be advised that this function allows for raw shell access to the named
@@ -2067,7 +2065,7 @@ def retcode(container, cmd):
     '''
     status = base_status.copy()
     return _run_wrapper(
-        status, container, 'cmd.retcode', cmd)
+        status, container, 'cmd.retcode', cmd)['status']
 
 
 def get_container_root(container):
