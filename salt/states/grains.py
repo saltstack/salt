@@ -254,9 +254,9 @@ def absent(name,
         .. versionadded:: FIXME
 
     .. versionchanged:: FIXME
-    This state now support nested grains. It is also more conservative:
-    if a grain has a value that is a list or a dict, it will not be removed
-    unless the `force` parameter is True
+    This state now support nested grains and complex values. It is also more
+    conservative: if a grain has a value that is a list or a dict, it will
+    not be removed unless the `force` parameter is True.
 
     .. code-block:: yaml
 
