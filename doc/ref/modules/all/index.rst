@@ -147,6 +147,7 @@ Full list of builtin execution modules
     kmod
     launchctl
     layman
+    ldap3
     ldapmod
     linux_acl
     linux_lvm
