@@ -788,7 +788,7 @@ def run(name,
             if not onlyif:
                 return valid(comment='onlyif execution failed')
         elif isinstance(onlyif, string_types):
-            if not retcode(cid, onlyif):
+            if not cmd.retcode(onlyif) == 0:
                 return valid(comment='onlyif execution failed')
 
     if unless is not None:
@@ -796,7 +796,7 @@ def run(name,
             if unless:
                 return valid(comment='unless execution succeeded')
         elif isinstance(unless, string_types):
-            if retcode(cid, unless):
+            if cmd.retcode(unless) == 0:
                 return valid(comment='unless execution succeeded')
 
     if docked_onlyif is not None:
