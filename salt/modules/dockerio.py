@@ -1819,16 +1819,13 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
     try:
         f = __salt__[func]
         ret = f(full_cmd, *args, **kwargs)
-        if ((isinstance(ret, dict) and
-                ('retcode' in ret) and
-                (ret['retcode'] != 0))
-                or (func == 'cmd.retcode' and ret != 0)):
-            return _invalid(status, id_=container, out=ret,
-                            comment=comment)
-        _valid(status, id_=container, out=ret, comment=comment,)
+        if ((isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0))
+           or (func == 'cmd.retcode' and ret != 0)):
+               _invalid(status, id_=container, out=ret,comment=comment)
+        else:
+            _valid(status, id_=container, out=ret, comment=comment)
     except Exception:
-        _invalid(status, id_=container,
-                 comment=comment, out=traceback.format_exc())
+        _invalid(status, id_=container,comment=comment, out=traceback.format_exc())
     return status
 
 
