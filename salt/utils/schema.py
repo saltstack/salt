@@ -479,6 +479,9 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
         attributes = []
         for base in reversed(bases):
             try:
+                base_attributes = getattr(base, '_attributes', [])
+                if base_attributes:
+                    attributes.extend(base_attributes)
                 # Extend the attributes with the base argspec argument names
                 # but skip "self"
                 for argname in inspect.getargspec(base.__init__).args:
