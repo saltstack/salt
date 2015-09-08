@@ -1850,7 +1850,7 @@ def load(imagepath):
         try:
             dockercmd = ['docker', 'load', '-i', imagepath]
             ret = __salt__['cmd.run'](dockercmd, python_shell=False)
-            if ((isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0))):
+            if isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0):
                 return _invalid(status, id_=None,
                                 out=ret,
                                 comment='Command to load image {0} failed.'.format(imagepath))
@@ -1901,7 +1901,7 @@ def save(image, filename):
         try:
             dockercmd = ['docker', 'save', '-o', filename, image]
             ret = __salt__['cmd.run'](dockercmd)
-            if ((isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0))):
+            if isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0):
                 return _invalid(status,
                                 id_=image,
                                 out=ret,
