@@ -8,6 +8,8 @@ from __future__ import absolute_import
 import logging
 import os
 import re
+import time
+import datetime
 
 # Import Salt libs
 import salt.utils
@@ -397,6 +399,18 @@ def diff(package, path):
     return res
 
 
+def _pkg_time_to_iso(pkg_time):
+    '''
+    Convert package time to ISO 8601.
+
+    :param pkg_time:
+    :return:
+    '''
+    ptime = time.strptime(pkg_time)
+    return datetime.datetime(ptime.tm_year, ptime.tm_mon, ptime.tm_mday,
+                             ptime.tm_hour, ptime.tm_min, ptime.tm_sec).isoformat()
+
+
 def info(*packages):
     '''
     Return a detailed package(s) summary information.
@@ -441,6 +455,8 @@ def info(*packages):
             key = key.replace(' ', '_').lower()
             if key == 'name':
                 pkg_name = value
+            if key in ['build_date', 'install_date']:
+                value = _pkg_time_to_iso(value)
             if key != 'description' and value:
                 pkg_data[key] = value
         if pkg_name:
