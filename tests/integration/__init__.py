@@ -35,7 +35,6 @@ INTEGRATION_TEST_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
 CODE_DIR = os.path.dirname(os.path.dirname(INTEGRATION_TEST_DIR))
-SALT_LIBS = os.path.dirname(CODE_DIR)
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -46,7 +45,7 @@ from salttesting.helpers import requires_sshd_server
 from salttesting.helpers import ensure_in_syspath, RedirectStdStreams
 
 # Update sys.path
-ensure_in_syspath(CODE_DIR, SALT_LIBS)
+ensure_in_syspath(CODE_DIR)
 
 # Import Salt libs
 import salt
