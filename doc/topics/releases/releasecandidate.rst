@@ -56,4 +56,4 @@ installation docs <_installation>`.  Then install salt using the following:
 Install on Windows
 ==================
 
-Builds for Windows can be found here: http://docs.saltstack.com/downloads/
+Builds for Windows can be found here: https://repo.saltstack.com/windows/
