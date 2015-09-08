@@ -201,4 +201,3 @@ def remove(path):
         return rehash()
     else:
         return False
-
