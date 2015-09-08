@@ -18,6 +18,8 @@ options
           verify_ssl: True
           service_url: s3.amazonaws.com
           kms_keyid: 01234567-89ab-cdef-0123-4567890abcde
+          s3_cache_expire: 30
+          s3_sync_on_update: True
 
 The ``bucket`` parameter specifies the target S3 bucket. It is required.
 
@@ -51,6 +53,11 @@ base url to use for accessing S3.
 The ``kms_keyid`` parameter is optional. It specifies the ID of the Key
 Management Service (KMS) master key that was used to encrypt the object.
 
+The ``s3_cache_expire`` parameter defaults to 30s. It specifies expiration
+time of S3 metadata cache file.
+
+The ``s3_sync_on_update`` paramater defaults to True. It specifies if cache
+is synced on update rather than jit.
 
 This pillar can operate in two modes, single environment per bucket or multiple
 environments per bucket.
@@ -96,8 +103,6 @@ import salt.utils.s3 as s3
 # Set up logging
 log = logging.getLogger(__name__)
 
-_s3_cache_expire = 30  # cache for 30 seconds
-_s3_sync_on_update = True  # sync cache on update rather than jit
 
 
 class S3Credentials(object):
@@ -123,7 +128,10 @@ def ext_pillar(minion_id,
                environment='base',
                prefix='',
                service_url=None,
-               kms_keyid=None):
+               kms_keyid=None,
+               s3_cache_expire=30,       # cache for 30 seconds
+               s3_sync_on_update=True):  # sync cache on update rather than jit
+
     '''
     Execute a command and read the output as YAML
     '''
@@ -140,9 +148,9 @@ def ext_pillar(minion_id,
     if __opts__['pillar_roots'].get(environment, []) == [pillar_dir]:
         return {}
 
-    metadata = _init(s3_creds, bucket, multiple_env, environment, prefix)
+    metadata = _init(s3_creds, bucket, multiple_env, environment, prefix, s3_cache_expire)
 
-    if _s3_sync_on_update:
+    if s3_sync_on_update:
         # sync the buckets to the local cache
         log.info('Syncing local pillar cache from S3...')
         for saltenv, env_meta in six.iteritems(metadata):
@@ -171,20 +179,23 @@ def ext_pillar(minion_id,
     return compiled_pillar
 
 
-def _init(creds, bucket, multiple_env, environment, prefix):
+def _init(creds, bucket, multiple_env, environment, prefix, s3_cache_expire):
     '''
     Connect to S3 and download the metadata for each file in all buckets
     specified and cache the data to disk.
     '''
 
     cache_file = _get_buckets_cache_filename(bucket, prefix)
-    exp = time.time() - _s3_cache_expire
+    exp = time.time() - s3_cache_expire
 
     # check mtime of the buckets files cache
-    if os.path.isfile(cache_file) and os.path.getmtime(cache_file) > exp:
+    cache_file_mtime = os.path.getmtime(cache_file)
+    if os.path.isfile(cache_file) and cache_file_mtime > exp:
+        log.debug("S3 bucket cache file %s is not expired, mtime_diff=%ss, expiration=%ss" % (cache_file, cache_file_mtime - exp, s3_cache_expire))
         return _read_buckets_cache_file(cache_file)
     else:
         # bucket files cache expired
+        log.debug("S3 bucket cache file %s is expired, mtime_diff=%ss, expiration=%ss" % (cache_file, cache_file_mtime - exp, s3_cache_expire))
         return _refresh_buckets_cache_file(creds, cache_file, multiple_env,
                                            environment, prefix)
 
@@ -367,12 +378,13 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
     # check the local cache...
     if os.path.isfile(cached_file_path):
         file_meta = _find_file_meta(metadata, bucket, saltenv, path)
-        file_md5 = list(filter(str.isalnum, file_meta['ETag'])) \
+        file_md5 = "".join(list(filter(str.isalnum, file_meta['ETag']))) \
             if file_meta else None
 
         cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
 
         # hashes match we have a cache hit
+        log.debug("Cached file: path=%s, md5=%s, etag=%s" % (cached_file_path, cached_md5, file_md5))
         if cached_md5 == file_md5:
             return
 
