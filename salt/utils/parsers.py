@@ -1267,6 +1267,13 @@ class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             help='Script arguments to be fed to the bootstrap script when '
                  'deploying the VM'
         )
+        group.add_option(
+            '-b', '--bootstrap',
+            nargs=1,
+            default=False,
+            metavar='<HOST> [MINION_ID] [OPTIONS...]',
+            help='Bootstrap an existing machine.'
+        )
         self.add_option_group(group)
 
     def process_function(self):
