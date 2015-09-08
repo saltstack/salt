@@ -268,7 +268,7 @@ def ext_pillar(minion_id,
     Execute a command and read the output as YAML
     '''
     if pillar_dirs is None:
-        return
+        pillar_dirs = {}
     # split the branch, repo name and optional extra (key=val) parameters.
     options = repo_string.strip().split()
     branch_env = options[0]
@@ -322,4 +322,4 @@ def ext_pillar(minion_id,
 
     pil = Pillar(opts, __grains__, minion_id, branch)
 
-    return pil.compile_pillar()
+    return pil.compile_pillar(ext=False)
