@@ -1524,7 +1524,7 @@ class Login(LowDataAdapter):
             perms = eauth.get(token['name'], [])
             perms.extend(eauth.get('*', []))
 
-            if 'groups' in token:
+            if 'groups' in token and token['groups'] is not False:
                 user_groups = set(token['groups'])
                 eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
 
