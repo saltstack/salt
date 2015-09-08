@@ -288,9 +288,9 @@ Here's a summary of the command line options:
       -I  If set, allow insecure connections while downloading any files. For
           example, pass '--no-check-certificate' to 'wget' or '--insecure' to 'curl'
       -A  Pass the salt-master DNS name or IP. This will be stored under
-          /etc/salt/minion.d/99-master-address.conf
+          ${_SALT_ETC_DIR}/minion.d/99-master-address.conf
       -i  Pass the salt-minion id. This will be stored under
-          /etc/salt/minion_id
+          ${_SALT_ETC_DIR}/minion_id
       -L  Install the Apache Libcloud package if possible(required for salt-cloud)
       -p  Extra-package to install while installing salt dependencies. One package
           per -p flag. You're responsible for providing the proper package name.
