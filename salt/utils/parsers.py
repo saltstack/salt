@@ -1120,9 +1120,9 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
                     )
 
     def process_state_verbose(self):
-        if (self.options.state_verbose == "True" or self.options.state_verbose == "true"):
+        if self.options.state_verbose == "True" or self.options.state_verbose == "true":
             self.options.state_verbose = True
-        elif (self.options.state_verbose == "False" or self.options.state_verbose == "false"):
+        elif self.options.state_verbose == "False" or self.options.state_verbose == "false":
             self.options.state_verbose = False
 
     def _mixin_after_parsed(self):
