@@ -395,3 +395,55 @@ def diff(package, path):
         return 'File "{0}" is binary and its content has been modified.'.format(path)
 
     return res
+
+
+def info(*packages):
+    '''
+    Return a detailed package(s) summary information.
+    If no packages specified, all packages will be returned.
+
+    :param packages:
+    :return:
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.info apache2 bash
+    '''
+
+    cmd = packages and "rpm -qi {0}".format(' '.join(packages)) or "rpm -qai"
+    call = __salt__['cmd.run_all'](cmd + " --queryformat '-----\n'", output_loglevel='trace')
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        raise CommandExecutionError('{0}'.format(comment))
+    else:
+        out = call['stdout']
+
+    ret = dict()
+    for pkg_info in re.split("----*", out):
+        pkg_info = pkg_info.strip()
+        if not pkg_info:
+            continue
+        pkg_info = pkg_info.split(os.linesep)
+        if pkg_info[-1].lower().startswith('distribution'):
+            pkg_info = pkg_info[:-1]
+
+        pkg_data = dict()
+        pkg_name = None
+        for line in pkg_info[:]:
+            line = [item.strip() for item in line.split(':', 1)]
+            if len(line) != 2:
+                continue
+            key, value = line
+            key = key.replace(' ', '_').lower()
+            if key == 'name':
+                pkg_name = value
+            if key != 'description' and value:
+                pkg_data[key] = value
+        if pkg_name:
+            ret[pkg_name] = pkg_data
+
+    return ret
