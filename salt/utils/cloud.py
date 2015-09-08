@@ -304,7 +304,10 @@ def bootstrap(vm_, opts):
         }
 
     key_filename = salt.config.get_cloud_config_value(
-        'key_filename', vm_, opts, search_global=False, default=None
+        'key_filename', vm_, opts, search_global=False,
+        default=salt.config.get_cloud_config_value(
+            'ssh_keyfile', vm_, opts, search_global=False, default=None
+        )
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
