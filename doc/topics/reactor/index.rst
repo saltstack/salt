@@ -32,6 +32,8 @@ The event system fires events with a very specific criteria. Every event has a
 addition to the tag, each event has a data structure. This data structure is a
 dict, which contains information about the event.
 
+.. _reactor-mapping-events:
+
 Mapping Events to Reactor SLS Files
 ===================================
 
@@ -182,6 +184,8 @@ rendered SLS file (or any errors generated while rendering the SLS file).
     The rendered output is the result of the Jinja parsing and is a good way to
     view the result of referencing Jinja variables. If the result is empty then
     Jinja produced an empty result and the Reactor will ignore it.
+
+.. _reactor-structure:
 
 Understanding the Structure of Reactor Formulas
 ===============================================
