@@ -28,7 +28,7 @@ See :ref:`beacon modules <all-salt.beacons>` for a current list.
 Configuring Beacons
 ===================
 
-Salt beacons does not require any changes to the system process that
+Salt beacons do not require any changes to the system process that
 is being monitored, everything is configured using Salt.
 
 Beacons are typically enabled by placing a ``beacons:`` top level block in the
