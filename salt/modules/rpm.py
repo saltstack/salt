@@ -447,18 +447,27 @@ def info(*packages):
 
         pkg_data = dict()
         pkg_name = None
-        for line in pkg_info[:]:
+        descr_marker = False
+        descr = list()
+        for line in pkg_info:
+            if descr_marker:
+                descr.append(line)
+                continue
             line = [item.strip() for item in line.split(':', 1)]
             if len(line) != 2:
                 continue
             key, value = line
             key = key.replace(' ', '_').lower()
+            if key == 'description':
+                descr_marker = True
+                continue
             if key == 'name':
                 pkg_name = value
             if key in ['build_date', 'install_date']:
                 value = _pkg_time_to_iso(value)
             if key != 'description' and value:
                 pkg_data[key] = value
+        pkg_data['decription'] = os.linesep.join(descr)
         if pkg_name:
             ret[pkg_name] = pkg_data
 
