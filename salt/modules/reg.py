@@ -460,6 +460,15 @@ def delete_key_recursive(hive, key):
         A dictionary listing the keys that deleted successfully as well as those
         that failed to delete.
     :rtype: dict
+
+    The following example will remove ``salt`` and all other subkeys from the
+    ``SOFTWARE`` key in ``HKEY_LOCAL_MACHINE``:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' reg.delete_key_recursive HKLM SOFTWARE\\salt
     '''
     # Functions for traversing the registry tree
     def subkeys(key):
