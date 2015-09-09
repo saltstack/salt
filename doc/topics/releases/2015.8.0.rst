@@ -3,8 +3,7 @@ Salt 2015.8.0 Release Notes - Codename Beryllium
 ================================================
 
 .. toctree::
-    includes/2015.8.0rc2
-    includes/2015.8.0rc3
+    includes/2015.8.0.pull_list
 
 The 2015.8.0 feature release of Salt contains several major new features. As
 usual the release notes are not exhaustive and primarily include the most
