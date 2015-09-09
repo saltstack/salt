@@ -301,3 +301,25 @@ def _get_pkg_install_time(pkg):
             iso_time = datetime.datetime.fromtimestamp(os.path.getmtime(location)).isoformat()
 
     return iso_time
+
+
+def info(*packages):
+    '''
+    Return a detailed package(s) summary information.
+    If no packages specified, all packages will be returned.
+
+    :param packages:
+    :return:
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.info apache2 bash
+    '''
+
+    ret = dict()
+    for pkg in _get_pkg_info(*packages):
+        ret[pkg['package']] = pkg
+
+    return ret
