@@ -628,7 +628,8 @@ def set(key,
     elif isinstance(_existing_value, list):
         _existing_value_type = 'complex'
 
-    if _existing_value_type is not None and _existing_value == val:
+    if _existing_value_type is not None and _existing_value == val \
+                   and (val is not None or destructive is not True):
         ret['comment'] = 'Grain is already set'
         return ret
 

@@ -549,6 +549,20 @@ class GrainsTestCase(TestCase):
                                   + "foo: null\n"
         )
 
+        # Unset grain when its value is False
+        self.setGrains({'a': 'aval', 'foo': False})
+        ret = grains.absent(
+            name='foo')
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Value for grain foo was set to None')
+        self.assertEqual(ret['changes'], {'grain': 'foo', 'value': None})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval', 'foo': None})
+        self.assertGrainFileContent("a: aval\n"
+                                  + "foo: null\n"
+        )
+
         # Unset a nested grain
         self.setGrains({'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']})
         ret = grains.absent(
@@ -640,6 +654,19 @@ class GrainsTestCase(TestCase):
     def test_absent_delete(self):
         # Delete a grain
         self.setGrains({'a': 'aval', 'foo': 'bar'})
+        ret = grains.absent(
+            name='foo',
+            destructive=True)
+        self.assertEqual(ret['result'], True)
+        self.assertEqual(ret['comment'], 'Grain foo was deleted')
+        self.assertEqual(ret['changes'], {'deleted': 'foo'})
+        self.assertEqual(
+            grains.__grains__,
+            {'a': 'aval'})
+        self.assertGrainFileContent("a: aval\n")
+
+        # Delete a previously unset grain
+        self.setGrains({'a': 'aval', 'foo': None})
         ret = grains.absent(
             name='foo',
             destructive=True)
