@@ -509,6 +509,8 @@ def current(sam=False):
     running from a command prompt it should return the username that started the
     command prompt.
 
+    .. versionadded:: 2015.5.6
+
     :param bool sam:
         False returns just the username without any domain notation. True
         returns the domain with the username in the SAM format. Ie:
