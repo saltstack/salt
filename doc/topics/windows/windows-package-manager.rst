@@ -473,14 +473,6 @@ installed, then Salt will use it instead of the old method (which invokes the
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 
-One important change this brings is the the fact that each repo configured
-under the :conf_master:`winrepo_remotes` option (``win_gitrepos`` in Salt
-versions prior to 2015.8.0) will have its URL hashed and and the files will be
-checked out into a subdirectory containing that hashed name (for example,
-``/srv/salt/win/repo/f42c3382aeeaa8733908e5c256dba1ca/myprogram.sls``). There
-is no functional reason for the hashed name, it just comes from using the same
-back-end code that gitfs and git_pillar are using.
-
 To minimize potential issues, it is a good idea to remove any winrepo git
 repositories that were checked out by the old (pre-2015.8.0) winrepo code when
 upgrading the master to 2015.8.0 or later, and run
