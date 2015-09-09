@@ -161,6 +161,7 @@ from copy import copy
 from collections import defaultdict
 
 # pylint: disable=import-error
+import cgi
 import yaml
 import tornado.httpserver
 import tornado.ioloop
@@ -503,7 +504,10 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         }
 
         try:
-            return ct_in_map[self.request.headers['Content-Type']](data)
+            # Use cgi.parse_header to correctly separate parameters from value
+            header = cgi.parse_header(self.request.headers['Content-Type'])
+            value, parameters = header
+            return ct_in_map[value](data)
         except KeyError:
             self.send_error(406)
         except ValueError:
