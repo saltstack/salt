@@ -443,7 +443,7 @@ win_gitrepos             :conf_minion:`winrepo_remotes`
 See :ref:`here <winrepo-minion-config-opts>` for detailed information on all
 minion config options for the Windows Repo.
 
-GitPython_/pygit2_ Support for Maintaining Git Repos
+pygit2_/GitPython_ Support for Maintaining Git Repos
 ----------------------------------------------------
 
 The :py:func:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>`
@@ -467,8 +467,10 @@ installed, then Salt will use it instead of the old method (which invokes the
 
     The :mod:`winrepo execution module <salt.modules.win_repo>` (discussed
     above in the :ref:`Managing Windows Software on a Standalone Windows Minion
-    <standalone-winrepo>` section) does not yet support the new
-    GitPython_/pygit2_ functionality.
+    <standalone-winrepo>` section) does not yet officially support the new
+    pygit2_/GitPython_ functionality, but if either pygit2_ or GitPython_ is
+    installed into Salt's bundled Python then it *should* work. However, it
+    should be considered experimental at this time.
 
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _GitPython: https://github.com/gitpython-developers/GitPython
@@ -480,8 +482,8 @@ upgrading the master to 2015.8.0 or later, and run
 clone them anew after the master is started.
 
 Additional added features include the ability to access authenticated git
-repositories (**NOTE:** pygit2_ only), and to set per-remote config settings. An
-example of this would be the following:
+repositories (**NOTE:** pygit2_ only), and to set per-remote config settings.
+An example of this would be the following:
 
 .. code-block:: yaml
 
@@ -505,6 +507,48 @@ example of this would be the following:
     See :ref:`here <gitfs-per-remote-config>` for more a more in-depth
     explanation of how per-remote configuration works in gitfs, the same
     principles apply to winrepo.
+
+There are a couple other changes in now Salt manages git repos using
+pygit2_/GitPython_. First of all, a ``clean`` argument has been added to the
+:py:func:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>`
+runner, which (if set to ``True``) will tell the runner to dispose of
+directories under the :conf_master:`winrepo_dir` which are not explicitly
+configured. This prevents the need to manually remove these directories when a
+repo is removed from the config file. To clean these old directories, just pass
+``clean=True``, like so:
+
+.. code-block:: bash
+
+    salt-run winrepo.update_git_repos clean=True
+
+However, if a mix of git and non-git Windows Repo definition files are being
+used, then this should *not* be used, as it will remove the directories
+containing non-git definitions.
+
+The other major change is that collisions between repo names are now detected,
+and the winrepo runner will not proceed if any are detected. Consider the
+following configuration:
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - https://foo.com/bar/baz.git
+      - https://mydomain.tld/baz.git
+      - https://github.com/foobar/baz
+
+The :py:func:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>`
+runner will refuse to update repos here, as all three of these repos would be
+checked out to the same directory. To work around this, a per-remote parameter
+called ``name`` can be used to resolve these conflicts:
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - https://foo.com/bar/baz.git
+      - https://mydomain.tld/baz.git:
+        - name: baz_junior
+      - https://github.com/foobar/baz:
+        - name: baz_the_third
 
 .. _wiki: http://wpkg.org/Category:Silent_Installers
 
