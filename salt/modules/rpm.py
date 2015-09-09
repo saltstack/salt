@@ -437,7 +437,7 @@ def info(*packages):
         out = call['stdout']
 
     ret = dict()
-    for pkg_info in re.split("----*", out):
+    for pkg_info in re.split(r"----*", out):
         pkg_info = pkg_info.strip()
         if not pkg_info:
             continue
