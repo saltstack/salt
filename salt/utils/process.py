@@ -247,10 +247,10 @@ class ProcessManager(object):
 
             if need_log_queue and 'log_queue' not in kwargs:
                 if hasattr(self, 'log_queue'):
-                   kwargs['log_queue'] = self.log_queue
+                    kwargs['log_queue'] = self.log_queue
                 else:
-                   kwargs['log_queue'] = (
-                           salt.log.setup.get_multiprocessing_logging_queue())
+                    kwargs['log_queue'] = (
+                            salt.log.setup.get_multiprocessing_logging_queue())
 
         if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
             process = tgt(*args, **kwargs)
