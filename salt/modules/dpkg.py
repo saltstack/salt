@@ -280,7 +280,8 @@ def _get_pkg_info(*packages):
         pkg_info, pkg_descr = re.split(r"====*", pkg_info)
         for pkg_info_line in [el.strip() for el in pkg_info.split(os.linesep) if el.strip()]:
             key, value = pkg_info_line.split(":", 1)
-            pkg_data[key] = value or "N/A"
+            if value:
+                pkg_data[key] = value
             pkg_data['install_date'] = _get_pkg_install_time(pkg_data.get('package'))
         pkg_data['description'] = pkg_descr.split(":", 1)[-1]
         ret.append(pkg_data)
