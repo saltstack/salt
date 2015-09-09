@@ -461,7 +461,7 @@ def delete_key_recursive(hive, key):
         that failed to delete.
     :rtype: dict
 
-    The following example will remove ``salt`` and all other subkeys from the
+    The following example will remove ``salt`` and all its subkeys from the
     ``SOFTWARE`` key in ``HKEY_LOCAL_MACHINE``:
 
     CLI Example:
