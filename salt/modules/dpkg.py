@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import logging
 import os
 import re
+import datetime
 
 # Import salt libs
 import salt.utils
@@ -280,8 +281,23 @@ def _get_pkg_info(*packages):
         for pkg_info_line in [el.strip() for el in pkg_info.split(os.linesep) if el.strip()]:
             key, value = pkg_info_line.split(":", 1)
             pkg_data[key] = value or "N/A"
+            pkg_data['install_date'] = _get_pkg_install_time(pkg_data.get('package'))
         pkg_data['description'] = pkg_descr.split(":", 1)[-1]
         ret.append(pkg_data)
 
     return ret
 
+
+def _get_pkg_install_time(pkg):
+    '''
+    Return package install time, based on the /var/lib/dpkg/info/<package>.list
+
+    :return:
+    '''
+    iso_time = "N/A"
+    if pkg is not None:
+        location = "/var/lib/dpkg/info/{0}.list".format(pkg)
+        if os.path.exists(location):
+            iso_time = datetime.datetime.fromtimestamp(os.path.getmtime(location)).isoformat()
+
+    return iso_time
