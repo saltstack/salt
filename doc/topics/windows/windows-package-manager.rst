@@ -526,8 +526,9 @@ used, then this should *not* be used, as it will remove the directories
 containing non-git definitions.
 
 The other major change is that collisions between repo names are now detected,
-and the winrepo runner will not proceed if any are detected. Consider the
-following configuration:
+and the :py:func:`winrepo.update_git_repos
+<salt.runners.winrepo.update_git_repos>` runner will not proceed if any are
+detected. Consider the following configuration:
 
 .. code-block:: yaml
 
