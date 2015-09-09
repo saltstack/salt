@@ -508,7 +508,7 @@ An example of this would be the following:
     explanation of how per-remote configuration works in gitfs, the same
     principles apply to winrepo.
 
-There are a couple other changes in now Salt manages git repos using
+There are a couple other changes in how Salt manages git repos using
 pygit2_/GitPython_. First of all, a ``clean`` argument has been added to the
 :py:func:`winrepo.update_git_repos <salt.runners.winrepo.update_git_repos>`
 runner, which (if set to ``True``) will tell the runner to dispose of
