@@ -95,7 +95,6 @@ def list_upgrades(refresh=True):
 list_updates = list_upgrades
 
 
-def info(*names, **kwargs):
 def info_installed(*names):
     '''
     Return the information of the named package(s), installed on the system.
@@ -120,6 +119,9 @@ def info_installed(*names):
         ret[pkg_name] = t_nfo
 
     return ret
+
+
+def info_available(*names, **kwargs):
     '''
     Return the information of the named package available for the system.
 
@@ -127,8 +129,8 @@ def info_installed(*names):
 
     .. code-block:: bash
 
-        salt '*' pkg.info <package name>
-        salt '*' pkg.info <package1> <package2> <package3> ...
+        salt '*' pkg.info_available <package1>
+        salt '*' pkg.info_available <package1> <package2> <package3> ...
     '''
     ret = {}
 
