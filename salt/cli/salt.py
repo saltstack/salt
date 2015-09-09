@@ -196,7 +196,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         out = ''
                         for full_ret in local.cmd_cli(**kwargs):
                             ret_, out, retcode = self._format_ret(full_ret)
-                            ret.update(ret_)
+                            ret.update(full_ret)
                         self._output_ret(ret, out)
                     else:
                         if self.options.verbose:
@@ -207,7 +207,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                                 ret_, out, retcode = self._format_ret(full_ret)
                                 retcodes.append(retcode)
                                 self._output_ret(ret_, out)
-                                ret.update(ret_)
+                                ret.update(full_ret)
                             except KeyError:
                                 errors.append(full_ret)
 
