@@ -28,7 +28,8 @@ import salt.template
 
 log = logging.getLogger(__name__)
 
-PER_REMOTE_PARAMS = ('ssl_verify',)
+# Global parameters which can be overridden on a per-remote basis
+PER_REMOTE_OVERRIDES = ('ssl_verify',)
 
 
 def genrepo(opts=None, fire_event=True):
@@ -245,7 +246,7 @@ def update_git_repos(opts=None, masterless=False):
             # New winrepo code utilizing salt.utils.gitfs
             try:
                 winrepo = salt.utils.gitfs.WinRepo(opts, base_dir)
-                winrepo.init_remotes(remotes, PER_REMOTE_PARAMS)
+                winrepo.init_remotes(remotes, PER_REMOTE_OVERRIDES)
                 winrepo.fetch_remotes()
                 winrepo.checkout()
             except Exception as exc:

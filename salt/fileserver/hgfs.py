@@ -46,7 +46,7 @@ from datetime import datetime
 from salt.exceptions import FileserverConfigError
 
 VALID_BRANCH_METHODS = ('branches', 'bookmarks', 'mixed')
-PER_REMOTE_PARAMS = ('base', 'branch_method', 'mountpoint', 'root')
+PER_REMOTE_OVERRIDES = ('base', 'branch_method', 'mountpoint', 'root')
 
 # Import third party libs
 import salt.ext.six as six
@@ -190,7 +190,7 @@ def init():
     repos = []
 
     per_remote_defaults = {}
-    for param in PER_REMOTE_PARAMS:
+    for param in PER_REMOTE_OVERRIDES:
         per_remote_defaults[param] = \
             six.text_type(__opts__['hgfs_{0}'.format(param)])
 
@@ -226,12 +226,12 @@ def init():
 
             per_remote_errors = False
             for param in (x for x in per_remote_conf
-                          if x not in PER_REMOTE_PARAMS):
+                          if x not in PER_REMOTE_OVERRIDES):
                 log.error(
                     'Invalid configuration parameter {0!r} for remote {1}. '
                     'Valid parameters are: {2}. See the documentation for '
                     'further information.'.format(
-                        param, repo_url, ', '.join(PER_REMOTE_PARAMS)
+                        param, repo_url, ', '.join(PER_REMOTE_OVERRIDES)
                     )
                 )
                 per_remote_errors = True

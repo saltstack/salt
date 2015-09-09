@@ -89,7 +89,7 @@ def init_git_pillar(opts):
                 pillar = salt.utils.gitfs.GitPillar(opts)
                 pillar.init_remotes(
                     opts_dict['git'],
-                    git_pillar.PER_REMOTE_PARAMS
+                    git_pillar.PER_REMOTE_OVERRIDES
                 )
                 ret.append(pillar)
     return ret

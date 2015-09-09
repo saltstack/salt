@@ -189,7 +189,7 @@ except ImportError:
     HAS_GITPYTHON = False
 # pylint: enable=import-error
 
-PER_REMOTE_PARAMS = ('env', 'root', 'ssl_verify')
+PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify')
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -242,7 +242,7 @@ def ext_pillar(minion_id, repo, pillar_dirs):
         opts = copy.deepcopy(__opts__)
         opts['pillar_roots'] = {}
         pillar = salt.utils.gitfs.GitPillar(opts)
-        pillar.init_remotes(repo, PER_REMOTE_PARAMS)
+        pillar.init_remotes(repo, PER_REMOTE_OVERRIDES)
         pillar.checkout()
         ret = {}
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
