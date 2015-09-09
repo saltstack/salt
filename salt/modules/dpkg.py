@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import os
+import re
 
 # Import salt libs
 import salt.utils
@@ -241,3 +242,46 @@ def file_dict(*packages):
             files.append(line)
         ret[pkg] = files
     return {'errors': errors, 'packages': ret}
+
+
+def _get_pkg_info(*packages):
+    '''
+    Return list of package informations. If 'packages' parameter is empty,
+    then data about all installed packages will be returned.
+
+    :param packages: Specified packages.
+    :return:
+    '''
+
+    ret = list()
+    cmd = "dpkg-query -W -f='package:${binary:Package}\\n" \
+          "revision:${binary:Revision}\\n" \
+          "architecture:${Architecture}\\n" \
+          "maintainer:${Maintainer}\\n" \
+          "summary:${Summary}\\n" \
+          "source:${source:Package}\\n" \
+          "version:${Version}\\n" \
+          "section:${Section}\\n" \
+          "size:${Installed-size}\\n" \
+          "origin:${Origin}\\n" \
+          "======\\n" \
+          "description:${Description}\\n" \
+          "------\\n'"
+    cmd += ' {0}'.format(' '.join(packages))
+    cmd = cmd.strip()
+
+    call = __salt__['cmd.run_all'](cmd, python_chell=False)
+    if call['retcode']:
+        raise CommandExecutionError("Error getting packages information: {0}".format(call['stderr']))
+
+    for pkg_info in [elm for elm in re.split(r"----*", call['stdout']) if elm.strip()]:
+        pkg_data = dict()
+        pkg_info, pkg_descr = re.split(r"====*", pkg_info)
+        for pkg_info_line in [el.strip() for el in pkg_info.split(os.linesep) if el.strip()]:
+            key, value = pkg_info_line.split(":", 1)
+            pkg_data[key] = value or "N/A"
+        pkg_data['description'] = pkg_descr.split(":", 1)[-1]
+        ret.append(pkg_data)
+
+    return ret
+
