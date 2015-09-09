@@ -124,7 +124,7 @@ def info(*names, **kwargs):
     # Run in batches
     while batch:
         cmd = 'zypper info -t package {0}'.format(' '.join(batch[:batch_size]))
-        pkg_info.extend(re.split("----*", __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')))
+        pkg_info.extend(re.split(r"----*", __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')))
         batch = batch[batch_size:]
 
     for pkg_data in pkg_info:
