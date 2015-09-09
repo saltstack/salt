@@ -264,13 +264,33 @@ def absent(name,
         grains.absent
     '''
 
+    _non_existent_key = 'NonExistentValueMagicNumberSpK3hnufdHfeBUXCfqVK'
+
     name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
-    grain = __salt__['grains.get'](name, None)
-    if grain:
+    grain = __salt__['grains.get'](name, _non_existent_key)
+    if grain is None:
+        if __opts__['test']:
+            ret['result'] = None
+            if destructive is True:
+                ret['comment'] = 'Grain {0} is set to be deleted'\
+                    .format(name)
+                ret['changes'] = {'deleted': name}
+            return ret
+        ret = __salt__['grains.set'](name,
+                                     None,
+                                     destructive=destructive,
+                                     force=force)
+        if ret['result']:
+            if destructive is True:
+                ret['comment'] = 'Grain {0} was deleted'\
+                    .format(name)
+                ret['changes'] = {'deleted': name}
+        ret['name'] = name
+    elif grain != _non_existent_key:
         if __opts__['test']:
             ret['result'] = None
             if destructive is True:
