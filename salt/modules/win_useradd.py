@@ -22,6 +22,9 @@ log = logging.getLogger(__name__)
 try:
     import wmi
     import pythoncom
+    import pywintypes
+    import win32api
+    import win32con
     import win32net
     import win32netcon
     import win32security
@@ -497,3 +500,48 @@ def rename(name, new_name):
         return post_info['name'] == new_name
 
     return False
+
+
+def current(sam=False):
+    '''
+    Get the username that salt-minion is running under. If salt-minion is
+    running as a service it should return the Local System account. If salt is
+    running from a command prompt it should return the username that started the
+    command prompt.
+
+    .. versionadded:: 2015.5.6
+
+    :param bool sam:
+        False returns just the username without any domain notation. True
+        returns the domain with the username in the SAM format. Ie:
+
+        ``domain\\username``
+
+    :return:
+        Returns False if the username cannot be returned. Otherwise returns the
+        username.
+    :rtype: bool str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.current
+    '''
+    try:
+        if sam:
+            user_name = win32api.GetUserNameEx(win32con.NameSamCompatible)
+        else:
+            user_name = win32api.GetUserName()
+    except pywintypes.error as exc:
+        (number, context, message) = exc
+        log.error('Failed to get current user')
+        log.error('nbr: {0}'.format(number))
+        log.error('ctx: {0}'.format(context))
+        log.error('msg: {0}'.format(message))
+        return False
+
+    if not user_name:
+        return False
+
+    return user_name
