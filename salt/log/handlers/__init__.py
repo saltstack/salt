@@ -91,18 +91,24 @@ class StreamHandler(ExcInfoOnLogLevelFormatMixIn, logging.StreamHandler, NewStyl
     '''
     Stream handler which properly handles exc_info on a per handler basis
     '''
+# Patch python with our mixed-in class
+logging.StreamHandler = StreamHandler
 
 
 class FileHandler(ExcInfoOnLogLevelFormatMixIn, logging.FileHandler, NewStyleClassMixIn):
     '''
     File handler which properly handles exc_info on a per handler basis
     '''
+# Patch python with our mixed-in class
+logging.FileHandler = FileHandler
 
 
 class SysLogHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.SysLogHandler, NewStyleClassMixIn):
     '''
     Syslog handler which properly handles exc_info on a per handler basis
     '''
+# Patch python with our mixed-in class
+logging.handlers.SysLogHandler = SysLogHandler
 
 
 if sys.version_info > (2, 6):
@@ -110,6 +116,9 @@ if sys.version_info > (2, 6):
         '''
         Watched file handler which properly handles exc_info on a per handler basis
         '''
+    # Patch python with our mixed-in class
+    logging.handlers.WatchedFileHandler = WatchedFileHandler
+
 
 if sys.version_info < (3, 2):
     class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.Handler, NewStyleClassMixIn):
@@ -178,3 +187,5 @@ if sys.version_info < (3, 2):
 else:
     class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.QueueHandler):  # pylint: disable=no-member
         pass
+    # Patch python with our mixed-in class
+    logging.handlers.QueueHandler = QueueHandler
