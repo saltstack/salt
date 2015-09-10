@@ -471,7 +471,7 @@ def loaded(name, source=None, source_hash='', force=False):
         remove_info = remove_image(name)
         if not remove_info['status']:
             return _invalid(name=name,
-                            comment='Image could not be removed: {1}'.format(name))
+                            comment='Image could not be removed: {0}'.format(name))
 
     load = __salt__['docker.load']
     returned = load(tmp_filename)
