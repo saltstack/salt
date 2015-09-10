@@ -82,33 +82,32 @@ class RegTestCase(TestCase):
         '''
         name = 'HKEY_CURRENT_USER\\SOFTWARE\\Salt'
         vname = 'version'
+        vdata = '0.15.3'
 
         ret = {'name': name,
                'changes': {},
                'result': True,
                'comment': '{0} is already absent'.format(name)}
 
-        mock_read = MagicMock(side_effect=[{'success': False},
-                                           {'success': False},
-                                           {'success': True},
-                                           {'success': True}])
+        mock_read_true = MagicMock(return_value={'success': True, 'vdata': vdata})
+        mock_read_false = MagicMock(return_value={'success': False, 'vdata': False})
+
         mock_t = MagicMock(return_value=True)
-        with patch.dict(reg.__salt__, {'reg.read_value': mock_read,
+        with patch.dict(reg.__salt__, {'reg.read_value': mock_read_false,
                                        'reg.delete_value': mock_t}):
             self.assertDictEqual(reg.absent(name, vname), ret)
 
+        with patch.dict(reg.__salt__, {'reg.read_value': mock_read_true}):
             with patch.dict(reg.__opts__, {'test': True}):
                 ret.update({'comment': '', 'result': None,
-                            'changes': {'reg': {'Will remove': {'Entry': vname,
-                                                                'Key': name}}}})
+                            'changes': {'reg': {'Will remove': {'Entry': vname, 'Key': name}}}})
                 self.assertDictEqual(reg.absent(name, vname), ret)
 
-            with patch.dict(reg.__opts__, {'test': False}):
-                ret.update({'result': True,
-                            'changes': {'reg': {'Removed': {'Entry': vname,
-                                                            'Key': name}}},
-                            'comment': 'Removed {0} from {0}'.format(name)})
-                self.assertDictEqual(reg.absent(name, vname), ret)
+        with patch.dict(reg.__opts__, {'test': False}):
+            ret.update({'result': True,
+                        'changes': {'reg': {'Removed': {'Entry': vname, 'Key': name}}},
+                        'comment': 'Removed {0} from {0}'.format(name)})
+            self.assertDictEqual(reg.absent(name, vname), ret)
 
 
 if __name__ == '__main__':
