@@ -74,7 +74,8 @@ def get_path():
     '''
     ret = __salt__['reg.read_key']('HKEY_LOCAL_MACHINE',
                                    'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
-                                   'PATH').split(';')
+                                   'PATH')
+    ret = ret['vdata'].split(';')
 
     # Trim ending backslash
     return list(map(_normalize_dir, ret))
