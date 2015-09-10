@@ -452,7 +452,8 @@ def wait_for_event(
         name,
         id_list,
         event_id='id',
-        timeout=300):
+        timeout=300,
+        node='master'):
     '''
     Watch Salt's event bus and block until a condition is met
 
@@ -498,7 +499,7 @@ def wait_for_event(
     ret = {'name': name, 'changes': {}, 'comment': '', 'result': False}
 
     sevent = salt.utils.event.get_event(
-            'master',
+            node,
             __opts__['sock_dir'],
             __opts__['transport'],
             opts=__opts__,
