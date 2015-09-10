@@ -2254,6 +2254,11 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
             help='Set this directory as the base pillar root.'
         )
         self.add_option(
+            '--states-dir',
+            default=None,
+            help='Set this directory to search for additional states'
+        )
+        self.add_option(
             '--retcode-passthrough',
             default=False,
             action='store_true',
