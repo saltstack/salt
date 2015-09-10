@@ -364,7 +364,8 @@ def info(*packages):
                 pkg[pkg_ext_k] = pkg_ext_v
         # Remove "technical" keys
         for t_key in ['installed_size', 'depends', 'recommends',
-                      'conflicts', 'bugs', 'description-md5']:
+                      'provides', 'replaces', 'conflicts', 'bugs',
+                      'description-md5', 'task']:
             if t_key in pkg:
                 del pkg[t_key]
         ret[pkg['package']] = pkg
