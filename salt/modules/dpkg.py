@@ -294,6 +294,24 @@ def _get_pkg_info(*packages):
     return ret
 
 
+def _get_pkg_license(pkg):
+    '''
+    Try to get a license from the package.
+    Based on https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+
+    :param pkg:
+    :return:
+    '''
+    licenses = set()
+    cpr = "/usr/share/doc/{0}/copyright".format(pkg)
+    if os.path.exists(cpr):
+        for line in open(cpr).read().split(os.linesep):
+            if line.startswith("License:"):
+                licenses.add(line.split(":", 1)[1].strip())
+
+    return ", ".join(sorted(licenses))
+
+
 def _get_pkg_install_time(pkg):
     '''
     Return package install time, based on the /var/lib/dpkg/info/<package>.list
@@ -368,6 +386,10 @@ def info(*packages):
                       'description-md5', 'task']:
             if t_key in pkg:
                 del pkg[t_key]
+
+        lic = _get_pkg_license(pkg['package'])
+        if lic:
+            pkg['license'] = lic
         ret[pkg['package']] = pkg
 
     return ret
