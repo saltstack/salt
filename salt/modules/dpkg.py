@@ -265,6 +265,7 @@ def _get_pkg_info(*packages):
           "section:${Section}\\n" \
           "size:${Installed-size}\\n" \
           "origin:${Origin}\\n" \
+          "homepage:${Homepage}\\n" \
           "======\\n" \
           "description:${Description}\\n" \
           "------\\n'"

@@ -2239,6 +2239,8 @@ def info_installed(*names):
                 t_nfo['group'] = value
             elif key == 'maintainer':
                 t_nfo['packager'] = value
+            elif key == 'homepage':
+                t_nfo['url'] = value
             else:
                 t_nfo[key] = value
 
