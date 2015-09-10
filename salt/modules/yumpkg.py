@@ -1047,9 +1047,9 @@ def install(name=None,
 
     if targets:
         if _yum() == 'dnf':
-            dnf_args='--best --allowerasing'
+            dnf_args = '--best --allowerasing'
         else:
-            dnf_args=''
+            dnf_args = ''
 
         cmd = '{yum_command} -y {dnf} {repo} {exclude} {branch} {gpgcheck} install {pkg}'.format(
             yum_command=_yum(),
