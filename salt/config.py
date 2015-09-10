@@ -3005,7 +3005,7 @@ def apply_spm_config(overrides, defaults):
     Returns the spm configurations dict.
 
     .. versionadded:: 2015.8.1
-    
+
     '''
     opts = defaults.copy()
     if overrides:
