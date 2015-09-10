@@ -191,11 +191,11 @@ def _init(creds, bucket, multiple_env, environment, prefix, s3_cache_expire):
     # check mtime of the buckets files cache
     cache_file_mtime = os.path.getmtime(cache_file)
     if os.path.isfile(cache_file) and cache_file_mtime > exp:
-        log.debug("S3 bucket cache file %s is not expired, mtime_diff=%ss, expiration=%ss" % (cache_file, cache_file_mtime - exp, s3_cache_expire))
+        log.debug("S3 bucket cache file {0} is not expired, mtime_diff={1}s, expiration={2}s".format(cache_file, cache_file_mtime - exp, s3_cache_expire))
         return _read_buckets_cache_file(cache_file)
     else:
         # bucket files cache expired
-        log.debug("S3 bucket cache file %s is expired, mtime_diff=%ss, expiration=%ss" % (cache_file, cache_file_mtime - exp, s3_cache_expire))
+        log.debug("S3 bucket cache file {0} is expired, mtime_diff={1}s, expiration={2}s".format(cache_file, cache_file_mtime - exp, s3_cache_expire))
         return _refresh_buckets_cache_file(creds, cache_file, multiple_env,
                                            environment, prefix)
 
@@ -384,7 +384,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
 
         # hashes match we have a cache hit
-        log.debug("Cached file: path=%s, md5=%s, etag=%s" % (cached_file_path, cached_md5, file_md5))
+        log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
         if cached_md5 == file_md5:
             return
 
