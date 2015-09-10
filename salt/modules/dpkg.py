@@ -263,7 +263,8 @@ def _get_pkg_info(*packages):
           "source:${source:Package}\\n" \
           "version:${Version}\\n" \
           "section:${Section}\\n" \
-          "size:${Installed-size}\\n" \
+          "installed_size:${Installed-size}\\n" \
+          "size:${Size}\\n" \
           "origin:${Origin}\\n" \
           "homepage:${Homepage}\\n" \
           "======\\n" \
