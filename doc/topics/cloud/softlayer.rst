@@ -11,7 +11,7 @@ available at PyPI:
 
 https://pypi.python.org/pypi/SoftLayer
 
-This package can be installed using `pip` or `easy_install`:
+This package can be installed using ``pip`` or ``easy_install``:
 
 .. code-block:: bash
 
@@ -53,13 +53,13 @@ Set up the cloud config at ``/etc/salt/cloud.providers``:
 
 Access Credentials
 ==================
-The `user` setting is the same user as is used to log into the SoftLayer
-Administration area. The `apikey` setting is found inside the Admin area after
+The ``user`` setting is the same user as is used to log into the SoftLayer
+Administration area. The ``apikey`` setting is found inside the Admin area after
 logging in:
 
-* Hover over the `Administrative` menu item.
-* Click the `API Access` link.
-* The `apikey` is located next to the `user` setting.
+* Hover over the ``Account`` menu item.
+* Click the ``Users`` link.
+* Find the ``API Key`` column and click ``View``.
 
 
 Profiles
@@ -94,13 +94,13 @@ Most of the above items are required; optional items are specified below.
 
 image
 -----
-Images to build an instance can be found using the `--list-images` option:
+Images to build an instance can be found using the ``--list-images`` option:
 
 .. code-block:: bash
 
     # salt-cloud --list-images my-softlayer
 
-The setting used will be labeled as `template`.
+The setting used will be labeled as ``template``.
 
 cpu_number
 ----------
