@@ -152,10 +152,9 @@ def _changes(name,
             change['homephone'] = homephone
     # OpenBSD login class
     if __grains__['kernel'] == 'OpenBSD':
-        if not loginclass:
-            loginclass = '""'
-        if __salt__['user.get_loginclass'](name)['loginclass'] != loginclass:
-            change['loginclass'] = loginclass
+        if loginclass:
+            if __salt__['user.get_loginclass'](name) != loginclass:
+                change['loginclass'] = loginclass
 
     return change
 
@@ -443,8 +442,8 @@ def present(name,
                 if lshad[key] != spost[key]:
                     ret['changes'][key] = spost[key]
         if __grains__['kernel'] == 'OpenBSD':
-            if lcpost['loginclass'] != lcpre['loginclass']:
-                ret['changes']['loginclass'] = lcpost['loginclass']
+            if lcpre != lcpost:
+                ret['changes']['loginclass'] = lcpost
         if ret['changes']:
             ret['comment'] = 'Updated user {0}'.format(name)
         changes = _changes(name,
