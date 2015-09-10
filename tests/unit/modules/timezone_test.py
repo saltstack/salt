@@ -22,8 +22,7 @@ ensure_in_syspath('../../')
 import salt.utils
 from salt.modules import timezone
 import os
-from salt.exceptions import CommandExecutionError
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
 # Globals
@@ -53,22 +52,28 @@ class TimezoneTestCase(TestCase):
             with patch('salt.utils.fopen', mock_open(read_data=file_data),
                        create=True) as mfile:
                 mfile.return_value.__iter__.return_value = file_data.splitlines()
-                with patch.dict(timezone.__grains__, {'os_family': 'Debian'}):
+                with patch.dict(timezone.__grains__, {'os_family': 'Debian',
+                                                      'os': 'Debian'}):
                     self.assertEqual(timezone.get_zone(), '#\nA')
 
-                with patch.dict(timezone.__grains__, {'os_family': 'Gentoo'}):
+                with patch.dict(timezone.__grains__, {'os_family': 'Gentoo',
+                                                      'os': 'Gentoo'}):
                     self.assertEqual(timezone.get_zone(), '')
 
-            with patch.dict(timezone.__grains__, {'os_family': 'FreeBSD'}):
-                with patch.object(os, 'readlink',
-                                  return_value='/usr/share/zoneinfo/'):
-                    self.assertEqual(timezone.get_zone(), '')
+            with patch.dict(timezone.__grains__, {'os_family': 'FreeBSD',
+                                                  'os': 'FreeBSD'}):
+                zone = 'America/Denver'
+                linkpath = '/usr/share/zoneinfo/' + zone
+                with patch.object(os, 'readlink', return_value=linkpath):
+                    self.assertEqual(timezone.get_zone(), zone)
 
-            with patch.dict(timezone.__grains__, {'os_family': 'Solaris'}):
-                with patch.dict(timezone.__salt__,
-                                {'cmd.run':
-                                 MagicMock(return_value='A=B')}):
-                    self.assertEqual(timezone.get_zone(), 'B')
+            with patch.dict(timezone.__grains__, {'os_family': 'Solaris',
+                                                  'os': 'Solaris'}):
+                fl_data = 'TZ=Foo\n'
+                with patch('salt.utils.fopen',
+                           mock_open(read_data=fl_data)) as mfile:
+                    mfile.return_value.__iter__.return_value = [fl_data]
+                    self.assertEqual(timezone.get_zone(), 'Foo')
 
     def test_get_zonecode(self):
         '''
@@ -171,26 +176,24 @@ class TimezoneTestCase(TestCase):
                     self.assertEqual(timezone.get_hwclock(), 'A')
 
             with patch.dict(timezone.__grains__, {'os_family': 'Debian'}):
-                with patch.dict(timezone.__salt__,
-                                {'cmd.run':
-                                 MagicMock(return_value='A=yes')}):
+                fl_data = 'UTC=yes\n'
+                with patch('salt.utils.fopen',
+                           mock_open(read_data=fl_data)) as mfile:
+                    mfile.return_value.__iter__.return_value = [fl_data]
                     self.assertEqual(timezone.get_hwclock(), 'UTC')
 
-                with patch.dict(timezone.__salt__,
-                                {'cmd.run':
-                                 MagicMock(return_value='A=no')}):
+                fl_data = 'UTC=no\n'
+                with patch('salt.utils.fopen',
+                           mock_open(read_data=fl_data)) as mfile:
+                    mfile.return_value.__iter__.return_value = [fl_data]
                     self.assertEqual(timezone.get_hwclock(), 'localtime')
 
-                with patch.dict(timezone.__salt__,
-                                {'cmd.run':
-                                 MagicMock(return_value='A')}):
-                    self.assertEqual(timezone.get_hwclock(), 'A')
-
             with patch.dict(timezone.__grains__, {'os_family': 'Gentoo'}):
-                with patch.dict(timezone.__salt__,
-                                {'cmd.run':
-                                 MagicMock(return_value='A=B')}):
-                    self.assertEqual(timezone.get_hwclock(), 'B')
+                fl_data = 'clock=UTC\n'
+                with patch('salt.utils.fopen',
+                           mock_open(read_data=fl_data)) as mfile:
+                    mfile.return_value.__iter__.return_value = [fl_data]
+                    self.assertEqual(timezone.get_hwclock(), 'UTC')
 
         mock = MagicMock(return_value=True)
         with patch.object(os.path, 'isfile', mock):
@@ -226,31 +229,30 @@ class TimezoneTestCase(TestCase):
         '''
         Test to sets the hardware clock to be either UTC or localtime
         '''
-        ret = ('UTC is the only choice for SPARC architecture')
-        ret1 = ('Zone does not exist: /usr/share/zoneinfo/America/Denver')
-        with patch.object(timezone, 'get_zone',
-                          return_value='America/Denver'):
+        zone = 'America/Denver'
+        with patch.object(timezone, 'get_zone', return_value=zone):
 
             with patch.dict(timezone.__grains__, {'os_family': 'Solaris',
                                                   'cpuarch': 'sparc'}):
-                self.assertEqual(timezone.set_hwclock('clock'), ret)
+                self.assertRaises(
+                    SaltInvocationError,
+                    timezone.set_hwclock,
+                    'clock'
+                )
+                self.assertRaises(
+                    SaltInvocationError,
+                    timezone.set_hwclock,
+                    'localtime'
+                )
 
-                with patch.dict(timezone.__salt__,
-                                {'cmd.run':
-                                 MagicMock(return_value=None)}):
-                    self.assertTrue(timezone.set_hwclock('localtime'))
-
-                    self.assertTrue(timezone.set_hwclock('UTC'))
-
-            with patch.dict(timezone.__grains__, {'os_family': 'Sola'}):
+            with patch.dict(timezone.__grains__,
+                            {'os_family': 'DoesNotMatter'}):
                 with patch.object(os.path, 'exists', return_value=False):
-                    self.assertEqual(timezone.set_hwclock('clock'), ret1)
-
-                with patch.object(os.path, 'exists', return_value=True):
-                    with patch.object(os, 'unlink', return_value=None):
-                        with patch.object(os, 'symlink', return_value=None):
-                            self.assertTrue(timezone.set_hwclock('clock'))
-
+                    self.assertRaises(
+                        CommandExecutionError,
+                        timezone.set_hwclock,
+                        'UTC'
+                    )
 
 if __name__ == '__main__':
     from integration import run_tests
