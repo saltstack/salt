@@ -28,6 +28,7 @@ from distutils.version import LooseVersion  # pylint: disable=E0611
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import MinionError
 
 log = logging.getLogger(__name__)
 
@@ -465,7 +466,10 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
             cached_pkg = __salt__['cp.is_cached'](installer, saltenv)
             if not cached_pkg:
                 # It's not cached. Cache it, mate.
-                cached_pkg = __salt__['cp.cache_file'](installer, saltenv)
+                try:
+                    cached_pkg = __salt__['cp.cache_file'](installer, saltenv)
+                except MinionError as exc:
+                    return '{0}: {1}'.format(exc, installer)
             if not cached_pkg:
                 return 'Unable to cache file {0} from saltenv: {1}'\
                     .format(installer, saltenv)
