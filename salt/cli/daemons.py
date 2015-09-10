@@ -238,6 +238,12 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
             )
         )
         migrations.migrate_paths(self.config)
+
+        # Bail out if we find a process running and it matches out pidfile
+        if self.check_running():
+            logger.exception('Salt minion is already running. Exiting.')
+            self.shutdown(err.errno)
+
         # TODO: AIO core is separate from transport
         if self.config['transport'].lower() in ('zeromq', 'tcp'):
             # Late import so logging works correctly

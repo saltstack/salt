@@ -102,6 +102,13 @@ def set_pidfile(pidfile, user):
     log.debug('Chowned pidfile: {0} to user: {1}'.format(pidfile, user))
 
 
+def get_pidfile(pidfile):
+    '''
+    Determine if a pidfile has been written out
+    '''
+    return os.path.isfile(pidfile)
+
+
 def clean_proc(proc, wait_for_kill=10):
     '''
     Generic method for cleaning up multiprocessing procs
