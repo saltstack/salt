@@ -265,6 +265,9 @@ def _get_pkg_info(*packages):
           "section:${Section}\\n" \
           "installed_size:${Installed-size}\\n" \
           "size:${Size}\\n" \
+          "MD5:${MD5sum}\\n" \
+          "SHA1:${SHA1}\\n" \
+          "SHA256:${SHA256}\\n" \
           "origin:${Origin}\\n" \
           "homepage:${Homepage}\\n" \
           "======\\n" \
@@ -306,6 +309,35 @@ def _get_pkg_install_time(pkg):
     return iso_time
 
 
+def _get_pkg_ds_avail():
+    '''
+    Get the package information of the available packages, maintained by dselect.
+    Note, this will be not very useful, if dselect isn't installed.
+
+    :return:
+    '''
+    avail = "/var/lib/dpkg/available"
+    if not salt.utils.which('dselect') or not os.path.exists(avail):
+        return dict()
+
+    # Do not update with dselect, just read what is.
+    ret = dict()
+    pkg_mrk = "Package:"
+    pkg_name = "package"
+    for pkg_info in open(avail).read().split(pkg_mrk):
+        nfo = dict()
+        for line in (pkg_mrk + pkg_info).split(os.linesep):
+            line = line.split(": ", 1)
+            if len(line) != 2: continue
+            key, value = line
+            if value.strip():
+                nfo[key.lower()] = value
+        if nfo.get(pkg_name):
+            ret[nfo[pkg_name]] = nfo
+
+    return ret
+
+
 def info(*packages):
     '''
     Return a detailed package(s) summary information.
@@ -320,9 +352,21 @@ def info(*packages):
 
         salt '*' lowpkg.info apache2 bash
     '''
+    # Get the missing information from the /var/lib/dpkg/available, if it is there.
+    # However, this file is operated by dselect which has to be installed.
+    dselect_pkg_avail = _get_pkg_ds_avail()
 
     ret = dict()
     for pkg in _get_pkg_info(*packages):
+        # Merge extra information from the dselect, if available
+        for pkg_ext_k, pkg_ext_v in dselect_pkg_avail.get(pkg['package'], {}).items():
+            if pkg_ext_k not in pkg:
+                pkg[pkg_ext_k] = pkg_ext_v
+        # Remove "technical" keys
+        for t_key in ['installed_size', 'depends', 'recommends',
+                      'conflicts', 'bugs', 'description-md5']:
+            if t_key in pkg:
+                del pkg[t_key]
         ret[pkg['package']] = pkg
 
     return ret
