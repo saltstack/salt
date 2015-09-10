@@ -177,8 +177,8 @@ def info(*names, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' pkg.info_available <package1>
-        salt '*' pkg.info_available <package1> <package2> <package3> ...
+        salt '*' pkg.info <package1>
+        salt '*' pkg.info <package1> <package2> <package3> ...
     '''
     salt.utils.warn_until('Nitrogen', "Please use 'pkg.info_available' instead")
     return info_available(*names)
