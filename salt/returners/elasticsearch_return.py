@@ -123,7 +123,7 @@ def save_load(jid, load):
     '''
     Save the load to the specified jid id
     '''
-    index = 'salt-master-job-cache'
+    index = __salt__['config.option']('elasticsearch:master_job_cache_index', 'salt-master-job-cache')
     doc_type = __salt__['config.option']('elasticsearch:master_job_cache_doc_type', 'default')
 
     index_exists = __salt__['elasticsearch.index_exists'](index)
@@ -147,7 +147,7 @@ def get_load(jid):
     '''
     Return the load data that marks a specified jid
     '''
-    index = 'salt-master_job_cache'
+    index = __salt__['config.option']('elasticsearch:master_job_cache_index', 'salt-master-job-cache')
     doc_type = __salt__['config.option']('elasticsearch:master_job_cache_doc_type', 'default')
 
     data = __salt__['elasticsearch.document_get'](index=index, id=jid, doc_type=doc_type)
