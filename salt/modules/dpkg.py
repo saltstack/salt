@@ -346,7 +346,8 @@ def _get_pkg_ds_avail():
         nfo = dict()
         for line in (pkg_mrk + pkg_info).split(os.linesep):
             line = line.split(": ", 1)
-            if len(line) != 2: continue
+            if len(line) != 2:
+                continue
             key, value = line
             if value.strip():
                 nfo[key.lower()] = value
