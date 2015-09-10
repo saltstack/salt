@@ -12,6 +12,7 @@ import os
 import shutil
 import datetime
 import hashlib
+import time
 
 # Import salt libs
 import salt.payload
@@ -137,7 +138,7 @@ def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
         log.warn('Could not write out jid file for job {0}. Retrying.'.format(jid))
         time.sleep(0.1)
         recurse_count += recurse_count
-        return prep_jid(passed_jid = jid, nocache=nocache)
+        return prep_jid(passed_jid=jid, nocache=nocache)
 
     return jid
 
