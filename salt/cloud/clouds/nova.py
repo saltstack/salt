@@ -110,7 +110,7 @@ except NameError as exc:
     HAS_NOVA = False
 
 # Import Salt Cloud Libs
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
 import salt.utils.cloud
 import salt.utils.pycrypto as sup
 import salt.config as config
@@ -128,12 +128,6 @@ try:
     HAS_NETADDR = True
 except ImportError:
     HAS_NETADDR = False
-
-try:
-    import requests  # pylint: disable=unused-import
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -183,7 +177,6 @@ def get_dependencies():
         'libcloud': HAS_LIBCLOUD,
         'netaddr': HAS_NETADDR,
         'nova': HAS_NOVA,
-        'requests': HAS_REQUESTS
     }
     return config.check_driver_dependencies(
         __virtualname__,
@@ -404,10 +397,11 @@ def destroy(name, conn=None, call=None):
     profile = None
     if 'metadata' in node.extra and 'profile' in node.extra['metadata']:
         profile = node.extra['metadata']['profile']
+
     flush_mine_on_destroy = False
-    if profile is not None and profile in profiles:
-        if 'flush_mine_on_destroy' in profiles[profile]:
-            flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+    if profile and profile in profiles and 'flush_mine_on_destroy' in profiles[profile]:
+        flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+
     if flush_mine_on_destroy:
         log.info('Clearing Salt Mine: {0}'.format(name))
         salt_client = salt.client.get_local_client(__opts__['conf_file'])
@@ -724,10 +718,9 @@ def create(vm_):
                     if private_ip not in data.private_ips and not ignore_ip:
                         result.append(private_ip)
 
-        if rackconnect(vm_) is True:
-            if ssh_interface(vm_) != 'private_ips' or rackconnectv3:
-                data.public_ips = access_ip
-                return data
+        if rackconnect(vm_) is True and (ssh_interface(vm_) != 'private_ips' or rackconnectv3):
+            data.public_ips = access_ip
+            return data
 
         if cloudnetwork(vm_) is True:
             data.public_ips = access_ip

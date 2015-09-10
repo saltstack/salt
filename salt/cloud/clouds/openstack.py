@@ -707,10 +707,9 @@ def create(vm_):
                     if private_ip not in data.private_ips and not ignore_ip:
                         result.append(private_ip)
 
-        if rackconnect(vm_) is True:
-            if ssh_interface(vm_) != 'private_ips':
-                data.public_ips = access_ip
-                return data
+        if rackconnect(vm_) is True and ssh_interface(vm_) != 'private_ips':
+            data.public_ips = access_ip
+            return data
 
         # populate return data with private_ips
         # when ssh_interface is set to private_ips and public_ips exist

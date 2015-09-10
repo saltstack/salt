@@ -363,9 +363,11 @@ def wait_for_ip(vm_):
         Wait for the IP address to become available
         '''
         instance = show_instance(name=vm_['name'], call='action')
-        if 'ip_address' in instance:
-            if instance['ip_address'] is not None:
-                return instance['ip_address']
+        ip_addrs = instance.get('ip_address', None)
+
+        if ip_addrs is not None:
+            return ip_addrs
+
         time.sleep(1)
         return False
 
@@ -514,10 +516,12 @@ def _get_instance_properties(instance, from_cache=True):
     for device in ret['devices']:
         if '_obj' in ret['devices'][device]:
             del ret['devices'][device]['_obj']
+
         # TODO: this is a workaround because the net does not return mac...?
-        if ret['mac_address'] is None:
-            if 'macAddress' in ret['devices'][device]:
-                ret['mac_address'] = ret['devices'][device]['macAddress']
+        mac_address = ret.get('mac_address', None)
+        if mac_address is None and 'macAddress' in ret['devices'][device]:
+            ret['mac_address'] = ret['devices'][device]['macAddress']
+
     ret['status'] = instance.get_status()
     ret['tools_status'] = instance.get_tools_status()
 
