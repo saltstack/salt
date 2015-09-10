@@ -1272,8 +1272,11 @@ class AESFuncs(object):
 
         :param dict load: The minion payload
         '''
-        salt.utils.job.store_job(
-            self.opts, load, event=self.event, mminion=self.mminion)
+        try:
+            salt.utils.job.store_job(
+                self.opts, load, event=self.event, mminion=self.mminion)
+        except salt.exception.SaltCacheError:
+            log.error('Could not store job information for load: {0}'.format(load))
 
     def _syndic_return(self, load):
         '''
