@@ -102,6 +102,23 @@ def set_pidfile(pidfile, user):
     log.debug('Chowned pidfile: {0} to user: {1}'.format(pidfile, user))
 
 
+def check_pidfile(pidfile):
+    '''
+    Determine if a pidfile has been written out
+    '''
+    return os.path.isfile(pidfile)
+
+
+def get_pidfile(pidfile):
+    '''
+    Return the pid from a pidfile as an integer
+    '''
+    with salt.utils.fopen(pidfile) as pdf:
+        pid = pdf.read()
+
+    return int(pid)
+
+
 def clean_proc(proc, wait_for_kill=10):
     '''
     Generic method for cleaning up multiprocessing procs
@@ -133,6 +150,8 @@ def os_is_running(pid):
     '''
     Use OS facilities to determine if a process is running
     '''
+    if isinstance(pid, six.string_types):
+        pid = int(pid)
     if HAS_PSUTIL:
         return psutil.pid_exists(pid)
     else:

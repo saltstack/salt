@@ -843,6 +843,10 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
             import salt.utils
             salt.utils.daemonize()
 
+    def is_daemonized(self, pid):
+        import salt.utils.process
+        return salt.utils.process.os_is_running(pid)
+
 
 class PidfileMixin(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 40
@@ -859,6 +863,20 @@ class PidfileMixin(six.with_metaclass(MixInMeta, object)):
     def set_pidfile(self):
         from salt.utils.process import set_pidfile
         set_pidfile(self.config['pidfile'], self.config['user'])
+
+    def check_pidfile(self):
+        '''
+        Report whether a pidfile exists
+        '''
+        from salt.utils.process import check_pidfile
+        return check_pidfile(self.config['pidfile'])
+
+    def get_pidfile(self):
+        '''
+        Return a pid contained in a pidfile
+        '''
+        from salt.utils.process import get_pidfile
+        return get_pidfile(self.config['pidfile'])
 
 
 class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
@@ -1515,6 +1533,14 @@ class MasterOptionParser(six.with_metaclass(OptionParserMeta,
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
+
+    def check_running(self):
+        '''
+        Check if a pid file exists and if it is associated with
+        a running process.
+        '''
+        if self.check_pidfile():
+            return self.is_daemonized(self.get_pidfile())
 
 
 class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser)):  # pylint: disable=no-init
