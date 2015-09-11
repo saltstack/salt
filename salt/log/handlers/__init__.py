@@ -111,6 +111,7 @@ if sys.version_info > (2, 6):
         Watched file handler which properly handles exc_info on a per handler basis
         '''
 
+
 if sys.version_info < (3, 2):
     class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.Handler, NewStyleClassMixIn):
         '''

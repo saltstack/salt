@@ -16,7 +16,7 @@ from __future__ import absolute_import
 import psutil
 
 if psutil.version_info >= (2, 0):
-    from psutil import *  # pylint: disable=wildcard-import
+    from psutil import *  # pylint: disable=wildcard-import,unused-wildcard-import
 else:
     # Import hack to work around bugs in old psutil's
     # Psuedo "from psutil import *"
