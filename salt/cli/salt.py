@@ -207,7 +207,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                                 ret_, out, retcode = self._format_ret(full_ret)
                                 retcodes.append(retcode)
                                 self._output_ret(ret_, out)
-                                ret.update(ret_)
+                                ret.update(full_ret)
                             except KeyError:
                                 errors.append(full_ret)
 
