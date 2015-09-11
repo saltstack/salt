@@ -1362,9 +1362,8 @@ def _query(action=None,
     if 'api_key' not in args.keys():
         args['api_key'] = apikey
 
-    if action:
-        if 'api_action' not in args.keys():
-            args['api_action'] = '{0}.{1}'.format(action, command)
+    if action and 'api_action' not in args.keys():
+        args['api_action'] = '{0}.{1}'.format(action, command)
 
     if header_dict is None:
         header_dict = {}
@@ -1421,9 +1420,8 @@ def _wait_for_job(linode_id, job_id, timeout=300, quiet=True):
         jobs_result = _query('linode',
                              'job.list',
                              args={'LinodeID': linode_id})['DATA']
-        if jobs_result[0]['JOBID'] == job_id:
-            if jobs_result[0]['HOST_SUCCESS'] == 1:
-                return True
+        if jobs_result[0]['JOBID'] == job_id and jobs_result[0]['HOST_SUCCESS'] == 1:
+            return True
 
         time.sleep(interval)
         if not quiet:

@@ -716,7 +716,7 @@ def _compute_signature(parameters, access_key_secret):
     sortedParameters = sorted(list(parameters.items()), key=lambda items: items[0])
 
     canonicalizedQueryString = ''
-    for (k, v) in sortedParameters:
+    for k, v in sortedParameters:
         canonicalizedQueryString += '&' + percent_encode(k) \
             + '=' + percent_encode(v)
 
