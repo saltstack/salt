@@ -1306,6 +1306,7 @@ def os_data():
         grains['os'] = 'ESXi'
     elif grains['kernel'] == 'Darwin':
         osrelease = __salt__['cmd.run']('sw_vers -productVersion')
+        grains['os_build_version'] = __salt__['cmd.run']('sw_vers -buildVersion')
         grains['os'] = 'MacOS'
         grains['osrelease'] = osrelease
         grains['osmajorrelease'] = osrelease.rsplit('.', 1)[0]
