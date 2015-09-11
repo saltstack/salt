@@ -105,10 +105,17 @@ def _determine_device_class():
         return '/Server/Linux'
 
 
-def find_device(device):
+def find_device(device=None):
     '''
     Find a device in Zenoss. If device not found, returns None.
+
+    Parameters:
+        device:         (Optional) Will use the grain 'fqdn' by default
+
+    CLI Example:
+        salt '*' zenoss.find_device
     '''
+
     data = [{'uid': '/zport/dmd/Devices', 'params': {}, 'limit': None}]
     all_devices = _router_request('DeviceRouter', 'getDevices', data=data)
     for dev in all_devices['devices']:
