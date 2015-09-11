@@ -103,6 +103,8 @@ except ImportError:
     except ImportError:
         HAS_SIX = False
 
+IP_RE = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+
 # Get logging started
 log = logging.getLogger(__name__)
 
@@ -365,7 +367,7 @@ def _get_network_adapter_type(adapter_type):
         return vim.vm.device.VirtualE1000e()
 
 
-def _edit_existing_network_adapter_helper(network_adapter, new_network_name, adapter_type, switch_type):
+def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_type, switch_type):
     adapter_type.strip().lower()
     switch_type.strip().lower()
 
@@ -470,7 +472,7 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     return network_spec
 
 
-def _edit_existing_scsi_adapter_helper(scsi_adapter, bus_sharing):
+def _edit_existing_scsi_adapter(scsi_adapter, bus_sharing):
     scsi_adapter.sharedBus = bus_sharing
     scsi_spec = vim.vm.device.VirtualDeviceSpec()
     scsi_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
@@ -549,7 +551,7 @@ def _set_cd_or_dvd_backing_type(drive, device_type, mode, iso_path):
     return drive
 
 
-def _edit_existing_cd_or_dvd_drive_helper(drive, device_type, mode, iso_path):
+def _edit_existing_cd_or_dvd_drive(drive, device_type, mode, iso_path):
     device_type.strip().lower()
     mode.strip().lower()
 
@@ -592,7 +594,7 @@ def _add_new_cd_or_dvd_drive_helper(drive_label, controller_key, device_type, mo
     return drive_spec
 
 
-def _set_network_adapter_mapping_helper(adapter_specs):
+def _set_network_adapter_mapping(adapter_specs):
     adapter_mapping = vim.vm.customization.AdapterMapping()
     adapter_mapping.adapter = vim.vm.customization.IPSettings()
 
@@ -650,8 +652,8 @@ def _manage_devices(devices, vm):
                     network_name = devices['network'][device.deviceInfo.label]['name']
                     adapter_type = devices['network'][device.deviceInfo.label]['adapter_type'] if 'adapter_type' in devices['network'][device.deviceInfo.label] else ''
                     switch_type = devices['network'][device.deviceInfo.label]['switch_type'] if 'switch_type' in devices['network'][device.deviceInfo.label] else ''
-                    network_spec = _edit_existing_network_adapter_helper(device, network_name, adapter_type, switch_type)
-                    adapter_mapping = _set_network_adapter_mapping_helper(devices['network'][device.deviceInfo.label])
+                    network_spec = _edit_existing_network_adapter(device, network_name, adapter_type, switch_type)
+                    adapter_mapping = _set_network_adapter_mapping(devices['network'][device.deviceInfo.label])
                     device_specs.append(network_spec)
                     nics_map.append(adapter_mapping)
 
@@ -669,7 +671,7 @@ def _manage_devices(devices, vm):
                         bus_sharing = '{0}Sharing'.format(bus_sharing)
                         if bus_sharing != device.sharedBus:
                             # Only edit the SCSI adapter if bus_sharing is different
-                            scsi_spec = _edit_existing_scsi_adapter_helper(device, bus_sharing)
+                            scsi_spec = _edit_existing_scsi_adapter(device, bus_sharing)
                             device_specs.append(scsi_spec)
 
         elif isinstance(device, vim.vm.device.VirtualCdrom):
@@ -681,7 +683,7 @@ def _manage_devices(devices, vm):
                     device_type = devices['cd'][device.deviceInfo.label]['device_type'] if 'device_type' in devices['cd'][device.deviceInfo.label] else ''
                     mode = devices['cd'][device.deviceInfo.label]['mode'] if 'mode' in devices['cd'][device.deviceInfo.label] else ''
                     iso_path = devices['cd'][device.deviceInfo.label]['iso_path'] if 'iso_path' in devices['cd'][device.deviceInfo.label] else ''
-                    cd_drive_spec = _edit_existing_cd_or_dvd_drive_helper(device, device_type, mode, iso_path)
+                    cd_drive_spec = _edit_existing_cd_or_dvd_drive(device, device_type, mode, iso_path)
                     device_specs.append(cd_drive_spec)
 
         elif isinstance(device, vim.vm.device.VirtualIDEController):
@@ -709,7 +711,7 @@ def _manage_devices(devices, vm):
             switch_type = devices['network'][network_adapter_label]['switch_type'] if 'switch_type' in devices['network'][network_adapter_label] else ''
             # create the network adapter
             network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type)
-            adapter_mapping = _set_network_adapter_mapping_helper(devices['network'][network_adapter_label])
+            adapter_mapping = _set_network_adapter_mapping(devices['network'][network_adapter_label])
             device_specs.append(network_spec)
             nics_map.append(adapter_mapping)
 
@@ -783,15 +785,14 @@ def _wait_for_ip(vm_ref, max_wait):
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting to retrieve IPv4 information [{1} s]".format(vm_ref.name, time_counter))
 
-        if vm_ref.summary.guest.ipAddress:
-            if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
-                log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
-                return vm_ref.summary.guest.ipAddress
+        if vm_ref.summary.guest.ipAddress and match(IP_RE, vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
+            log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
+            return vm_ref.summary.guest.ipAddress
 
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
-                    if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
+                    if match(IP_RE, current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
                         log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
                         return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
@@ -2381,24 +2382,24 @@ def create(vm_):
             config=config_spec
         )
 
-        if devices and 'network' in list(devices.keys()):
-            if "Windows" not in object_ref.config.guestFullName:
-                global_ip = vim.vm.customization.GlobalIPSettings()
-                if 'dns_servers' in list(vm_.keys()):
-                    global_ip.dnsServerList = vm_['dns_servers']
+        if devices and 'network' in list(devices.keys()) and 'Windows' not in object_ref.config.guestFullName:
+            global_ip = vim.vm.customization.GlobalIPSettings()
 
-                identity = vim.vm.customization.LinuxPrep()
-                hostName = vm_name.split('.')[0]
-                domainName = vm_name.split('.', 1)[-1]
-                identity.hostName = vim.vm.customization.FixedName(name=hostName)
-                identity.domain = domainName if hostName != domainName else domain
+            if 'dns_servers' in list(vm_.keys()):
+                global_ip.dnsServerList = vm_['dns_servers']
 
-                custom_spec = vim.vm.customization.Specification(
-                    globalIPSettings=global_ip,
-                    identity=identity,
-                    nicSettingMap=specs['nics_map']
-                )
-                clone_spec.customization = custom_spec
+            identity = vim.vm.customization.LinuxPrep()
+            hostName = vm_name.split('.')[0]
+            domainName = vm_name.split('.', 1)[-1]
+            identity.hostName = vim.vm.customization.FixedName(name=hostName)
+            identity.domain = domainName if hostName != domainName else domain
+
+            custom_spec = vim.vm.customization.Specification(
+                globalIPSettings=global_ip,
+                identity=identity,
+                nicSettingMap=specs['nics_map']
+            )
+            clone_spec.customization = custom_spec
 
         if not template:
             clone_spec.powerOn = power
