@@ -146,11 +146,11 @@ def add(path, index=0):
 
     # Add it to the Path
     sysPath.insert(index, path)
-    regedit = __salt__['reg.set_key'](
+    regedit = __salt__['reg.set_value'](
         'HKEY_LOCAL_MACHINE',
         'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
-        'PATH',
         ';'.join(sysPath),
+        'PATH',
         'REG_EXPAND_SZ'
     )
 
@@ -183,11 +183,11 @@ def remove(path):
     except ValueError:
         return True
 
-    regedit = __salt__['reg.set_key'](
+    regedit = __salt__['reg.set_value'](
         'HKEY_LOCAL_MACHINE',
         'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
-        'PATH',
         ';'.join(sysPath),
+        'PATH',
         'REG_EXPAND_SZ'
     )
     if regedit:
