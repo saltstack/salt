@@ -367,6 +367,8 @@ def present(name,
             ret['comment'] = ('The following user attributes are set to be '
                               'changed:\n')
             for key, val in changes.items():
+                if key == 'password':
+                    val = 'XXX-REDACTED-XXX'
                 ret['comment'] += '{0}: {1}\n'.format(key, val)
             return ret
         # The user is present
@@ -488,9 +490,9 @@ def present(name,
                     if spost['passwd'] != password:
                         ret['comment'] = 'User {0} created but failed to set' \
                                          ' password to' \
-                                         ' {1}'.format(name, password)
+                                         ' {1}'.format(name, 'XXX-REDACTED-XXX')
                         ret['result'] = False
-                    ret['changes']['password'] = password
+                    ret['changes']['password'] = 'XXX-REDACTED-XXX'
                 if date:
                     __salt__['shadow.set_date'](name, date)
                     spost = __salt__['shadow.info'](name)
@@ -550,9 +552,9 @@ def present(name,
                     if not __salt__['user.setpassword'](name, password):
                         ret['comment'] = 'User {0} created but failed to set' \
                                          ' password to' \
-                                         ' {1}'.format(name, password)
+                                         ' {1}'.format(name, 'XXX-REDACTED-XXX')
                         ret['result'] = False
-                    ret['changes']['passwd'] = password
+                    ret['changes']['passwd'] = 'XXX-REDACTED-XXX'
         else:
             ret['comment'] = 'Failed to create new user {0}'.format(name)
             ret['result'] = False
