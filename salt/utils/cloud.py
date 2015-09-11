@@ -347,7 +347,7 @@ def bootstrap(vm_, opts):
 
     inline_script_code = salt.config.get_cloud_config_value(
         'inline_script', vm_, opts, default=None
-        )
+    )
 
     ssh_username = salt.config.get_cloud_config_value(
         'ssh_username', vm_, opts, default='root'
@@ -355,6 +355,33 @@ def bootstrap(vm_, opts):
 
     if 'file_transport' not in opts:
         opts['file_transport'] = vm_.get('file_transport', 'sftp')
+
+    # If we haven't generated any keys yet, do so now.
+    if 'pub_key' not in vm_ and 'priv_key' not in vm_:
+        log.debug('Generating keys for \'{0[name]}\''.format(vm_))
+
+        vm_['priv_key'], vm_['pub_key'] = gen_keys(
+            salt.config.get_cloud_config_value(
+                'keysize',
+                vm_,
+                opts
+            )
+        )
+
+        key_id = vm_.get('name')
+        if 'append_domain' in vm_:
+            key_id = '.'.join([key_id, vm_['append_domain']])
+
+        accept_key(
+            opts['pki_dir'], vm_['pub_key'], key_id
+        )
+
+    if 'os' not in vm_:
+        vm_['os'] = salt.config.get_cloud_config_value(
+            'script',
+            vm_,
+            opts
+        )
 
     # NOTE: deploy_kwargs is also used to pass inline_script variable content
     #       to run_inline_script function
@@ -482,9 +509,6 @@ def bootstrap(vm_, opts):
         {'kwargs': event_kwargs},
         transport=opts.get('transport', 'zeromq')
     )
-
-    deployed = False
-    inline_script_deployed = False
 
     if salt.config.get_cloud_config_value('inline_script', vm_, opts) \
             and salt.config.get_cloud_config_value('deploy', vm_, opts) is False:
