@@ -12,11 +12,13 @@ import os
 import shutil
 import datetime
 import hashlib
+import time
 
 # Import salt libs
 import salt.payload
 import salt.utils
 import salt.utils.jid
+import salt.exceptions
 
 log = logging.getLogger(__name__)
 
@@ -99,12 +101,16 @@ def _format_jid_instance(jid, job):
 
 
 #TODO: add to returner docs-- this is a new one
-def prep_jid(nocache=False, passed_jid=None):
+def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
     '''
     Return a job id and prepare the job id directory
     This is the function responsible for making sure jids don't collide (unless its passed a jid)
     So do what you have to do to make sure that stays the case
     '''
+    if recurse_count >= 5:
+        err = 'prep_jid could not store a jid after {0} tries.'.format(recurse_count)
+        log.error(err)
+        raise salt.exceptions.SaltCacheError(err)
     if passed_jid is None:  # this can be a None of an empty string
         jid = salt.utils.jid.gen_jid()
     else:
@@ -117,15 +123,22 @@ def prep_jid(nocache=False, passed_jid=None):
     try:
         os.makedirs(jid_dir_)
     except OSError:
-        # TODO: some sort of sleep or something? Spinning is generally bad practice
+        time.sleep(0.1)
         if passed_jid is None:
+            recurse_count += recurse_count
             return prep_jid(nocache=nocache)
 
-    with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'wb+') as fn_:
-        fn_.write(jid)
-    if nocache:
-        with salt.utils.fopen(os.path.join(jid_dir_, 'nocache'), 'wb+') as fn_:
-            fn_.write('')
+    try:
+        with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'wb+') as fn_:
+            fn_.write(jid)
+        if nocache:
+            with salt.utils.fopen(os.path.join(jid_dir_, 'nocache'), 'wb+') as fn_:
+                fn_.write('')
+    except IOError:
+        log.warn('Could not write out jid file for job {0}. Retrying.'.format(jid))
+        time.sleep(0.1)
+        recurse_count += recurse_count
+        return prep_jid(passed_jid=jid, nocache=nocache)
 
     return jid
 

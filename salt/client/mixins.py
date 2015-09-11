@@ -328,16 +328,19 @@ class SyncClientMixin(object):
             data['success'] = False
 
         namespaced_event.fire_event(data, 'ret')
-        salt.utils.job.store_job(
-            self.opts,
-            {'id': self.opts['id'],
-             'tgt': self.opts['id'],
-             'jid': data['jid'],
-             'return': data,
-             },
-            event=None,
-            mminion=self.mminion,
-            )
+        try:
+            salt.utils.job.store_job(
+                self.opts,
+                {'id': self.opts['id'],
+                 'tgt': self.opts['id'],
+                 'jid': data['jid'],
+                 'return': data,
+                 },
+                event=None,
+                mminion=self.mminion,
+                )
+        except salt.exceptions.SaltCacheError:
+            log.error('Could not store job cache info. Job details for this run may be unavailable.')
         # if we fired an event, make sure to delete the event object.
         # This will ensure that we call destroy, which will do the 0MQ linger
         log.info('Runner completed: {0}'.format(data['jid']))
