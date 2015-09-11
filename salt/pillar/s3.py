@@ -75,9 +75,9 @@ that you use the `prefix=` parameter and specify one entry in ext_pillar
 for each environment rather than specifying multiple_env. This is due
 to issue #22471 (https://github.com/saltstack/salt/issues/22471)
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import time
@@ -98,7 +98,6 @@ import salt.utils.s3 as s3
 
 # Set up logging
 log = logging.getLogger(__name__)
-
 
 
 class S3Credentials(object):
