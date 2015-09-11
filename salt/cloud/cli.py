@@ -402,13 +402,6 @@ class SaltCloud(parsers.SaltCloudParser):
                     self.config['pki_dir'], vm_['pub_key'], key_id
                 )
 
-            if 'os' not in vm_:
-                vm_['os'] = salt.config.get_cloud_config_value(
-                    'script',
-                    vm_,
-                    self.config
-                )
-
             try:
                 ret = salt.utils.cloud.bootstrap(vm_, self.config)
             except (SaltCloudException, Exception) as exc:
