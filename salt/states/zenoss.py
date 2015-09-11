@@ -54,14 +54,14 @@ def monitored(name, device_class=None, collector='localhost', prod_state=None):
         ret['result'] = True
         ret['changes'] = None
         ret['comment'] = '{0} is already monitored'.format(name)
-        
-        # if prod_state is set, ensure it matches with the current state 
+
+        # if prod_state is set, ensure it matches with the current state
         if prod_state:
             if device['productionState'] != prod_state:
                 __salt__['zenoss.set_prod_state'](prod_state, name)
                 ret['changes'] = {'old': 'prodState == {0}'.format(device['productionState']), 'new':'prodState == {0}'.format(prod_state)}
                 ret['comment'] = '{0} is already monitored but prodState was incorrect, setting to Production'.format(name)
-            
+
         return ret
 
     if __opts__['test']:
