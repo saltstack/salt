@@ -9,15 +9,6 @@ LXC Management with Salt
     This walkthrough assumes basic knowledge of Salt. To get up to speed, check
     out the :doc:`Salt Walkthrough </topics/tutorials/walkthrough>`.
 
-.. warning::
-
-    Some features are only currently available in the ``develop`` branch, and
-    are new in the upcoming 2015.5.0 release. These new features will be
-    clearly labeled.
-    Even in 2015.5 release, you will need up to the last changeset of this
-    stable branch for the salt-cloud stuff to work correctly.
-
-
 Dependencies
 ============
 
@@ -106,7 +97,7 @@ Consider the following container profile data:
         size: 20G
 
 Any minion with the above Pillar data would have the **size** parameter in the
-**centos** profile overriden to 20G, while those minions without the above
+**centos** profile overridden to 20G, while those minions without the above
 Pillar data would have the 10G **size** value. This is another way of achieving
 the same result as the **centos_big** profile above, without having to define
 another whole profile that differs in just one value.
@@ -155,7 +146,7 @@ get connectivity.
 
 .. warning::
 
-   on pre **2015.5.2**, you need to specify explitly the network bridge
+   on pre **2015.5.2**, you need to specify explicitly the network bridge
 
 .. code-block:: yaml
 
@@ -238,7 +229,7 @@ container-by-container basis, for instance using the ``nic_opts`` argument to
 
 
 Old lxc support (<1.0.7)
----------------------------
+------------------------
 
 With saltstack **2015.5.2** and above, normally the setting is autoselected, but
 before, you'll need to teach your network profile to set
@@ -254,7 +245,7 @@ Thus you'll need
           ipv4.gateway: auto
 
 Tricky network setups Examples
------------------------------------
+------------------------------
 This example covers how to make a container with both an internal ip and a
 public routable ip, wired on two veth pairs.
 
@@ -510,7 +501,7 @@ To run a command and return all information:
 
 
 Container Management Using salt-cloud
-========================================
+=====================================
 
 Salt cloud uses under the hood the salt runner and module to manage containers,
 Please look at :ref:`this chapter <config_lxc>`
