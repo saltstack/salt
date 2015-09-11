@@ -1177,10 +1177,9 @@ def _create_eni_if_necessary(interface):
         if 'item' in subnet_query_result:
             if isinstance(subnet_query_result['item'], dict):
                 for key, value in subnet_query_result['item'].iteritems():
-                    if key == "subnetId":
-                        if value == interface['SubnetId']:
-                            found = True
-                            break
+                    if key == "subnetId" and value == interface['SubnetId']:
+                        found = True
+                        break
             else:
                 for subnet in subnet_query_result['item']:
                     if subnet['subnetId'] == interface['SubnetId']:
@@ -1194,12 +1193,11 @@ def _create_eni_if_necessary(interface):
 
     params = {'SubnetId': interface['SubnetId']}
 
-    for k in ('Description', 'PrivateIpAddress',
-              'SecondaryPrivateIpAddressCount'):
+    for k in 'Description', 'PrivateIpAddress', 'SecondaryPrivateIpAddressCount':
         if k in interface:
             params[k] = interface[k]
 
-    for k in ('PrivateIpAddresses', 'SecurityGroupId'):
+    for k in 'PrivateIpAddresses', 'SecurityGroupId':
         if k in interface:
             params.update(_param_from_config(k, interface[k]))
 
@@ -1233,7 +1231,7 @@ def _create_eni_if_necessary(interface):
         _new_eip = _request_eip(interface)
         _associate_eip_with_interface(eni_id, _new_eip)
     elif interface.get('allocate_new_eips'):
-        addr_list = _list_interface_private_addresses(eni_desc)
+        addr_list = _list_interface_private_addrs(eni_desc)
         eip_list = []
         for idx, addr in enumerate(addr_list):
             eip_list.append(_request_eip(interface))
@@ -1258,7 +1256,7 @@ def _create_eni_if_necessary(interface):
             'NetworkInterfaceId': eni_id}
 
 
-def _list_interface_private_addresses(eni_desc):
+def _list_interface_private_addrs(eni_desc):
     '''
     Returns a list of all of the private IP addresses attached to a
     network interface. The 'primary' address will be listed first.
@@ -1606,7 +1604,7 @@ def request_instance(vm_=None, call=None):
         if not isinstance(ex_securitygroupid, list):
             params[spot_prefix + 'SecurityGroupId.1'] = ex_securitygroupid
         else:
-            for (counter, sg_) in enumerate(ex_securitygroupid):
+            for counter, sg_ in enumerate(ex_securitygroupid):
                 params[
                     spot_prefix + 'SecurityGroupId.{0}'.format(counter)
                 ] = sg_
@@ -1651,11 +1649,10 @@ def request_instance(vm_=None, call=None):
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
     )
 
-    if set_del_root_vol_on_destroy is not None:
-        if not isinstance(set_del_root_vol_on_destroy, bool):
-            raise SaltCloudConfigError(
-                '\'del_root_vol_on_destroy\' should be a boolean value.'
-            )
+    if set_del_root_vol_on_destroy and not isinstance(set_del_root_vol_on_destroy, bool):
+        raise SaltCloudConfigError(
+            '\'del_root_vol_on_destroy\' should be a boolean value.'
+        )
 
     vm_['set_del_root_vol_on_destroy'] = set_del_root_vol_on_destroy
 
@@ -1737,11 +1734,10 @@ def request_instance(vm_=None, call=None):
         'del_all_vols_on_destroy', vm_, __opts__, search_global=False, default=False
     )
 
-    if set_del_all_vols_on_destroy is not None:
-        if not isinstance(set_del_all_vols_on_destroy, bool):
-            raise SaltCloudConfigError(
-                '\'del_all_vols_on_destroy\' should be a boolean value.'
-            )
+    if set_del_all_vols_on_destroy and not isinstance(set_del_all_vols_on_destroy, bool):
+        raise SaltCloudConfigError(
+            '\'del_all_vols_on_destroy\' should be a boolean value.'
+        )
 
     salt.utils.cloud.fire_event(
         'event',

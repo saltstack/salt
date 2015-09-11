@@ -188,7 +188,7 @@ def query(conn_type, option, post_data=None):
         log.error(response)
 
 
-def _getVmByName(name, allDetails=False):
+def _get_vm_by_name(name, allDetails=False):
     '''
     Since Proxmox works based op id's rather than names as identifiers this
     requires some filtering to retrieve the required information.
@@ -201,7 +201,7 @@ def _getVmByName(name, allDetails=False):
     return False
 
 
-def _getVmById(vmid, allDetails=False):
+def _get_vm_by_id(vmid, allDetails=False):
     '''
     Retrieve a VM based on the ID.
     '''
@@ -652,7 +652,7 @@ def create_node(vm_):
     vmhost = vm_['host']
     newnode['vmid'] = _get_next_vmid()
 
-    for prop in ('cpuunits', 'description', 'memory', 'onboot'):
+    for prop in 'cpuunits', 'description', 'memory', 'onboot':
         if prop in vm_:  # if the property is set, use it for the VM request
             newnode[prop] = vm_[prop]
 
@@ -662,12 +662,12 @@ def create_node(vm_):
         newnode['ostemplate'] = vm_['image']
 
         # optional VZ settings
-        for prop in ('cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid', 'storage'):
+        for prop in 'cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid', 'storage':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
-        for prop in ('acpi', 'cores', 'cpu', 'pool', 'storage'):
+        for prop in 'acpi', 'cores', 'cpu', 'pool', 'storage':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
@@ -788,7 +788,7 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
-    vmobj = _getVmByName(name)
+    vmobj = _get_vm_by_name(name)
     if vmobj is not None:
         # stop the vm
         if get_vm_status(vmid=vmobj['vmid'])['status'] != 'stopped':
@@ -823,11 +823,11 @@ def set_vm_status(status, name=None, vmid=None):
     if vmid is not None:
         log.debug('set_vm_status: via ID - VMID {0} ({1}): {2}'.format(
                   vmid, name, status))
-        vmobj = _getVmById(vmid)
+        vmobj = _get_vm_by_id(vmid)
     else:
         log.debug('set_vm_status: via name - VMID {0} ({1}): {2}'.format(
                   vmid, name, status))
-        vmobj = _getVmByName(name)
+        vmobj = _get_vm_by_name(name)
 
     if not vmobj or 'node' not in vmobj or 'type' not in vmobj or 'vmid' not in vmobj:
         log.error('Unable to set status {0} for {1} ({2})'.format(
@@ -853,10 +853,10 @@ def get_vm_status(vmid=None, name=None):
     '''
     if vmid is not None:
         log.debug('get_vm_status: VMID {0}'.format(vmid))
-        vmobj = _getVmById(vmid)
+        vmobj = _get_vm_by_id(vmid)
     elif name is not None:
         log.debug('get_vm_status: name {0}'.format(name))
-        vmobj = _getVmByName(name)
+        vmobj = _get_vm_by_name(name)
     else:
         log.debug("get_vm_status: No ID or NAME given")
         raise SaltCloudExecutionFailure
