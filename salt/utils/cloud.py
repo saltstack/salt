@@ -173,7 +173,7 @@ def accept_key(pki_dir, pub, id_):
     the opts directory, this method places the pub key in the accepted
     keys dir and removes it from the unaccepted keys dir if that is the case.
     '''
-    for key_dir in ('minions', 'minions_pre', 'minions_rejected'):
+    for key_dir in 'minions', 'minions_pre', 'minions_rejected':
         key_path = os.path.join(pki_dir, key_dir)
         if not os.path.exists(key_path):
             os.makedirs(key_path)
@@ -2469,7 +2469,7 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
 
     driver = next(six.iterkeys(opts['providers'][provider]))
     fname = '{0}.p'.format(minion_id)
-    for cachedir in ('requested', 'active'):
+    for cachedir in 'requested', 'active':
         path = os.path.join(base, cachedir, driver, provider, fname)
         log.debug('path: {0}'.format(path))
         if os.path.exists(path):
@@ -2539,7 +2539,7 @@ def update_bootstrap(config, url=None):
         url = default_url
     if not url:
         raise ValueError('Cant get any source to update')
-    if (url.startswith('http')) or ('://' in url):
+    if url.startswith('http') or '://' in url:
         log.debug('Updating the bootstrap-salt.sh script to latest stable')
         try:
             import requests

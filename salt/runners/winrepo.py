@@ -28,7 +28,8 @@ import salt.template
 
 log = logging.getLogger(__name__)
 
-PER_REMOTE_PARAMS = ('ssl_verify',)
+# Global parameters which can be overridden on a per-remote basis
+PER_REMOTE_OVERRIDES = ('ssl_verify',)
 
 
 def genrepo(opts=None, fire_event=True):
@@ -138,7 +139,7 @@ def genrepo(opts=None, fire_event=True):
     return ret
 
 
-def update_git_repos(opts=None, masterless=False):
+def update_git_repos(opts=None, clean=False, masterless=False):
     '''
     Checkout git repos containing Windows Software Package Definitions
 
@@ -146,12 +147,23 @@ def update_git_repos(opts=None, masterless=False):
         Specify an alternate opts dict. Should not be used unless this function
         is imported into an execution module.
 
+    clean : False
+        Clean repo cachedirs which are not configured under
+        :conf_master:`winrepo_remotes`.
 
-    CLI Example:
+        .. warning::
+            This argument should not be set to ``True`` if a mix of git and
+            non-git repo definitions are being used, as it will result in the
+            non-git repo definitions being removed.
+
+        .. versionadded:: 2015.8.0
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt-run winrepo.update_git_repos
+        salt-run winrepo.update_git_repos clean=True
     '''
     if opts is None:
         opts = __opts__
@@ -245,8 +257,13 @@ def update_git_repos(opts=None, masterless=False):
             # New winrepo code utilizing salt.utils.gitfs
             try:
                 winrepo = salt.utils.gitfs.WinRepo(opts, base_dir)
-                winrepo.init_remotes(remotes, PER_REMOTE_PARAMS)
+                winrepo.init_remotes(remotes, PER_REMOTE_OVERRIDES)
                 winrepo.fetch_remotes()
+                # Since we're not running update(), we need to manually call
+                # clear_old_remotes() to remove directories from remotes that
+                # have been removed from configuration.
+                if clean:
+                    winrepo.clear_old_remotes()
                 winrepo.checkout()
             except Exception as exc:
                 msg = 'Failed to update winrepo_remotes: {0}'.format(exc)

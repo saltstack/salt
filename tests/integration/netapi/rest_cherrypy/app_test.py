@@ -4,12 +4,10 @@
 from __future__ import absolute_import
 
 # Import salttesting libs
-from salttesting import mock
 from salttesting.unit import skipIf
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../../')
 
-from salt.exceptions import EauthAuthenticationError
 from tests.utils import BaseRestCherryPyTest
 
 # Import 3rd-party libs
@@ -60,26 +58,10 @@ class TestLogin(BaseRestCherryPyTest):
             ('password', 'saltdev'),
             ('eauth', 'auto'))
 
-    @mock.patch('salt.auth.Resolver', autospec=True)
-    def setUp(self, Resolver, *args, **kwargs):
-        super(TestLogin, self).setUp(*args, **kwargs)
-
-        self.app.salt.auth.Resolver = Resolver
-        self.Resolver = Resolver
-
     def test_good_login(self):
         '''
         Test logging in
         '''
-        # Mock mk_token for a positive return
-        self.Resolver.return_value.mk_token.return_value = {
-            'token': '6d1b722e',
-            'start': 1363805943.776223,
-            'expire': 1363849143.776224,
-            'name': 'saltdev',
-            'eauth': 'auto',
-        }
-
         body = urlencode(self.auth_creds)
         request, response = self.request('/login', method='POST', body=body,
             headers={
@@ -92,9 +74,6 @@ class TestLogin(BaseRestCherryPyTest):
         '''
         Test logging in
         '''
-        # Mock mk_token for a negative return
-        self.Resolver.return_value.mk_token.return_value = {}
-
         body = urlencode({'totally': 'invalid_creds'})
         request, response = self.request('/login', method='POST', body=body,
             headers={
@@ -117,7 +96,7 @@ class TestLogin(BaseRestCherryPyTest):
 
 class TestRun(BaseRestCherryPyTest):
     auth_creds = (
-        ('username', 'saltdev'),
+        ('username', 'saltdev_auto'),
         ('password', 'saltdev'),
         ('eauth', 'auto'))
 
@@ -134,14 +113,10 @@ class TestRun(BaseRestCherryPyTest):
         cmd = dict(self.low, **dict(self.auth_creds))
         body = urlencode(cmd)
 
-        # Mock the interaction with Salt so we can focus on the API.
-        with mock.patch.object(self.app.salt.netapi.NetapiClient, 'run',
-                return_value=True):
-            request, response = self.request('/run', method='POST', body=body,
-                headers={
-                    'content-type': 'application/x-www-form-urlencoded'
-            })
-
+        request, response = self.request('/run', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
         self.assertEqual(response.status, '200 OK')
 
     def test_run_bad_login(self):
@@ -151,14 +126,10 @@ class TestRun(BaseRestCherryPyTest):
         cmd = dict(self.low, **{'totally': 'invalid_creds'})
         body = urlencode(cmd)
 
-        # Mock the interaction with Salt so we can focus on the API.
-        with mock.patch.object(self.app.salt.netapi.NetapiClient, 'run',
-                side_effect=EauthAuthenticationError('Oh noes!')):
-            request, response = self.request('/run', method='POST', body=body,
-                headers={
-                    'content-type': 'application/x-www-form-urlencoded'
-            })
-
+        request, response = self.request('/run', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
         self.assertEqual(response.status, '401 Unauthorized')
 
 
@@ -171,20 +142,10 @@ class TestWebhookDisableAuth(BaseRestCherryPyTest):
         },
     }
 
-    @mock.patch('salt.utils.event.get_event', autospec=True)
-    def setUp(self, get_event, *args, **kwargs):
-        super(TestWebhookDisableAuth, self).setUp(*args, **kwargs)
-
-        self.app.salt.utils.event.get_event = get_event
-        self.get_event = get_event
-
     def test_webhook_noauth(self):
         '''
         Auth can be disabled for requests to the webhook URL
         '''
-        # Mock fire_event() since we're only testing auth here.
-        self.get_event.return_value.fire_event.return_value = True
-
         body = urlencode({'foo': 'Foo!'})
         request, response = self.request('/hook', method='POST', body=body,
             headers={

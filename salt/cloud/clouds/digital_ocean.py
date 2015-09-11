@@ -727,9 +727,11 @@ def destroy(name, call=None):
     delete_record = config.get_cloud_config_value(
         'delete_dns_record', get_configured_provider(), __opts__, search_global=False, default=None,
     )
-    if delete_record is not None:
-        if not isinstance(delete_record, bool):
-            raise SaltCloudConfigError("'delete_dns_record' should be a boolean value.")
+
+    if delete_record and not isinstance(delete_record, bool):
+        raise SaltCloudConfigError(
+            '\'delete_dns_record\' should be a boolean value.'
+        )
 
     if delete_record:
         delete_dns_record(name)
