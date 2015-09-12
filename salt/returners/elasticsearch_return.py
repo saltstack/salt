@@ -122,6 +122,8 @@ def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
 def save_load(jid, load):
     '''
     Save the load to the specified jid id
+
+    .. versionadded:: 2015.8.1
     '''
     index = __salt__['config.option']('elasticsearch:master_job_cache_index', 'salt-master-job-cache')
     doc_type = __salt__['config.option']('elasticsearch:master_job_cache_doc_type', 'default')
@@ -146,6 +148,8 @@ def save_load(jid, load):
 def get_load(jid):
     '''
     Return the load data that marks a specified jid
+
+    .. versionadded:: 2015.8.1
     '''
     index = __salt__['config.option']('elasticsearch:master_job_cache_index', 'salt-master-job-cache')
     doc_type = __salt__['config.option']('elasticsearch:master_job_cache_doc_type', 'default')
