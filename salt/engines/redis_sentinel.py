@@ -22,7 +22,6 @@ events based on the channels they are subscribed to.
 :depends: redis
 '''
 from __future__ import absolute_import
-import redis
 import salt.client
 from salt.ext import six
 from salt.ext.six.moves import zip
