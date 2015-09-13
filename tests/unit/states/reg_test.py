@@ -80,7 +80,9 @@ class RegTestCase(TestCase):
         '''
         Test to remove a registry entry.
         '''
-        name = 'HKEY_CURRENT_USER\\SOFTWARE\\Salt'
+        hive = 'HKEY_CURRENT_USER'
+        key = 'SOFTWARE\\Salt'
+        name = hive + '\\' + key
         vname = 'version'
         vdata = '0.15.3'
 
@@ -103,11 +105,13 @@ class RegTestCase(TestCase):
                             'changes': {'reg': {'Will remove': {'Entry': vname, 'Key': name}}}})
                 self.assertDictEqual(reg.absent(name, vname), ret)
 
-        with patch.dict(reg.__opts__, {'test': False}):
-            ret.update({'result': True,
-                        'changes': {'reg': {'Removed': {'Entry': vname, 'Key': name}}},
-                        'comment': 'Removed {0} from {0}'.format(name)})
-            self.assertDictEqual(reg.absent(name, vname), ret)
+        with patch.dict(reg.__salt__, {'reg.read_value': mock_read_true,
+                                       'reg.delete_value': mock_t}):
+            with patch.dict(reg.__opts__, {'test': False}):
+                ret.update({'result': True,
+                            'changes': {'reg': {'Removed': {'Entry': vname, 'Key': name}}},
+                            'comment': 'Removed {0} from {1}'.format(key, hive)})
+                self.assertDictEqual(reg.absent(name, vname), ret)
 
 
 if __name__ == '__main__':

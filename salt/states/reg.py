@@ -277,11 +277,10 @@ def absent(name, vname=None):
     ret['result'] = __salt__['reg.delete_value'](hive, key, vname)
     if not ret['result']:
         ret['changes'] = {}
-        ret['comment'] = r'Failed to remove {0}\{1} from {2}'.format(key, vname,
-                                                                     hive)
+        ret['comment'] = r'Failed to remove {0} from {1}'.format(key, hive)
     else:
         ret['changes'] = {'reg': {'Removed': remove_change}}
-        ret['comment'] = r'Removed {0}\{1} from {2}'.format(key, name, hive)
+        ret['comment'] = r'Removed {0} from {1}'.format(key, hive)
 
     return ret
 
