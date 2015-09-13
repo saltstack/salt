@@ -1,5 +1,6 @@
 """
-A salt cloud provider that lets you control virtualbox on your machine and act as a cloud.
+A salt cloud provider that lets you use virtualbox on your machine and act as a cloud.
+It can be used in co
 
 Followed https://docs.saltstack.com/en/latest/topics/cloud/cloud.html#non-libcloud-based-modules
 to create this.
@@ -83,6 +84,7 @@ def create(vm_info):
                 profile: <dict>
                 provider: <provider>
             }
+    @return dict of resulting vm. !!!Passwords cand and should be included!!!
     """
     salt.utils.cloud.fire_event(
         'event',
@@ -95,3 +97,72 @@ def create(vm_info):
         },
         transport=__opts__['transport']
     )
+
+    #TODO Calculate kwargs with parameters required by virtualbox to create the virtual machine.
+    request_kwargs = {
+        'name': vm_info['name'],
+        'profile': vm_info['profile']
+    }
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'requesting instance',
+        'salt/cloud/{0}/requesting'.format(vm_info['name']),
+        request_kwargs,
+        transport=__opts__['transport']
+    )
+    # TODO request a new VM!
+    vm_result = vb_create_vm(**request_kwargs)
+
+    #TODO Prepare deployment of salt on the vm
+    #  Any private data, including passwords and keys (including public keys) should be stripped from the deploy kwargs before the event is fired.
+    deploy_kwargs = {
+    }
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'deploying salt',
+        'salt/cloud/{0}/deploying'.format(vm_info['name']),
+        deploy_kwargs,
+        transport=__opts__['transport']
+    )
+
+    deploy_kwargs = deploy_kwargs.update({
+        # TODO Add private data
+    })
+
+    # TODO wait for target machine to become available
+    # TODO deploy!
+    # Do we have to call this?
+    salt.utils.cloud.deploy_script(**deploy_kwargs)
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'created machine',
+        'salt/cloud/{0}/created'.format(vm_info['name']),
+        vm_result,
+        transport=__opts__['transport']
+    )
+
+    # Passwords should be included in this object!!
+    return vm_result
+
+
+# -----------------------------
+# Virtualbox method
+# -----------------------------
+def vb_create_vm(**kwargs):
+    """
+    Tells virtualbox to create a VM
+
+    @return dict of resulting VM
+    """
+    pass
+
+def vb_start_vm(**kwargs):
+    """
+    Tells Virtualbox to start up a VM.
+    Blocking function!
+
+    @return dict of started VM, contains IP addresses and what not
+    """
