@@ -114,7 +114,7 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
 
 def remove_file(path, conn=None):
     '''
-    Install a single file to the file system
+    Remove a single file from the file system
     '''
     if conn is None:
         conn = init()
