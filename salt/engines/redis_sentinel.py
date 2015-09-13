@@ -21,24 +21,31 @@ events based on the channels they are subscribed to.
 
 :depends: redis
 '''
+
+# Import python libs
 from __future__ import absolute_import
+import logging
+
+# Import salt libs
 import salt.client
 from salt.ext import six
 from salt.ext.six.moves import zip
 
+# Import third party libs
 try:
     import redis
     HAS_REDIS = True
 except ImportError:
     HAS_REDIS = False
 
-import logging
-log = logging.getLogger(__name__)
-log.debug('LOAD REDIS_SENTINEL')
-
 
 def __virtual__():
-    return HAS_REDIS
+    if not HAS_REDIS:
+        return False
+    else:
+        return True
+
+log = logging.getLogger(__name__)
 
 
 class Listener(object):
