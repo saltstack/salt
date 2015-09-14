@@ -184,10 +184,36 @@ def list_nodes(call=None):
     while fetch:
         items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
         for node in items['droplets']:
+            networks = node['networks']
+            v4s = networks.get('v4', None)
+            v6s = networks.get('v6', None)
+            public_ips = []
+            private_ips = []
+
+            if v4s:
+                for item in v4s:
+                    ip_type = item.get('type')
+                    ip_address = item.get('ip_address')
+                    if ip_type == 'public':
+                        public_ips.append(ip_address)
+                    if ip_type == 'private':
+                        private_ips.append(ip_address)
+
+            if v6s:
+                for item in v6s:
+                    ip_type = item.get('type')
+                    ip_address = item.get('ip_address')
+                    if ip_type == 'public':
+                        public_ips.append(ip_address)
+                    if ip_type == 'private':
+                        private_ips.append(ip_address)
+
             ret[node['name']] = {
                 'id': node['id'],
                 'image': node['image']['name'],
-                'networks': str(node['networks']),
+                'name': node['name'],
+                'private_ips': private_ips,
+                'public_ips': public_ips,
                 'size': node['size_slug'],
                 'state': str(node['status']),
             }
