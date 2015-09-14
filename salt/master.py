@@ -387,22 +387,11 @@ class Master(SMaster):
         errors = []
         critical_errors = []
 
-        if salt.utils.is_windows() and self.opts['user'] == 'root':
-            # 'root' doesn't typically exist on Windows. Use the current user
-            # home directory instead.
-            home = os.path.expanduser('~')
-        else:
-            home = os.path.expanduser('~' + self.opts['user'])
         try:
-            if salt.utils.is_windows() and not os.path.isdir(home):
-                # On Windows, Service account home directories may not
-                # initially exist. If this is the case, make sure the
-                # directory exists before continuing.
-                os.mkdir(home, 0o755)
-            os.chdir(home)
+            os.chdir('/')
         except OSError as err:
             errors.append(
-                'Cannot change to home directory {0} ({1})'.format(home, err)
+                'Cannot change to root directory ({1})'.format(err)
             )
 
         fileserver = salt.fileserver.Fileserver(self.opts)
