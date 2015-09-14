@@ -3,7 +3,7 @@
 Beacon to monitor network adapter setting changes on Linux
 
 '''
-
+from __future__ import absolute_import
 # Import third party libs
 try:
     from pyroute2.ipdb import IPDB
