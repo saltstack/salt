@@ -21,11 +21,11 @@ img.center{display:block;margin:auto}
 .list-group-item{border:none;padding-left:25px}
 .list-group-item a{color:#333;display:list-item}
 h1,h2,h3,h4,h5,h6,.h1,.h2,.h3,.h4,.h5,.h6{text-transform:uppercase}
-h1,.h1,h1 > code.docutils.literal{color:#48b4fb;font-size:40px;margin-top:10px;margin-bottom:30px}
-h2,.h2,h2 > code.docutils.literal{color:#48b4fb;font-size:23px}
-h3,.h3,h3 > code.docutils.literal{font-size:18px}
-h4,.h4,h4 > code.docutils.literal{font-size:16px}
-h5,.h5,h5 > code.docutils.literal{font-size:16px;font-style:italic}
+h1,.h1{color:#48b4fb;font-size:40px;margin-top:10px;margin-bottom:30px}
+h2,.h2{color:#48b4fb;font-size:23px}
+h3,.h3{font-size:18px}
+h4,.h4{font-size:16px}
+h5,.h5{font-size:16px;font-style:italic}
 .subhead{color:#C0392B;font-size:16px;text-transform:uppercase}
 .reference h3{font-size:16pt;line-height:1.9;color:#D75400;font-weight:300}
 .head3 h2{font-size:21px;color:#C0392B}
@@ -144,7 +144,8 @@ ul.nav.collapsed li{padding:0 0 15px 10px;margin:0}
 .open>.dropdown-menu{width:100%}
 #lnav-title{font-weight:300;font-size:16pt;text-align:center}
 pre{border-top-width:4px;padding-top:18px}
-code{font-family:Monaco,Menlo,Consolas,"Courier New",monospace;font-size:12px;color:#333;-webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px;white-space:nowrap;background-color:rgba(0,0,0,.1)}
+code{font-family:Monaco,Menlo,Consolas,"Courier New",monospace;color:#333;-webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px;white-space:nowrap;background-color:rgba(0,0,0,.1)}
+p code{font-size:12px}
 code.xref{color:#4070a0}
 code.descclassname{background-color:transparent;border:none}
 code.descname{background-color:transparent;font-weight:700;font-size:1.5em}

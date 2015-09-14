@@ -1,3 +1,5 @@
+.. _faq:
+
 Frequently Asked Questions
 ==========================
 
@@ -289,3 +291,18 @@ More information about salting the Salt master can be found in the salt-formula
 for salt itself:
 
 https://github.com/saltstack-formulas/salt-formula
+
+.. _faq-grain-security:
+
+Is Targeting using Grain Data Secure?
+=====================================
+
+Because grains can be set by users that have access to the minion configuration
+files on the local system, grains are considered less secure than other
+identifiers in Salt. Use caution when targeting sensitive operations or setting
+pillar values based on grain data.
+
+When possible, you should target sensitive operations and data using the Minion
+ID. If the Minion ID of a system changes, the Salt Minion's public key must be
+re-accepted by an administrator on the Salt Master, making it less vulnerable
+to impersonation attacks.
