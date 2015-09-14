@@ -15,6 +15,7 @@ Allows for setting a state of minions in Zenoss using the Zenoss API. Currently 
         - name: web01.example.com
         - device_class: /Servers/Linux
         - collector: localhost
+        - prod_state: 1000
 '''
 
 from __future__ import absolute_import
