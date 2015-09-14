@@ -265,6 +265,22 @@ class ProcessManager(object):
         if kwargs is None:
             kwargs = {}
 
+        if salt.utils.is_windows():
+            # Need to ensure that 'log_queue' is correctly transfered to
+            # processes that inherit from 'MultiprocessingProcess'.
+            if type(MultiprocessingProcess) is type(tgt) and (
+                    issubclass(tgt, MultiprocessingProcess)):
+                need_log_queue = True
+            else:
+                need_log_queue = False
+
+            if need_log_queue and 'log_queue' not in kwargs:
+                if hasattr(self, 'log_queue'):
+                    kwargs['log_queue'] = self.log_queue
+                else:
+                    kwargs['log_queue'] = (
+                            salt.log.setup.get_multiprocessing_logging_queue())
+
         if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
             process = tgt(*args, **kwargs)
         else:

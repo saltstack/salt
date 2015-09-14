@@ -49,6 +49,7 @@ import salt.fileserver
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
 import salt.transport.server
+import salt.log.setup
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.job
@@ -132,13 +133,13 @@ class Maintenance(MultiprocessingProcess):
     A generalized maintenance process which performances maintenance
     routines.
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, **kwargs):
         '''
         Create a maintenance instance
 
         :param dict opts: The salt options
         '''
-        super(Maintenance, self).__init__()
+        super(Maintenance, self).__init__(**kwargs)
         self.opts = opts
         # How often do we perform the maintenance tasks
         self.loop_interval = int(self.opts['loop_interval'])
@@ -436,11 +437,12 @@ class Master(SMaster):
 
     # run_reqserver cannot be defined within a class method in order for it
     # to be picklable.
-    def run_reqserver(self):
+    def run_reqserver(self, **kwargs):
         reqserv = ReqServer(
             self.opts,
             self.key,
-            self.master_key)
+            self.master_key,
+            **kwargs)
         reqserv.run()
 
     def start(self):
@@ -509,7 +511,12 @@ class Master(SMaster):
             time.sleep(2)
 
         log.info('Creating master request server process')
-        process_manager.add_process(self.run_reqserver)
+        kwargs = {}
+        if salt.utils.is_windows():
+            kwargs['log_queue'] = (
+                    salt.log.setup.get_multiprocessing_logging_queue())
+        process_manager.add_process(self.run_reqserver, kwargs=kwargs)
+
         try:
             process_manager.run()
         except KeyboardInterrupt:
@@ -523,13 +530,13 @@ class Halite(MultiprocessingProcess):
     '''
     Manage the Halite server
     '''
-    def __init__(self, hopts):
+    def __init__(self, hopts, **kwargs):
         '''
         Create a halite instance
 
         :param dict hopts: The halite options
         '''
-        super(Halite, self).__init__()
+        super(Halite, self).__init__(**kwargs)
         self.hopts = hopts
 
     def run(self):
@@ -563,7 +570,7 @@ class ReqServer(object):
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts, key, mkey):
+    def __init__(self, opts, key, mkey, log_queue=None):
         '''
         Create a request server
 
@@ -578,6 +585,7 @@ class ReqServer(object):
         self.master_key = mkey
         # Prepare the AES key
         self.key = key
+        self.log_queue = log_queue
 
     def __bind(self):
         '''
@@ -597,6 +605,10 @@ class ReqServer(object):
             chan.pre_fork(self.process_manager)
             req_channels.append(chan)
 
+        kwargs = {}
+        if salt.utils.is_windows():
+            kwargs['log_queue'] = self.log_queue
+
         for ind in range(int(self.opts['worker_threads'])):
             self.process_manager.add_process(MWorker,
                                              args=(self.opts,
@@ -604,6 +616,7 @@ class ReqServer(object):
                                                    self.key,
                                                    req_channels,
                                                    ),
+                                             kwargs=kwargs
                                              )
         try:
             self.process_manager.run()
@@ -646,7 +659,8 @@ class MWorker(MultiprocessingProcess):
                  opts,
                  mkey,
                  key,
-                 req_channels):
+                 req_channels,
+                 **kwargs):
         '''
         Create a salt master worker process
 
@@ -657,7 +671,7 @@ class MWorker(MultiprocessingProcess):
         :rtype: MWorker
         :return: Master worker
         '''
-        MultiprocessingProcess.__init__(self)
+        MultiprocessingProcess.__init__(self, **kwargs)
         self.opts = opts
         self.req_channels = req_channels
 
@@ -671,7 +685,7 @@ class MWorker(MultiprocessingProcess):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        MultiprocessingProcess.__init__(self)
+        MultiprocessingProcess.__init__(self, log_queue=state['log_queue'])
         self.opts = state['opts']
         self.req_channels = state['req_channels']
         self.mkey = state['mkey']
@@ -685,6 +699,7 @@ class MWorker(MultiprocessingProcess):
                 'mkey': self.mkey,
                 'key': self.key,
                 'k_mtime': self.k_mtime,
+                'log_queue': self.log_queue,
                 'secrets': SMaster.secrets}
 
     def __bind(self):
