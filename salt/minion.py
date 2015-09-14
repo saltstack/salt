@@ -1649,7 +1649,13 @@ class Minion(MinionBase):
         ping_interval = self.opts.get('ping_interval', 0) * 60
         if ping_interval > 0:
             def ping_master():
-                self._fire_master('ping', 'minion_ping')
+                if not self._fire_master('ping', 'minion_ping'):
+                    if not self.opts.get('auth_safemode', True):
+                        log.error('** Master Ping failed. Attempting to restart minion**')
+                        delay = self.opts.get('random_reauth_delay', 5)
+                        log.info('delaying random_reauth_delay {0}s'.format(delay))
+                        # regular sys.exit raises an exception -- which isn't sufficient in a thread
+                        os._exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
             self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
 
         self.periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
