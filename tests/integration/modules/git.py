@@ -216,15 +216,13 @@ class GitModuleTest(integration.ModuleCase):
         self.assertTrue(
             self.run_function(
                 'git.branch',
-                [self.repo, renamed_branch],
-                opts='-m ' + self.branches[1]
+                [self.repo, renamed_branch, '-m ' + self.branches[1]]
             )
         )
         self.assertTrue(
             self.run_function(
                 'git.branch',
-                [self.repo, renamed_branch],
-                opts='-D'
+                [self.repo, renamed_branch, '-D']
             )
         )
 
@@ -236,8 +234,7 @@ class GitModuleTest(integration.ModuleCase):
         self.assertEqual(
             self.run_function(
                 'git.checkout',
-                [self.repo, 'HEAD'],
-                opts='-b ' + new_branch
+                [self.repo, 'HEAD', False, '-b ' + new_branch]
             ),
             'Switched to a new branch \'' + new_branch + '\''
         )
@@ -253,7 +250,8 @@ class GitModuleTest(integration.ModuleCase):
         new_branch = 'iamanothernewbranch'
         self.assertEqual(
             self.run_function(
-                'git.checkout', [self.repo], rev=None, opts='-b ' + new_branch
+                'git.checkout',
+                [self.repo, None, False, '-b ' + new_branch]
             ),
             'Switched to a new branch \'' + new_branch + '\''
         )
@@ -751,8 +749,7 @@ class GitModuleTest(integration.ModuleCase):
         # Back up one commit. We should now be at the same revision as master
         self.run_function(
             'git.reset',
-            [self.repo],
-            opts='--hard HEAD~1'
+            [self.repo, '--hard HEAD~1']
         )
         # Get the SHA1 of current HEAD (remember, we're on the second branch)
         head_rev = self.run_function('git.revision', [self.repo], rev='HEAD')
@@ -776,7 +773,8 @@ class GitModuleTest(integration.ModuleCase):
         # Using --abbrev-ref on HEAD will give us the current branch
         self.assertEqual(
             self.run_function(
-                'git.rev_parse', [self.repo, 'HEAD'], opts='--abbrev-ref'
+                'git.rev_parse',
+                [self.repo, 'HEAD', '--abbrev-ref']
             ),
             'master'
         )
@@ -800,7 +798,7 @@ class GitModuleTest(integration.ModuleCase):
                     for x in self.files])
         )
         self.assertEqual(
-            self.run_function('git.rm', [self.repo, entire_dir], opts='-r'),
+            self.run_function('git.rm', [self.repo, entire_dir, '-r']),
             expected
         )
 
@@ -824,18 +822,14 @@ class GitModuleTest(integration.ModuleCase):
         self.assertTrue(
             'ERROR' not in self.run_function(
                 'git.stash',
-                [self.repo],
-                action='apply',
-                opts='stash@{0}'
+                [self.repo, 'apply', 'stash@{0}']
             )
         )
         # Drop the stash
         self.assertTrue(
             'ERROR' not in self.run_function(
                 'git.stash',
-                [self.repo],
-                action='drop',
-                opts='stash@{0}'
+                [self.repo, 'drop', 'stash@{0}']
             )
         )
 
@@ -881,8 +875,7 @@ class GitModuleTest(integration.ModuleCase):
         self.assertEqual(
             self.run_function(
                 'git.symbolic_ref',
-                [self.repo, 'HEAD'],
-                opts='--quiet'
+                [self.repo, 'HEAD', None, '--quiet']
             ),
             'refs/heads/master'
         )
