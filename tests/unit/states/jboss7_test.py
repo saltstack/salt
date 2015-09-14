@@ -58,7 +58,7 @@ class JBoss7StateTestCase(TestCase):
         datasource_properties = {'connection-url': 'jdbc:/old-connection-url'}
         ds_status = {'created': False}
 
-        def read_func(jboss_config, name):
+        def read_func(jboss_config, name, profile):
             if ds_status['created']:
                 return {'success': True, 'result': datasource_properties}
             else:
@@ -82,7 +82,7 @@ class JBoss7StateTestCase(TestCase):
     def test_should_update_the_datasource_if_exists(self):
         ds_status = {'updated': False}
 
-        def read_func(jboss_config, name):
+        def read_func(jboss_config, name, profile):
             if ds_status['updated']:
                 return {'success': True, 'result': {'connection-url': 'jdbc:/new-connection-url'}}
             else:
@@ -116,7 +116,7 @@ class JBoss7StateTestCase(TestCase):
         result = jboss7.datasource_exists(name='appDS', jboss_config={}, datasource_properties={'connection-url': 'jdbc:/same-connection-url'}, recreate=True)
 
         __salt__['jboss7.remove_datasource'].assert_called_with(name='appDS', jboss_config={}, profile=None)
-        __salt__['jboss7.create_datasource'].assert_called_with(name='appDS', jboss_config={}, datasource_properties={'connection-url': 'jdbc:/same-connection-url'})
+        __salt__['jboss7.create_datasource'].assert_called_with(name='appDS', jboss_config={}, datasource_properties={'connection-url': 'jdbc:/same-connection-url'}, profile=None)
         self.assertEqual(result['changes']['removed'], 'appDS')
         self.assertEqual(result['changes']['created'], 'appDS')
 
@@ -139,7 +139,7 @@ class JBoss7StateTestCase(TestCase):
         # given
         binding_status = {'created': False}
 
-        def read_func(jboss_config, binding_name):
+        def read_func(jboss_config, binding_name, profile):
             if binding_status['created']:
                 return {'success': True, 'result': {'value': 'DEV'}}
             else:
@@ -165,7 +165,7 @@ class JBoss7StateTestCase(TestCase):
         # given
         binding_status = {'updated': False}
 
-        def read_func(jboss_config, binding_name):
+        def read_func(jboss_config, binding_name, profile):
             if binding_status['updated']:
                 return {'success': True, 'result': {'value': 'DEV2'}}
             else:
@@ -201,7 +201,7 @@ class JBoss7StateTestCase(TestCase):
         self.assertEqual(result['comment'], 'Bindings not changed.')
 
     def test_should_raise_exception_if_cannot_create_binding(self):
-        def read_func(jboss_config, binding_name):
+        def read_func(jboss_config, binding_name, profile):
             return {'success': False, 'err_code': 'JBAS014807'}
 
         def create_func(jboss_config, binding_name, value):
@@ -218,7 +218,7 @@ class JBoss7StateTestCase(TestCase):
             self.assertEqual(str(e), 'Incorrect binding name.')
 
     def test_should_raise_exception_if_cannot_update_binding(self):
-        def read_func(jboss_config, binding_name):
+        def read_func(jboss_config, binding_name, profile):
             return {'success': True, 'result': {'value': 'DEV'}}
 
         def update_func(jboss_config, binding_name, value):
