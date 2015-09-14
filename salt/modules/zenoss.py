@@ -177,6 +177,8 @@ def set_prod_state(prod_state, device=None):
     '''
     A function to set the prod_state in zenoss.
 
+    versionadded:: Boron
+
     Parameters:
         prod_state:     (Required) Integer value of the state
         device:         (Optional) Will use the grain 'fqdn' by default.
