@@ -185,8 +185,8 @@ def list_nodes(call=None):
         items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
         for node in items['droplets']:
             networks = node['networks']
-            v4s = networks.get('v4', None)
-            v6s = networks.get('v6', None)
+            v4s = networks.get('v4')
+            v6s = networks.get('v6')
             public_ips = []
             private_ips = []
 
