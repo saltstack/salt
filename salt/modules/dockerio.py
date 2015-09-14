@@ -1442,8 +1442,8 @@ def build(path=None,
 
         except Exception:
             _invalid(status,
-                    out=traceback.format_exc(),
-                    comment='Unexpected error while building an image')
+                     out=traceback.format_exc(),
+                     comment='Unexpected error while building an image')
             return status
 
     return status
@@ -1819,16 +1819,13 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
     try:
         f = __salt__[func]
         ret = f(full_cmd, *args, **kwargs)
-        if ((isinstance(ret, dict) and
-                ('retcode' in ret) and
-                (ret['retcode'] != 0))
-                or (func == 'cmd.retcode' and ret != 0)):
-            return _invalid(status, id_=container, out=ret,
-                            comment=comment)
-        _valid(status, id_=container, out=ret, comment=comment,)
+        if ((isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0))
+           or (func == 'cmd.retcode' and ret != 0)):
+            _invalid(status, id_=container, out=ret, comment=comment)
+        else:
+            _valid(status, id_=container, out=ret, comment=comment)
     except Exception:
-        _invalid(status, id_=container,
-                 comment=comment, out=traceback.format_exc())
+        _invalid(status, id_=container, comment=comment, out=traceback.format_exc())
     return status
 
 
@@ -1853,9 +1850,7 @@ def load(imagepath):
         try:
             dockercmd = ['docker', 'load', '-i', imagepath]
             ret = __salt__['cmd.run'](dockercmd, python_shell=False)
-            if ((isinstance(ret, dict) and
-                ('retcode' in ret) and
-                (ret['retcode'] != 0))):
+            if isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0):
                 return _invalid(status, id_=None,
                                 out=ret,
                                 comment='Command to load image {0} failed.'.format(imagepath))
@@ -1863,12 +1858,12 @@ def load(imagepath):
             _valid(status, id_=None, out=ret, comment='Image load success')
         except Exception:
             _invalid(status, id_=None,
-                    comment="Image not loaded.",
-                    out=traceback.format_exc())
+                     comment="Image not loaded.",
+                     out=traceback.format_exc())
     else:
         _invalid(status, id_=None,
-                comment='Image file {0} could not be found.'.format(imagepath),
-                out=traceback.format_exc())
+                 comment='Image file {0} could not be found.'.format(imagepath),
+                 out=traceback.format_exc())
 
     return status
 
@@ -1899,16 +1894,14 @@ def save(image, filename):
         ok = True
     except Exception:
         _invalid(status, id_=image,
-                comment="docker image {0} could not be found.".format(image),
-                out=traceback.format_exc())
+                 comment="docker image {0} could not be found.".format(image),
+                 out=traceback.format_exc())
 
     if ok:
         try:
             dockercmd = ['docker', 'save', '-o', filename, image]
             ret = __salt__['cmd.run'](dockercmd)
-            if ((isinstance(ret, dict) and
-                ('retcode' in ret) and
-                (ret['retcode'] != 0))):
+            if isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0):
                 return _invalid(status,
                                 id_=image,
                                 out=ret,
@@ -2053,9 +2046,7 @@ def retcode(container, cmd):
         command to execute
 
     .. note::
-        The return is a bit different as we use the docker struct.
-        Output of the command is in 'out' and result is ``False`` if
-        command failed to execute.
+        The return is True or False depending on the commands success.
 
     .. warning::
         Be advised that this function allows for raw shell access to the named
@@ -2070,7 +2061,7 @@ def retcode(container, cmd):
     '''
     status = base_status.copy()
     return _run_wrapper(
-        status, container, 'cmd.retcode', cmd)
+        status, container, 'cmd.retcode', cmd)['status']
 
 
 def get_container_root(container):

@@ -274,8 +274,8 @@ def _parse_volumes(volumes):
                     contvolumes.append(str(vol))
                     continue
             bindvolumes[source] = {
-                    'bind': target,
-                    'ro': read_only
+                'bind': target,
+                'ro': read_only
             }
     result = {'bindvols': bindvolumes, 'contvols': contvolumes}
     log.trace("Finished parsing volumes, with result: " + str(result))
@@ -460,9 +460,9 @@ def loaded(name, source=None, source_hash='', force=False):
 
     tmp_filename = salt.utils.mkstemp()
     __salt__['state.single']('file.managed',
-                            name=tmp_filename,
-                            source=source,
-                            source_hash=source_hash)
+                             name=tmp_filename,
+                             source=source,
+                             source_hash=source_hash)
     changes = {}
 
     if image_infos['status']:
@@ -471,7 +471,7 @@ def loaded(name, source=None, source_hash='', force=False):
         remove_info = remove_image(name)
         if not remove_info['status']:
             return _invalid(name=name,
-                    comment='Image could not be removed: {0}'.format(name))
+                            comment='Image could not be removed: {0}'.format(name))
 
     load = __salt__['docker.load']
     returned = load(tmp_filename)
@@ -686,23 +686,23 @@ def absent(name):
                 is_gone = __salt__['docker.exists'](cid)
                 if is_gone:
                     return _valid(comment=('Container {0!r}'
-                                           ' was stopped and destroyed, '.format(cid)),
-                                           changes={name: True})
+                                  ' was stopped and destroyed, '.format(cid)),
+                                  changes={name: True})
                 else:
                     return _valid(comment=('Container {0!r}'
-                                           ' was stopped but could not be destroyed,'.format(cid)),
-                                           changes={name: True})
+                                  ' was stopped but could not be destroyed,'.format(cid)),
+                                  changes={name: True})
         else:
             __salt__['docker.remove_container'](cid)
             is_gone = __salt__['docker.exists'](cid)
             if is_gone:
                 return _valid(comment=('Container {0!r}'
-                                       ' is stopped and was destroyed, '.format(cid)),
-                                       changes={name: True})
+                              'is stopped and was destroyed, '.format(cid)),
+                              changes={name: True})
             else:
                 return _valid(comment=('Container {0!r}'
-                                       ' is stopped but could not be destroyed,'.format(cid)),
-                                       changes={name: True})
+                              ' is stopped but could not be destroyed,'.format(cid)),
+                              changes={name: True})
     else:
         return _valid(comment="Container {0!r} not found".format(name))
 
@@ -788,7 +788,7 @@ def run(name,
             if not onlyif:
                 return valid(comment='onlyif execution failed')
         elif isinstance(onlyif, string_types):
-            if retcode(cid, onlyif) != 0:
+            if not __salt__['cmd.retcode'](onlyif) == 0:
                 return valid(comment='onlyif execution failed')
 
     if unless is not None:
@@ -796,7 +796,7 @@ def run(name,
             if unless:
                 return valid(comment='unless execution succeeded')
         elif isinstance(unless, string_types):
-            if retcode(cid, unless) == 0:
+            if __salt__['cmd.retcode'](unless) == 0:
                 return valid(comment='unless execution succeeded')
 
     if docked_onlyif is not None:
@@ -804,7 +804,7 @@ def run(name,
             if not docked_onlyif:
                 return valid(comment='docked_onlyif execution failed')
         elif isinstance(docked_onlyif, string_types):
-            if retcode(cid, docked_onlyif) != 0:
+            if not retcode(cid, docked_onlyif):
                 return valid(comment='docked_onlyif execution failed')
 
     if docked_unless is not None:
@@ -812,8 +812,9 @@ def run(name,
             if docked_unless:
                 return valid(comment='docked_unless execution succeeded')
         elif isinstance(docked_unless, string_types):
-            if retcode(cid, docked_unless) == 0:
+            if retcode(cid, docked_unless):
                 return valid(comment='docked_unless execution succeeded')
+    # run only if the above did not bail
     result = drun_all(cid, name)
     if result['status']:
         return valid(comment=result['comment'])
@@ -1061,21 +1062,21 @@ def running(name,
 
     if not already_exists:
         args, kwargs = [image], dict(
-                        command=command,
-                        hostname=hostname,
-                        user=user,
-                        detach=detach,
-                        stdin_open=stdin_open,
-                        tty=tty,
-                        mem_limit=mem_limit,
-                        ports=exposeports,
-                        environment=denvironment,
-                        dns=dns,
-                        binds=bindvolumes,
-                        volumes=contvolumes,
-                        name=name,
-                        cpu_shares=cpu_shares,
-                        cpuset=cpuset)
+            command=command,
+            hostname=hostname,
+            user=user,
+            detach=detach,
+            stdin_open=stdin_open,
+            tty=tty,
+            mem_limit=mem_limit,
+            ports=exposeports,
+            environment=denvironment,
+            dns=dns,
+            binds=bindvolumes,
+            volumes=contvolumes,
+            name=name,
+            cpu_shares=cpu_shares,
+            cpuset=cpuset)
         out = create(*args, **kwargs)
         # if container has been created, even if not started, we mark
         # it as installed
@@ -1108,10 +1109,8 @@ def running(name,
             if is_running:
                 changes.append('Container {0!r} started.\n'.format(name))
             else:
-                return _invalid(
-                        comment=(
-                        'Container {0!r} cannot be started\n{1!s}'
-                        .format(name, started['out'],)))
+                return _invalid(comment=('Container {0!r} cannot be started\n{1!s}'
+                                         .format(name, started['out'],)))
         else:
             changes.append('Container {0!r} started.\n'.format(name))
     return _valid(comment=','.join(changes), changes={name: True})
