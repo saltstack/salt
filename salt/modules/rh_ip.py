@@ -50,7 +50,7 @@ _ETHTOOL_CONFIG_OPTS = [
     'gso', 'gro', 'lro'
 ]
 _RH_CONFIG_OPTS = [
-    'domain', 'peerdns', 'defroute',
+    'domain', 'peerdns', 'peerntp', 'defroute',
     'mtu', 'static-routes', 'gateway'
 ]
 _RH_CONFIG_BONDING_OPTS = [
@@ -653,7 +653,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result['enable_ipv6'] = opts['enable_ipv6']
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    for opt in ['onparent', 'peerdns', 'peerroutes', 'slave', 'vlan', 'defroute', 'stp', 'ipv6_peerdns',
+    for opt in ['onparent', 'peerdns', 'peerntp', 'peerroutes', 'slave', 'vlan', 'defroute', 'stp', 'ipv6_peerdns',
                 'ipv6_defroute', 'ipv6_peerroutes', 'ipv6_autoconf', 'ipv4_failure_fatal', 'dhcpv6c']:
         if opt in opts:
             if opts[opt] in _CONFIG_TRUE:
