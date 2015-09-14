@@ -65,37 +65,38 @@ def add(name,
     '''
     Add a user to the minion.
 
-    :param name: str
+    :param str name:
     User name
 
-    :param password: str
+    :param str password:
     User's password in plain text.
 
-    :param fullname: str
+    :param str fullname:
     The user's full name.
 
-    :param description: str
+    :param str description:
     A brief description of the user account.
 
-    :param groups: list
+    :param list groups:
     A list of groups to add the user to.
 
-    :param home: str
+    :param str home:
     The path to the user's home directory.
 
-    :param homedrive: str
+    :param str homedrive:
     The drive letter to assign to the home directory. Must be the Drive Letter
     followed by a colon. ie: U:
 
-    :param profile: str
+    :param str profile:
     An explicit path to a profile. Can be a UNC or a folder on the system. If
     left blank, windows uses it's default profile directory.
 
-    :param logonscript: str
+    :param str logonscript:
     Path to a login script to run when the user logs on.
 
-    :return: bool
+    :return:
     True if successful. False is unsuccessful.
+    :rtype: bool
 
     CLI Example:
 
@@ -149,33 +150,34 @@ def update(name,
 
     .. versionadded:: 2015.8.0
 
-    :param name: str
+    :param str name:
     The user name to update.
 
-    :param password: str
+    :param str password:
     New user password in plain text.
 
-    :param fullname: str
+    :param str fullname:
     The user's full name.
 
-    :param description: str
+    :param str description:
     A brief description of the user account.
 
-    :param home: str
+    :param str home:
     The path to the user's home directory.
 
-    :param homedrive: str
+    :param str homedrive:
     The drive letter to assign to the home directory. Must be the Drive Letter
     followed by a colon. ie: U:
 
-    :param logonscript: str
+    :param str logonscript:
     The path to the logon script.
 
-    :param profile: str
+    :param str profile:
     The path to the user's profile directory.
 
-    :return: bool
+    :return:
     True if successful. False is unsuccessful.
+    :rtype: bool
 
     CLI Example:
 
@@ -234,16 +236,20 @@ def delete(name,
     '''
     Remove a user from the minion
 
-    :param name:
+    :param str name:
     The name of the user to delete
 
-    :param purge:
+    :param bool purge:
     Boolean value indicating that the user profile should also be removed when
     the user account is deleted. If set to True the profile will be removed.
 
-    :param force:
+    :param bool force:
     Boolean value indicating that the user account should be deleted even if the
     user is logged in. True will log the user out and delete user.
+
+    :return:
+    True if successful
+    :rtype: bool
 
     CLI Example:
 
@@ -329,6 +335,22 @@ def delete(name,
 
 
 def getUserSid(username):
+    '''
+    Get the Security ID for the user
+
+    :param str username:
+    user name for which to look up the SID
+
+    :return:
+    Returns the user SID
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.getUserSid jsnuffy
+    '''
     domain = win32api.GetComputerName()
     if username.find(u'\\') != -1:
         domain = username.split(u'\\')[0]
@@ -339,13 +361,23 @@ def getUserSid(username):
 
 def setpassword(name, password):
     '''
-    Set a user's password
+    Set the user's password
+
+    :param str name:
+    user name for which to set the password
+
+    :param str password:
+    the new password
+
+    :return:
+    True if successful. False is unsuccessful.
+    :rtype: bool
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' user.setpassword name password
+        salt '*' user.setpassword jsnuffy sup3rs3cr3t
     '''
     return update(name=name, password=password)
 
@@ -354,11 +386,21 @@ def addgroup(name, group):
     '''
     Add user to a group
 
+    :param str name:
+    user name to add to the group
+
+    :param str group:
+    name of the group to which to add the user
+
+    :return:
+    True if successful. False is unsuccessful.
+    :rtype: bool
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' user.addgroup username groupname
+        salt '*' user.addgroup jsnuffy 'Power Users'
     '''
     name = _cmd_quote(name)
     group = _cmd_quote(group).lstrip('\'').rstrip('\'')
@@ -379,11 +421,21 @@ def removegroup(name, group):
     '''
     Remove user from a group
 
+    :param str name:
+    user name to remove from the group
+
+    :param str group:
+    name of the group from which to remove the user
+
+    :return:
+    True if successful. False is unsuccessful.
+    :rtype: bool
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' user.removegroup username groupname
+        salt '*' user.removegroup jsnuffy 'Power Users'
     '''
     name = _cmd_quote(name)
     group = _cmd_quote(group).lstrip('\'').rstrip('\'')
@@ -406,6 +458,19 @@ def chhome(name, home, persist=False):
     '''
     Change the home directory of the user, pass True for persist to move files
     to the new home directory if the old home directory exist.
+
+    :param str name:
+    name of the user whose home directory you wish to change
+
+    :param str home:
+    new location of the home directory
+
+    :param bool persist:
+    True to move the contents of the existing home directory to the new location
+
+    :return:
+    True if successful. False is unsuccessful.
+    :rtype: bool
 
     CLI Example:
 
@@ -440,6 +505,16 @@ def chprofile(name, profile):
     '''
     Change the profile directory of the user
 
+    :param str name:
+    name of the user whose profile you wish to change
+
+    :param str profile:
+    new location of the profile
+
+    :return:
+    True if successful. False is unsuccessful.
+    :rtype: bool
+
     CLI Example:
 
     .. code-block:: bash
@@ -452,6 +527,16 @@ def chprofile(name, profile):
 def chfullname(name, fullname):
     '''
     Change the full name of the user
+
+    :param str name:
+    user name for which to change the full name
+
+    :param str fullname:
+    the new value for the full name
+
+    :return:
+    True if successful. False is unsuccessful.
+    :rtype: bool
 
     CLI Example:
 
@@ -467,11 +552,26 @@ def chgroups(name, groups, append=True):
     Change the groups this user belongs to, add append=False to make the user a
     member of only the specified groups
 
+    :param str name:
+    user name for which to change groups
+
+    :param groups:
+    a single group or a list of groups to assign to the user
+    :type: list, str
+
+    :param bool append:
+    True adds the passed groups to the user's current groups
+    False sets the user's groups to the passed groups only
+
+    :return:
+    True if successful. False is unsuccessful.
+    :rtype: bool
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' user.chgroups foo wheel,root True
+        salt '*' user.chgroups jsnuffy Administrators,Users True
     '''
     if isinstance(groups, string_types):
         groups = groups.split(',')
@@ -505,14 +605,14 @@ def info(name):
     '''
     Return user information
 
-    :param name: str
+    :param str name:
     Username for which to display information
 
-    :returns: dict
+    :returns:
     A dictionary containing user information
     - fullname
     - username
-    - uid
+    - SID
     - passwd (will always return None)
     - comment (same as description, left here for backwards compatibility)
     - description
@@ -523,12 +623,13 @@ def info(name):
     - homedrive
     - groups
     - gid
+    :rtype: dict
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' user.info root
+        salt '*' user.info jsnuffy
     '''
     ret = {}
     items = {}
@@ -582,6 +683,13 @@ def list_groups(name):
     '''
     Return a list of groups the named user belongs to
 
+    :param str name:
+    user name for which to list groups
+
+    :return:
+    list of groups to which the user belongs
+    :rtype: list
+
     CLI Example:
 
     .. code-block:: bash
@@ -602,6 +710,14 @@ def list_groups(name):
 def getent(refresh=False):
     '''
     Return the list of all info for all users
+
+    :param bool refresh:
+    Refresh the cached user information. Default is False. Useful when used from
+    within a state function.
+
+    :return:
+    A dictionary containing information about all users on the system
+    :rtype: dict
 
     CLI Example:
 
@@ -634,6 +750,16 @@ def getent(refresh=False):
 def list_users():
     '''
     Return a list of users on Windows
+
+    :return:
+    list of users on the system
+    :rtype: list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' user.list_users
     '''
     res = 0
     users = []
@@ -660,11 +786,21 @@ def rename(name, new_name):
     '''
     Change the username for a named user
 
+    :param str name:
+    user name to change
+
+    :param str new_name:
+    the new name for the current user
+
+    :return:
+    True if successful. False is unsuccessful.
+    :rtype: bool
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' user.rename name new_name
+        salt '*' user.rename jsnuffy jshmoe
     '''
     current_info = info(name)
     if not current_info:

@@ -134,6 +134,7 @@ code relevant to issues or the source code changed by pull requests.
 * ``RAET``
 * ``Returners``
 * ``Runners``
+* ``SPM``
 * ``Salt-API``
 * ``Salt-Cloud``
 * ``Salt-SSH``
