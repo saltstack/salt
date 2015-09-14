@@ -129,12 +129,12 @@ class SPMTest(TestCase):
                 ('summary', 'Summary: {0}')):
             assert line.format(_F1['definition'][key]) in lines
         # Reinstall with force=False, should fail
-        self.ui._error.clear()
+        self.ui._error = []
         self.client.run(['local', 'install', pkgpath])
         assert len(self.ui._error) > 0
         # Reinstall with force=True, should succeed
         __opts__['force'] = True
-        self.ui._error.clear()
+        self.ui._error = []
         self.client.run(['local', 'install', pkgpath])
         assert len(self.ui._error) == 0
         __opts__['force'] = False
@@ -167,7 +167,7 @@ class SPMTest(TestCase):
         )
 
         for args in fail_args:
-            self.ui._error.clear()
+            self.ui._error = []
             self.client.run(args)
             assert len(self.ui._error) > 0
 
