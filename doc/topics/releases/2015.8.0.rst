@@ -290,4 +290,4 @@ Major Bug Fixes
 - Improve process management in proxy minion (:issue:`12024`)
 - Proxy minion never comes up with message ' I am XXX and I am not supposed to
   start any proxies.' (:issue:`25908`)
-- Fixed an issue that caused an exception when using Salt mine from pillar (:issue:`11509`).
+- Fixed an issue that caused an exception when using Salt mine from pillar. (:issue:`11509`)
