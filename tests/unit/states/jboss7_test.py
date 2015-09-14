@@ -72,7 +72,7 @@ class JBoss7StateTestCase(TestCase):
         __salt__['jboss7.create_datasource'] = MagicMock(side_effect=create_func)
 
         # when
-        result = jboss7.datasource_exists(name='appDS', jboss_config={}, datasource_properties=datasource_properties)
+        result = jboss7.datasource_exists(name='appDS', jboss_config={}, datasource_properties=datasource_properties, profile=None)
 
         # then
         __salt__['jboss7.create_datasource'].assert_called_with(name='appDS', jboss_config={}, datasource_properties=datasource_properties)
@@ -95,7 +95,7 @@ class JBoss7StateTestCase(TestCase):
         __salt__['jboss7.read_datasource'] = MagicMock(side_effect=read_func)
         __salt__['jboss7.update_datasource'] = MagicMock(side_effect=update_func)
 
-        result = jboss7.datasource_exists(name='appDS', jboss_config={}, datasource_properties={'connection-url': 'jdbc:/new-connection-url'})
+        result = jboss7.datasource_exists(name='appDS', jboss_config={}, datasource_properties={'connection-url': 'jdbc:/new-connection-url'}, profile=None)
 
         __salt__['jboss7.update_datasource'].assert_called_with(name='appDS', jboss_config={}, new_properties={'connection-url': 'jdbc:/new-connection-url'})
         self.assertFalse(__salt__['jboss7.create_datasource'].called)
@@ -115,7 +115,7 @@ class JBoss7StateTestCase(TestCase):
 
         result = jboss7.datasource_exists(name='appDS', jboss_config={}, datasource_properties={'connection-url': 'jdbc:/same-connection-url'}, recreate=True)
 
-        __salt__['jboss7.remove_datasource'].assert_called_with(name='appDS', jboss_config={})
+        __salt__['jboss7.remove_datasource'].assert_called_with(name='appDS', jboss_config={}, profile=None)
         __salt__['jboss7.create_datasource'].assert_called_with(name='appDS', jboss_config={}, datasource_properties={'connection-url': 'jdbc:/same-connection-url'})
         self.assertEqual(result['changes']['removed'], 'appDS')
         self.assertEqual(result['changes']['created'], 'appDS')
@@ -131,7 +131,7 @@ class JBoss7StateTestCase(TestCase):
 
         result = jboss7.datasource_exists(name='appDS', jboss_config={}, datasource_properties={'connection-url': 'jdbc:/old-connection-url'})
 
-        __salt__['jboss7.update_datasource'].assert_called_with(name='appDS', jboss_config={}, new_properties={'connection-url': 'jdbc:/old-connection-url'})
+        __salt__['jboss7.update_datasource'].assert_called_with(name='appDS', jboss_config={}, new_properties={'connection-url': 'jdbc:/old-connection-url'}, profile=None)
         self.assertFalse(__salt__['jboss7.create_datasource'].called)
         self.assertEqual(result['comment'], 'Datasource not changed.')
 
@@ -153,7 +153,7 @@ class JBoss7StateTestCase(TestCase):
         __salt__['jboss7.create_simple_binding'] = MagicMock(side_effect=create_func)
 
         # when
-        result = jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': 'DEV'})
+        result = jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': 'DEV'}, profile=None)
 
         # then
         __salt__['jboss7.create_simple_binding'].assert_called_with(jboss_config={}, binding_name='env', value='DEV')
@@ -179,7 +179,7 @@ class JBoss7StateTestCase(TestCase):
         __salt__['jboss7.update_simple_binding'] = MagicMock(side_effect=update_func)
 
         # when
-        result = jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': 'DEV2'})
+        result = jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': 'DEV2'}, profile=None)
 
         # then
         __salt__['jboss7.update_simple_binding'].assert_called_with(jboss_config={}, binding_name='env', value='DEV2')
@@ -212,7 +212,7 @@ class JBoss7StateTestCase(TestCase):
 
         # when
         try:
-            jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': 'DEV2'})
+            jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': 'DEV2'}, profile=None)
             self.fail('An exception should be thrown')
         except CommandExecutionError as e:
             self.assertEqual(str(e), 'Incorrect binding name.')
@@ -229,7 +229,7 @@ class JBoss7StateTestCase(TestCase):
 
         # when
         try:
-            jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': '!@#!///some weird value'})
+            jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': '!@#!///some weird value'}, profile=None)
             self.fail('An exception should be thrown')
         except CommandExecutionError as e:
             self.assertEqual(str(e), 'Incorrect binding name.')

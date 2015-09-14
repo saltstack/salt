@@ -48,10 +48,10 @@ def status(jboss_config, host=None, server_config=None):
     jboss_config
         Configuration dictionary with properties specified above.
     host
-        The name of the host. JBoss domain mode only - and required if running in domain mode. 
+        The name of the host. JBoss domain mode only - and required if running in domain mode.
         The host name is the "name" attribute of the "host" element in host.xml
     server_config
-        The name of the Server Configuration. JBoss Domain mode only - and required 
+        The name of the Server Configuration. JBoss Domain mode only - and required
         if running in domain mode.
 
     CLI Example:
@@ -62,14 +62,14 @@ def status(jboss_config, host=None, server_config=None):
 
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.status")
-    if (host is None and server_config is None):
-      operation = ':read-attribute(name=server-state)'
-    elif (host is not None and server_config is not None):
-      operation = '/host="{host}"/server-config="{server_config}"/:read-attribute(name=status)'.format(
-              host=host, 
+    if host is None and server_config is None:
+        operation = ':read-attribute(name=server-state)'
+    elif host is not None and server_config is not None:
+        operation = '/host="{host}"/server-config="{server_config}"/:read-attribute(name=status)'.format(
+              host=host,
               server_config=server_config)
     else:
-      raise SaltInvocationError('Invalid parameters. Must either pass both host and server_config or neither')
+        raise SaltInvocationError('Invalid parameters. Must either pass both host and server_config or neither')
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False, retries=0)
 
 
@@ -80,7 +80,7 @@ def stop_server(jboss_config, host=None):
     jboss_config
         Configuration dictionary with properties specified above.
     host
-        The name of the host. JBoss domain mode only - and required if running in domain mode. 
+        The name of the host. JBoss domain mode only - and required if running in domain mode.
         The host name is the "name" attribute of the "host" element in host.xml
 
     CLI Example:
@@ -92,9 +92,9 @@ def stop_server(jboss_config, host=None):
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.stop_server")
     if host is None:
-      operation = ':shutdown'
+        operation = ':shutdown'
     else:
-      operation = '/host="{host}"/:shutdown'.format(host=host)
+        operation = '/host="{host}"/:shutdown'.format(host=host)
     shutdown_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
     # JBoss seems to occasionaly close the channel immediately when :shutdown is sent
     if shutdown_result['success'] or (not shutdown_result['success'] and 'Operation failed: Channel closed' in shutdown_result['stdout']):
@@ -110,7 +110,7 @@ def reload_(jboss_config, host=None):
     jboss_config
         Configuration dictionary with properties specified above.
     host
-        The name of the host. JBoss domain mode only - and required if running in domain mode. 
+        The name of the host. JBoss domain mode only - and required if running in domain mode.
         The host name is the "name" attribute of the "host" element in host.xml
 
     CLI Example:
@@ -122,9 +122,9 @@ def reload_(jboss_config, host=None):
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.reload")
     if host is None:
-      operation = ':reload'
+        operation = ':reload'
     else:
-      operation = '/host="{host}"/:reload'.format(host=host)
+        operation = '/host="{host}"/:reload'.format(host=host)
     reload_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
     # JBoss seems to occasionaly close the channel immediately when :reload is sent
     if reload_result['success'] or (not reload_result['success'] and
@@ -165,12 +165,12 @@ def create_datasource(jboss_config, name, datasource_properties, profile=None):
     ds_resource_description = __get_datasource_resource_description(jboss_config, name, profile)
 
     if profile is None:
-      operation = '/subsystem=datasources/data-source="{name}":add({properties})'.format(
+        operation = '/subsystem=datasources/data-source="{name}":add({properties})'.format(
                 name=name,
                 properties=__get_properties_assignment_string(datasource_properties, ds_resource_description)
       )
     else:
-      operation = '/profile="{profile}"/subsystem=datasources/data-source="{name}":add({properties})'.format(
+        operation = '/profile="{profile}"/subsystem=datasources/data-source="{name}":add({properties})'.format(
                 name=name,
                 profile=profile,
                 properties=__get_properties_assignment_string(datasource_properties, ds_resource_description)
@@ -267,9 +267,9 @@ def __get_datasource_resource_description(jboss_config, name, profile=None):
     log.debug("======================== MODULE FUNCTION: jboss7.__get_datasource_resource_description, name=%s, profile=%s", name, profile)
 
     if profile is None:
-      operation = '/subsystem=datasources/data-source="{name}":read-resource-description'.format(name=name)
+        operation = '/subsystem=datasources/data-source="{name}":read-resource-description'.format(name=name)
     else:
-      operation = '/profile="{profile}"/subsystem=datasources/data-source="{name}":read-resource-description'.format(name=name, profile=profile)
+        operation = '/profile="{profile}"/subsystem=datasources/data-source="{name}":read-resource-description'.format(name=name, profile=profile)
 
     operation_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation)
     if operation_result['outcome']:
@@ -285,7 +285,7 @@ def read_datasource(jboss_config, name, profile=None):
     name
         Datasource name
     profile
-        Profile name (JBoss domain mode only) 
+        Profile name (JBoss domain mode only)
 
     CLI Example:
 
@@ -318,12 +318,12 @@ def create_simple_binding(jboss_config, binding_name, value, profile=None):
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.create_simple_binding, binding_name=%s, value=%s, profile=%s", binding_name, value, profile)
     if profile is None:
-      operation = '/subsystem=naming/binding="{binding_name}":add(binding-type=simple, value="{value}")'.format(
+        operation = '/subsystem=naming/binding="{binding_name}":add(binding-type=simple, value="{value}")'.format(
             binding_name=binding_name,
             value=__escape_binding_value(value)
       )
     else:
-      operation = '/profile="{profile}"/subsystem=naming/binding="{binding_name}":add(binding-type=simple, value="{value}")'.format(
+        operation = '/profile="{profile}"/subsystem=naming/binding="{binding_name}":add(binding-type=simple, value="{value}")'.format(
             profile=profile,
             binding_name=binding_name,
             value=__escape_binding_value(value)
@@ -352,15 +352,15 @@ def update_simple_binding(jboss_config, binding_name, value, profile=None):
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.update_simple_binding, binding_name=%s, value=%s, profile=%s", binding_name, value, profile)
     if profile is None:
-      operation = '/subsystem=naming/binding="{binding_name}":write-attribute(name=value, value="{value}")'.format(
-          binding_name=binding_name,
-          value=__escape_binding_value(value)
+        operation = '/subsystem=naming/binding="{binding_name}":write-attribute(name=value, value="{value}")'.format(
+            binding_name=binding_name,
+            value=__escape_binding_value(value)
       )
     else:
-      operation = '/profile="{profile}"/subsystem=naming/binding="{binding_name}":write-attribute(name=value, value="{value}")'.format(
-          profile=profile,
-          binding_name=binding_name,
-          value=__escape_binding_value(value)
+        operation = '/profile="{profile}"/subsystem=naming/binding="{binding_name}":write-attribute(name=value, value="{value}")'.format(
+            profile=profile,
+            binding_name=binding_name,
+            value=__escape_binding_value(value)
       )
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation)
 
@@ -417,9 +417,9 @@ def __update_datasource_property(jboss_config, datasource_name, name, value, ds_
 def __read_datasource(jboss_config, name, profile=None):
 
     if profile is None:
-      operation = '/subsystem=datasources/data-source="{name}":read-resource'.format(name=name)
+        operation = '/subsystem=datasources/data-source="{name}":read-resource'.format(name=name)
     else:
-      operation = '/profile="{profile}"/subsystem=datasources/data-source="{name}":read-resource'.format(profile=profile, name=name)
+        operation = '/profile="{profile}"/subsystem=datasources/data-source="{name}":read-resource'.format(profile=profile, name=name)
 
     operation_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation)
 
