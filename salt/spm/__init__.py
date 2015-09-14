@@ -74,17 +74,20 @@ class SPMClient(object):
                 os.path.join(syspaths.CONFIG_DIR, 'spm')
             )
         self.opts = opts
+        self.db_prov = self.opts.get('spm_db_provider', 'sqlite3')
+        self.files_prov = self.opts.get('spm_files_provider', 'local')
         self._prep_pkgdb()
         self._prep_pkgfiles()
+        self._init()
 
     def _prep_pkgdb(self):
-        self.db_prov = self.opts.get('spm_db_provider', 'sqlite3')
         self.pkgdb = salt.loader.pkgdb(self.opts)
-        self.db_conn = self._pkgdb_fun('init')
 
     def _prep_pkgfiles(self):
-        self.files_prov = self.opts.get('spm_files_provider', 'local')
         self.pkgfiles = salt.loader.pkgfiles(self.opts)
+
+    def _init(self):
+        self.db_conn = self._pkgdb_fun('init')
         self.files_conn = self._pkgfiles_fun('init')
 
     def run(self, args):
