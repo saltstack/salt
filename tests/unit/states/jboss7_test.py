@@ -75,7 +75,7 @@ class JBoss7StateTestCase(TestCase):
         result = jboss7.datasource_exists(name='appDS', jboss_config={}, datasource_properties=datasource_properties, profile=None)
 
         # then
-        __salt__['jboss7.create_datasource'].assert_called_with(name='appDS', jboss_config={}, datasource_properties=datasource_properties)
+        __salt__['jboss7.create_datasource'].assert_called_with(name='appDS', jboss_config={}, datasource_properties=datasource_properties, profile=None)
         self.assertFalse(__salt__['jboss7.update_datasource'].called)
         self.assertEqual(result['comment'], 'Datasource created.')
 
@@ -97,7 +97,7 @@ class JBoss7StateTestCase(TestCase):
 
         result = jboss7.datasource_exists(name='appDS', jboss_config={}, datasource_properties={'connection-url': 'jdbc:/new-connection-url'}, profile=None)
 
-        __salt__['jboss7.update_datasource'].assert_called_with(name='appDS', jboss_config={}, new_properties={'connection-url': 'jdbc:/new-connection-url'})
+        __salt__['jboss7.update_datasource'].assert_called_with(name='appDS', jboss_config={}, new_properties={'connection-url': 'jdbc:/new-connection-url'}, profile=None)
         self.assertFalse(__salt__['jboss7.create_datasource'].called)
         self.assertEqual(result['comment'], 'Datasource updated.')
 
@@ -156,7 +156,7 @@ class JBoss7StateTestCase(TestCase):
         result = jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': 'DEV'}, profile=None)
 
         # then
-        __salt__['jboss7.create_simple_binding'].assert_called_with(jboss_config={}, binding_name='env', value='DEV')
+        __salt__['jboss7.create_simple_binding'].assert_called_with(jboss_config={}, binding_name='env', value='DEV', profile=None)
         self.assertEqual(__salt__['jboss7.update_simple_binding'].call_count, 0)
         self.assertEqual(result['changes'], {'added': 'env:DEV\n'})
         self.assertEqual(result['comment'], 'Bindings changed.')
@@ -182,7 +182,7 @@ class JBoss7StateTestCase(TestCase):
         result = jboss7.bindings_exist(name='bindings', jboss_config={}, bindings={'env': 'DEV2'}, profile=None)
 
         # then
-        __salt__['jboss7.update_simple_binding'].assert_called_with(jboss_config={}, binding_name='env', value='DEV2')
+        __salt__['jboss7.update_simple_binding'].assert_called_with(jboss_config={}, binding_name='env', value='DEV2', profile=None)
         self.assertEqual(__salt__['jboss7.create_simple_binding'].call_count, 0)
         self.assertEqual(result['changes'], {'changed': 'env:DEV->DEV2\n'})
         self.assertEqual(result['comment'], 'Bindings changed.')
