@@ -340,6 +340,7 @@ You can call the logger from custom modules to write messages to the minion
 logs. The following code snippet demonstrates writing log messages:
 
 .. code-block:: python
+
     import logging
 
     log = logging.getLogger(__name__)

@@ -46,7 +46,7 @@ Salt's Loader Interface
 Modules in the Salt ecosystem are loaded into memory using a custom loader
 system. This allows modules to have conditional requirements (OS, OS version,
 installed libraries, etc) and allows Salt to inject special variables
-(``__salt__``, ``__opts``, etc).
+(``__salt__``, ``__opts__``, etc).
 
 Most modules can be manually loaded. This is often useful in third-party Python
 apps or when writing tests. However some modules require and expect a full,
