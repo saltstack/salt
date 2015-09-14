@@ -1,25 +1,91 @@
+.. _installation-rhel:
+
 ==============================================================
 RHEL / CentOS / Scientific Linux / Amazon Linux / Oracle Linux
 ==============================================================
 
+.. _installation-rhel-repo:
+
+Installation from the SaltStack Repository
+==========================================
+
+To install using the SaltStack yum repository:
+
+#. Run one of the following commands based on your version to import the SaltStack repository key:
+
+   Version 7:
+
+   .. code-block:: bash
+
+       wget -O - rpm --import https://repo.saltstack.com/yum/rhel7/SALTSTACK-GPG-KEY.pub
+
+   Version 6:
+
+   .. code-block:: bash
+
+       wget -O - rpm --import https://repo.saltstack.com/yum/rhel6/SALTSTACK-GPG-KEY.pub
+
+   Version 5:
+
+   .. code-block:: bash
+
+       wget https://repo.saltstack.com/yum/rhel5/SALTSTACK-EL5-GPG-KEY.pub ; rpm --import SALTSTACK-EL5-GPG-KEY.pub ; rm -f SALTSTACK-EL5-GPG-KEY.pub
+
+#. Save the following file to ``/etc/yum.repos.d/saltstack.repo``:
+
+   Versions 6 / 7:
+
+    .. code-block:: config
+
+        ####################
+        # Enable SaltStack's package repository
+        [saltstack-repo]
+        name=SaltStack repo for RHEL/CentOS $releasever
+        baseurl=https://repo.saltstack.com/yum/rhel$releasever
+        enabled=1
+        gpgcheck=1
+        gpgkey=https://repo.saltstack.com/yum/rhel$releasever/SALTSTACK-GPG-KEY.pub
+
+   Version 5:
+
+    .. code-block:: config
+
+        ####################
+        # Enable SaltStack's package repository
+        [saltstack-repo]
+        name=SaltStack repo for RHEL/CentOS $releasever
+        baseurl=https://repo.saltstack.com/yum/rhel$releasever
+        enabled=1
+        gpgcheck=1
+        gpgkey=https://repo.saltstack.com/yum/rhel$releasever/SALTSTACK-EL5-GPG-KEY.pub
+
+#. Run ``sudo yum clean expire-cache``
+
+#. Run ``sudo yum update``
+
+#. Install the salt-minion, salt-master, or other Salt components:
+
+   - ``yum install salt-master``
+   - ``yum install salt-minion``
+   - ``yum install salt-ssh``
+   - ``yum install salt-syndic``
+   - ``yum install salt-cloud``
+
+.. note::
+    EPEL support is not required when installing using the SaltStack repository
+    on Red Hat 6 and 7. EPEL must be enabled when installing on Red Hat 5.
+
 Installation from Repository
 ============================
 
-.. _installation-rhel-5:
-
-RHEL/CentOS 5
--------------
-
-Due to the removal of some of Salt's dependencies from EPEL5, we have created a
-repository on `Fedora COPR`_. Moving forward, this will be the official means
-of installing Salt on RHEL5-based systems. Information on how to enable this
-repository can be found here__.
-
-.. _`Fedora COPR`: https://copr.fedoraproject.org/
-.. __: https://copr.fedoraproject.org/coprs/saltstack/salt-el5/
-
 RHEL/CentOS 6 and 7, Scientific Linux, etc.
 -------------------------------------------
+
+.. warning::
+    Salt 2015.8 requires ``python-crypto`` 2.6.1 or higher, and ``python-tornado`` version
+    4.2.1 or higher. These packages are not currently available in EPEL for
+    Red Hat 5 and 6. You must install these dependencies from another location
+    or use the SaltStack repository documented above.
 
 Beginning with version 0.9.4, Salt has been available in `EPEL`_. It is
 installable using yum. Salt should work properly with all mainstream
@@ -34,6 +100,18 @@ installing salt on RHEL6.
 
 .. _`EPEL`: http://fedoraproject.org/wiki/EPEL
 
+.. _installation-rhel-5:
+
+RHEL/CentOS 5
+-------------
+
+Due to the removal of some of Salt's dependencies from EPEL5, we have created a
+repository on `Fedora COPR`_. Moving forward, this will be the official means
+of installing Salt on RHEL5-based systems. Information on how to enable this
+repository can be found here__.
+
+.. _`Fedora COPR`: https://copr.fedoraproject.org/
+.. __: https://copr.fedoraproject.org/coprs/saltstack/salt-el5/
 
 Enabling EPEL
 *************

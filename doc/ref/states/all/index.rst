@@ -14,7 +14,7 @@ Full list of builtin state modules
     alternatives
     apache
     apache_module
-    apt
+    aptpkg
     archive
     artifactory
     at
