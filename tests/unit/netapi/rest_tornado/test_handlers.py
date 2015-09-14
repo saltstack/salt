@@ -46,6 +46,7 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
     Mixin to hold some shared things
     '''
     content_type_map = {'json': 'application/json',
+                        'json-utf8': 'application/json; charset=utf-8',
                         'yaml': 'application/x-yaml',
                         'text': 'text/plain',
                         'form': 'application/x-www-form-urlencoded'}
@@ -238,6 +239,13 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(returned_lowstate['tgt'], '*')
         self.assertEqual(returned_lowstate['fun'], 'test.fib')
         self.assertEqual(returned_lowstate['arg'], ['10', 'foo'])
+
+        # Send json with utf8 charset
+        response = self.fetch('/',
+                              method='POST',
+                              body=json.dumps(valid_lowstate),
+                              headers={'Content-Type': self.content_type_map['json-utf8']})
+        self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
 
 
 class TestSaltAuthHandler(SaltnadoTestCase):
