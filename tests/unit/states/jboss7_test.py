@@ -64,7 +64,7 @@ class JBoss7StateTestCase(TestCase):
             else:
                 return {'success': False, 'err_code': 'JBAS014807'}
 
-        def create_func(jboss_config, name, datasource_properties):
+        def create_func(jboss_config, name, datasource_properties, profile):
             ds_status['created'] = True
             return {'success': True}
 
@@ -88,7 +88,7 @@ class JBoss7StateTestCase(TestCase):
             else:
                 return {'success': True, 'result': {'connection-url': 'jdbc:/old-connection-url'}}
 
-        def update_func(jboss_config, name, new_properties):
+        def update_func(jboss_config, name, new_properties, profile):
             ds_status['updated'] = True
             return {'success': True}
 
@@ -145,7 +145,7 @@ class JBoss7StateTestCase(TestCase):
             else:
                 return {'success': False, 'err_code': 'JBAS014807'}
 
-        def create_func(jboss_config, binding_name, value):
+        def create_func(jboss_config, binding_name, value, profile):
             binding_status['created'] = True
             return {'success': True}
 
@@ -171,7 +171,7 @@ class JBoss7StateTestCase(TestCase):
             else:
                 return {'success': True, 'result': {'value': 'DEV'}}
 
-        def update_func(jboss_config, binding_name, value):
+        def update_func(jboss_config, binding_name, value, profile):
             binding_status['updated'] = True
             return {'success': True}
 
@@ -204,7 +204,7 @@ class JBoss7StateTestCase(TestCase):
         def read_func(jboss_config, binding_name, profile):
             return {'success': False, 'err_code': 'JBAS014807'}
 
-        def create_func(jboss_config, binding_name, value):
+        def create_func(jboss_config, binding_name, value, profile):
             return {'success': False, 'failure-description': 'Incorrect binding name.'}
 
         __salt__['jboss7.read_simple_binding'] = MagicMock(side_effect=read_func)
@@ -221,7 +221,7 @@ class JBoss7StateTestCase(TestCase):
         def read_func(jboss_config, binding_name, profile):
             return {'success': True, 'result': {'value': 'DEV'}}
 
-        def update_func(jboss_config, binding_name, value):
+        def update_func(jboss_config, binding_name, value, profile):
             return {'success': False, 'failure-description': 'Incorrect binding name.'}
 
         __salt__['jboss7.read_simple_binding'] = MagicMock(side_effect=read_func)
