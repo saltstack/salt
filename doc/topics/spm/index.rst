@@ -99,7 +99,7 @@ A list of packages which must be installed before this package can function.
 Building a Package
 ------------------
 Once a ``FORMULA`` file has been created, it is placed into the root of the
-formula that is to be turned into a package. The the ``spm build`` command is
+formula that is to be turned into a package. The ``spm build`` command is
 used to turn that formula into a package:
 
 .. code-block:: bash
@@ -120,7 +120,7 @@ and issue an ``spm create_repo`` command:
 
     spm create_repo /srv/spm
 
-This command is used, even if reposity metadata already exists in that
+This command is used, even if repository metadata already exists in that
 directory. SPM will regenerate the repository metadata again, using all of the
 packages in that directory.
 
@@ -210,14 +210,41 @@ also be removed.
 
 Technical Information
 =====================
-Packages are built using BZ2-compressed tarballs. Support for this is built into
-Python, and so no external dependencies are needed.
+Packages are built using BZ2-compressed tarballs. By default, the package
+database is stored using the ``sqlite3`` driver (see Loader Modules below).
 
-The package database is stored using SQLite3. Support for this is built into
-Python, and so no external dependencies are needed.
+Support for these are built into Python, and so no external dependencies are
+needed.
 
 All other files belonging to SPM use YAML, for portability and ease of use and
 maintainability.
+
+
+SPM-Specific Loader Modules
+===========================
+SPM was designed to behave like traditional package managers, which apply files
+to the filesystem and store package metadata in a local database. However,
+because modern infrastructures often extend beyond those use cases, certain
+parts of SPM have been broken out into their own set of modules.
+
+
+Package Database
+----------------
+By default, the package database is stored using the ``sqlite3`` module. This
+module was chosen because support for SQLite3 is built into Python itself.
+
+Please see the SPM Development Guide for information on creating new modules
+for package database management.
+
+
+Package Files
+-------------
+By default, package files are installed using the ``local`` module. This module
+applies files to the local filesystem, on the machine that the package is
+installed on.
+
+Please see the SPM Development Guide for information on creating new modules
+for package file management.
 
 
 SPM Configuration
