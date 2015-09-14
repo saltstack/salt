@@ -10,6 +10,17 @@ usual the release notes are not exhaustive and primarily include the most
 notable additions and improvements. Hundreds of bugs have been fixed and many
 modules have been substantially updated and added.
 
+New SaltStack Installation Repositories
+=======================================
+
+SaltStack now provides installation repositories for several platforms, with more to come.
+See the following links for instructions:
+
+- :ref:`Red Hat / CentOS 5, 6, 7 <installation-rhel-repo>`
+- :ref:`Debian 8 <installation-debian-repo>`
+- :ref:`Windows <windows-installer>`
+- FreeBSD
+
 Send Event on State Completion
 ==============================
 
@@ -47,7 +58,7 @@ performance.
 
 .. note::
 
-   Tornado is considered early-access in this release. The following known
+   Tornado is considered expiremental in this release. The following known
    issues were being investigated at the time of release:
      - TCP tests show
        performance degredation over time (:issue:`26051`)
@@ -197,6 +208,7 @@ Other Improvements
 - Add end time to master job cache for jobs (optional, off by default)
 - Tornado is now the default backend for http.request
 - Support pillarenv selection as it's done for saltenv
+- salt was updated to use python-crypto version 2.6.1, which removes the dependency on python-m2crypto.
 
 Deprecations
 ============
@@ -278,3 +290,4 @@ Major Bug Fixes
 - Improve process management in proxy minion (:issue:`12024`)
 - Proxy minion never comes up with message ' I am XXX and I am not supposed to
   start any proxies.' (:issue:`25908`)
+- Fixed an issue that caused an exception when using Salt mine from pillar (:issue:`11509`).

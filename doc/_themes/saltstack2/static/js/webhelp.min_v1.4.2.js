@@ -115,7 +115,7 @@ $( document ).ready(function() {
     });
 
     /*version page selector*/
-    $( 'div.versions' ).on('click', 'a', function (e) {
+    $( 'div.releaselinks' ).on('click', 'a', function (e) {
         e.preventDefault();
         var clickedVer = $(this).attr("href");
         var $currentVer = $( 'div.versions' ).find( 'a.active' ).first();
