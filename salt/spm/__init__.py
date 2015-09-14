@@ -116,15 +116,13 @@ class SPMClient(object):
 
     def _pkgdb_fun(self, func, *args, **kwargs):
         try:
-            return getattr(self.pkgdb,
-                           '{0}.{1}'.format(self.db_prov, func))(*args, **kwargs)
+            return getattr(getattr(self.pkgdb, self.db_prov), func)(*args, **kwargs)
         except AttributeError:
             return self.pkgdb['{0}.{1}'.format(self.db_prov, func)](*args, **kwargs)
 
     def _pkgfiles_fun(self, func, *args, **kwargs):
         try:
-            return getattr(self.pkgfiles,
-                           '{0}.{1}'.format(self.files_prov, func))(*args, **kwargs)
+            return getattr(getattr(self.pkgfiles, self.files_prov), func)(*args, **kwargs)
         except AttributeError:
             return self.pkgfiles['{0}.{1}'.format(self.files_prov, func)](*args, **kwargs)
 
