@@ -37,8 +37,8 @@ following file to your system:
 .. code-block:: json 
 
     saltstack: {
-      url: "http://repo.saltstack.org/freebsd/${ABI}/",
-      mirror_type: "srv",
+      url: "http://repo.saltstack.com/freebsd/${ABI}/",
+      mirror_type: "http",
       enabled: yes
       priority: 10
     }
