@@ -611,6 +611,9 @@ def show_all_prices(call=None, kwargs=None):
             '-f or --function, or with the --list-images option'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     conn = get_conn(service='SoftLayer_Product_Package')
     if 'code' not in kwargs:
         return conn.getCategories(id=50)
