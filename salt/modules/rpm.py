@@ -8,6 +8,8 @@ from __future__ import absolute_import
 import logging
 import os
 import re
+import time
+import datetime
 
 # Import Salt libs
 import salt.utils
@@ -395,3 +397,78 @@ def diff(package, path):
         return 'File "{0}" is binary and its content has been modified.'.format(path)
 
     return res
+
+
+def _pkg_time_to_iso(pkg_time):
+    '''
+    Convert package time to ISO 8601.
+
+    :param pkg_time:
+    :return:
+    '''
+    ptime = time.strptime(pkg_time)
+    return datetime.datetime(ptime.tm_year, ptime.tm_mon, ptime.tm_mday,
+                             ptime.tm_hour, ptime.tm_min, ptime.tm_sec).isoformat()
+
+
+def info(*packages):
+    '''
+    Return a detailed package(s) summary information.
+    If no packages specified, all packages will be returned.
+
+    :param packages:
+    :return:
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.info apache2 bash
+    '''
+
+    cmd = packages and "rpm -qi {0}".format(' '.join(packages)) or "rpm -qai"
+    call = __salt__['cmd.run_all'](cmd + " --queryformat '-----\n'", output_loglevel='trace')
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += call['stderr']
+        raise CommandExecutionError('{0}'.format(comment))
+    else:
+        out = call['stdout']
+
+    ret = dict()
+    for pkg_info in re.split(r"----*", out):
+        pkg_info = pkg_info.strip()
+        if not pkg_info:
+            continue
+        pkg_info = pkg_info.split(os.linesep)
+        if pkg_info[-1].lower().startswith('distribution'):
+            pkg_info = pkg_info[:-1]
+
+        pkg_data = dict()
+        pkg_name = None
+        descr_marker = False
+        descr = list()
+        for line in pkg_info:
+            if descr_marker:
+                descr.append(line)
+                continue
+            line = [item.strip() for item in line.split(':', 1)]
+            if len(line) != 2:
+                continue
+            key, value = line
+            key = key.replace(' ', '_').lower()
+            if key == 'description':
+                descr_marker = True
+                continue
+            if key == 'name':
+                pkg_name = value
+            if key in ['build_date', 'install_date']:
+                value = _pkg_time_to_iso(value)
+            if key != 'description' and value:
+                pkg_data[key] = value
+        pkg_data['decription'] = os.linesep.join(descr)
+        if pkg_name:
+            ret[pkg_name] = pkg_data
+
+    return ret
