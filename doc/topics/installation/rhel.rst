@@ -17,7 +17,9 @@ To install using the SaltStack yum repository:
 
    .. code-block:: bash
 
-       wget -O - rpm --import https://repo.saltstack.com/yum/rhel7/SALTSTACK-GPG-KEY.pub
+       wget https://repo.saltstack.com/yum/rhel7/SALTSTACK-GPG-KEY.pub
+       rpm --import SALTSTACK-GPG-KEY.pub
+       rm -f SALTSTACK-GPG-KEY.pub
 
    Version 6:
 
