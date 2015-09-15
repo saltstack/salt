@@ -1007,7 +1007,7 @@ class Minion(MinionBase):
                     executors[-1] = 'sudo.get'
                 # Get the last one that is function executor
                 executor = minion_instance.executors[
-                    "{0}".format(executors.pop())](opts, data, func, *args, **kwargs)
+                    "{0}".format(executors.pop())](opts, data, func, args, kwargs)
                 # Instantiate others from bottom to the top
                 for executor_name in reversed(executors):
                     executor = minion_instance.executors["{0}".format(executor_name)](opts, data, executor)
