@@ -30,7 +30,9 @@ To install using the SaltStack yum repository:
 
    .. code-block:: bash
 
-       wget https://repo.saltstack.com/yum/rhel5/SALTSTACK-EL5-GPG-KEY.pub ; rpm --import SALTSTACK-EL5-GPG-KEY.pub ; rm -f SALTSTACK-EL5-GPG-KEY.pub
+       wget https://repo.saltstack.com/yum/rhel5/SALTSTACK-EL5-GPG-KEY.pub
+       rpm --import SALTSTACK-EL5-GPG-KEY.pub
+       rm -f SALTSTACK-EL5-GPG-KEY.pub
 
 #. Save the following file to ``/etc/yum.repos.d/saltstack.repo``:
 
