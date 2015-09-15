@@ -122,7 +122,7 @@ def ext_pillar(minion_id,
                environment='base',
                prefix='',
                service_url=None,
-               s3_cache_expire=30,       # cache for 30 seconds
+               s3_cache_expire=30,  # cache for 30 seconds
                s3_sync_on_update=True):  # sync cache on update rather than jit
 
     '''
@@ -374,6 +374,8 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
             if file_meta else None
 
         cached_md5 = salt.utils.get_hash(cached_file_path, 'md5')
+
+        log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
 
         # hashes match we have a cache hit
         log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))

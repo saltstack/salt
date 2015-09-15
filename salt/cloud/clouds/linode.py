@@ -1518,6 +1518,7 @@ def _validate_name(name):
     name
         The VM name to validate
     '''
+    name = str(name)
     name_length = len(name)
     regex = re.compile(r'^[a-zA-Z0-9][A-Za-z0-9_-]*[a-zA-Z0-9]$')
 
