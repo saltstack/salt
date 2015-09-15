@@ -103,6 +103,71 @@ def delete(name):
     return __salt__['cmd.retcode'](cmd) == 0
 
 
+def adduser(group, name):
+    '''
+    Add a user in the group.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+         salt '*' group.adduser foo bar
+
+    Verifies if a valid username 'bar' as a member of an existing group 'foo',
+    if not then adds it.
+    '''
+    cmd = 'dscl . -merge /Groups/{0} GroupMembership {1}'.format(group, name)
+    return __salt__['cmd.retcode'](cmd) == 0
+
+
+def deluser(group, name):
+    '''
+    Remove a user from the group
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+         salt '*' group.deluser foo bar
+
+    Removes a member user 'bar' from a group 'foo'. If group is not present
+    then returns True.
+    '''
+    cmd = 'dscl . -delete /Groups/{0} GroupMembership {1}'.format(group, name)
+    return __salt__['cmd.retcode'](cmd) == 0
+
+
+def members(name, members_list):
+    '''
+    Replaces members of the group with a provided list.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+        salt '*' group.members foo 'user1,user2,user3,...'
+
+    Replaces a membership list for a local group 'foo'.
+    '''
+    retcode = 1
+    grp_info = __salt__['group.info'](name)
+    if grp_info and name in grp_info['name']:
+        cmd = '/usr/bin/dscl . -delete /Groups/{0} GroupMembership'.format(name)
+        retcode = __salt__['cmd.retcode'](cmd) == 0
+        for user in members_list.split(','):
+            cmd = '/usr/bin/dscl . -merge /Groups/{0} GroupMembership {1}'.format(name, user)
+            retcode = __salt__['cmd.retcode'](cmd)
+            if not retcode == 0:
+                break
+            # provided list is '': users previously deleted from group
+            else:
+                retcode = 0
+
+    return retcode == 0
+
+
 def info(name):
     '''
     Return information about a group
