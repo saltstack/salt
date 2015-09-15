@@ -1695,7 +1695,7 @@ def _hw_data(osdata):
         for serial in ('system-serial-number', 'chassis-serial-number', 'baseboard-serial-number'):
             serial = __salt__['smbios.get'](serial)
             if serial is not None:
-                grains['serial'] = serial
+                grains['serialnumber'] = serial
                 break
     elif osdata['kernel'] == 'FreeBSD':
         # On FreeBSD /bin/kenv (already in base system)
