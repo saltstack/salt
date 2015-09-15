@@ -23,7 +23,7 @@ import salt.auth
 import salt.key
 
 from salt.utils import parsers, print_cli
-from salt.utils.verify import check_user, verify_env, verify_files
+from salt.utils.verify import check_user, verify_env, verify_files, verify_log
 from salt.exceptions import (
     SaltInvocationError,
     SaltClientError,
@@ -56,6 +56,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         try:
             # We don't need to bail on config file permission errors
@@ -305,6 +306,7 @@ class SaltCP(parsers.SaltCPOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         cp_ = salt.cli.cp.SaltCP(self.config)
         cp_.run()
@@ -355,6 +357,7 @@ class SaltKey(parsers.SaltKeyOptionParser):
                 )
 
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         key = salt.key.KeyCLI(self.config)
         if check_user(self.config['user']):
@@ -407,6 +410,7 @@ class SaltCall(parsers.SaltCallOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         #caller = salt.cli.caller.Caller(self.config)
         caller = salt.cli.caller.Caller.factory(self.config)
@@ -452,6 +456,7 @@ class SaltRun(parsers.SaltRunOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         runner = salt.runner.Runner(self.config)
         if self.options.doc:
@@ -473,6 +478,7 @@ class SaltSSH(parsers.SaltSSHOptionParser):
     '''
     def run(self):
         self.parse_args()
+        verify_log(self.config)
 
         ssh = salt.client.ssh.SSH(self.config)
         ssh.run()
@@ -516,6 +522,7 @@ class SaltAPI(parsers.OptionParser, parsers.ConfigDirMixIn,
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
+        verify_log(self.config)
         client = salt.client.netapi.NetapiClient(self.config)
         self.daemonize_if_required()
         self.set_pidfile()

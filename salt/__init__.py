@@ -46,7 +46,7 @@ from salt.utils import migrations
 try:
     from salt.utils import parsers, ip_bracket
     from salt.utils.verify import check_user, verify_env, verify_socket
-    from salt.utils.verify import verify_files
+    from salt.utils.verify import verify_files, verify_log
 except ImportError as exc:
     if exc.args[0] != 'No module named _msgpack':
         raise
@@ -113,6 +113,7 @@ class Master(parsers.MasterOptionParser):
 
         self.setup_logfile_logger()
         logger.info('Setting up the Salt Master')
+        verify_log(self.config)
 
         if self.config['transport'].lower() == 'zeromq':
             if not verify_socket(self.config['interface'],
@@ -222,6 +223,7 @@ class Minion(parsers.MinionOptionParser):
                     self.config['id']
                 )
             )
+            verify_log(self.config)
             migrations.migrate_paths(self.config)
         if self.config['transport'].lower() == 'zeromq':
             # Late import so logging works correctly
@@ -350,6 +352,7 @@ class ProxyMinion(parsers.MinionOptionParser):
                 self.config['id']
             )
         )
+        verify_log(self.config)
         migrations.migrate_paths(self.config)
         # Late import so logging works correctly
         import salt.minion
@@ -437,6 +440,7 @@ class Syndic(parsers.SyndicOptionParser):
                 self.config['id']
             )
         )
+        verify_log(self.config)
 
         # Late import so logging works correctly
         import salt.minion
