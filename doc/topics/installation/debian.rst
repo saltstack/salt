@@ -17,7 +17,7 @@ To install using the SaltStack Debian repository:
 
    .. code-block:: bash
 
-       wget -O - https://repo.saltstack.com/apt/debian/SALTSTACK-GPG-KEY.pub | apt-key add -
+       wget -O - https://repo.saltstack.com/apt/debian/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
 
 #. Add the following line to ``/etc/apt/sources.list``:
 
