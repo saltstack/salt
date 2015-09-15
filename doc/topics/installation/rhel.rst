@@ -23,13 +23,17 @@ To install using the SaltStack yum repository:
 
    .. code-block:: bash
 
-       wget -O - rpm --import https://repo.saltstack.com/yum/rhel6/SALTSTACK-GPG-KEY.pub
+       wget https://repo.saltstack.com/yum/rhel6/SALTSTACK-GPG-KEY.pub
+       rpm --import SALTSTACK-GPG-KEY.pub
+       rm -f SALTSTACK-GPG-KEY.pub
 
    Version 5:
 
    .. code-block:: bash
 
-       wget https://repo.saltstack.com/yum/rhel5/SALTSTACK-EL5-GPG-KEY.pub ; rpm --import SALTSTACK-EL5-GPG-KEY.pub ; rm -f SALTSTACK-EL5-GPG-KEY.pub
+       wget https://repo.saltstack.com/yum/rhel5/SALTSTACK-EL5-GPG-KEY.pub
+       rpm --import SALTSTACK-EL5-GPG-KEY.pub
+       rm -f SALTSTACK-EL5-GPG-KEY.pub
 
 #. Save the following file to ``/etc/yum.repos.d/saltstack.repo``:
 
@@ -105,13 +109,11 @@ installing salt on RHEL6.
 RHEL/CentOS 5
 -------------
 
-Due to the removal of some of Salt's dependencies from EPEL5, we have created a
-repository on `Fedora COPR`_. Moving forward, this will be the official means
-of installing Salt on RHEL5-based systems. Information on how to enable this
-repository can be found here__.
+Due to the removal of some of Salt's dependencies from EPEL5, we recommend
+using the :ref:`SaltStack Repository <installation-rhel-repo>` or
+the repository on `Fedora COPR`_.
 
-.. _`Fedora COPR`: https://copr.fedoraproject.org/
-.. __: https://copr.fedoraproject.org/coprs/saltstack/salt-el5/
+.. _`Fedora COPR`: https://copr.fedoraproject.org/coprs/saltstack/salt-el5/
 
 Enabling EPEL
 *************
@@ -197,12 +199,10 @@ ZeroMQ 4
 ========
 
 We recommend using ZeroMQ 4 where available. SaltStack provides ZeroMQ 4.0.4
-and pyzmq 14.3.1 in a COPR_ repository. Instructions for adding this repository
-(as well as for upgrading ZeroMQ and pyzmq on existing minions) can be found
-here__.
+and pyzmq 14.3.1 in the :ref:`SaltStack Repository <installation-rhel-repo>`
+as well as a COPR_ repository.
 
-.. _COPR: http://copr.fedoraproject.org/
-.. __: http://copr.fedoraproject.org/coprs/saltstack/zeromq4/
+.. _COPR: http://copr.fedoraproject.org/coprs/saltstack/zeromq4/
 
 If this repo is added *before* Salt is installed, then installing either
 ``salt-master`` or ``salt-minion`` will automatically pull in ZeroMQ 4.0.4, and
@@ -214,7 +214,6 @@ additional states to upgrade ZeroMQ and pyzmq are unnecessary.
     because YUM will not be able to process the SHA256 checksums used by COPR.
 
 .. note::
-
     For RHEL/CentOS 5 installations, if using the new repository to install
     Salt (as detailed :ref:`above <installation-rhel-5>`), then it is not
     necessary to enable the zeromq4 COPR, as the new EL5 repository includes
