@@ -311,6 +311,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W
     Server side websocket handler.
     '''
 
+    # pylint: disable=W0221
     def get(self, token):
         '''
         Check the token, returns a 401 if the token is invalid.
