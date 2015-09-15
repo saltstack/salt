@@ -603,13 +603,15 @@ def show_pricing(kwargs=None, call=None):
 
 def show_all_prices(call=None, kwargs=None):
     '''
-    Return a dict of all available VM images on the cloud provider.
+    Return a dict of all prices on the cloud provider.
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The avail_images function must be called with '
-            '-f or --function, or with the --list-images option'
+            'The show_all_prices function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     conn = get_conn(service='SoftLayer_Product_Package')
     if 'code' not in kwargs:
@@ -624,3 +626,23 @@ def show_all_prices(call=None, kwargs=None):
                 ret[price['id']] = price['item'].copy()
                 del ret[price['id']]['id']
     return ret
+
+
+def show_all_categories(call=None):
+    '''
+    Return a dict of all available categories on the cloud provider.
+
+    .. versionadded:: Boron
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The show_all_categories function must be called with -f or --function.'
+        )
+
+    conn = get_conn(service='SoftLayer_Product_Package')
+    categories = []
+
+    for category in conn.getCategories(id=50):
+        categories.append(category['categoryCode'])
+
+    return {'category_codes': categories}
