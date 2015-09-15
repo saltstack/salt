@@ -161,6 +161,8 @@ def _sync(form, saltenv=None):
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
         with salt.utils.fopen(mod_file, 'a+') as ofile:
             ofile.write('')
+    if form == 'grains' and __opts__.get('grains_cache'):
+        os.remove(os.path.join(__opts__['cachedir'], 'grains.cache.p'))
     return ret
 
 
