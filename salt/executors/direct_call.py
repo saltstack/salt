@@ -17,7 +17,7 @@ class DirectCallExecutor(ModuleExecutorBase):
     Directly calls the given function with arguments
     '''
 
-    def __init__(self, opts, data, func, *args, **kwargs):
+    def __init__(self, opts, data, func, args, kwargs):
         '''
         Constructor
         '''

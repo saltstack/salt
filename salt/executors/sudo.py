@@ -60,7 +60,7 @@ class SudoExecutor(ModuleExecutorBase):
     being run on ``sudo_minion``.
     '''
 
-    def __init__(self, opts, data, func, *args, **kwargs):
+    def __init__(self, opts, data, func, args, kwargs):
         '''
         Constructor
         '''
