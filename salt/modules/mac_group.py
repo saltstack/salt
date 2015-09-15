@@ -156,7 +156,7 @@ def members(name, members_list):
     if grp_info and name in grp_info['name']:
         cmd = '/usr/bin/dscl . -delete /Groups/{0} GroupMembership'.format(name)
         retcode = __salt__['cmd.retcode'](cmd) == 0
-        for user in members_list.split(","):
+        for user in members_list.split(','):
             cmd = '/usr/bin/dscl . -merge /Groups/{0} GroupMembership {1}'.format(name, user)
             retcode = __salt__['cmd.retcode'](cmd)
             if not retcode == 0:
