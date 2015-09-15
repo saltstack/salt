@@ -3342,6 +3342,7 @@ def worktree_prune(cwd,
         .. versionadded:: 2015.8.0
 
     .. _`git-worktree(1)`: http://git-scm.com/docs/git-worktree
+    .. _`git-config(1)`: http://git-scm.com/docs/git-config/2.5.1
 
 
     CLI Examples:
