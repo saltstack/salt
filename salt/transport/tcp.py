@@ -234,13 +234,19 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
     # TODO: opts!
     backlog = 5
 
+    def __init__(self, opts):
+        salt.transport.server.ReqServerChannel.__init__(self, opts)
+        self._socket = None
+
     @property
     def socket(self):
         return self._socket
 
     def close(self):
-        self.socket.shutdown(socket.SHUT_RDWR)
-        self.socket.close()
+        if self._socket is not None:
+            self._socket.shutdown(socket.SHUT_RDWR)
+            self._socket.close()
+            self._socket = None
 
     def __del__(self):
         self.close()
@@ -250,10 +256,6 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         Pre-fork we need to create the zmq router device
         '''
         salt.transport.mixins.auth.AESReqServerMixin.pre_fork(self, process_manager)
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._socket.setblocking(0)
-        self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
 
     def post_fork(self, payload_handler, io_loop):
         '''
@@ -262,11 +264,15 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
 
         payload_handler: function to call with your payloads
         '''
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._socket.setblocking(0)
+        self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
         self.payload_handler = payload_handler
         self.io_loop = io_loop
         self.req_server = SaltMessageServer(self.handle_message, io_loop=self.io_loop)
-        self.req_server.add_socket(self.socket)
-        self.socket.listen(self.backlog)
+        self.req_server.add_socket(self._socket)
+        self._socket.listen(self.backlog)
 
         self.serial = salt.payload.Serial(self.opts)
         salt.transport.mixins.auth.AESReqServerMixin.post_fork(self, payload_handler, io_loop)
@@ -392,6 +398,7 @@ class SaltMessageClient(object):
         self.send_timeout_map = {}  # request_id -> timeout_callback
 
         self._connecting_future = self.connect()
+        self._read_until_future = None
         self.io_loop.spawn_callback(self._stream_return)
 
         self._on_recv = None
@@ -402,6 +409,14 @@ class SaltMessageClient(object):
         self._closing = True
         if hasattr(self, '_stream') and not self._stream.closed():
             self._stream.close()
+            if self._read_until_future is not None:
+                # This will prevent this message from showing up:
+                # '[ERROR   ] Future exception was never retrieved:
+                # StreamClosedError'
+                # This happens because the logic is always waiting to read
+                # the next message and the associated read future is marked
+                # 'StreamClosedError' when the stream is closed.
+                self._read_until_future.exc_info()
 
     def __del__(self):
         self.destroy()
@@ -448,7 +463,8 @@ class SaltMessageClient(object):
             yield self._connecting_future
         while True:
             try:
-                framed_msg_len = yield self._stream.read_until(' ')
+                self._read_until_future = self._stream.read_until(' ')
+                framed_msg_len = yield self._read_until_future
                 framed_msg_raw = yield self._stream.read_bytes(int(framed_msg_len.strip()))
                 framed_msg = msgpack.loads(framed_msg_raw)
                 header = framed_msg['head']
@@ -602,6 +618,12 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
         self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
 
+    def __setstate__(self, state):
+        self.__init__(state['opts'])
+
+    def __getstate__(self):
+        return {'opts': self.opts}
+
     def _publish_daemon(self):
         '''
         Bind to the interface specified in the configuration file
@@ -613,7 +635,11 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         pub_server.listen(int(self.opts['publish_port']), address=self.opts['interface'])
 
         # Set up Salt IPC server
-        pull_uri = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            pull_uri = int(self.opts.get('tcp_master_publish_pull', 4514))
+        else:
+            pull_uri = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+
         pull_sock = salt.transport.ipc.IPCMessageServer(
             pull_uri,
             io_loop=self.io_loop,
@@ -652,7 +678,10 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             log.debug("Signing data packet")
             payload['sig'] = salt.crypt.sign_message(master_pem_path, payload['load'])
         # Use the Salt IPC server
-        pull_uri = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
+        if self.opts.get('ipc_mode', '') == 'tcp':
+            pull_uri = int(self.opts.get('tcp_master_publish_pull', 4514))
+        else:
+            pull_uri = os.path.join(self.opts['sock_dir'], 'publish_pull.ipc')
         # TODO: switch to the actual async interface
         #pub_sock = salt.transport.ipc.IPCMessageClient(self.opts, io_loop=self.io_loop)
         pub_sock = salt.utils.async.SyncWrapper(
