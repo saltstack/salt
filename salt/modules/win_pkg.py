@@ -458,7 +458,7 @@ def genrepo(saltenv='base'):
 
 
 def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
-    '''
+    r'''
     Install the passed package(s) on the system using winrepo
 
     :param name:
