@@ -140,7 +140,40 @@ instance.
 
 disk_size
 ---------
-The amount of disk space that will be allocated to this image, in megabytes.
+The amount of disk space that will be allocated to this image, in gigabytes.
+
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: 100
+
+Using Multiple Disks
+~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.1
+
+SoftLayer allows up to 5 disks to be specified for a virtual machine upon
+creation. Multiple disks can be specified either as a list or a comma-delimited
+string. The first ``disk_size`` specified in the string or list will be the first
+disk size assigned to the VM.
+
+List Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: ['100', '20', '20']
+
+String Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: '100, 20, 20'
+
+.. note::
+
+    All disks listed in the ``disk_size`` configuration will be created either as
+    SAN disks or local disks, depending on if the ``local_disk`` configuration
+    is set to ``true`` or not. See ``local_disk`` parameter below.
 
 local_disk
 ----------
