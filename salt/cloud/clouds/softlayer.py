@@ -538,7 +538,7 @@ def list_nodes_full(mask='mask[id]', call=None):
         )
 
     ret = {}
-    conn = get_conn(service='Account')
+    conn = get_conn(service='SoftLayer_Account')
     response = conn.getVirtualGuests()
     for node_id in response:
         ret[node_id['hostname']] = node_id
@@ -651,5 +651,5 @@ def list_vlans(call=None):
             'The list_vlans function must be called with -f or --function.'
         )
 
-    conn = get_conn(service='Account')
+    conn = get_conn(service='SoftLayer_Account')
     return conn.getNetworkVlans()

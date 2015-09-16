@@ -697,7 +697,7 @@ def list_nodes_full(mask='mask[id, hostname, primaryIpAddress, \
         )
 
     ret = {}
-    conn = get_conn(service='Account')
+    conn = get_conn(service='SoftLayer_Account')
     response = conn.getHardware(mask=mask)
 
     for node in response:
@@ -817,5 +817,5 @@ def list_vlans(call=None):
             'The list_vlans function must be called with -f or --function.'
         )
 
-    conn = get_conn(service='Account')
+    conn = get_conn(service='SoftLayer_Account')
     return conn.getNetworkVlans()
