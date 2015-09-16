@@ -295,12 +295,16 @@ def create(vm_):
 
         count = 0
         for disk in disks:
+            # device number '1' is reserved for the SWAP disk
+            if count == 1:
+                count += 1
             block_device = {'device': str(count),
                             'diskImage': {'capacity': str(disk)}}
             kwargs['blockDevices'].append(block_device)
             count += 1
 
-            if count > 4:
+            # Upper bound must be 5 as we're skipping '1' for the SWAP disk ID
+            if count > 5:
                 log.warning('More that 5 disks were specified for {0} .'
                             'The first 5 disks will be applied to the VM, '
                             'but the remaining disks will be ignored.\n'
