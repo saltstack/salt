@@ -15,6 +15,7 @@ import integration  # pylint: disable=import-error
 # Import Salt libs
 try:
     from salt.netapi.rest_tornado import saltnado
+    from salt.netapi.rest_tornado import saltnado_websockets
     HAS_TORNADO = True
 except ImportError:
     HAS_TORNADO = False
@@ -26,7 +27,9 @@ import salt.auth
 try:
     import tornado.testing
     import tornado.concurrent
-    from tornado.testing import AsyncHTTPTestCase
+    from tornado.testing import AsyncHTTPTestCase, gen_test
+    from tornado.httpclient import HTTPRequest, HTTPError
+    from tornado.websocket import websocket_connect
     HAS_TORNADO = True
 except ImportError:
     HAS_TORNADO = False
@@ -247,6 +250,60 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                               headers={'Content-Type': self.content_type_map['json-utf8']})
         self.assertEqual(valid_lowstate, json.loads(response.body)['lowstate'])
 
+    def test_cors_origin_wildcard(self):
+        '''
+        Check that endpoints returns Access-Control-Allow-Origin
+        '''
+        self._app.mod_opts['cors_origin'] = '*'
+
+        headers = self.fetch('/').headers
+        self.assertEqual(headers["Access-Control-Allow-Origin"], "*")
+
+    def test_cors_origin_single(self):
+        '''
+        Check that endpoints returns the Access-Control-Allow-Origin when
+        only one origins is set
+        '''
+        self._app.mod_opts['cors_origin'] = 'http://example.foo'
+
+        # Example.foo is an authorized origin
+        headers = self.fetch('/', headers={'Origin': 'http://example.foo'}).headers
+        self.assertEqual(headers["Access-Control-Allow-Origin"], "http://example.foo")
+
+        # Example2.foo is not an authorized origin
+        headers = self.fetch('/', headers={'Origin': 'http://example2.foo'}).headers
+        self.assertEqual(headers.get("Access-Control-Allow-Origin"), None)
+
+    def test_cors_origin_multiple(self):
+        '''
+        Check that endpoints returns the Access-Control-Allow-Origin when
+        multiple origins are set
+        '''
+        self._app.mod_opts['cors_origin'] = ['http://example.foo', 'http://foo.example']
+
+        # Example.foo is an authorized origin
+        headers = self.fetch('/', headers={'Origin': 'http://example.foo'}).headers
+        self.assertEqual(headers["Access-Control-Allow-Origin"], "http://example.foo")
+
+        # Example2.foo is not an authorized origin
+        headers = self.fetch('/', headers={'Origin': 'http://example2.foo'}).headers
+        self.assertEqual(headers.get("Access-Control-Allow-Origin"), None)
+
+    def test_cors_preflight_request(self):
+        '''
+        Check that preflight request contains right headers
+        '''
+        self._app.mod_opts['cors_origin'] = '*'
+
+        response = self.fetch('/', method='OPTIONS')
+        headers = response.headers
+
+        self.assertEqual(headers['Access-Control-Allow-Headers'], 'X-Auth-Token')
+        self.assertEqual(headers['Access-Control-Expose-Headers'], 'X-Auth-Token')
+        self.assertEqual(headers['Access-Control-Allow-Methods'], 'OPTIONS, GET, POST')
+
+        self.assertEqual(response.code, 204)
+
 
 class TestSaltAuthHandler(SaltnadoTestCase):
 
@@ -307,6 +364,118 @@ class TestSaltAuthHandler(SaltnadoTestCase):
                                headers={'Content-Type': self.content_type_map['form']})
 
         self.assertEqual(response.code, 401)
+
+
+@skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')  # pylint: disable=W0223
+class TestWebsocketSaltAPIHandler(SaltnadoTestCase):
+
+    def get_app(self):
+
+        urls = [
+            ('/login', saltnado.SaltAuthHandler),
+            (r"/hook/([0-9A-Fa-f]{32})", saltnado_websockets.AllEventsHandler)]
+
+        application = self.build_tornado_app(urls)
+
+        return application
+
+    @gen_test
+    def test_websocket_handler_upgrade_to_websocket(self):
+        response = yield self.http_client.fetch(self.get_url('/login'),
+                                                method='POST',
+                                                body=urlencode(self.auth_creds),
+                                                headers={'Content-Type': self.content_type_map['form']})
+        token = json.loads(response.body)['return'][0]['token']
+
+        url = 'ws://127.0.0.1:{0}/hook/{1}'.format(self.get_http_port(), token)
+        request = HTTPRequest(url, headers={'Origin': 'http://example.com',
+                                            'Host': 'example.com'})
+        ws = yield websocket_connect(request)
+        ws.write_message('websocket client ready')
+        ws.close()
+
+    @gen_test
+    def test_websocket_handler_bad_token(self):
+        """
+        A bad token should returns a 401 during a websocket connect
+        """
+        token = 'A'*32
+
+        url = 'ws://127.0.0.1:{0}/hook/{1}'.format(self.get_http_port(), token)
+        request = HTTPRequest(url, headers={'Origin': 'http://example.com',
+                                            'Host': 'example.com'})
+        try:
+            ws = yield websocket_connect(request)
+        except HTTPError as error:
+            self.assertEqual(error.code, 401)
+
+    @gen_test
+    def test_websocket_handler_cors_origin_wildcard(self):
+        self._app.mod_opts['cors_origin'] = '*'
+
+        response = yield self.http_client.fetch(self.get_url('/login'),
+                                                method='POST',
+                                                body=urlencode(self.auth_creds),
+                                                headers={'Content-Type': self.content_type_map['form']})
+        token = json.loads(response.body)['return'][0]['token']
+
+        url = 'ws://127.0.0.1:{0}/hook/{1}'.format(self.get_http_port(), token)
+        request = HTTPRequest(url, headers={'Origin': 'http://foo.bar',
+                                            'Host': 'example.com'})
+        ws = yield websocket_connect(request)
+        ws.write_message('websocket client ready')
+        ws.close()
+
+    @gen_test
+    def test_cors_origin_single(self):
+        self._app.mod_opts['cors_origin'] = 'http://example.com'
+
+        response = yield self.http_client.fetch(self.get_url('/login'),
+                                                method='POST',
+                                                body=urlencode(self.auth_creds),
+                                                headers={'Content-Type': self.content_type_map['form']})
+        token = json.loads(response.body)['return'][0]['token']
+        url = 'ws://127.0.0.1:{0}/hook/{1}'.format(self.get_http_port(), token)
+
+        # Example.com should works
+        request = HTTPRequest(url, headers={'Origin': 'http://example.com',
+                                            'Host': 'example.com'})
+        ws = yield websocket_connect(request)
+        ws.write_message('websocket client ready')
+        ws.close()
+
+        # But foo.bar not
+        request = HTTPRequest(url, headers={'Origin': 'http://foo.bar',
+                                            'Host': 'example.com'})
+        try:
+            ws = yield websocket_connect(request)
+        except HTTPError as error:
+            self.assertEqual(error.code, 403)
+
+    @gen_test
+    def test_cors_origin_multiple(self):
+        self._app.mod_opts['cors_origin'] = ['http://example.com', 'http://foo.bar']
+
+        response = yield self.http_client.fetch(self.get_url('/login'),
+                                                method='POST',
+                                                body=urlencode(self.auth_creds),
+                                                headers={'Content-Type': self.content_type_map['form']})
+        token = json.loads(response.body)['return'][0]['token']
+        url = 'ws://127.0.0.1:{0}/hook/{1}'.format(self.get_http_port(), token)
+
+        # Example.com should works
+        request = HTTPRequest(url, headers={'Origin': 'http://example.com',
+                                            'Host': 'example.com'})
+        ws = yield websocket_connect(request)
+        ws.write_message('websocket client ready')
+        ws.close()
+
+        # Foo.bar too
+        request = HTTPRequest(url, headers={'Origin': 'http://foo.bar',
+                                            'Host': 'example.com'})
+        ws = yield websocket_connect(request)
+        ws.write_message('websocket client ready')
+        ws.close()
 
 
 if __name__ == '__main__':

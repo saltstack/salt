@@ -31,7 +31,7 @@ add the following to the Salt master config file.
         debug: False
         disable_ssl: False
         webhook_disable_auth: False
-
+        cors_origin: null
 
 .. _rest_tornado-auth:
 
@@ -48,6 +48,42 @@ The token may be sent in one of two ways:
   automatically handle cookie support (such as browsers).
 
 .. seealso:: You can bypass the session handling via the :py:class:`RunSaltAPIHandler` URL.
+
+CORS
+----
+
+rest_tornado supports Cross-site HTTP requests out of the box. It is by default
+deactivated and controlled by the `cors_origin` config key.
+
+You can allow all origins by settings `cors_origin` to `*`.
+
+You can allow only one origin with this configuration:
+
+.. code-block:: yaml
+
+    rest_tornado:
+        cors_origin: http://salt.yourcompany.com
+
+You can also be more specific and select only a few allowed origins by using
+a list. For example:
+
+.. code-block:: yaml
+
+    rest_tornado:
+        cors_origin:
+            - http://salt.yourcompany.com
+            - http://salt-preprod.yourcampany.com
+
+The format for origin are full URL, with both scheme and port if not standard.
+
+In this case, rest_tornado will check if the Origin header is in the allowed
+list if it's the case allow the origin. Else it will returns nothing,
+effectively preventing the origin to make request.
+
+For reference, CORS is a mechanism used by browser to allow (or disallow)
+requests made from browser from a different origin than salt-api. It's
+complementary to Authentication and mandatory only if you plan to use
+a salt client developed as a Javascript browser application.
 
 Usage
 -----
@@ -529,6 +565,36 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         else:
             lowstate = data
         return lowstate
+
+    def set_default_headers(self):
+        '''
+        Set default CORS headers
+        '''
+        mod_opts = self.application.mod_opts
+
+        if mod_opts.get('cors_origin'):
+            origin = self.request.headers.get('Origin')
+
+            allowed_origin = _check_cors_origin(origin, mod_opts['cors_origin'])
+
+            if allowed_origin:
+                self.set_header("Access-Control-Allow-Origin", allowed_origin)
+
+    def options(self):
+        '''
+        Return CORS headers for preflight requests
+        '''
+        # Allow X-Auth-Token in requests
+        self.set_header('Access-Control-Allow-Headers', 'X-Auth-Token')
+
+        # Allow X-Auth-Token in responses
+        self.set_header('Access-Control-Expose-Headers', 'X-Auth-Token')
+
+        # Allow all methods
+        self.set_header('Access-Control-Allow-Methods', 'OPTIONS, GET, POST')
+
+        self.set_status(204)
+        self.finish()
 
 
 class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
@@ -1620,3 +1686,17 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         }, tag)
 
         self.write(self.serialize({'success': ret}))
+
+
+def _check_cors_origin(origin, allowed_origins):
+    """
+    Check if an origin match cors allowed origins
+    """
+    if isinstance(allowed_origins, list):
+        if origin in allowed_origins:
+            return origin
+    elif allowed_origins == '*':
+        return allowed_origins
+    elif allowed_origins == origin:
+        # Cors origin is either * or specific origin
+        return allowed_origins
