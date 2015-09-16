@@ -52,7 +52,10 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
                         'json-utf8': 'application/json; charset=utf-8',
                         'yaml': 'application/x-yaml',
                         'text': 'text/plain',
-                        'form': 'application/x-www-form-urlencoded'}
+                        'form': 'application/x-www-form-urlencoded',
+                        'xml': 'application/xml',
+                        'real-accept-header-json': 'application/json, text/javascript, */*; q=0.01',
+                        'real-accept-header-yaml': 'application/x-yaml, text/yaml, */*; q=0.01'}
     auth_creds = (
         ('username', 'saltdev_api'),
         ('password', 'saltdev'),
@@ -126,7 +129,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         urls = [('/', StubHandler)]
         return self.build_tornado_app(urls)
 
-    def test_content_type(self):
+    def test_accept_content_type(self):
         '''
         Test the base handler's accept picking
         '''
@@ -136,13 +139,29 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(response.headers['Content-Type'], self.content_type_map['json'])
         self.assertEqual(type(json.loads(response.body)), dict)
 
-        # send application/json
+        # Request application/json
         response = self.fetch('/', headers={'Accept': self.content_type_map['json']})
         self.assertEqual(response.headers['Content-Type'], self.content_type_map['json'])
         self.assertEqual(type(json.loads(response.body)), dict)
 
-        # send application/x-yaml
+        # Request application/x-yaml
         response = self.fetch('/', headers={'Accept': self.content_type_map['yaml']})
+        self.assertEqual(response.headers['Content-Type'], self.content_type_map['yaml'])
+        self.assertEqual(type(yaml.load(response.body)), dict)
+
+        # Request not supported content-type
+        response = self.fetch('/', headers={'Accept': self.content_type_map['xml']})
+        self.assertEqual(response.code, 406)
+
+        # Request some JSON with a browser like Accept
+        accept_header = self.content_type_map['real-accept-header-json']
+        response = self.fetch('/', headers={'Accept': accept_header})
+        self.assertEqual(response.headers['Content-Type'], self.content_type_map['json'])
+        self.assertEqual(type(json.loads(response.body)), dict)
+
+        # Request some YAML with a browser like Accept
+        accept_header = self.content_type_map['real-accept-header-yaml']
+        response = self.fetch('/', headers={'Accept': accept_header})
         self.assertEqual(response.headers['Content-Type'], self.content_type_map['yaml'])
         self.assertEqual(type(yaml.load(response.body)), dict)
 
