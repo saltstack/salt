@@ -37,11 +37,14 @@ class SaltRun(parsers.SaltRunOptionParser):
             if check_user(self.config['user']):
                 pr = activate_profile(profiling_enabled)
                 try:
-                    runner.run()
+                    ret = runner.run()
                 finally:
                     output_profile(
                         pr,
                         stats_path=self.options.profiling_path,
                         stop=True)
+                    if isinstance(ret, dict) and 'retcode' in ret:
+                        self.exit(ret['retcode'])
+
         except SaltClientError as exc:
             raise SystemExit(str(exc))
