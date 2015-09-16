@@ -624,12 +624,12 @@ class Client(object):
 
             try:
                 content_length = int(query['handle'].headers['Content-Length'])
-            except (AttributeError, KeyError):
+            except (AttributeError, KeyError, ValueError):
                 # Shouldn't happen but don't let this raise an exception.
                 # Instead, just don't do content length checking below.
                 log.warning(
                     'No Content-Length header in HTTP response from fetch of '
-                    '{0}'.format(fixed_url)
+                    '{0}, or Content-Length is non-numeric'.format(fixed_url)
                 )
                 content_length = None
 
