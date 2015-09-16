@@ -852,6 +852,9 @@ def deploy_windows(host,
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
 
         smb_conn = salt.utils.smb.get_conn(host, username, password)
+        if smb_conn is False:
+            log.error('Please install impacket to enable SMB functionality')
+            return False
 
         creds = "-U '{0}%{1}' //{2}".format(
             username, password, host)
