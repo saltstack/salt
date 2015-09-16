@@ -647,7 +647,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                 # Check to see if the file is cached
                 cached_file = __salt__['cp.is_cached'](cache_file, saltenv)
                 if not cached_file:
-                    cached_file = __salt__{'cp.cache_file'}(cache_file, saltenv)
+                    cached_file = __salt__['cp.cache_file'](cache_file, saltenv)
 
                 # Make sure the cached file is the same as the source
                 if __salt__['cp.hash_file'](cache_file, saltenv) != \
