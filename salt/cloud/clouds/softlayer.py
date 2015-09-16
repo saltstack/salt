@@ -275,9 +275,13 @@ def create(vm_):
         'domain': vm_['domain'],
         'startCpus': vm_['cpu_number'],
         'maxMemory': vm_['ram'],
-        'localDiskFlag': vm_['local_disk'],
         'hourlyBillingFlag': vm_['hourly_billing'],
     }
+
+    local_disk_flag = config.get_cloud_config_value(
+        'local_disk', vm_, __opts__, default=False
+    )
+    kwargs['localDiskFlag'] = local_disk_flag
 
     if 'image' in vm_:
         kwargs['operatingSystemReferenceCode'] = vm_['image']
