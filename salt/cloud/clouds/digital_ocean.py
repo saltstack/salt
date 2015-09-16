@@ -137,7 +137,7 @@ def avail_images(call=None):
         for image in items['images']:
             ret[image['id']] = {}
             for item in six.iterkeys(image):
-                ret[image['id']][item] = str(image[item])
+                ret[image['id']][item] = image[item]
 
         page += 1
         try:
@@ -270,9 +270,9 @@ def get_image(vm_):
     Return the image object to use
     '''
     images = avail_images()
-    vm_image = str(config.get_cloud_config_value(
+    vm_image = config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
-    ))
+    )
     for image in images:
         if vm_image in (images[image]['name'], images[image]['slug'], images[image]['id']):
             if images[image]['slug'] is not None:
