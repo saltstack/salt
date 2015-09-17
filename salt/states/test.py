@@ -43,6 +43,17 @@ from salt.exceptions import SaltInvocationError
 log = logging.getLogger(__name__)
 
 
+def nop(name, **kwargs):
+    '''
+    A no-op state that does nothing. Useful in conjunction with the `use`
+    requisite, or in templates which could otherwise be empty due to jinja
+    rendering
+
+    .. versionadded:: 2015.5.6
+    '''
+    return succeed_without_changes(name)
+
+
 def succeed_without_changes(name):
     '''
     Returns successful.
@@ -58,9 +69,6 @@ def succeed_without_changes(name):
         'result': True,
         'comment': 'Success!'
     }
-    if __opts__['test']:
-        ret['result'] = True
-        ret['comment'] = 'If we weren\'t testing, this would be a success!'
     return ret
 
 
