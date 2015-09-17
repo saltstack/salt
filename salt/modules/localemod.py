@@ -127,7 +127,7 @@ def get_locale():
         cmd = 'grep "^LANG=" /etc/sysconfig/i18n'
     elif 'Debian' in __grains__['os_family']:
         if salt.utils.which('localectl'):
-            return _localectl_get()
+            return _locale_get()
 
         cmd = 'grep "^LANG=" /etc/default/locale'
     elif 'Gentoo' in __grains__['os_family']:
