@@ -186,7 +186,7 @@ def present(name, value=None, vname=None, vdata=None, vtype='REG_SZ', reflection
     # This is for backwards compatibility
     # If 'value' is passed a value, vdata becomes value and the vname is
     # obtained from the key path
-    if value:
+    if value or value in [0, '']:
         hive, key, vname = _parse_key_value(name)
         vdata = value
         ret['comment'] = 'State file is using deprecated syntax. Please update.'
@@ -208,7 +208,7 @@ def present(name, value=None, vname=None, vdata=None, vtype='REG_SZ', reflection
 
     add_change = {'Key': r'{0}\{1}'.format(hive, key),
                   'Entry': '{0}'.format(vname if vname else '(Default)'),
-                  'Value': '{0}'.format(vdata if vdata else '(Empty String)')}
+                  'Value': '{0}'.format(vdata)}
 
     # Check for test option
     if __opts__['test']:
@@ -256,9 +256,15 @@ def absent(name, vname=None):
     hive, key = _parse_key(name)
 
     # Determine what to do
-    if not __salt__['reg.read_value'](hive, key, vname)['success']:
-        hive, key, vname = _parse_key_value(name)
-        if not __salt__['reg.read_value'](hive, key, vname)['success']:
+    reg_check = __salt__['reg.read_value'](hive, key, vname)
+    if not reg_check['success'] or reg_check['vdata'] == '(value not set)':
+        if not vname:
+            hive, key, vname = _parse_key_value(name)
+            reg_check = __salt__['reg.read_value'](hive, key, vname)
+            if not reg_check['success'] or reg_check['vdata'] == '(value not set)':
+                ret['comment'] = '{0} is already absent'.format(name)
+                return ret
+        else:
             ret['comment'] = '{0} is already absent'.format(name)
             return ret
 
@@ -275,11 +281,10 @@ def absent(name, vname=None):
     ret['result'] = __salt__['reg.delete_value'](hive, key, vname)
     if not ret['result']:
         ret['changes'] = {}
-        ret['comment'] = r'Failed to remove {0} from {1}\{2}'.format(name, hive,
-                                                                    key)
+        ret['comment'] = r'Failed to remove {0} from {1}'.format(key, hive)
     else:
         ret['changes'] = {'reg': {'Removed': remove_change}}
-        ret['comment'] = r'Removed {0} from {1}\{2}'.format(name, hive, key)
+        ret['comment'] = r'Removed {0} from {1}'.format(key, hive)
 
     return ret
 
