@@ -9,6 +9,7 @@ import sys
 import salt.utils.job
 from salt.ext.six import string_types
 from salt.utils import parsers, print_cli
+from salt.utils.verify import verify_log
 from salt.exceptions import (
         SaltClientError,
         SaltInvocationError,
@@ -34,6 +35,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         try:
             # We don't need to bail on config file permission errors

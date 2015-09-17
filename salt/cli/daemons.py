@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import os
 import sys
 import warnings
+from salt.utils.verify import verify_log
 
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
@@ -115,6 +116,7 @@ class Master(parsers.MasterOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
+        verify_log(self.config)
         logger.info('Setting up the Salt Master')
 
         # TODO: AIO core is separate from transport
@@ -226,6 +228,7 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
+        verify_log(self.config)
         logger.info(
             'Setting up the Salt Minion "{0}"'.format(
                 self.config['id']
@@ -393,6 +396,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
+        verify_log(self.config)
         logger.info(
             'Setting up a Salt Proxy Minion "{0}"'.format(
                 self.config['id']
@@ -490,6 +494,7 @@ class Syndic(parsers.SyndicOptionParser):
             sys.exit(err.errno)
 
         self.setup_logfile_logger()
+        verify_log(self.config)
         logger.info(
             'Setting up the Salt Syndic Minion "{0}"'.format(
                 self.config['id']

@@ -199,19 +199,25 @@ def read_value(hive, key, vname=None):
         ret['vname'] = '(Default)'
 
     registry = Registry()
-    hive = registry.hkeys[hive]
+    hkey = registry.hkeys[hive]
 
     try:
-        handle = _winreg.OpenKey(hive, key)
-        vdata, vtype = _winreg.QueryValueEx(handle, vname)
-        if vdata:
-            ret['vdata'] = vdata
-            ret['vtype'] = registry.vtype_reverse[vtype]
-        else:
-            ret['comment'] = 'Empty Value'
+        handle = _winreg.OpenKey(hkey, key)
+        try:
+            vdata, vtype = _winreg.QueryValueEx(handle, vname)
+            if vdata or vdata in [0, '']:
+                ret['vtype'] = registry.vtype_reverse[vtype]
+                ret['vdata'] = vdata
+            else:
+                ret['comment'] = 'Empty Value'
+        except WindowsError as exc:  # pylint: disable=E0602
+            ret['vdata'] = ('(value not set)')
+            ret['vtype'] = 'REG_SZ'
+            ret['success'] = True
     except WindowsError as exc:  # pylint: disable=E0602
         log.debug(exc)
-        ret['comment'] = '{0}'.format(exc)
+        log.debug('Cannot find key: {0}\\{1}'.format(hive, key))
+        ret['comment'] = 'Cannot find key: {0}\\{1}'.format(hive, key)
         ret['success'] = False
 
     return ret
@@ -312,7 +318,7 @@ def set_value(hive, key, vname=None, vdata=None, vtype='REG_SZ', reflection=True
         _winreg.CloseKey(handle)
         return True
     except (WindowsError, ValueError) as exc:  # pylint: disable=E0602
-        log.error(exc)
+        log.error(exc, exc_info=True)
         return False
 
 
@@ -434,7 +440,7 @@ def delete_key(hkey, path, key=None, reflection=True, force=False):
         _winreg.DeleteKey(hive, key)
         return True
     except WindowsError as exc:  # pylint: disable=E0602
-        log.error(exc)
+        log.error(exc, exc_info=True)
         return False
 
 
@@ -504,7 +510,7 @@ def delete_key_recursive(hive, key):
             _winreg.DeleteKey(hkey, keypath)
             ret['Deleted'].append(r'{0}\{1}'.format(hive, keypath))
         except WindowsError as exc:  # pylint: disable=E0602
-            log.error(exc)
+            log.error(exc, exc_info=True)
             ret['Failed'].append(r'{0}\{1} {2}'.format(hive, key, exc))
 
     # Delete the key now that all the subkeys are deleted
@@ -512,7 +518,7 @@ def delete_key_recursive(hive, key):
         _winreg.DeleteKey(hkey, key)
         ret['Deleted'].append(r'{0}\{1}'.format(hive, key))
     except WindowsError as exc:  # pylint: disable=E0602
-        log.error(exc)
+        log.error(exc, exc_info=True)
         ret['Failed'].append(r'{0}\{1} {2}'.format(hive, key, exc))
 
     return ret
@@ -561,5 +567,5 @@ def delete_value(hive, key, vname=None, reflection=True):
         return True
     except WindowsError as exc:  # pylint: disable=E0602
         _winreg.CloseKey(handle)
-        log.error(exc)
+        log.error(exc, exc_info=True)
         return False
