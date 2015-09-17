@@ -436,6 +436,7 @@ def list_nodes(conn=None, call=None):
         ret[node.name] = {
             'id': node.id,
             'image': node.image,
+            'name': node.name,
             'private_ips': node.private_ips,
             'public_ips': node.public_ips,
             'size': node.size,

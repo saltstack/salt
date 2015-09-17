@@ -41,7 +41,7 @@ class LocalemodTestCase(TestCase):
         Test for Get the current system locale
         '''
         with patch.dict(localemod.__grains__, {'os_family': ['Arch']}):
-            with patch.object(localemod, '_localectl_get', return_value=True):
+            with patch.object(localemod, '_locale_get', return_value=True):
                 self.assertTrue(localemod.get_locale())
 
         with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
@@ -58,16 +58,6 @@ class LocalemodTestCase(TestCase):
             with patch.dict(localemod.__salt__, {'cmd.run':
                                                  MagicMock(return_value='A')}):
                 self.assertEqual(localemod.get_locale(), '')
-
-    @patch('salt.utils.which', MagicMock(side_effect=['/usr/bin/localectl', None]))
-    def test_get_locale_debian(self):
-        with patch.dict(localemod.__grains__, {'os_family': ['Debian']}):
-            with patch.object(localemod, '_localectl_get', return_value=True):
-                self.assertTrue(localemod.get_locale())
-
-            with patch.dict(localemod.__salt__, {'cmd.run':
-                                                 MagicMock(return_value='LC_ALL=C')}):
-                self.assertEqual(localemod.get_locale(), 'C')
 
     def test_set_locale(self):
         '''
