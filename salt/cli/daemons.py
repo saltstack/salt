@@ -270,12 +270,6 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
             if check_user(self.config['user']):
                 logger.info('The salt minion is starting up')
                 self.minion.tune_in()
-        except (KeyboardInterrupt, SaltSystemExit) as exc:
-            logger.warn('Stopping the Salt Minion')
-            if isinstance(exc, KeyboardInterrupt):
-                logger.warn('Exiting on Ctrl-c')
-            else:
-                logger.error(str(exc))
         finally:
             self.shutdown()
 
