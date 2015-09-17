@@ -16,6 +16,7 @@ import logging
 import salt.utils.parsers as parsers
 import salt.version
 import salt.syspaths as syspaths
+from salt.utils.verify import verify_log
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -48,6 +49,7 @@ class SaltAPI(six.with_metaclass(parsers.OptionParserMeta,  # pylint: disable=W0
         import salt.client.netapi
         self.parse_args()
         self.setup_logfile_logger()
+        verify_log(self.config)
         self.daemonize_if_required()
         client = salt.client.netapi.NetapiClient(self.config)
         self.set_pidfile()

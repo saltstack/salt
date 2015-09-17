@@ -1445,6 +1445,8 @@ def managed(name,
             if ret['changes']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
+                if not show_diff:
+                    ret['changes']['diff'] = '<show_diff=False>'
             else:
                 ret['result'] = True
                 ret['comment'] = 'The file {0} is in the correct state'.format(name)
@@ -3825,11 +3827,16 @@ def copy(
                 )
 
     if __opts__['test']:
-        ret['comment'] = 'File "{0}" is set to be copied to "{1}"'.format(
-            source,
-            name
-        )
-        ret['result'] = None
+        if changed:
+            ret['comment'] = 'File "{0}" is set to be copied to "{1}"'.format(
+                source,
+                name
+            )
+            ret['result'] = None
+        else:
+            ret['comment'] = ('The target file "{0}" exists and will not be '
+                              'overwritten'.format(name))
+            ret['result'] = True
         return ret
 
     if not changed:
@@ -4248,10 +4255,10 @@ def serialize(name,
         if os.path.isfile(name):
             if formatter == 'yaml':
                 with salt.utils.fopen(name, 'r') as fhr:
-                    existing_data = yaml.safe_load(fhr.read())
+                    existing_data = yaml.safe_load(fhr)
             elif formatter == 'json':
                 with salt.utils.fopen(name, 'r') as fhr:
-                    existing_data = json.load(fhr.read())
+                    existing_data = json.load(fhr)
             else:
                 return {'changes': {},
                         'comment': ('{0} format is not supported for merging'
