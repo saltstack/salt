@@ -108,20 +108,19 @@ def __virtual__():
 
 def read_key(hkey, path, key=None):
     '''
-    *** Incorrect Usage ***
-    The name of this function is misleading and will be changed to reflect
-    proper usage in the Boron release of Salt. The path option will be removed
-    and the key will be the actual key. See the following issue:
+    .. important::
+        The name of this function is misleading and will be changed to reflect
+        proper usage in the Boron release of Salt. The path option will be removed
+        and the key will be the actual key. See the following issue:
 
-    https://github.com/saltstack/salt/issues/25618
+        https://github.com/saltstack/salt/issues/25618
 
-    In order to not break existing state files this function will call the
-    read_value function if a key is passed. Key will be passed as the value
-    name. If key is not passed, this function will return the default value for
-    the key.
+        In order to not break existing state files this function will call the
+        read_value function if a key is passed. Key will be passed as the value
+        name. If key is not passed, this function will return the default value for
+        the key.
 
-    In the Boron release this function will be removed in favor of read_value.
-    ***
+        In the Boron release this function will be removed in favor of read_value.
 
     Read registry key value
 
@@ -219,20 +218,19 @@ def read_value(hive, key, vname=None):
 
 def set_key(hkey, path, value, key=None, vtype='REG_DWORD', reflection=True):
     '''
-    *** Incorrect Usage ***
-    The name of this function is misleading and will be changed to reflect
-    proper usage in the Boron release of Salt. The path option will be removed
-    and the key will be the actual key. See the following issue:
+    .. important ::
+        The name of this function is misleading and will be changed to reflect
+        proper usage in the Boron release of Salt. The path option will be removed
+        and the key will be the actual key. See the following issue:
 
-    https://github.com/saltstack/salt/issues/25618
+        https://github.com/saltstack/salt/issues/25618
 
-    In order to not break existing state files this function will call the
-    set_value function if a key is passed. Key will be passed as the value
-    name. If key is not passed, this function will return the default value for
-    the key.
+        In order to not break existing state files this function will call the
+        set_value function if a key is passed. Key will be passed as the value
+        name. If key is not passed, this function will return the default value for
+        the key.
 
-    In the Boron release this function will be removed in favor of set_value.
-    ***
+        In the Boron release this function will be removed in favor of set_value.
 
     Set a registry key
 
@@ -318,21 +316,20 @@ def set_value(hive, key, vname=None, vdata=None, vtype='REG_SZ', reflection=True
 
 def create_key(hkey, path, key=None, value=None, reflection=True):
     '''
-    *** Incorrect Usage ***
-    The name of this function is misleading and will be changed to reflect
-    proper usage in the Boron release of Salt. The path option will be removed
-    and the key will be the actual key. See the following issue:
+    .. important ::
+        The name of this function is misleading and will be changed to reflect
+        proper usage in the Boron release of Salt. The path option will be removed
+        and the key will be the actual key. See the following issue:
 
-    https://github.com/saltstack/salt/issues/25618
+        https://github.com/saltstack/salt/issues/25618
 
-    In order to not break existing state files this function will call the
-    set_value function if key is passed. Key will be passed as the value name.
-    If key is not passed, this function will return the default value for the
-    key.
+        In order to not break existing state files this function will call the
+        set_value function if key is passed. Key will be passed as the value name.
+        If key is not passed, this function will return the default value for the
+        key.
 
-    In the Boron release path will be removed and key will be the path. You will
-    not pass value.
-    ***
+        In the Boron release path will be removed and key will be the path. You will
+        not pass value.
 
     Create a registry key
 
@@ -357,21 +354,20 @@ def create_key(hkey, path, key=None, value=None, reflection=True):
 
 def delete_key(hkey, path, key=None, reflection=True, force=False):
     '''
-    *** Incorrect Usage ***
-    The name of this function is misleading and will be changed to reflect
-    proper usage in the Boron release of Salt. The path option will be removed
-    and the key will be the actual key. See the following issue:
+    .. important::
+        The name of this function is misleading and will be changed to reflect
+        proper usage in the Boron release of Salt. The path option will be removed
+        and the key will be the actual key. See the following issue:
 
-    https://github.com/saltstack/salt/issues/25618
+        https://github.com/saltstack/salt/issues/25618
 
-    In order to not break existing state files this function will call the
-    delete_value function if a key is passed. Key will be passed as the value
-    name. If key is not passed, this function will return the default value for
-    the key.
+        In order to not break existing state files this function will call the
+        delete_value function if a key is passed. Key will be passed as the value
+        name. If key is not passed, this function will return the default value for
+        the key.
 
-    In the Boron release path will be removed and key will be the path.
-    reflection will also be removed.
-    ***
+        In the Boron release path will be removed and key will be the path.
+        reflection will also be removed.
 
     Delete a registry key
 

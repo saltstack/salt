@@ -607,7 +607,7 @@ def import_key(user=None,
                text=None,
                filename=None,
                gnupghome=None):
-    '''
+    r'''
     Import a key from text or file
 
     user
@@ -629,6 +629,7 @@ def import_key(user=None,
 
         salt '*' gpg.import_key text='-----BEGIN PGP PUBLIC KEY BLOCK-----\n ... -----END PGP PUBLIC KEY BLOCK-----'
         salt '*' gpg.import_key filename='/path/to/public-key-file'
+
     '''
     ret = {
            'res': True,

@@ -1,39 +1,40 @@
 # -*- coding: utf-8 -*-
 '''
-    Connection module for Amazon Cloud Formation
+Connection module for Amazon Cloud Formation
 
-    .. versionadded:: 2015.8.0
+.. versionadded:: 2015.8.0
 
-    :configuration: This module accepts explicit AWS credentials but can also utilize
-    IAM roles assigned to the instance trough Instance Profiles. Dynamic
+:depends: boto
+:configuration: This module accepts explicit AWS credentials but can also utilize
+    IAM roles assigned to the instance through Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at::
-
-       http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+    configuration is necessary. More Information available at
+    http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
     If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file::
+    in the minion's config file:
+
+    .. code-block:: yaml
 
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
     .. code-block:: yaml
 
-    stack-present:
-      boto_cfn.present:
-        - name: mystack
-        - template_body: salt://base/mytemplate.json
-        - disable_rollback: true
-        - region: eu-west-1
-        - keyid: 'AKIAJHTMIQ2ASDFLASDF'
-        - key: 'fdkjsafkljsASSADFalkfjasdf'
+        stack-present:
+          boto_cfn.present:
+            - name: mystack
+            - template_body: salt://base/mytemplate.json
+            - disable_rollback: true
+            - region: eu-west-1
+            - keyid: 'AKIAJHTMIQ2ASDFLASDF'
+            - key: 'fdkjsafkljsASSADFalkfjasdf'
 
     .. code-block:: yaml
 
-    stack-absent:
-      boto_cfn.absent:
-        - name: mystack
-:depends: boto
+        stack-absent:
+          boto_cfn.absent:
+            - name: mystack
 '''
 
 from __future__ import absolute_import
@@ -116,6 +117,8 @@ def present(name, template_body=None, template_url=None, parameters=None, notifi
 
     profile (dict) - A dict with region, key and keyid, or a pillar key (string) that contains a dict with region, key
     and keyid.
+
+    .. _ sns_console: https://console.aws.amazon.com/sns
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 

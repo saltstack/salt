@@ -1915,21 +1915,21 @@ class WebsocketEndpoint(object):
 
         .. http:get:: /ws/(token)
 
-            :query format_events: The event stream will undergo server-side
-                formatting if the ``format_events`` URL parameter is included
-                in the request. This can be useful to avoid formatting on the
-                client-side:
+        :query format_events: The event stream will undergo server-side
+            formatting if the ``format_events`` URL parameter is included
+            in the request. This can be useful to avoid formatting on the
+            client-side:
 
-                .. code-block:: bash
+            .. code-block:: bash
 
-                    curl -NsS <...snip...> localhost:8000/ws?format_events
+                curl -NsS <...snip...> localhost:8000/ws?format_events
 
-            :reqheader X-Auth-Token: an authentication token from
-                :py:class:`~Login`.
+        :reqheader X-Auth-Token: an authentication token from
+            :py:class:`~Login`.
 
-            :status 101: switching to the websockets protocol
-            :status 401: |401|
-            :status 406: |406|
+        :status 101: switching to the websockets protocol
+        :status 401: |401|
+        :status 406: |406|
 
         **Example request:**
 

@@ -20,6 +20,8 @@ Full list of builtin state modules
     at
     augeas
     aws_sqs
+    beacon
+    bigip
     blockdev
     boto_asg
     boto_cfn
@@ -52,10 +54,14 @@ Full list of builtin state modules
     dockerio
     dockerng
     drac
+    elasticsearch_index
+    elasticsearch_index_template
     environ
     eselect
+    etcd_mod
     event
     file
+    firewalld
     gem
     git
     glusterfs
@@ -68,6 +74,7 @@ Full list of builtin state modules
     host
     htpasswd
     http
+    ifttt
     incron
     influxdb_database
     influxdb_user
@@ -114,6 +121,7 @@ Full list of builtin state modules
     pecl
     pip_state
     pkg
+    pkgbuild
     pkgng
     pkgrepo
     portage_config
@@ -122,6 +130,7 @@ Full list of builtin state modules
     postgres_extension
     postgres_group
     postgres_schema
+    postgres_tablespace
     postgres_user
     powerpath
     process
@@ -151,6 +160,7 @@ Full list of builtin state modules
     ssh_known_hosts
     stateconf
     status
+    stormpath_account
     supervisord
     svn
     sysctl
@@ -160,16 +170,19 @@ Full list of builtin state modules
     timezone
     tls
     tomcat
+    trafficserver
     tuned
     uptime
     user
     vbox_guest
+    victorops
     virtualenv_mod
     win_dacl
     win_dns_client
     win_firewall
     win_network
     win_path
+    win_powercfg
     win_servermanager
     win_system
     win_update

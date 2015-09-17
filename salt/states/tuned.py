@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
+Interface to Red Hat tuned-adm module
+
 :maintainer:    Syed Ali <alicsyed@gmail.com>
 :maturity:      new
 :depends:       cmd.run

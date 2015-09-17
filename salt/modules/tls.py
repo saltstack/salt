@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 A salt module for SSL/TLS.
 Can create a Certificate Authority (CA)
 or use Self-Signed certificates.
@@ -891,9 +891,9 @@ def create_csr(ca_name,
         for the given req. source with a DNS: prefix. To be thorough, you
         may want to include both DNS: and IP: entries if you are using
         subjectAltNames for destinations for your TLS connections.
-            e.g.:
-                requests to https://1.2.3.4 will fail from python's
-                requests library w/out the second entry in the above list
+        e.g.:
+        requests to https://1.2.3.4 will fail from python's
+        requests library w/out the second entry in the above list
 
     .. versionadded:: 2015.8.0
 
@@ -901,17 +901,19 @@ def create_csr(ca_name,
         Specify the general certificate type. Can be either `server` or
         `client`. Indicates the set of common extensions added to the CSR.
 
-        server: {
-           'basicConstraints': 'CA:FALSE',
-           'extendedKeyUsage': 'serverAuth',
-           'keyUsage': 'digitalSignature, keyEncipherment'
-        }
+        .. code-block:: cfg
 
-        client: {
-           'basicConstraints': 'CA:FALSE',
-           'extendedKeyUsage': 'clientAuth',
-           'keyUsage': 'nonRepudiation, digitalSignature, keyEncipherment'
-        }
+            server: {
+               'basicConstraints': 'CA:FALSE',
+               'extendedKeyUsage': 'serverAuth',
+               'keyUsage': 'digitalSignature, keyEncipherment'
+            }
+
+            client: {
+               'basicConstraints': 'CA:FALSE',
+               'extendedKeyUsage': 'clientAuth',
+               'keyUsage': 'nonRepudiation, digitalSignature, keyEncipherment'
+            }
 
     type_ext
         boolean.  Whether or not to extend the filename with CN_[cert_type]
