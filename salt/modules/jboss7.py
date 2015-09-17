@@ -268,8 +268,11 @@ def create_simple_binding(jboss_config, binding_name, value):
 
     .. code-block:: bash
 
-        salt '*' jboss7.create_simple_binding '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_binding_name my_binding_value
-       '''
+        salt '*' jboss7.create_simple_binding \\
+                '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", \\
+                "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' \\
+                my_binding_name my_binding_value
+    '''
     log.debug("======================== MODULE FUNCTION: jboss7.create_simple_binding, binding_name=%s, value=%s", binding_name, value)
     operation = '/subsystem=naming/binding="{binding_name}":add(binding-type=simple, value="{value}")'.format(
           binding_name=binding_name,

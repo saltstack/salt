@@ -172,7 +172,7 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
 
     .. seealso::
 
-        See :glob:`tests/eventlisten.sh` for an example of usage within a shell
+        See :blob:`tests/eventlisten.sh` for an example of usage within a shell
         script.
     '''
     sevent = salt.utils.event.get_event(
