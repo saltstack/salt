@@ -17,30 +17,12 @@ limitations under the License.
 Google Compute Engine Module
 ============================
 
-The Google Compute Engine module.  This module interfaces with Google Compute
-Engine.  To authenticate to GCE, you will need to create a Service Account.
+The Google Compute Engine module. This module interfaces with Google Compute
+Engine (GCE). To authenticate to GCE, you will need to create a Service Account.
+To set up Service Account Authentication, follow the :ref:`gce_setup` instructions.
 
-Setting up Service Account Authentication:
-  - Go to the Cloud Console at: https://cloud.google.com/console.
-  - Create or navigate to your desired Project.
-  - Make sure Google Compute Engine service is enabled under the Services
-    section.
-  - Go to "APIs and auth" section, and then the "Credentials" link.
-  - Click the "CREATE NEW CLIENT ID" button.
-  - Select "Service Account" and click "Create Client ID" button.
-  - This will automatically download a .json file; ignore it.
-  - Look for a new "Service Account" section in the page, click on the "Generate New P12 key" button
-  - Copy the Email Address for inclusion in your /etc/salt/cloud file
-    in the 'service_account_email_address' setting.
-  - Download the Private Key
-  - The key that you download is a PKCS12 key.  It needs to be converted to
-    the PEM format.
-  - Convert the key using OpenSSL (the default password is 'notasecret'):
-    C{openssl pkcs12 -in PRIVKEY.p12 -passin pass:notasecret \
-    -nodes -nocerts | openssl rsa -out ~/PRIVKEY.pem}
-  - Add the full path name of the converted private key to your
-    /etc/salt/cloud file as 'service_account_private_key' setting.
-  - Consider using a more secure location for your private key.
+Example Provider Configuration
+------------------------------
 
 .. code-block:: yaml
 
@@ -60,7 +42,6 @@ Setting up Service Account Authentication:
 
 :maintainer: Eric Johnson <erjohnso@google.com>
 :depends: libcloud >= 0.14.1
-:depends: pycrypto >= 2.1
 '''
 # pylint: disable=invalid-name,function-redefined
 
