@@ -424,8 +424,8 @@ def last(attrs=None, where=None):
 
 
 def listening_ports(attrs=None, where=None):
-    '''
-    Return listening_ports\_ information from osquery
+    r'''
+    Return listening_ports_ information from osquery
 
     CLI Example:
 
@@ -437,8 +437,8 @@ def listening_ports(attrs=None, where=None):
 
 
 def logged_in_users(attrs=None, where=None):
-    '''
-    Return logged_in_users\_ information from osquery
+    r'''
+    Return logged_in_users_ information from osquery
 
     CLI Example:
 
@@ -450,8 +450,8 @@ def logged_in_users(attrs=None, where=None):
 
 
 def mounts(attrs=None, where=None):
-    '''
-    Return mounts\_ information from osquery
+    r'''
+    Return mounts_ information from osquery
 
     CLI Example:
 
