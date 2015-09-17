@@ -114,6 +114,7 @@ The following options can be set in the :ref:`minion config
     - nsenter
     - lxc-attach
     - docker-exec
+
     See :ref:`Executing Commands Within a Running Container <docker-execution-driver>`.
 
 Functions

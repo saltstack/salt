@@ -31,6 +31,7 @@ Full list of runner modules
     pkg
     queue
     sdb
+    ssh
     search
     state
     survey
