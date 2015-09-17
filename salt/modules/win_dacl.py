@@ -349,7 +349,7 @@ def get(path, objectType):
 
 
 def add_ace(path, objectType, user, permission, acetype, propagation):
-    '''
+    r'''
     add an ace to an object
 
     path:  path to the object (i.e. c:\\temp\\file, HKEY_LOCAL_MACHINE\\SOFTWARE\\KEY, etc)
@@ -424,7 +424,7 @@ def add_ace(path, objectType, user, permission, acetype, propagation):
 
 
 def rm_ace(path, objectType, user, permission, acetype, propagation):
-    '''
+    r'''
     remove an ace to an object
 
     path:  path to the object (i.e. c:\\temp\\file, HKEY_LOCAL_MACHINE\\SOFTWARE\\KEY, etc)

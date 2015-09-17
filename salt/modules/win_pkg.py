@@ -490,10 +490,14 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
 
         If the package is installed by ``pkg.install``:
 
+        .. code-block:: cfg
+
             {'<package>': {'old': '<old-version>',
                            'new': '<new-version>'}}
 
         If the package is already installed:
+
+        .. code-block:: cfg
 
             {'<package>': {'current': '<current-version>'}}
 
