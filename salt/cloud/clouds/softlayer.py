@@ -275,16 +275,43 @@ def create(vm_):
         'domain': vm_['domain'],
         'startCpus': vm_['cpu_number'],
         'maxMemory': vm_['ram'],
-        'localDiskFlag': vm_['local_disk'],
         'hourlyBillingFlag': vm_['hourly_billing'],
     }
 
+    local_disk_flag = config.get_cloud_config_value(
+        'local_disk', vm_, __opts__, default=False
+    )
+    kwargs['localDiskFlag'] = local_disk_flag
+
     if 'image' in vm_:
         kwargs['operatingSystemReferenceCode'] = vm_['image']
-        kwargs['blockDevices'] = [{
-            'device': '0',
-            'diskImage': {'capacity': vm_['disk_size']},
-        }]
+        kwargs['blockDevices'] = []
+        disks = vm_['disk_size']
+
+        if isinstance(disks, int):
+            disks = [str(disks)]
+        elif isinstance(disks, str):
+            disks = [size.strip() for size in disks.split(',')]
+
+        count = 0
+        for disk in disks:
+            # device number '1' is reserved for the SWAP disk
+            if count == 1:
+                count += 1
+            block_device = {'device': str(count),
+                            'diskImage': {'capacity': str(disk)}}
+            kwargs['blockDevices'].append(block_device)
+            count += 1
+
+            # Upper bound must be 5 as we're skipping '1' for the SWAP disk ID
+            if count > 5:
+                log.warning('More that 5 disks were specified for {0} .'
+                            'The first 5 disks will be applied to the VM, '
+                            'but the remaining disks will be ignored.\n'
+                            'Please adjust your cloud configuration to only '
+                            'specify a maximum of 5 disks.'.format(vm_['name']))
+                break
+
     elif 'global_identifier' in vm_:
         kwargs['blockDeviceTemplateGroup'] = {
             'globalIdentifier': vm_['global_identifier']
