@@ -169,12 +169,6 @@ String Example:
     base_softlayer_ubuntu:
       disk_size: '100, 20, 20'
 
-.. note::
-
-    All disks listed in the ``disk_size`` configuration will be created either as
-    SAN disks or local disks, depending on if the ``local_disk`` configuration
-    is set to ``true`` or not. See ``local_disk`` parameter below.
-
 local_disk
 ----------
 When true the disks for the computing instance will be provisioned on the host
