@@ -804,7 +804,7 @@ def _list_nodes(full=False, for_output=False):
             name = node['name']
             ret[name] = {}
             if full:
-                _get_full_output(node, for_output=for_output)
+                ret[name] = _get_full_output(node, for_output=for_output)
             else:
                 public_ips, private_ips = _get_ips(node['networks'])
                 ret[name] = {
@@ -832,12 +832,11 @@ def _get_full_output(node, for_output=False):
     Returns a dictionary containing the full information of a node.
     '''
     ret = {}
-    name = node['name']
     for item in six.iterkeys(node):
         value = node[item]
         if value is not None and for_output:
             value = str(value)
-        ret[name][item] = value
+        ret[item] = value
     return ret
 
 
