@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import os
 
 from salt.utils import parsers
-from salt.utils.verify import verify_env, verify_files
+from salt.utils.verify import verify_env, verify_files, verify_log
 from salt.config import _expand_glob_path
 import salt.cli.caller
 import salt.defaults.exitcodes
@@ -56,6 +56,7 @@ class SaltCall(parsers.SaltCallOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         caller = salt.cli.caller.Caller.factory(self.config)
 

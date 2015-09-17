@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import os
 
 from salt.utils import parsers
-from salt.utils.verify import check_user, verify_env, verify_files
+from salt.utils.verify import check_user, verify_env, verify_files, verify_log
 
 
 class SaltKey(parsers.SaltKeyOptionParser):
@@ -55,6 +55,7 @@ class SaltKey(parsers.SaltKeyOptionParser):
                 )
 
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         key = salt.key.KeyCLI(self.config)
         if check_user(self.config['user']):
