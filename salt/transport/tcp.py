@@ -256,6 +256,10 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         Pre-fork we need to create the zmq router device
         '''
         salt.transport.mixins.auth.AESReqServerMixin.pre_fork(self, process_manager)
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._socket.setblocking(0)
+        self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
 
     def post_fork(self, payload_handler, io_loop):
         '''
@@ -264,10 +268,6 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
 
         payload_handler: function to call with your payloads
         '''
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._socket.setblocking(0)
-        self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
         self.payload_handler = payload_handler
         self.io_loop = io_loop
         self.req_server = SaltMessageServer(self.handle_message, io_loop=self.io_loop)
