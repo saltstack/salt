@@ -465,15 +465,22 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         Run before get/posts etc. Pre-flight checks:
             - verify that we can speak back to them (compatible accept header)
         '''
-        # verify the content type
-        found = False
-        for content_type, dumper in self.ct_out_map:
-            if fnmatch.fnmatch(content_type, self.request.headers.get('Accept', '*/*')):
-                found = True
-                break
+        # Find an acceptable content-type
+        accept_header = self.request.headers.get('Accept', '*/*')
+        # Ignore any parameter, including q (quality) one
+        parsed_accept_header = [cgi.parse_header(h)[0] for h in accept_header.split(',')]
+
+        def find_acceptable_content_type(parsed_accept_header):
+            for media_range in parsed_accept_header:
+                for content_type, dumper in self.ct_out_map:
+                    if fnmatch.fnmatch(content_type, media_range):
+                        return content_type, dumper
+            return None, None
+
+        content_type, dumper = find_acceptable_content_type(parsed_accept_header)
 
         # better return message?
-        if not found:
+        if not content_type:
             self.send_error(406)
 
         self.content_type = content_type
