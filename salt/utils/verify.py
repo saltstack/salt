@@ -500,3 +500,11 @@ def safe_py_code(code):
         if code.count(bad):
             return False
     return True
+
+
+def verify_log(opts):
+    '''
+    If an insecre logging configuration is found, show a warning
+    '''
+    if opts.get('log_level') in ('garbage', 'trace', 'debug'):
+        log.warn('Insecure logging configuration detected! Sensitive data may be logged.')

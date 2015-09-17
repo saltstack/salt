@@ -3,7 +3,7 @@ from __future__ import print_function
 from __future__ import absolute_import
 
 from salt.utils import parsers
-from salt.utils.verify import check_user, verify_env, verify_files
+from salt.utils.verify import check_user, verify_env, verify_files, verify_log
 from salt.exceptions import SaltClientError
 import salt.defaults.exitcodes  # pylint: disable=W0611
 
@@ -40,6 +40,7 @@ class SaltRun(parsers.SaltRunOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         runner = salt.runner.Runner(self.config)
         if self.options.doc:

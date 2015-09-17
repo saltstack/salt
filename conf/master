@@ -672,6 +672,10 @@
 
 # The level of messages to send to the console.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+#
+# The following log levels are considered INSECURE and may log sensitive data:
+# ['garbage', 'trace', 'debug']
+#
 #log_level: warning
 
 # The level of messages to send to the log file.

@@ -25,7 +25,7 @@ import salt.defaults.exitcodes
 import salt.output
 import salt.utils
 from salt.utils import parsers
-from salt.utils.verify import check_user, verify_env, verify_files
+from salt.utils.verify import check_user, verify_env, verify_files, verify_log
 
 # Import salt.cloud libs
 import salt.cloud
@@ -73,6 +73,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
         # Setup log file logging
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         if self.options.update_bootstrap:
             ret = salt.utils.cloud.update_bootstrap(self.config)
