@@ -63,7 +63,10 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         '''
 
         # do we have any mapping for this io_loop
-        io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
+        io_loop = kwargs.get('io_loop')
+        if io_loop is None:
+            zmq.eventloop.ioloop.install()
+            io_loop = tornado.ioloop.IOLoop.current()
         if io_loop not in cls.instance_map:
             cls.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = cls.instance_map[io_loop]
@@ -114,7 +117,10 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         if 'master_uri' in kwargs:
             self.opts['master_uri'] = kwargs['master_uri']
 
-        self._io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
+        self._io_loop = kwargs.get('io_loop')
+        if self._io_loop is None:
+            zmq.eventloop.ioloop.install()
+            self._io_loop = tornado.ioloop.IOLoop.current()
 
         if self.crypt != 'clear':
             # we don't need to worry about auth as a kwarg, since its a singleton
@@ -232,10 +238,10 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         self.opts = opts
         self.ttype = 'zeromq'
 
-        if 'io_loop' in kwargs:
-            self.io_loop = kwargs['io_loop']
-        else:
-            self.io_loop = tornado.ioloop.IOLoop()
+        self.io_loop = kwargs.get('io_loop')
+        if self.io_loop is None:
+            zmq.eventloop.ioloop.install()
+            self.io_loop = tornado.ioloop.IOLoop.current()
 
         self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
 
@@ -697,7 +703,11 @@ class AsyncReqMessageClient(object):
         self.opts = opts
         self.addr = addr
         self.linger = linger
-        self.io_loop = io_loop or zmq.eventloop.ioloop.ZMQIOLoop.current()
+        if io_loop is None:
+            zmq.eventloop.ioloop.install()
+            tornado.ioloop.IOLoop.current()
+        else:
+            self.io_loop = io_loop
 
         self.serial = salt.payload.Serial(self.opts)
 
