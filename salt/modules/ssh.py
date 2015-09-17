@@ -967,6 +967,13 @@ def hash_known_hosts(user=None, config=None):
 
     .. versionadded:: 2014.7.0
 
+    user
+        hash known hosts of this user
+
+    config
+        path to known hosts file: can be absolute or relative to user's home
+        directory
+
     CLI Example:
 
     .. code-block:: bash
@@ -977,7 +984,7 @@ def hash_known_hosts(user=None, config=None):
     full = _get_known_hosts_file(config=config, user=user)
 
     if isinstance(full, dict):
-        return full
+        return full  # full contains error information
 
     if not os.path.isfile(full):
         return {'status': 'error',
