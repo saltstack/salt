@@ -1,14 +1,46 @@
+.. _installation-debian:
+
 ===================
 Debian Installation
 ===================
 
-Currently the latest packages for Debian Old Stable, Stable, and
-Unstable (Squeeze, Wheezy, and Sid) are published in our
-(saltstack.com) Debian repository.
+.. _installation-debian-repo:
+
+Installation from the SaltStack Repository
+==========================================
+
+Debian 8 packages are available in the SaltStack Debian repository.
+
+To install using the SaltStack Debian repository:
+
+#. Run the following command to import the SaltStack repository key:
+
+   .. code-block:: bash
+
+       wget -O - https://repo.saltstack.com/apt/debian/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
+
+#. Add the following line to ``/etc/apt/sources.list``:
+
+   .. code-block:: bash
+
+       deb http://repo.saltstack.com/apt/debian jessie contrib
+
+#. Run ``sudo apt-get update``
+
+#. Install the salt-minion, salt-master, or other Salt components:
+
+   - ``apt-get install salt-master``
+   - ``apt-get install salt-minion``
+   - ``apt-get install salt-ssh``
+   - ``apt-get install salt-syndic``
+   - ``apt-get install salt-cloud``
 
 Configure Apt
 -------------
 
+Currently the latest packages for Debian Old Stable, Stable, and
+Unstable (Squeeze, Wheezy, and Sid) are published in our
+(saltstack.com) Debian repository.
 
 Squeeze (Old Old Stable)
 ------------------------

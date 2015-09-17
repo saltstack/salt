@@ -11,7 +11,7 @@ available at PyPI:
 
 https://pypi.python.org/pypi/SoftLayer
 
-This package can be installed using `pip` or `easy_install`:
+This package can be installed using ``pip`` or ``easy_install``:
 
 .. code-block:: bash
 
@@ -61,13 +61,13 @@ Set up the cloud config at ``/etc/salt/cloud.providers``:
 
 Access Credentials
 ==================
-The `user` setting is the same user as is used to log into the SoftLayer
-Administration area. The `apikey` setting is found inside the Admin area after
+The ``user`` setting is the same user as is used to log into the SoftLayer
+Administration area. The ``apikey`` setting is found inside the Admin area after
 logging in:
 
-* Hover over the `Administrative` menu item.
-* Click the `API Access` link.
-* The `apikey` is located next to the `user` setting.
+* Hover over the ``Account`` menu item.
+* Click the ``Users`` link.
+* Find the ``API Key`` column and click ``View``.
 
 
 Profiles
@@ -102,13 +102,13 @@ Most of the above items are required; optional items are specified below.
 
 image
 -----
-Images to build an instance can be found using the `--list-images` option:
+Images to build an instance can be found using the ``--list-images`` option:
 
 .. code-block:: bash
 
     # salt-cloud --list-images my-softlayer
 
-The setting used will be labeled as `template`.
+The setting used will be labeled as ``template``.
 
 cpu_number
 ----------
@@ -140,7 +140,34 @@ instance.
 
 disk_size
 ---------
-The amount of disk space that will be allocated to this image, in megabytes.
+The amount of disk space that will be allocated to this image, in gigabytes.
+
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: 100
+
+Using Multiple Disks
+~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.1
+
+SoftLayer allows up to 5 disks to be specified for a virtual machine upon
+creation. Multiple disks can be specified either as a list or a comma-delimited
+string. The first ``disk_size`` specified in the string or list will be the first
+disk size assigned to the VM.
+
+List Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: ['100', '20', '20']
+
+String Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: '100, 20, 20'
 
 local_disk
 ----------

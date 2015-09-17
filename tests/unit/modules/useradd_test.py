@@ -347,33 +347,6 @@ class UserAddTestCase(TestCase):
                 with patch.object(useradd, 'info', mock):
                     self.assertFalse(useradd.chhomephone('salt', 1))
 
-    # 'chloginclass' function tests: 1
-
-    def test_chloginclass(self):
-        '''
-        Test if the default login class of the user is changed
-        '''
-        with patch.dict(useradd.__grains__, {'kernel': 'Linux'}):
-            self.assertFalse(useradd.chloginclass('salt', 'staff'))
-
-        with patch.dict(useradd.__grains__, {'kernel': 'OpenBSD'}):
-            mock_login = MagicMock(return_value={'loginclass': 'staff'})
-            with patch.object(useradd, 'get_loginclass', mock_login):
-                self.assertTrue(useradd.chloginclass('salt', 'staff'))
-
-            mock = MagicMock(return_value=None)
-            with patch.dict(useradd.__salt__, {'cmd.run': mock}):
-                mock = MagicMock(side_effect=[{'loginclass': '""'},
-                                              {'loginclass': 'staff'}])
-                with patch.object(useradd, 'get_loginclass', mock):
-                    self.assertTrue(useradd.chloginclass('salt', 'staff'))
-
-            mock_login = MagicMock(return_value={'loginclass': 'staff1'})
-            with patch.object(useradd, 'get_loginclass', mock_login):
-                mock = MagicMock(return_value=None)
-                with patch.dict(useradd.__salt__, {'cmd.run': mock}):
-                    self.assertFalse(useradd.chloginclass('salt', 'staff'))
-
     # 'info' function tests: 1
 
     def test_info(self):
@@ -393,27 +366,6 @@ class UserAddTestCase(TestCase):
             mock = MagicMock(return_value='Group Name')
             with patch.object(useradd, 'list_groups', mock):
                 self.assertEqual(useradd.info('salt')['name'], '_TEST_GROUP')
-
-    # 'get_loginclass' function tests: 1
-
-    def test_get_loginclass(self):
-        '''
-        Test the login class of the user
-        '''
-        with patch.dict(useradd.__grains__, {'kernel': 'Linux'}):
-            self.assertFalse(useradd.get_loginclass('salt'))
-
-        with patch.dict(useradd.__grains__, {'kernel': 'OpenBSD'}):
-            mock = MagicMock(return_value='class staff')
-            with patch.dict(useradd.__salt__, {'cmd.run_stdout': mock}):
-                self.assertDictEqual(useradd.get_loginclass('salt'),
-                                     {'loginclass': 'staff'})
-
-        with patch.dict(useradd.__grains__, {'kernel': 'OpenBSD'}):
-            mock = MagicMock(return_value='class ')
-            with patch.dict(useradd.__salt__, {'cmd.run_stdout': mock}):
-                self.assertDictEqual(useradd.get_loginclass('salt'),
-                                     {'loginclass': '""'})
 
     # 'list_groups' function tests: 1
 

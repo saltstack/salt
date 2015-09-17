@@ -8,6 +8,12 @@ from __future__ import absolute_import
 import logging
 import re
 import os
+HAS_DBUS = False
+try:
+    import dbus
+    HAS_DBUS = True
+except ImportError:
+    pass
 
 # Import salt libs
 import salt.utils
@@ -25,38 +31,55 @@ def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
+    if HAS_DBUS is False and _uses_dbus():
+        return False
     if salt.utils.is_windows():
         return False
+
     return __virtualname__
 
 
-def _parse_localectl():
+def _uses_dbus():
+    if 'Arch' in __grains__['os_family']:
+        return True
+    elif 'RedHat' in __grains__['os_family']:
+        return False
+    elif 'Debian' in __grains__['os_family']:
+        return False
+    elif 'Gentoo' in __grains__['os_family']:
+        return False
+
+
+def _parse_dbus_locale():
     '''
-    Get the 'System Locale' parameters from localectl
+    Get the 'System Locale' parameters from dbus
     '''
     ret = {}
-    for line in __salt__['cmd.run']('localectl').splitlines():
-        cols = [x.strip() for x in line.split(':', 1)]
-        if len(cols) > 1:
-            cur_param = cols.pop(0)
-        if cur_param == 'System Locale':
-            try:
-                key, val = re.match('^([A-Z_]+)=(.*)$', cols[0]).groups()
-            except AttributeError:
-                log.error('Odd locale parameter "{0}" detected in localectl '
-                          'output. This should not happen. localectl should '
-                          'catch this. You should probably investigate what '
-                          'caused this.'.format(cols[0]))
-            else:
-                ret[key] = val.replace('"', '')
+
+    bus = dbus.SystemBus()
+    localed = bus.get_object('org.freedesktop.locale1',
+                             '/org/freedesktop/locale1')
+    properties = dbus.Interface(localed, 'org.freedesktop.DBus.Properties')
+    system_locale = properties.Get('org.freedesktop.locale1', 'Locale')
+
+    try:
+        key, val = re.match('^([A-Z_]+)=(.*)$', system_locale[0]).groups()
+    except AttributeError:
+        log.error('Odd locale parameter "{0}" detected in dbus locale '
+                  'output. This should not happen. You should '
+                  'probably investigate what caused this.'.format(
+                      system_locale[0]))
+    else:
+        ret[key] = val.replace('"', '')
+
     return ret
 
 
-def _localectl_get():
+def _locale_get():
     '''
-    Use systemd's localectl command to get the current locale
+    Use dbus to get the current locale
     '''
-    return _parse_localectl().get('LANG', '')
+    return _parse_dbus_locale().get('LANG', '')
 
 
 def _localectl_set(locale=''):
@@ -64,7 +87,7 @@ def _localectl_set(locale=''):
     Use systemd's localectl command to set the LANG locale parameter, making
     sure not to trample on other params that have been set.
     '''
-    locale_params = _parse_localectl()
+    locale_params = _parse_dbus_locale()
     locale_params['LANG'] = str(locale)
     args = ' '.join(['{0}="{1}"'.format(k, v)
                      for k, v in six.iteritems(locale_params)])
@@ -99,7 +122,7 @@ def get_locale():
     '''
     cmd = ''
     if 'Arch' in __grains__['os_family']:
-        return _localectl_get()
+        return _locale_get()
     elif 'RedHat' in __grains__['os_family']:
         cmd = 'grep "^LANG=" /etc/sysconfig/i18n'
     elif 'Debian' in __grains__['os_family']:
@@ -236,10 +259,12 @@ def gen_locale(locale, **kwargs):
                                      locale_info['territory']) in os.listdir(search)
         except OSError as ex:
             log.error(ex)
-            raise CommandExecutionError("Locale \"{0}\" is not available.".format(locale))
+            raise CommandExecutionError(
+                "Locale \"{0}\" is not available.".format(locale))
 
     if not valid:
-        log.error('The provided locale "{0}" is not found in {1}'.format(locale, search))
+        log.error(
+            'The provided locale "{0}" is not found in {1}'.format(locale, search))
         return False
 
     if os.path.exists('/etc/locale.gen'):
@@ -267,7 +292,8 @@ def gen_locale(locale, **kwargs):
         cmd.append(locale)
     elif salt.utils.which("localedef") is not None:
         cmd = ['localedef', '--force',
-               '-i', "{0}_{1}".format(locale_info['language'], locale_info['territory']),
+               '-i', "{0}_{1}".format(locale_info['language'],
+                                      locale_info['territory']),
                '-f', locale_info['codeset'],
                locale]
         cmd.append(kwargs.get('verbose', False) and '--verbose' or '--quiet')

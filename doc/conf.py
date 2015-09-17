@@ -50,6 +50,7 @@ MOCK_MODULES = [
     'Crypto.PublicKey',
     'Crypto.Random',
     'Crypto.Signature',
+    'Crypto.Signature.PKCS1_v1_5',
     'M2Crypto',
     'msgpack',
     'yaml',
@@ -87,6 +88,7 @@ MOCK_MODULES = [
     'tornado.httpserver',
     'tornado.httputil',
     'tornado.ioloop',
+    'tornado.simple_httpclient',
     'tornado.web',
     'tornado.websocket',
 
@@ -104,7 +106,6 @@ MOCK_MODULES = [
     'MySQLdb.cursors',
     'nagios_json',
     'psutil',
-    'psutil.version_info',
     'pycassa',
     'pymongo',
     'rabbitmq_server',
@@ -162,9 +163,9 @@ project = 'Salt'
 copyright = '2015 SaltStack, Inc.'
 
 version = salt.version.__version__
-latest_release = '2015.5.5'  # latest release
-previous_release = '2014.7.6'  # latest release from previous branch
-previous_release_dir = '2014.7'  # path on web server for previous branch
+latest_release = '2015.8.0' # latest release
+previous_release = '2015.5.5'  # latest release from previous branch
+previous_release_dir = '2015.5'  # path on web server for previous branch
 build_type = 'develop'  # latest, previous, develop
 
 # set release to 'version' for develop so sha is used
@@ -176,11 +177,11 @@ release = latest_release  # version, latest_release, previous_release
 # Set google custom search engine
 
 if release == latest_release:
-    search_cx = '004624818632696854117:yfmprrbw3pk'
+    search_cx = '004624818632696854117:yfmprrbw3pk' # latest
 elif release.startswith('2014.7'):
-    search_cx = '004624818632696854117:thhslradbru'
+    search_cx = '004624818632696854117:thhslradbru' # 2014.7
 elif release.startswith('2015.5'):
-    search_cx = '004624818632696854117:ovogwef29do'
+    search_cx = '004624818632696854117:ovogwef29do' # 2015.5
 else:
     search_cx = '004624818632696854117:haj7bjntf4s'  # develop
 
@@ -228,11 +229,11 @@ rst_prolog = """\
 .. _`salt-packagers`: https://groups.google.com/forum/#!forum/salt-packagers
 .. |windownload| raw:: html
 
-     <p>x86: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe"><strong>Salt-Minion-{release}-x86-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-x86-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>x86: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-3-x86-Setup.exe"><strong>Salt-Minion-{release}-3-x86-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-3-x86-Setup.exe.md5"><strong>md5</strong></a></p>
 
-     <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe"><strong>Salt-Minion-{release}-AMD64-Setup.exe</strong></a>
-      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
+     <p>AMD64: <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-3-AMD64-Setup.exe"><strong>Salt-Minion-{release}-3-AMD64-Setup.exe</strong></a>
+      | <a href="https://repo.saltstack.com/windows/Salt-Minion-{release}-3-AMD64-Setup.exe.md5"><strong>md5</strong></a></p>
 
 """.format(release=release)
 

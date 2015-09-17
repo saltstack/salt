@@ -50,7 +50,7 @@ _ETHTOOL_CONFIG_OPTS = [
     'gso', 'gro', 'lro'
 ]
 _RH_CONFIG_OPTS = [
-    'domain', 'peerdns', 'defroute',
+    'domain', 'peerdns', 'peerntp', 'defroute',
     'mtu', 'static-routes', 'gateway'
 ]
 _RH_CONFIG_BONDING_OPTS = [

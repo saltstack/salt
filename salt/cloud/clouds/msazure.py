@@ -222,7 +222,7 @@ def list_nodes(conn=None, call=None):
     nodes = list_nodes_full(conn, call)
     for node in nodes:
         ret[node] = {}
-        for prop in 'id', 'image', 'size', 'state', 'private_ips', 'public_ips':
+        for prop in 'id', 'image', 'name', 'size', 'state', 'private_ips', 'public_ips':
             ret[node][prop] = nodes[node][prop]
     return ret
 

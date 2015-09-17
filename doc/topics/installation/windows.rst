@@ -1,3 +1,5 @@
+.. _windows:
+
 =======
 Windows
 =======
@@ -11,6 +13,7 @@ to control your Salt Minions on Windows.
 Many of the standard Salt modules have been ported to work on Windows and many
 of the Salt States currently work on Windows, as well.
 
+.. _windows-installer:
 
 Windows Installer
 =================
@@ -46,9 +49,10 @@ Windows service.
 If the minion won't start, try installing the Microsoft Visual C++ 2008 x64 SP1
 redistributable. Allow all Windows updates to run salt-minion smoothly.
 
+.. _windows-installer-options:
 
-Silent Installer option
-=======================
+Silent Installer Options
+========================
 
 The installer can be run silently by providing the `/S` option at the command
 line. The options `/master` and `/minion-name` allow for configuring the master
