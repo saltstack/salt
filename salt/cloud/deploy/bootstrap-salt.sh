@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2015.08.06"
+__ScriptVersion="2015.08.07"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -213,6 +213,7 @@ _EXTRA_PACKAGES=""
 _HTTP_PROXY=""
 _DISABLE_SALT_CHECKS=$BS_FALSE
 __SALT_GIT_CHECKOUT_DIR=${BS_SALT_GIT_CHECKOUT_DIR:-/tmp/git/salt}
+_NO_DEPS=$BS_FALSE
 
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -283,12 +284,14 @@ usage() {
       touching /tmp/disable_salt_checks on the target host. Defaults \${BS_FALSE}
   -H  Use the specified http proxy for the installation
   -Z  Enable external software source for newer ZeroMQ(Only available for RHEL/CentOS/Fedora/Ubuntu based distributions)
+  -b  Assume that dependencies are already installed and software sources are set up.
+      If git is selected, git tree is still checked out as dependency step.
 
 EOT
 }   # ----------  end of function usage  ----------
 
 
-while getopts ":hvnDc:Gg:k:MSNXCPFUKIA:i:Lp:dH:Z" opt
+while getopts ":hvnDc:Gg:k:MSNXCPFUKIA:i:Lp:dH:Zb" opt
 do
   case "${opt}" in
 
@@ -339,7 +342,8 @@ do
     p )  _EXTRA_PACKAGES="$_EXTRA_PACKAGES $OPTARG"     ;;
     d )  _DISABLE_SALT_CHECKS=$BS_TRUE                  ;;
     H )  _HTTP_PROXY="$OPTARG"                          ;;
-    Z)   _ENABLE_EXTERNAL_ZMQ_REPOS=$BS_TRUE            ;;
+    Z )  _ENABLE_EXTERNAL_ZMQ_REPOS=$BS_TRUE            ;;
+    b )  _NO_DEPS=$BS_TRUE                              ;;
 
 
     \?)  echo
@@ -5120,12 +5124,19 @@ daemons_running() {
 # LET'S PROCEED WITH OUR INSTALLATION
 #======================================================================================================================
 # Let's get the dependencies install function
-DEP_FUNC_NAMES="install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_${ITYPE}_deps"
-DEP_FUNC_NAMES="$DEP_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}${PREFIXED_DISTRO_MINOR_VERSION}_${ITYPE}_deps"
-DEP_FUNC_NAMES="$DEP_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_deps"
-DEP_FUNC_NAMES="$DEP_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}${PREFIXED_DISTRO_MINOR_VERSION}_deps"
-DEP_FUNC_NAMES="$DEP_FUNC_NAMES install_${DISTRO_NAME_L}_${ITYPE}_deps"
-DEP_FUNC_NAMES="$DEP_FUNC_NAMES install_${DISTRO_NAME_L}_deps"
+
+if [ "$_NO_DEPS" -eq $BS_FALSE ]; then
+    DEP_FUNC_NAMES="install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_${ITYPE}_deps"
+    DEP_FUNC_NAMES="$DEP_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}${PREFIXED_DISTRO_MINOR_VERSION}_${ITYPE}_deps"
+    DEP_FUNC_NAMES="$DEP_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}_deps"
+    DEP_FUNC_NAMES="$DEP_FUNC_NAMES install_${DISTRO_NAME_L}${PREFIXED_DISTRO_MAJOR_VERSION}${PREFIXED_DISTRO_MINOR_VERSION}_deps"
+    DEP_FUNC_NAMES="$DEP_FUNC_NAMES install_${DISTRO_NAME_L}_${ITYPE}_deps"
+    DEP_FUNC_NAMES="$DEP_FUNC_NAMES install_${DISTRO_NAME_L}_deps"
+elif [ "${ITYPE}" = "git" ]; then
+    DEP_FUNC_NAMES="__git_clone_and_checkout"
+else
+    DEP_FUNC_NAMES=""
+fi
 
 DEPS_INSTALL_FUNC="null"
 for FUNC_NAME in $(__strip_duplicates "$DEP_FUNC_NAMES"); do
