@@ -293,7 +293,7 @@ def bootstrap(name,
     # npm.install will return a string if it can't parse a JSON result
     if isinstance(call, str):
         ret['result'] = False
-        ret['comment'] = 'Could not bootstrap directory'
+        ret['comment'] = 'Could not bootstrap directory: {0}'.format(call)
     else:
         ret['result'] = True
         ret['changes'] = {name: 'Bootstrapped'}
