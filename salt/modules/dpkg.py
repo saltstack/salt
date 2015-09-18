@@ -322,7 +322,7 @@ def _get_pkg_install_time(pkg):
     if pkg is not None:
         location = "/var/lib/dpkg/info/{0}.list".format(pkg)
         if os.path.exists(location):
-            iso_time = datetime.datetime.utcfromtimestamp(os.path.getmtime(location)).isoformat()
+            iso_time = datetime.datetime.utcfromtimestamp(int(os.path.getmtime(location))).isoformat() + "Z"
 
     return iso_time
 
