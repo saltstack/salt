@@ -469,13 +469,13 @@ class SaltEvent(object):
              - 'fnmatch' : fnmatch tag event tags matching
             Default is opts['event_match_type'] or 'startswith'
 
-            .. versionadded:: Beryllium
+            .. versionadded:: 2015.8.0
 
         no_block
             Define if getting the event should be a blocking call or not.
             Defaults to False to keep backwards compatibility.
 
-            .. versionadded:: Beryllium
+            .. versionadded:: 2015.8.0
 
         Notes:
 
