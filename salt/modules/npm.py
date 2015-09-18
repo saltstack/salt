@@ -133,7 +133,7 @@ def install(pkg=None,
         cmd.append(pkg)
     elif pkgs:
         cmd.extend(pkgs)
-    else:
+    elif not ( pkg and pkgs ) and dir is None:
         return 'No package name specified'
 
     if env is None:
