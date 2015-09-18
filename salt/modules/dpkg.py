@@ -287,7 +287,9 @@ def _get_pkg_info(*packages):
             key, value = pkg_info_line.split(":", 1)
             if value:
                 pkg_data[key] = value
-            pkg_data['install_date'] = _get_pkg_install_time(pkg_data.get('package'))
+            install_date = _get_pkg_install_time(pkg_data.get('package'))
+            if install_date:
+                pkg_data['install_date'] = install_date
         pkg_data['description'] = pkg_descr.split(":", 1)[-1]
         ret.append(pkg_data)
 
@@ -318,7 +320,7 @@ def _get_pkg_install_time(pkg):
 
     :return:
     '''
-    iso_time = "N/A"
+    iso_time = None
     if pkg is not None:
         location = "/var/lib/dpkg/info/{0}.list".format(pkg)
         if os.path.exists(location):
