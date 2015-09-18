@@ -355,6 +355,12 @@ def create(vm_):
             'maxSpeed': int(max_net_speed)
         }]
 
+    post_uri = config.get_cloud_config_value(
+        'post_uri', vm_, __opts__, default=None
+    )
+    if post_uri:
+        kwargs['postInstallScriptUri'] = post_uri
+
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
