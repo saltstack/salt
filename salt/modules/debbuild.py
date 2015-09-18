@@ -2,7 +2,7 @@
 '''
 Debian Package builder system
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 This system allows for all of the components to build debs safely in chrooted
 environments. This also provides a function to generate debian repositories
