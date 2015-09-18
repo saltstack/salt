@@ -702,7 +702,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         # Get settings for msiexec and allusers
         msiexec = pkginfo[version_num].get('msiexec')
         all_users = pkginfo[version_num].get('allusers')
-        
+
         # all_users defaults to True
         if all_users is None:
             all_users = True
