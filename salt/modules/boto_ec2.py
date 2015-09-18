@@ -153,7 +153,7 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
         return False
 
 
-def create_image(ami_name, instance_id=None, name=None, tags=None, region=None,
+def create_image(ami_name, instance_id=None, instance_name=None, tags=None, region=None,
                  key=None, keyid=None, profile=None, description=None, no_reboot=False,
                  dry_run=False):
     '''
@@ -163,12 +163,12 @@ def create_image(ami_name, instance_id=None, name=None, tags=None, region=None,
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.create_instance ami_name name=myinstance
+        salt myminion boto_ec2.create_instance ami_name instance_name=myinstance
         salt myminion boto_ec2.create_instance another_ami_name tags='{"mytag": "value"}' description='this is my ami'
 
     '''
 
-    instances = find_instances(instance_id=instance_id, name=name, tags=tags,
+    instances = find_instances(instance_id=instance_id, name=instance_name, tags=tags,
                                region=region, key=key, keyid=keyid, profile=profile,
                                return_objs=True)
 
