@@ -8,6 +8,12 @@ Provide test case states that enable easy testing of things to do with
 
 .. code-block:: yaml
 
+    always-passes-with-any-kwarg:
+      test.nop:
+        - name: foo
+        - something: else
+        - foo: bar
+
     always-passes:
       test.succeed_without_changes:
         - name: foo
