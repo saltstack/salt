@@ -696,6 +696,9 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         cached_pkg = cached_pkg.replace('/', '\\')
         cache_path, _ = os.path.split(cached_pkg)
 
+        # Get settings for wusa
+        wusa = pkginfo[version_num].get('wusa')
+
         # Get settings for msiexec and allusers
         msiexec = pkginfo[version_num].get('msiexec')
         all_users = pkginfo[version_num].get('allusers')
@@ -703,9 +706,6 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         # all_users defaults to True
         if all_users is None:
             all_users = True
-
-        # Get settings for wusa
-        wusa = pkginfo[version_num].get('wusa')
 
         # Get install flags
         install_flags = '{0}'.format(pkginfo[version_num].get('install_flags'))
@@ -715,14 +715,14 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
 
         # Build the install command
         cmd = []
+        if wusa:
+            cmd.extend(['wusa'])
         if msiexec:
             cmd.extend(['msiexec', '/i'])
         cmd.append(cached_pkg)
         cmd.extend(shlex.split(install_flags))
         if msiexec and all_users:
             cmd.append('ALLUSERS="1"')
-        if wusa:
-            cmd.extend(['wusa'])
         cmd.append(cached_pkg)
         cmd.extend(shlex.split(install_flags))
 
@@ -910,12 +910,12 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             uninstall_flags = '{0} {1}'.format(uninstall_flags,
                                                kwargs.get('extra_uninstall_flags', ""))
 
-        # Build the install command
+        # Build the uninstall command
         cmd = []
-        if pkginfo[version_num].get('msiexec'):
-            cmd.extend(['msiexec', '/x'])
         if pkginfo[version_num].get('wusa'):
             cmd.extend(['wusa', '/uninstall'])
+        if pkginfo[version_num].get('msiexec'):
+            cmd.extend(['msiexec', '/x'])
         cmd.append(expanded_cached_pkg)
         cmd.extend(shlex.split(uninstall_flags))
 
