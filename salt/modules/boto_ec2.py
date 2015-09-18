@@ -153,6 +153,90 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
         return False
 
 
+def create_image(ami_name, instance_id=None, instance_name=None, tags=None, region=None,
+                 key=None, keyid=None, profile=None, description=None, no_reboot=False,
+                 dry_run=False):
+    '''
+    Given instance properties that define exactly one instance, create AMI and return AMI-id.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.create_instance ami_name instance_name=myinstance
+        salt myminion boto_ec2.create_instance another_ami_name tags='{"mytag": "value"}' description='this is my ami'
+
+    '''
+
+    instances = find_instances(instance_id=instance_id, name=instance_name, tags=tags,
+                               region=region, key=key, keyid=keyid, profile=profile,
+                               return_objs=True)
+
+    if not instances:
+        log.error('Source instance not found')
+        return False
+    if len(instances) > 1:
+        log.error('Multiple instances found, must match exactly only one instance to create an image from')
+        return False
+
+    instance = instances[0]
+    try:
+        return instance.create_image(ami_name, description=description,
+                                     no_reboot=no_reboot, dry_run=dry_run)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
+        return False
+
+
+def find_images(ami_name=None, executable_by=None, owners=None, image_ids=None, tags=None,
+                region=None, key=None, keyid=None, profile=None, return_objs=False):
+
+    '''
+    Given image properties, find and return matching AMI ids
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.find_instances tags='{"mytag": "value"}'
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        filter_parameters = {'filters': {}}
+
+        if image_ids:
+            filter_parameters['image_ids'] = [image_ids]
+
+        if executable_by:
+            filter_parameters['executable_by'] = [executable_by]
+
+        if owners:
+            filter_parameters['owners'] = [owners]
+
+        if ami_name:
+            filter_parameters['filters']['name'] = ami_name
+
+        if tags:
+            for tag_name, tag_value in six.iteritems(tags):
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+        images = conn.get_all_images(**filter_parameters)
+        log.debug('The filters criteria {0} matched the following '
+                  'images:{1}'.format(filter_parameters, images))
+
+        if images:
+            if return_objs:
+                return images
+            return [image.id for image in images]
+        else:
+            return False
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
+        return False
+
+
 def terminate(instance_id=None, name=None, region=None,
               key=None, keyid=None, profile=None):
     '''
