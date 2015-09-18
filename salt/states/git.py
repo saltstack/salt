@@ -476,7 +476,7 @@ def present(name, bare=True, user=None, force=False, shared=None):
     shared
         Specify the permission for sharing, see git-init for details (Default: None)
 
-       .. versionadded:: 2015.5
+       .. versionadded:: 2015.5.0
     '''
     name = os.path.expanduser(name)
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
