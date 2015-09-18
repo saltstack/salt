@@ -107,6 +107,17 @@ class NetapiClient(object):
         local = salt.client.get_local_client(mopts=self.opts)
         return local.cmd_batch(*args, **kwargs)
 
+    def local_subset(self, *args, **kwargs):
+        '''
+        Run :ref:`execution modules <all-salt.modules>` against subsets of minions
+
+        .. versionadded:: Boron
+
+        Wraps :py:meth:`salt.client.LocalClient.cmd_subset`
+        '''
+        local = salt.client.get_local_client(mopts=self.opts)
+        return local.cmd_subset(*args, **kwargs)
+
     def ssh(self, *args, **kwargs):
         '''
         Run salt-ssh commands synchronously
