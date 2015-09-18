@@ -13,12 +13,13 @@ at https://cloud.google.com.
 
 Dependencies
 ============
-* Libcloud >= 0.14.0-beta3
-* PyCrypto >= 2.1.
+* LibCloud >= 0.14.1
 * A Google Cloud Platform account with Compute Engine enabled
 * A registered Service Account for authorization
 * Oh, and obviously you'll need `salt <https://github.com/saltstack/salt>`_
 
+
+.. _gce_setup:
 
 Google Compute Engine Setup
 ===========================
@@ -49,17 +50,19 @@ Google Compute Engine Setup
    To set up authorization, navigate to *APIs & auth* section and then the
    *Credentials* link and click the *CREATE NEW CLIENT ID* button. Select
    *Service Account* and click the *Create Client ID* button. This will
-   automatically download a ``.json`` file which can be ignored.
+   automatically download a ``.json`` file, which may or may not be used
+   in later steps, depending on your version of ``libcloud``.
    
-   Look for a new *Service Account* section in the page and record the generated email
-   address for the matching key/fingerprint. The email address will be used
-   in the ``service_account_email_address`` of the ``/etc/salt/cloud`` file.
+   Look for a new *Service Account* section in the page and record the generated
+   email address for the matching key/fingerprint. The email address will be used
+   in the ``service_account_email_address`` of the ``/etc/salt/cloud.providers``
+   or the ``/etc/salt/cloud.providers.d/*.conf`` file.
 
 #. Key Format
 
-   *If you are using ``libcloud >= 0.17.0`` it is recommended that you use the ``JSON 
-   format`` file you downloaded above and skip to the "Configuration" section below, using 
-   the JSON file **_in place of 'NEW.pem'_** in the documentation.
+   *If you are using ``libcloud >= 0.17.0`` it is recommended that you use the ``JSON
+   format`` file you downloaded above and skip to the `Provider Configuration`_ section
+   below, using the JSON file **_in place of 'NEW.pem'_** in the documentation.
    
    If you are using an older version of libcloud or are unsure of the version you 
    have, please follow the instructions below to generate and format a new P12 key.*
