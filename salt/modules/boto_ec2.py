@@ -188,7 +188,7 @@ def create_image(ami_name, instance_id=None, instance_name=None, tags=None, regi
         return False
 
 
-def find_images(name=None, executable_by=None, owners=None, image_ids=None, tags=None,
+def find_images(ami_name=None, executable_by=None, owners=None, image_ids=None, tags=None,
                 region=None, key=None, keyid=None, profile=None, return_objs=False):
 
     '''
@@ -215,8 +215,8 @@ def find_images(name=None, executable_by=None, owners=None, image_ids=None, tags
         if owners:
             filter_parameters['owners'] = [owners]
 
-        if name:
-            filter_parameters['filters']['name'] = name
+        if ami_name:
+            filter_parameters['filters']['name'] = ami_name
 
         if tags:
             for tag_name, tag_value in six.iteritems(tags):
