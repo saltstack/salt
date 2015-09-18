@@ -709,7 +709,7 @@ def upgrade(refresh=True, skip_verify=False):
     old = list_pkgs()
     cmd = 'zypper --non-interactive'
     if skip_verify:
-       cmd +=' --no-gpg-checks'
+        cmd += ' --no-gpg-checks'
     cmd += ' update --auto-agree-with-licenses'
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     if call['retcode'] != 0:
