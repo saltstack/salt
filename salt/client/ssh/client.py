@@ -113,7 +113,7 @@ class SSHClient(object):
         '''
         Execute a salt-ssh call synchronously.
 
-        .. versionaddedd:: 2015.5.0
+        .. versionadded:: 2015.5.0
 
         WARNING: Eauth is **NOT** respected
 
