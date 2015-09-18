@@ -723,8 +723,6 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         cmd.extend(shlex.split(install_flags))
         if msiexec and all_users:
             cmd.append('ALLUSERS="1"')
-        cmd.append(cached_pkg)
-        cmd.extend(shlex.split(install_flags))
 
         # Install the software
         result = __salt__['cmd.run_stdout'](cmd, cache_path, output_loglevel='trace', python_shell=False)
