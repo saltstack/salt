@@ -176,57 +176,10 @@ def list_nodes(call=None):
         raise SaltCloudSystemExit(
             'The list_nodes function must be called with -f or --function.'
         )
-
-    fetch = True
-    page = 1
-    ret = {}
-
-    while fetch:
-        items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
-        for node in items['droplets']:
-            networks = node['networks']
-            v4s = networks.get('v4')
-            v6s = networks.get('v6')
-            public_ips = []
-            private_ips = []
-
-            if v4s:
-                for item in v4s:
-                    ip_type = item.get('type')
-                    ip_address = item.get('ip_address')
-                    if ip_type == 'public':
-                        public_ips.append(ip_address)
-                    if ip_type == 'private':
-                        private_ips.append(ip_address)
-
-            if v6s:
-                for item in v6s:
-                    ip_type = item.get('type')
-                    ip_address = item.get('ip_address')
-                    if ip_type == 'public':
-                        public_ips.append(ip_address)
-                    if ip_type == 'private':
-                        private_ips.append(ip_address)
-
-            ret[node['name']] = {
-                'id': node['id'],
-                'image': node['image']['name'],
-                'name': node['name'],
-                'private_ips': private_ips,
-                'public_ips': public_ips,
-                'size': node['size_slug'],
-                'state': str(node['status']),
-            }
-        page += 1
-        try:
-            fetch = 'next' in items['links']['pages']
-        except KeyError:
-            fetch = False
-
-    return ret
+    return _list_nodes()
 
 
-def list_nodes_full(call=None, forOutput=True):
+def list_nodes_full(call=None, for_output=True):
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -234,26 +187,7 @@ def list_nodes_full(call=None, forOutput=True):
         raise SaltCloudSystemExit(
             'The list_nodes_full function must be called with -f or --function.'
         )
-
-    fetch = True
-    page = 1
-    ret = {}
-
-    while fetch:
-        items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
-        for node in items['droplets']:
-            ret[node['name']] = {}
-            for item in six.iterkeys(node):
-                value = node[item]
-                if value is not None and forOutput:
-                    value = str(value)
-                ret[node['name']][item] = value
-        page += 1
-        try:
-            fetch = 'next' in items['links']['pages']
-        except KeyError:
-            fetch = False
-    return ret
+    return _list_nodes(full=True, for_output=for_output)
 
 
 def list_nodes_select(call=None):
@@ -599,7 +533,7 @@ def _get_node(name):
     attempts = 10
     while attempts >= 0:
         try:
-            return list_nodes_full(forOutput=False)[name]
+            return list_nodes_full(for_output=False)[name]
         except KeyError:
             attempts -= 1
             log.debug(
@@ -853,3 +787,85 @@ def show_pricing(kwargs=None, call=None):
         ret['_raw'] = raw
 
     return {profile['profile']: ret}
+
+
+def _list_nodes(full=False, for_output=False):
+    '''
+    Helper function to format and parse node data.
+    '''
+    fetch = True
+    page = 1
+    ret = {}
+
+    while fetch:
+        items = query(method='droplets',
+                      command='?page=' + str(page) + '&per_page=200')
+        for node in items['droplets']:
+            name = node['name']
+            ret[name] = {}
+            if full:
+                ret[name] = _get_full_output(node, for_output=for_output)
+            else:
+                public_ips, private_ips = _get_ips(node['networks'])
+                ret[name] = {
+                    'id': node['id'],
+                    'image': node['image']['name'],
+                    'name': name,
+                    'private_ips': private_ips,
+                    'public_ips': public_ips,
+                    'size': node['size_slug'],
+                    'state': str(node['status']),
+                }
+
+        page += 1
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
+
+    return ret
+
+
+def _get_full_output(node, for_output=False):
+    '''
+    Helper function for _list_nodes to loop through all node information.
+    Returns a dictionary containing the full information of a node.
+    '''
+    ret = {}
+    for item in six.iterkeys(node):
+        value = node[item]
+        if value is not None and for_output:
+            value = str(value)
+        ret[item] = value
+    return ret
+
+
+def _get_ips(networks):
+    '''
+    Helper function for list_nodes. Returns public and private ip lists based on a
+    given network dictionary.
+    '''
+    v4s = networks.get('v4')
+    v6s = networks.get('v6')
+    public_ips = []
+    private_ips = []
+
+    if v4s:
+        for item in v4s:
+            ip_type = item.get('type')
+            ip_address = item.get('ip_address')
+            if ip_type == 'public':
+                public_ips.append(ip_address)
+            if ip_type == 'private':
+                private_ips.append(ip_address)
+
+    if v6s:
+        for item in v6s:
+            ip_type = item.get('type')
+            ip_address = item.get('ip_address')
+            if ip_type == 'public':
+                public_ips.append(ip_address)
+            if ip_type == 'private':
+                private_ips.append(ip_address)
+
+    return public_ips, private_ips
