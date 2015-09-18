@@ -98,7 +98,7 @@ from salt.exceptions import SaltRenderError
 import salt.ext.six as six
 
 
-LOG = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 GPG_HEADER = re.compile(r'-----BEGIN PGP MESSAGE-----')
 
@@ -118,13 +118,14 @@ def _get_key_dir():
     '''
     return the location of the GPG key directory
     '''
-    if __salt__['config.get']('gpg_keydir'):
-        return __salt__['config.get']('gpg_keydir')
+    if 'config.get' in __salt__:
+        gpg_keydir = __salt__['config.get']('gpg_keydir')
     else:
-        return os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
+        gpg_keydir = __opts__.get('gpg_keydir')
+    return gpg_keydir or os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')
 
 
-def _decrypt_ciphertext(cipher):
+def _decrypt_ciphertext(cipher, translate_newlines=False):
     '''
     Given a block of ciphertext as a string, and a gpg object, try to decrypt
     the cipher and return the decrypted string. If the cipher cannot be
@@ -132,32 +133,41 @@ def _decrypt_ciphertext(cipher):
     '''
     cmd = [_get_gpg_exec(), '--homedir', _get_key_dir(), '-d']
     proc = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
-    decrypted_data, decrypt_error = proc.communicate(input=cipher)
+    decrypted_data, decrypt_error = proc.communicate(
+        input=cipher.replace(r'\n', '\n') if translate_newlines else cipher
+    )
     if not decrypted_data:
-        LOG.error('Could not decrypt cipher %s, received: %s', cipher, decrypt_error)
+        log.error(
+            'Could not decrypt cipher %s, received: %s',
+            cipher,
+            decrypt_error
+        )
         return cipher
     else:
         return str(decrypted_data)
 
 
-def _decrypt_object(obj):
+def _decrypt_object(obj, translate_newlines=False):
     '''
-    Recursively try to decrypt any object. If the object is a six.string_types (string or unicode), and
-    it contains a valid GPG header, decrypt it, otherwise keep going until
-    a string is found.
+    Recursively try to decrypt any object. If the object is a six.string_types
+    (string or unicode), and it contains a valid GPG header, decrypt it,
+    otherwise keep going until a string is found.
     '''
     if isinstance(obj, six.string_types):
         if GPG_HEADER.search(obj):
-            return _decrypt_ciphertext(obj)
+            return _decrypt_ciphertext(obj,
+                                       translate_newlines=translate_newlines)
         else:
             return obj
     elif isinstance(obj, dict):
-        for key, val in six.iteritems(obj):
-            obj[key] = _decrypt_object(val)
+        for key, value in six.iteritems(obj):
+            obj[key] = _decrypt_object(value,
+                                       translate_newlines=translate_newlines)
         return obj
     elif isinstance(obj, list):
         for key, value in enumerate(obj):
-            obj[key] = _decrypt_object(value)
+            obj[key] = _decrypt_object(value,
+                                       translate_newlines=translate_newlines)
         return obj
     else:
         return obj
@@ -170,6 +180,7 @@ def render(gpg_data, saltenv='base', sls='', argline='', **kwargs):
     '''
     if not _get_gpg_exec():
         raise SaltRenderError('GPG unavailable')
-    LOG.debug('Reading GPG keys from: %s', _get_key_dir())
+    log.debug('Reading GPG keys from: %s', _get_key_dir())
 
-    return _decrypt_object(gpg_data)
+    translate_newlines = kwargs.get('translate_newlines', False)
+    return _decrypt_object(gpg_data, translate_newlines=translate_newlines)
