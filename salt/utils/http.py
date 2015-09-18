@@ -313,7 +313,7 @@ def query(url,
             urllib_request.HTTPCookieProcessor(sess_cookies)
         ]
 
-        if url.startswith('https') or port == 443:
+        if url.startswith('https'):
             hostname = request.get_host()
             handlers[0] = urllib_request.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
@@ -323,8 +323,12 @@ def query(url,
                 log.warn(('SSL certificate verification has been explicitly '
                          'disabled. THIS CONNECTION MAY NOT BE SECURE!'))
             else:
+                if ':' in hostname:
+                    hostname, port = hostname.split(':')
+                else:
+                    port = 443
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect((hostname, 443))
+                sock.connect((hostname, int(port)))
                 sockwrap = ssl.wrap_socket(
                     sock,
                     ca_certs=ca_bundle,
