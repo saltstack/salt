@@ -774,7 +774,8 @@ def set_known_host(user=None,
                    port=None,
                    enc=None,
                    hash_hostname=True,
-                   config=None):
+                   config=None,
+                   hash_known_hosts=True):
     '''
     Download SSH public key from remote host "hostname", optionally validate
     its fingerprint against "fingerprint" variable and save the record in the
@@ -782,6 +783,44 @@ def set_known_host(user=None,
 
     If such a record does already exists in there, do nothing.
 
+    user
+        The user who owns the ssh authorized keys file to modify
+
+    hostname
+        The name of the remote host (e.g. "github.com")
+
+    fingerprint
+        The fingerprint of the key which must be presented in the known_hosts
+        file (optional if key specified)
+
+    key
+        The public key which must be presented in the known_hosts file
+        (optional if fingerprint specified)
+
+    port
+        optional parameter, denoting the port of the remote host, which will be
+        used in case, if the public key will be requested from it. By default
+        the port 22 is used.
+
+    enc
+        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
+        or ssh-dss
+
+    hash_hostname : True
+        Hash all hostnames and addresses in the known hosts file.
+
+        .. deprecated:: Carbon
+
+            Please use hash_known_hosts instead.
+
+    config
+        The location of the authorized keys file relative to the user's home
+        directory, defaults to ".ssh/known_hosts". If no user is specified,
+        defaults to "/etc/ssh/ssh_known_hosts". If present, must be an
+        absolute path when a user is not specified.
+
+    hash_known_hosts : True
+        Hash all hostnames and addresses in the known hosts file.
 
     CLI Example:
 
@@ -797,6 +836,14 @@ def set_known_host(user=None,
         return {'status': 'error',
                 'error': 'argument port can not be used in '
                 'conjunction with argument hash_hostname'}
+
+    if not hash_hostname:
+        salt.utils.warn_until(
+            'Carbon',
+            'The hash_hostname parameter is misleading as ssh-keygen can only '
+            'hash the whole known hosts file, not entries for individual'
+            'hosts. Please use hash_known_hosts=False instead.')
+        hash_known_hosts = hash_hostname
 
     update_required = False
     stored_host = get_known_host(user, hostname, config, port)
@@ -864,7 +911,7 @@ def set_known_host(user=None,
             os.chown(ssh_dir, uinfo['uid'], uinfo['gid'])
             os.chmod(ssh_dir, 0o700)
 
-    if key:
+    if key and hash_known_hosts:
         cmd_result = __salt__['ssh.hash_known_hosts'](user=user, config=full)
 
     # write line to known_hosts file
@@ -967,6 +1014,13 @@ def hash_known_hosts(user=None, config=None):
 
     .. versionadded:: 2014.7.0
 
+    user
+        hash known hosts of this user
+
+    config
+        path to known hosts file: can be absolute or relative to user's home
+        directory
+
     CLI Example:
 
     .. code-block:: bash
@@ -977,7 +1031,7 @@ def hash_known_hosts(user=None, config=None):
     full = _get_known_hosts_file(config=config, user=user)
 
     if isinstance(full, dict):
-        return full
+        return full  # full contains error information
 
     if not os.path.isfile(full):
         return {'status': 'error',
