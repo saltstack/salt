@@ -699,10 +699,13 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         # Get settings for msiexec and allusers
         msiexec = pkginfo[version_num].get('msiexec')
         all_users = pkginfo[version_num].get('allusers')
-
+        
         # all_users defaults to True
         if all_users is None:
             all_users = True
+
+        # Get settings for wusa
+        wusa = pkginfo[version_num].get('wusa')
 
         # Get install flags
         install_flags = '{0}'.format(pkginfo[version_num].get('install_flags'))
@@ -718,6 +721,11 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         cmd.extend(shlex.split(install_flags))
         if msiexec and all_users:
             cmd.append('ALLUSERS="1"')
+        elif wusa:
+            cmd.extend(['wusa'])
+        cmd.append(cached_pkg)
+        cmd.extend(shlex.split(install_flags))
+
 
         # Install the software
         result = __salt__['cmd.run_stdout'](cmd, cache_path, output_loglevel='trace', python_shell=False)
@@ -906,6 +914,8 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
         cmd = []
         if pkginfo[version_num].get('msiexec'):
             cmd.extend(['msiexec', '/x'])
+        elif pkginfo[version_num].get('wusa'):
+            cmd.extend(['wusa', '/uninstall'])
         cmd.append(expanded_cached_pkg)
         cmd.extend(shlex.split(uninstall_flags))
 
