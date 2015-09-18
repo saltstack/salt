@@ -374,12 +374,12 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
 
     .. code-block:: yaml
 
-    add-instances:
-      boto_elb.register_instances:
-        - name: myloadbalancer
-        - instances:
-          - instance-id1
-          - instance-id2
+        add-instances:
+          boto_elb.register_instances:
+            - name: myloadbalancer
+            - instances:
+              - instance-id1
+              - instance-id2
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     ret['name'] = name
