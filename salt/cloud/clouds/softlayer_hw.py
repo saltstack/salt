@@ -293,6 +293,12 @@ def create(vm_):
     )
     kwargs['prices'].append({'id': bandwidth})
 
+    post_uri = config.get_cloud_config_value(
+        'post_uri', vm_, __opts__, default=None
+    )
+    if post_uri:
+        kwargs['prices'].append({'id': post_uri})
+
     vlan_id = config.get_cloud_config_value(
         'vlan', vm_, __opts__, default=False
     )
