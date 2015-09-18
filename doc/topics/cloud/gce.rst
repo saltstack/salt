@@ -13,12 +13,13 @@ at https://cloud.google.com.
 
 Dependencies
 ============
-* Libcloud >= 0.14.0-beta3
-* PyCrypto >= 2.1.
+* LibCloud >= 0.14.1
 * A Google Cloud Platform account with Compute Engine enabled
 * A registered Service Account for authorization
 * Oh, and obviously you'll need `salt <https://github.com/saltstack/salt>`_
 
+
+.. _gce_setup:
 
 Google Compute Engine Setup
 ===========================
@@ -49,17 +50,20 @@ Google Compute Engine Setup
    To set up authorization, navigate to *APIs & auth* section and then the
    *Credentials* link and click the *CREATE NEW CLIENT ID* button. Select
    *Service Account* and click the *Create Client ID* button. This will
-   automatically download a ``.json`` file which can be ignored.
+   automatically download a ``.json`` file, which may or may not be used
+   in later steps, depending on your version of ``libcloud``.
    
-   Look for a new *Service Account* section in the page and record the generated email
-   address for the matching key/fingerprint. The email address will be used
-   in the ``service_account_email_address`` of the ``/etc/salt/cloud`` file.
+   Look for a new *Service Account* section in the page and record the generated
+   email address for the matching key/fingerprint. The email address will be used
+   in the ``service_account_email_address`` of the ``/etc/salt/cloud.providers``
+   or the ``/etc/salt/cloud.providers.d/*.conf`` file.
 
 #. Key Format
 
-   *If you are using ``libcloud >= 0.17.0`` it is recommended that you use the ``JSON 
-   format`` file you downloaded above and skip to the "Configuration" section below, using 
-   the JSON file **_in place of 'NEW.pem'_** in the documentation.
+   *If you are using ``libcloud >= 0.17.0`` it is recommended that you use the ``JSON
+   format`` file you downloaded above and skip to the `Provider Configuration`_ section
+   below, using the JSON file **_in place of 'NEW.pem'_** in the documentation.
+   
    If you are using an older version of libcloud or are unsure of the version you 
    have, please follow the instructions below to generate and format a new P12 key.*
  
@@ -78,35 +82,31 @@ Google Compute Engine Setup
 
  
 
-Configuration
-=============
+Provider Configuration
+======================
 
-Set up the cloud config at ``/etc/salt/cloud``:
+Set up the provider cloud config at ``/etc/salt/cloud.providers`` or
+``/etc/salt/cloud.providers.d/*.conf``:
 
 .. code-block:: yaml
 
-    # Note: This example is for /etc/salt/cloud
+    gce-config:
+      # Set up the Project name and Service Account authorization
+      project: "your-project-id"
+      service_account_email_address: "123-a5gt@developer.gserviceaccount.com"
+      service_account_private_key: "/path/to/your/NEW.pem"
 
-    providers:
-      gce-config:
-        # Set up the Project name and Service Account authorization
-        #
-        project: "your-project-id"
-        service_account_email_address: "123-a5gt@developer.gserviceaccount.com"
-        service_account_private_key: "/path/to/your/NEW.pem"
+      # Set up the location of the salt master
+      minion:
+        master: saltmaster.example.com
 
-        # Set up the location of the salt master
-        #
-        minion:
-          master: saltmaster.example.com
+      # Set up grains information, which will be common for all nodes
+      # using this provider
+      grains:
+        node_type: broker
+        release: 1.0.1
 
-        # Set up grains information, which will be common for all nodes
-        # using this provider
-        grains:
-          node_type: broker
-          release: 1.0.1
-
-        driver: gce
+      driver: gce
 
 .. note::
 
@@ -122,13 +122,14 @@ Set up the cloud config at ``/etc/salt/cloud``:
     provides the underlying functionality to connect to a cloud host, while cloud profiles continue
     to use ``provider`` to refer to provider configurations that you define.
 
-Cloud Profiles
-==============
-Set up an initial profile at ``/etc/salt/cloud.profiles``:
+Profile Configuration
+=====================
+Set up an initial profile at ``/etc/salt/cloud.profiles`` or
+``/etc/salt/cloud.profiles.d/*.conf``:
 
 .. code-block:: yaml
 
-    all_settings:
+    my-gce-profile:
       image: centos-6
       size: n1-standard-1
       location: europe-west1-b
@@ -145,18 +146,18 @@ The profile can be realized now with a salt command:
 
 .. code-block:: bash
 
-    salt-cloud -p all_settings gce-instance
+    salt-cloud -p my-gce-profile gce-instance
 
 This will create an salt minion instance named ``gce-instance`` in GCE.  If
 the command was executed on the salt-master, its Salt key will automatically
 be signed on the master.
 
-Once the instance has been created with salt-minion installed, connectivity to
+Once the instance has been created with a salt-minion installed, connectivity to
 it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt 'ami.example.com' test.ping
+    salt gce-instance test.ping
 
 
 GCE Specific Settings
@@ -167,7 +168,7 @@ typically also include a hard-coded default.
 
 .. code-block:: yaml
 
-    all_settings:
+    my-gce-profile:
 
       # Image is used to define what Operating System image should be used
       # to for the instance.  Examples are Debian 7 (wheezy) and CentOS 6.
@@ -239,11 +240,12 @@ typically also include a hard-coded default.
 
 GCE instances do not allow remote access to the root user by default.
 Instead, another user must be used to run the deploy script using sudo.
-Append something like this to ``/etc/salt/cloud.profiles``:
+Append something like this to ``/etc/salt/cloud.profiles`` or
+``/etc/salt/cloud.profiles.d/*.conf``:
 
 .. code-block:: yaml
 
-  all_settings:
+  my-gce-profile:
       ...
 
       # SSH to GCE instances as gceuser
@@ -259,7 +261,7 @@ the metadata setting too:
 
 .. code-block:: yaml
 
-  all_settings:
+  my-gce-profile:
       ...
 
       metadata: '{"one": "1", "2": "two",
@@ -432,7 +434,7 @@ Specify the network name to view information about the network.
     salt-cloud -f show_network gce name=mynet
 
 Create address
----------------
+--------------
 Create a new named static IP address in a region.
 
 .. code-block:: bash
@@ -440,7 +442,7 @@ Create a new named static IP address in a region.
     salt-cloud -f create_address gce name=my-fixed-ip region=us-central1
 
 Delete address
----------------
+--------------
 Delete an existing named fixed IP address.
 
 .. code-block:: bash
@@ -448,7 +450,7 @@ Delete an existing named fixed IP address.
     salt-cloud -f delete_address gce name=my-fixed-ip region=us-central1
 
 Show address
----------------
+------------
 View details on a named address.
 
 .. code-block:: bash

@@ -176,7 +176,7 @@ def event(tagmatch='*',
 
     .. seealso::
 
-        See :glob:`tests/eventlisten.sh` for an example of usage within a shell
+        See :blob:`tests/eventlisten.sh` for an example of usage within a shell
         script.
     '''
     statemod = salt.loader.raw_mod(__opts__, 'state', None)

@@ -7,7 +7,7 @@ Schedules and users can be referenced by pagerduty ID, or by name, or by email a
 
 For example:
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
     ensure test escalation policy:
         pagerduty_escalation_policy.present:

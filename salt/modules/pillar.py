@@ -150,7 +150,7 @@ def obfuscate(*args):
     Here are some examples:
 
     * ``'secret password'`` becomes ``'<str>'``
-    * ``['secret', 1]`` becomes ``['<str>', '<int>']
+    * ``['secret', 1]`` becomes ``['<str>', '<int>']``
     * ``{'login': 'somelogin', 'pwd': 'secret'}`` becomes
       ``{'login': '<str>', 'pwd': '<str>'}``
 

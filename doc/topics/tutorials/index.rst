@@ -39,6 +39,7 @@ Advanced Topics
     :maxdepth: 2
 
     walkthrough
+    rooted
     minionfs
     esky
     multimaster
@@ -50,6 +51,7 @@ Advanced Topics
     writing_tests
     http
     lxc
+    stormpath
 
 Salt Virt
 ==========

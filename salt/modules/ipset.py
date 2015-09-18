@@ -279,9 +279,9 @@ def list_sets(family='ipv4'):
 
 def check_set(set=None, family='ipv4'):
     '''
-    .. versionadded:: 2014.7.0
-
     Check that given ipset set exists.
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -395,7 +395,7 @@ def check(set=None, entry=None, family='ipv4'):
         An entry in the ipset.  This parameter can be a single IP address, a
         range of IP addresses, or a subnet block.  Example:
 
-        .. code-block::
+        .. code-block:: cfg
 
             192.168.0.1
             192.168.0.2-192.168.0.19
