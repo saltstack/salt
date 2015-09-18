@@ -41,7 +41,7 @@ To install using the SaltStack yum repository:
 
    Versions 6 / 7:
 
-    .. code-block:: config
+    .. code-block:: cfg
 
         ####################
         # Enable SaltStack's package repository
@@ -54,7 +54,7 @@ To install using the SaltStack yum repository:
 
    Version 5:
 
-    .. code-block:: config
+    .. code-block:: cfg
 
         ####################
         # Enable SaltStack's package repository

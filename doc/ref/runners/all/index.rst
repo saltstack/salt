@@ -34,6 +34,7 @@ Full list of runner modules
     queue
     reactor
     sdb
+    ssh
     search
     spacewalk
     ssh

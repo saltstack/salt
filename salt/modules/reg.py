@@ -108,20 +108,19 @@ def __virtual__():
 
 def read_key(hkey, path, key=None):
     '''
-    *** Incorrect Usage ***
-    The name of this function is misleading and will be changed to reflect
-    proper usage in the Boron release of Salt. The path option will be removed
-    and the key will be the actual key. See the following issue:
+    .. important::
+        The name of this function is misleading and will be changed to reflect
+        proper usage in the Boron release of Salt. The path option will be removed
+        and the key will be the actual key. See the following issue:
 
-    https://github.com/saltstack/salt/issues/25618
+        https://github.com/saltstack/salt/issues/25618
 
-    In order to not break existing state files this function will call the
-    read_value function if a key is passed. Key will be passed as the value
-    name. If key is not passed, this function will return the default value for
-    the key.
+        In order to not break existing state files this function will call the
+        read_value function if a key is passed. Key will be passed as the value
+        name. If key is not passed, this function will return the default value for
+        the key.
 
-    In the Boron release this function will be removed in favor of read_value.
-    ***
+        In the Boron release this function will be removed in favor of read_value.
 
     Read registry key value
 
@@ -199,19 +198,25 @@ def read_value(hive, key, vname=None):
         ret['vname'] = '(Default)'
 
     registry = Registry()
-    hive = registry.hkeys[hive]
+    hkey = registry.hkeys[hive]
 
     try:
-        handle = _winreg.OpenKey(hive, key)
-        vdata, vtype = _winreg.QueryValueEx(handle, vname)
-        if vdata:
-            ret['vdata'] = vdata
-            ret['vtype'] = registry.vtype_reverse[vtype]
-        else:
-            ret['comment'] = 'Empty Value'
+        handle = _winreg.OpenKey(hkey, key)
+        try:
+            vdata, vtype = _winreg.QueryValueEx(handle, vname)
+            if vdata or vdata in [0, '']:
+                ret['vtype'] = registry.vtype_reverse[vtype]
+                ret['vdata'] = vdata
+            else:
+                ret['comment'] = 'Empty Value'
+        except WindowsError as exc:  # pylint: disable=E0602
+            ret['vdata'] = ('(value not set)')
+            ret['vtype'] = 'REG_SZ'
+            ret['success'] = True
     except WindowsError as exc:  # pylint: disable=E0602
         log.debug(exc)
-        ret['comment'] = '{0}'.format(exc)
+        log.debug('Cannot find key: {0}\\{1}'.format(hive, key))
+        ret['comment'] = 'Cannot find key: {0}\\{1}'.format(hive, key)
         ret['success'] = False
 
     return ret
@@ -219,20 +224,19 @@ def read_value(hive, key, vname=None):
 
 def set_key(hkey, path, value, key=None, vtype='REG_DWORD', reflection=True):
     '''
-    *** Incorrect Usage ***
-    The name of this function is misleading and will be changed to reflect
-    proper usage in the Boron release of Salt. The path option will be removed
-    and the key will be the actual key. See the following issue:
+    .. important ::
+        The name of this function is misleading and will be changed to reflect
+        proper usage in the Boron release of Salt. The path option will be removed
+        and the key will be the actual key. See the following issue:
 
-    https://github.com/saltstack/salt/issues/25618
+        https://github.com/saltstack/salt/issues/25618
 
-    In order to not break existing state files this function will call the
-    set_value function if a key is passed. Key will be passed as the value
-    name. If key is not passed, this function will return the default value for
-    the key.
+        In order to not break existing state files this function will call the
+        set_value function if a key is passed. Key will be passed as the value
+        name. If key is not passed, this function will return the default value for
+        the key.
 
-    In the Boron release this function will be removed in favor of set_value.
-    ***
+        In the Boron release this function will be removed in favor of set_value.
 
     Set a registry key
 
@@ -312,27 +316,26 @@ def set_value(hive, key, vname=None, vdata=None, vtype='REG_SZ', reflection=True
         _winreg.CloseKey(handle)
         return True
     except (WindowsError, ValueError) as exc:  # pylint: disable=E0602
-        log.error(exc)
+        log.error(exc, exc_info=True)
         return False
 
 
 def create_key(hkey, path, key=None, value=None, reflection=True):
     '''
-    *** Incorrect Usage ***
-    The name of this function is misleading and will be changed to reflect
-    proper usage in the Boron release of Salt. The path option will be removed
-    and the key will be the actual key. See the following issue:
+    .. important ::
+        The name of this function is misleading and will be changed to reflect
+        proper usage in the Boron release of Salt. The path option will be removed
+        and the key will be the actual key. See the following issue:
 
-    https://github.com/saltstack/salt/issues/25618
+        https://github.com/saltstack/salt/issues/25618
 
-    In order to not break existing state files this function will call the
-    set_value function if key is passed. Key will be passed as the value name.
-    If key is not passed, this function will return the default value for the
-    key.
+        In order to not break existing state files this function will call the
+        set_value function if key is passed. Key will be passed as the value name.
+        If key is not passed, this function will return the default value for the
+        key.
 
-    In the Boron release path will be removed and key will be the path. You will
-    not pass value.
-    ***
+        In the Boron release path will be removed and key will be the path. You will
+        not pass value.
 
     Create a registry key
 
@@ -357,21 +360,20 @@ def create_key(hkey, path, key=None, value=None, reflection=True):
 
 def delete_key(hkey, path, key=None, reflection=True, force=False):
     '''
-    *** Incorrect Usage ***
-    The name of this function is misleading and will be changed to reflect
-    proper usage in the Boron release of Salt. The path option will be removed
-    and the key will be the actual key. See the following issue:
+    .. important::
+        The name of this function is misleading and will be changed to reflect
+        proper usage in the Boron release of Salt. The path option will be removed
+        and the key will be the actual key. See the following issue:
 
-    https://github.com/saltstack/salt/issues/25618
+        https://github.com/saltstack/salt/issues/25618
 
-    In order to not break existing state files this function will call the
-    delete_value function if a key is passed. Key will be passed as the value
-    name. If key is not passed, this function will return the default value for
-    the key.
+        In order to not break existing state files this function will call the
+        delete_value function if a key is passed. Key will be passed as the value
+        name. If key is not passed, this function will return the default value for
+        the key.
 
-    In the Boron release path will be removed and key will be the path.
-    reflection will also be removed.
-    ***
+        In the Boron release path will be removed and key will be the path.
+        reflection will also be removed.
 
     Delete a registry key
 
@@ -434,7 +436,7 @@ def delete_key(hkey, path, key=None, reflection=True, force=False):
         _winreg.DeleteKey(hive, key)
         return True
     except WindowsError as exc:  # pylint: disable=E0602
-        log.error(exc)
+        log.error(exc, exc_info=True)
         return False
 
 
@@ -504,7 +506,7 @@ def delete_key_recursive(hive, key):
             _winreg.DeleteKey(hkey, keypath)
             ret['Deleted'].append(r'{0}\{1}'.format(hive, keypath))
         except WindowsError as exc:  # pylint: disable=E0602
-            log.error(exc)
+            log.error(exc, exc_info=True)
             ret['Failed'].append(r'{0}\{1} {2}'.format(hive, key, exc))
 
     # Delete the key now that all the subkeys are deleted
@@ -512,7 +514,7 @@ def delete_key_recursive(hive, key):
         _winreg.DeleteKey(hkey, key)
         ret['Deleted'].append(r'{0}\{1}'.format(hive, key))
     except WindowsError as exc:  # pylint: disable=E0602
-        log.error(exc)
+        log.error(exc, exc_info=True)
         ret['Failed'].append(r'{0}\{1} {2}'.format(hive, key, exc))
 
     return ret
@@ -561,5 +563,5 @@ def delete_value(hive, key, vname=None, reflection=True):
         return True
     except WindowsError as exc:  # pylint: disable=E0602
         _winreg.CloseKey(handle)
-        log.error(exc)
+        log.error(exc, exc_info=True)
         return False

@@ -452,7 +452,8 @@ def sync_log_handlers(saltenv=None, refresh=True):
 def sync_all(saltenv=None, refresh=True):
     '''
     Sync down all of the dynamic modules from the file server for a specific
-    environment
+    environment. This function synchronizes custom modules, states, beacons,
+    grains, returners, outputters, renderers, and utils.
 
     refresh : True
         Also refresh the execution modules and pillar data available to the minion.
