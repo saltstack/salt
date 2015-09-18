@@ -1094,7 +1094,7 @@ def deploy_windows(host,
             logging_stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
                 logging_creds
             )
-            win_cmd(stop_cmd, logging_stop_cmd)
+            win_cmd(stop_cmd, logging_command=logging_stop_cmd)
 
             time.sleep(5)
 
@@ -1102,7 +1102,7 @@ def deploy_windows(host,
             logging_start_cmd = 'winexe {0} "sc start salt-minion"'.format(
                 logging_creds
             )
-            win_cmd(start_cmd, logging_start_cmd)
+            win_cmd(start_cmd, logging_command=logging_start_cmd)
 
         # Fire deploy action
         fire_event(
