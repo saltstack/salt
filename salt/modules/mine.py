@@ -224,6 +224,22 @@ def get(tgt, fun, expr_form='glob'):
         salt '*' mine.get '*' network.interfaces
         salt '*' mine.get 'os:Fedora' network.interfaces grain
         salt '*' mine.get 'os:Fedora and S@192.168.5.0/24' network.ipaddrs compound
+
+    .. seealso:: Retrieving Mine data from Pillar and Orchestrate
+
+        This execution module is intended to be executed on minions.
+        Master-side operations such as Pillar or Orchestrate that require Mine
+        data should use the :py:mod:`Mine Runner module <salt.runners.mine>`
+        instead; it can be invoked from an SLS file using the
+        :py:func:`saltutil.runner <salt.modules.saltutil.runner>` module. For
+        example:
+
+        .. code-block:: yaml
+
+            {% set minion_ips = salt.saltutil.runner('mine.get',
+                tgt='*',
+                fun='network.ip_addrs',
+                tgt_type='glob') %}
     '''
     if __opts__['file_client'] == 'local':
         ret = {}

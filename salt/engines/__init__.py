@@ -64,11 +64,11 @@ class Engine(MultiprocessingProcess):
     '''
     Execute the given engine in a new process
     '''
-    def __init__(self, opts, fun, config, funcs, runners):
+    def __init__(self, opts, fun, config, funcs, runners, **kwargs):
         '''
         Set up the process executor
         '''
-        super(Engine, self).__init__()
+        super(Engine, self).__init__(**kwargs)
         self.opts = opts
         self.config = config
         self.fun = fun

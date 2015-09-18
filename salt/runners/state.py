@@ -4,13 +4,10 @@ Execute orchestration functions
 '''
 # Import pytohn libs
 from __future__ import absolute_import, print_function
-import fnmatch
-import json
 import logging
-import sys
 
 # Import salt libs
-import salt.syspaths
+import salt.loader
 import salt.utils.event
 from salt.exceptions import SaltInvocationError
 
@@ -130,7 +127,12 @@ def orchestrate_high(data, test=None, queue=False, pillar=None, **kwargs):
     return ret
 
 
-def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
+def event(tagmatch='*',
+        count=-1,
+        quiet=False,
+        sock_dir=None,
+        pretty=False,
+        node='master'):
     r'''
     Watch Salt's event bus and block until the given tag is matched
 
@@ -149,6 +151,8 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
     :param sock_dir: path to the Salt master's event socket file.
     :param pretty: Output the JSON all on a single line if ``False`` (useful
         for shell tools); pretty-print the JSON output if ``True``.
+    :param node: Watch the minion-side or master-side event bus.
+        .. versionadded:: Boron
 
     CLI Examples:
 
@@ -170,123 +174,17 @@ def event(tagmatch='*', count=-1, quiet=False, sock_dir=None, pretty=False):
             echo $data | jq -colour-output .
         done
 
-    The following example monitors Salt's event bus in a background process
-    watching for returns for a given job. Requires a POSIX environment and jq
-    <http://stedolan.github.io/jq/>.
+    .. seealso::
 
-    .. code-block:: bash
-
-        #!/bin/sh
-        # Usage: ./eventlisten.sh '*' test.sleep 10
-
-        # Mimic fnmatch from the Python stdlib.
-        fnmatch() { case "$2" in $1) return 0 ;; *) return 1 ;; esac ; }
-        count() { printf '%s\n' "$#" ; }
-
-        listen() {
-            events='events'
-            mkfifo $events
-            exec 3<>$events     # Hold the fd open.
-
-            # Start listening to events before starting the command to avoid race
-            # conditions.
-            salt-run state.event count=-1 >&3 &
-            events_pid=$!
-
-            (
-                timeout=$(( 60 * 60 ))
-                sleep $timeout
-                kill -s USR2 $$
-            ) &
-            timeout_pid=$!
-
-            # Give the runner a few to connect to the event bus.
-            printf 'Subscribing to the Salt event bus...\n'
-            sleep 4
-
-            trap '
-                excode=$?; trap - EXIT;
-                exec 3>&-
-                kill '"${timeout_pid}"'
-                kill '"${events_pid}"'
-                rm '"${events}"'
-                exit
-                echo $excode
-            ' INT TERM EXIT
-
-            trap '
-                printf '\''Timeout reached; exiting.\n'\''
-                exit 4
-            ' USR2
-
-            # Run the command and get the JID.
-            jid=$(salt --async "$@")
-            jid="${jid#*: }"    # Remove leading text up to the colon.
-
-            # Create the event tags to listen for.
-            start_tag="salt/job/${jid}/new"
-            ret_tag="salt/job/${jid}/ret/*"
-
-            # ``read`` will block when no events are going through the bus.
-            printf 'Waiting for tag %s\n' "$ret_tag"
-            while read -r tag data; do
-                if fnmatch "$start_tag" "$tag"; then
-                    minions=$(printf '%s\n' "${data}" | jq -r '.["minions"][]')
-                    num_minions=$(count $minions)
-                    printf 'Waiting for %s minions.\n' "$num_minions"
-                    continue
-                fi
-
-                if fnmatch "$ret_tag" "$tag"; then
-                    mid="${tag##*/}"
-                    printf 'Got return for %s.\n' "$mid"
-                    printf 'Pretty-printing event: %s\n' "$tag"
-                    printf '%s\n' "$data" | jq .
-
-                    minions="$(printf '%s\n' "$minions" | sed -e '/'"$mid"'/d')"
-                    num_minions=$(count $minions)
-                    if [ $((num_minions)) -eq 0 ]; then
-                        printf 'All minions returned.\n'
-                        break
-                    else
-                        printf 'Remaining minions: %s\n' "$num_minions"
-                    fi
-                else
-                    printf 'Skipping tag: %s\n' "$tag"
-                    continue
-                fi
-            done <&3
-        }
-
-        listen "$@"
+        See :glob:`tests/eventlisten.sh` for an example of usage within a shell
+        script.
     '''
-    sevent = salt.utils.event.get_event(
-            'master',
-            sock_dir or __opts__['sock_dir'],
-            __opts__['transport'],
-            opts=__opts__,
-            listen=True)
+    statemod = salt.loader.raw_mod(__opts__, 'state', None)
 
-    while True:
-        ret = sevent.get_event(full=True)
-        if ret is None:
-            continue
-
-        if fnmatch.fnmatch(ret['tag'], tagmatch):
-            if not quiet:
-                print('{0}\t{1}'.format(
-                    ret['tag'],
-                    json.dumps(
-                        ret['data'],
-                        sort_keys=pretty,
-                        indent=None if not pretty else 4)))
-                sys.stdout.flush()
-
-            count -= 1
-            LOGGER.debug('Remaining event matches: {0}'.format(count))
-
-            if count == 0:
-                break
-        else:
-            LOGGER.debug('Skipping event tag: {0}'.format(ret['tag']))
-            continue
+    return statemod['state.event'](
+            tagmatch=tagmatch,
+            count=count,
+            quiet=quiet,
+            sock_dir=sock_dir,
+            pretty=pretty,
+            node=node)

@@ -176,7 +176,8 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
                             os.makedirs(tgt_dir)
                         shutil.copy(filename, tgt)
                     continue
-    try:  # cwd may not exist if it was removed but salt was run from it
+    try:
+        # cwd may not exist if it was removed but salt was run from it
         cwd = os.getcwd()
     except OSError:
         cwd = None

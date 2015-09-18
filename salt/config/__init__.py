@@ -32,6 +32,7 @@ from salt.ext.six.moves.urllib.parse import urlparse
 
 # Import salt libs
 import salt.utils
+import salt.utils.dictupdate
 import salt.utils.network
 import salt.syspaths
 import salt.utils.validate.path
@@ -532,7 +533,8 @@ VALID_OPTS = {
     'autosign_timeout': int,
 
     # A mapping of external systems that can be used to generate topfile data.
-    'master_tops': bool,  # FIXME Should be dict?
+    # FIXME Should be dict?
+    'master_tops': bool,
 
     # A flag that should be set on a top-level master when it is ordering around subordinate masters
     # via the use of a salt syndic
@@ -1480,7 +1482,7 @@ def include_config(include, orig_path, verbose):
 
         for fn_ in sorted(glob.glob(path)):
             log.debug('Including configuration from \'{0}\''.format(fn_))
-            configuration.update(_read_conf_file(fn_))
+            salt.utils.dictupdate.update(configuration, _read_conf_file(fn_))
     return configuration
 
 
@@ -3014,6 +3016,8 @@ def spm_config(path):
 def apply_spm_config(overrides, defaults):
     '''
     Returns the spm configurations dict.
+
+    .. versionadded:: 2015.8.1
     '''
     opts = defaults.copy()
     if overrides:

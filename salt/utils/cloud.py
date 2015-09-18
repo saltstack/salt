@@ -173,7 +173,7 @@ def accept_key(pki_dir, pub, id_):
     the opts directory, this method places the pub key in the accepted
     keys dir and removes it from the unaccepted keys dir if that is the case.
     '''
-    for key_dir in ('minions', 'minions_pre', 'minions_rejected'):
+    for key_dir in 'minions', 'minions_pre', 'minions_rejected':
         key_path = os.path.join(pki_dir, key_dir)
         if not os.path.exists(key_path):
             os.makedirs(key_path)
@@ -347,7 +347,7 @@ def bootstrap(vm_, opts):
 
     inline_script_code = salt.config.get_cloud_config_value(
         'inline_script', vm_, opts, default=None
-        )
+    )
 
     ssh_username = salt.config.get_cloud_config_value(
         'ssh_username', vm_, opts, default='root'
@@ -355,6 +355,33 @@ def bootstrap(vm_, opts):
 
     if 'file_transport' not in opts:
         opts['file_transport'] = vm_.get('file_transport', 'sftp')
+
+    # If we haven't generated any keys yet, do so now.
+    if 'pub_key' not in vm_ and 'priv_key' not in vm_:
+        log.debug('Generating keys for \'{0[name]}\''.format(vm_))
+
+        vm_['priv_key'], vm_['pub_key'] = gen_keys(
+            salt.config.get_cloud_config_value(
+                'keysize',
+                vm_,
+                opts
+            )
+        )
+
+        key_id = vm_.get('name')
+        if 'append_domain' in vm_:
+            key_id = '.'.join([key_id, vm_['append_domain']])
+
+        accept_key(
+            opts['pki_dir'], vm_['pub_key'], key_id
+        )
+
+    if 'os' not in vm_:
+        vm_['os'] = salt.config.get_cloud_config_value(
+            'script',
+            vm_,
+            opts
+        )
 
     # NOTE: deploy_kwargs is also used to pass inline_script variable content
     #       to run_inline_script function
@@ -482,9 +509,6 @@ def bootstrap(vm_, opts):
         {'kwargs': event_kwargs},
         transport=opts.get('transport', 'zeromq')
     )
-
-    deployed = False
-    inline_script_deployed = False
 
     if salt.config.get_cloud_config_value('inline_script', vm_, opts) \
             and salt.config.get_cloud_config_value('deploy', vm_, opts) is False:
@@ -675,6 +699,8 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
             '-oChallengeResponseAuthentication=no',
             # Make sure public key authentication is enabled
             '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
@@ -1749,6 +1775,8 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
             '-oChallengeResponseAuthentication=no',
             # Make sure public key authentication is enabled
             '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
@@ -1850,6 +1878,8 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
             '-oChallengeResponseAuthentication=no',
             # Make sure public key authentication is enabled
             '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
@@ -1985,6 +2015,8 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
             '-oChallengeResponseAuthentication=no',
             # Make sure public key authentication is enabled
             '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
@@ -2469,7 +2501,7 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
 
     driver = next(six.iterkeys(opts['providers'][provider]))
     fname = '{0}.p'.format(minion_id)
-    for cachedir in ('requested', 'active'):
+    for cachedir in 'requested', 'active':
         path = os.path.join(base, cachedir, driver, provider, fname)
         log.debug('path: {0}'.format(path))
         if os.path.exists(path):
@@ -2539,7 +2571,7 @@ def update_bootstrap(config, url=None):
         url = default_url
     if not url:
         raise ValueError('Cant get any source to update')
-    if (url.startswith('http')) or ('://' in url):
+    if url.startswith('http') or '://' in url:
         log.debug('Updating the bootstrap-salt.sh script to latest stable')
         try:
             import requests
@@ -2727,7 +2759,7 @@ def missing_node_cache(prov_dir, node_list, provider, opts):
     '''
     cached_nodes = []
     for node in os.listdir(prov_dir):
-        cached_nodes.append(node.replace('.p', ''))
+        cached_nodes.append(os.path.splitext(node)[0])
 
     log.debug(sorted(cached_nodes))
     log.debug(sorted(node_list))

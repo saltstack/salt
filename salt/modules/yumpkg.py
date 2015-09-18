@@ -684,6 +684,32 @@ def list_upgrades(refresh=True, **kwargs):
     return dict([(x.name, x.version) for x in updates])
 
 
+def info_installed(*names):
+    '''
+    Return the information of the named package(s), installed on the system.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.info_installed <package1>
+        salt '*' pkg.info_installed <package1> <package2> <package3> ...
+    '''
+    ret = dict()
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names).items():
+        t_nfo = dict()
+        # Translate dpkg-specific keys to a common structure
+        for key, value in pkg_nfo.items():
+            if key == 'source_rpm':
+                t_nfo['source'] = value
+            else:
+                t_nfo[key] = value
+
+        ret[pkg_name] = t_nfo
+
+    return ret
+
+
 def check_db(*names, **kwargs):
     '''
     .. versionadded:: 0.17.0
@@ -738,13 +764,13 @@ def check_db(*names, **kwargs):
         __context__['pkg._avail'] = avail
 
     ret = {}
+    repoquery_cmd = repoquery_base + ' {0}'.format(" ".join(names))
+    provides = sorted(
+        set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
+    )
     for name in names:
         ret.setdefault(name, {})['found'] = name in avail
         if not ret[name]['found']:
-            repoquery_cmd = repoquery_base + ' {0}'.format(name)
-            provides = sorted(
-                set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
-            )
             if name in provides:
                 # Package was not in avail but was found by the repoquery_cmd
                 ret[name]['found'] = True
@@ -1062,8 +1088,14 @@ def install(name=None,
                 downgrade.append(pkgstr)
 
     if targets:
-        cmd = '{yum_command} -y {repo} {exclude} {branch} {gpgcheck} install {pkg}'.format(
+        if _yum() == 'dnf':
+            dnf_args = '--best --allowerasing'
+        else:
+            dnf_args = ''
+
+        cmd = '{yum_command} -y {dnf} {repo} {exclude} {branch} {gpgcheck} install {pkg}'.format(
             yum_command=_yum(),
+            dnf=dnf_args,
             repo=repo_arg,
             exclude=exclude_arg,
             branch=branch_arg,

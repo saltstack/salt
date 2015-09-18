@@ -384,31 +384,6 @@ class SaltCloud(parsers.SaltCloudParser):
                     'kwargs. Ex: ssh_username=larry. Remaining arguments: {0}'.format(args)
                 )
 
-            if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-                log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
-                vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
-                    salt.config.get_cloud_config_value(
-                        'keysize',
-                        vm_,
-                        self.config
-                    )
-                )
-
-                key_id = vm_.get('name')
-                if 'append_domain' in vm_:
-                    key_id = '.'.join([key_id, vm_['append_domain']])
-
-                salt.utils.cloud.accept_key(
-                    self.config['pki_dir'], vm_['pub_key'], key_id
-                )
-
-            if 'os' not in vm_:
-                vm_['os'] = salt.config.get_cloud_config_value(
-                    'script',
-                    vm_,
-                    self.config
-                )
-
             try:
                 ret = salt.utils.cloud.bootstrap(vm_, self.config)
             except (SaltCloudException, Exception) as exc:

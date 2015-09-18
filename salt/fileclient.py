@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import contextlib
-import errno
 import logging
 import hashlib
 import os
@@ -23,6 +22,7 @@ import salt.payload
 import salt.transport
 import salt.fileserver
 import salt.utils
+import salt.utils.files
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.gzip_util
@@ -512,7 +512,8 @@ class Client(object):
         ret.sort()
         return ret
 
-    def get_url(self, url, dest, makedirs=False, saltenv='base', env=None, no_cache=False):
+    def get_url(self, url, dest, makedirs=False, saltenv='base',
+                env=None, no_cache=False):
         '''
         Get a single file from a URL.
         '''
@@ -617,27 +618,59 @@ class Client(object):
                 password=url_data.password,
                 **get_kwargs
             )
+
             if 'handle' not in query:
                 raise MinionError('Error: {0}'.format(query['error']))
+
+            try:
+                content_length = int(query['handle'].headers['Content-Length'])
+            except (AttributeError, KeyError, ValueError):
+                # Shouldn't happen but don't let this raise an exception.
+                # Instead, just don't do content length checking below.
+                log.warning(
+                    'No Content-Length header in HTTP response from fetch of '
+                    '{0}, or Content-Length is non-numeric'.format(fixed_url)
+                )
+                content_length = None
+
             if no_cache:
-                return ''.join(result)
+                content = ''.join(result)
+                if content_length is not None \
+                        and len(content) > content_length:
+                    return content[-content_length:]
+                else:
+                    return content
             else:
                 destfp.close()
                 destfp = None
-                # Can't just do an os.rename() here, this results in a
-                # WindowsError being raised when the destination path exists on
-                # a Windows machine. Have to remove the file.
-                try:
-                    os.remove(dest)
-                except OSError as exc:
-                    if exc.errno != errno.ENOENT:
-                        raise MinionError(
-                            'Error: Unable to remove {0}: {1}'.format(
-                                dest,
-                                exc.strerror
-                            )
+                dest_tmp_size = os.path.getsize(dest_tmp)
+                if content_length is not None \
+                        and dest_tmp_size > content_length:
+                    log.warning(
+                        'Size of file downloaded from {0} ({1}) does not '
+                        'match the Content-Length ({2}). This is probably due '
+                        'to an upstream bug in tornado '
+                        '(https://github.com/tornadoweb/tornado/issues/1518). '
+                        'Re-writing the file to correct this.'.format(
+                            fixed_url,
+                            dest_tmp_size,
+                            content_length
                         )
-                os.rename(dest_tmp, dest)
+                    )
+                    dest_tmp_bak = dest_tmp + '.bak'
+                    salt.utils.files.rename(dest_tmp, dest_tmp_bak)
+                    with salt.utils.fopen(dest_tmp_bak, 'rb') as fp_bak:
+                        fp_bak.seek(dest_tmp_size - content_length)
+                        with salt.utils.fopen(dest_tmp, 'wb') as fp_new:
+                            while True:
+                                chunk = fp_bak.read(
+                                    self.opts['file_buffer_size']
+                                )
+                                if not chunk:
+                                    break
+                                fp_new.write(chunk)
+                    os.remove(dest_tmp_bak)
+                salt.utils.files.rename(dest_tmp, dest)
                 return dest
         except HTTPError as exc:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(

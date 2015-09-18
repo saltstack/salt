@@ -40,6 +40,7 @@ from salt.textformat import TextFormat
 from salt.log.handlers import (TemporaryLoggingHandler,
                                StreamHandler,
                                SysLogHandler,
+                               FileHandler,
                                WatchedFileHandler,
                                QueueHandler)
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
@@ -812,6 +813,18 @@ def set_logger_level(logger_name, log_level='error'):
     logging.getLogger(logger_name).setLevel(
         LOG_LEVELS.get(log_level.lower(), logging.ERROR)
     )
+
+
+def patch_python_logging_handlers():
+    '''
+    Patch the python logging handlers with out mixed-in classes
+    '''
+    logging.StreamHandler = StreamHandler
+    logging.FileHandler = FileHandler
+    logging.handlers.SysLogHandler = SysLogHandler
+    logging.handlers.WatchedFileHandler = WatchedFileHandler
+    if sys.version_info >= (3, 2):
+        logging.handlers.QueueHandler = QueueHandler
 
 
 def __process_multiprocessing_logging_queue(queue):

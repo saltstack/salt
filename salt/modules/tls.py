@@ -109,7 +109,7 @@ import salt.utils
 from salt._compat import string_types
 from salt.ext.six.moves import range as _range
 from datetime import datetime
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 
 import re
 

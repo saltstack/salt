@@ -161,6 +161,13 @@ def _sync(form, saltenv=None):
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
         with salt.utils.fopen(mod_file, 'a+') as ofile:
             ofile.write('')
+    if form == 'grains' and \
+       __opts__.get('grains_cache') and \
+       os.path.isfile(os.path.join(__opts__['cachedir'], 'grains.cache.p')):
+        try:
+            os.remove(os.path.join(__opts__['cachedir'], 'grains.cache.p'))
+        except OSError:
+            log.error('Could not remove grains cache!')
     return ret
 
 
@@ -185,7 +192,7 @@ def update(version=None):
     '''
     Update the salt minion from the URL defined in opts['update_url']
     SaltStack, Inc provides the latest builds here:
-    update_url: http://docs.saltstack.com/downloads/
+    update_url: https://repo.saltstack.com/windows/
 
     Be aware that as of 2014-8-11 there's a bug in esky such that only the
     latest version available in the update_url can be downloaded and installed.

@@ -603,6 +603,7 @@ class MultiMinion(MinionBase):
         self.auth_wait = self.opts['acceptance_wait_time']
         self.max_auth_wait = self.opts['acceptance_wait_time_max']
 
+        zmq.eventloop.ioloop.install()
         self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
 
     def _spawn_minions(self):
@@ -681,9 +682,11 @@ class Minion(MinionBase):
         self.win_proc = []
         self.loaded_base_name = loaded_base_name
 
-        self.io_loop = io_loop or zmq.eventloop.ioloop.ZMQIOLoop()
-        if not self.io_loop.initialized():
-            self.io_loop.install()
+        if io_loop is None:
+            zmq.eventloop.ioloop.install()
+            self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        else:
+            self.io_loop = io_loop
 
         # Warn if ZMQ < 3.2
         if HAS_ZMQ:
@@ -1007,7 +1010,7 @@ class Minion(MinionBase):
                     executors[-1] = 'sudo.get'
                 # Get the last one that is function executor
                 executor = minion_instance.executors[
-                    "{0}".format(executors.pop())](opts, data, func, *args, **kwargs)
+                    "{0}".format(executors.pop())](opts, data, func, args, kwargs)
                 # Instantiate others from bottom to the top
                 for executor_name in reversed(executors):
                     executor = minion_instance.executors["{0}".format(executor_name)](opts, data, executor)
@@ -1649,7 +1652,13 @@ class Minion(MinionBase):
         ping_interval = self.opts.get('ping_interval', 0) * 60
         if ping_interval > 0:
             def ping_master():
-                self._fire_master('ping', 'minion_ping')
+                if not self._fire_master('ping', 'minion_ping'):
+                    if not self.opts.get('auth_safemode', True):
+                        log.error('** Master Ping failed. Attempting to restart minion**')
+                        delay = self.opts.get('random_reauth_delay', 5)
+                        log.info('delaying random_reauth_delay {0}s'.format(delay))
+                        # regular sys.exit raises an exception -- which isn't sufficient in a thread
+                        os._exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
             self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
 
         self.periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
@@ -1965,10 +1974,10 @@ class MultiSyndic(MinionBase):
         self.jid_forward_cache = set()
 
         if io_loop is None:
+            zmq.eventloop.ioloop.install()
             self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
         else:
             self.io_loop = io_loop
-        self.io_loop.install()
 
     def _spawn_syndics(self):
         '''
@@ -2327,7 +2336,7 @@ class Matcher(object):
                 return salt.utils.network.in_subnet(tgt, self.opts['grains'][proto])
         except:  # pylint: disable=bare-except
             try:
-               # Target should be an address
+                # Target should be an address
                 proto = 'ipv{0}'.format(ipaddress.ip_address(tgt).version)
                 if proto not in self.opts['grains']:
                     return False

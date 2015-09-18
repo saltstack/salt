@@ -35,6 +35,13 @@ except ImportError:
     pass
 
 
+def systemd_notify_call(action):
+    process = subprocess.Popen(['systemd-notify', action], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process.communicate()
+    status = process.poll()
+    return status == 0
+
+
 def notify_systemd():
     '''
     Notify systemd that this process has started
@@ -42,7 +49,10 @@ def notify_systemd():
     try:
         import systemd.daemon
     except ImportError:
+        if salt.utils.which('systemd-notify') and systemd_notify_call('--booted'):
+            return systemd_notify_call('--ready')
         return False
+
     if systemd.daemon.booted():
         try:
             return systemd.daemon.notify('READY=1')
@@ -102,6 +112,23 @@ def set_pidfile(pidfile, user):
     log.debug('Chowned pidfile: {0} to user: {1}'.format(pidfile, user))
 
 
+def check_pidfile(pidfile):
+    '''
+    Determine if a pidfile has been written out
+    '''
+    return os.path.isfile(pidfile)
+
+
+def get_pidfile(pidfile):
+    '''
+    Return the pid from a pidfile as an integer
+    '''
+    with salt.utils.fopen(pidfile) as pdf:
+        pid = pdf.read()
+
+    return int(pid)
+
+
 def clean_proc(proc, wait_for_kill=10):
     '''
     Generic method for cleaning up multiprocessing procs
@@ -133,6 +160,8 @@ def os_is_running(pid):
     '''
     Use OS facilities to determine if a process is running
     '''
+    if isinstance(pid, six.string_types):
+        pid = int(pid)
     if HAS_PSUTIL:
         return psutil.pid_exists(pid)
     else:
@@ -235,6 +264,22 @@ class ProcessManager(object):
 
         if kwargs is None:
             kwargs = {}
+
+        if salt.utils.is_windows():
+            # Need to ensure that 'log_queue' is correctly transfered to
+            # processes that inherit from 'MultiprocessingProcess'.
+            if type(MultiprocessingProcess) is type(tgt) and (
+                    issubclass(tgt, MultiprocessingProcess)):
+                need_log_queue = True
+            else:
+                need_log_queue = False
+
+            if need_log_queue and 'log_queue' not in kwargs:
+                if hasattr(self, 'log_queue'):
+                    kwargs['log_queue'] = self.log_queue
+                else:
+                    kwargs['log_queue'] = (
+                            salt.log.setup.get_multiprocessing_logging_queue())
 
         if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
             process = tgt(*args, **kwargs)

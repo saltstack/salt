@@ -1802,6 +1802,10 @@ def mod_repo(repo, saltenv='base', **kwargs):
     elif 'key_url' in kwargs:
         key_url = kwargs['key_url']
         fn_ = __salt__['cp.cache_file'](key_url, saltenv)
+        if not fn_:
+            raise CommandExecutionError(
+                'Error: file not found: {0}'.format(key_url)
+            )
         cmd = 'apt-key add {0}'.format(_cmd_quote(fn_))
         out = __salt__['cmd.run_stdout'](cmd, **kwargs)
         if not out.upper().startswith('OK'):
@@ -2212,4 +2216,38 @@ def owner(*paths):
             ret[path] = ''
     if len(ret) == 1:
         return next(six.itervalues(ret))
+    return ret
+
+
+def info_installed(*names):
+    '''
+    Return the information of the named package(s), installed on the system.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.info_installed <package1>
+        salt '*' pkg.info_installed <package1> <package2> <package3> ...
+    '''
+    ret = dict()
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names).items():
+        t_nfo = dict()
+        # Translate dpkg-specific keys to a common structure
+        for key, value in pkg_nfo.items():
+            if key == 'package':
+                t_nfo['name'] = value
+            elif key == 'origin':
+                t_nfo['vendor'] = value
+            elif key == 'section':
+                t_nfo['group'] = value
+            elif key == 'maintainer':
+                t_nfo['packager'] = value
+            elif key == 'homepage':
+                t_nfo['url'] = value
+            else:
+                t_nfo[key] = value
+
+        ret[pkg_name] = t_nfo
+
     return ret
