@@ -560,10 +560,20 @@ def list_keypairs(call=None):
 
     items = query(method='account/keys')
     ret = {}
-    for keypair in items['ssh_keys']:
-        ret[keypair['name']] = {}
-        for item in six.iterkeys(keypair):
-            ret[keypair['name']][item] = str(keypair[item])
+    for key_pair in items['ssh_keys']:
+        name = key_pair['name']
+        if name in ret:
+            raise SaltCloudSystemExit(
+                'A duplicate key pair name, \'{0}\', was found in DigitalOcean\'s '
+                'key pair list. Please change the key name stored by DigitalOcean. '
+                'Be sure to adjust the value of \'ssh_key_file\' in your cloud '
+                'profile or provider configuration, if necessary.'.format(
+                    name
+                )
+            )
+        ret[name] = {}
+        for item in six.iterkeys(key_pair):
+            ret[name][item] = str(key_pair[item])
 
     return ret
 
