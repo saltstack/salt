@@ -80,19 +80,10 @@ def _yum():
     '''
     contextkey = 'yum_bin'
     if contextkey not in __context__:
-        try:
-            osrelease = int(__grains__['osrelease'])
-        except ValueError:
-            log.warning(
-                'Unexpected osrelease grain \'{0}\', please report this'
-                .format(__grains__['osrelease'])
-            )
-            __context__[contextkey] = 'yum'
+        if 'fedora' in __grains__['os'].lower() and __grains__['osrelease'] >= 22:
+            __context__[contextkey] = 'dnf'
         else:
-            if 'fedora' in __grains__['os'].lower() and osrelease >= 22:
-                __context__[contextkey] = 'dnf'
-            else:
-                __context__[contextkey] = 'yum'
+            __context__[contextkey] = 'yum'
     return __context__[contextkey]
 
 
