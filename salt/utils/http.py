@@ -287,7 +287,7 @@ def query(url,
         if password_mgr:
             handlers.append(urllib_request.HTTPBasicAuthHandler(password_mgr))
 
-        if url.startswith('https') or port == 443:
+        if url.startswith('https'):
             if not HAS_MATCHHOSTNAME:
                 log.warn(('match_hostname() not available, SSL hostname checking '
                          'not available. THIS CONNECTION MAY NOT BE SECURE!'))
@@ -296,8 +296,12 @@ def query(url,
                          'disabled. THIS CONNECTION MAY NOT BE SECURE!'))
             else:
                 hostname = request.get_host()
+                if ':' in hostname:
+                    hostname, port = hostname.split(':')
+                else:
+                    port = 443
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect((hostname, 443))
+                sock.connect((hostname, int(port)))
                 sockwrap = ssl.wrap_socket(
                     sock,
                     ca_certs=ca_bundle,
