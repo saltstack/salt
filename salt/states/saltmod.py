@@ -430,7 +430,7 @@ def wait_for_event(
     '''
     Watch Salt's event bus and block until a condition is met
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         An event tag to watch for; supports Reactor-style globbing.
@@ -531,7 +531,7 @@ def runner(name, **kwargs):
     '''
     Execute a runner module on the master
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         The name of the function to run
@@ -554,7 +554,7 @@ def wheel(name, **kwargs):
     '''
     Execute a wheel module on the master
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         The name of the function to run
