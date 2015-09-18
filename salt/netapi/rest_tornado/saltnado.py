@@ -585,7 +585,13 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         Return CORS headers for preflight requests
         '''
         # Allow X-Auth-Token in requests
-        self.set_header('Access-Control-Allow-Headers', 'X-Auth-Token')
+        request_headers = self.request.headers.get('Access-Control-Request-Headers')
+        allowed_headers = request_headers.split(',')
+
+        # Filter allowed header here if needed.
+
+        # Allow request headers
+        self.set_header('Access-Control-Allow-Headers', ','.join(allowed_headers))
 
         # Allow X-Auth-Token in responses
         self.set_header('Access-Control-Expose-Headers', 'X-Auth-Token')

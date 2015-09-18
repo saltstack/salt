@@ -295,10 +295,15 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         '''
         self._app.mod_opts['cors_origin'] = '*'
 
-        response = self.fetch('/', method='OPTIONS')
+        request_headers = 'X-Auth-Token, accept, content-type'
+        preflight_headers = {'Access-Control-Request-Headers': request_headers,
+                             'Access-Control-Request-Method': 'GET'}
+
+        response = self.fetch('/', method='OPTIONS', headers=preflight_headers)
         headers = response.headers
 
-        self.assertEqual(headers['Access-Control-Allow-Headers'], 'X-Auth-Token')
+        self.assertEqual(response.code, 204)
+        self.assertEqual(headers['Access-Control-Allow-Headers'], request_headers)
         self.assertEqual(headers['Access-Control-Expose-Headers'], 'X-Auth-Token')
         self.assertEqual(headers['Access-Control-Allow-Methods'], 'OPTIONS, GET, POST')
 
