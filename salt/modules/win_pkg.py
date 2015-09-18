@@ -907,7 +907,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             uninstall_flags = '{0} {1}'.format(uninstall_flags,
                                                kwargs.get('extra_uninstall_flags', ""))
 
-        # Build the uninstall command
+        # Build the install command
         cmd = []
         if pkginfo[version_num].get('wusa'):
             cmd.extend(['wusa', '/uninstall'])
