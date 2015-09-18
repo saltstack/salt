@@ -706,12 +706,18 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             }}
         '''
         try:
-            creds = {'username': self.get_arguments('username')[0],
-                     'password': self.get_arguments('password')[0],
-                     'eauth': self.get_arguments('eauth')[0],
+            request_payload = self.deserialize(self.request.body)
+
+            if not isinstance(request_payload, dict):
+                self.send_error(400)
+                return
+
+            creds = {'username': request_payload['username'],
+                     'password': request_payload['password'],
+                     'eauth': request_payload['eauth'],
                      }
         # if any of the args are missing, its a bad request
-        except IndexError:
+        except KeyError:
             self.send_error(400)
             return
 
