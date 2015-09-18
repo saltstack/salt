@@ -830,7 +830,7 @@ def validate_windows_cred(host,
         password,
         host
     )
-    logging_cmd = "winexe -U '{0}%XXX-REDACTED-XXX' //{2} \"hostname\"".format(
+    logging_cmd = "winexe -U '{0}%XXX-REDACTED-XXX' //{1} \"hostname\"".format(
         username,
         host
     )
@@ -989,7 +989,7 @@ def deploy_windows(host,
             password,
             host
         )
-        logging_creds = "-U '{0}%XXX-REDACTED-XXX' //{2}".format(
+        logging_creds = "-U '{0}%XXX-REDACTED-XXX' //{1}".format(
             username,
             host
         )
