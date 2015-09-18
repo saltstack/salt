@@ -248,7 +248,8 @@ def create(vm_):
             'hostname': vm_['name'],
             'domain': vm_['domain'],
         }],
-        'packageId': 50,  # Baremetal Package
+        # Baremetal Package
+        'packageId': 50,
         'prices': [
             # Size Ex: 1921: 2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram
             {'id': vm_['size']},
@@ -348,7 +349,8 @@ def create(vm_):
     )
 
     ssh_connect_timeout = config.get_cloud_config_value(
-        'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
+        # 15 minutes
+        'ssh_connect_timeout', vm_, __opts__, 900
     )
     if not salt.utils.cloud.wait_for_port(ip_address,
                                          timeout=ssh_connect_timeout):
