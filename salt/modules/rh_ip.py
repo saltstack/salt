@@ -51,7 +51,7 @@ _ETHTOOL_CONFIG_OPTS = [
 ]
 _RH_CONFIG_OPTS = [
     'domain', 'peerdns', 'peerntp', 'defroute',
-    'mtu', 'static-routes', 'gateway'
+    'mtu', 'static-routes', 'gateway', 'zone'
 ]
 _RH_CONFIG_BONDING_OPTS = [
     'mode', 'miimon', 'arp_interval',
@@ -624,7 +624,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if iface_type == 'ib':
         result['devtype'] = 'InfiniBand'
 
-    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain', 'gateway']:
+    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain', 'gateway', 'zone']:
         if opt in opts:
             result[opt] = opts[opt]
 
