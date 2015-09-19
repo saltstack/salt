@@ -15,6 +15,7 @@ import sys
 # Import salt libs
 import salt.client
 from salt.utils import parsers, print_cli
+from salt.utils.verify import verify_log
 import salt.output
 
 
@@ -31,6 +32,7 @@ class SaltCPCli(parsers.SaltCPOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         cp_ = SaltCP(self.config)
         cp_.run()

@@ -1,0 +1,8 @@
+===========================
+Salt 2015.8.1 Release Notes
+===========================
+
+Version 2015.8.1 is a bugfix release for :doc:`2015.8.0
+</topics/releases/2015.8.0>`.
+
+Changes:

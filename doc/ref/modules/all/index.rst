@@ -65,6 +65,7 @@ Full list of builtin execution modules
     cpan
     cron
     cyg
+    cytest
     daemontools
     darwin_pkgutil
     darwin_sysctl

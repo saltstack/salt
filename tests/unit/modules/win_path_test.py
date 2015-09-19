@@ -70,7 +70,7 @@ class WinPathTestCase(TestCase):
             Test to Returns the system path
         '''
         mock = MagicMock(return_value={'vdata': 'c:\\salt'})
-        with patch.dict(win_path.__salt__, {'reg.read_key': mock}):
+        with patch.dict(win_path.__salt__, {'reg.read_value': mock}):
             self.assertListEqual(win_path.get_path(), ['c:\\salt'])
 
     def test_exists(self):

@@ -3025,6 +3025,11 @@ def list_nodes_full(location=None, call=None):
             get_location(vm_) for vm_ in six.itervalues(__opts__['profiles'])
             if _vm_provider_driver(vm_)
         )
+        # If there aren't any profiles defined for EC2, check
+        # the provider config file, or use the default location.
+        if not locations:
+            locations = [get_location()]
+
         for loc in locations:
             ret.update(_list_nodes_full(loc))
         return ret
@@ -3919,15 +3924,17 @@ def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
     for d in data:
         for k, v in six.iteritems(d):
             r_data[k] = v
-    snapshot_id = r_data['snapshotId']
 
-    # Waits till volume is available
-    if wait_to_finish:
-        salt.utils.cloud.run_func_until_ret_arg(fun=describe_snapshots,
-                                                kwargs={'snapshot_id': snapshot_id},
-                                                fun_call=call,
-                                                argument_being_watched='status',
-                                                required_argument_response='completed')
+    if 'snapshotId' in r_data:
+        snapshot_id = r_data['snapshotId']
+
+        # Waits till volume is available
+        if wait_to_finish:
+            salt.utils.cloud.run_func_until_ret_arg(fun=describe_snapshots,
+                                                    kwargs={'snapshot_id': snapshot_id},
+                                                    fun_call=call,
+                                                    argument_being_watched='status',
+                                                    required_argument_response='completed')
 
     return r_data
 

@@ -198,7 +198,7 @@ need to be changed to the ownership of the new user.
 .. conf_minion:: sudo_user
 
 ``sudo_user``
---------
+-------------
 
 Default: ``''``
 

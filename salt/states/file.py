@@ -1464,6 +1464,8 @@ def managed(name,
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
                 if show_diff and 'diff' in ret['pchanges']:
                     ret['changes']['diff'] = ret['pchanges']['diff']
+                if not show_diff:
+                    ret['changes']['diff'] = '<show_diff=False>'
             else:
                 ret['result'] = True
                 ret['comment'] = 'The file {0} is in the correct state'.format(name)

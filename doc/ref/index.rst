@@ -33,3 +33,4 @@ Reference
     beacons/all/index
     engines/all/index
     sdb/all/index
+    serializers/all/index

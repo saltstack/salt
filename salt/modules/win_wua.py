@@ -261,46 +261,50 @@ def list_update(name=None,
     """
     Returns details for all updates that match the search criteria
 
-    :param name: str
-    The name of the update you're searching for. This can be the GUID
-    (preferred), a KB number, or the full name of the update. Run list_updates
-    to get the GUID for the update you're looking for.
+    :param str name:
+        The name of the update you're searching for. This can be the GUID
+        (preferred), a KB number, or the full name of the update. Run list_updates
+        to get the GUID for the update you're looking for.
 
-    :param download: bool
+    :param bool download:
         Download the update returned by this function. Run this function first
         to see if the update exists, then set download=True to download the
         update.
 
-    :param install: bool
+    :param bool install:
         Install the update returned by this function. Run this function first
         to see if the update exists, then set install=True to install the
         update. This will override download=True
 
-    :return: dict
-    Returns a dict containing a list of updates that match the name if
-    download and install are both set to False. Should usually be a single
-    update, but can return multiple if a partial name is given. If download or
-    install is set to true it will return the results of
-    win_wua.download_updates::
+    :return:
+        Returns a dict containing a list of updates that match the name if
+        download and install are both set to False. Should usually be a single
+        update, but can return multiple if a partial name is given. If download or
+        install is set to true it will return the results of
+        win_wua.download_updates:
 
-        List of Updates:
-        {'<GUID>': {'Title': <title>,
-                    'KB': <KB>,
-                    'GUID': <the globally unique identifier for the update>
-                    'Description': <description>,
-                    'Downloaded': <has the update been downloaded>,
-                    'Installed': <has the update been installed>,
-                    'Mandatory': <is the update mandatory>,
-                    'UserInput': <is user input required>,
-                    'EULAAccepted': <has the EULA been accepted>,
-                    'Severity': <update severity>,
-                    'NeedsReboot': <is the update installed and awaiting reboot>,
-                    'RebootBehavior': <will the update require a reboot>,
-                    'Categories': [ '<category 1>',
-                                    '<category 2>',
-                                    ...]
-                    }
-        }
+        .. code-block:: cfg
+
+            List of Updates:
+            {'<GUID>': {'Title': <title>,
+                        'KB': <KB>,
+                        'GUID': <the globally unique identifier for the update>
+                        'Description': <description>,
+                        'Downloaded': <has the update been downloaded>,
+                        'Installed': <has the update been installed>,
+                        'Mandatory': <is the update mandatory>,
+                        'UserInput': <is user input required>,
+                        'EULAAccepted': <has the EULA been accepted>,
+                        'Severity': <update severity>,
+                        'NeedsReboot': <is the update installed and awaiting reboot>,
+                        'RebootBehavior': <will the update require a reboot>,
+                        'Categories': [ '<category 1>',
+                                        '<category 2>',
+                                        ...]
+                        }
+            }
+
+    :return type: dict
 
     CLI Examples:
 
@@ -392,31 +396,31 @@ def list_updates(software=True,
     """
     Returns a detailed list of available updates or a summary
 
-    :param software: bool
+    :param bool software:
         Include software updates in the results (default is True)
 
-    :param drivers: bool
+    :param bool drivers:
         Include driver updates in the results (default is False)
 
-    :param summary: bool
+    :param bool summary:
         True: Return a summary of updates available for each category.\
         False (default): Return a detailed list of available updates.
 
-    :param installed: bool
+    :param bool installed:
         Include installed updates in the results (default if False)
 
-    :param download: bool
+    :param bool download:
         (Overrides reporting functionality) Download the list of updates
         returned by this function. Run this function first to see what will be
         installed, then set download=True to download the updates.
 
-    :param install: bool
+    :param bool install:
         (Overrides reporting functionality) Install the list of updates
         returned by this function. Run this function first to see what will be
         installed, then set install=True to install the updates. This will
         override download=True
 
-    :param categories: list
+    :param list categories:
         Specify the categories to list. Must be passed as a list. All
         categories returned by default.
 
@@ -436,7 +440,7 @@ def list_updates(software=True,
         * Windows 8.1 and later drivers
         * Windows Defender
 
-    :param severities: list
+    :param list severities:
         Specify the severities to include. Must be passed as a list. All
         severities returned by default.
 
@@ -446,36 +450,39 @@ def list_updates(software=True,
         * Important
 
     :return:
-        Returns a dict containing either a summary or a list of updates::
+        Returns a dict containing either a summary or a list of updates:
 
-        List of Updates:
-        {'<GUID>': {'Title': <title>,
-                    'KB': <KB>,
-                    'GUID': <the globally uinique identifier for the update>
-                    'Description': <description>,
-                    'Downloaded': <has the update been downloaded>,
-                    'Installed': <has the update been installed>,
-                    'Mandatory': <is the update mandatory>,
-                    'UserInput': <is user input required>,
-                    'EULAAccepted': <has the EULA been accepted>,
-                    'Severity': <update severity>,
-                    'NeedsReboot': <is the update installed and awaiting reboot>,
-                    'RebootBehavior': <will the update require a reboot>,
-                    'Categories': [ '<category 1>',
-                                    '<category 2>',
-                                    ...]
-                    }
-        }
+        .. code-block:: cfg
 
-        Summary of Updates:
-        {'Total': <total number of updates returned>,
-         'Available': <updates that are not downloaded or installed>,
-         'Downloaded': <updates that are downloaded but not installed>,
-         'Installed': <updates installed (usually 0 unless installed=True)>,
-         'Categories': { <category 1>: <total for that category>,
-                         <category 2>: <total for category 2>,
-                         ... }
-        }
+            List of Updates:
+            {'<GUID>': {'Title': <title>,
+                        'KB': <KB>,
+                        'GUID': <the globally uinique identifier for the update>
+                        'Description': <description>,
+                        'Downloaded': <has the update been downloaded>,
+                        'Installed': <has the update been installed>,
+                        'Mandatory': <is the update mandatory>,
+                        'UserInput': <is user input required>,
+                        'EULAAccepted': <has the EULA been accepted>,
+                        'Severity': <update severity>,
+                        'NeedsReboot': <is the update installed and awaiting reboot>,
+                        'RebootBehavior': <will the update require a reboot>,
+                        'Categories': [ '<category 1>',
+                                        '<category 2>',
+                                        ...]
+                        }
+            }
+
+            Summary of Updates:
+            {'Total': <total number of updates returned>,
+             'Available': <updates that are not downloaded or installed>,
+             'Downloaded': <updates that are downloaded but not installed>,
+             'Installed': <updates installed (usually 0 unless installed=True)>,
+             'Categories': { <category 1>: <total for that category>,
+                             <category 2>: <total for category 2>,
+                             ... }
+            }
+    :return type: dict
 
     CLI Examples:
 
@@ -934,26 +941,26 @@ def set_wu_settings(level=None,
     Change Windows Update settings. If no parameters are passed, the current
     value will be returned.
 
-    :param level: int
+    :param int level:
         Number from 1 to 4 indicating the update level:
             1. Never check for updates
             2. Check for updates but let me choose whether to download and install them
             3. Download updates but let me choose whether to install them
             4. Install updates automatically
-    :param recommended: bool
+    :param bool recommended:
         Boolean value that indicates whether to include optional or recommended
         updates when a search for updates and installation of updates is
         performed.
-    :param featured: bool
+    :param bool featured:
         Boolean value that indicates whether to display notifications for
         featured updates.
-    :param elevated: bool
+    :param bool elevated:
         Boolean value that indicates whether non-administrators can perform some
         update-related actions without administrator approval.
-    :param msupdate: bool
+    :param bool msupdate:
         Boolean value that indicates whether to turn on Microsoft Update for
         other Microsoft products
-    :param day: str
+    :param str day:
         Days of the week on which Automatic Updates installs or uninstalls
         updates.
         Accepted values:
@@ -964,7 +971,7 @@ def set_wu_settings(level=None,
         - Thursday
         - Friday
         - Saturday
-    :param time: str
+    :param str time:
         Time at which Automatic Updates installs or uninstalls updates. Must be
         in the ##:## 24hr format, eg. 3:00 PM would be 15:00
 
@@ -1118,39 +1125,39 @@ def get_wu_settings():
     Get current Windows Update settings.
 
     :return:
-    Featured Updates:
-        Boolean value that indicates whether to display notifications for
-        featured updates.
-    Group Policy Required (Read-only):
-        Boolean value that indicates whether Group Policy requires the Automatic
-        Updates service.
-    Microsoft Update:
-        Boolean value that indicates whether to turn on Microsoft Update for
-        other Microsoft Products
-    Needs Reboot:
-        Boolean value that indicates whether the machine is in a reboot pending
-        state.
-    Non Admins Elevated:
-        Boolean value that indicates whether non-administrators can perform some
-        update-related actions without administrator approval.
-    Notification Level:
-        Number 1 to 4 indicating the update level:
-            1. Never check for updates
-            2. Check for updates but let me choose whether to download and install them
-            3. Download updates but let me choose whether to install them
-            4. Install updates automatically
-    Read Only (Read-only):
-        Boolean value that indicates whether the Automatic Update
-        settings are read-only.
-    Recommended Updates:
-        Boolean value that indicates whether to include optional or recommended
-        updates when a search for updates and installation of updates is
-        performed.
-    Scheduled Day:
-        Days of the week on which Automatic Updates installs or uninstalls
-        updates.
-    Scheduled Time:
-        Time at which Automatic Updates installs or uninstalls updates.
+        Featured Updates:
+            Boolean value that indicates whether to display notifications for
+            featured updates.
+        Group Policy Required (Read-only):
+            Boolean value that indicates whether Group Policy requires the Automatic
+            Updates service.
+        Microsoft Update:
+            Boolean value that indicates whether to turn on Microsoft Update for
+            other Microsoft Products
+        Needs Reboot:
+            Boolean value that indicates whether the machine is in a reboot pending
+            state.
+        Non Admins Elevated:
+            Boolean value that indicates whether non-administrators can perform some
+            update-related actions without administrator approval.
+        Notification Level:
+            Number 1 to 4 indicating the update level:
+                1. Never check for updates
+                2. Check for updates but let me choose whether to download and install them
+                3. Download updates but let me choose whether to install them
+                4. Install updates automatically
+        Read Only (Read-only):
+            Boolean value that indicates whether the Automatic Update
+            settings are read-only.
+        Recommended Updates:
+            Boolean value that indicates whether to include optional or recommended
+            updates when a search for updates and installation of updates is
+            performed.
+        Scheduled Day:
+            Days of the week on which Automatic Updates installs or uninstalls
+            updates.
+        Scheduled Time:
+            Time at which Automatic Updates installs or uninstalls updates.
 
     CLI Examples:
 

@@ -108,10 +108,14 @@ class AsyncRemotePillar(object):
                 'cmd': '_pillar'}
         if self.ext:
             load['ext'] = self.ext
-        ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
-            load,
-            dictkey='pillar',
-        )
+        try:
+            ret_pillar = yield self.channel.crypted_transfer_decode_dictentry(
+                load,
+                dictkey='pillar',
+            )
+        except:
+            log.exception('Exception getting pillar:')
+            raise SaltClientError('Exception getting pillar.')
 
         if not isinstance(ret_pillar, dict):
             msg = ('Got a bad pillar from master, type {0}, expecting dict: '

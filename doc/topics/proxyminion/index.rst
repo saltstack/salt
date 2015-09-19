@@ -1,8 +1,8 @@
 .. _proxy-minion:
 
-===============================
-Salt Proxy Minion Documentation
-===============================
+=================
+Salt Proxy Minion
+=================
 
 Proxy minions are a developing Salt feature that enables controlling devices
 that, for whatever reason, cannot run a standard salt-minion.  Examples include
@@ -507,3 +507,8 @@ And then in salt.proxy.rest_sample.py we find
             return False
 
 
+.. toctree::
+    :maxdepth: 2
+    :glob:
+
+    demo

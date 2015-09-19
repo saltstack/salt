@@ -1609,7 +1609,7 @@ class GitBase(object):
                 pass
         to_remove = []
         for item in cachedir_ls:
-            if item in ('hash', 'refs'):
+            if item in ('gitfs', 'refs'):
                 continue
             path = os.path.join(self.cache_root, item)
             if os.path.isdir(path):

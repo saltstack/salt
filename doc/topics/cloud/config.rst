@@ -229,7 +229,7 @@ Amazon AWS
 ----------
 
 A number of configuration options are required for Amazon AWS including ``id``,
-``key``, ``keyname``, ``sercuritygroup``, and ``private_key``:
+``key``, ``keyname``, ``securitygroup``, and ``private_key``:
 
 .. code-block:: yaml
 

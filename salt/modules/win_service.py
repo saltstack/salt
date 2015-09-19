@@ -246,7 +246,6 @@ def restart(name):
 
 def create_win_salt_restart_task():
     '''
-
     Create a task in Windows task scheduler to enable restarting the salt-minion
 
     CLI Example:
@@ -395,7 +394,7 @@ def create(name,
            obj=None,
            password=None,
            **kwargs):
-    '''
+    r'''
     Create the named service.
 
     .. versionadded:: 2015.8.0

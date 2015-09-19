@@ -406,9 +406,9 @@ def _pkg_time_to_iso(pkg_time):
     :param pkg_time:
     :return:
     '''
-    ptime = time.strptime(pkg_time)
+    ptime = time.strptime(pkg_time, '%a %d %b %Y %H:%M:%S %p %Z')
     return datetime.datetime(ptime.tm_year, ptime.tm_mon, ptime.tm_mday,
-                             ptime.tm_hour, ptime.tm_min, ptime.tm_sec).isoformat()
+                             ptime.tm_hour, ptime.tm_min, ptime.tm_sec).isoformat() + "Z"
 
 
 def info(*packages):
@@ -427,7 +427,10 @@ def info(*packages):
     '''
 
     cmd = packages and "rpm -qi {0}".format(' '.join(packages)) or "rpm -qai"
-    call = __salt__['cmd.run_all'](cmd + " --queryformat '-----\n'", output_loglevel='trace')
+
+    # Locale needs to be en_US instead of C, because RPM otherwise will yank the timezone from the timestamps
+    call = __salt__['cmd.run_all'](cmd + " --queryformat '-----\n'",
+                                   output_loglevel='trace', env={'LC_ALL': 'en_US', 'TZ': 'UTC'}, clean_env=True)
     if call['retcode'] != 0:
         comment = ''
         if 'stderr' in call:

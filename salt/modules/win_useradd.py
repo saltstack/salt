@@ -11,7 +11,8 @@ Module for managing Windows Users
         - win32security
         - win32ts
 
-NOTE: This currently only works with local user accounts, not domain accounts
+.. note::
+    This currently only works with local user accounts, not domain accounts
 '''
 from __future__ import absolute_import
 
@@ -69,36 +70,36 @@ def add(name,
     Add a user to the minion.
 
     :param str name:
-    User name
+        User name
 
     :param str password:
-    User's password in plain text.
+        User's password in plain text.
 
     :param str fullname:
-    The user's full name.
+        The user's full name.
 
     :param str description:
-    A brief description of the user account.
+        A brief description of the user account.
 
     :param list groups:
-    A list of groups to add the user to.
+        A list of groups to add the user to.
 
     :param str home:
-    The path to the user's home directory.
+        The path to the user's home directory.
 
     :param str homedrive:
-    The drive letter to assign to the home directory. Must be the Drive Letter
-    followed by a colon. ie: U:
+        The drive letter to assign to the home directory. Must be the Drive Letter
+        followed by a colon. ie: U:
 
     :param str profile:
-    An explicit path to a profile. Can be a UNC or a folder on the system. If
-    left blank, windows uses it's default profile directory.
+        An explicit path to a profile. Can be a UNC or a folder on the system. If
+        left blank, windows uses it's default profile directory.
 
     :param str logonscript:
-    Path to a login script to run when the user logs on.
+        Path to a login script to run when the user logs on.
 
     :return:
-    True if successful. False is unsuccessful.
+        True if successful. False is unsuccessful.
     :rtype: bool
 
     CLI Example:
@@ -154,32 +155,32 @@ def update(name,
     .. versionadded:: 2015.8.0
 
     :param str name:
-    The user name to update.
+        The user name to update.
 
     :param str password:
-    New user password in plain text.
+        New user password in plain text.
 
     :param str fullname:
-    The user's full name.
+        The user's full name.
 
     :param str description:
-    A brief description of the user account.
+        A brief description of the user account.
 
     :param str home:
-    The path to the user's home directory.
+        The path to the user's home directory.
 
     :param str homedrive:
-    The drive letter to assign to the home directory. Must be the Drive Letter
-    followed by a colon. ie: U:
+        The drive letter to assign to the home directory. Must be the Drive Letter
+        followed by a colon. ie: U:
 
     :param str logonscript:
-    The path to the logon script.
+        The path to the logon script.
 
     :param str profile:
-    The path to the user's profile directory.
+        The path to the user's profile directory.
 
     :return:
-    True if successful. False is unsuccessful.
+        True if successful. False is unsuccessful.
     :rtype: bool
 
     CLI Example:
@@ -240,18 +241,18 @@ def delete(name,
     Remove a user from the minion
 
     :param str name:
-    The name of the user to delete
+        The name of the user to delete
 
     :param bool purge:
-    Boolean value indicating that the user profile should also be removed when
-    the user account is deleted. If set to True the profile will be removed.
+        Boolean value indicating that the user profile should also be removed when
+        the user account is deleted. If set to True the profile will be removed.
 
     :param bool force:
-    Boolean value indicating that the user account should be deleted even if the
-    user is logged in. True will log the user out and delete user.
+        Boolean value indicating that the user account should be deleted even if the
+        user is logged in. True will log the user out and delete user.
 
     :return:
-    True if successful
+        True if successful
     :rtype: bool
 
     CLI Example:
@@ -342,10 +343,10 @@ def getUserSid(username):
     Get the Security ID for the user
 
     :param str username:
-    user name for which to look up the SID
+        user name for which to look up the SID
 
     :return:
-    Returns the user SID
+        Returns the user SID
     :rtype: str
 
     CLI Example:
@@ -367,13 +368,13 @@ def setpassword(name, password):
     Set the user's password
 
     :param str name:
-    user name for which to set the password
+        user name for which to set the password
 
     :param str password:
-    the new password
+        the new password
 
     :return:
-    True if successful. False is unsuccessful.
+        True if successful. False is unsuccessful.
     :rtype: bool
 
     CLI Example:
@@ -390,13 +391,13 @@ def addgroup(name, group):
     Add user to a group
 
     :param str name:
-    user name to add to the group
+        user name to add to the group
 
     :param str group:
-    name of the group to which to add the user
+        name of the group to which to add the user
 
     :return:
-    True if successful. False is unsuccessful.
+        True if successful. False is unsuccessful.
     :rtype: bool
 
     CLI Example:
@@ -425,13 +426,13 @@ def removegroup(name, group):
     Remove user from a group
 
     :param str name:
-    user name to remove from the group
+        user name to remove from the group
 
     :param str group:
-    name of the group from which to remove the user
+        name of the group from which to remove the user
 
     :return:
-    True if successful. False is unsuccessful.
+        True if successful. False is unsuccessful.
     :rtype: bool
 
     CLI Example:
@@ -463,16 +464,16 @@ def chhome(name, home, persist=False):
     to the new home directory if the old home directory exist.
 
     :param str name:
-    name of the user whose home directory you wish to change
+        name of the user whose home directory you wish to change
 
     :param str home:
-    new location of the home directory
+        new location of the home directory
 
     :param bool persist:
-    True to move the contents of the existing home directory to the new location
+        True to move the contents of the existing home directory to the new location
 
     :return:
-    True if successful. False is unsuccessful.
+        True if successful. False is unsuccessful.
     :rtype: bool
 
     CLI Example:
@@ -509,10 +510,10 @@ def chprofile(name, profile):
     Change the profile directory of the user
 
     :param str name:
-    name of the user whose profile you wish to change
+        name of the user whose profile you wish to change
 
     :param str profile:
-    new location of the profile
+        new location of the profile
 
     :return:
     True if successful. False is unsuccessful.
@@ -532,13 +533,13 @@ def chfullname(name, fullname):
     Change the full name of the user
 
     :param str name:
-    user name for which to change the full name
+        user name for which to change the full name
 
     :param str fullname:
-    the new value for the full name
+        the new value for the full name
 
     :return:
-    True if successful. False is unsuccessful.
+        True if successful. False is unsuccessful.
     :rtype: bool
 
     CLI Example:
@@ -556,18 +557,18 @@ def chgroups(name, groups, append=True):
     member of only the specified groups
 
     :param str name:
-    user name for which to change groups
+        user name for which to change groups
 
     :param groups:
-    a single group or a list of groups to assign to the user
-    :type: list, str
+        a single group or a list of groups to assign to the user
+    :type groups: list, str
 
     :param bool append:
-    True adds the passed groups to the user's current groups
-    False sets the user's groups to the passed groups only
+        True adds the passed groups to the user's current groups
+        False sets the user's groups to the passed groups only
 
     :return:
-    True if successful. False is unsuccessful.
+        True if successful. False is unsuccessful.
     :rtype: bool
 
     CLI Example:
@@ -609,23 +610,23 @@ def info(name):
     Return user information
 
     :param str name:
-    Username for which to display information
+        Username for which to display information
 
     :returns:
-    A dictionary containing user information
-    - fullname
-    - username
-    - SID
-    - passwd (will always return None)
-    - comment (same as description, left here for backwards compatibility)
-    - description
-    - active
-    - logonscript
-    - profile
-    - home
-    - homedrive
-    - groups
-    - gid
+        A dictionary containing user information
+            - fullname
+            - username
+            - SID
+            - passwd (will always return None)
+            - comment (same as description, left here for backwards compatibility)
+            - description
+            - active
+            - logonscript
+            - profile
+            - home
+            - homedrive
+            - groups
+            - gid
     :rtype: dict
 
     CLI Example:
@@ -687,10 +688,10 @@ def list_groups(name):
     Return a list of groups the named user belongs to
 
     :param str name:
-    user name for which to list groups
+        user name for which to list groups
 
     :return:
-    list of groups to which the user belongs
+        list of groups to which the user belongs
     :rtype: list
 
     CLI Example:
@@ -715,11 +716,11 @@ def getent(refresh=False):
     Return the list of all info for all users
 
     :param bool refresh:
-    Refresh the cached user information. Default is False. Useful when used from
-    within a state function.
+        Refresh the cached user information. Default is False. Useful when used from
+        within a state function.
 
     :return:
-    A dictionary containing information about all users on the system
+        A dictionary containing information about all users on the system
     :rtype: dict
 
     CLI Example:
@@ -755,7 +756,7 @@ def list_users():
     Return a list of users on Windows
 
     :return:
-    list of users on the system
+        list of users on the system
     :rtype: list
 
     CLI Example:
@@ -790,13 +791,13 @@ def rename(name, new_name):
     Change the username for a named user
 
     :param str name:
-    user name to change
+        user name to change
 
     :param str new_name:
-    the new name for the current user
+        the new name for the current user
 
     :return:
-    True if successful. False is unsuccessful.
+        True if successful. False is unsuccessful.
     :rtype: bool
 
     CLI Example:
