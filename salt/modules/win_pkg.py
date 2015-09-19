@@ -702,7 +702,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         # Get settings for msiexec and allusers
         msiexec = pkginfo[version_num].get('msiexec')
         all_users = pkginfo[version_num].get('allusers')
-        
+
         # all_users defaults to True
         if all_users is None:
             all_users = True
@@ -725,7 +725,6 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         cmd.extend(shlex.split(install_flags))
         if msiexec and all_users:
             cmd.append('ALLUSERS="1"')
-
 
         # Install the software
         result = __salt__['cmd.run_stdout'](cmd, cache_path, output_loglevel='trace', python_shell=False)
@@ -910,7 +909,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             uninstall_flags = '{0} {1}'.format(uninstall_flags,
                                                kwargs.get('extra_uninstall_flags', ""))
 
-        # Build the uninstall command
+        # Build the install command
         cmd = []
         if pkginfo[version_num].get('wusa'):
             cmd = []
