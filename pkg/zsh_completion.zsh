@@ -1,4 +1,4 @@
-#compdef salt salt-call salt-cp
+#compdef salt salt-call salt-cp salt-run
 # The use-cache style is checked in a few places to allow caching minions, modules,
 # or the directory salt is installed in.
 # you can cache those three with:
@@ -24,6 +24,21 @@ _modules(){
     fi
 
     _wanted modules expl modules _multi_parts "$@" . _funcs
+}
+
+_runners(){
+    local _runs expl curcontext=${curcontext%:*}:runners
+
+    if ! zstyle -T ":completion:$curcontext:" cache-policy; then
+        zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
+    fi
+
+    if _cache_invalid salt/runners || ! _retrieve_cache salt/runners; then
+        _runs=( ${(M)${(Q)${(f)"$(command salt-run -d 2>/dev/null)"}}##[[:alnum:]._]##} )
+        _store_cache salt/runners _runs
+    fi
+
+    _wanted modules expl runners _multi_parts "$@" . _runs
 }
 
 _minions(){
@@ -105,6 +120,11 @@ _minion_options=(
     '--refresh-grains-cache[Force a refresh of the grains cache]'
 )
 
+_runner_options=(
+    '--hard-crash[raise any original exception rather than exiting gracefully]'
+    '(-d --doc --documentation)'{-d,--doc,--documentation}'[Return the documentation for the specified module]'
+)
+
 _logging_options=(
     '(-l --log-level)'{-l,--log-level}'[Console logging log level.(default: warning)]:Log Level:(all garbage trace debug info warning error critical quiet)'
     '--log-file[Log file path. Default: /var/log/salt/master.]:Log File:_files'
@@ -147,6 +167,13 @@ _salt_comp(){
                 "$_logging_options[@]" \
                 ':Source File:_files' \
                 ':Destination File:_files'
+            ;;
+        salt-run)
+            _arguments -C \
+                ":runners:_runners" \
+                "$_runner_options[@]" \
+                "$_common_opts[@]" \
+                "$_logging_options[@]"
             ;;
     esac
 }
