@@ -2965,7 +2965,7 @@ def statvfs(path):
             'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
             'f_frsize', 'f_namemax'))
     except (OSError, IOError):
-        raise CommandExecutionError('Could not create {0!r}'.format(link))
+        raise CommandExecutionError('Could not statvfs {0!r}'.format(path))
     return False
 
 
