@@ -511,10 +511,10 @@ def refresh_db():
 def install(name=None,
             refresh=False,
             fromrepo=None,
-            skip_verify=False,
             pkgs=None,
             sources=None,
             downloadonly=None,
+            skip_verify=False,
             **kwargs):
     '''
     Install the passed package(s), add refresh=True to run 'zypper refresh'
