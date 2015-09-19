@@ -716,10 +716,8 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         # Build the install command
         cmd = []
         if wusa:
-            cmd = []
             cmd.extend(['wusa'])
         if msiexec:
-            cmd = []
             cmd.extend(['msiexec', '/i'])
         cmd.append(cached_pkg)
         cmd.extend(shlex.split(install_flags))
@@ -912,10 +910,8 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
         # Build the install command
         cmd = []
         if pkginfo[version_num].get('wusa'):
-            cmd = []
             cmd.extend(['wusa', '/uninstall'])
         if pkginfo[version_num].get('msiexec'):
-            cmd = []
             cmd.extend(['msiexec', '/x'])
         cmd.append(expanded_cached_pkg)
         cmd.extend(shlex.split(uninstall_flags))
