@@ -716,15 +716,15 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         # Build the install command
         cmd = []
         if wusa:
+            cmd = []
             cmd.extend(['wusa'])
         if msiexec:
+            cmd = []
             cmd.extend(['msiexec', '/i'])
         cmd.append(cached_pkg)
         cmd.extend(shlex.split(install_flags))
         if msiexec and all_users:
             cmd.append('ALLUSERS="1"')
-        cmd.append(cached_pkg)
-        cmd.extend(shlex.split(install_flags))
 
 
         # Install the software
@@ -913,8 +913,10 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
         # Build the uninstall command
         cmd = []
         if pkginfo[version_num].get('wusa'):
+            cmd = []
             cmd.extend(['wusa', '/uninstall'])
         if pkginfo[version_num].get('msiexec'):
+            cmd = []
             cmd.extend(['msiexec', '/x'])
         cmd.append(expanded_cached_pkg)
         cmd.extend(shlex.split(uninstall_flags))
