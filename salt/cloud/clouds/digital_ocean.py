@@ -137,7 +137,7 @@ def avail_images(call=None):
         for image in items['images']:
             ret[image['name']] = {}
             for item in six.iterkeys(image):
-                ret[image['id']][item] = image[item]
+                ret[image['name']][item] = image[item]
 
         page += 1
         try:
