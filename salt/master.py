@@ -1779,7 +1779,7 @@ class ClearFuncs(object):
             # If there are groups in the token, check if any of them are listed in the eauth config
             group_auth_match = False
             try:
-                if token.get('groups') in [False, None]:
+                if token.get('groups'):
                     for group in token['groups']:
                         if group in eauth_groups:
                             group_auth_match = True
