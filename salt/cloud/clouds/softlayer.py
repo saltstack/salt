@@ -268,6 +268,7 @@ def create(vm_):
 
     if vm_.get('use_fqdn'):
         name = '.'.join([name, domain])
+        vm_['name'] = name
 
     salt.utils.cloud.fire_event(
         'event',

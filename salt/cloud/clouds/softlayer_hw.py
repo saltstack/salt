@@ -228,6 +228,7 @@ def create(vm_):
         vm_['driver'] = vm_.pop('provider')
 
     name = vm_['name']
+    hostname = name
     domain = config.get_cloud_config_value(
         'domain', vm_, __opts__, default=None
     )
@@ -235,6 +236,10 @@ def create(vm_):
         SaltCloudSystemExit(
             'A domain name is required for the SoftLayer driver.'
         )
+
+    if vm_.get('use_fqdn'):
+        name = '.'.join([name, domain])
+        vm_['name'] = name
 
     salt.utils.cloud.fire_event(
         'event',
@@ -254,7 +259,7 @@ def create(vm_):
         'complexType': 'SoftLayer_Container_Product_Order_Hardware_Server',
         'quantity': 1,
         'hardware': [{
-            'hostname': name,
+            'hostname': hostname,
             'domain': domain,
         }],
         # Baremetal Package
@@ -346,8 +351,8 @@ def create(vm_):
         Wait for the IP address to become available
         '''
         nodes = list_nodes_full()
-        if 'primaryIpAddress' in nodes[name]:
-            return nodes[name]['primaryIpAddress']
+        if 'primaryIpAddress' in nodes[hostname]:
+            return nodes[hostname]['primaryIpAddress']
         time.sleep(1)
         return False
 
