@@ -54,6 +54,7 @@ The below code deletes a key pair:
 # Import Python Libs
 from __future__ import absolute_import
 import logging
+from time import time, sleep
 
 # Import salt libs
 import salt.utils.dictupdate as dictupdate
@@ -411,4 +412,38 @@ def eni_absent(
             return ret
         ret['comment'] = 'Deleted ENI {0}'.format(name)
         ret['changes']['id'] = None
+    return ret
+
+
+def snapshot_created(name, ami_name, instance_name, wait_until_available=True, wait_timeout_seconds=300, **kwargs):
+    '''
+    Create a snapshot from the given instance
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    if not __salt__['boto_ec2.create_image'](ami_name=ami_name, instance_name=instance_name, **kwargs):
+        ret['comment'] = 'Failed to create new AMI {}'.format(ami_name)
+        ret['result'] = False
+        return ret
+
+    ret['comment'] = 'Created new AMI {}'.format(ami_name)
+    ret['changes']['new'] = { ami_name: ami_name }
+    if not wait_until_available:
+        return ret
+
+    starttime = time()
+    while True:
+        image, = __salt__['boto_ec2.find_images'](ami_name=ami_name, return_objs=True)
+        if image.state == 'available':
+            break
+        if time() - starttime > wait_timeout_seconds:
+            ret['comment'] = 'AMI still in state {} after timeout'.format(image.state)
+            ret['result'] = False
+            return ret
+        sleep(5)
+
     return ret
