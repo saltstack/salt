@@ -1533,11 +1533,10 @@ class Minion(MinionBase):
             self.socket.setsockopt(zmq.SUBSCRIBE, self.hexid)
         else:
             #self.socket.setsockopt(zmq.SUBSCRIBE, '')
-            #Make sure there are no enabled zmq_filteing minion can also be normal receive commands
+            #Make sure there are no enabled zmq_filtering minion can also be normal receive commands
             self.socket.setsockopt(zmq.SUBSCRIBE, 'hope')
             self.socket.setsockopt(zmq.SUBSCRIBE, 'broadcast')
-
-
+            
         self.socket.setsockopt(zmq.IDENTITY, self.opts['id'])
         self._set_ipv4only()
         self._set_reconnect_ivl_max()
