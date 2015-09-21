@@ -198,6 +198,19 @@ max_net_speed
 Specifies the connection speed for the instance's network components. This
 setting is optional. By default, this is set to 10.
 
+post_uri
+--------
+Specifies the uri location of the script to be downloaded and run after the instance
+is provisioned.
+
+.. versionadded:: 2015.8.1
+
+Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      post_uri: 'https://SOMESERVERIP:8000/myscript.sh'
+
 public_vlan
 -----------
 If it is necessary for an instance to be created within a specific frontend
