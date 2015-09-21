@@ -135,7 +135,7 @@ def avail_images(call=None):
         items = query(method='images', command='?page=' + str(page) + '&per_page=200')
 
         for image in items['images']:
-            ret[image['id']] = {}
+            ret[image['name']] = {}
             for item in six.iterkeys(image):
                 ret[image['id']][item] = image[item]
 
