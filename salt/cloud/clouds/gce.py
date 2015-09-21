@@ -2011,15 +2011,10 @@ def destroy(vm_name, call=None):
     return inst_deleted
 
 
-def create(vm_=None, call=None):
+def request_instance(vm_):
     '''
-    Create a single GCE instance from a data dict.
+    Request a single GCE instance from a data dict.
     '''
-    if call:
-        raise SaltCloudSystemExit(
-            'You cannot create an instance with -a or -f.'
-        )
-
     if not GCE_VM_NAME_REGEX.match(vm_['name']):
         raise SaltCloudSystemExit(
             'VM names must start with a letter, only contain letters, numbers, or dashes '
@@ -2118,6 +2113,20 @@ def create(vm_=None, call=None):
     except TypeError:
         # node_data is a libcloud Node which is unsubscriptable
         node_dict = show_instance(node_data.name, 'action')
+
+    return node_dict, node_data
+
+
+def create(vm_=None, call=None):
+    '''
+    Create a single GCE instance from a data dict.
+    '''
+    if call:
+        raise SaltCloudSystemExit(
+            'You cannot create an instance with -a or -f.'
+        )
+
+    node_dict, node_data = request_instance(vm_)
 
     ssh_user, ssh_key = __get_ssh_credentials(vm_)
     vm_['ssh_host'] = __get_host(node_data, vm_)
