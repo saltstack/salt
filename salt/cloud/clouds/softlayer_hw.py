@@ -227,26 +227,35 @@ def create(vm_):
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
 
+    name = vm_['name']
+    domain = config.get_cloud_config_value(
+        'domain', vm_, __opts__, default=None
+    )
+    if domain is None:
+        SaltCloudSystemExit(
+            'A domain name is required for the SoftLayer driver.'
+        )
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
-        'salt/cloud/{0}/creating'.format(vm_['name']),
+        'salt/cloud/{0}/creating'.format(name),
         {
-            'name': vm_['name'],
+            'name': name,
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM {0}'.format(name))
     conn = get_conn(service='SoftLayer_Product_Order')
     kwargs = {
         'complexType': 'SoftLayer_Container_Product_Order_Hardware_Server',
         'quantity': 1,
         'hardware': [{
-            'hostname': vm_['name'],
-            'domain': vm_['domain'],
+            'hostname': name,
+            'domain': domain,
         }],
         # Baremetal Package
         'packageId': 50,
@@ -311,7 +320,7 @@ def create(vm_):
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
-        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        'salt/cloud/{0}/requesting'.format(name),
         {'kwargs': kwargs},
         transport=__opts__['transport']
     )
@@ -325,7 +334,7 @@ def create(vm_):
             'Error creating {0} on SoftLayer\n\n'
             'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], str(exc)
+                name, str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
@@ -337,8 +346,8 @@ def create(vm_):
         Wait for the IP address to become available
         '''
         nodes = list_nodes_full()
-        if 'primaryIpAddress' in nodes[vm_['name']]:
-            return nodes[vm_['name']]['primaryIpAddress']
+        if 'primaryIpAddress' in nodes[name]:
+            return nodes[name]['primaryIpAddress']
         time.sleep(1)
         return False
 
@@ -402,9 +411,9 @@ def create(vm_):
     salt.utils.cloud.fire_event(
         'event',
         'created instance',
-        'salt/cloud/{0}/created'.format(vm_['name']),
+        'salt/cloud/{0}/created'.format(name),
         {
-            'name': vm_['name'],
+            'name': name,
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },

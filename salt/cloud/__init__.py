@@ -1199,6 +1199,10 @@ class Cloud(object):
 
         key_id = minion_dict.get('id', vm_['name'])
 
+        domain = vm_.get('domain')
+        if vm_.get('use_fqdn') and domain:
+            minion_dict['append_domain'] = domain
+
         if 'append_domain' in minion_dict:
             key_id = '.'.join([key_id, minion_dict['append_domain']])
 

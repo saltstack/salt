@@ -185,6 +185,19 @@ The domain name that will be used in the FQDN (Fully Qualified Domain Name) for
 this instance. The `domain` setting will be used in conjunction with the
 instance name to form the FQDN.
 
+use_fqdn
+--------
+If set to True, the Minion will be identified by the FQDN (Fully Qualified Domain
+Name) which is a result of combining the ``domain`` configuration value and the
+Minion name specified either via the CLI or a map file rather than only using the
+short host name, or Minion ID. Default is False.
+
+.. versionadded:: Boron
+
+For example, if the value of ``domain`` is ``example.com`` and a new VM was created
+via the CLI with ``salt-cloud -p base_softlayer_ubuntu my-vm``, the resulting
+Minion ID would be ``my-vm.example.com``.
+
 location
 --------
 Images to build an instance can be found using the `--list-locations` option:
