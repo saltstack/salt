@@ -23,6 +23,9 @@ from __future__ import absolute_import
 # Import python libs
 import os
 
+# Import salt libs
+import salt.utils
+
 
 def present(
         name,
@@ -32,7 +35,8 @@ def present(
         port=None,
         enc=None,
         config=None,
-        hash_hostname=True):
+        hash_hostname=True,
+        hash_known_hosts=True):
     '''
     Verifies that the specified host is known by the specified user
 
@@ -70,7 +74,14 @@ def present(
         absolute path when a user is not specified.
 
     hash_hostname : True
-        Hash all hostnames and addresses in the output.
+        Hash all hostnames and addresses in the known hosts file.
+
+        .. deprecated:: Carbon
+
+            Please use hash_known_hosts instead.
+
+    hash_known_hosts : True
+        Hash all hostnames and addresses in the known hosts file.
     '''
     ret = {'name': name,
            'changes': {},
@@ -86,6 +97,14 @@ def present(
         comment = 'If not specifying a "user", specify an absolute "config".'
         ret['result'] = False
         return dict(ret, comment=comment)
+
+    if not hash_hostname:
+        salt.utils.warn_until(
+            'Carbon',
+            'The hash_hostname parameter is misleading as ssh-keygen can only '
+            'hash the whole known hosts file, not entries for individual'
+            'hosts. Please use hash_known_hosts=False instead.')
+        hash_known_hosts = hash_hostname
 
     if __opts__['test']:
         if key and fingerprint:
@@ -121,7 +140,7 @@ def present(
                 port=port,
                 enc=enc,
                 config=config,
-                hash_hostname=hash_hostname)
+                hash_known_hosts=hash_known_hosts)
     if result['status'] == 'exists':
         return dict(ret,
                     comment='{0} already exists in {1}'.format(name, config))
