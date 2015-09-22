@@ -37,7 +37,7 @@ Mine Functions Aliases
 Function aliases can be used to provide usage intentions or to allow multiple
 calls of the same function with different arguments.
 
-.. versionadded:: 2014.7
+.. versionadded:: 2014.7.0
 
 .. code-block:: yaml
 
