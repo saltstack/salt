@@ -57,6 +57,7 @@ import salt.ext.six as six
 try:
     import pymongo
     version = pymongo.version
+    version = '.'.join(version.split('.')[:2])
     HAS_PYMONGO = True
 except ImportError:
     HAS_PYMONGO = False
