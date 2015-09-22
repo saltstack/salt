@@ -1302,7 +1302,9 @@ def replace(path,
     repl
         The replacement text
     count
-        Maximum number of pattern occurrences to be replaced
+        Maximum number of pattern occurrences to be replaced.  Defaults to 0.
+        If count is a positive integer n, only n occurrences will be replaced,
+        otherwise all occurrences will be replaced.
     flags (list or int)
         A list of flags defined in the :ref:`re module documentation
         <contents-of-module-re>`. Each list item should be a string that will
