@@ -223,11 +223,15 @@ def high(data, test=False, queue=False, **kwargs):
         opts['test'] = __opts__.get('test', None)
 
     pillar = kwargs.get('pillar')
-    if pillar is not None and not isinstance(pillar, dict):
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar is not None \
+            and not isinstance(pillar, dict):
         raise SaltInvocationError(
-            'Pillar data must be formatted as a dictionary'
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
         )
-    st_ = salt.state.State(__opts__, pillar)
+    st_ = salt.state.State(__opts__, pillar, pillar_enc=pillar_enc)
     ret = st_.call_high(data)
     _set_retcode(ret)
     return ret
@@ -462,16 +466,29 @@ def highstate(test=None,
 
         Sets the ``test`` variable in the minion ``opts`` for the duration of
         the state run.
+
     pillar
-        Custom Pillar data can be passed with the ``pillar`` kwarg. Values
-        passed here will override hard-coded Pillar values.
-    queue : ``False``
+        Additional pillar data to use for this function. Any pillar keys
+        specified here will overwrite matching keys in the Pillar data.
+
+        .. versionchanged:: Boron
+            GPG-encrypted CLI Pillar data is now supported via the GPG
+            renderer. See :ref:`here <encrypted-cli-pillar-data>` for details.
+
+    pillar_enc
+        Specify which renderer to use to decrypt encrypted data located within
+        the ``pillar`` value. Currently, only ``gpg`` is supported.
+
+        .. versionadded:: Boron
+
+    queue : False
         Instead of failing immediately when another state run is in progress,
         queue the new state run to begin running once the other has finished.
 
         This option starts a new thread for each queued state run so use this
         option sparingly.
-    localconfig:
+
+    localconfig
         Instead of using running minion opts, load ``localconfig`` and merge that
         with the running minion opts. This functionality is intended for using
         "roots" of salt directories (with their own minion config, pillars,
@@ -524,15 +541,22 @@ def highstate(test=None,
         opts['environment'] = kwargs['saltenv']
 
     pillar = kwargs.get('pillar')
-    if pillar is not None and not isinstance(pillar, dict):
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar is not None \
+            and not isinstance(pillar, dict):
         raise SaltInvocationError(
-            'Pillar data must be formatted as a dictionary'
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
         )
 
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
 
-    st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
+    st_ = salt.state.HighState(opts,
+                               pillar,
+                               kwargs.get('__pub_jid'),
+                               pillar_enc=pillar_enc)
     st_.push_active()
     try:
         ret = st_.call_highstate(
@@ -575,15 +599,28 @@ def sls(mods,
 
         Sets the ``test`` variable in the minion ``opts`` for the duration of
         the state run.
+
     pillar
-        Custom Pillar data can be passed with the ``pillar`` kwarg. Values
-        passed here will override hard-coded Pillar values.
+        Additional pillar data to use for this function. Any pillar keys
+        specified here will overwrite matching keys in the Pillar data.
+
+        .. versionchanged:: Boron
+            GPG-encrypted CLI Pillar data is now supported via the GPG
+            renderer. See :ref:`here <encrypted-cli-pillar-data>` for details.
+
+    pillar_enc
+        Specify which renderer to use to decrypt encrypted data located within
+        the ``pillar`` value. Currently, only ``gpg`` is supported.
+
+        .. versionadded:: Boron
+
     queue : ``False``
         Instead of failing immediately when another state run is in progress,
         queue the new state run to begin running once the other has finished.
 
         This option starts a new thread for each queued state run so use this
         option sparingly.
+
     saltenv : None
         Specify a ``file_roots`` environment.
 
@@ -593,13 +630,16 @@ def sls(mods,
             Defaults to None. If no saltenv is specified, the minion config will
             be checked for a saltenv and if found, it will be used. If none is found,
             base will be used.
+
     pillarenv : None
         Specify a ``pillar_roots`` environment. By default all pillar environments
         merged together will be used.
+
     concurrent:
         WARNING: This flag is potentially dangerous. It is designed
         for use when multiple state runs can safely be run at the same
         Do not use this flag for performance optimization.
+
     localconfig:
         Instead of using running minion opts, load ``localconfig`` and merge that
         with the running minion opts. This functionality is intended for using
@@ -673,9 +713,13 @@ def sls(mods,
         opts['test'] = __opts__.get('test', None)
 
     pillar = kwargs.get('pillar')
-    if pillar is not None and not isinstance(pillar, dict):
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar is not None \
+            and not isinstance(pillar, dict):
         raise SaltInvocationError(
-            'Pillar data must be formatted as a dictionary'
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
         )
 
     serial = salt.payload.Serial(__opts__)
@@ -684,7 +728,10 @@ def sls(mods,
             '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
             )
 
-    st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
+    st_ = salt.state.HighState(opts,
+                               pillar,
+                               kwargs.get('__pub_jid'),
+                               pillar_enc=pillar_enc)
 
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
@@ -777,12 +824,16 @@ def top(topfn,
         opts['test'] = __opts__.get('test', None)
 
     pillar = kwargs.get('pillar')
-    if pillar is not None and not isinstance(pillar, dict):
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar is not None \
+            and not isinstance(pillar, dict):
         raise SaltInvocationError(
-            'Pillar data must be formatted as a dictionary'
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
         )
 
-    st_ = salt.state.HighState(opts, pillar)
+    st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc)
     st_.push_active()
     st_.opts['state_top'] = salt.utils.url.create(topfn)
     if saltenv:
@@ -818,12 +869,16 @@ def show_highstate(queue=False, **kwargs):
     if conflict is not None:
         return conflict
     pillar = kwargs.get('pillar')
-    if pillar is not None and not isinstance(pillar, dict):
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar is not None \
+            and not isinstance(pillar, dict):
         raise SaltInvocationError(
-            'Pillar data must be formatted as a dictionary'
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
         )
 
-    st_ = salt.state.HighState(__opts__, pillar)
+    st_ = salt.state.HighState(__opts__, pillar, pillar_enc=pillar_enc)
     st_.push_active()
     try:
         ret = st_.compile_highstate()
@@ -1006,15 +1061,19 @@ def show_sls(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
         opts['test'] = __opts__.get('test', None)
 
     pillar = kwargs.get('pillar')
-    if pillar is not None and not isinstance(pillar, dict):
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar is not None \
+            and not isinstance(pillar, dict):
         raise SaltInvocationError(
-            'Pillar data must be formatted as a dictionary'
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
         )
 
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
 
-    st_ = salt.state.HighState(opts, pillar)
+    st_ = salt.state.HighState(opts, pillar, pillar_enc=pillar_enc)
     if isinstance(mods, six.string_types):
         mods = mods.split(',')
     st_.push_active()
@@ -1102,12 +1161,16 @@ def single(fun, name, test=None, queue=False, **kwargs):
         opts['test'] = __opts__.get('test', None)
 
     pillar = kwargs.get('pillar')
-    if pillar is not None and not isinstance(pillar, dict):
+    pillar_enc = kwargs.get('pillar_enc')
+    if pillar_enc is None \
+            and pillar is not None \
+            and not isinstance(pillar, dict):
         raise SaltInvocationError(
-            'Pillar data must be formatted as a dictionary'
+            'Pillar data must be formatted as a dictionary, unless pillar_enc '
+            'is specified.'
         )
 
-    st_ = salt.state.State(opts, pillar)
+    st_ = salt.state.State(opts, pillar, pillar_enc=pillar_enc)
     err = st_.verify_data(kwargs)
     if err:
         __context__['retcode'] = 1
