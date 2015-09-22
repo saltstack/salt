@@ -2449,7 +2449,9 @@ def replace(name,
         The replacement text.
 
     count
-        Maximum number of pattern occurrences to be replaced.
+        Maximum number of pattern occurrences to be replaced.  Defaults to 0.
+        If count is a positive integer n, no more than n occurrences will be
+        replaced, otherwise all occurrences will be replaced.
 
     flags
         A list of flags defined in the :ref:`re module documentation <contents-of-module-re>`.
