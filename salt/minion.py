@@ -16,7 +16,7 @@ import logging
 import threading
 import traceback
 import multiprocessing
-from random import shuffle
+from random import randint, shuffle
 from salt.config import DEFAULT_MINION_OPTS
 from stat import S_IMODE
 
