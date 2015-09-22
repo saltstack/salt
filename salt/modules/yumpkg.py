@@ -452,7 +452,7 @@ def latest_version(*names, **kwargs):
 
     # Refresh before looking for the latest version available
     if refresh:
-        refresh_db(_get_branch_option(**kwargs), repo_arg, exclude_arg)
+        refresh_db(**kwargs)
 
     # Get updates for specified package(s)
     updates = _repoquery_pkginfo(
@@ -684,7 +684,7 @@ def list_upgrades(refresh=True, **kwargs):
     exclude_arg = _get_excludes_option(**kwargs)
 
     if salt.utils.is_true(refresh):
-        refresh_db(_get_branch_option(**kwargs), repo_arg, exclude_arg)
+        refresh_db(**kwargs)
     updates = _repoquery_pkginfo(
         '{0} {1} --all --pkgnarrow=updates'.format(repo_arg, exclude_arg)
     )
@@ -760,7 +760,7 @@ def check_db(*names, **kwargs):
     return ret
 
 
-def refresh_db(branch_arg=None, repo_arg=None, exclude_arg=None, branch=None, repo=None, exclude=None):
+def refresh_db(**kwargs):
     '''
     Check the yum repos for updated packages
 
@@ -770,60 +770,58 @@ def refresh_db(branch_arg=None, repo_arg=None, exclude_arg=None, branch=None, re
     - ``False``: An error occurred
     - ``None``: No updates are available
 
+    repo
+        Refresh just the specified repo
+
+    disablerepo
+        Do not refresh the specified repo
+
+    enablerepo
+        Refesh a disabled repo using this option
+
+    branch
+        Add the specified branch when refreshing
+
+    disableexcludes
+        Disable the excludes defined in your config files. Takes one of three
+        options:
+        - ``all`` - disable all excludes
+        - ``main`` - disable excludes defined in [main] in yum.conf
+        - ``repoid`` - disable excludes defined for that repo
+
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pkg.refresh_db
     '''
-    def warn(old, new):
-        '''
-        warn about old arguments
-        '''
-        salt.utils.warn_until(
-            'Carbon',
-            '"{0}" is being deprecated in favor of "{1}"'.format(old, new)
-        )
-
-    if branch_arg:
-        warn(branch_arg, branch)
-        branch = branch_arg
-
-    if repo_arg:
-        warn(repo_arg, repo)
-        repo = repo_arg
-
-    if exclude_arg:
-        warn(exclude_arg, exclude)
-        exclude = exclude_arg
-
     retcodes = {
         100: True,
         0: None,
         1: False,
     }
 
-    clean_cmd = ['yum', '-q', 'clean', 'expire-cache']
-    update_cmd = ['yum', '-q', 'check-update']
+    repo_arg = _get_repo_options(**kwargs)
+    exclude_arg = _get_excludes_option(**kwargs)
+    branch_arg = _get_branch_option(**kwargs)
 
-    if repo:
-        clean_cmd.append(repo)
-        update_cmd.append(repo)
+    clean_cmd = 'yum -q clean expire-cache {repo} {exclude} {branch}'.format(
+        repo=repo_arg,
+        exclude=exclude_arg,
+        branch=branch_arg
+    )
+    update_cmd = 'yum -q check-update {repo} {exclude} {branch}'.format(
+        repo=repo_arg,
+        exclude=exclude_arg,
+        branch=branch_arg
+    )
 
-    if exclude:
-        clean_cmd.append(exclude)
-        update_cmd.append(exclude)
-
-    if branch:
-        clean_cmd.append(branch)
-        update_cmd.append(branch)
-
-    __salt__['cmd.run'](clean_cmd, python_shell=False)
-    ret = __salt__['cmd.retcode'](update_cmd,
-                                  python_shell=False,
-                                  ignore_retcode=True)
-
-    return retcodes.get(ret, False)
+    __salt__['cmd.run'](clean_cmd)
+    return retcodes.get(
+        __salt__['cmd.retcode'](update_cmd, ignore_retcode=True),
+        False
+    )
 
 
 def clean_metadata(**kwargs):
@@ -839,7 +837,7 @@ def clean_metadata(**kwargs):
 
         salt '*' pkg.clean_metadata
     '''
-    return refresh_db(_get_branch_option(**kwargs), _get_repo_options(**kwargs), _get_excludes_option(**kwargs))
+    return refresh_db(**kwargs)
 
 
 def group_install(name,
@@ -940,7 +938,6 @@ def group_install(name,
 
 def install(name=None,
             refresh=False,
-            fromrepo=None,
             skip_verify=False,
             pkgs=None,
             sources=None,
@@ -1059,12 +1056,12 @@ def install(name=None,
         {'<package>': {'old': '<old-version>',
                        'new': '<new-version>'}}
     '''
-    branch_arg = _get_branch_option(**kwargs)
-    repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
+    repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
+    branch_arg = _get_branch_option(**kwargs)
 
     if salt.utils.is_true(refresh):
-        refresh_db(branch_arg, repo_arg, exclude_arg)
+        refresh_db(**kwargs)
     reinstall = salt.utils.is_true(reinstall)
 
     try:
@@ -1185,7 +1182,7 @@ def install(name=None,
     return ret
 
 
-def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
+def upgrade(refresh=True, skip_verify=False, **kwargs):
     '''
     Run a full system upgrade, a yum upgrade
 
@@ -1222,12 +1219,12 @@ def upgrade(refresh=True, fromrepo=None, skip_verify=False, **kwargs):
 
         .. versionadded:: 2014.7.0
     '''
-    repo_arg = _get_repo_options(fromrepo=fromrepo, **kwargs)
+    repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
     branch_arg = _get_branch_option(**kwargs)
 
     if salt.utils.is_true(refresh):
-        refresh_db(branch_arg, repo_arg, exclude_arg)
+        refresh_db(**kwargs)
 
     old = list_pkgs()
     cmd = 'yum -q -y {repo} {exclude} {branch} {gpgcheck} upgrade'.format(
