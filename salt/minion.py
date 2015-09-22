@@ -16,7 +16,8 @@ import logging
 import threading
 import traceback
 import multiprocessing
-from random import shuffle
+from random import randint, shuffle
+from salt.config import DEFAULT_MINION_OPTS
 from stat import S_IMODE
 
 # Import Salt Libs
@@ -791,6 +792,30 @@ class Minion(MinionBase):
 
         self.grains_cache = self.opts['grains']
 
+    def _return_retry_timer(self):
+        '''
+        Based on the minion configuration, either return a randomized timer or
+        just return the value of the return_retry_timer.
+        '''
+        msg = 'Minion return retry timer set to {0} seconds'
+        if self.opts['return_retry_random']:
+            try:
+                random_retry = randint(1, self.opts['return_retry_timer'])
+            except ValueError:
+                # Catch wiseguys using negative integers here
+                log.error(
+                    'Invalid value ({0}) for return_retry_timer, must be a '
+                    'positive integer'.format(self.opts['return_retry_timer'])
+                )
+                log.debug(msg.format(DEFAULT_MINION_OPTS['return_retry_timer']))
+                return DEFAULT_MINION_OPTS['return_retry_timer']
+            else:
+                log.debug(msg.format(random_retry) + ' (randomized)')
+                return random_retry
+        else:
+            log.debug(msg.format(self.opts['return_retry_timer']))
+            return self.opts['return_retry_timer']
+
     def _prep_mod_opts(self):
         '''
         Returns a copy of the opts with key bits stripped out
@@ -1083,7 +1108,10 @@ class Minion(MinionBase):
                 ret['metadata'] = data['metadata']
             else:
                 log.warning('The metadata parameter must be a dictionary.  Ignoring.')
-        minion_instance._return_pub(ret)
+        minion_instance._return_pub(
+            ret,
+            timeout=minion_instance._return_retry_timer()
+        )
         if data['ret']:
             if 'ret_config' in data:
                 ret['ret_config'] = data['ret_config']
@@ -1140,7 +1168,10 @@ class Minion(MinionBase):
             ret['fun_args'] = data['arg']
         if 'metadata' in data:
             ret['metadata'] = data['metadata']
-        minion_instance._return_pub(ret)
+        minion_instance._return_pub(
+            ret,
+            timeout=minion_instance._return_retry_timer()
+        )
         if data['ret']:
             if 'ret_config' in data:
                 ret['ret_config'] = data['ret_config']
@@ -1896,7 +1927,9 @@ class Syndic(Minion):
                               pretag=tagify(self.opts['id'], base='syndic'),
                               )
         for jid in self.jids:
-            self._return_pub(self.jids[jid], '_syndic_return')
+            self._return_pub(self.jids[jid],
+                             '_syndic_return',
+                             timeout=self._return_retry_timer())
         self._reset_event_aggregation()
 
     def destroy(self):
