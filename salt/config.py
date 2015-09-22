@@ -370,6 +370,9 @@ VALID_OPTS = {
     # in the event of a disconnect event
     'recon_randomize': float,  # FIXME This should really be a bool, according to the implementation
 
+    'return_retry_timer': int,
+    'return_retry_random': bool,
+
     # Specify a returner in which all events will be sent to. Requires that the returner in question
     # have an event_return(event) function!
     'event_return': str,
@@ -882,6 +885,8 @@ DEFAULT_MINION_OPTS = {
     'recon_max': 10000,
     'recon_default': 1000,
     'recon_randomize': True,
+    'return_retry_timer': 4,
+    'return_retry_random': True,
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'random_reauth_delay': 10,
