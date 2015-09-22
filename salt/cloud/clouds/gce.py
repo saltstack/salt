@@ -2126,7 +2126,13 @@ def create(vm_=None, call=None):
             'You cannot create an instance with -a or -f.'
         )
 
-    node_dict, node_data = request_instance(vm_)
+    node_info = request_instance(vm_)
+    if isinstance(node_info, bool):
+        raise SaltCloudSystemExit(
+            'There was an error creating the GCE instance.'
+        )
+    node_dict = node_info[0]
+    node_data = node_info[1]
 
     ssh_user, ssh_key = __get_ssh_credentials(vm_)
     vm_['ssh_host'] = __get_host(node_data, vm_)
