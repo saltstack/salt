@@ -1037,7 +1037,7 @@ def list_storage_services(conn=None, call=None):
 
 def get_operation_status(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: 2015.2
+    .. versionadded:: 2015.8.0
 
     Get Operation Status, based on a request ID
 

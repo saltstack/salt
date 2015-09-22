@@ -3,7 +3,7 @@
     Fluent Logging Handler
     ========================
 
-    .. versionadded:: 2015.2
+    .. versionadded:: 2015.8.0
 
     This module provides some `Fluent`_ logging handlers.
 

@@ -46,7 +46,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
 
     digitalocean-ubuntu:
         provider: my-digitalocean-config
-        image: Ubuntu 14.04 x32
+        image: 14.04 x64
         size: 512MB
         location: New York 1
         private_networking: True
@@ -117,18 +117,20 @@ command:
         ----------
         digital_ocean:
             ----------
-            Arch Linux 2013.05 x64:
+            10.1:
                 ----------
+                created_at:
+                    2015-01-20T20:04:34Z
                 distribution:
-                    Arch Linux
+                    FreeBSD
                 id:
-                    350424
+                    10144573
+                min_disk_size:
+                    20
                 name:
-                    Arch Linux 2013.05 x64
+                    10.1
                 public:
                     True
-                slug:
-                    None
     ...SNIP...
 
 .. note::

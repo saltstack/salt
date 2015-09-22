@@ -51,7 +51,7 @@ _ETHTOOL_CONFIG_OPTS = [
 ]
 _RH_CONFIG_OPTS = [
     'domain', 'peerdns', 'peerntp', 'defroute',
-    'mtu', 'static-routes', 'gateway'
+    'mtu', 'static-routes', 'gateway', 'zone'
 ]
 _RH_CONFIG_BONDING_OPTS = [
     'mode', 'miimon', 'arp_interval',
@@ -634,7 +634,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     elif 'netmask' in opts:
         result['netmask'] = opts['netmask']
 
-    for opt in ['ipaddr', 'master', 'srcaddr', 'delay', 'domain', 'gateway', 'uuid', 'nickname']:
+    for opt in ['ipaddr', 'master', 'srcaddr', 'delay', 'domain', 'gateway', 'uuid', 'nickname', 'zone']:
         if opt in opts:
             result[opt] = opts[opt]
 
