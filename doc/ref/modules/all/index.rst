@@ -73,6 +73,7 @@ Full list of builtin execution modules
     ddns
     deb_apache
     deb_postgres
+    debbuild
     debconfmod
     debian_ip
     debian_service
@@ -131,6 +132,7 @@ Full list of builtin execution modules
     incron
     influx
     ini_manage
+    inspectlib
     introspect
     ipmi
     ipset
@@ -257,6 +259,7 @@ Full list of builtin execution modules
     shadow
     slack_notify
     smartos_imgadm
+    smartos_virt
     smartos_vmadm
     smbios
     smf
@@ -285,6 +288,7 @@ Full list of builtin execution modules
     sysrc
     system
     system_profiler
+    system_rest_sample
     systemd
     temp
     test
