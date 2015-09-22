@@ -20,6 +20,7 @@ Reference
     peer
     pillar/index
     pillar/all/index
+    proxy/all/index
     renderers/index
     returners/index
     roster/all/index

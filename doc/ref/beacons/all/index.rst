@@ -16,6 +16,7 @@ Full list of builtin beacon modules
     journald
     load
     network_info
+    ps
     service
     sh
     twilio_txt_msg
