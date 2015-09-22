@@ -954,6 +954,13 @@ class Minion(MinionBase):
         '''
         # this seems awkward at first, but it's a workaround for Windows
         # multiprocessing communication.
+        if sys.platform.startswith('win') and \
+                opts['multiprocessing'] and \
+                not salt.log.is_logging_configured():
+            # We have to re-init the logging system for Windows
+            salt.log.setup_console_logger(log_level=opts.get('log_level', 'info'))
+            if opts.get('log_file'):
+                salt.log.setup_logfile_logger(opts['log_file'], opts.get('log_level', 'info'))
         if not minion_instance:
             minion_instance = cls(opts)
             if not hasattr(minion_instance, 'functions'):
