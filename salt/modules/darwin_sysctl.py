@@ -176,9 +176,11 @@ def persist(name, value, config='/etc/sysctl.conf', apply_change=False):
                     return 'Already set'
                 new_line = '{0}={1}'.format(name, value)
                 nlines.append(new_line)
+                nlines.append('\n')
                 edited = True
     if not edited:
         nlines.append('{0}={1}'.format(name, value))
+        nlines.append('\n')
     with salt.utils.fopen(config, 'w+') as ofile:
         ofile.writelines(nlines)
     # If apply_change=True, apply edits to system
