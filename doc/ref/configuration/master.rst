@@ -415,7 +415,7 @@ configuration requirements. Read the returner's documentation.
 ``master_job_cache``
 --------------------
 
-.. versionadded:: 2014.7
+.. versionadded:: 2014.7.0
 
 Default: 'local_cache'
 
