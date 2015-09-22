@@ -126,6 +126,11 @@ def present(
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
+    # If a list is passed in for value, change it to a comma-separated string
+    # So it will work with subsequent boto module calls and string functions
+    if isinstance(value, list):
+        value = ','.join(value)
+
     record = __salt__['boto_route53.get_record'](name, zone, record_type,
                                                  False, region, key, keyid,
                                                  profile)
