@@ -80,7 +80,8 @@ def _yum():
     '''
     contextkey = 'yum_bin'
     if contextkey not in __context__:
-        if 'fedora' in __grains__['os'].lower() and int(__grains__['osrelease']) >= 22:
+        if 'fedora' in __grains__['os'].lower() \
+                and int(__grains__['osrelease']) >= 22:
             __context__[contextkey] = 'dnf'
         else:
             __context__[contextkey] = 'yum'
@@ -127,30 +128,33 @@ def _repoquery(repoquery_args,
     _check_repoquery()
 
     if _yum() == 'dnf':
-        _query_format = query_format.replace('-%{VERSION}_', '-%{EPOCH}:%{VERSION}_')
+        _query_format = query_format.replace(
+            '-%{VERSION}_',
+            '-%{EPOCH}:%{VERSION}_'
+        )
     else:
         _query_format = query_format
 
-    cmd = 'repoquery --plugins --queryformat {0} {1}'.format(
-        _cmd_quote(_query_format), repoquery_args
-    )
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    cmd = ['repoquery', '--plugins', '--queryformat', _query_format]
+    cmd.extend(repoquery_args)
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=False)
     if call['retcode'] != 0:
         comment = ''
         # When checking for packages some yum modules return data via
-        # stderr that don't cause non-zero return codes. j perfect
+        # stderr that don't cause non-zero return codes. A perfect
         # example of this is when spacewalk is installed but not yet
         # registered. We should ignore those when getting pkginfo.
         if 'stderr' in call and not salt.utils.is_true(ignore_stderr):
             comment += call['stderr']
         if 'stdout' in call:
             comment += call['stdout']
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
+        raise CommandExecutionError(comment)
     else:
         if _yum() == 'dnf':
-            # Remove the epoch when it is zero to maintain backward compatibility
+            # Remove the epoch when it is zero to maintain backward
+            # compatibility
             remove_zero_epoch = call['stdout'].replace('-0:', '-')
             out = remove_zero_epoch
         else:
@@ -160,7 +164,7 @@ def _repoquery(repoquery_args,
 
 def _get_repo_options(**kwargs):
     '''
-    Returns a string of '--enablerepo' and '--disablerepo' options to be used
+    Returns a list of '--enablerepo' and '--disablerepo' options to be used
     in the yum command, based on the kwargs.
     '''
     # Get repo options from the kwargs
@@ -173,61 +177,50 @@ def _get_repo_options(**kwargs):
     if repo and not fromrepo:
         fromrepo = repo
 
-    repo_arg = ''
+    repo_arg = []
     if fromrepo:
         log.info('Restricting to repo \'{0}\''.format(fromrepo))
-        repo_arg = ('--disablerepo=\'{0}\' --enablerepo=\'{1}\''
-                    .format('*', fromrepo))
+        repo_arg.extend(['--disablerepo=*', '--enablerepo=' + fromrepo])
     else:
-        repo_arg = ''
         if disablerepo:
-            if isinstance(disablerepo, list):
-                for repo_item in disablerepo:
-                    log.info('Disabling repo \'{0}\''.format(repo_item))
-                    repo_arg += '--disablerepo=\'{0}\' '.format(repo_item)
-            else:
-                log.info('Disabling repo \'{0}\''.format(disablerepo))
-                repo_arg += '--disablerepo=\'{0}\''.format(disablerepo)
+            targets = [disablerepo] \
+                if not isinstance(disablerepo, list) \
+                else disablerepo
+            log.info('Disabling repo(s): {0}'.format(', '.join(disablerepo)))
+            repo_arg.extend(
+                ['--disablerepo={0}'.format(x) for x in disablerepo]
+            )
         if enablerepo:
-            if isinstance(enablerepo, list):
-                for repo_item in enablerepo:
-                    log.info('Enabling repo \'{0}\''.format(repo_item))
-                    repo_arg += '--enablerepo=\'{0}\' '.format(repo_item)
-            else:
-                log.info('Enabling repo \'{0}\''.format(enablerepo))
-                repo_arg += '--enablerepo=\'{0}\''.format(enablerepo)
+            targets = [enablerepo] \
+                if not isinstance(enablerepo, list) \
+                else enablerepo
+            log.info('Enabling repo(s): {0}'.format(', '.join(enablerepo)))
+            repo_arg.extend(['--enablerepo={0}'.format(x) for x in enablerepo])
     return repo_arg
 
 
 def _get_excludes_option(**kwargs):
     '''
-    Returns a string of '--disableexcludes' option to be used in the yum command,
+    Returns a list of '--disableexcludes' option to be used in the yum command,
     based on the kwargs.
     '''
-    disable_excludes_arg = ''
     disable_excludes = kwargs.get('disableexcludes', '')
-
     if disable_excludes:
         log.info('Disabling excludes for \'{0}\''.format(disable_excludes))
-        disable_excludes_arg = \
-            '--disableexcludes=\'{0}\''.format(disable_excludes)
-
-    return disable_excludes_arg
+        return ['--disableexcludes={0}'.format(disable_excludes)]
+    return []
 
 
 def _get_branch_option(**kwargs):
     '''
-    Returns a string of '--branch' option to be used in the yum command,
+    Returns a list of '--branch' option to be used in the yum command,
     based on the kwargs. This feature requires 'branch' plugin for YUM.
     '''
-    # Get branch option from the kwargs
     branch = kwargs.get('branch', '')
-
-    branch_arg = ''
     if branch:
         log.info('Adding branch \'{0}\''.format(branch))
-        branch_arg = '--branch=\'{0}\''.format(branch)
-    return branch_arg
+        return ['--branch={0}'.format(branch)]
+    return []
 
 
 def _get_yum_config():
@@ -732,7 +725,7 @@ def check_db(*names, **kwargs):
     repo_arg = _get_repo_options(**kwargs)
     exclude_arg = _get_excludes_option(**kwargs)
     repoquery_base = \
-        '{0} {1} --all --quiet --whatprovides'.format(repo_arg, exclude_arg)
+        repo_arg + exclude_arg + ['-all', '--quiet', '--whatprovides']
 
     if 'pkg._avail' in __context__:
         avail = __context__['pkg._avail']
@@ -740,7 +733,7 @@ def check_db(*names, **kwargs):
         # get list of available packages
         avail = []
         lines = _repoquery(
-            '{0} --pkgnarrow=all --all'.format(repo_arg),
+            repo_arg + ['--pkgnarrow=all', '--all'],
             query_format='%{NAME}_|-%{ARCH}'
         )
         for line in lines:
@@ -755,7 +748,7 @@ def check_db(*names, **kwargs):
         __context__['pkg._avail'] = avail
 
     ret = {}
-    repoquery_cmd = repoquery_base + ' {0}'.format(" ".join(names))
+    repoquery_cmd = repoquery_base + list(names)
     provides = sorted(
         set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
     )
