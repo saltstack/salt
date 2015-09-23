@@ -3005,6 +3005,15 @@ def check_key_path_and_mode(provider, key_path):
     Checks that the key_path exists and the key_mode is either 0400 or 0600.
 
     Returns True or False.
+
+    .. versionadded:: Boron
+
+    provider
+        The provider name that the key_path to check belongs to.
+
+    key_path
+        The key_path to ensure that it exists and to check adequate permissions
+        against.
     '''
     if not os.path.exists(key_path):
         log.error(
