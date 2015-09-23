@@ -470,7 +470,7 @@ def info(*packages):
                 value = _pkg_time_to_iso(value)
             if key != 'description' and value:
                 pkg_data[key] = value
-        pkg_data['decription'] = os.linesep.join(descr)
+        pkg_data['description'] = os.linesep.join(descr)
         if pkg_name:
             ret[pkg_name] = pkg_data
 
