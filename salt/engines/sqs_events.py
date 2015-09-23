@@ -72,7 +72,7 @@ def __virtual__():
 log = logging.getLogger(__name__)
 
 
-def _get_sqs_conn(profile):
+def _get_sqs_conn(profile, region=None, key=None, keyid=None):
     '''
     Get a boto connection to SQS.
     '''
@@ -85,17 +85,12 @@ def _get_sqs_conn(profile):
         keyid = _profile.get('keyid', None)
         region = _profile.get('region', None)
 
-    if not region and __opts__.get('sqs.region'):
-        region = __opts__.get('sqs.region')
-
     if not region:
-        region = 'us-east-1'
-
-    if not key and __opts__.get('sqs.key'):
-        key = __opts__.get('sqs.key')
-    if not keyid and __opts__.get('sqs.keyid'):
-        keyid = __opts__.get('sqs.keyid')
-
+        region = __opts__.get('sqs.region', 'us-east-1')
+    if not key:
+        key = __opts__.get('sqs.key', None)
+    if not keyid:
+        keyid = __opts__.get('sqs.keyid', None)
     try:
         conn = boto.sqs.connect_to_region(region, aws_access_key_id=keyid,
                                           aws_secret_access_key=key)
@@ -113,7 +108,8 @@ def start(queue, profile=None, tag='salt/engine/sqs'):
     if __opts__.get('__role') == 'master':
         fire_master = salt.utils.event.get_master_event(
             __opts__,
-            __opts__['sock_dir']).fire_event
+            __opts__['sock_dir'],
+            listen=False).fire_event
     else:
         fire_master = None
 

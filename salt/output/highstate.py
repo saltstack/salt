@@ -131,7 +131,7 @@ def _format_host(host, data):
             # Increment result counts
             rcounts.setdefault(ret['result'], 0)
             rcounts[ret['result']] += 1
-            rdurations.append(ret['duration'])
+            rdurations.append(ret.get('duration', 0))
 
             tcolor = colors['GREEN']
             schanged, ctext = _format_changes(ret['changes'])
@@ -368,7 +368,16 @@ def _format_host(host, data):
                                                sum(six.itervalues(rcounts)) - rcounts.get('warnings', 0),
                                                line_max_len - 7)
         hstrs.append(colorfmt.format(colors['CYAN'], totals, colors))
-        total_duration = u'Total run time: {0:>{1}} ms'.format(sum(rdurations), line_max_len - 7)
+
+        sum_duration = sum(rdurations)
+        duration_unit = 'ms'
+        # convert to seconds if duration is 1000ms or more
+        if sum_duration > 999:
+            sum_duration /= 1000
+            duration_unit = 's'
+        total_duration = u'Total run time: {0} {1}'.format(
+            '{0:.3f}'.format(sum_duration).rjust(line_max_len - 5),
+            duration_unit)
         hstrs.append(colorfmt.format(colors['CYAN'], total_duration, colors))
 
     if strip_colors:

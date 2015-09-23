@@ -902,14 +902,22 @@ def add_pool_member(hostname, username, password, name, member):
     '''
     A function to connect to a bigip device and add a new member to an existing pool.
 
-    Parameters:
-        hostname:                   The host/address of the bigip device
-        username:                   The iControl REST username
-        password:                   The iControl REST password
-        name:                       The name of the pool to modify
-        member:                     The name of the member to add
-                                    i.e. 10.1.1.2:80
+    hostname
+        The host/address of the bigip device
+    username
+        The iControl REST username
+    password
+        The iControl REST password
+    name
+        The name of the pool to modify
+    member
+        The name of the member to add
+        i.e. 10.1.1.2:80
+
     CLI Example:
+
+    .. code-block:: bash
+
         salt '*' bigip.add_pool_members bigip admin admin my-pool 10.2.2.1:80
     '''
 

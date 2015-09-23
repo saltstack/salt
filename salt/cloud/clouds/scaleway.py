@@ -22,19 +22,16 @@ the cloud configuration at ``/etc/salt/cloud.providers`` or
 :depends: requests
 '''
 
+# Import Python Libs
 from __future__ import absolute_import
-
-import copy
 import json
 import logging
 import pprint
 import time
 
-try:
-    import requests
-except ImportError:
-    requests = None
-
+# Import Salt Libs
+from salt.ext.six.moves import range
+import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
     SaltCloudNotFound,
@@ -42,24 +39,31 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
-from salt.ext.six.moves import range
-import salt.utils.cloud
 
+# Import Third Party Libs
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
 
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'scaleway'
 
 
 # Only load in this module if the Scaleway configurations are in place
 def __virtual__():
-    ''' Check for Scaleway configurations.
     '''
-    if requests is None:
-        return False
-
+    Check for Scaleway configurations.
+    '''
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -67,8 +71,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'scaleway',
+        __active_provider_name__ or __virtualname__,
         ('token',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'requests': HAS_REQUESTS}
     )
 
 
@@ -192,12 +206,17 @@ def create(server_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'scaleway',
-                                        server_['profile']) is False:
+        if server_['profile'] and config.is_profile_configured(__opts__,
+                                                               __active_provider_name__ or 'scaleway',
+                                                               server_['profile']) is False:
             return False
     except AttributeError:
         pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in server_:
+        server_['driver'] = server_.pop('provider')
 
     salt.utils.cloud.fire_event(
         'event',
@@ -206,7 +225,7 @@ def create(server_):
         {
             'name': server_['name'],
             'profile': server_['profile'],
-            'provider': server_['provider'],
+            'provider': server_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -272,98 +291,11 @@ def create(server_):
         finally:
             raise SaltCloudSystemExit(str(exc))
 
-    ssh_username = config.get_cloud_config_value(
-        'ssh_username', server_, __opts__, default='root'
+    server_['ssh_host'] = data['public_ip']['address']
+    server_['ssh_password'] = config.get_cloud_config_value(
+        'ssh_password', server_, __opts__
     )
-
-    if config.get_cloud_config_value('deploy', server_, __opts__) is True:
-        deploy_script = script(server_)
-        if data.get('public_ip') is not None:
-            ip_address = data['public_ip']['address']
-
-        deploy_kwargs = {
-            'opts': __opts__,
-            'host': ip_address,
-            'username': ssh_username,
-            'script': deploy_script,
-            'name': server_['name'],
-            'tmp_dir': config.get_cloud_config_value(
-                'tmp_dir', server_, __opts__, default='/tmp/.saltcloud'
-            ),
-            'deploy_command': config.get_cloud_config_value(
-                'deploy_command', server_, __opts__,
-                default='/tmp/.saltcloud/deploy.sh',
-            ),
-            'start_action': __opts__['start_action'],
-            'parallel': __opts__['parallel'],
-            'sock_dir': __opts__['sock_dir'],
-            'conf_file': __opts__['conf_file'],
-            'minion_pem': server_['priv_key'],
-            'minion_pub': server_['pub_key'],
-            'keep_tmp': __opts__['keep_tmp'],
-            'preseed_minion_keys': server_.get('preseed_minion_keys', None),
-            'display_ssh_output': config.get_cloud_config_value(
-                'display_ssh_output', server_, __opts__, default=True
-            ),
-            'sudo': config.get_cloud_config_value(
-                'sudo', server_, __opts__, default=(ssh_username != 'root')
-            ),
-            'sudo_password': config.get_cloud_config_value(
-                'sudo_password', server_, __opts__, default=None
-            ),
-            'tty': config.get_cloud_config_value(
-                'tty', server_, __opts__, default=False
-            ),
-            'script_args': config.get_cloud_config_value(
-                'script_args', server_, __opts__
-            ),
-            'script_env': config.get_cloud_config_value('script_env', server_,
-                                                        __opts__),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, server_)
-        }
-
-        # Deploy salt-master files, if necessary
-        if config.get_cloud_config_value('make_master', server_, __opts__) is True:
-            deploy_kwargs['make_master'] = True
-            deploy_kwargs['master_pub'] = server_['master_pub']
-            deploy_kwargs['master_pem'] = server_['master_pem']
-            master_conf = salt.utils.cloud.master_config(__opts__, server_)
-            deploy_kwargs['master_conf'] = master_conf
-
-            if master_conf.get('syndic_master', None):
-                deploy_kwargs['make_syndic'] = True
-
-        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
-            'make_minion', server_, __opts__, default=True
-        )
-
-        # Store what was used to the deploy the BareMetal server
-        event_kwargs = copy.deepcopy(deploy_kwargs)
-        del event_kwargs['minion_pem']
-        del event_kwargs['minion_pub']
-        del event_kwargs['sudo_password']
-        if 'password' in event_kwargs:
-            del event_kwargs['password']
-        ret['deploy_kwargs'] = event_kwargs
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'executing deploy script',
-            'salt/cloud/{0}/deploying'.format(server_['name']),
-            {'kwargs': event_kwargs},
-            transport=__opts__['transport']
-        )
-
-        deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
-
-        if deployed:
-            log.info('Salt installed on {0}'.format(server_['name']))
-        else:
-            log.error(
-                'Failed to start Salt on BareMetal server {0}'.format(
-                    server_['name']
-                )
-            )
+    ret = salt.utils.cloud.bootstrap(server_, __opts__)
 
     ret.update(data)
 
@@ -381,7 +313,7 @@ def create(server_):
         {
             'name': server_['name'],
             'profile': server_['profile'],
-            'provider': server_['provider'],
+            'provider': server_['driver'],
         },
         transport=__opts__['transport']
     )

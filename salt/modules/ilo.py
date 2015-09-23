@@ -6,7 +6,7 @@ Manage HP ILO
 '''
 from __future__ import absolute_import
 
-import xml.etree.cElementTree as ET
+from salt._compat import ElementTree as ET
 import salt.utils
 import os
 import tempfile
@@ -37,8 +37,8 @@ def __execute_cmd(name, xml):
     if not os.path.isdir(tmp_dir):
         os.mkdir(tmp_dir)
     with tempfile.NamedTemporaryFile(dir=tmp_dir,
-                                     prefix=name,
-                                     suffix=os.getpid(),
+                                     prefix=name+str(os.getpid()),
+                                     suffix='.xml',
                                      delete=False) as fh:
         tmpfilename = fh.name
         fh.write(xml)

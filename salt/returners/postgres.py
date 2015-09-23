@@ -204,7 +204,7 @@ def get_load(jid):
     cur.execute(sql, (jid,))
     data = cur.fetchone()
     if data:
-        return json.loads(data)
+        return json.loads(data[0])
     _close_conn(conn)
     return {}
 

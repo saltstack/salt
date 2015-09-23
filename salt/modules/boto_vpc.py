@@ -1015,6 +1015,7 @@ def create_internet_gateway(internet_gateway_name=None, vpc_id=None,
     returns False if the internet gateways was not created.
 
     .. versionadded:: 2015.8.0
+
     CLI Example:
 
     .. code-block:: bash

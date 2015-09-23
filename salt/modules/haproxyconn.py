@@ -55,6 +55,8 @@ def list_servers(backend, socket='/var/run/haproxy.sock', objectify=False):
     socket
         haproxy stats socket
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' haproxy.list_servers mysql
@@ -76,6 +78,8 @@ def enable_server(name, backend, socket='/var/run/haproxy.sock'):
 
     socket
         haproxy stats socket
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -100,6 +104,8 @@ def disable_server(name, backend, socket='/var/run/haproxy.sock'):
     socket
         haproxy stats socket
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' haproxy.disable_server db1.example.com mysql
@@ -122,6 +128,8 @@ def get_weight(name, backend, socket='/var/run/haproxy.sock'):
 
     socket
         haproxy stats socket
+
+    CLI Example:
 
     .. code-block:: bash
 
@@ -148,6 +156,8 @@ def set_weight(name, backend, weight=0, socket='/var/run/haproxy.sock'):
     socket
         haproxy stats socket
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' haproxy.set_weight web1.example.com www 13
@@ -165,6 +175,8 @@ def show_frontends(socket='/var/run/haproxy.sock'):
     socket
         haproxy stats socket
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' haproxy.show_frontends
@@ -180,6 +192,8 @@ def show_backends(socket='/var/run/haproxy.sock'):
 
     socket
         haproxy stats socket
+
+    CLI Example:
 
     .. code-block:: bash
 

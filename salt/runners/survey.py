@@ -49,20 +49,7 @@ def hash(*args, **kwargs):
         salt-run survey.hash "*" file.get_hash /etc/salt/minion survey_sort=up
     '''
 
-    bulk_ret = _get_pool_results(*args, **kwargs)
-    for k in bulk_ret:
-        print('minion pool :\n'
-              '------------')
-        print(k['pool'])
-        print('pool size :\n'
-              '----------')
-        print('    ' + str(len(k['pool'])))
-        print('pool result :\n'
-              '-------')
-        print('    ' + str(k['result']))
-        print('\n')
-
-    return bulk_ret
+    return _get_pool_results(*args, **kwargs)
 
 
 def diff(*args, **kwargs):

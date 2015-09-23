@@ -193,7 +193,11 @@ Overriding the alarm values on the resource:
                   attributes:
                     threshold: 2.0
 '''
+
+# Import Python Libs
 from __future__ import absolute_import
+
+# Import Salt Libs
 import salt.utils.dictupdate as dictupdate
 from salt.exceptions import SaltInvocationError
 import salt.ext.six as six
@@ -307,13 +311,17 @@ def present(
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
-    _ret = _attributes_present(name, attributes, region, key, keyid, profile)
-    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-    if not _ret['result']:
-        ret['result'] = _ret['result']
-        if ret['result'] is False:
-            return ret
+
+    if attributes:
+        _ret = _attributes_present(name, attributes, region, key, keyid, profile)
+        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
+
     _ret = _health_check_present(name, health_check, region, key, keyid,
                                  profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
@@ -366,12 +374,12 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
 
     .. code-block:: yaml
 
-    add-instances:
-      boto_elb.register_instances:
-        - name: myloadbalancer
-        - instances:
-          - instance-id1
-          - instance-id2
+        add-instances:
+          boto_elb.register_instances:
+            - name: myloadbalancer
+            - instances:
+              - instance-id1
+              - instance-id2
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     ret['name'] = name
@@ -446,22 +454,19 @@ def _elb_present(
             raise SaltInvocationError('Listeners must have at minimum port,'
                                       ' instance_port and protocol values in'
                                       ' the provided list.')
-        if 'elb_port' not in listener:
-            raise SaltInvocationError('elb_port is a required value for'
-                                      ' listeners.')
-        if 'instance_port' not in listener:
-            raise SaltInvocationError('instance_port is a required value for'
-                                      ' listeners.')
-        if 'elb_protocol' not in listener:
-            raise SaltInvocationError('elb_protocol is a required value for'
-                                      ' listeners.')
+        for config in ('elb_port', 'instance_port', 'elb_protocol'):
+            if not listener.get(config):
+                raise SaltInvocationError(
+                    '{0} is a required value for listeners.'.format(config)
+                )
+
         listener['elb_protocol'] = listener['elb_protocol'].upper()
         if listener['elb_protocol'] == 'HTTPS' and 'certificate' not in listener:
             raise SaltInvocationError('certificate is a required value for'
                                       ' listeners if HTTPS is set for'
                                       ' elb_protocol.')
         # We define all listeners as complex listeners.
-        if 'instance_protocol' not in listener:
+        if not listener.get('instance_protocol'):
             listener['instance_protocol'] = listener['elb_protocol'].upper()
         else:
             listener['instance_protocol'] = listener['instance_protocol'].upper()

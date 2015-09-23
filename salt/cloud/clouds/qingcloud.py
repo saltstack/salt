@@ -26,9 +26,8 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 :depends: requests
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import time
 import json
 import pprint
@@ -37,12 +36,9 @@ import hmac
 import base64
 from hashlib import sha256
 
-# Import 3rd-party libs
-import requests
+# Import Salt Libs
 from salt.ext.six.moves.urllib.parse import quote as _quote  # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves import range
-
-# Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
@@ -52,9 +48,18 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
+# Import Third Party Libs
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'qingcloud'
 
 DEFAULT_QINGCLOUD_API_VERSION = 1
 DEFAULT_QINGCLOUD_SIGNATURE_VERSION = 1
@@ -68,7 +73,10 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -77,8 +85,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'qingcloud',
+        __active_provider_name__ or __virtualname__,
         ('access_key_id', 'secret_access_key', 'zone', 'key_filename')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'requests': HAS_REQUESTS}
     )
 
 
@@ -640,9 +658,9 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'qingcloud',
-                                        vm_['profile']) is False:
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'qingcloud',
+                                                           vm_['profile']) is False:
             return False
     except AttributeError:
         pass

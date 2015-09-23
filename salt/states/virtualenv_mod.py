@@ -162,7 +162,12 @@ def managed(name,
             use_vt=use_vt,
         )
 
-        ret['result'] = _ret['retcode'] == 0
+        if _ret['retcode'] != 0:
+            ret['result'] = False
+            ret['comment'] = _ret['stdout'] + _ret['stderr']
+            return ret
+
+        ret['result'] = True
         ret['changes']['new'] = __salt__['cmd.run_stderr'](
             '{0} -V'.format(venv_py)).strip('\n')
 

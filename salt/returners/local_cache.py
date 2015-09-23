@@ -12,11 +12,13 @@ import os
 import shutil
 import time
 import hashlib
+import bisect
 
 # Import salt libs
 import salt.payload
 import salt.utils
 import salt.utils.jid
+import salt.exceptions
 
 log = logging.getLogger(__name__)
 
@@ -28,6 +30,8 @@ MINIONS_P = '.minions.p'
 RETURN_P = 'return.p'
 # out is the "out" from the minion data
 OUT_P = 'out.p'
+# endtime is the end time for a job, not stored as msgpack
+ENDTIME = 'endtime'
 
 
 def _job_dir():
@@ -70,12 +74,16 @@ def _walk_through(job_dir):
 
 
 #TODO: add to returner docs-- this is a new one
-def prep_jid(nocache=False, passed_jid=None):
+def prep_jid(nocache=False, passed_jid=None, recurse_count=0):
     '''
     Return a job id and prepare the job id directory
     This is the function responsible for making sure jids don't collide (unless its passed a jid)
     So do what you have to do to make sure that stays the case
     '''
+    if recurse_count >= 5:
+        err = 'prep_jid could not store a jid after {0} tries.'.format(recurse_count)
+        log.error(err)
+        raise salt.exceptions.SaltCacheError(err)
     if passed_jid is None:  # this can be a None of an empty string
         jid = salt.utils.jid.gen_jid()
     else:
@@ -88,15 +96,22 @@ def prep_jid(nocache=False, passed_jid=None):
     try:
         os.makedirs(jid_dir_)
     except OSError:
-        # TODO: some sort of sleep or something? Spinning is generally bad practice
+        time.sleep(0.1)
         if passed_jid is None:
+            recurse_count += recurse_count
             return prep_jid(nocache=nocache)
 
-    with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'wb+') as fn_:
-        fn_.write(jid)
-    if nocache:
-        with salt.utils.fopen(os.path.join(jid_dir_, 'nocache'), 'wb+') as fn_:
-            fn_.write('')
+    try:
+        with salt.utils.fopen(os.path.join(jid_dir_, 'jid'), 'wb+') as fn_:
+            fn_.write(jid)
+        if nocache:
+            with salt.utils.fopen(os.path.join(jid_dir_, 'nocache'), 'wb+') as fn_:
+                fn_.write('')
+    except IOError:
+        log.warn('Could not write out jid file for job {0}. Retrying.'.format(jid))
+        time.sleep(0.1)
+        recurse_count += recurse_count
+        return prep_jid(passed_jid=jid, nocache=nocache)
 
     return jid
 
@@ -165,6 +180,17 @@ def save_load(jid, clear_load):
 
     serial = salt.payload.Serial(__opts__)
 
+    # Save the invocation information
+    try:
+        if not os.path.exists(jid_dir):
+            os.makedirs(jid_dir)
+        serial.dump(
+            clear_load,
+            salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
+            )
+    except IOError as exc:
+        log.warning('Could not write job invocation cache file: {0}'.format(exc))
+
     # if you have a tgt, save that for the UI etc
     if 'tgt' in clear_load:
         ckminions = salt.utils.minions.CkMinions(__opts__)
@@ -179,19 +205,9 @@ def save_load(jid, clear_load):
                 minions,
                 salt.utils.fopen(os.path.join(jid_dir, MINIONS_P), 'w+b')
                 )
-        except IOError:
+        except IOError as exc:
             log.warning('Could not write job cache file for minions: {0}'.format(minions))
-
-    # Save the invocation information
-    try:
-        if not os.path.exists(jid_dir):
-            os.makedirs(jid_dir)
-        serial.dump(
-            clear_load,
-            salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
-            )
-    except IOError as exc:
-        log.warning('Could not write job invocation cache file: {0}'.format(exc))
+            log.debug('Job cache write failure: {0}'.format(exc))
 
 
 def get_load(jid):
@@ -253,6 +269,35 @@ def get_jids():
     ret = {}
     for jid, job, _, _ in _walk_through(_job_dir()):
         ret[jid] = salt.utils.jid.format_jid_instance(jid, job)
+
+        if __opts__.get('job_cache_store_endtime'):
+            endtime = get_endtime(jid)
+            if endtime:
+                ret[jid]['EndTime'] = endtime
+
+    return ret
+
+
+def get_jids_filter(count, filter_find_job=True):
+    '''
+    Return a list of all jobs information filtered by the given criteria.
+    :param int count: show not more than the count of most recent jobs
+    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    '''
+    keys = []
+    ret = []
+    for jid, job, _, _ in _walk_through(_job_dir()):
+        job = salt.utils.jid.format_jid_instance_ext(jid, job)
+        if filter_find_job and job['Function'] == 'saltutil.find_job':
+            continue
+        i = bisect.bisect(keys, jid)
+        if len(keys) == count and i == 0:
+            continue
+        keys.insert(i, jid)
+        ret.insert(i, job)
+        if len(keys) > count:
+            del keys[0]
+            del ret[0]
     return ret
 
 
@@ -280,3 +325,34 @@ def clean_old_jobs():
                     hours_difference = (cur - jid_ctime) / 3600.0
                     if hours_difference > __opts__['keep_jobs']:
                         shutil.rmtree(f_path)
+
+
+def update_endtime(jid, time):
+    '''
+    Update (or store) the end time for a given job
+
+    Endtime is stored as a plain text string
+    '''
+    jid_dir = _jid_dir(jid)
+    try:
+        if not os.path.exists(jid_dir):
+            os.makedirs(jid_dir)
+        with salt.utils.fopen(os.path.join(jid_dir, ENDTIME), 'w') as etfile:
+            etfile.write(time)
+    except IOError as exc:
+        log.warning('Could not write job invocation cache file: {0}'.format(exc))
+
+
+def get_endtime(jid):
+    '''
+    Retrieve the stored endtime for a given job
+
+    Returns False if no endtime is present
+    '''
+    jid_dir = _jid_dir(jid)
+    etpath = os.path.join(jid_dir, ENDTIME)
+    if not os.path.exists(etpath):
+        return False
+    with salt.utils.fopen(etpath, 'r') as etfile:
+        endtime = etfile.read().strip('\n')
+    return endtime

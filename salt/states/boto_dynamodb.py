@@ -38,43 +38,41 @@ pillars or minion config:
 
 .. code-block:: yaml
 
-Ensure DynamoDB table does not exist:
-  boto_dynamodb.absent:
-    - table_name: new_table
-    - keyid: GKTADJGHEIQSXMKKRBJ08H
-    - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-    - region: us-east-1
+    Ensure DynamoDB table does not exist:
+      boto_dynamodb.absent:
+        - table_name: new_table
+        - keyid: GKTADJGHEIQSXMKKRBJ08H
+        - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+        - region: us-east-1
 
-Ensure DynamoDB table exists:
-  boto_dynamodb.present:
-    - table_name: new_table
-    - read_capacity_units: 1
-    - write_capacity_units: 2
-    - hash_key: primary_id
-    - hash_key_data_type: N
-    - range_key: start_timestamp
-    - range_key_data_type: N
-    - keyid: GKTADJGHEIQSXMKKRBJ08H
-    - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-    - region: us-east-1
-    - local_indexes:
-        - index:
-            - name: "primary_id_end_timestamp_index"
-            - hash_key: primary_id
-            - hash_key_data_type: N
-            - range_key: end_timestamp
-            - range_key_data_type: N
-    - global_indexes:
-        - index:
-            - name: "name_end_timestamp_index"
-            - hash_key: name
-            - hash_key_data_type: S
-            - range_key: end_timestamp
-            - range_key_data_type: N
-            - read_capacity_units: 3
-            - write_capacity_units: 4
-
-
+    Ensure DynamoDB table exists:
+      boto_dynamodb.present:
+        - table_name: new_table
+        - read_capacity_units: 1
+        - write_capacity_units: 2
+        - hash_key: primary_id
+        - hash_key_data_type: N
+        - range_key: start_timestamp
+        - range_key_data_type: N
+        - keyid: GKTADJGHEIQSXMKKRBJ08H
+        - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+        - region: us-east-1
+        - local_indexes:
+            - index:
+                - name: "primary_id_end_timestamp_index"
+                - hash_key: primary_id
+                - hash_key_data_type: N
+                - range_key: end_timestamp
+                - range_key_data_type: N
+        - global_indexes:
+            - index:
+                - name: "name_end_timestamp_index"
+                - hash_key: name
+                - hash_key_data_type: S
+                - range_key: end_timestamp
+                - range_key_data_type: N
+                - read_capacity_units: 3
+                - write_capacity_units: 4
 '''
 # Import Python libs
 from __future__ import absolute_import
