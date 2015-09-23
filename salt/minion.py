@@ -798,7 +798,7 @@ class Minion(MinionBase):
         just return the value of the return_retry_timer.
         '''
         msg = 'Minion return retry timer set to {0} seconds'
-        if self.opts['return_retry_random']:
+        if self.opts.get('return_retry_random'):
             try:
                 random_retry = randint(1, self.opts['return_retry_timer'])
             except ValueError:
@@ -813,8 +813,8 @@ class Minion(MinionBase):
                 log.debug(msg.format(random_retry) + ' (randomized)')
                 return random_retry
         else:
-            log.debug(msg.format(self.opts['return_retry_timer']))
-            return self.opts['return_retry_timer']
+            log.debug(msg.format(self.opts.get('return_retry_timer')))
+            return self.opts.get('return_retry_timer')
 
     def _prep_mod_opts(self):
         '''
