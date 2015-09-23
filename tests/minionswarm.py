@@ -38,6 +38,12 @@ OSES = [
         'AIX',
         'Solaris',
         ]
+VERS = [
+        '2014.1.6',
+        '2014.7.4',
+        '2015.5.5',
+        '2015.8.0',
+        ]
 
 
 def parse():
@@ -77,6 +83,12 @@ def parse():
         default=False,
         action='store_true',
         help='Each Minion claims a different os grain')
+    parser.add_option(
+        '--rand-ver',
+        dest='rand_ver',
+        default=False,
+        action='store_true',
+        help='Each Minion claims a different version grain')
     parser.add_option(
         '-k',
         '--keep-modules',
@@ -300,6 +312,8 @@ class MinionSwarm(Swarm):
 
         if self.opts['rand_os']:
             data['grains']['os'] = random.choice(OSES)
+        if self.opts['rand_ver']:
+            data['grains']['saltversion'] = random.choice(VERS)
 
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)
