@@ -174,7 +174,7 @@ def extracted(name,
 
     log.debug('Extract {0} in {1}'.format(filename, name))
     if archive_format == 'zip':
-        files = __salt__['archive.cmd_unzip'](filename, name)
+        files = __salt__['archive.unzip'](filename, name)
     elif archive_format == 'rar':
         files = __salt__['archive.unrar'](filename, name)
     else:
