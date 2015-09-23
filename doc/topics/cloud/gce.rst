@@ -258,6 +258,8 @@ GCE supports two different disk types, ``pd-standard`` and ``pd-ssd``.
 The default disk type setting is ``pd-standard``. To specify using an SSD
 disk, set ``pd-ssd`` as the value.
 
+.. versionadded:: 2014.7.0
+
 
 SSH Remote Access
 =================
