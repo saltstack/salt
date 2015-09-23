@@ -331,8 +331,8 @@ def _compare(actual, create_kwargs, runtime_kwargs):
                     continue
 
             elif isinstance(data, list):
-                # Compare two sorted lists of items. Won't work for "command"
-                # or "entrypoint" because those are both shell commands and the
+                # Compare two sorted lists of items. Won't work for "cmd" or
+                # "entrypoint" because those are both shell commands and the
                 # original order matters. It will, however, work for "volumes"
                 # because even though "volumes" is a sub-dict nested within the
                 # "actual" dict sorted(somedict) still just gives you a sorted
@@ -416,6 +416,7 @@ def image_present(name,
            'changes': {},
            'result': False,
            'comment': ''}
+
     if build is not None and load is not None:
         ret['comment'] = 'Only one of \'build\' or \'load\' is permitted.'
         return ret
@@ -731,7 +732,7 @@ def running(name,
 
     **CONTAINER CONFIGURATION PARAMETERS**
 
-    command
+    cmd or command
         Command to run in the container
 
         .. code-block:: yaml
@@ -739,7 +740,19 @@ def running(name,
             foo:
               dockerng.running:
                 - image: bar/baz:latest
+                - cmd: bash
+
+        OR
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
                 - command: bash
+
+        .. versionchanged:: 2015.8.1
+            ``cmd`` is now also accepted
 
     hostname
         Hostname of the container. If not provided, and if a ``name`` has been
@@ -798,7 +811,8 @@ def running(name,
                 - tty: True
 
     detach : True
-        If ``True``, run ``command`` in the background (daemon mode)
+        If ``True``, run the container's command in the background (daemon
+        mode)
 
         .. code-block:: yaml
 
@@ -1329,6 +1343,16 @@ def running(name,
     if image is None:
         ret['comment'] = 'The \'image\' argument is required'
         return ret
+
+    if 'command' in kwargs:
+        if 'cmd' in kwargs:
+            ret['comment'] = (
+                'Only one of \'cmd\' and \'command\' can be used. Both '
+                'arguments are equivalent.'
+            )
+            ret['result'] = False
+            return ret
+        kwargs['cmd'] = kwargs.pop('command')
 
     try:
         image = ':'.join(_get_repo_tag(image))

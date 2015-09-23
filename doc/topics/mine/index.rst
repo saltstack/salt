@@ -39,7 +39,7 @@ multiple calls of the same function with different arguments.  There is a differ
 syntax for passing positional and key-value arguments.  Mixing positional and
 key-value arguments is not supported.
 
-.. versionadded:: 2014.7
+.. versionadded:: 2014.7.0
 
 .. code-block:: yaml
 
