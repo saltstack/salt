@@ -271,6 +271,14 @@ disk, set ``pd-ssd`` as the value.
 
 .. versionadded:: 2014.7.0
 
+ip_forwarding
+-------------
+
+GCE instances can be enabled to use IP Forwarding. When set to ``True``,
+this options allows the instance to send/receive non-matching src/dst
+packets. Default is ``False``.
+
+.. versionadded:: 2015.8.1
 
 SSH Remote Access
 =================
