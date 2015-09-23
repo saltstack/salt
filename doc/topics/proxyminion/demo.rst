@@ -67,7 +67,7 @@ from the file /srv/pillar/p8000.sls (if you have not changed your default pillar
    ---------
 
    proxy:
-     proxymodule: rest_sample
+     proxytype: rest_sample
      url: http://<IP your REST listens on>:port
 
 In other words, if your REST service is listening on port 8000 on 127.0.0.1
