@@ -119,13 +119,11 @@ def _get_conn(ret):
     user = _options.get('user')
     password = _options.get('password')
     indexes = _options.get('indexes', False)
-
     '''
     at some point we should remove support for 
     pymongo versions < 2.3 until then there are
     a bunch of these sections that need to be supported
     '''
-
     if float(version) > 2.3:
         conn = pymongo.MongoClient(host, port)
     else:
