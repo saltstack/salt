@@ -343,7 +343,7 @@ argument name:
 '''
 
 VALID_CREATE_OPTS = {
-    'command': {
+    'cmd': {
         'path': 'Config:Cmd',
     },
     'hostname': {
@@ -1099,25 +1099,25 @@ def _validate_input(action,
             raise SaltInvocationError(key + ' must be a list of strings')
 
     # Custom validation functions for container creation options
-    def _valid_command():  # pylint: disable=unused-variable
+    def _valid_cmd():  # pylint: disable=unused-variable
         '''
         Must be either a string or a list of strings. Value will be translated
         to a list of strings
         '''
-        if kwargs.get('command') is None:
+        if kwargs.get('cmd') is None:
             # No need to validate
             return
-        if isinstance(kwargs['command'], six.string_types):
+        if isinstance(kwargs['cmd'], six.string_types):
             # Translate command into a list of strings
             try:
-                kwargs['command'] = shlex.split(kwargs['command'])
+                kwargs['cmd'] = shlex.split(kwargs['cmd'])
             except AttributeError:
                 pass
         try:
-            _valid_stringlist('command')
+            _valid_stringlist('cmd')
         except SaltInvocationError:
             raise SaltInvocationError(
-                'command must be a string or list of strings'
+                'cmd must be a string or list of strings'
             )
 
     def _valid_user():  # pylint: disable=unused-variable
@@ -2507,10 +2507,13 @@ def create(image,
     image
         Image from which to create the container
 
-    command
+    cmd or command
         Command to run in the container
 
-        Example: ``command=bash``
+        Example: ``cmd=bash`` or ``command=bash``
+
+        .. versionchanged:: 2015.8.1
+            ``cmd`` is now also accepted
 
     hostname
         Hostname of the container. If not provided, and if a ``name`` has been
@@ -2643,6 +2646,14 @@ def create(image,
         # Create a CentOS 7 container that will stay running once started
         salt myminion dockerng.create centos:7 name=mycent7 interactive=True tty=True command=bash
     '''
+    if 'command' in kwargs:
+        if 'cmd' in kwargs:
+            raise SaltInvocationError(
+                'Only one of \'cmd\' and \'command\' can be used. Both '
+                'arguments are equivalent.'
+            )
+        kwargs['cmd'] = kwargs.pop('command')
+
     try:
         # Try to inspect the image, if it fails then we know we need to pull it
         # first.
@@ -2670,8 +2681,10 @@ def create(image,
     # Added to manage api change in 1.19.
     # mem_limit and memswap_limit must be provided in host_config object
     if salt.utils.version_cmp(version()['ApiVersion'], '1.18') == 1:
-        create_kwargs['host_config'] = docker.utils.create_host_config(mem_limit=create_kwargs.get('mem_limit'),
-                                                                       memswap_limit=create_kwargs.get('memswap_limit'))
+        create_kwargs['host_config'] = docker.utils.create_host_config(
+            mem_limit=create_kwargs.get('mem_limit'),
+            memswap_limit=create_kwargs.get('memswap_limit')
+        )
         if 'mem_limit' in create_kwargs:
             del create_kwargs['mem_limit']
         if 'memswap_limit' in create_kwargs:
