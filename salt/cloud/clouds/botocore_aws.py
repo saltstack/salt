@@ -32,15 +32,12 @@ If this driver is still needed, set up the cloud configuration at
 
 # Import python libs
 from __future__ import absolute_import
-import os
-import stat
 import logging
 
 # Import salt.cloud libs
 import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 import salt.ext.six as six
 
 # Import libcloudfuncs and libcloud_aws, required to latter patch __opts__

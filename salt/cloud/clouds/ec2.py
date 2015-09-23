@@ -71,7 +71,6 @@ To use the EC2 cloud module, set up the cloud configuration at
 from __future__ import absolute_import
 import os
 import sys
-import stat
 import time
 import uuid
 import pprint

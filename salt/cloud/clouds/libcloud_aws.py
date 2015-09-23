@@ -34,7 +34,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import stat
 import uuid
 import pprint
 import logging
