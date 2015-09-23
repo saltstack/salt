@@ -49,7 +49,6 @@ Example Provider Configuration
 from __future__ import absolute_import
 import os
 import re
-import stat
 import pprint
 import logging
 import msgpack
