@@ -129,13 +129,11 @@ def _get_conn(ret):
     user = _options.get('user')
     password = _options.get('password')
     indexes = _options.get('indexes', False)
-    
     '''
     at some point we should remove support for 
     pymongo versions < 2.3 until then there are
     a bunch of these sections that need to be supported
     '''
-
     if float(version) > 2.3:
         conn = pymongo.MongoClient(host, port)
     else:
@@ -149,14 +147,12 @@ def _get_conn(ret):
         if float(version) > 2.3:
             mdb.saltReturns.create_index('minion')
             mdb.saltReturns.create_index('jid')
-            
             mdb.jobs.create_index('jid')
         else:
             mdb.saltReturns.ensure_index('minion')
             mdb.saltReturns.ensure_index('jid')
-            
             mdb.jobs.ensure_index('jid')
-
+            
     return conn, mdb
 
 
