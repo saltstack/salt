@@ -3,6 +3,11 @@
 Manage Docker containers
 ========================
 
+.. deprecated:: 2015.8.0
+    Future feature development will be done only in :mod:`dockerng
+    <salt.states.dockerng>`. See the documentation for this module for
+    information on the deprecation path.
+
 `Docker <https://www.docker.io>`_
 is a lightweight, portable, self-sufficient software container
 wrapper. The base supported wrapper type is
