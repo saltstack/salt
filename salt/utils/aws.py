@@ -51,6 +51,7 @@ __AccessKeyId__ = ''
 __SecretAccessKey__ = ''
 __Token__ = ''
 __Expiration__ = ''
+__Location__ = ''
 
 
 def creds(provider):
@@ -139,8 +140,9 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     return params_with_headers
 
 
-def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
-         product='ec2', uri='/', requesturl=None):
+def sig4(method, endpoint, params, prov_dict,
+         aws_api_version=DEFAULT_AWS_API_VERSION, location=None,
+         product='ec2', uri='/', requesturl=None, data=''):
     '''
     Sign a query against AWS services using Signature Version 4 Signing
     Process. This is documented at:
@@ -154,8 +156,14 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
     # Retrieve access credentials from meta-data, or use provided
     access_key_id, secret_access_key, token = creds(prov_dict)
 
+    if location is None:
+        location = get_region_from_metadata()
+    if location is None:
+        location = DEFAULT_LOCATION
+
     params_with_headers = params.copy()
-    params_with_headers['Version'] = aws_api_version
+    if product != 's3':
+        params_with_headers['Version'] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(map(params_with_headers.get, keys))
     querystring = urlencode(list(zip(keys, values))).replace('+', '%20')
@@ -167,13 +175,18 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
         endpoint,
         amzdate,
     )
+
     signed_headers = 'host;x-amz-date'
+
+    if token != '':
+        canonical_headers += 'x-amz-security-token:{0}\n'.format(token)
+        signed_headers += ';x-amz-security-token'
 
     algorithm = 'AWS4-HMAC-SHA256'
 
     # Create payload hash (hash of the request body content). For GET
     # requests, the payload is an empty string ('').
-    payload_hash = hashlib.sha256('').hexdigest()
+    payload_hash = hashlib.sha256(data).hexdigest()
 
     # Combine elements to create create canonical request
     canonical_request = '\n'.join((
@@ -223,7 +236,8 @@ def sig4(method, endpoint, params, prov_dict, aws_api_version, location,
 
     headers = {
         'x-amz-date': amzdate,
-        'Authorization': authorization_header
+        'x-amz-content-sha256': payload_hash,
+        'Authorization': authorization_header,
     }
 
     # Add in security token if we have one
@@ -434,15 +448,56 @@ def query(params=None, setname=None, requesturl=None, location=None,
     return ret
 
 
+def get_region_from_metadata():
+    '''
+    Try to get region from instance identity document and cache it
+
+    .. versionadded:: 2015.5.6
+    '''
+    global __Location__
+
+    if __Location__ == 'do-not-get-from-metadata':
+        LOG.debug('Previously failed to get AWS region from metadata. Not trying again.')
+        return None
+
+    # Cached region
+    if __Location__ != '':
+        return __Location__
+
+    try:
+        # Connections to instance meta-data must never be proxied
+        result = requests.get(
+            "http://169.254.169.254/latest/dynamic/instance-identity/document",
+            proxies={'http': ''},
+        )
+    except requests.exceptions.RequestException:
+        LOG.warning('Failed to get AWS region from instance metadata.', exc_info=True)
+        # Do not try again
+        __Location__ = 'do-not-get-from-metadata'
+        return None
+
+    try:
+        region = result.json()['region']
+        __Location__ = region
+        return __Location__
+    except (ValueError, KeyError):
+        LOG.warning('Failed to decode JSON from instance metadata.')
+        return None
+
+    return None
+
+
 def get_location(opts, provider=None):
     '''
     Return the region to use, in this order:
         opts['location']
         provider['location']
+        get_region_from_metadata()
         DEFAULT_LOCATION
     '''
-    return opts.get(
-        'location', provider.get(
-            'location', DEFAULT_LOCATION
-        )
-    )
+    ret = opts.get('location', provider.get('location'))
+    if ret is None:
+        ret = get_region_from_metadata()
+    if ret is None:
+        ret = DEFAULT_LOCATION
+    return ret

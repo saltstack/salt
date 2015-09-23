@@ -50,8 +50,8 @@ _ETHTOOL_CONFIG_OPTS = [
     'gso', 'gro', 'lro'
 ]
 _RH_CONFIG_OPTS = [
-    'domain', 'peerdns', 'defroute',
-    'mtu', 'static-routes', 'gateway'
+    'domain', 'peerdns', 'peerntp', 'defroute',
+    'mtu', 'static-routes', 'gateway', 'zone'
 ]
 _RH_CONFIG_BONDING_OPTS = [
     'mode', 'miimon', 'arp_interval',
@@ -624,7 +624,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if iface_type == 'ib':
         result['devtype'] = 'InfiniBand'
 
-    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain', 'gateway']:
+    for opt in ['ipaddr', 'master', 'netmask', 'srcaddr', 'delay', 'domain', 'gateway', 'zone']:
         if opt in opts:
             result[opt] = opts[opt]
 
@@ -646,7 +646,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         result['enable_ipv6'] = opts['enable_ipv6']
 
     valid = _CONFIG_TRUE + _CONFIG_FALSE
-    for opt in ['onparent', 'peerdns', 'slave', 'vlan', 'defroute', 'stp']:
+    for opt in ['onparent', 'peerdns', 'peerntp', 'slave', 'vlan', 'defroute', 'stp']:
         if opt in opts:
             if opts[opt] in _CONFIG_TRUE:
                 result[opt] = 'yes'
@@ -957,7 +957,7 @@ def build_routes(iface, **settings):
     '''
 
     template = 'rh6_route_eth.jinja'
-    if float(__grains__['osrelease']) < 6:
+    if __grains__['osrelease'][0] < 6:
         template = 'route_eth.jinja'
     log.debug('Template name: ' + template)
 

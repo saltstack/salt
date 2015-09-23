@@ -86,6 +86,15 @@ Job events
     :var fun: The function the minion ran. E.g., ``test.ping``.
     :var return: The data returned from the execution module.
 
+.. salt:event:: salt/job/<JID>/prog/<MID>/<RUN NUM>
+
+    Fired each time a each function in a state run completes execution. Must be
+    enabled using the :conf_master:`state_events` option.
+
+    :var data: The data returned from the state module function.
+    :var id: The minion ID.
+    :var jid: The job ID.
+
 .. _event-master_presence:
 
 Presence events

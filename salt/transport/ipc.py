@@ -102,6 +102,9 @@ class IPCServer(object):
                 framed_msg = msgpack.loads(framed_msg_raw)
                 body = framed_msg['body']
                 self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
+            except tornado.iostream.StreamClosedError:
+                log.trace('Client disconnected from IPC {0}'.format(self.socket_path))
+                break
             except Exception as exc:
                 log.error('Exception occurred while handling stream: {0}'.format(exc))
 

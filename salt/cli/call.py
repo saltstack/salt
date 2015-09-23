@@ -4,8 +4,10 @@ from __future__ import absolute_import
 import os
 
 from salt.utils import parsers
+from salt.utils.verify import verify_log
 from salt.config import _expand_glob_path
 import salt.cli.caller
+import salt.defaults.exitcodes
 
 
 class SaltCall(parsers.SaltCallOptionParser):
@@ -36,15 +38,16 @@ class SaltCall(parsers.SaltCallOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         caller = salt.cli.caller.Caller.factory(self.config)
 
         if self.options.doc:
             caller.print_docs()
-            self.exit(os.EX_OK)
+            self.exit(salt.defaults.exitcodes.EX_OK)
 
         if self.options.grains_run:
             caller.print_grains()
-            self.exit(os.EX_OK)
+            self.exit(salt.defaults.exitcodes.EX_OK)
 
         caller.run()

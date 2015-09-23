@@ -21,6 +21,8 @@ automatically
         - dest_dir: /tmp/pkg
         - spec: salt://pkg/salt/spec/salt.spec
         - template: jinja
+        - deps:
+          - salt://pkg/salt/sources/required_dependency.rpm
         - tgt: epel-7-x86_64
         - sources:
           - salt://pkg/salt/sources/logrotate.salt
@@ -53,6 +55,8 @@ def built(
         sources,
         template,
         tgt,
+        deps=None,
+        env=None,
         results=None,
         always=False,
         saltenv='base'):
@@ -80,6 +84,31 @@ def built(
     tgt
         The target platform to run the build on
 
+    deps
+        Packages required to ensure that the named package is built
+        can be hosted on either the salt master server or on an HTTP
+        or FTP server.  Both HTTPS and HTTP are supported as well as
+        downloading directly from Amazon S3 compatible URLs with both
+        pre-configured and automatic IAM credentials
+
+    env
+        A dictionary of environment variables to be set prior to execution.
+        Example:
+
+        .. code-block:: yaml
+
+                - env:
+                    DEB_BUILD_OPTIONS: 'nocheck'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
     results
         The names of the expected rpms that will be built
 
@@ -101,7 +130,7 @@ def built(
         present = set()
         if os.path.isdir(dest_dir):
             for fn_ in os.listdir(dest_dir):
-                present.appd(fn_)
+                present.add(fn_)
         need = results.difference(present)
         if not need:
             ret['comment'] = 'All needed packages exist'
@@ -110,19 +139,29 @@ def built(
         ret['comment'] = 'Packages need to be built'
         ret['result'] = None
         return ret
+
+    # Need the check for None here, if env is not provided then it falls back
+    # to None and it is assumed that the environment is not being overridden.
+    if env is not None and not isinstance(env, dict):
+        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
+                          'documentation.')
+        return ret
+
     ret['changes'] = __salt__['pkgbuild.build'](
-            runas,
-            tgt,
-            dest_dir,
-            spec,
-            sources,
-            template,
-            saltenv)
+        runas,
+        tgt,
+        dest_dir,
+        spec,
+        sources,
+        deps,
+        env,
+        template,
+        saltenv)
     ret['comment'] = 'Packages Built'
     return ret
 
 
-def repo(name):
+def repo(name, keyid=None, env=None):
     '''
     Make a package repository, the name is directoty to turn into a repo.
     This state is best used with onchanges linked to your package building
@@ -130,6 +169,30 @@ def repo(name):
 
     name
         The directory to find packages that will be in the repository
+
+    keyid
+        Optional Key ID to use in signing repository
+
+    env
+        A dictionary of environment variables to be utlilized in creating the repository.
+        Example:
+
+        .. code-block:: yaml
+
+                - env:
+                    OPTIONS: 'ask-passphrase'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+            Use of OPTIONS on some platforms, for example: ask-passphrase, will
+            require gpg-agent or similar to cache passphrases.
     '''
     ret = {'name': name,
            'changes': {},
@@ -139,6 +202,14 @@ def repo(name):
         ret['result'] = None
         ret['comment'] = 'Package repo at {0} will be rebuilt'.format(name)
         return ret
-    __salt__['pkgbuild.make_repo'](name)
+
+    # Need the check for None here, if env is not provided then it falls back
+    # to None and it is assumed that the environment is not being overridden.
+    if env is not None and not isinstance(env, dict):
+        ret['comment'] = ('Invalidly-formatted \'env\' parameter. See '
+                          'documentation.')
+        return ret
+
+    __salt__['pkgbuild.make_repo'](name, keyid, env)
     ret['changes'] = {'refresh': True}
     return ret

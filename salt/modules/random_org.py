@@ -120,9 +120,6 @@ def _query(api_version=None, data=None):
     elif result.get('status', None) == salt.ext.six.moves.http_client.NO_CONTENT:
         return False
     else:
-        log.debug('base_url {0}'.format(base_url))
-        log.debug('data {0}'.format(data))
-        log.debug('result {0}'.format(result.text))
         ret['message'] = result.text
         return ret
 
@@ -670,6 +667,7 @@ def generateBlobs(api_key=None,
                   **kwargs):
     '''
     List all Slack users.
+
     :param api_key: The Random.org api key.
     :param api_version: The Random.org api version.
     :param format: Specifies the format in which the

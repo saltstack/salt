@@ -9,6 +9,7 @@ import sys
 import salt.utils.job
 from salt.ext.six import string_types
 from salt.utils import parsers, print_cli
+from salt.utils.verify import verify_log
 from salt.exceptions import (
         SaltClientError,
         SaltInvocationError,
@@ -34,6 +35,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
         # Setup file logging!
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         try:
             # We don't need to bail on config file permission errors
@@ -87,7 +89,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 self._output_ret(ret, '')
 
             else:
-                batch = salt.cli.batch.Batch(self.config, eauth=eauth)
+                try:
+                    batch = salt.cli.batch.Batch(self.config, eauth=eauth)
+                except salt.exceptions.SaltClientError as exc:
+                    # We will print errors to the console further down the stack
+                    sys.exit(1)
                 # Printing the output is already taken care of in run() itself
                 for res in batch.run():
                     if self.options.failhard:
@@ -172,7 +178,10 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                         ret = {}
                         for progress in cmd_func(**kwargs):
                             out = 'progress'
-                            self._progress_ret(progress, out)
+                            try:
+                                self._progress_ret(progress, out)
+                            except salt.exceptions.LoaderError as exc:
+                                raise salt.exceptions.SaltSystemExit(exc)
                             if 'return_count' not in progress:
                                 ret.update(progress)
                         self._progress_end(out)
@@ -193,7 +202,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                                 ret_, out, retcode = self._format_ret(full_ret)
                                 retcodes.append(retcode)
                                 self._output_ret(ret_, out)
-                                ret.update(ret_)
+                                ret.update(full_ret)
                             except KeyError:
                                 errors.append(full_ret)
 
@@ -274,7 +283,11 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         import salt.output
         # Get the progress bar
         if not hasattr(self, 'progress_bar'):
-            self.progress_bar = salt.output.get_progress(self.config, out, progress)
+            try:
+                self.progress_bar = salt.output.get_progress(self.config, out, progress)
+            except Exception as exc:
+                raise salt.exceptions.LoaderError('\nWARNING: Install the `progressbar` python package. '
+                                                  'Requested job was still run but output cannot be displayed.\n')
         salt.output.update_progress(self.config, progress, self.progress_bar, out)
 
     def _output_ret(self, ret, out):

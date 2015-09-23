@@ -81,7 +81,8 @@ def enter_mainloop(target,
                    pool_size=None,
                    callback=None,
                    queue=None):
-    '''Manage a multiprocessing pool
+    '''
+    Manage a multiprocessing pool
 
     - If the queue does not output anything, the pool runs indefinitely
 
@@ -227,7 +228,7 @@ class CloudClient(object):
                          if a.get('provider', '')]
             if providers:
                 _providers = opts.get('providers', {})
-                for provider in six.iterkeys(_providers):
+                for provider in _providers.keys():
                     if provider not in providers:
                         _providers.pop(provider)
         return opts
@@ -636,9 +637,9 @@ class Cloud(object):
                 # If driver has function list_nodes_min, just replace it
                 # with query param to check existing vms on this driver
                 # for minimum information, Otherwise still use query param.
-                if 'selected_query_option' not in opts:
-                    if '{0}.list_nodes_min'.format(driver) in self.clouds:
-                        this_query = 'list_nodes_min'
+                if 'selected_query_option' not in opts and '{0}.list_nodes_min'.format(driver) in self.clouds:
+                    this_query = 'list_nodes_min'
+
                 fun = '{0}.{1}'.format(driver, this_query)
                 if fun not in self.clouds:
                     log.error(
@@ -696,12 +697,8 @@ class Cloud(object):
                 # the search returns the same instance for each provider
                 # because amazon returns all instances in a region, not
                 # availability zone.
-                if profile:
-                    if alias not in \
-                        self.opts['profiles'][profile]['provider'].split(
-                            ':'
-                            )[0]:
-                        continue
+                if profile and alias not in self.opts['profiles'][profile]['provider'].split(':')[0]:
+                    continue
 
                 for vm_name, details in six.iteritems(vms):
                     # XXX: The logic below can be removed once the aws driver
@@ -1047,17 +1044,15 @@ class Cloud(object):
                 salt.utils.cloud.remove_key(self.opts['pki_dir'], os.path.basename(key_file))
                 continue
 
-            if not os.path.isfile(key_file) and globbed_key_file:
-                # Since we have globbed matches, there are probably
-                # some keys for which their minion configuration has
-                # append_domain set.
-                if len(globbed_key_file) == 1:
-                    # Single entry, let's remove it!
-                    salt.utils.cloud.remove_key(
-                        self.opts['pki_dir'],
-                        os.path.basename(globbed_key_file[0])
-                    )
-                    continue
+            # Since we have globbed matches, there are probably some keys for which their minion
+            # configuration has append_domain set.
+            if not os.path.isfile(key_file) and globbed_key_file and len(globbed_key_file) == 1:
+                # Single entry, let's remove it!
+                salt.utils.cloud.remove_key(
+                    self.opts['pki_dir'],
+                    os.path.basename(globbed_key_file[0])
+                )
+                continue
 
             # Since we can't get the profile or map entry used to create
             # the VM, we can't also get the append_domain setting.
@@ -1178,12 +1173,11 @@ class Cloud(object):
         )
 
         if deploy:
-            if make_master is False and 'master' not in minion_dict:
-                raise SaltCloudConfigError(
-                    (
-                        'There\'s no master defined on the '
-                        '{0!r} VM settings'
-                    ).format(vm_['name'])
+            if not make_master and 'master' not in minion_dict:
+                log.warn(
+                    'There\'s no master defined on the {0!r} VM settings.'.format(
+                        vm_['name']
+                    )
                 )
 
             if 'pub_key' not in vm_ and 'priv_key' not in vm_:
@@ -1208,22 +1202,21 @@ class Cloud(object):
         if 'append_domain' in minion_dict:
             key_id = '.'.join([key_id, minion_dict['append_domain']])
 
-        if make_master is True:
-            if 'master_pub' not in vm_ and 'master_pem' not in vm_:
-                log.debug(
-                    'Generating the master keys for {0[name]!r}'.format(
-                        vm_
-                    )
+        if make_master is True and 'master_pub' not in vm_ and 'master_pem' not in vm_:
+            log.debug(
+                'Generating the master keys for {0[name]!r}'.format(
+                    vm_
                 )
-                master_priv, master_pub = salt.utils.cloud.gen_keys(
-                    salt.config.get_cloud_config_value(
-                        'keysize',
-                        vm_,
-                        self.opts
-                    )
+            )
+            master_priv, master_pub = salt.utils.cloud.gen_keys(
+                salt.config.get_cloud_config_value(
+                    'keysize',
+                    vm_,
+                    self.opts
                 )
-                vm_['master_pub'] = master_pub
-                vm_['master_pem'] = master_priv
+            )
+            vm_['master_pub'] = master_pub
+            vm_['master_pem'] = master_priv
 
         if local_master is True and deploy is True:
             # Accept the key on the local master
@@ -1378,14 +1371,7 @@ class Cloud(object):
         del provider_details['profiles']
 
         for name in names:
-            name_exists = False
             if name in vms:
-                if 'state' in vms[name]:
-                    if vms[name]['state'].lower() != 'terminated':
-                        name_exists = True
-                else:
-                    name_exists = True
-            if name_exists:
                 msg = '{0} already exists under {1}:{2}'.format(
                     name, alias, driver
                 )
@@ -1658,11 +1644,18 @@ class Map(Cloud):
         for alias, drivers in six.iteritems(query_map):
             for driver, vms in six.iteritems(drivers):
                 for vm_name, vm_details in six.iteritems(vms):
-                    if (vm_details != 'Absent') and \
-                        (
-                            vm_details['state'].lower() in
-                            matching_states[action]
-                            ):
+                    # Only certain actions are support in to use in this case. Those actions are the
+                    # "Global" salt-cloud actions defined in the "matching_states" dictionary above.
+                    # If a more specific action is passed in, we shouldn't stack-trace - exit gracefully.
+                    try:
+                        state_action = matching_states[action]
+                    except KeyError:
+                        log.error(
+                            'The use of \'{0}\' as an action is not supported in this context. '
+                            'Only \'start\', \'stop\', and \'reboot\' are supported options.'.format(action)
+                        )
+                        raise SaltCloudException()
+                    if vm_details != 'Absent' and vm_details['state'].lower() in state_action:
                         vm_names.append(vm_name)
         return vm_names
 
@@ -1674,11 +1667,11 @@ class Map(Cloud):
             return {}
 
         if not os.path.isfile(self.opts['map']):
-            raise SaltCloudNotFound(
-                'The specified map file does not exist: {0}\n'.format(
-                    self.opts['map']
-                )
+            log.error(
+                'The specified map file does not exist: \'{0}\''.format(
+                    self.opts['map'])
             )
+            raise SaltCloudNotFound()
         try:
             renderer = self.opts.get('renderer', 'yaml_jinja')
             rend = salt.loader.render(self.opts, {})
@@ -1715,7 +1708,15 @@ class Map(Cloud):
                             #   - bar1:
                             #   - bar2:
                             overrides = {}
-                        overrides.setdefault('name', name)
+                        try:
+                            overrides.setdefault('name', name)
+                        except AttributeError:
+                            log.error(
+                                'Cannot use \'name\' as a minion id in a cloud map as it '
+                                'is a reserved word. Please change \'name\' to a different '
+                                'minion id reference.'
+                            )
+                            return ''
                         entries[name] = overrides
                 map_[profile] = entries
                 continue
@@ -1837,16 +1838,17 @@ class Map(Cloud):
                         overrides[setting] = overrides.pop(deprecated)
 
                 # merge minion grains from map file
-                if 'minion' in overrides and 'minion' in nodedata:
-                    if 'grains' in overrides['minion']:
-                        if 'grains' in nodedata['minion']:
-                            nodedata['minion']['grains'].update(
-                                overrides['minion']['grains']
-                            )
-                            del overrides['minion']['grains']
-                            # remove minion key if now is empty dict
-                            if len(overrides['minion']) == 0:
-                                del overrides['minion']
+                if 'minion' in overrides and \
+                        'minion' in nodedata and \
+                        'grains' in overrides['minion'] and \
+                        'grains' in nodedata['minion']:
+                    nodedata['minion']['grains'].update(
+                        overrides['minion']['grains']
+                    )
+                    del overrides['minion']['grains']
+                    # remove minion key if now is empty dict
+                    if len(overrides['minion']) == 0:
+                        del overrides['minion']
 
                 nodedata.update(overrides)
                 # Add the computed information to the return data
@@ -1860,9 +1862,8 @@ class Map(Cloud):
             for alias, drivers in six.iteritems(pmap):
                 for driver, vms in six.iteritems(drivers):
                     for vm_name, details in six.iteritems(vms):
-                        if vm_name == name:
-                            if driver not in matches:
-                                matches[driver] = details['state']
+                        if vm_name == name and driver not in matches:
+                            matches[driver] = details['state']
             return matches
 
         for alias, drivers in six.iteritems(pmap):
@@ -1878,32 +1879,17 @@ class Map(Cloud):
                         continue
 
                     # A machine by the same name exists
-                    for mdriver, state in six.iteritems(matching):
+                    for item in matching:
                         if name not in ret['create']:
                             # Machine already removed
                             break
 
-                        if mdriver not in ('aws', 'ec2') and \
-                                state.lower() != 'terminated':
-                            # Regarding other providers, simply remove
-                            # them for the create map.
-                            log.warn(
-                                '{0!r} already exists, removing from '
-                                'the create map'.format(name)
-                            )
-                            if 'existing' not in ret:
-                                ret['existing'] = {}
-                            ret['existing'][name] = ret['create'].pop(name)
-                            continue
+                        log.warn('{0!r} already exists, removing from '
+                                 'the create map.'.format(name))
 
-                        if state.lower() != 'terminated':
-                            log.info(
-                                '{0!r} already exists, removing '
-                                'from the create map'.format(name)
-                            )
-                            if 'existing' not in ret:
-                                ret['existing'] = {}
-                            ret['existing'][name] = ret['create'].pop(name)
+                        if 'existing' not in ret:
+                            ret['existing'] = {}
+                        ret['existing'][name] = ret['create'].pop(name)
 
         if 'hard' in self.opts and self.opts['hard']:
             if self.opts['enable_hard_maps'] is False:
@@ -2122,7 +2108,9 @@ class Map(Cloud):
                 output[name] = self.create(
                     profile, local_master=local_master
                 )
-                if self.opts.get('show_deploy_args', False) is False and 'deploy_kwargs' in output:
+                if self.opts.get('show_deploy_args', False) is False \
+                        and 'deploy_kwargs' in output \
+                        and isinstance(output[name], dict):
                     output[name].pop('deploy_kwargs', None)
             except SaltCloudException as exc:
                 log.error(
@@ -2211,7 +2199,7 @@ def create_multiprocessing(parallel_data, queue=None):
         )
         return {parallel_data['name']: {'Error': str(exc)}}
 
-    if parallel_data['opts'].get('show_deploy_args', False) is False:
+    if parallel_data['opts'].get('show_deploy_args', False) is False and isinstance(output, dict):
         output.pop('deploy_kwargs', None)
 
     return {
@@ -2287,7 +2275,7 @@ def run_parallel_map_providers_query(data, queue=None):
             exc_info_on_loglevel=logging.DEBUG
         )
         # Failed to communicate with the provider, don't list any nodes
-        return (data['alias'], data['driver'], ())
+        return data['alias'], data['driver'], ()
 
 
 # for pickle and multiprocessing, we can't use directly decorators

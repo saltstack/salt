@@ -2,7 +2,7 @@
 Getting Started With VMware
 ===========================
 
-.. versionadded:: 2015.8.0
+.. versionadded:: 2015.5.4
 
 **Author**: Nitin Madhok <nmadhok@clemson.edu>
 
@@ -34,22 +34,24 @@ set up in the cloud configuration at
 
     my-vmware-config:
       driver: vmware
-      user: "DOMAIN\user"
-      password: "verybadpass"
-      url: "vcenter01.domain.com"
+      user: 'DOMAIN\user'
+      password: 'verybadpass'
+      url: '10.20.30.40'
 
-    vmware-vcenter02:
+    vcenter01:
       driver: vmware
-      user: "DOMAIN\user"
-      password: "verybadpass"
-      url: "vcenter02.domain.com"
+      user: 'DOMAIN\user'
+      password: 'verybadpass'
+      url: 'vcenter01.domain.com'
+      protocol: 'https'
+      port: 443
 
-    vmware-vcenter03:
+    vcenter02:
       driver: vmware
-      user: "DOMAIN\user"
-      password: "verybadpass"
-      url: "vcenter03.domain.com"
-      protocol: "http"
+      user: 'DOMAIN\user'
+      password: 'verybadpass'
+      url: 'vcenter02.domain.com'
+      protocol: 'http'
       port: 80
 
 .. note::
@@ -57,6 +59,15 @@ set up in the cloud configuration at
     Optionally, ``protocol`` and ``port`` can be specified if the vCenter
     server is not using the defaults. Default is ``protocol: https`` and
     ``port: 443``.
+
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 .. _vmware-cloud-profile:
 
@@ -68,7 +79,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 .. code-block:: yaml
 
     vmware-centos6.5:
-      provider: vmware-vcenter01
+      provider: vcenter01
       clonefrom: test-vm
 
       ## Optional arguments
@@ -156,6 +167,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         /path/to/local/file: /path/to/remote/file
         /srv/salt/yum/epel.repo: /etc/yum.repos.d/epel.repo
 
+      hardware_version: 10
 
 ``provider``
     Enter the name that was specified when the cloud provider config was created.
@@ -377,3 +389,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     and salt is installed. A good example of using this would be if you need to put
     custom repo files on the server in case your server will be in a private network
     and cannot reach external networks.
+
+``hardware_version``
+    Specify the virtual hardware version for the vm/template that is supported by the
+    host.

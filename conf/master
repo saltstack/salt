@@ -356,12 +356,12 @@
 # If this is set to True the first newline after a Jinja block is removed
 # (block, not variable tag!). Defaults to False, corresponds to the Jinja
 # environment init variable "trim_blocks".
-# jinja_trim_blocks: False
+#jinja_trim_blocks: False
 #
 # If this is set to True leading spaces and tabs are stripped from the start
 # of a line to a block. Defaults to False, corresponds to the Jinja
 # environment init variable "lstrip_blocks".
-# jinja_lstrip_blocks: False
+#jinja_lstrip_blocks: False
 
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution, defaults to False
@@ -381,13 +381,18 @@
 #state_output: full
 
 # Automatically aggregate all states that have support for mod_aggregate by
-# setting to True. Or pass a list of state module names to automatically
+# setting to 'True'. Or pass a list of state module names to automatically
 # aggregate just those types.
 #
 # state_aggregate:
 #   - pkg
 #
 #state_aggregate: False
+
+# Send progress events as each function in a state run completes execution
+# by setting to 'True'. Progress events are in the format
+# 'salt/job/<JID>/prog/<MID>/<RUN NUM>'.
+#state_events: False
 
 #####      File Server settings      #####
 ##########################################
@@ -413,6 +418,23 @@
 #file_roots:
 #  base:
 #    - /srv/salt
+#
+
+# When using multiple environments, each with their own top file, the
+# default behaviour is an unordered merge. To prevent top files from
+# being merged together and instead to only use the top file from the
+# requested environment, set this value to 'same'. 
+#top_file_merging_strategy: merge
+
+# To specify the order in which environments are merged, set the ordering
+# in the env_order option. Given a conflict, the last matching value will
+# win.
+#env_order: ['base', 'dev', 'prod']
+
+# If top_file_merging_strategy is set to 'same' and an environment does not
+# contain a top file, the top file in the environment specified by default_top
+# will be used instead.
+#default_top: base
 
 # The hash_type is the hash to use when discovering the hash of a file on
 # the master server. The default is md5, but sha1, sha224, sha256, sha384
@@ -548,7 +570,7 @@
 # master config file that can then be used on minions.
 #pillar_opts: False
 
-# The pillar_safe_render_error option prevents the master from passing piller
+# The pillar_safe_render_error option prevents the master from passing pillar
 # render errors to the minion. This is set on by default because the error could
 # contain templating data which would give that minion information it shouldn't
 # have, like a password! When set true the error message will only show:
@@ -670,6 +692,10 @@
 
 # The level of messages to send to the console.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+#
+# The following log levels are considered INSECURE and may log sensitive data:
+# ['garbage', 'trace', 'debug']
+#
 #log_level: warning
 
 # The level of messages to send to the log file.
@@ -696,7 +722,9 @@
 # the coloring of the messages, these color formatters also include padding as
 # well.  Color LogRecord attributes are only available for console logging.
 #
+#log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
+#
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This

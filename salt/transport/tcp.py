@@ -82,6 +82,8 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
 
     @classmethod
     def __key(cls, opts, **kwargs):
+        if 'master_uri' in kwargs:
+            opts['master_uri'] = kwargs['master_uri']
         return (opts['pki_dir'],     # where the keys are stored
                 opts['id'],          # minion ID
                 opts['master_uri'],  # master ID
@@ -574,8 +576,9 @@ class PubServer(tornado.tcpserver.TCPServer, object):
     # TODO: ACK the publish through IPC
     @tornado.gen.coroutine
     def publish_payload(self, payload, _):
-        payload = salt.transport.frame.frame_msg(payload['payload'], raw_body=True)
         log.debug('TCP PubServer sending payload: {0}'.format(payload))
+        payload = salt.transport.frame.frame_msg(payload['payload'], raw_body=True)
+
         to_remove = []
         for item in self.clients:
             client, address = item

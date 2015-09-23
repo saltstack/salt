@@ -31,6 +31,7 @@ from salt.ext.six.moves.urllib.parse import urlparse
 
 # Import salt libs
 import salt.utils
+import salt.utils.dictupdate
 import salt.utils.network
 import salt.syspaths
 import salt.utils.validate.path
@@ -161,6 +162,8 @@ VALID_OPTS = {
 
     # Allows a user to provide an alternate name for top.sls
     'state_top': str,
+
+    'state_top_saltenv': str,
 
     # States to run when a minion starts up
     'startup_states': str,
@@ -294,6 +297,9 @@ VALID_OPTS = {
     # Tell the loader to attempt to import *.pyx cython files if cython is available
     'cython_enable': bool,
 
+    # Tell the loader to attempt to import *.zip archives
+    'enable_zip_modules': bool,
+
     # Tell the client to show minions that have timed out
     'show_timeout': bool,
 
@@ -305,6 +311,9 @@ VALID_OPTS = {
 
     # Specify the format for state outputs. See highstate outputter for additional details.
     'state_output': str,
+
+    # Tells the highstate outputter to only report diffs of states that changed
+    'state_output_diff': bool,
 
     # When true, states run in the order defined in an SLS file, unless requisites re-order them
     'state_auto_order': bool,
@@ -361,6 +370,9 @@ VALID_OPTS = {
     # in the event of a disconnect event
     'recon_randomize': float,  # FIXME This should really be a bool, according to the implementation
 
+    'return_retry_timer': int,
+    'return_retry_random': bool,
+
     # Specify a returner in which all events will be sent to. Requires that the returner in question
     # have an event_return(event) function!
     'event_return': str,
@@ -374,9 +386,6 @@ VALID_OPTS = {
 
     # Events matching a tag in this list should never be sent to an event returner.
     'event_return_blacklist': list,
-
-    # The source location for the winrepo sls files
-    'win_repo_source_dir': str,
 
     # This pidfile to write out to when a deamon starts
     'pidfile': str,
@@ -425,7 +434,17 @@ VALID_OPTS = {
     # A master-only copy of the file_roots dictionary, used by the state compiler
     'master_roots': dict,
 
-
+    'git_pillar_base': str,
+    'git_pillar_branch': str,
+    'git_pillar_env': str,
+    'git_pillar_root': str,
+    'git_pillar_ssl_verify': bool,
+    'git_pillar_user': str,
+    'git_pillar_password': str,
+    'git_pillar_insecure_auth': bool,
+    'git_pillar_privkey': str,
+    'git_pillar_pubkey': str,
+    'git_pillar_passphrase': str,
     'gitfs_remotes': list,
     'gitfs_mountpoint': str,
     'gitfs_root': str,
@@ -438,6 +457,7 @@ VALID_OPTS = {
     'gitfs_passphrase': str,
     'gitfs_env_whitelist': list,
     'gitfs_env_blacklist': list,
+    'gitfs_ssl_verify': bool,
     'hgfs_remotes': list,
     'hgfs_mountpoint': str,
     'hgfs_root': str,
@@ -467,9 +487,24 @@ VALID_OPTS = {
     # Whether or not a copy of the master opts dict should be rendered into minion pillars
     'pillar_opts': bool,
 
-
     'pillar_safe_render_error': bool,
+
+    # When creating a pillar, there are several stratigies to choose from when
+    # encountering duplicate values
     'pillar_source_merging_strategy': str,
+
+    # How to merge multiple top files from multiple salt environments
+    # (saltenvs); can be 'merge' or 'same'
+    'top_file_merging_strategy': str,
+
+    # The ordering for salt environment merging, when top_file_merging_strategy
+    # is set to 'same'
+    'env_order': list,
+
+    # The salt environment which provides the default top file when
+    # top_file_merging_strategy is set to 'same'; defaults to 'base'
+    'default_top': str,
+
     'ping_on_rotate': bool,
     'peer': dict,
     'preserve_minion_cache': bool,
@@ -516,6 +551,9 @@ VALID_OPTS = {
     # that it receives
     'master_job_cache': str,
 
+    # Specify whether the master should store end times for jobs as returns come in
+    'job_cache_store_endtime': bool,
+
     # The minion data cache is a cache of information about the minions stored on the master.
     # This information is primarily the pillar and grains data. The data is cached in the master
     # cachedir under the name of the minion and used to predetermine what minions are expected to
@@ -550,9 +588,23 @@ VALID_OPTS = {
     # The logfile location for salt-key
     'key_logfile': str,
 
-    'win_repo': str,
-    'win_repo_mastercachefile': str,
-    'win_gitrepos': list,
+    # The source location for the winrepo sls files
+    # (used by win_pkg.py, minion only)
+    'winrepo_source_dir': str,
+
+    'winrepo_dir': str,
+    'winrepo_dir_ng': str,
+    'winrepo_cachefile': str,
+    'winrepo_remotes': list,
+    'winrepo_remotes_ng': list,
+    'winrepo_branch': str,
+    'winrepo_ssl_verify': bool,
+    'winrepo_user': str,
+    'winrepo_password': str,
+    'winrepo_insecure_auth': bool,
+    'winrepo_privkey': str,
+    'winrepo_pubkey': str,
+    'winrepo_passphrase': str,
 
     # Set a hard limit for the amount of memory modules can consume on a minion.
     'modules_max_memory': int,
@@ -685,7 +737,15 @@ VALID_OPTS = {
     # Used by salt-api for master requests timeout
     'rest_timeout': int,
 
+    # If set, all minion exec module actions will be rerouted through sudo as this user
     'sudo_user': str,
+
+    # HTTP request timeout in seconds. Applied for tornado http fetch functions like cp.get_url should be greater than
+    # overall download time.
+    'http_request_timeout': float,
+
+    # HTTP request max file content size.
+    'http_max_body': int,
 }
 
 # default configurations
@@ -720,14 +780,19 @@ DEFAULT_MINION_OPTS = {
     'pillarenv': None,
     'extension_modules': '',
     'state_top': 'top.sls',
+    'state_top_saltenv': None,
     'startup_states': '',
     'sls_list': [],
     'top_file': '',
     'file_client': 'remote',
     'use_master_when_local': False,
     'file_roots': {
-        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
+                 salt.syspaths.SPM_FORMULA_PATH]
     },
+    'top_file_merging_strategy': 'merge',
+    'env_order': [],
+    'default_top': 'base',
     'fileserver_limit_traversal': False,
     'file_recv': False,
     'file_recv_max_size': 100,
@@ -737,8 +802,20 @@ DEFAULT_MINION_OPTS = {
     'fileserver_followsymlinks': True,
     'fileserver_ignoresymlinks': False,
     'pillar_roots': {
-        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
+                 salt.syspaths.SPM_PILLAR_PATH]
     },
+    'git_pillar_base': 'master',
+    'git_pillar_branch': 'master',
+    'git_pillar_env': '',
+    'git_pillar_root': '',
+    'git_pillar_ssl_verify': False,
+    'git_pillar_user': '',
+    'git_pillar_password': '',
+    'git_pillar_insecure_auth': False,
+    'git_pillar_privkey': '',
+    'git_pillar_pubkey': '',
+    'git_pillar_passphrase': '',
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -751,6 +828,7 @@ DEFAULT_MINION_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
+    'gitfs_ssl_verify': False,
     'hash_type': 'md5',
     'disable_modules': [],
     'disable_returners': [],
@@ -786,8 +864,10 @@ DEFAULT_MINION_OPTS = {
     'test': False,
     'ext_job_cache': '',
     'cython_enable': False,
+    'enable_zip_modules': False,
     'state_verbose': True,
     'state_output': 'full',
+    'state_output_diff': False,
     'state_auto_order': True,
     'state_events': False,
     'state_aggregate': False,
@@ -805,10 +885,25 @@ DEFAULT_MINION_OPTS = {
     'recon_max': 10000,
     'recon_default': 1000,
     'recon_randomize': True,
+    'return_retry_timer': 4,
+    'return_retry_random': True,
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'random_reauth_delay': 10,
-    'win_repo_source_dir': 'salt://win/repo/',
+    'winrepo_source_dir': 'salt://win/repo-ng/',
+    'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
+    'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
+    'winrepo_cachefile': 'winrepo.p',
+    'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
+    'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
+    'winrepo_branch': 'master',
+    'winrepo_ssl_verify': False,
+    'winrepo_user': '',
+    'winrepo_password': '',
+    'winrepo_insecure_auth': False,
+    'winrepo_privkey': '',
+    'winrepo_pubkey': '',
+    'winrepo_passphrase': '',
     'pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-minion.pid'),
     'range_server': 'range:80',
     'tcp_keepalive': True,
@@ -849,6 +944,8 @@ DEFAULT_MINION_OPTS = {
     'cache_sreqs': True,
     'cmd_safe': True,
     'sudo_user': '',
+    'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
+    'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -866,15 +963,31 @@ DEFAULT_MASTER_OPTS = {
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'master'),
     'file_roots': {
-        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_FILE_ROOTS_DIR,
+                 salt.syspaths.SPM_FORMULA_PATH]
     },
     'master_roots': {
         'base': [salt.syspaths.BASE_MASTER_ROOTS_DIR],
     },
     'pillar_roots': {
-        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR],
+        'base': [salt.syspaths.BASE_PILLAR_ROOTS_DIR,
+                 salt.syspaths.SPM_PILLAR_PATH]
     },
+    'top_file_merging_strategy': 'merge',
+    'env_order': [],
+    'default_top': 'base',
     'file_client': 'local',
+    'git_pillar_base': 'master',
+    'git_pillar_branch': 'master',
+    'git_pillar_env': '',
+    'git_pillar_root': '',
+    'git_pillar_ssl_verify': False,
+    'git_pillar_user': '',
+    'git_pillar_password': '',
+    'git_pillar_insecure_auth': False,
+    'git_pillar_privkey': '',
+    'git_pillar_pubkey': '',
+    'git_pillar_passphrase': '',
     'gitfs_remotes': [],
     'gitfs_mountpoint': '',
     'gitfs_root': '',
@@ -887,6 +1000,7 @@ DEFAULT_MASTER_OPTS = {
     'gitfs_passphrase': '',
     'gitfs_env_whitelist': [],
     'gitfs_env_blacklist': [],
+    'gitfs_ssl_verify': False,
     'hgfs_remotes': [],
     'hgfs_mountpoint': '',
     'hgfs_root': '',
@@ -943,11 +1057,13 @@ DEFAULT_MASTER_OPTS = {
     'renderer': 'yaml_jinja',
     'failhard': False,
     'state_top': 'top.sls',
+    'state_top_saltenv': None,
     'master_tops': {},
     'order_masters': False,
     'job_cache': True,
     'ext_job_cache': '',
     'master_job_cache': 'local_cache',
+    'job_cache_store_endtime': False,
     'minion_data_cache': True,
     'enforce_mine_cache': False,
     'ipc_mode': _DFLT_IPC_MODE,
@@ -978,6 +1094,7 @@ DEFAULT_MASTER_OPTS = {
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',
+    'state_output_diff': False,
     'state_auto_order': True,
     'state_events': False,
     'state_aggregate': False,
@@ -992,10 +1109,19 @@ DEFAULT_MASTER_OPTS = {
     'verify_env': True,
     'permissive_pki_access': False,
     'default_include': 'master.d/*.conf',
-    'win_repo': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
-    'win_repo_mastercachefile': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR,
-                                             'win', 'repo', 'winrepo.p'),
-    'win_gitrepos': ['https://github.com/saltstack/salt-winrepo.git'],
+    'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
+    'winrepo_dir_ng': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo-ng'),
+    'winrepo_cachefile': 'winrepo.p',
+    'winrepo_remotes': ['https://github.com/saltstack/salt-winrepo.git'],
+    'winrepo_remotes_ng': ['https://github.com/saltstack/salt-winrepo-ng.git'],
+    'winrepo_branch': 'master',
+    'winrepo_ssl_verify': False,
+    'winrepo_user': '',
+    'winrepo_password': '',
+    'winrepo_insecure_auth': False,
+    'winrepo_privkey': '',
+    'winrepo_pubkey': '',
+    'winrepo_passphrase': '',
     'syndic_wait': 5,
     'jinja_lstrip_blocks': False,
     'jinja_trim_blocks': False,
@@ -1046,6 +1172,18 @@ DEFAULT_MASTER_OPTS = {
     'rotate_aes_key': True,
     'cache_sreqs': True,
     'dummy_pub': False,
+    'http_request_timeout': 1 * 60 * 60.0,  # 1 hour
+    'http_max_body': 100 * 1024 * 1024 * 1024,  # 100GB
+}
+
+
+# ----- Salt Proxy Minion Configuration Defaults ----------------------------------->
+# Note that proxies use the same config path as regular minions.  DEFAULT_MINION_OPTS
+# is loaded first, then if we are setting up a proxy, the config is overwritten with
+# these settings.
+DEFAULT_PROXY_MINION_OPTS = {
+    'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
+    'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
@@ -1083,13 +1221,17 @@ DEFAULT_API_OPTS = {
 
 DEFAULT_SPM_OPTS = {
     # ----- Salt master settings overridden by SPM --------------------->
-    'reactor_roots': '/srv/reactor',
+    'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
+    'formula_path': '/srv/spm/salt',
+    'pillar_path': '/srv/spm/pillar',
+    'reactor_path': '/srv/spm/reactor',
     'spm_logfile': '/var/log/salt/spm',
+    'default_include': 'spm.d/*.conf',
     # spm_repos_config also includes a .d/ directory
     'spm_repos_config': '/etc/salt/spm.repos',
     'spm_cache_dir': os.path.join(salt.syspaths.CACHE_DIR, 'spm'),
-    'spm_build_dir': '/srv/spm',
-    'spm_build_exclude': ['.git'],
+    'spm_build_dir': '/srv/spm_build',
+    'spm_build_exclude': ['CVS', '.hg', '.git', '.svn'],
     'spm_db': os.path.join(salt.syspaths.CACHE_DIR, 'spm', 'packages.db'),
     # <---- Salt master settings overridden by SPM ----------------------
 }
@@ -1127,9 +1269,12 @@ def _expand_glob_path(file_roots):
     '''
     unglobbed_path = []
     for path in file_roots:
-        if glob.has_magic(path):
-            unglobbed_path.extend(glob.glob(path))
-        else:
+        try:
+            if glob.has_magic(path):
+                unglobbed_path.extend(glob.glob(path))
+            else:
+                unglobbed_path.append(path)
+        except Exception:
             unglobbed_path.append(path)
     return unglobbed_path
 
@@ -1341,7 +1486,7 @@ def include_config(include, orig_path, verbose):
 
         for fn_ in sorted(glob.glob(path)):
             log.debug('Including configuration from {0!r}'.format(fn_))
-            configuration.update(_read_conf_file(fn_))
+            salt.utils.dictupdate.update(configuration, _read_conf_file(fn_))
     return configuration
 
 
@@ -1392,6 +1537,9 @@ def minion_config(path,
     '''
     if defaults is None:
         defaults = DEFAULT_MINION_OPTS
+
+    if path is not None and path.endswith('proxy'):
+        defaults.update(DEFAULT_PROXY_MINION_OPTS)
 
     if not os.environ.get(env_var, None):
         # No valid setting was given using the configuration variable.
@@ -2391,12 +2539,20 @@ def is_profile_configured(opts, provider, profile_name):
     .. versionadded:: 2015.8.0
     '''
     # Standard dict keys required by all drivers.
-    required_keys = ['image', 'provider']
+    required_keys = ['provider']
     alias, driver = provider.split(':')
 
+    # Most drivers need an image to be specified, but some do not.
+    non_image_drivers = ['vmware']
+
     # Most drivers need a size, but some do not.
-    non_size_drivers = ['opennebula', 'parallels', 'softlayer', 'softlayer_hw',
-                        'vmware', 'vsphere']
+    non_size_drivers = ['opennebula', 'parallels', 'scaleway', 'softlayer',
+                        'softlayer_hw', 'vmware', 'vsphere']
+
+    if driver not in non_image_drivers:
+        required_keys.append('image')
+    elif driver == 'vmware':
+        required_keys.append('clonefrom')
 
     if driver not in non_size_drivers:
         required_keys.append('size')
@@ -2424,6 +2580,34 @@ def is_profile_configured(opts, provider, profile_name):
             return False
 
     return True
+
+
+def check_driver_dependencies(driver, dependencies):
+    '''
+    Check if the driver's dependencies are available.
+
+    .. versionadded:: 2015.8.0
+
+    driver
+        The name of the driver.
+
+    dependencies
+        The dictionary of dependencies to check.
+    '''
+    ret = True
+    for key, value in six.iteritems(dependencies):
+        if value is False:
+            log.warning(
+                'Missing dependency: \'{0}\'. The {1} driver requires '
+                '\'{0}\' to be installed.'.format(
+                    key,
+                    driver
+                )
+            )
+            ret = False
+
+    return ret
+
 # <---- Salt Cloud Configuration Functions -----------------------------------
 
 
@@ -2810,4 +2994,43 @@ def spm_config(path):
     # Let's override them with spm's required defaults
     defaults.update(DEFAULT_SPM_OPTS)
 
+    overrides = load_config(path, 'SPM_CONFIG', DEFAULT_SPM_OPTS['conf_file'])
+    default_include = overrides.get('default_include',
+                                    defaults['default_include'])
+    include = overrides.get('include', [])
+
+    overrides.update(include_config(default_include, path, verbose=False))
+    overrides.update(include_config(include, path, verbose=True))
+    defaults = apply_master_config(overrides, defaults)
+    defaults = apply_spm_config(overrides, defaults)
     return client_config(path, env_var='SPM_CONFIG', defaults=defaults)
+
+
+def apply_spm_config(overrides, defaults):
+    '''
+    Returns the spm configurations dict.
+
+    .. versionadded:: 2015.8.1
+
+    '''
+    opts = defaults.copy()
+    if overrides:
+        opts.update(overrides)
+
+    # Prepend root_dir to other paths
+    prepend_root_dirs = [
+        'formula_path', 'pillar_path', 'reactor_path',
+        'spm_cache_dir', 'spm_build_dir'
+    ]
+
+    # These can be set to syslog, so, not actual paths on the system
+    for config_key in ('spm_logfile',):
+        log_setting = opts.get(config_key, '')
+        if log_setting is None:
+            continue
+
+        if urlparse(log_setting).scheme == '':
+            prepend_root_dirs.append(config_key)
+
+    prepend_root_dir(opts, prepend_root_dirs)
+    return opts

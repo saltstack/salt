@@ -278,7 +278,7 @@ def _load_accumulators():
         serial = salt.payload.Serial(__opts__)
         ret = {'accumulators': {}, 'accumulators_deps': {}}
         try:
-            with open(path, 'rb') as f:
+            with salt.utils.fopen(path, 'rb') as f:
                 loaded = serial.load(f)
                 return loaded if loaded else ret
         except (IOError, NameError):
@@ -291,13 +291,12 @@ def _load_accumulators():
 
 
 def _persist_accummulators(accumulators, accumulators_deps):
-
     accumm_data = {'accumulators': accumulators,
                    'accumulators_deps': accumulators_deps}
 
     serial = salt.payload.Serial(__opts__)
     try:
-        with open(_get_accumulator_filepath(), 'w+b') as f:
+        with salt.utils.fopen(_get_accumulator_filepath(), 'w+b') as f:
             serial.dump(accumm_data, f)
     except NameError:
         # msgpack error from salt-ssh
@@ -813,6 +812,16 @@ def symlink(
         user = __opts__['user']
 
     if salt.utils.is_windows():
+
+        # Make sure the user exists in Windows
+        # Salt default is 'root'
+        if not __salt__['user.info'](user):
+            # User not found, use the account salt is running under
+            # If username not found, use System
+            user = __salt__['user.current']()
+            if not user:
+                user = 'SYSTEM'
+
         if group is not None:
             log.warning(
                 'The group argument for {0} has been ignored as this '
@@ -895,17 +904,17 @@ def symlink(
             if os.path.lexists(backupname):
                 if not force:
                     return _error(ret, ((
-                        'File exists where the backup target {0} should go'
-                    ).format(backupname)))
+                                            'File exists where the backup target {0} should go'
+                                        ).format(backupname)))
                 elif os.path.isfile(backupname):
                     os.remove(backupname)
                 elif os.path.isdir(backupname):
                     shutil.rmtree(backupname)
                 else:
                     return _error(ret, ((
-                        'Something exists where the backup target {0}'
-                        'should go'
-                    ).format(backupname)))
+                                            'Something exists where the backup target {0}'
+                                            'should go'
+                                        ).format(backupname)))
             os.rename(name, backupname)
         elif force:
             # Remove whatever is in the way
@@ -922,8 +931,8 @@ def symlink(
                                .format(name)))
             else:
                 return _error(ret, ((
-                    'Directory exists where the symlink {0} should be'
-                ).format(name)))
+                                        'Directory exists where the symlink {0} should be'
+                                    ).format(name)))
 
     if not os.path.exists(name):
         # The link is not present, make it
@@ -1401,7 +1410,8 @@ def managed(name,
 
     if not replace and os.path.exists(name):
         # Check and set the permissions if necessary
-        ret, _ = __salt__['file.check_perms'](name, ret, user, group, mode, follow_symlinks)
+        ret, _ = __salt__['file.check_perms'](name, ret, user, group, mode,
+                                              follow_symlinks)
         if __opts__['test']:
             ret['comment'] = 'File {0} not updated'.format(name)
         elif not ret['changes'] and ret['result']:
@@ -1435,6 +1445,8 @@ def managed(name,
             if ret['changes']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
+                if not show_diff:
+                    ret['changes']['diff'] = '<show_diff=False>'
             else:
                 ret['result'] = True
                 ret['comment'] = 'The file {0} is in the correct state'.format(name)
@@ -1472,6 +1484,8 @@ def managed(name,
         log.debug(traceback.format_exc())
         return _error(ret, 'Unable to manage file: {0}'.format(exc))
 
+    tmp_filename = None
+
     if check_cmd:
         tmp_filename = salt.utils.mkstemp()
 
@@ -1503,6 +1517,8 @@ def managed(name,
         except Exception as exc:
             ret['changes'] = {}
             log.debug(traceback.format_exc())
+            if os.path.isfile(tmp_filename):
+                os.remove(tmp_filename)
             return _error(ret, 'Unable to check_cmd file: {0}'.format(exc))
 
         # file being updated to verify using check_cmd
@@ -1520,6 +1536,8 @@ def managed(name,
             cret = mod_run_check_cmd(check_cmd, tmp_filename, **check_cmd_opts)
             if isinstance(cret, dict):
                 ret.update(cret)
+                if os.path.isfile(tmp_filename):
+                    os.remove(tmp_filename)
                 return ret
             # Since we generated a new tempfile and we are not returning here
             # lets change the original sfn to the new tempfile or else we will
@@ -1556,6 +1574,9 @@ def managed(name,
             ret['changes'] = {}
             log.debug(traceback.format_exc())
             return _error(ret, 'Unable to manage file: {0}'.format(exc))
+        finally:
+            if tmp_filename and os.path.isfile(tmp_filename):
+                os.remove(tmp_filename)
 
 
 def directory(name,
@@ -1740,8 +1761,8 @@ def directory(name,
             if os.path.lexists(backupname):
                 if not force:
                     return _error(ret, ((
-                        'File exists where the backup target {0} should go'
-                    ).format(backupname)))
+                                            'File exists where the backup target {0} should go'
+                                        ).format(backupname)))
                 elif os.path.isfile(backupname):
                     os.remove(backupname)
                 elif os.path.islink(backupname):
@@ -1750,9 +1771,9 @@ def directory(name,
                     shutil.rmtree(backupname)
                 else:
                     return _error(ret, ((
-                        'Something exists where the backup target {0}'
-                        'should go'
-                    ).format(backupname)))
+                                            'Something exists where the backup target {0}'
+                                            'should go'
+                                        ).format(backupname)))
             os.rename(name, backupname)
         elif force:
             # Remove whatever is in the way
@@ -1767,10 +1788,12 @@ def directory(name,
         else:
             if os.path.isfile(name):
                 return _error(
-                    ret, 'Specified location {0} exists and is a file'.format(name))
+                    ret,
+                    'Specified location {0} exists and is a file'.format(name))
             elif os.path.islink(name):
                 return _error(
-                     ret, 'Specified location {0} exists and is a symlink'.format(name))
+                    ret,
+                    'Specified location {0} exists and is a symlink'.format(name))
 
     if __opts__['test']:
         ret['result'], ret['comment'] = _check_directory(
@@ -1831,7 +1854,8 @@ def directory(name,
         if not isinstance(recurse, list):
             ret['result'] = False
             ret['comment'] = '"recurse" must be formed as a list of strings'
-        elif not set(['user', 'group', 'mode', 'ignore_files', 'ignore_dirs']) >= set(recurse):
+        elif not set(['user', 'group', 'mode', 'ignore_files',
+                      'ignore_dirs']) >= set(recurse):
             ret['result'] = False
             ret['comment'] = 'Types for "recurse" limited to "user", ' \
                              '"group", "mode", "ignore_files, and "ignore_dirs"'
@@ -2509,6 +2533,12 @@ def replace(name,
             # <...snip...>
             - pattern: |
                 CentOS \(2.6.32[^\n]+\n\s+root[^\n]+\n\)+
+
+    .. note::
+
+       When using YAML multiline string syntax in ``pattern:``, make sure to
+       also use that syntax in the ``repl:`` part, or you might loose line
+       feeds.
     '''
     name = os.path.expanduser(name)
 
@@ -2876,7 +2906,10 @@ def comment(name, regex, char='#', backup='.bak'):
     '''
     name = os.path.expanduser(name)
 
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.comment')
 
@@ -2901,8 +2934,9 @@ def comment(name, regex, char='#', backup='.bak'):
         return ret
     with salt.utils.fopen(name, 'rb') as fp_:
         slines = fp_.readlines()
+
     # Perform the edit
-    __salt__['file.comment'](name, regex, char, backup)
+    __salt__['file.comment_line'](name, regex, char, True, backup)
 
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
@@ -2963,7 +2997,10 @@ def uncomment(name, regex, char='#', backup='.bak'):
     '''
     name = os.path.expanduser(name)
 
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.uncomment')
 
@@ -2997,7 +3034,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
         slines = fp_.readlines()
 
     # Perform the edit
-    __salt__['file.uncomment'](name, regex, char, backup)
+    __salt__['file.comment_line'](name, regex, char, False, backup)
 
     with salt.utils.fopen(name, 'rb') as fp_:
         nlines = fp_.readlines()
@@ -3769,11 +3806,11 @@ def copy(
         if force and os.path.isfile(name):
             hash1 = salt.utils.get_hash(name)
             hash2 = salt.utils.get_hash(source)
-            if hash1 != hash2:
-                changed = True
+            if hash1 == hash2:
+                changed = False
         if not force:
             changed = False
-        elif not __opts__['test']:
+        elif not __opts__['test'] and changed:
             # Remove the destination to prevent problems later
             try:
                 if os.path.islink(name):
@@ -3790,11 +3827,16 @@ def copy(
                 )
 
     if __opts__['test']:
-        ret['comment'] = 'File "{0}" is set to be copied to "{1}"'.format(
-            source,
-            name
-        )
-        ret['result'] = None
+        if changed:
+            ret['comment'] = 'File "{0}" is set to be copied to "{1}"'.format(
+                source,
+                name
+            )
+            ret['result'] = None
+        else:
+            ret['comment'] = ('The target file "{0}" exists and will not be '
+                              'overwritten'.format(name))
+            ret['result'] = True
         return ret
 
     if not changed:
@@ -4213,10 +4255,10 @@ def serialize(name,
         if os.path.isfile(name):
             if formatter == 'yaml':
                 with salt.utils.fopen(name, 'r') as fhr:
-                    existing_data = yaml.safe_load(fhr.read())
+                    existing_data = yaml.safe_load(fhr)
             elif formatter == 'json':
                 with salt.utils.fopen(name, 'r') as fhr:
-                    existing_data = json.load(fhr.read())
+                    existing_data = json.load(fhr)
             else:
                 return {'changes': {},
                         'comment': ('{0} format is not supported for merging'
@@ -4278,7 +4320,8 @@ def serialize(name,
 
         if ret['changes']:
             ret['result'] = None
-            ret['comment'] = 'Dataset will be serialized and stored into {0}'.format(name)
+            ret['comment'] = 'Dataset will be serialized and stored into {0}'.format(
+                name)
         else:
             ret['result'] = True
             ret['comment'] = 'The file {0} is in the correct state'.format(name)
@@ -4411,7 +4454,7 @@ def mknod(name, ntype, major=0, minor=0, user=None, group=None, mode='0600'):
                 ret['comment'] = (
                     'Character device {0} exists and has a different '
                     'major/minor {1}/{2}. Cowardly refusing to continue'
-                    .format(name, devmaj, devmin)
+                        .format(name, devmaj, devmin)
                 )
             # Check the perms
             else:

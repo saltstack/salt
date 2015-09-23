@@ -6,6 +6,8 @@ OpenNebula Cloud Module
 The OpenNebula cloud module is used to control access to an OpenNebula
 cloud.
 
+:depends: lxml
+
 Use of this module requires the ``xml_rpc``, ``user`` and
 ``password`` parameter to be set. Set up the cloud configuration
 at ``/etc/salt/cloud.providers`` or
@@ -24,7 +26,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import copy
 import time
 import pprint
 import logging
@@ -50,6 +51,8 @@ except ImportError:
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'opennebula'
 
 
 # Helper functions
@@ -89,13 +92,13 @@ def __virtual__():
     '''
     Check for OpenNebula configurations
     '''
-    if not HAS_XMLLIBS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -104,8 +107,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'opennebula',
+        __active_provider_name__ or __virtualname__,
         ('xml_rpc', 'user', 'password')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'lmxl': HAS_XMLLIBS}
     )
 
 
@@ -286,9 +299,9 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'opennebula',
-                                        vm_['profile']) is False:
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'opennebula',
+                                                           vm_['profile']) is False:
             return False
     except AttributeError:
         pass
@@ -316,16 +329,6 @@ def create(vm_):
         'region_id': get_location(vm_),
     }
 
-    key_filename = config.get_cloud_config_value(
-        'ssh_key_file', vm_, __opts__, search_global=False, default=None
-    )
-    if key_filename is not None and not os.path.isfile(key_filename):
-        raise SaltCloudConfigError(
-            'The defined key_filename {0!r} does not exist'.format(
-                key_filename
-            )
-        )
-
     private_networking = config.get_cloud_config_value(
         'private_networking', vm_, __opts__, search_global=False, default=None
     )
@@ -343,7 +346,12 @@ def create(vm_):
         region = 'SCHED_REQUIREMENTS="ID={0}"'.format(kwargs['region_id'])
     try:
         server, user, password = _get_xml_rpc()
-        ret = server.one.template.instantiate(user+':'+password, int(kwargs['image_id']), kwargs['name'], False, region)[1]
+        auth = ':'.join([user, password])
+        server.one.template.instantiate(auth,
+                                        int(kwargs['image_id']),
+                                        kwargs['name'],
+                                        False,
+                                        region)
     except Exception as exc:
         log.error(
             'Error creating {0} on OpenNebula\n\n'
@@ -358,14 +366,14 @@ def create(vm_):
         return False
 
     def __query_node_data(vm_name):
-        data = show_instance(vm_name, call='action')
-        if not data:
+        node_data = show_instance(vm_name, call='action')
+        if not node_data:
             # Trigger an error in the wait_for_ip function
             return False
-        if data['state'] == '7':
+        if node_data['state'] == '7':
             return False
-        if data['lcm_state'] == '3':
-            return data
+        if node_data['lcm_state'] == '3':
+            return node_data
 
     try:
         data = salt.utils.cloud.wait_for_ip(
@@ -385,113 +393,38 @@ def create(vm_):
         finally:
             raise SaltCloudSystemExit(str(exc))
 
+    key_filename = config.get_cloud_config_value(
+        'private_key', vm_, __opts__, search_global=False, default=None
+    )
+    if key_filename is not None and not os.path.isfile(key_filename):
+        raise SaltCloudConfigError(
+            'The defined key_filename {0!r} does not exist'.format(
+                key_filename
+            )
+        )
+
+    try:
+        private_ip = data['private_ips'][0]
+    except KeyError:
+        private_ip = data['template']['nic']['ip']
+
     ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
     )
 
-    if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
-        deploy_script = script(vm_)
-        deploy_kwargs = {
-            'host': data['private_ips'][0],
-            'username': ssh_username,
-            'key_filename': key_filename,
-            'script': deploy_script,
-            'name': vm_['name'],
-            'tmp_dir': config.get_cloud_config_value(
-                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
-            ),
-            'deploy_command': config.get_cloud_config_value(
-                'deploy_command', vm_, __opts__,
-                default='/tmp/.saltcloud/deploy.sh',
-            ),
-            'start_action': __opts__['start_action'],
-            'parallel': __opts__['parallel'],
-            'sock_dir': __opts__['sock_dir'],
-            'conf_file': __opts__['conf_file'],
-            'minion_pem': vm_['priv_key'],
-            'minion_pub': vm_['pub_key'],
-            'keep_tmp': __opts__['keep_tmp'],
-            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'display_ssh_output': config.get_cloud_config_value(
-                'display_ssh_output', vm_, __opts__, default=True
-            ),
-            'sudo': config.get_cloud_config_value(
-                'sudo', vm_, __opts__, default=(ssh_username != 'root')
-            ),
-            'sudo_password': config.get_cloud_config_value(
-                'sudo_password', vm_, __opts__, default=None
-            ),
-            'tty': config.get_cloud_config_value(
-                'tty', vm_, __opts__, default=False
-            ),
-            'script_args': config.get_cloud_config_value(
-                'script_args', vm_, __opts__
-            ),
-            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
-        }
+    vm_['username'] = ssh_username
+    vm_['key_filename'] = key_filename
+    vm_['ssh_host'] = private_ip
 
-        # Deploy salt-master files, if necessary
-        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
-            deploy_kwargs['make_master'] = True
-            deploy_kwargs['master_pub'] = vm_['master_pub']
-            deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = salt.utils.cloud.master_config(__opts__, vm_)
-            deploy_kwargs['master_conf'] = master_conf
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
-            if master_conf.get('syndic_master', None):
-                deploy_kwargs['make_syndic'] = True
-
-        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
-            'make_minion', vm_, __opts__, default=True
-        )
-
-        # Check for Windows install params
-        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
-        if win_installer:
-            deploy_kwargs['win_installer'] = win_installer
-            minion = salt.utils.cloud.minion_config(__opts__, vm_)
-            deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_cloud_config_value(
-                'win_username', vm_, __opts__, default='Administrator'
-            )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=''
-            )
-
-        # Store what was used to the deploy the VM
-        event_kwargs = copy.deepcopy(deploy_kwargs)
-        del event_kwargs['minion_pem']
-        del event_kwargs['minion_pub']
-        del event_kwargs['sudo_password']
-        if 'password' in event_kwargs:
-            del event_kwargs['password']
-        ret = {}
-        ret['deploy_kwargs'] = event_kwargs
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'executing deploy script',
-            'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': event_kwargs},
-        )
-
-        deployed = False
-        if win_installer:
-            deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
-        else:
-            deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
-
-        if deployed:
-            log.info('Salt installed on {0}'.format(vm_['name']))
-        else:
-            log.error(
-                'Failed to start Salt on Cloud VM {0}'.format(
-                    vm_['name']
-                )
-            )
-
-    ret.update(data)
+    ret['id'] = data['id']
+    ret['image'] = vm_['image']
+    ret['name'] = vm_['name']
+    ret['size'] = data['template']['memory']
+    ret['state'] = data['state']
+    ret['private_ips'] = private_ip
+    ret['public_ips'] = []
 
     log.info('Created Cloud VM {0[name]!r}'.format(vm_))
     log.debug(

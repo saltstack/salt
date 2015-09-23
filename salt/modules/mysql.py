@@ -50,14 +50,25 @@ import salt.ext.six as six
 # pylint: disable=import-error
 from salt.ext.six.moves import range, zip  # pylint: disable=no-name-in-module,redefined-builtin
 try:
+    # Try to import MySQLdb
     import MySQLdb
     import MySQLdb.cursors
     import MySQLdb.converters
     from MySQLdb.constants import FIELD_TYPE, FLAG
     HAS_MYSQLDB = True
 except ImportError:
-    HAS_MYSQLDB = False
-# pylint: enable=import-error
+    try:
+        # MySQLdb import failed, try to import PyMySQL
+        import pymysql
+        pymysql.install_as_MySQLdb()
+        import MySQLdb
+        import MySQLdb.cursors
+        import MySQLdb.converters
+        from MySQLdb.constants import FIELD_TYPE, FLAG
+        HAS_MYSQLDB = True
+    except ImportError:
+        # No MySQL Connector installed, return False
+        HAS_MYSQLDB = False
 
 log = logging.getLogger(__name__)
 

@@ -1,9 +1,13 @@
+.. _state-modules:
+
 =============
 State Modules
 =============
 
 State Modules are the components that map to actual enforcement and management
 of Salt states.
+
+.. _writing-state-modules:
 
 States are Easy to Write!
 =========================
@@ -63,12 +67,12 @@ state with the same name. Note that a state's default name is its filename
 (i.e. ``foo.py`` becomes state ``foo``), but that its name can be overridden
 by using a :ref:`__virtual__ function <virtual-modules>`.
 
-
-Cross Calling Modules
-=====================
+Cross Calling Execution Modules from States
+===========================================
 
 As with Execution Modules, State Modules can also make use of the ``__salt__``
-and ``__grains__`` data.
+and ``__grains__`` data. See :ref:`cross calling execution modules
+<cross-calling-execution-modules>`.
 
 It is important to note that the real work of state management should not be
 done in the state module unless it is needed. A good example is the pkg state
@@ -82,6 +86,31 @@ state module, a good example of this is the file module. But in the vast
 majority of cases this is not the best approach, and writing specific
 execution modules to do the backend work will be the optimal solution.
 
+.. _cross-calling-state-modules:
+
+Cross Calling State Modules
+===========================
+
+All of the Salt state modules are available to each other and state modules can call
+functions available in other state modules.
+
+The variable ``__states__`` is packed into the modules after they are loaded into
+the Salt minion.
+
+The ``__states__`` variable is a :ref:`Python dictionary <python2:typesmapping>`
+containing all of the state modules. Dictionary keys are strings representing the
+names of the modules and the values are the functions themselves.
+
+Salt state modules can be cross-called by accessing the value in the ``__states__`` dict:
+
+.. code-block:: python
+
+    ret = __states__['file.managed'](name='/tmp/myfile', source='salt://myfile')
+
+This code will call the `managed` function in the :mod:`file
+<salt.states.file>` state module and pass the arguments ``name`` and ``source``
+to it.
+
 Return Data
 ===========
 
@@ -93,8 +122,25 @@ A State Module must return a dict containing the following keys/values:
   containing the old/new values. For example, the pkg state's **changes** dict
   has one key for each package changed, with the "old" and "new" keys in its
   sub-dict containing the old and new versions of the package.
-- **result:** A boolean value. *True* if the action was successful, otherwise
-  *False*.
+- **result:** A tristate value.  ``True`` if the action was successful,
+  ``False`` if it was not, or ``None`` if the state was run in test mode,
+  ``test=True``, and changes would have been made if the state was not run in
+  test mode.
+
+  +--------------------+-----------+-----------+
+  |                    | live mode | test mode |
+  +====================+===========+===========+
+  | no changes         | ``True``  | ``True``  |
+  +--------------------+-----------+-----------+
+  | successful changes | ``True``  | ``None``  |
+  +--------------------+-----------+-----------+
+  | failed changes     | ``False`` | ``None``  |
+  +--------------------+-----------+-----------+
+
+  .. note::
+
+      Test mode does not predict if the changes will be successful or not.
+
 - **comment:** A string containing a summary of the result.
 
 Test State
@@ -181,6 +227,23 @@ need to refresh the package database. Therefore if the package database is
 prepared to refresh, then return True and the mod_init will not be called
 the next time a pkg state is evaluated, otherwise return False and the mod_init
 will be called next time a pkg state is evaluated.
+
+Log Output
+==========
+
+You can call the logger from custom modules to write messages to the minion
+logs. The following code snippet demonstrates writing log messages:
+
+.. code-block:: python
+
+    import logging
+
+    log = logging.getLogger(__name__)
+
+    log.info('Here is Some Information')
+    log.warning('You Should Not Do That')
+    log.error('It Is Busted')
+
 
 Full State Module Example
 =========================

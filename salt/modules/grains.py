@@ -572,7 +572,7 @@ def set(key,
     its value and the given one are not a list or a dict. The `force`
     parameter is used to allow overwriting in all cases.
 
-    .. versionadded:: FIXME
+    .. versionadded:: 2015.8.0
 
     :param force: Force writing over existing entry if given or existing
                   values are list or dict. Defaults to False.

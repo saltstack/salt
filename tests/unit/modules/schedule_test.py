@@ -18,6 +18,7 @@ from salttesting.mock import (
 from salttesting.helpers import ensure_in_syspath
 
 import os
+import sys
 import integration
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
@@ -41,26 +42,6 @@ class ScheduleTestCase(TestCase):
     '''
     Test cases for salt.modules.schedule
     '''
-    # 'list_' function tests: 1
-
-    def test_list(self):
-        '''
-        Test if it list the jobs currently scheduled on the minion.
-        '''
-        with patch.dict(schedule.__opts__, {'schedule': {'_seconds': []}, 'sock_dir': SOCK_DIR}):
-            mock = MagicMock(return_value=True)
-            with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                _ret_value = {'complete': True, 'schedule': {'_seconds': []}}
-                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
-                    self.assertEqual(schedule.list_(), 'schedule:\n  _seconds: []\n')
-                    self.assertDictEqual(schedule.list_(show_all=True, return_yaml=False), {'_seconds': []})
-
-        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
-            mock = MagicMock(return_value=True)
-            with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                _ret_value = {'complete': True, 'schedule': {}}
-                with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
-                    self.assertDictEqual(schedule.list_(), {'schedule': {}})
 
     # 'purge' function tests: 1
 
@@ -191,10 +172,16 @@ class ScheduleTestCase(TestCase):
                                                                    'comment': comm3,
                                                                    'result': False})
 
-                    self.assertDictEqual(schedule.modify('job1', function='test.ping'),
-                                         {'changes': {},
-                                          'comment': 'Job job1 in correct state',
-                                          'result': True})
+                    if sys.version_info[1] >= 7:
+                        self.assertDictEqual(schedule.modify('job1', function='test.ping'),
+                                             {'changes': {'diff': '--- \n+++ \n@@ -1,4 +1,3 @@\n-enabled:True\n function:test.ping\n jid_include:True\n maxrunning:1\n'},
+                                              'comment': 'Modified job: job1 in schedule.',
+                                              'result': True})
+                    elif sys.version_info[1] >= 6:
+                        self.assertDictEqual(schedule.modify('job1', function='test.ping'),
+                                {'changes': {'diff': '---  \n+++  \n@@ -1,4 +1,3 @@\n-enabled:True\n function:test.ping\n jid_include:True\n maxrunning:1\n'},
+                                              'comment': 'Modified job: job1 in schedule.',
+                                              'result': True})
 
                     ret = schedule.modify('job3', function='test.ping', test=True)
                     if 'diff' in ret['changes']:
@@ -283,19 +270,6 @@ class ScheduleTestCase(TestCase):
         self.assertDictEqual(schedule.disable(test=True),
                              {'comment': 'Schedule would be disabled.',
                               'result': True})
-
-    # 'reload_' function tests: 1
-
-    def test_reload_(self):
-        '''
-        Test if it reload saved scheduled jobs on the minion.
-        '''
-        mock = MagicMock(return_value=True)
-        with patch.dict(schedule.__opts__, {'config_dir': '',
-                                            'default_include': '/tmp'}):
-            with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                self.assertDictEqual(schedule.reload_(),
-                                     {'comment': [], 'result': True})
 
     # 'move' function tests: 1
 

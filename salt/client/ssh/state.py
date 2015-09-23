@@ -38,7 +38,7 @@ class SSHState(salt.state.State):
         self.functions = self.wrapper
         self.utils = salt.loader.utils(self.opts)
         locals_ = salt.loader.minion_mods(self.opts, utils=self.utils)
-        self.states = salt.loader.states(self.opts, locals_)
+        self.states = salt.loader.states(self.opts, locals_, self.utils)
         self.rend = salt.loader.render(self.opts, self.functions)
 
     def check_refresh(self, data, ret):

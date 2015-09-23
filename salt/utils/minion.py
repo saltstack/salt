@@ -24,7 +24,7 @@ def running(opts):
             data = _read_proc_file(path, opts)
             if data is not None:
                 ret.append(data)
-        except IOError:
+        except (IOError, OSError):
             # proc files may be removed at any time during this process by
             # the minion process that is executing the JID in question, so
             # we must ignore ENOENT during this process

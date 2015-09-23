@@ -533,8 +533,12 @@ class SSH(object):
         final_exit = 0
         for ret in self.handle_ssh():
             host = next(six.iterkeys(ret))
-            host_ret = ret[host].get('retcode', 0)
-            if host_ret != 0:
+            if isinstance(ret[host], dict):
+                host_ret = ret[host].get('retcode', 0)
+                if host_ret != 0:
+                    final_exit = 1
+            else:
+                # Error on host
                 final_exit = 1
 
             self.cache_job(jid, host, ret[host], fun)
@@ -649,6 +653,7 @@ class Single(object):
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                     'sock_dir': '/',
+                    'log_file': 'salt-call.log'
                 })
         self.minion_config = yaml.dump(self.minion_opts)
         self.target = kwargs
@@ -778,11 +783,13 @@ class Single(object):
                 opts_pkg['_caller_cachedir'] = self.opts['cachedir']
             # Use the ID defined in the roster file
             opts_pkg['id'] = self.id
-            retcode = opts_pkg['retcode']
+
+            retcode = 0
 
             if '_error' in opts_pkg:
                 # Refresh failed
                 ret = json.dumps({'local': opts_pkg})
+                retcode = opts_pkg['retcode']
                 return ret, retcode
 
             pillar = salt.pillar.Pillar(
@@ -853,8 +860,10 @@ class Single(object):
                 result = self.wfuncs[self.fun](*self.args, **self.kwargs)
         except TypeError as exc:
             result = 'TypeError encountered executing {0}: {1}'.format(self.fun, exc)
+            retcode = 1
         except Exception as exc:
             result = 'An Exception occurred while executing {0}: {1}'.format(self.fun, exc)
+            retcode = 1
         # Mimic the json data-structure that "salt-call --local" will
         # emit (as seen in ssh_py_shim.py)
         if isinstance(result, dict) and 'local' in result:
@@ -945,10 +954,10 @@ ARGS = {9}\n'''.format(self.minion_config,
             pass
 
         # Execute shim
-        ret = self.shell.exec_cmd('/bin/sh $HOME/{0}'.format(target_shim_file))
+        ret = self.shell.exec_cmd('/bin/sh \'$HOME/{0}\''.format(target_shim_file))
 
         # Remove shim from target system
-        self.shell.exec_cmd('rm $HOME/{0}'.format(target_shim_file))
+        self.shell.exec_cmd('rm \'$HOME/{0}\''.format(target_shim_file))
 
         return ret
 
@@ -1066,6 +1075,11 @@ ARGS = {9}\n'''.format(self.minion_config,
                 (salt.defaults.exitcodes.EX_THIN_CHECKSUM,),
                 'checksum mismatched',
                 'The salt thin transfer was corrupted'
+            ),
+            (
+                (salt.defaults.exitcodes.EX_SCP_NOT_FOUND,),
+                'scp not found',
+                'No scp binary. openssh-clients package required'
             ),
             (
                 (salt.defaults.exitcodes.EX_CANTCREAT,),

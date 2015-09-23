@@ -14,9 +14,9 @@ Before SPM can install packages, they must be built. The source for these
 packages is often a Git repository, such as those found at the
 ``saltstack-formulas`` organization on GitHub.
 
-FORMULA.yml
+FORMULA
 -----------
-In addition to the formula itself, a ``FORMULA.yml`` file must exist which
+In addition to the formula itself, a ``FORMULA`` file must exist which
 describes the package. An example of this file is:
 
 .. code-block:: yaml
@@ -77,14 +77,29 @@ Optional Fields
 ```````````````
 The following fields may also be present.
 
+top_level_dir
+~~~~~~~~~~~~~
+This field is optional, but highly recommended. If it is not specified, the
+package name will be used.
+
+Formula repositories typically do not store ``.sls`` files in the root of the
+repository; instead they are stored in a subdirectory. For instance, an
+``apache-formula`` repository would contain a directory called ``apache``, which
+would contain an ``init.sls``, plus a number of other related files. In this
+instance, the ``top_level_dir`` should be set to ``apache``.
+
+Files outside the ``top_level_dir``, such as ``README.rst``, ``FORMULA``, and
+``LICENSE`` will not be installed. The exceptions to this rule are files that
+are already treated specially, such as ``pillar.example`` and ``_modules/``.
+
 dependencies
 ~~~~~~~~~~~~
 A list of packages which must be installed before this package can function.
 
 Building a Package
 ------------------
-Once a ``FORMULA.yml`` file has been created, it is placed into the root of the
-formula that is to be turned into a package. The the ``spm build`` command is
+Once a ``FORMULA`` file has been created, it is placed into the root of the
+formula that is to be turned into a package. The ``spm build`` command is
 used to turn that formula into a package:
 
 .. code-block:: bash
@@ -105,7 +120,7 @@ and issue an ``spm create_repo`` command:
 
     spm create_repo /srv/spm
 
-This command is used, even if reposity metadata already exists in that
+This command is used, even if repository metadata already exists in that
 directory. SPM will regenerate the repository metadata again, using all of the
 packages in that directory.
 
@@ -166,7 +181,7 @@ Pillars
 =======
 Formula packages include a pillar.example file. Rather than being placed in the
 formula directory, this file is renamed to ``<formula name>.sls.orig`` and
-placed in the ``pillar_roots``, where it can be easily updated to meet the
+placed in the ``pillar_path``, where it can be easily updated to meet the
 user's needs.
 
 Loader Modules
@@ -195,14 +210,41 @@ also be removed.
 
 Technical Information
 =====================
-Packages are built using BZ2-compressed tarballs. Support for this is built into
-Python, and so no external dependencies are needed.
+Packages are built using BZ2-compressed tarballs. By default, the package
+database is stored using the ``sqlite3`` driver (see Loader Modules below).
 
-The package database is stored using SQLite3. Support for this is built into
-Python, and so no external dependencies are needed.
+Support for these are built into Python, and so no external dependencies are
+needed.
 
 All other files belonging to SPM use YAML, for portability and ease of use and
 maintainability.
+
+
+SPM-Specific Loader Modules
+===========================
+SPM was designed to behave like traditional package managers, which apply files
+to the filesystem and store package metadata in a local database. However,
+because modern infrastructures often extend beyond those use cases, certain
+parts of SPM have been broken out into their own set of modules.
+
+
+Package Database
+----------------
+By default, the package database is stored using the ``sqlite3`` module. This
+module was chosen because support for SQLite3 is built into Python itself.
+
+Please see the SPM Development Guide for information on creating new modules
+for package database management.
+
+
+Package Files
+-------------
+By default, package files are installed using the ``local`` module. This module
+applies files to the local filesystem, on the machine that the package is
+installed on.
+
+Please see the SPM Development Guide for information on creating new modules
+for package file management.
 
 
 SPM Configuration
@@ -262,3 +304,38 @@ option requires a list to be specified.
     spm_build_exclude:
       - .git
       - .svn
+
+
+Types of Packages
+=================
+SPM supports different types of formula packages. The function of each package
+is denoted by its name. For instance, packages which end in ``-formula`` are
+considered to be Salt States (the most common type of formula). Packages which
+end in ``-conf`` contain configuration which is to be placed in the
+``/etc/salt/`` directory. Packages which do not contain one of these names are
+treated as if they have a ``-formula`` name.
+
+formula
+-------
+By default, most files from this type of package live in the ``/srv/spm/salt/``
+directory. The exception is the ``pillar.example`` file, which will be renamed
+to ``<package_name>.sls`` and placed in the pillar directory (``/srv/spm/pillar/``
+by default).
+
+reactor
+-------
+By default, files from this type of package live in the ``/srv/spm/reactor/``
+directory.
+
+conf
+----
+The files in this type of package are configuration files for Salt, which
+normally live in the ``/etc/salt/`` directory. Configuration files for packages
+other than Salt can and should be handled with a Salt State (using a ``formula``
+type of package).
+
+.. toctree::
+    :maxdepth: 2
+    :glob:
+
+    dev

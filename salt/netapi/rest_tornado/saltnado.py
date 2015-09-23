@@ -217,6 +217,7 @@ class SaltClientsMixIn(object):
                 'local_batch': local_client.cmd_batch,
                 'local_async': local_client.run_job,
                 'runner': salt.runner.RunnerClient(opts=self.application.opts).async,
+                'runner_async': None,  # empty, since we use the same client as `runner`
                 }
         return SaltClientsMixIn.__saltclients
 
@@ -259,9 +260,8 @@ class EventListener(object):
             opts['sock_dir'],
             opts['transport'],
             opts=opts,
+            listen=True,
         )
-
-        self.event.subscribe()  # start listening for events immediately
 
         # tag -> list of futures
         self.tag_map = defaultdict(list)
@@ -718,7 +718,7 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
             Content-Type: application/json
             Content-Legnth: 83
 
-            {"clients": ["local", "local_batch", "local_async","runner"], "return": "Welcome"}
+            {"clients": ["local", "local_batch", "local_async", "runner", "runner_async"], "return": "Welcome"}
         '''
         ret = {"clients": list(self.saltclients.keys()),
                "return": "Welcome"}
@@ -1031,6 +1031,15 @@ class SaltAPIHandler(BaseSaltAPIHandler, SaltClientsMixIn):  # pylint: disable=W
             raise tornado.gen.Return(event['data']['return'])
         except TimeoutException:
             raise tornado.gen.Return('Timeout waiting for runner to execute')
+
+    @tornado.gen.coroutine
+    def _disbatch_runner_async(self, chunk):
+        '''
+        Disbatch runner client_async commands
+        '''
+        f_call = {'args': [chunk['fun'], chunk]}
+        pub_data = self.saltclients['runner'](chunk['fun'], chunk)
+        raise tornado.gen.Return(pub_data)
 
 
 class MinionSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
@@ -1598,7 +1607,8 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
             'master',
             self.application.opts['sock_dir'],
             self.application.opts['transport'],
-            opts=self.application.opts)
+            opts=self.application.opts,
+            listen=False)
 
         ret = self.event.fire_event({
             'post': self.raw_data,

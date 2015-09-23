@@ -25,6 +25,9 @@ Full list of builtin execution modules
     at
     augeas_cfg
     aws_sqs
+    bamboohr
+    beacons
+    bigip
     blockdev
     bluez
     boto_asg
@@ -56,6 +59,7 @@ Full list of builtin execution modules
     cmdmod
     composer
     config
+    consul
     container_resource
     cp
     cpan
@@ -69,6 +73,7 @@ Full list of builtin execution modules
     ddns
     deb_apache
     deb_postgres
+    debbuild
     debconfmod
     debian_ip
     debian_service
@@ -121,11 +126,13 @@ Full list of builtin execution modules
     hosts
     htpasswd
     http
+    ifttt
     ilo
     img
     incron
     influx
     ini_manage
+    inspectlib
     introspect
     ipmi
     ipset
@@ -178,6 +185,7 @@ Full list of builtin execution modules
     nfs3
     nftables
     nginx
+    node
     nova
     npm
     nspawn
@@ -192,6 +200,7 @@ Full list of builtin execution modules
     osxdesktop
     pacman
     pagerduty
+    pagerduty_util
     pam
     parted
     pecl
@@ -218,6 +227,7 @@ Full list of builtin execution modules
     quota
     rabbitmq
     raet_publish
+    rallydev
     random_org
     rbenv
     rdp
@@ -231,6 +241,7 @@ Full list of builtin execution modules
     rh_service
     riak
     rpm
+    rpmbuild
     rsync
     runit
     rvm
@@ -248,6 +259,7 @@ Full list of builtin execution modules
     shadow
     slack_notify
     smartos_imgadm
+    smartos_virt
     smartos_vmadm
     smbios
     smf
@@ -259,11 +271,13 @@ Full list of builtin execution modules
     solarisips
     solarispkg
     solr
+    splay
     splunk_search
     sqlite3
     ssh
     state
     status
+    stormpath
     sudo
     supervisord
     svn
@@ -274,20 +288,25 @@ Full list of builtin execution modules
     sysrc
     system
     system_profiler
+    system_rest_sample
     systemd
+    temp
     test
     test_virtual
     timezone
     tls
     tomcat
+    trafficserver
     tuned
     twilio_notify
+    udev
     upstart
     uptime
     useradd
     uwsgi
     varnish
     vbox_guest
+    victorops
     virt
     virtualenv_mod
     win_autoruns
@@ -302,6 +321,7 @@ Full list of builtin execution modules
     win_ntp
     win_path
     win_pkg
+    win_powercfg
     win_repo
     win_servermanager
     win_service
@@ -311,6 +331,7 @@ Full list of builtin execution modules
     win_timezone
     win_update
     win_useradd
+    win_wua
     x509
     xapi
     xfs

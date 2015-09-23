@@ -210,6 +210,16 @@ def get_hostnames():
     except (IOError, OSError):
         pass
 
+    # try /etc/nodename (SunOS only)
+    if salt.utils.is_sunos():
+        try:
+            name = ''
+            with salt.utils.fopen('/etc/nodename') as hfl:
+                name = hfl.read()
+            h.append(name)
+        except (IOError, OSError):
+            pass
+
     # try /etc/hosts
     try:
         with salt.utils.fopen('/etc/hosts') as hfl:
@@ -559,7 +569,7 @@ def _interfaces_ifconfig(out):
     else:
         pip = re.compile(r'.*?(?:inet addr:|inet )(.*?)\s')
         pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
-        pmask6 = re.compile(r'.*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+)).*')
+        pmask6 = re.compile(r'.*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+))(?: Scope:([a-zA-Z]+)| scopeid (0x[0-9a-fA-F]))?')
     pmask = re.compile(r'.*?(?:Mask:|netmask )(?:((?:0x)?[0-9a-fA-F]{8})|([\d\.]+))')
     pupdown = re.compile('UP')
     pbcast = re.compile(r'.*?(?:Bcast:|broadcast )([\d\.]+)')
@@ -606,6 +616,9 @@ def _interfaces_ifconfig(out):
                 mmask6 = pmask6.match(line)
                 if mmask6:
                     addr_obj['prefixlen'] = mmask6.group(1) or mmask6.group(2)
+                    if not salt.utils.is_sunos():
+                        ipv6scope = mmask6.group(3) or mmask6.group(4)
+                        addr_obj['scope'] = ipv6scope.lower() if ipv6scope is not None else ipv6scope
                 data['inet6'].append(addr_obj)
         data['up'] = updown
         if iface in ret:
@@ -615,7 +628,12 @@ def _interfaces_ifconfig(out):
             # status determines global interface status.
             #
             # merge items with higher priority for older values
+            # after that merge the inet and inet6 sub items for both
             ret[iface] = dict(list(data.items()) + list(ret[iface].items()))
+            if 'inet' in data:
+                ret[iface]['inet'].extend(x for x in data['inet'] if x not in ret[iface]['inet'])
+            if 'inet6' in data:
+                ret[iface]['inet6'].extend(x for x in data['inet6'] if x not in ret[iface]['inet6'])
         else:
             ret[iface] = data
         del data

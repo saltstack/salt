@@ -104,6 +104,7 @@ def execute(context=None, lens=None, commands=()):
 
     method_map = {
         'set':    'set',
+        'setm':    'setm',
         'mv':     'move',
         'move':   'move',
         'ins':    'insert',
@@ -136,6 +137,13 @@ def execute(context=None, lens=None, commands=()):
                     path = os.path.join(context.rstrip('/'), path.lstrip('/'))
                 value = value.strip('"').strip("'")
                 args = {'path': path, 'value': value}
+            elif method == 'setm':
+                base, sub, value = re.findall('([^\'" ]+|"[^"]*"|\'[^\']*\')', arg)
+                base = base.rstrip()
+                if context:
+                    base = os.path.join(context.rstrip('/'), base.lstrip('/'))
+                value = value.strip('"').strip("'")
+                args = {'base': base, 'sub': sub, 'value': value}
             elif method == 'move':
                 path, dst = arg.split(' ', 1)
                 if context:

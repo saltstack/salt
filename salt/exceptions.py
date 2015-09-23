@@ -157,6 +157,12 @@ class SaltClientTimeout(SaltException):
         self.jid = jid
 
 
+class SaltCacheError(SaltException):
+    '''
+    Thrown when a problem was encountered trying to read or write from the salt cache
+    '''
+
+
 class SaltReqTimeoutError(SaltException):
     '''
     Thrown when a salt master request call fails to return within the timeout
@@ -261,4 +267,11 @@ class SaltCloudExecutionFailure(SaltCloudException):
 class SaltCloudPasswordError(SaltCloudException):
     '''
     Raise when virtual terminal password input failed
+    '''
+
+
+class NotImplemented(SaltException):
+    '''
+    Used when a module runs a command which returns an error and wants
+    to show the user the output gracefully instead of dying
     '''

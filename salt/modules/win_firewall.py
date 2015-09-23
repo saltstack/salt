@@ -6,12 +6,16 @@ from __future__ import absolute_import
 
 # Import python libs
 import re
+import logging
 
 # Import salt libs
 import salt.utils
+from salt.ext import six
 
 # Define the module's virtual name
 __virtualname__ = 'firewall'
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -119,11 +123,18 @@ def add_rule(name, localport, protocol='tcp', action='allow', dir='in'):
            'dir={0}'.format(dir),
            'localport={0}'.format(localport),
            'action={0}'.format(action)]
-    return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
+    if isinstance(ret, six.string_types):
+        return ret.strip() == 'Ok.'
+    else:
+        log.error('firewall.add_rule failed: {0}'.format(ret))
+        return False
 
 
 def delete_rule(name, localport, protocol='tcp', dir='in'):
     '''
+    .. versionadded:: 2015.8.0
+
     Delete an existing firewall rule
 
     CLI Example:
@@ -137,4 +148,9 @@ def delete_rule(name, localport, protocol='tcp', dir='in'):
            'protocol={0}'.format(protocol),
            'dir={0}'.format(dir),
            'localport={0}'.format(localport)]
-    return __salt__['cmd.run'](cmd, python_shell=False) == 'Ok.'
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
+    if isinstance(ret, six.string_types):
+        return ret.endswith('Ok.')
+    else:
+        log.error('firewall.delete_rule failed: {0}'.format(ret))
+        return False

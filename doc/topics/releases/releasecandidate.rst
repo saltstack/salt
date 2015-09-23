@@ -1,3 +1,5 @@
+:orphan:
+
 ===========================================
 Installing/Testing a Salt Release Candidate
 ===========================================
@@ -16,7 +18,7 @@ The easiest way to install a release candidate of Salt is using
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh git v2015.8.0rc1
+    sudo sh install_salt.sh git v2015.8.0rc2
 
 If you want to also install a master using `Salt Bootstrap`_, use the ``-M``
 flag:
@@ -24,7 +26,7 @@ flag:
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -M git v2015.8.0rc1
+    sudo sh install_salt.sh -M git v2015.8.0rc2
 
 If you want to install only a master and not a minion using `Salt Bootstrap`_,
 use the ``-M`` and ``-N`` flags:
@@ -32,7 +34,7 @@ use the ``-M`` and ``-N`` flags:
 .. code-block:: bash
 
     curl -o install_salt.sh -L https://bootstrap.saltstack.com
-    sudo sh install_salt.sh -M -N git v2015.8.0rc1
+    sudo sh install_salt.sh -M -N git v2015.8.0rc2
 
 
 Installation from Source Tarball
@@ -44,9 +46,9 @@ installation docs <_installation>`.  Then install salt using the following:
 
 .. code-block:: bash
 
-    curl -O https://pypi.python.org/packages/source/s/salt/salt-2015.8.0rc1.tar.gz
-    tar -xzvf salt-2015.8.0rc1.tar.gz
-    cd salt-2015.8.0rc1
+    curl -O https://pypi.python.org/packages/source/s/salt/salt-2015.8.0rc2.tar.gz
+    tar -xzvf salt-2015.8.0rc2.tar.gz
+    cd salt-2015.8.0rc2
     sudo python setup.py install
 
 
@@ -56,4 +58,4 @@ installation docs <_installation>`.  Then install salt using the following:
 Install on Windows
 ==================
 
-Builds for Windows can be found here: http://docs.saltstack.com/downloads/
+Builds for Windows can be found here: https://repo.saltstack.com/windows/

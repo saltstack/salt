@@ -66,6 +66,7 @@ from Crypto.Signature import PKCS1_v1_5
 
 # Import salt libs
 import salt.ext.six as six
+from salt.ext.six.moves import http_client  # pylint: disable=import-error,no-name-in-module
 import salt.utils.http
 import salt.utils.cloud
 import salt.config as config
@@ -78,12 +79,10 @@ from salt.exceptions import (
     SaltCloudNotFound,
 )
 
-# Import 3rd-party libs
-import salt.ext.six as six
-from salt.ext.six.moves import http_client  # pylint: disable=import-error,no-name-in-module
-
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'joyent'
 
 JOYENT_API_HOST_SUFFIX = '.api.joyentcloud.com'
 JOYENT_API_VERSION = '~7.2'
@@ -117,8 +116,7 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    conn = None
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -127,7 +125,7 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'joyent',
+        __active_provider_name__ or __virtualname__,
         ('user', 'password')
     )
 
@@ -244,9 +242,9 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'joyent',
-                                        vm_['profile']) is False:
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'joyent',
+                                                           vm_['profile']) is False:
             return False
     except AttributeError:
         pass

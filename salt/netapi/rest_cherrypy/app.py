@@ -118,24 +118,23 @@ The token may be sent in one of two ways:
 
   For example, using curl:
 
-  .. code-block:: bash
+    .. code-block:: bash
 
-      curl -sSk https://localhost:8000/login \
-            -H 'Accept: application/x-yaml' \
-            -d username=saltdev \
-            -d password=saltdev \
+        curl -sSk https://localhost:8000/login \\
+            -H 'Accept: application/x-yaml' \\
+            -d username=saltdev \\
+            -d password=saltdev \\
             -d eauth=auto
 
-  Copy the ``token`` value from the output and include it in subsequent
-  requests:
+Copy the ``token`` value from the output and include it in subsequent requests:
 
-  .. code-block:: bash
+    .. code-block:: bash
 
-      curl -sSk https://localhost:8000 \
-            -H 'Accept: application/x-yaml' \
-            -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\
-            -d client=local \
-            -d tgt='*' \
+        curl -sSk https://localhost:8000 \\
+            -H 'Accept: application/x-yaml' \\
+            -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\\
+            -d client=local \\
+            -d tgt='*' \\
             -d fun=test.ping
 
 * Sent via a cookie. This option is a convenience for HTTP clients that
@@ -146,19 +145,19 @@ The token may be sent in one of two ways:
   .. code-block:: bash
 
       # Write the cookie file:
-      curl -sSk https://localhost:8000/login \
-            -c ~/cookies.txt \
-            -H 'Accept: application/x-yaml' \
-            -d username=saltdev \
-            -d password=saltdev \
+      curl -sSk https://localhost:8000/login \\
+            -c ~/cookies.txt \\
+            -H 'Accept: application/x-yaml' \\
+            -d username=saltdev \\
+            -d password=saltdev \\
             -d eauth=auto
 
       # Read the cookie file:
-      curl -sSk https://localhost:8000 \
-            -b ~/cookies.txt \
-            -H 'Accept: application/x-yaml' \
-            -d client=local \
-            -d tgt='*' \
+      curl -sSk https://localhost:8000 \\
+            -b ~/cookies.txt \\
+            -H 'Accept: application/x-yaml' \\
+            -d client=local \\
+            -d tgt='*' \\
             -d fun=test.ping
 
 .. seealso:: You can bypass the session handling via the :py:class:`Run` URL.
@@ -329,6 +328,75 @@ def salt_token_tool():
     # X-Auth-Token header trumps session cookie
     if x_auth:
         cherrypy.request.cookie['session_id'] = x_auth
+
+
+def salt_api_acl_tool(username, request):
+    '''
+    ..versionadded:: Boron
+
+    Verifies user requests against the API whitelist. (User/IP pair)
+    in order to provide whitelisting for the API similar to the
+    master, but over the API.
+
+    ..code-block:: yaml
+
+        rest_cherrypy:
+            api_acl:
+                users:
+                    '*':
+                        - 1.1.1.1
+                        - 1.1.1.2
+                    foo:
+                        - 8.8.4.4
+                    bar:
+                        - '*'
+
+    :param username: Username to check against the API.
+    :type username: str
+    :param request: Cherrypy request to check against the API.
+    :type request: cherrypy.request
+    '''
+    failure_str = ("[api_acl] Authentication failed for "
+                   "user {0} from IP {1}")
+    success_str = ("[api_acl] Authentication sucessful for "
+                   "user {0} from IP {1}")
+    pass_str = ("[api_acl] Authentication not checked for "
+                "user {0} from IP {1}")
+
+    acl = None
+    # Salt Configuration
+    salt_config = cherrypy.config.get('saltopts', None)
+    if salt_config:
+        # Cherrypy Config.
+        cherrypy_conf = salt_config.get('rest_cherrypy', None)
+        if cherrypy_conf:
+            # ACL Config.
+            acl = cherrypy_conf.get('api_acl', None)
+
+    ip = request.remote.ip
+    if acl:
+        users = acl.get('users', {})
+        if users:
+            if username in users:
+                if ip in users[username] or '*' in users[username]:
+                    logger.info(success_str.format(username, ip))
+                    return True
+                else:
+                    logger.info(failure_str.format(username, ip))
+                    return False
+            elif username not in users and '*' in users:
+                if ip in users['*'] or '*' in users['*']:
+                    logger.info(success_str.format(username, ip))
+                    return True
+                else:
+                    logger.info(failure_str.format(username, ip))
+                    return False
+            else:
+                logger.info(failure_str.format(username, ip))
+                return False
+    else:
+        logger.info(pass_str.format(username, ip))
+        return True
 
 
 def salt_ip_verify_tool():
@@ -822,7 +890,7 @@ class LowDataAdapter(object):
                     -d arg='du -sh .' \\
                     -d arg='/path/to/dir'
 
-            # Sending posiitonal args and Keyword args with JSON:
+            # Sending positional args and Keyword args with JSON:
             echo '[
                 {
                     "client": "local",
@@ -998,6 +1066,9 @@ class Jobs(LowDataAdapter):
         .. http:get:: /jobs/(jid)
 
             List jobs or show a single job from the job cache.
+
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
 
             :status 200: |200|
             :status 401: |401|
@@ -1429,6 +1500,12 @@ class Login(LowDataAdapter):
         else:
             creds = cherrypy.serving.request.lowstate
 
+        username = creds.get('username', None)
+        # Validate against the whitelist.
+        if not salt_api_acl_tool(username, cherrypy.request):
+            raise cherrypy.HTTPError(401)
+
+        # Mint token.
         token = self.auth.mk_token(creds)
         if 'token' not in token:
             raise cherrypy.HTTPError(401,
@@ -1442,19 +1519,18 @@ class Login(LowDataAdapter):
         try:
             eauth = self.opts.get('external_auth', {}).get(token['eauth'], {})
 
-            if 'groups' in token:
+            # Get sum of '*' perms, user-specific perms, and group-specific perms
+            perms = eauth.get(token['name'], [])
+            perms.extend(eauth.get('*', []))
+
+            if 'groups' in token and token['groups'] is not False:
                 user_groups = set(token['groups'])
                 eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
 
-                perms = []
                 for group in user_groups & eauth_groups:
                     perms.extend(eauth['{0}%'.format(group)])
 
-                perms = perms or None
-            else:
-                perms = eauth.get(token['name'], eauth.get('*'))
-
-            if perms is None:
+            if not perms:
                 raise ValueError("Eauth permission list not found.")
         except (AttributeError, IndexError, KeyError, ValueError):
             logger.debug("Configuration for external_auth malformed for "
@@ -1788,7 +1864,8 @@ class Events(object):
                     'master',
                     sock_dir=self.opts['sock_dir'],
                     transport=self.opts['transport'],
-                    opts=self.opts)
+                    opts=self.opts,
+                    listen=True)
             stream = event.iter_events(full=True)
 
             yield u'retry: {0}\n'.format(400)
@@ -1838,21 +1915,21 @@ class WebsocketEndpoint(object):
 
         .. http:get:: /ws/(token)
 
-            :query format_events: The event stream will undergo server-side
-                formatting if the ``format_events`` URL parameter is included
-                in the request. This can be useful to avoid formatting on the
-                client-side:
+        :query format_events: The event stream will undergo server-side
+            formatting if the ``format_events`` URL parameter is included
+            in the request. This can be useful to avoid formatting on the
+            client-side:
 
-                .. code-block:: bash
+            .. code-block:: bash
 
-                    curl -NsS <...snip...> localhost:8000/ws?format_events
+                curl -NsS <...snip...> localhost:8000/ws?format_events
 
-            :reqheader X-Auth-Token: an authentication token from
-                :py:class:`~Login`.
+        :reqheader X-Auth-Token: an authentication token from
+            :py:class:`~Login`.
 
-            :status 101: switching to the websockets protocol
-            :status 401: |401|
-            :status 406: |406|
+        :status 101: switching to the websockets protocol
+        :status 401: |401|
+        :status 406: |406|
 
         **Example request:**
 
@@ -1961,7 +2038,8 @@ class WebsocketEndpoint(object):
                     'master',
                     sock_dir=self.opts['sock_dir'],
                     transport=self.opts['transport'],
-                    opts=self.opts)
+                    opts=self.opts,
+                    listen=True)
             stream = event.iter_events(full=True)
             SaltInfo = event_processor.SaltInfo(handler)
             while True:

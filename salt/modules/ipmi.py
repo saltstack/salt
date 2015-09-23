@@ -193,7 +193,8 @@ def set_channel_access(channel=14, access_update_mode='non_volatile',
     Set channel access
 
     :param channel: number [1:7]
-    :param access_update_mode: one of
+
+    :param access_update_mode:
         - 'dont_change'  = don't set or change Channel Access
         - 'non_volatile' = set non-volatile Channel Access
         - 'volatile'     = set volatile (active) setting of Channel Access
@@ -683,21 +684,24 @@ def set_bootdev(bootdev='default', persist=False, uefiboot=False, **kwargs):
     Set boot device to use on next reboot
 
     :param bootdev:
-                    *network -- Request network boot
-                    *hd -- Boot from hard drive
-                    *safe -- Boot from hard drive, requesting 'safe mode'
-                    *optical -- boot from CD/DVD/BD drive
-                    *setup -- Boot into setup utility
-                    *default -- remove any IPMI directed boot device
-                                request
+        - network: Request network boot
+        - hd: Boot from hard drive
+        - safe: Boot from hard drive, requesting 'safe mode'
+        - optical: boot from CD/DVD/BD drive
+        - setup: Boot into setup utility
+        - default: remove any IPMI directed boot device
+          request
+
     :param persist: If true, ask that system firmware use this device
                     beyond next boot.  Be aware many systems do not honor
                     this
+
     :param uefiboot: If true, request UEFI boot explicitly.  Strictly
                     speaking, the spec sugests that if not set, the system
                     should BIOS boot and offers no "don't care" option.
                     In practice, this flag not being set does not preclude
                     UEFI boot on any system I've encountered.
+
     :param kwargs:
         - api_host=127.0.0.1
         - api_user=admin
@@ -811,6 +815,7 @@ def get_users(channel=14, **kwargs):
     get list of users and access information
 
     :param channel: number [1:7]
+
     :param kwargs:
         - api_host=127.0.0.1
         - api_user=admin
@@ -819,15 +824,15 @@ def get_users(channel=14, **kwargs):
         - api_kg=None
 
     :return:
-        name: (str)
-        uid: (int)
-        channel: (int)
-        access:
+        - name: (str)
+        - uid: (int)
+        - channel: (int)
+        - access:
             - callback (bool)
             - link_auth (bool)
             - ipmi_msg (bool)
             - privilege_level: (str)[callback, user, operatorm administrator,
-                                    proprietary, no_access]
+              proprietary, no_access]
 
     CLI Examples:
 

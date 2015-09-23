@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Compendium of generic DNS utilities
+Compendium of generic DNS utilities.
+The 'dig' command line tool must be installed in order to use this module.
 '''
 from __future__ import absolute_import
 

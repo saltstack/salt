@@ -22,6 +22,7 @@ import fnmatch
 import logging
 import datetime
 import traceback
+import re
 
 # Import salt libs
 import salt.utils
@@ -216,8 +217,8 @@ def format_log(ret):
                             new = chg[pkg]['new']
                             if not new and new not in (False, None):
                                 new = 'absent'
-                            msg += '{0} changed from {1} to ' \
-                                   '{2}\n'.format(pkg, old, new)
+                            msg += '{0!r} changed from {1!r} to ' \
+                                   '{2!r}\n'.format(pkg, old, new)
             if not msg:
                 msg = str(ret['changes'])
             if ret['result'] is True or ret['result'] is None:
@@ -256,9 +257,9 @@ class Compiler(object):
     '''
     Class used to compile and manage the High Data structure
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, renderers):
         self.opts = opts
-        self.rend = salt.loader.render(self.opts, {})
+        self.rend = renderers
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # 'self.rend' contains a function reference which is not picklable.
@@ -381,7 +382,7 @@ class Compiler(object):
                             # Add the requires to the reqs dict and check them
                             # all for recursive requisites.
                             argfirst = next(iter(arg))
-                            if argfirst in ('require', 'watch', 'prereq'):
+                            if argfirst in ('require', 'watch', 'prereq', 'onchanges'):
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(('The {0}'
                                     ' statement in state {1!r} in SLS {2!r} '
@@ -631,7 +632,10 @@ class State(object):
         mod_init function in the state module.
         '''
         # ensure that the module is loaded
-        self.states['{0}.{1}'.format(low['state'], low['fun'])]  # pylint: disable=W0106
+        try:
+            self.states['{0}.{1}'.format(low['state'], low['fun'])]  # pylint: disable=W0106
+        except KeyError:
+            return
         minit = '{0}.mod_init'.format(low['state'])
         if low['state'] not in self.mod_init:
             if minit in self.states._dict:
@@ -754,7 +758,7 @@ class State(object):
                                         func[func.rindex('.'):]
                                         )
                                 self.functions[f_key] = funcs[func]
-        self.states = salt.loader.states(self.opts, self.functions)
+        self.states = salt.loader.states(self.opts, self.functions, self.utils)
         self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
 
     def module_refresh(self):
@@ -991,7 +995,7 @@ class State(object):
                                         'formed as a list'
                                         .format(name, body['__sls__'])
                                     )
-                            if argfirst in ('require', 'watch', 'prereq'):
+                            if argfirst in ('require', 'watch', 'prereq', 'onchanges'):
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(
                                         'The {0} statement in state {1!r} in '
@@ -2295,11 +2299,16 @@ class BaseHighState(object):
                 opts['state_top'] = salt.utils.url.create(mopts['state_top'][1:])
             else:
                 opts['state_top'] = salt.utils.url.create(mopts['state_top'])
+            opts['state_top_saltenv'] = mopts.get('state_top_saltenv', None)
             opts['nodegroups'] = mopts.get('nodegroups', {})
             opts['state_auto_order'] = mopts.get(
                 'state_auto_order',
                 opts['state_auto_order'])
             opts['file_roots'] = mopts['file_roots']
+            opts['top_file_merging_strategy'] = mopts.get('top_file_merging_strategy',
+                                                          opts.get('top_file_merging_strategy'))
+            opts['env_order'] = mopts.get('env_order', opts.get('env_order', []))
+            opts['default_top'] = mopts.get('default_top', opts.get('default_top'))
             opts['state_events'] = mopts.get('state_events')
             opts['state_aggregate'] = mopts.get('state_aggregate', opts.get('state_aggregate', False))
             opts['jinja_lstrip_blocks'] = mopts.get('jinja_lstrip_blocks', False)
@@ -2310,10 +2319,28 @@ class BaseHighState(object):
         '''
         Pull the file server environments out of the master options
         '''
-        envs = set(['base'])
+        envs = ['base']
         if 'file_roots' in self.opts:
-            envs.update(list(self.opts['file_roots']))
-        return envs.union(set(self.client.envs()))
+            envs.extend(list(self.opts['file_roots']))
+        client_envs = self.client.envs()
+        env_order = self.opts.get('env_order', [])
+        client_envs = self.client.envs()
+        if env_order and client_envs:
+            client_env_list = self.client.envs()
+            env_intersection = set(env_order).intersection(client_env_list)
+            final_list = []
+            for ord_env in env_order:
+                if ord_env in env_intersection:
+                    final_list.append(ord_env)
+            return set(final_list)
+
+        elif env_order:
+            return set(env_order)
+        else:
+            for cenv in client_envs:
+                if cenv not in envs:
+                    envs.append(cenv)
+            return set(envs)
 
     def get_tops(self):
         '''
@@ -2324,6 +2351,13 @@ class BaseHighState(object):
         done = DefaultOrderedDict(list)
         found = 0  # did we find any contents in the top files?
         # Gather initial top files
+        if self.opts['top_file_merging_strategy'] == 'same' and \
+        not self.opts['environment']:
+            if not self.opts['default_top']:
+                raise SaltRenderError('Top file merge strategy set to same, but no default_top '
+                          'configuration option was set')
+            self.opts['environment'] = self.opts['default_top']
+
         if self.opts['environment']:
             contents = self.client.cache_file(
                 self.opts['state_top'],
@@ -2339,9 +2373,10 @@ class BaseHighState(object):
                     saltenv=self.opts['environment']
                 )
             ]
-        else:
+        elif self.opts['top_file_merging_strategy'] == 'merge':
             found = 0
-            for saltenv in self._get_envs():
+            if self.opts.get('state_top_saltenv', False):
+                saltenv = self.opts['state_top_saltenv']
                 contents = self.client.cache_file(
                     self.opts['state_top'],
                     saltenv
@@ -2359,6 +2394,29 @@ class BaseHighState(object):
                         saltenv=saltenv
                     )
                 )
+            else:
+                for saltenv in self._get_envs():
+                    contents = self.client.cache_file(
+                        self.opts['state_top'],
+                        saltenv
+                    )
+                    if contents:
+                        found = found + 1
+                    else:
+                        log.debug('No contents loaded for env: {0}'.format(saltenv))
+
+                    tops[saltenv].append(
+                        compile_template(
+                            contents,
+                            self.state.rend,
+                            self.state.opts['renderer'],
+                            saltenv=saltenv
+                        )
+                    )
+            if found > 1:
+                log.warning('Top file merge strategy set to \'merge\' and multiple top files found. '
+                            'Top file merging order is undefined; '
+                            'for better results use \'same\' option')
 
         if found == 0:
             log.error('No contents found in top file')
@@ -2633,13 +2691,25 @@ class BaseHighState(object):
                         continue
 
                     if inc_sls.startswith('.'):
+                        levels, include = \
+                            re.match(r'^(\.+)(.*)$', inc_sls).groups()
+                        level_count = len(levels)
                         p_comps = sls.split('.')
                         if state_data.get('source', '').endswith('/init.sls'):
-                            inc_sls = sls + inc_sls
-                        else:
-                            inc_sls = '.'.join(p_comps[:-1]) + inc_sls
+                            p_comps.append('init')
+                        if level_count > len(p_comps):
+                            msg = ('Attempted relative include of {0!r} '
+                                   'within SLS \'{1}:{2}\' '
+                                   'goes beyond top level package '
+                                   .format(inc_sls, saltenv, sls))
+                            log.error(msg)
+                            errors.append(msg)
+                            continue
+                        inc_sls = '.'.join(p_comps[:-level_count] + [include])
 
                     if env_key != xenv_key:
+                        if matches is None:
+                            matches = []
                         # Resolve inc_sls in the specified environment
                         if env_key in matches or fnmatch.filter(self.avail[env_key], inc_sls):
                             resolved_envs = [env_key]
@@ -3143,7 +3213,8 @@ class MasterState(State):
                 )
         # Load the states, but they should not be used in this class apart
         # from inspection
-        self.states = salt.loader.states(self.opts, self.functions)
+        self.utils = salt.loader.utils(self.opts)
+        self.states = salt.loader.states(self.opts, self.functions, self.utils)
         self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
 
 

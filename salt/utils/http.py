@@ -3,7 +3,7 @@
 Utils for making various web calls. Primarily designed for REST, SOAP, webhooks
 and the like, but also useful for basic HTTP testing.
 
-.. versionaddedd:: 2015.2
+.. versionadded:: 2015.5.0
 '''
 
 # Import python libs
@@ -13,6 +13,8 @@ import logging
 import os.path
 import pprint
 import socket
+import urllib
+import inspect
 
 import ssl
 try:
@@ -53,6 +55,7 @@ from salt.ext.six.moves.urllib.error import URLError
 
 # Don't need a try/except block, since Salt depends on tornado
 import tornado.httputil
+import tornado.simple_httpclient
 from tornado.httpclient import HTTPClient
 
 try:
@@ -117,8 +120,10 @@ def query(url,
           headers_out=None,
           decode_out=None,
           stream=False,
+          streaming_callback=None,
           handle=False,
           agent=USERAGENT,
+          hide_fields=None,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -174,9 +179,21 @@ def query(url,
             data_file, data_render, data_renderer, template_dict, opts
         )
 
-    log.debug('Requesting URL {0} using {1} method'.format(url_full, method))
+    # Make sure no secret fields show up in logs
+    log_url = sanitize_url(url_full, hide_fields)
+
+    log.debug('Requesting URL {0} using {1} method'.format(log_url, method))
     if method == 'POST':
-        log.trace('Request POST Data: {0}'.format(pprint.pformat(data)))
+        # Make sure no secret fields show up in logs
+        if isinstance(data, dict):
+            log_data = data.copy()
+            for item in data:
+                for field in hide_fields:
+                    if item == field:
+                        log_data[item] = 'XXXXXXXXXX'
+            log.trace('Request POST Data: {0}'.format(pprint.pformat(log_data)))
+        else:
+            log.trace('Request POST Data: {0}'.format(pprint.pformat(data)))
 
     if header_file is not None:
         header_tpl = _render(
@@ -221,8 +238,6 @@ def query(url,
     if not auth:
         if username and password:
             auth = (username, password)
-        else:
-            auth = None
 
     if agent == USERAGENT:
         agent = '{0} http.query()'.format(agent)
@@ -285,7 +300,7 @@ def query(url,
         if stream is True or handle is True:
             return {'handle': result}
 
-        log.debug('Final URL location of Response: {0}'.format(result.url))
+        log.debug('Final URL location of Response: {0}'.format(sanitize_url(result.url, hide_fields)))
 
         result_status_code = result.status_code
         result_headers = result.headers
@@ -298,7 +313,7 @@ def query(url,
             urllib_request.HTTPCookieProcessor(sess_cookies)
         ]
 
-        if url.startswith('https') or port == 443:
+        if url.startswith('https'):
             hostname = request.get_host()
             handlers[0] = urllib_request.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
@@ -308,8 +323,12 @@ def query(url,
                 log.warn(('SSL certificate verification has been explicitly '
                          'disabled. THIS CONNECTION MAY NOT BE SECURE!'))
             else:
+                if ':' in hostname:
+                    hostname, port = hostname.split(':')
+                else:
+                    port = 443
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect((hostname, 443))
+                sock.connect((hostname, int(port)))
                 sockwrap = ssl.wrap_socket(
                     sock,
                     ca_certs=ca_bundle,
@@ -385,18 +404,44 @@ def query(url,
                 log.error('The client-side certificate path that was passed is '
                           'not valid: {0}'.format(cert))
 
+        if verify_ssl:
+            req_kwargs['ca_certs'] = ca_bundle
+
+        max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
+        timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
+
+        client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+        supports_max_body_size = 'max_body_size' in client_argspec.args
+
         try:
-            result = HTTPClient().fetch(
-                url_full,
-                method=method,
-                headers=header_dict,
-                auth_username=username,
-                auth_password=password,
-                body=data,
-                validate_cert=verify_ssl,
-                allow_nonstandard_methods=True,
-                **req_kwargs
-            )
+            if supports_max_body_size:
+                result = HTTPClient(max_body_size=max_body).fetch(
+                    url_full,
+                    method=method,
+                    headers=header_dict,
+                    auth_username=username,
+                    auth_password=password,
+                    body=data,
+                    validate_cert=verify_ssl,
+                    allow_nonstandard_methods=True,
+                    streaming_callback=streaming_callback,
+                    request_timeout=timeout,
+                    **req_kwargs
+                )
+            else:
+                result = HTTPClient().fetch(
+                    url_full,
+                    method=method,
+                    headers=header_dict,
+                    auth_username=username,
+                    auth_password=password,
+                    body=data,
+                    validate_cert=verify_ssl,
+                    allow_nonstandard_methods=True,
+                    streaming_callback=streaming_callback,
+                    request_timeout=timeout,
+                    **req_kwargs
+                )
         except tornado.httpclient.HTTPError as exc:
             ret['status'] = exc.code
             ret['error'] = str(exc)
@@ -523,7 +568,6 @@ def get_ca_bundle(opts=None):
 
     # Check Salt first
     for salt_root in file_roots.get('base', []):
-        log.debug('file_roots is {0}'.format(salt_root))
         for path in ('cacert.pem', 'ca-bundle.crt'):
             if os.path.exists(path):
                 return path
@@ -749,3 +793,23 @@ def parse_cookie_header(header):
         ret.append(salt.ext.six.moves.http_cookiejar.Cookie(name=name, value=value, **cookie))
 
     return ret
+
+
+def sanitize_url(url, hide_fields):
+    '''
+    Make sure no secret fields show up in logs
+    '''
+    if isinstance(hide_fields, list):
+        url_comps = urllib.splitquery(url)
+        log_url = url_comps[0]
+        if len(url_comps) > 1:
+            log_url += '?'
+        for pair in url_comps[1:]:
+            for field in hide_fields:
+                if pair.startswith('{0}='.format(field)):
+                    log_url += '{0}=XXXXXXXXXX&'.format(field)
+                else:
+                    log_url += '{0}&'.format(pair)
+        return log_url.rstrip('&')
+    else:
+        return str(url)

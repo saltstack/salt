@@ -17,6 +17,7 @@ import logging
 import inspect
 import tempfile
 from collections import MutableMapping
+from zipimport import zipimporter
 
 # Import salt libs
 from salt.exceptions import LoaderError
@@ -204,7 +205,7 @@ def minion_mods(
 
     ret.pack['__salt__'] = ret
     if notify:
-        evt = salt.utils.event.get_event('minion', opts=opts)
+        evt = salt.utils.event.get_event('minion', opts=opts, listen=False)
         evt.fire_event({'complete': True}, tag='/salt/minion/minion_mod_complete')
 
     return ret
@@ -248,7 +249,7 @@ def engines(opts, functions, runners):
                       pack=pack)
 
 
-def proxy(opts, functions, whitelist=None):
+def proxy(opts, functions, whitelist=None, loaded_base_name=None):
     '''
     Returns the proxy module for this salt-proxy-minion
     '''
@@ -256,7 +257,8 @@ def proxy(opts, functions, whitelist=None):
                       opts,
                       tag='proxy',
                       whitelist=whitelist,
-                      pack={'__proxy__': functions})
+                      pack={'__proxy__': functions},
+                      loaded_base_name=loaded_base_name)
 
 
 def returners(opts, functions, whitelist=None, context=None):
@@ -385,7 +387,7 @@ def roster(opts, whitelist=None):
                       whitelist=whitelist)
 
 
-def states(opts, functions, whitelist=None):
+def states(opts, functions, utils, whitelist=None):
     '''
     Returns the state modules
 
@@ -399,13 +401,16 @@ def states(opts, functions, whitelist=None):
         import salt.loader
 
         __opts__ = salt.config.minion_config('/etc/salt/minion')
-        statemods = salt.loader.states(__opts__, None)
+        statemods = salt.loader.states(__opts__, None, None)
     '''
-    return LazyLoader(_module_dirs(opts, 'states', 'states'),
+    ret = LazyLoader(_module_dirs(opts, 'states', 'states'),
                       opts,
                       tag='states',
                       pack={'__salt__': functions},
                       whitelist=whitelist)
+    ret.pack['__states__'] = ret
+    ret.pack['__utils__'] = utils
+    return ret
 
 
 def beacons(opts, functions, context=None):
@@ -701,6 +706,42 @@ def sdb(opts, functions=None, whitelist=None):
                      )
 
 
+def pkgdb(opts):
+    '''
+    Return modules for SPM's package database
+
+    .. versionadded:: 2015.8.0
+    '''
+    return LazyLoader(
+        _module_dirs(
+            opts,
+            'pkgdb',
+            'pkgdb',
+            base_path=os.path.join(SALT_BASE_PATH, 'spm')
+        ),
+        opts,
+        tag='pkgdb'
+    )
+
+
+def pkgfiles(opts):
+    '''
+    Return modules for SPM's file handling
+
+    .. versionadded:: 2015.8.0
+    '''
+    return LazyLoader(
+        _module_dirs(
+            opts,
+            'pkgfiles',
+            'pkgfiles',
+            base_path=os.path.join(SALT_BASE_PATH, 'spm')
+        ),
+        opts,
+        tag='pkgfiles'
+    )
+
+
 def clouds(opts):
     '''
     Return the cloud functions
@@ -803,6 +844,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  whitelist=None,
                  virtual_enable=True,
                  ):  # pylint: disable=W0231
+
         self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
@@ -900,6 +942,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             except ImportError:
                 log.info('Cython is enabled in the options but not present '
                     'in the system path. Skipping Cython modules.')
+        # Allow for zipimport of modules
+        if self.opts.get('enable_zip_modules', True) is True:
+            self.suffix_map['.zip'] = tuple()
         # allow for module dirs
         self.suffix_map[''] = ('', '', imp.PKG_DIRECTORY)
 
@@ -1027,6 +1072,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             sys.path.append(os.path.dirname(fpath))
             if suffix == '.pyx':
                 mod = self.pyximport.load_module(name, fpath, tempfile.gettempdir())
+            elif suffix == '.o':
+                top_mod = __import__(fpath, globals(), locals(), [])
+                comps = fpath.split('.')
+                if len(comps) < 2:
+                    mod = top_mod
+                else:
+                    mod = top_mod
+                    for subname in comps[1:]:
+                        mod = getattr(mod, subname)
+            elif suffix == '.zip':
+                mod = zipimporter(fpath).load_module(name)
             else:
                 desc = self.suffix_map[suffix]
                 # if it is a directory, we dont open a file
@@ -1042,7 +1098,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     if not self.initial_load:
                         self._reload_submodules(mod)
                 else:
-                    with open(fpath, desc[1]) as fn_:
+                    with salt.utils.fopen(fpath, desc[1]) as fn_:
                         mod = imp.load_module(
                             '{0}.{1}.{2}.{3}'.format(
                                 self.loaded_base_name,
@@ -1138,14 +1194,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # If this is a proxy minion then MOST modules cannot work. Therefore, require that
         # any module that does work with salt-proxy-minion define __proxyenabled__ as a list
         # containing the names of the proxy types that the module supports.
-        if not hasattr(mod, 'render') and 'proxy' in self.opts:
-            if not hasattr(mod, '__proxyenabled__') or \
-                    self.opts['proxy']['proxytype'] in mod.__proxyenabled__ or \
-                    '*' in mod.__proxyenabled__:
-                err_string = 'not a proxy_minion enabled module'
-                self.missing_modules[module_name] = err_string
-                self.missing_modules[name] = err_string
-                return False
+        #
+        # Render modules and state modules are OK though
+        if 'proxymodule' in self.opts:
+            if self.tag not in ['render', 'states', 'utils']:
+                if not hasattr(mod, '__proxyenabled__') or \
+                        (self.opts['proxymodule'].loaded_base_name not in mod.__proxyenabled__ and
+                            '*' not in mod.__proxyenabled__):
+                    err_string = 'not a proxy_minion enabled module'
+                    self.missing_modules[module_name] = err_string
+                    self.missing_modules[name] = err_string
+                    return False
 
         if getattr(mod, '__load__', False) is not False:
             log.info(

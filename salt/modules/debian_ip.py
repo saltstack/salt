@@ -1793,7 +1793,7 @@ def get_routes(iface):
 
     .. code-block:: bash
 
-        salt '*' ip.get_interface eth0
+        salt '*' ip.get_routes eth0
     '''
 
     filename = os.path.join(_DEB_NETWORK_UP_DIR, 'route-{0}'.format(iface))

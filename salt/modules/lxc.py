@@ -866,7 +866,8 @@ def _network_conf(conf_tuples=None, **kwargs):
     # (lxc.network.ipv4.gateway: auto)
     if (
         distutils.version.LooseVersion(version()) <= '1.0.7' and
-        True not in ['ipv4.gateway' in a for a in ret]
+        True not in ['lxc.network.ipv4.gateway' in a for a in ret] and
+        True in ['lxc.network.ipv4' in a for a in ret]
     ):
         ret.append({'lxc.network.ipv4.gateway': 'auto'})
     return ret
@@ -3146,7 +3147,7 @@ def set_dns(name, dnsservers=None, searchdomains=None, path=None):
             path=path, python_shell=True)
     # blindly delete the setter file
     run_all(name,
-            'if [ -f "{0}" ];then rm -f "{0}";fi'.format(script),
+            'sh -c \'if [ -f "{0}" ];then rm -f "{0}";fi\''.format(script),
             path=path, python_shell=True)
     if result['retcode'] != 0:
         error = ('Unable to write to /etc/resolv.conf in container \'{0}\''
@@ -3187,7 +3188,7 @@ def running_systemd(name, cache=True, path=None):
             '''\
             #!/usr/bin/env bash
             set -x
-            if ! which systemctl 1>/dev/nulll 2>/dev/null;then exit 2;fi
+            if ! which systemctl 1>/dev/null 2>/dev/null;then exit 2;fi
             for i in \\
                 /run/systemd/journal/dev-log\\
                 /run/systemd/journal/flushed\\
@@ -3512,27 +3513,22 @@ def bootstrap(name,
         if needs_install or force_install or unconditional_install:
             if install:
                 rstr = __salt__['test.rand_str']()
-                configdir = '/tmp/.c_{0}'.format(rstr)
-                run(name,
-                    'install -m 0700 -d {0}'.format(configdir),
-                    path=path,
-                    python_shell=False)
+                configdir = '/var/tmp/.c_{0}'.format(rstr)
+
+                cmd = 'install -m 0700 -d {0}'.format(configdir)
+                if run(name, cmd, python_shell=False):
+                    log.error('tmpdir {0} creation failed ({1}'
+                              .format(configdir, cmd))
+                    return False
+
                 bs_ = __salt__['config.gather_bootstrap_script'](
                     bootstrap=bootstrap_url)
-                dest_dir = os.path.join('/tmp', rstr)
-                for cmd in [
-                    'mkdir -p {0}'.format(dest_dir),
-                    'chmod 700 {0}'.format(dest_dir),
-                ]:
-                    if run_stdout(name, cmd, path=path):
-                        log.error(
-                            ('tmpdir {0} creation'
-                             ' failed ({1}').format(dest_dir, cmd))
-                        return False
-                copy_to(name,
-                        bs_,
-                        '{0}/bootstrap.sh'.format(dest_dir),
-                        path=path)
+                script = '/sbin/{0}_bootstrap.sh'.format(rstr)
+                copy_to(name, bs_, script, path=path)
+                result = run_all(name,
+                                 'sh -c "chmod +x {0}"'.format(script),
+                                 python_shell=True)
+
                 copy_to(name, cfg_files['config'],
                         os.path.join(configdir, 'minion'),
                         path=path)
@@ -3543,16 +3539,22 @@ def bootstrap(name,
                         os.path.join(configdir, 'minion.pub'),
                         path=path)
                 bootstrap_args = bootstrap_args.format(configdir)
-                cmd = ('{0} {2}/bootstrap.sh {1}'
+                cmd = ('{0} {2} {1}'
                        .format(bootstrap_shell,
                                bootstrap_args.replace("'", "''"),
-                               dest_dir))
+                               script))
                 # log ASAP the forged bootstrap command which can be wrapped
                 # out of the output in case of unexpected problem
                 log.info('Running {0} in LXC container \'{1}\''
                          .format(cmd, name))
                 ret = retcode(name, cmd, output_loglevel='info',
                               path=path, use_vt=True) == 0
+
+                run_all(name,
+                        'sh -c \'if [ -f "{0}" ];then rm -f "{0}";fi\''
+                        ''.format(script),
+                        ignore_retcode=True,
+                        python_shell=True)
             else:
                 ret = False
         else:

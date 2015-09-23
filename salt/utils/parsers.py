@@ -297,7 +297,7 @@ class SaltfileMixIn(six.with_metaclass(MixInMeta, object)):
     def _mixin_setup(self):
         self.add_option(
             '--saltfile', default=None,
-            help='Specify the path to a Saltfile. If not passed, on will be '
+            help='Specify the path to a Saltfile. If not passed, one will be '
                  'searched for in the current working directory'
         )
 
@@ -1000,6 +1000,18 @@ class ArgsStdinMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
 
+class ProxyIdMixIn(six.with_metaclass(MixInMeta, object)):
+    _mixin_prio = 40
+
+    def _mixin_setup(self):
+        self.add_option(
+            '--proxyid',
+            default=None,
+            dest='proxyid',
+            help=('Id for this proxy')
+        )
+
+
 class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
 
     _mixin_prio_ = 40
@@ -1476,6 +1488,31 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
                                     cache_minion_id=True)
 
 
+class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
+                                                 OptionParser,
+                                                 ConfigDirMixIn,
+                                                 MergeConfigMixIn,
+                                                 LogLevelMixIn,
+                                                 RunUserMixin,
+                                                 DaemonMixIn,
+                                                 PidfileMixin,
+                                                 SaltfileMixIn,
+                                                 ProxyIdMixIn)):  # pylint: disable=no-init
+
+    description = (
+        'The Salt proxy minion, connects to and controls devices not able to run a minion.  Receives commands from a remote Salt master.'
+    )
+
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'proxy'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'proxy')
+
+    def setup_config(self):
+        return config.minion_config(self.get_config_file_path(),
+                                   cache_minion_id=False)
+
+
 class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
                                             OptionParser,
                                             ConfigDirMixIn,
@@ -1542,7 +1579,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             '-p', '--progress',
             default=False,
             action='store_true',
-            help=('Display a progress graph')
+            help=('Display a progress graph. [Requires `progressbar` python package.]')
         )
         self.add_option(
             '--failhard',
@@ -2637,8 +2674,9 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
     def _mixin_after_parsed(self):
         # spm needs arguments
         if len(self.args) <= 1:
-            self.print_help()
-            self.exit(salt.defaults.exitcodes.EX_USAGE)
+            if not self.args or self.args[0] not in ('update_repo',):
+                self.print_help()
+                self.exit(salt.defaults.exitcodes.EX_USAGE)
 
     def setup_config(self):
         return salt.config.spm_config(self.get_config_file_path())

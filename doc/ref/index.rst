@@ -20,6 +20,7 @@ Reference
     peer
     pillar/index
     pillar/all/index
+    proxy/all/index
     renderers/index
     returners/index
     roster/all/index
@@ -33,3 +34,4 @@ Reference
     beacons/all/index
     engines/all/index
     sdb/all/index
+    serializers/all/index

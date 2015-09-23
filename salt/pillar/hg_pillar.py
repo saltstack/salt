@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (C) 2014 Floris Bruynooghe <flub@devork.be>
 
-'''
+r'''
 Use remote Mercurial repository as a Pillar source.
 
 .. versionadded:: 2015.8.0

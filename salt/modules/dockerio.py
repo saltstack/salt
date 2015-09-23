@@ -658,25 +658,47 @@ def create_container(image,
                 volumes.remove(volume)
 
     try:
-        container_info = client.create_container(
-            image=image,
-            command=command,
-            hostname=hostname,
-            user=user,
-            detach=detach,
-            stdin_open=stdin_open,
-            tty=tty,
-            mem_limit=mem_limit,
-            ports=ports,
-            environment=environment,
-            dns=dns,
-            volumes=volumes,
-            volumes_from=volumes_from,
-            name=name,
-            cpu_shares=cpu_shares,
-            cpuset=cpuset,
-            host_config=docker.utils.create_host_config(binds=binds)
-        )
+        if salt.utils.version_cmp(client.version()['ApiVersion'], '1.18') == 1:
+            container_info = client.create_container(
+                image=image,
+                command=command,
+                hostname=hostname,
+                user=user,
+                detach=detach,
+                stdin_open=stdin_open,
+                tty=tty,
+                ports=ports,
+                environment=environment,
+                dns=dns,
+                volumes=volumes,
+                volumes_from=volumes_from,
+                name=name,
+                cpu_shares=cpu_shares,
+                cpuset=cpuset,
+                host_config=docker.utils.create_host_config(binds=binds,
+                                                            mem_limit=mem_limit)
+            )
+        else:
+            container_info = client.create_container(
+                image=image,
+                command=command,
+                hostname=hostname,
+                user=user,
+                detach=detach,
+                stdin_open=stdin_open,
+                tty=tty,
+                mem_limit=mem_limit,
+                ports=ports,
+                environment=environment,
+                dns=dns,
+                volumes=volumes,
+                volumes_from=volumes_from,
+                name=name,
+                cpu_shares=cpu_shares,
+                cpuset=cpuset,
+                host_config=docker.utils.create_host_config(binds=binds)
+            )
+
         log.trace("docker.client.create_container returned: " + str(container_info))
         container = container_info['Id']
         callback = _valid
@@ -1465,8 +1487,8 @@ def build(path=None,
 
         except Exception:
             _invalid(status,
-                    out=traceback.format_exc(),
-                    comment='Unexpected error while building an image')
+                     out=traceback.format_exc(),
+                     comment='Unexpected error while building an image')
             return status
 
     return status
@@ -1841,16 +1863,13 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
     comment = 'Executed {0}'.format(full_cmd)
     try:
         ret = __salt__[func](full_cmd, *args, **kwargs)
-        if ((isinstance(ret, dict) and
-                ('retcode' in ret) and
-                (ret['retcode'] != 0))
-                or (func == 'cmd.retcode' and ret != 0)):
-            return _invalid(status, id_=container, out=ret,
-                            comment=comment)
-        _valid(status, id_=container, out=ret, comment=comment,)
+        if ((isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0))
+           or (func == 'cmd.retcode' and ret != 0)):
+            _invalid(status, id_=container, out=ret, comment=comment)
+        else:
+            _valid(status, id_=container, out=ret, comment=comment)
     except Exception:
-        _invalid(status, id_=container,
-                 comment=comment, out=traceback.format_exc())
+        _invalid(status, id_=container, comment=comment, out=traceback.format_exc())
     return status
 
 
@@ -1875,9 +1894,7 @@ def load(imagepath):
         try:
             dockercmd = ['docker', 'load', '-i', imagepath]
             ret = __salt__['cmd.run'](dockercmd, python_shell=False)
-            if ((isinstance(ret, dict) and
-                ('retcode' in ret) and
-                (ret['retcode'] != 0))):
+            if isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0):
                 return _invalid(status, id_=None,
                                 out=ret,
                                 comment='Command to load image {0} failed.'.format(imagepath))
@@ -1885,12 +1902,12 @@ def load(imagepath):
             _valid(status, id_=None, out=ret, comment='Image load success')
         except Exception:
             _invalid(status, id_=None,
-                    comment="Image not loaded.",
-                    out=traceback.format_exc())
+                     comment="Image not loaded.",
+                     out=traceback.format_exc())
     else:
         _invalid(status, id_=None,
-                comment='Image file {0} could not be found.'.format(imagepath),
-                out=traceback.format_exc())
+                 comment='Image file {0} could not be found.'.format(imagepath),
+                 out=traceback.format_exc())
 
     return status
 
@@ -1921,16 +1938,14 @@ def save(image, filename):
         ok = True
     except Exception:
         _invalid(status, id_=image,
-                comment="docker image {0} could not be found.".format(image),
-                out=traceback.format_exc())
+                 comment="docker image {0} could not be found.".format(image),
+                 out=traceback.format_exc())
 
     if ok:
         try:
             dockercmd = ['docker', 'save', '-o', filename, image]
             ret = __salt__['cmd.run'](dockercmd)
-            if ((isinstance(ret, dict) and
-                ('retcode' in ret) and
-                (ret['retcode'] != 0))):
+            if isinstance(ret, dict) and ('retcode' in ret) and (ret['retcode'] != 0):
                 return _invalid(status,
                                 id_=image,
                                 out=ret,
@@ -2075,9 +2090,7 @@ def retcode(container, cmd):
         command to execute
 
     .. note::
-        The return is a bit different as we use the docker struct.
-        Output of the command is in 'out' and result is ``False`` if
-        command failed to execute.
+        The return is True or False depending on the commands success.
 
     .. warning::
         Be advised that this function allows for raw shell access to the named
@@ -2092,7 +2105,7 @@ def retcode(container, cmd):
     '''
     status = base_status.copy()
     return _run_wrapper(
-        status, container, 'cmd.retcode', cmd)
+        status, container, 'cmd.retcode', cmd)['status']
 
 
 def get_container_root(container):

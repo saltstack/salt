@@ -66,10 +66,10 @@ def __virtual__():
     '''
     Check for DigitalOcean configurations
     '''
-    if not HAS_REQUESTS:
+    if get_configured_provider() is False:
         return False
 
-    if get_configured_provider() is False:
+    if get_dependencies() is False:
         return False
 
     return __virtualname__
@@ -81,8 +81,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'digital_ocean',
+        __active_provider_name__ or __virtualname__,
         ('personal_access_token',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'requests': HAS_REQUESTS}
     )
 
 
@@ -125,9 +135,9 @@ def avail_images(call=None):
         items = query(method='images', command='?page=' + str(page) + '&per_page=200')
 
         for image in items['images']:
-            ret[image['id']] = {}
+            ret[image['name']] = {}
             for item in six.iterkeys(image):
-                ret[image['id']][item] = str(image[item])
+                ret[image['name']][item] = image[item]
 
         page += 1
         try:
@@ -166,31 +176,10 @@ def list_nodes(call=None):
         raise SaltCloudSystemExit(
             'The list_nodes function must be called with -f or --function.'
         )
-
-    fetch = True
-    page = 1
-    ret = {}
-
-    while fetch:
-        items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
-        for node in items['droplets']:
-            ret[node['name']] = {
-                'id': node['id'],
-                'image': node['image']['name'],
-                'networks': str(node['networks']),
-                'size': node['size_slug'],
-                'state': str(node['status']),
-            }
-        page += 1
-        try:
-            fetch = 'next' in items['links']['pages']
-        except KeyError:
-            fetch = False
-
-    return ret
+    return _list_nodes()
 
 
-def list_nodes_full(call=None, forOutput=True):
+def list_nodes_full(call=None, for_output=True):
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -198,26 +187,7 @@ def list_nodes_full(call=None, forOutput=True):
         raise SaltCloudSystemExit(
             'The list_nodes_full function must be called with -f or --function.'
         )
-
-    fetch = True
-    page = 1
-    ret = {}
-
-    while fetch:
-        items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
-        for node in items['droplets']:
-            ret[node['name']] = {}
-            for item in six.iterkeys(node):
-                value = node[item]
-                if value is not None and forOutput:
-                    value = str(value)
-                ret[node['name']][item] = value
-        page += 1
-        try:
-            fetch = 'next' in items['links']['pages']
-        except KeyError:
-            fetch = False
-    return ret
+    return _list_nodes(full=True, for_output=for_output)
 
 
 def list_nodes_select(call=None):
@@ -234,9 +204,9 @@ def get_image(vm_):
     Return the image object to use
     '''
     images = avail_images()
-    vm_image = str(config.get_cloud_config_value(
+    vm_image = config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
-    ))
+    )
     for image in images:
         if vm_image in (images[image]['name'], images[image]['slug'], images[image]['id']):
             if images[image]['slug'] is not None:
@@ -297,9 +267,9 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'digital_ocean',
-                                        vm_['profile']) is False:
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'digital_ocean',
+                                                           vm_['profile']) is False:
             return False
     except AttributeError:
         pass
@@ -563,7 +533,7 @@ def _get_node(name):
     attempts = 10
     while attempts >= 0:
         try:
-            return list_nodes_full(forOutput=False)[name]
+            return list_nodes_full(for_output=False)[name]
         except KeyError:
             attempts -= 1
             log.debug(
@@ -590,10 +560,20 @@ def list_keypairs(call=None):
 
     items = query(method='account/keys')
     ret = {}
-    for keypair in items['ssh_keys']:
-        ret[keypair['name']] = {}
-        for item in six.iterkeys(keypair):
-            ret[keypair['name']][item] = str(keypair[item])
+    for key_pair in items['ssh_keys']:
+        name = key_pair['name']
+        if name in ret:
+            raise SaltCloudSystemExit(
+                'A duplicate key pair name, \'{0}\', was found in DigitalOcean\'s '
+                'key pair list. Please change the key name stored by DigitalOcean. '
+                'Be sure to adjust the value of \'ssh_key_file\' in your cloud '
+                'profile or provider configuration, if necessary.'.format(
+                    name
+                )
+            )
+        ret[name] = {}
+        for item in six.iterkeys(key_pair):
+            ret[name][item] = str(key_pair[item])
 
     return ret
 
@@ -715,9 +695,11 @@ def destroy(name, call=None):
     delete_record = config.get_cloud_config_value(
         'delete_dns_record', get_configured_provider(), __opts__, search_global=False, default=None,
     )
-    if delete_record is not None:
-        if not isinstance(delete_record, bool):
-            raise SaltCloudConfigError("'delete_dns_record' should be a boolean value.")
+
+    if delete_record and not isinstance(delete_record, bool):
+        raise SaltCloudConfigError(
+            '\'delete_dns_record\' should be a boolean value.'
+        )
 
     if delete_record:
         delete_dns_record(name)
@@ -815,3 +797,85 @@ def show_pricing(kwargs=None, call=None):
         ret['_raw'] = raw
 
     return {profile['profile']: ret}
+
+
+def _list_nodes(full=False, for_output=False):
+    '''
+    Helper function to format and parse node data.
+    '''
+    fetch = True
+    page = 1
+    ret = {}
+
+    while fetch:
+        items = query(method='droplets',
+                      command='?page=' + str(page) + '&per_page=200')
+        for node in items['droplets']:
+            name = node['name']
+            ret[name] = {}
+            if full:
+                ret[name] = _get_full_output(node, for_output=for_output)
+            else:
+                public_ips, private_ips = _get_ips(node['networks'])
+                ret[name] = {
+                    'id': node['id'],
+                    'image': node['image']['name'],
+                    'name': name,
+                    'private_ips': private_ips,
+                    'public_ips': public_ips,
+                    'size': node['size_slug'],
+                    'state': str(node['status']),
+                }
+
+        page += 1
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
+
+    return ret
+
+
+def _get_full_output(node, for_output=False):
+    '''
+    Helper function for _list_nodes to loop through all node information.
+    Returns a dictionary containing the full information of a node.
+    '''
+    ret = {}
+    for item in six.iterkeys(node):
+        value = node[item]
+        if value is not None and for_output:
+            value = str(value)
+        ret[item] = value
+    return ret
+
+
+def _get_ips(networks):
+    '''
+    Helper function for list_nodes. Returns public and private ip lists based on a
+    given network dictionary.
+    '''
+    v4s = networks.get('v4')
+    v6s = networks.get('v6')
+    public_ips = []
+    private_ips = []
+
+    if v4s:
+        for item in v4s:
+            ip_type = item.get('type')
+            ip_address = item.get('ip_address')
+            if ip_type == 'public':
+                public_ips.append(ip_address)
+            if ip_type == 'private':
+                private_ips.append(ip_address)
+
+    if v6s:
+        for item in v6s:
+            ip_type = item.get('type')
+            ip_address = item.get('ip_address')
+            if ip_type == 'public':
+                public_ips.append(ip_address)
+            if ip_type == 'private':
+                private_ips.append(ip_address)
+
+    return public_ips, private_ips

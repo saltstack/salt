@@ -546,7 +546,7 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         ordering = []
         serialized['type'] = 'object'
         properties = OrderedDict()
-        after_items_update = OrderedDict()
+        cls.after_items_update = []
         for name in cls._order:
             skip_order = False
             if name in cls._sections:
@@ -558,8 +558,11 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
                     properties.update(serialized_section['properties'])
                     if 'x-ordering' in serialized_section:
                         ordering.extend(serialized_section['x-ordering'])
-                    if 'required' in serialized:
+                    if 'required' in serialized_section:
                         required.extend(serialized_section['required'])
+                    if hasattr(section, 'after_items_update'):
+                        cls.after_items_update.extend(section.after_items_update)
+                    skip_order = True
                 else:
                     # Store it as a configuration section
                     properties[name] = serialized_section
@@ -568,7 +571,8 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
                 config = cls._items[name]
                 # Handle the configuration items defined in the class instance
                 if config.__flatten__ is True:
-                    after_items_update.update(config.serialize())
+                    serialized_config = config.serialize()
+                    cls.after_items_update.append(serialized_config)
                     skip_order = True
                 else:
                     properties[name] = config.serialize()
@@ -586,7 +590,15 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
             serialized['properties'] = properties
 
         # Update the serialized object with any items to include after properties
-        serialized.update(after_items_update)
+        if cls.after_items_update:
+            after_items_update = {}
+            for entry in cls.after_items_update:
+                name, data = next(six.iteritems(entry))
+                if name in after_items_update:
+                    after_items_update[name].extend(data)
+                else:
+                    after_items_update[name] = data
+            serialized.update(after_items_update)
 
         if required:
             # Only include required if not empty
@@ -598,8 +610,28 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         return serialized
 
     @classmethod
+    def defaults(cls):
+        serialized = cls.serialize()
+        defaults = {}
+        for name, details in serialized['properties'].items():
+            if 'default' in details:
+                defaults[name] = details['default']
+                continue
+            if 'properties' in details:
+                for sname, sdetails in details['properties'].items():
+                    if 'default' in sdetails:
+                        defaults.setdefault(name, {})[sname] = sdetails['default']
+                continue
+        return defaults
+
+    @classmethod
     def as_requirements_item(cls):
-        return RequirementsItem(requirements=cls())
+        serialized_schema = cls.serialize()
+        required = serialized_schema.get('required', [])
+        for name in serialized_schema['properties']:
+            if name not in required:
+                required.append(name)
+        return RequirementsItem(requirements=required)
 
     #@classmethod
     #def render_as_rst(cls):
@@ -1237,6 +1269,22 @@ class DictItem(BaseSchemaItem):
         self.__flatten__ = flatten
         return self
 
+    def serialize(self):
+        result = super(DictItem, self).serialize()
+        required = []
+        if self.properties is not None:
+            if isinstance(self.properties, Schema):
+                serialized = self.properties.serialize()
+                if 'required' in serialized:
+                    required.extend(serialized['required'])
+            else:
+                for key, prop in self.properties.items():
+                    if prop.required:
+                        required.append(key)
+        if required:
+            result['required'] = required
+        return result
+
 
 class RequirementsItem(SchemaItem):
     __type__ = 'object'
@@ -1253,34 +1301,29 @@ class RequirementsItem(SchemaItem):
             raise RuntimeError(
                 'The passed requirements must not be empty'
             )
-        if not isinstance(self.requirements, (Schema, SchemaItem, list, tuple, set)):
+        if not isinstance(self.requirements, (SchemaItem, list, tuple, set)):
             raise RuntimeError(
                 'The passed requirements must be passed as a list, tuple, '
-                'set SchemaItem, BaseSchemaItem or Schema, not \'{0}\''.format(self.requirements)
+                'set SchemaItem or BaseSchemaItem, not \'{0}\''.format(self.requirements)
             )
 
-        if not isinstance(self.requirements, (SchemaItem, Schema)):
+        if not isinstance(self.requirements, SchemaItem):
             if not isinstance(self.requirements, list):
                 self.requirements = list(self.requirements)
 
             for idx, item in enumerate(self.requirements):
-                if not isinstance(item, (six.string_types, (SchemaItem, Schema))):
+                if not isinstance(item, (six.string_types, SchemaItem)):
                     raise RuntimeError(
                         'The passed requirement at the {0} index must be of type '
-                        'str or Schema, not \'{1}\''.format(idx, type(item))
+                        'str or SchemaItem, not \'{1}\''.format(idx, type(item))
                     )
 
     def serialize(self):
-        if isinstance(self.requirements, Schema):
-            requirements = self.requirements.serialize()['required']
-        elif isinstance(self.requirements, SchemaItem):
+        if isinstance(self.requirements, SchemaItem):
             requirements = self.requirements.serialize()
         else:
             requirements = []
             for requirement in self.requirements:
-                if isinstance(requirement, Schema):
-                    requirements.extend(requirement.serialize()['required'])
-                    continue
                 if isinstance(requirement, SchemaItem):
                     requirements.append(requirement.serialize())
                     continue

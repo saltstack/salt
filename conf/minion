@@ -1,5 +1,5 @@
 ##### Primary configuration settings #####
-########################################## 
+##########################################
 # This configuration file is used to manage the behavior of the Salt Minion.
 # With the exception of the location of the Salt Master Server, values that are
 # commented out but have an empty line after the comment are defaults that need
@@ -25,7 +25,7 @@
 # Minions can connect to multiple masters simultaneously (all masters
 # are "hot"), or can be configured to failover if a master becomes
 # unavailable.  Multiple hot masters are configured by setting this
-# value to "standard".  Failover masters can be requested by setting
+# value to "str".  Failover masters can be requested by setting
 # to "failover".  MAKE SURE TO SET master_alive_interval if you are
 # using failover.
 # master_type: str
@@ -482,9 +482,9 @@
 # will be shown for each state run.
 #state_output_profile: True
 
-# Fingerprint of the master public key to double verify the master is valid,
-# the master fingerprint can be found by running "salt-key -f master.pub" on the
-# salt master.
+# Fingerprint of the master public key to validate the identity of your Salt master
+# before the initial key exchange. The master fingerprint can be found by running
+# "salt-key -F master" on the Salt master.
 #master_finger: ''
 
 
@@ -511,6 +511,10 @@
 
 # The level of messages to send to the console.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+#
+# The following log levels are considered INSECURE and may log sensitive data:
+# ['garbage', 'trace', 'debug']
+#
 # Default: 'warning'
 #log_level: warning
 
@@ -539,7 +543,9 @@
 # the coloring of the messages, these color formatters also include padding as
 # well.  Color LogRecord attributes are only available for console logging.
 #
+#log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
+#
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This

@@ -21,6 +21,8 @@ import logging
 import locale
 import salt.exceptions
 
+__proxyenabled__ = ['*']
+
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
 from platform import _supported_dists
@@ -351,7 +353,7 @@ def _sunos_cpudata():
     grains = {}
     grains['cpu_flags'] = []
 
-    grains['cpuarch'] = __salt__['cmd.run']('uname -p')
+    grains['cpuarch'] = __salt__['cmd.run']('isainfo -k')
     psrinfo = '/usr/sbin/psrinfo 2>/dev/null'
     grains['num_cpus'] = len(__salt__['cmd.run'](psrinfo, python_shell=True).splitlines())
     kstat_info = 'kstat -p cpu_info:0:*:brand'
@@ -473,30 +475,29 @@ def _virtual(osdata):
     skip_cmds = ('AIX',)
 
     # list of commands to be executed to determine the 'virtual' grain
-    _cmds = set()
-
+    _cmds = []
     # test first for virt-what, which covers most of the desired functionality
     # on most platforms
     if not salt.utils.is_windows() and osdata['kernel'] not in skip_cmds:
         if salt.utils.which('virt-what'):
-            _cmds = (['virt-what'])
+            _cmds = ['virt-what']
         else:
             log.debug(
                 'Please install \'virt-what\' to improve results of the '
                 '\'virtual\' grain.'
             )
     # Check if enable_lspci is True or False
-    elif __opts__.get('enable_lspci', True) is False:
-        _cmds = (['dmidecode', 'dmesg'])
+    if __opts__.get('enable_lspci', True) is False:
+        _cmds += ['dmidecode', 'dmesg']
     elif osdata['kernel'] in skip_cmds:
         _cmds = ()
     else:
         # /proc/bus/pci does not exists, lspci will fail
         if not os.path.exists('/proc/bus/pci'):
-            _cmds = ('systemd-detect-virt', 'virt-what', 'dmidecode', 'dmesg')
+            _cmds = ['systemd-detect-virt', 'virt-what', 'dmidecode', 'dmesg']
         else:
-            _cmds = ('systemd-detect-virt', 'virt-what', 'dmidecode', 'lspci',
-                     'dmesg')
+            _cmds = ['systemd-detect-virt', 'virt-what', 'dmidecode', 'lspci',
+                     'dmesg']
 
     failed_commands = set()
     for command in _cmds:
@@ -517,7 +518,9 @@ def _virtual(osdata):
 
             if ret['retcode'] > 0:
                 if salt.log.is_logging_configured():
-                    if salt.utils.is_windows():
+                    # systemd-detect-virt always returns > 0 on non-virtualized
+                    # systems
+                    if salt.utils.is_windows() or 'systemd-detect-virt' in cmd:
                         continue
                     failed_commands.add(command)
                 continue
@@ -1025,7 +1028,13 @@ def os_data():
      grains['kernelrelease'], version, grains['cpuarch'], _) = platform.uname()
     # pylint: enable=unpacking-non-sequence
 
-    if salt.utils.is_windows():
+    if salt.utils.is_proxy():
+        grains['kernel'] = 'proxy'
+        grains['kernelrelease'] = 'proxy'
+        grains['osrelease'] = 'proxy'
+        grains['os'] = 'proxy'
+        grains['os_family'] = 'proxy'
+    elif salt.utils.is_windows():
         with salt.utils.winapi.Com():
             wmi_c = wmi.WMI()
             grains['osrelease'] = grains['kernelrelease']
@@ -1065,32 +1074,33 @@ def os_data():
             os.stat('/run/systemd/system')
             grains['init'] = 'systemd'
         except OSError:
-            with salt.utils.fopen('/proc/1/cmdline') as fhr:
-                init_cmdline = fhr.read().replace('\x00', ' ').split()
-                init_bin = salt.utils.which(init_cmdline[0])
-                if init_bin:
-                    supported_inits = ('upstart', 'sysvinit', 'systemd')
-                    edge_len = max(len(x) for x in supported_inits) - 1
-                    buf_size = __opts__['file_buffer_size']
-                    try:
-                        with open(init_bin, 'rb') as fp_:
-                            buf = True
-                            edge = ''
-                            buf = fp_.read(buf_size).lower()
-                            while buf:
-                                buf = edge + buf
-                                for item in supported_inits:
-                                    if item in buf:
-                                        grains['init'] = item
-                                        buf = ''
-                                        break
-                                edge = buf[-edge_len:]
+            if os.path.exists('/proc/1/cmdline'):
+                with salt.utils.fopen('/proc/1/cmdline') as fhr:
+                    init_cmdline = fhr.read().replace('\x00', ' ').split()
+                    init_bin = salt.utils.which(init_cmdline[0])
+                    if init_bin:
+                        supported_inits = ('upstart', 'sysvinit', 'systemd')
+                        edge_len = max(len(x) for x in supported_inits) - 1
+                        buf_size = __opts__['file_buffer_size']
+                        try:
+                            with open(init_bin, 'rb') as fp_:
+                                buf = True
+                                edge = ''
                                 buf = fp_.read(buf_size).lower()
-                    except (IOError, OSError) as exc:
-                        log.error(
-                            'Unable to read from init_bin ({0}): {1}'
-                            .format(init_bin, exc)
-                        )
+                                while buf:
+                                    buf = edge + buf
+                                    for item in supported_inits:
+                                        if item in buf:
+                                            grains['init'] = item
+                                            buf = ''
+                                            break
+                                    edge = buf[-edge_len:]
+                                    buf = fp_.read(buf_size).lower()
+                        except (IOError, OSError) as exc:
+                            log.error(
+                                'Unable to read from init_bin ({0}): {1}'
+                                .format(init_bin, exc)
+                            )
 
         # Add lsb grains on any distro with lsb-release
         try:
@@ -1240,11 +1250,11 @@ def os_data():
         grains.update(_linux_gpu_data())
     elif grains['kernel'] == 'SunOS':
         grains['os_family'] = 'Solaris'
-        uname_v = __salt__['cmd.run']('uname -v')
-        if 'joyent_' in uname_v:
+        if salt.utils.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
+            uname_v = __salt__['cmd.run']('uname -v')
             grains['os'] = grains['osfullname'] = 'SmartOS'
-            grains['osrelease'] = uname_v
+            grains['osrelease'] = uname_v[uname_v.index('_')+1:]
         elif os.path.isfile('/etc/release'):
             with salt.utils.fopen('/etc/release', 'r') as fp_:
                 rel_data = fp_.read()
@@ -1668,7 +1678,9 @@ def _hw_data(osdata):
         return {}
 
     grains = {}
-    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None:
+    # On SmartOS (possibly SunOS also) smbios only works in the global zone
+    # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
+    if salt.utils.which_bin(['dmidecode', 'smbios']) is not None and not salt.utils.is_smartos():
         grains = {
             'biosversion': __salt__['smbios.get']('bios-version'),
             'productname': __salt__['smbios.get']('system-product-name'),
@@ -1683,7 +1695,7 @@ def _hw_data(osdata):
         for serial in ('system-serial-number', 'chassis-serial-number', 'baseboard-serial-number'):
             serial = __salt__['smbios.get'](serial)
             if serial is not None:
-                grains['serial'] = serial
+                grains['serialnumber'] = serial
                 break
     elif osdata['kernel'] == 'FreeBSD':
         # On FreeBSD /bin/kenv (already in base system)

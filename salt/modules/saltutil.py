@@ -108,7 +108,7 @@ def _sync(form, saltenv=None):
         # Grab only the desired files (.py, .pyx, .so)
         cache.extend(
             __salt__['cp.cache_dir'](
-                source, sub_env, include_pat=r'E@\.(pyx?|so)$'
+                source, sub_env, include_pat=r'E@\.(pyx?|so|zip)$'
             )
         )
         local_cache_dir = os.path.join(
@@ -161,6 +161,13 @@ def _sync(form, saltenv=None):
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
         with salt.utils.fopen(mod_file, 'a+') as ofile:
             ofile.write('')
+    if form == 'grains' and \
+       __opts__.get('grains_cache') and \
+       os.path.isfile(os.path.join(__opts__['cachedir'], 'grains.cache.p')):
+        try:
+            os.remove(os.path.join(__opts__['cachedir'], 'grains.cache.p'))
+        except OSError:
+            log.error('Could not remove grains cache!')
     return ret
 
 
@@ -185,7 +192,7 @@ def update(version=None):
     '''
     Update the salt minion from the URL defined in opts['update_url']
     SaltStack, Inc provides the latest builds here:
-    update_url: http://docs.saltstack.com/downloads/
+    update_url: https://repo.saltstack.com/windows/
 
     Be aware that as of 2014-8-11 there's a bug in esky such that only the
     latest version available in the update_url can be downloaded and installed.
@@ -445,7 +452,8 @@ def sync_log_handlers(saltenv=None, refresh=True):
 def sync_all(saltenv=None, refresh=True):
     '''
     Sync down all of the dynamic modules from the file server for a specific
-    environment
+    environment. This function synchronizes custom modules, states, beacons,
+    grains, returners, outputters, renderers, and utils.
 
     refresh : True
         Also refresh the execution modules available to the minion.
@@ -546,7 +554,7 @@ def refresh_modules(async=True):
             #  If we're going to block, first setup a listener
             ret = __salt__['event.fire']({}, 'module_refresh')
         else:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__)
+            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
             ret = __salt__['event.fire']({'notify': True}, 'module_refresh')
             # Wait for the finish event to fire
             log.trace('refresh_modules waiting for module refresh to complete')
@@ -866,11 +874,11 @@ def cmd_iter(tgt,
         yield ret
 
 
-def runner(fun, **kwargs):
+def runner(_fun, **kwargs):
     '''
     Execute a runner module (this function must be run on the master)
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         The name of the function to run
@@ -893,14 +901,14 @@ def runner(fun, **kwargs):
     else:
         rclient = salt.runner.RunnerClient(__opts__)
 
-    return rclient.cmd(fun, [], kwarg=kwargs)
+    return rclient.cmd(_fun, kwarg=kwargs)
 
 
-def wheel(fun, **kwargs):
+def wheel(_fun, **kwargs):
     '''
     Execute a wheel module (this function must be run on the master)
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         The name of the function to run
@@ -914,7 +922,7 @@ def wheel(fun, **kwargs):
         salt '*' saltutil.wheel key.accept match=jerry
     '''
     wclient = salt.wheel.WheelClient(__opts__)
-    return wclient.cmd(fun, kwarg=kwargs)
+    return wclient.cmd(_fun, kwarg=kwargs)
 
 
 # this is the only way I could figure out how to get the REAL file_roots

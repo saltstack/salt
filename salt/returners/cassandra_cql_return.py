@@ -20,66 +20,72 @@ Return data to a cassandra server
     IP address. No assumption or default will be used for the cluster IPs.
     The cluster IPs will be tried in the order listed. The port, username,
     and password values shown below will be the assumed defaults if you do
-    not provide values.::
+    not provide values.:
 
-    cassandra:
-      cluster:
-        - 192.168.50.11
-        - 192.168.50.12
-        - 192.168.50.13
-      port: 9042
-      username: salt
-      password: salt
+    .. code-block:: yaml
 
-Use the following cassandra database schema::
+        cassandra:
+          cluster:
+            - 192.168.50.11
+            - 192.168.50.12
+            - 192.168.50.13
+          port: 9042
+          username: salt
+          password: salt
 
-    CREATE KEYSPACE IF NOT EXISTS salt
-        WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};
+    Use the following cassandra database schema:
 
-    CREATE USER IF NOT EXISTS salt WITH PASSWORD 'salt' NOSUPERUSER;
+    .. code-block:: sql
 
-    GRANT ALL ON KEYSPACE salt TO salt;
+        CREATE KEYSPACE IF NOT EXISTS salt
+            WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};
 
-    USE salt;
+        CREATE USER IF NOT EXISTS salt WITH PASSWORD 'salt' NOSUPERUSER;
 
-    CREATE TABLE IF NOT EXISTS salt.salt_returns (
-        jid text,
-        minion_id text,
-        fun text,
-        alter_time timestamp,
-        full_ret text,
-        return text,
-        success boolean,
-        PRIMARY KEY (jid, minion_id, fun)
-    ) WITH CLUSTERING ORDER BY (minion_id ASC, fun ASC);
-    CREATE INDEX IF NOT EXISTS salt_returns_minion_id ON salt.salt_returns (minion_id);
-    CREATE INDEX IF NOT EXISTS salt_returns_fun ON salt.salt_returns (fun);
+        GRANT ALL ON KEYSPACE salt TO salt;
 
-    CREATE TABLE IF NOT EXISTS salt.jids (
-        jid text PRIMARY KEY,
-        load text
-    );
+        USE salt;
 
-    CREATE TABLE IF NOT EXISTS salt.minions (
-        minion_id text PRIMARY KEY,
-        last_fun text
-    );
-    CREATE INDEX IF NOT EXISTS minions_last_fun ON salt.minions (last_fun);
+        CREATE TABLE IF NOT EXISTS salt.salt_returns (
+            jid text,
+            minion_id text,
+            fun text,
+            alter_time timestamp,
+            full_ret text,
+            return text,
+            success boolean,
+            PRIMARY KEY (jid, minion_id, fun)
+        ) WITH CLUSTERING ORDER BY (minion_id ASC, fun ASC);
+        CREATE INDEX IF NOT EXISTS salt_returns_minion_id ON salt.salt_returns (minion_id);
+        CREATE INDEX IF NOT EXISTS salt_returns_fun ON salt.salt_returns (fun);
 
-    CREATE TABLE IF NOT EXISTS salt.salt_events (
-        id timeuuid,
-        tag text,
-        alter_time timestamp,
-        data text,
-        master_id text,
-        PRIMARY KEY (id, tag)
-    ) WITH CLUSTERING ORDER BY (tag ASC);
-    CREATE INDEX tag ON salt.salt_events (tag);
+        CREATE TABLE IF NOT EXISTS salt.jids (
+            jid text PRIMARY KEY,
+            load text
+        );
+
+        CREATE TABLE IF NOT EXISTS salt.minions (
+            minion_id text PRIMARY KEY,
+            last_fun text
+        );
+        CREATE INDEX IF NOT EXISTS minions_last_fun ON salt.minions (last_fun);
+
+        CREATE TABLE IF NOT EXISTS salt.salt_events (
+            id timeuuid,
+            tag text,
+            alter_time timestamp,
+            data text,
+            master_id text,
+            PRIMARY KEY (id, tag)
+        ) WITH CLUSTERING ORDER BY (tag ASC);
+        CREATE INDEX tag ON salt.salt_events (tag);
 
 
 Required python modules: cassandra-driver
 
-  To use the cassandra returner, append '--return cassandra' to the salt command. ex:
+To use the cassandra returner, append '--return cassandra' to the salt command. ex:
+
+.. code-block:: bash
 
     salt '*' test.ping --return cassandra
 '''

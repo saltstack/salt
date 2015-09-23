@@ -97,6 +97,11 @@ def list_(show_all=False, where=None, return_yaml=True):
             del schedule[job]
             continue
 
+        # if enabled is not included in the job,
+        # assume job is enabled.
+        if 'enabled' not in schedule[job]:
+            schedule[job]['enabled'] = True
+
         for item in pycopy.copy(schedule[job]):
             if item not in SCHEDULE_CONF:
                 del schedule[job][item]
@@ -342,7 +347,7 @@ def add(name, **kwargs):
 
         salt '*' schedule.add job1 function='test.ping' seconds=3600
         # If function have some arguments, use job_args
-        salt '*' schedule.add job2 function='cmd.run' job_args=['date >> /tmp/date.log'] seconds=60
+        salt '*' schedule.add job2 function='cmd.run' job_args="['date >> /tmp/date.log']" seconds=60
     '''
 
     ret = {'comment': 'Failed to add job {0} to schedule.'.format(name),

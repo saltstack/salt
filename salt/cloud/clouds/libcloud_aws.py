@@ -87,9 +87,6 @@ def __virtual__():
     '''
     Set up the libcloud funcstions and check for AWS configs
     '''
-    if not HAS_LIBCLOUD:
-        return False
-
     try:
         import botocore
         # Since we have botocore, we won't load the libcloud AWS module
@@ -98,6 +95,9 @@ def __virtual__():
         pass
 
     if get_configured_provider() is False:
+        return False
+
+    if get_dependencies() is False:
         return False
 
     for provider, details in six.iteritems(__opts__['providers']):
@@ -163,6 +163,16 @@ def get_configured_provider():
         __opts__,
         __active_provider_name__ or 'aws',
         ('id', 'key', 'keyname', 'securitygroup', 'private_key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBCLOUD}
     )
 
 
@@ -248,7 +258,7 @@ def ssh_username(vm_):
     initial = usernames[:]
 
     # Add common usernames to the list to be tested
-    for name in ('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root'):
+    for name in 'ec2-user', 'ubuntu', 'admin', 'bitnami', 'root':
         if name not in usernames:
             usernames.append(name)
     # Add the user provided usernames to the end of the list since enough time
@@ -312,9 +322,9 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'aws',
-                                        vm_['profile']) is False:
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'aws',
+                                                           vm_['profile']) is False:
             return False
     except AttributeError:
         pass
@@ -783,9 +793,14 @@ def destroy(name):
     ret = {}
 
     newname = name
-    if config.get_cloud_config_value('rename_on_destroy',
-                               get_configured_provider(),
-                               __opts__, search_global=False) is True:
+
+    # Default behavior is to rename AWS VMs when destroyed
+    # via salt-cloud, unless explicitly set to False.
+    rename_on_destroy = config.get_cloud_config_value('rename_on_destroy',
+                                                      get_configured_provider(),
+                                                      __opts__,
+                                                      search_global=False)
+    if rename_on_destroy is not False:
         newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
         rename(name, kwargs={'newname': newname}, call='action')
         log.info(

@@ -2,21 +2,22 @@
 '''
 Manage Kerberos KDC
 
-:configuration: In order to manage your KDC you will need to generate a keytab
-that can authenticate without requireing a password.
+:configuration:
+    In order to manage your KDC you will need to generate a keytab
+    that can authenticate without requiring a password.
 
-    .. code-block:: bash
+.. code-block:: bash
 
-        # ktadd -k /root/secure.keytab kadmin/admin kadmin/changepw
+    # ktadd -k /root/secure.keytab kadmin/admin kadmin/changepw
 
 On the KDC minion you will need to add the following to the minion
 configuration file so Salt knows what keytab to use and what principal to
 authenticate as.
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
-        auth_keytab: /root/auth.keytab
-        auth_principal: kadmin/admin
+    auth_keytab: /root/auth.keytab
+    auth_principal: kadmin/admin
 '''
 
 # Import python libs

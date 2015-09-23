@@ -13,7 +13,8 @@
         logging handler to be available.
 
     Configuring the python `Sentry`_ client, `Raven`_, should be done under the
-    ``sentry_handler`` configuration key.
+    ``sentry_handler`` configuration key. Additional `context` may be provided
+    for coresponding grain item(s).
     At the bare minimum, you need to define the `DSN`_. As an example:
 
     .. code-block:: yaml
@@ -33,7 +34,12 @@
           project: app-id
           public_key: deadbeefdeadbeefdeadbeefdeadbeef
           secret_key: beefdeadbeefdeadbeefdeadbeefdead
-
+          context:
+            - os
+            - master
+            - saltversion
+            - cpuarch
+            - ec2.tags.environment
 
     All the client configuration keys are supported, please see the
     `Raven client documentation`_.
@@ -75,6 +81,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+import salt.loader
 from salt.log import LOG_LEVELS
 
 # Import 3rd party libs
@@ -86,6 +93,8 @@ except ImportError:
     HAS_RAVEN = False
 
 log = logging.getLogger(__name__)
+__grains__ = {}
+__salt__ = {}
 
 # Define the module's virtual name
 __virtualname__ = 'sentry'
@@ -93,6 +102,8 @@ __virtualname__ = 'sentry'
 
 def __virtual__():
     if HAS_RAVEN is True:
+        __grains__ = salt.loader.grains(__opts__)
+        __salt__ = salt.loader.minion_mods(__opts__)
         return __virtualname__
     return False
 
@@ -101,7 +112,6 @@ def setup_handlers():
     if 'sentry_handler' not in __opts__:
         log.debug('No \'sentry_handler\' key was found in the configuration')
         return False
-
     options = {}
     dsn = get_config_value('dsn')
     if dsn is not None:
@@ -178,7 +188,15 @@ def setup_handlers():
     })
 
     client = raven.Client(**options)
-
+    context = get_config_value('context')
+    context_dict = {}
+    if context is not None:
+        for tag in context:
+            tag_value = __salt__['grains.get'](tag)
+            if len(tag_value) > 0:
+                context_dict[tag] = tag_value
+        if len(context_dict) > 0:
+            client.context.merge({'tags': context_dict})
     try:
         handler = SentryHandler(client)
         handler.setLevel(LOG_LEVELS[get_config_value('log_level', 'error')])

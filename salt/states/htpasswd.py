@@ -81,7 +81,7 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
             ret['comment'] = useradd_ret['stderr']
             return ret
 
-    if __opts__['test']:
+    if __opts__['test'] and ret['changes']:
         ret['result'] = None
     else:
         ret['result'] = True

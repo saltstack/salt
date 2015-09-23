@@ -7,9 +7,13 @@ Highstate data structure definitions
 The Salt State Tree
 ===================
 
-A state tree is a collection of ``SLS`` files that live under the directory
-specified in :conf_master:`file_roots`. A state tree can be organized into
-``SLS modules``.
+A state tree is a collection of ``SLS`` files and directories that live under the directory
+specified in :conf_master:`file_roots`.
+
+.. note::
+
+   Directory names or filenames in the state tree cannot contain a period, with the
+   exception of the period in the .sls file suffix.
 
 .. _states-highstate-top-file:
 
@@ -76,9 +80,8 @@ Extend declaration
 ------------------
 
 Extends a :ref:`name-declaration` from an included ``SLS module``. The
-keys of the extend declaration always define existing :ref`ID declaration`
-which have been defined in included
-``SLS modules``.
+keys of the extend declaration always refer to an existing
+:ref:`id-declaration` which have been defined in included ``SLS modules``.
 
 Occurs only in the top level and defines a dictionary.
 

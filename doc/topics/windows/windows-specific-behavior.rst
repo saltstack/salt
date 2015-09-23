@@ -52,7 +52,7 @@ Follow :issue:`11801` for any changes to this behavior.
 Dealing with various username forms
 ===================================
 Salt does not understand the various forms that Windows usernames can come in,
-e.g. username, mydomain\username, username@mydomain.tld can all refer to the
+e.g. username, mydomain\\username, username@mydomain.tld can all refer to the
 same user. In fact, Salt generally only considers the raw username value, i.e.
 the username without the domain or host information.
 

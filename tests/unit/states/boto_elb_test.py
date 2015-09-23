@@ -98,7 +98,7 @@ class BotoElbTestCase(TestCase):
                 self.assertTrue(boto_elb.__salt__['boto_elb.exists'].called)
                 self.assertTrue(boto_elb.__salt__['boto_elb.create'].called)
                 self.assertTrue(boto_elb.__salt__['state.single'].called)
-                self.assertTrue(
+                self.assertFalse(
                     boto_elb.__salt__['boto_elb.get_attributes'].called
                 )
                 self.assertTrue(

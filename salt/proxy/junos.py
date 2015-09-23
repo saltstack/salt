@@ -7,58 +7,79 @@ Interface with a Junos device via proxy-minion.
 from __future__ import print_function
 from __future__ import absolute_import
 
+import logging
+
 # Import 3rd-party libs
-import jnpr.junos
-import jnpr.junos.utils
-import jnpr.junos.cfg
+# import jnpr.junos
+# import jnpr.junos.utils
+# import jnpr.junos.utils.config
+import json
 HAS_JUNOS = True
 
 __proxyenabled__ = ['junos']
 
+thisproxy = {}
 
-class Proxyconn(object):
+log = logging.getLogger(__name__)
+
+# def __init__(opts):
+#     '''
+#     Open the connection to the Junos device, login, and bind to the
+#     Resource class
+#     '''
+#     log.debug('Opening connection to junos')
+#     thisproxy['conn'] = jnpr.junos.Device(user=opts['proxy']['username'],
+#                                             host=opts['proxy']['host'],
+#                                             password=opts['proxy']['passwd'])
+#     thisproxy['conn'].open()
+#     thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
+
+
+def conn():
+    return thisproxy['conn']
+
+
+def facts():
+    return thisproxy['conn'].facts
+
+
+def refresh():
+    return thisproxy['conn'].facts_refresh()
+
+
+def proxytype():
     '''
-    This class provides the persistent connection to the device that is being
-    controlled.
+    Returns the name of this proxy
+    '''
+    return 'junos'
+
+
+def id(opts):
+    '''
+    Returns a unique ID for this proxy minion
+    '''
+    return thisproxy['conn'].facts['hostname']
+
+
+def ping():
+    '''
+    Ping?  Pong!
+    '''
+    return thisproxy['conn'].connected
+
+
+def shutdown(opts):
+    '''
+    This is called when the proxy-minion is exiting to make sure the
+    connection to the device is closed cleanly.
     '''
 
-    def __init__(self, details):
-        '''
-        Open the connection to the Junos device, login, and bind to the
-        Resource class
-        '''
-        self.conn = jnpr.junos.Device(user=details['username'],
-                                      host=details['host'],
-                                      password=details['passwd'])
-        self.conn.open()
-        self.conn.bind(cu=jnpr.junos.cfg.Resource)
+    log.debug('Proxy module {0} shutting down!!'.format(opts['id']))
+    try:
+        thisproxy['conn'].close()
+    except Exception:
+        pass
 
-    def proxytype(self):
-        '''
-        Returns the name of this proxy
-        '''
-        return 'junos'
 
-    def id(self, opts):
-        '''
-        Returns a unique ID for this proxy minion
-        '''
-        return self.conn.facts['hostname']
-
-    def ping(self):
-        '''
-        Ping?  Pong!
-        '''
-        return self.conn.connected
-
-    def shutdown(self, opts):
-        '''
-        This is called when the proxy-minion is exiting to make sure the
-        connection to the device is closed cleanly.
-        '''
-
-        print('Proxy module {0} shutting down!!'.format(opts['id']))
-        try:
-            self.conn.close()
-        except Exception:
-            pass
+def rpc():
+    return json.dumps(thisproxy['conn'].rpc.get_software_information())

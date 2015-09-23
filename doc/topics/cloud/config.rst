@@ -45,7 +45,7 @@ Cloud Configuration Syntax
 
 The data specific to interacting with public clouds is set up here.
 
-Cloud provider configuration syntax can live in several places. The first is in
+Cloud provider configuration settings can live in several places. The first is in
 ``/etc/salt/cloud``:
 
 .. code-block:: yaml
@@ -171,13 +171,13 @@ minion. In your pillar file, you would use something like this:
 
       profiles:
         ubuntu-nova:
-          driver: my-nova
+          provider: my-nova
           size: performance1-8
           image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
           script_args: git develop
 
         ubuntu-openstack:
-          driver: my-openstack
+          provider: my-openstack
           size: performance1-8
           image: bb02b1a3-bc77-4d17-ab5b-421d89850fca
           script_args: git develop
@@ -217,7 +217,7 @@ Rackspace cloud requires two configuration options; a ``user`` and an ``apikey``
     my-rackspace-config:
       user: example_user
       apikey: 123984bjjas87034
-      driver: rackspace-config
+      driver: rackspace
 
 .. note::
 
@@ -229,7 +229,7 @@ Amazon AWS
 ----------
 
 A number of configuration options are required for Amazon AWS including ``id``,
-``key``, ``keyname``, ``sercuritygroup``, and ``private_key``:
+``key``, ``keyname``, ``securitygroup``, and ``private_key``:
 
 .. code-block:: yaml
 
@@ -444,7 +444,7 @@ Proxmox
 -------
 
 Using Salt with Proxmox requires a ``user``, ``password``, and ``URL``. These can be
-obtained from your cloud provider. Both PAM and PVE users can be used.
+obtained from your cloud host. Both PAM and PVE users can be used.
 
 .. code-block:: yaml
 
@@ -478,7 +478,7 @@ And in the map file:
 .. code-block:: yaml
 
     devhost10-lxc:
-      driver: devhost10-lxc
+      provider: devhost10-lxc
       from_container: ubuntu
       backing: lvm
       sudo: True
@@ -500,35 +500,11 @@ And in the map file:
 Saltify
 -------
 
-The Saltify driver is a new, experimental driver for installing Salt on
-existing machines (virtual or bare metal). Because it does not use an actual
-cloud provider, it needs no configuration in the main cloud config file.
-However, it does still require a profile to be set up, and is most useful when
-used inside a map file. The key parameters to be set are ``ssh_host``,
-``ssh_username`` and either ``ssh_keyfile`` or ``ssh_password``. These may all
-be set in either the profile or the map. An example configuration might use the
-following in cloud.profiles:
-
-.. code-block:: yaml
-
-    make_salty:
-      driver: saltify
-
-And in the map file:
-
-.. code-block:: yaml
-
-    make_salty:
-      - myinstance:
-        ssh_host: 54.262.11.38
-        ssh_username: ubuntu
-        ssh_keyfile: '/etc/salt/mysshkey.pem'
-        sudo: True
-
-.. note::
-
-    In the cloud profile that uses this provider configuration, the syntax for the
-    ``provider`` required field would be ``provider: make_salty``.
+The Saltify driver is a new, experimental driver designed to install Salt on a remote
+machine, virtual or bare metal, using SSH. This driver is useful for provisioning
+machines which are already installed, but not Salted. For more information about using
+this driver and for configuration examples, please see the
+:ref:`Gettting Started with Saltify <getting-started-with-saltify>` documentation.
 
 
 Extending Profiles and Cloud Providers Configuration

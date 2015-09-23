@@ -19,6 +19,7 @@ Full list of builtin returner modules
     elasticsearch_return
     etcd_return
     hipchat_return
+    influxdb_return
     kafka_return
     local
     local_cache
@@ -29,6 +30,7 @@ Full list of builtin returner modules
     mysql
     nagios_return
     odbc
+    pgjsonb
     postgres
     postgres_local_cache
     pushover_returner

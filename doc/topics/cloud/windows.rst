@@ -46,7 +46,7 @@ from saltstack.com:
 
 * `SaltStack Download Area`__
 
-.. __: http://docs.saltstack.com/downloads/
+.. __: https://repo.saltstack.com/windows/
 
 
 Firewall Settings

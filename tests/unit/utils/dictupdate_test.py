@@ -68,6 +68,65 @@ class UtilDictupdateTestCase(TestCase):
         )
         self.assertEqual(res, mdict)
 
+
+class UtilDictMergeTestCase(TestCase):
+
+    dict1 = {'A': 'B', 'C': {'D': 'E', 'F': {'G': 'H', 'I': 'J'}}}
+
+    def test_merge_overwrite_traditional(self):
+        '''
+        Test traditional overwrite, wherein a key in the second dict overwrites a key in the first
+        '''
+        mdict = copy.deepcopy(self.dict1)
+        mdict['A'] = 'b'
+        ret = dictupdate.merge_overwrite(copy.deepcopy(self.dict1), {'A': 'b'})
+        self.assertEqual(mdict, ret)
+
+    def test_merge_overwrite_missing_source_key(self):
+        '''
+        Test case wherein the overwrite strategy is used but a key in the second dict is
+        not present in the first
+        '''
+        mdict = copy.deepcopy(self.dict1)
+        mdict['D'] = 'new'
+        ret = dictupdate.merge_overwrite(copy.deepcopy(self.dict1), {'D': 'new'})
+        self.assertEqual(mdict, ret)
+
+    def test_merge_aggregate_traditional(self):
+        '''
+        Test traditional aggregation, where a val from dict2 overwrites one
+        present in dict1
+        '''
+        mdict = copy.deepcopy(self.dict1)
+        mdict['A'] = 'b'
+        ret = dictupdate.merge_overwrite(copy.deepcopy(self.dict1), {'A': 'b'})
+        self.assertEqual(mdict, ret)
+
+    def test_merge_list_traditional(self):
+        '''
+        Test traditional list merge, where a key present in dict2 will be converted
+        to a list
+        '''
+        mdict = copy.deepcopy(self.dict1)
+        mdict['A'] = ['B', 'b']
+        ret = dictupdate.merge_list(copy.deepcopy(self.dict1), {'A': 'b'})
+        self.assertEqual(mdict, ret)
+
+    def test_merge_list_append(self):
+        '''
+        This codifies the intended behaviour that items merged into a dict val that is already
+        a list that those items will *appended* to the list, and not magically merged in
+        '''
+        mdict = copy.deepcopy(self.dict1)
+        mdict['A'] = ['B', 'b', 'c']
+
+        # Prepare a modified copy of dict1 that has a list as a val for the key of 'A'
+        mdict1 = copy.deepcopy(self.dict1)
+        mdict1['A'] = ['B']
+        ret = dictupdate.merge_list(mdict1, {'A': ['b', 'c']})
+        self.assertEqual({'A': [['B'], ['b', 'c']], 'C': {'D': 'E', 'F': {'I': 'J', 'G': 'H'}}}, ret)
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(UtilDictupdateTestCase, needs_daemon=False)

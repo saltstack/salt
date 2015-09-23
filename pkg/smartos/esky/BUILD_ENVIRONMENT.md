@@ -18,12 +18,8 @@ hash -r
 
 rm -rf /var/db/pkgin/
 pkgin -y up
-pkgin -y in build-essential salt swig py27-pip unzip py27-mysqldb libsodium mysql-client
+pkgin -y in build-essential salt swig py27-pip unzip py27-mysqldb libsodium mysql-client patchelf
 pkgin -y rm salt py27-zmq
-
-cd /opt/local/bin
-curl -kO 'https://us-east.manta.joyent.com/nahamu/public/smartos/bins/patchelf'
-chmod +x patchelf
 
 pip install --egg esky bbfreeze
 

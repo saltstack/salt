@@ -6,6 +6,7 @@ involves preparing the three listeners and the workers needed by the master.
 
 # Import python libs
 from __future__ import absolute_import
+import copy
 import os
 import re
 import sys
@@ -14,6 +15,7 @@ import errno
 import logging
 import tempfile
 import multiprocessing
+import traceback
 
 # Import third party libs
 import zmq
@@ -165,9 +167,9 @@ class Maintenance(multiprocessing.Process):
                                                      returners=self.returners)
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         # Make Event bus for firing
-        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
         # Init any values needed by the git ext pillar
-        self.pillargitfs = salt.daemons.masterapi.init_git_pillar(self.opts)
+        self.git_pillar = salt.daemons.masterapi.init_git_pillar(self.opts)
         # Set up search object
         self.search = salt.search.Search(self.opts)
 
@@ -198,7 +200,7 @@ class Maintenance(multiprocessing.Process):
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
             self.handle_search(now, last)
-            self.handle_pillargit()
+            self.handle_git_pillar()
             self.handle_schedule()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
@@ -252,16 +254,19 @@ class Maintenance(multiprocessing.Process):
                           'due to key rotation')
                 salt.utils.master.ping_all_connected_minions(self.opts)
 
-    def handle_pillargit(self):
+    def handle_git_pillar(self):
         '''
         Update git pillar
         '''
         try:
-            for pillargit in self.pillargitfs:
-                pillargit.update()
+            for pillar in self.git_pillar:
+                pillar.update()
         except Exception as exc:
-            log.error('Exception {0} occurred in file server update '
-                      'for git_pillar module.'.format(exc))
+            log.error(
+                'Exception \'{0}\' caught while updating git_pillar'
+                .format(exc),
+                exc_info_on_loglevel=logging.DEBUG
+            )
 
     def handle_schedule(self):
         '''
@@ -380,23 +385,13 @@ class Master(SMaster):
         should not start up.
         '''
         errors = []
+        critical_errors = []
 
-        if salt.utils.is_windows() and self.opts['user'] == 'root':
-            # 'root' doesn't typically exist on Windows. Use the current user
-            # home directory instead.
-            home = os.path.expanduser('~' + salt.utils.get_user())
-        else:
-            home = os.path.expanduser('~' + self.opts['user'])
         try:
-            if salt.utils.is_windows() and not os.path.isdir(home):
-                # On Windows, Service account home directories may not
-                # initially exist. If this is the case, make sure the
-                # directory exists before continuing.
-                os.mkdir(home, 0o755)
-            os.chdir(home)
+            os.chdir('/')
         except OSError as err:
             errors.append(
-                'Cannot change to home directory {0} ({1})'.format(home, err)
+                'Cannot change to root directory ({1})'.format(err)
             )
 
         fileserver = salt.fileserver.Fileserver(self.opts)
@@ -411,13 +406,32 @@ class Master(SMaster):
             try:
                 fileserver.init()
             except FileserverConfigError as exc:
-                errors.append('{0}'.format(exc))
+                critical_errors.append('{0}'.format(exc))
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
-        if errors:
+
+        non_legacy_git_pillars = [
+            x for x in self.opts.get('ext_pillar', [])
+            if 'git' in x
+            and not isinstance(x['git'], six.string_types)
+        ]
+        if non_legacy_git_pillars:
+            new_opts = copy.deepcopy(self.opts)
+            new_opts['ext_pillar'] = non_legacy_git_pillars
+            try:
+                # Init any values needed by the git ext pillar
+                salt.utils.gitfs.GitPillar(new_opts)
+            except FileserverConfigError as exc:
+                critical_errors.append(exc.strerror)
+            finally:
+                del new_opts
+
+        if errors or critical_errors:
             for error in errors:
                 log.error(error)
-            log.error('Master failed pre flight checks, exiting\n')
+            for error in critical_errors:
+                log.critical(error)
+            log.critical('Master failed pre flight checks, exiting\n')
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
     # run_reqserver cannot be defined within a class method in order for it
@@ -767,7 +781,7 @@ class AESFuncs(object):
         :returns: Instance for handling AES operations
         '''
         self.opts = opts
-        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
         self.serial = salt.payload.Serial(opts)
         self.ckminions = salt.utils.minions.CkMinions(opts)
         # Make a client
@@ -949,11 +963,15 @@ class AESFuncs(object):
             if saltenv not in file_roots:
                 file_roots[saltenv] = []
         mopts['file_roots'] = file_roots
+        mopts['top_file_merging_strategy'] = self.opts['top_file_merging_strategy']
+        mopts['env_order'] = self.opts['env_order']
+        mopts['default_top'] = self.opts['default_top']
         if load.get('env_only'):
             return mopts
         mopts['renderer'] = self.opts['renderer']
         mopts['failhard'] = self.opts['failhard']
         mopts['state_top'] = self.opts['state_top']
+        mopts['state_top_saltenv'] = self.opts['state_top_saltenv']
         mopts['nodegroups'] = self.opts['nodegroups']
         mopts['state_auto_order'] = self.opts['state_auto_order']
         mopts['state_events'] = self.opts['state_events']
@@ -1169,8 +1187,11 @@ class AESFuncs(object):
 
         :param dict load: The minion payload
         '''
-        salt.utils.job.store_job(
-            self.opts, load, event=self.event, mminion=self.mminion)
+        try:
+            salt.utils.job.store_job(
+                self.opts, load, event=self.event, mminion=self.mminion)
+        except salt.exception.SaltCacheError:
+            log.error('Could not store job information for load: {0}'.format(load))
 
     def _syndic_return(self, load):
         '''
@@ -1401,7 +1422,7 @@ class ClearFuncs(object):
         self.opts = opts
         self.key = key
         # Create the event manager
-        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
+        self.event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
         # Make a client
         self.local = salt.client.get_local_client(self.opts['conf_file'])
         # Make an minion checker object
@@ -1674,26 +1695,28 @@ class ClearFuncs(object):
         try:
             name = self.loadauth.load_name(clear_load)
             groups = self.loadauth.get_groups(clear_load)
-            if not ((name in self.opts['external_auth'][clear_load['eauth']]) |
-                    ('*' in self.opts['external_auth'][clear_load['eauth']])):
+            eauth_config = self.opts['external_auth'][clear_load['eauth']]
+            if '*' not in eauth_config and name not in eauth_config:
                 found = False
                 for group in groups:
-                    if "{0}%".format(group) in self.opts['external_auth'][clear_load['eauth']]:
+                    if "{0}%".format(group) in eauth_config:
                         found = True
                         break
                 if not found:
                     log.warning('Authentication failure of type "eauth" occurred.')
                     return ''
-                else:
-                    clear_load['groups'] = groups
             if not self.loadauth.time_auth(clear_load):
                 log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
+
+            clear_load['groups'] = groups
             return self.loadauth.mk_token(clear_load)
         except Exception as exc:
+            type_, value_, traceback_ = sys.exc_info()
             log.error(
                 'Exception occurred while authenticating: {0}'.format(exc)
             )
+            log.error(traceback.format_exception(type_, value_, traceback_))
             return ''
 
     def get_token(self, clear_load):
@@ -1737,40 +1760,46 @@ class ClearFuncs(object):
                     )
                 )
                 return ''
+
+            # Bail if the token is empty or if the eauth type specified is not allowed
             if not token or token['eauth'] not in self.opts['external_auth']:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            if not ((token['name'] in self.opts['external_auth'][token['eauth']]) |
-                    ('*' in self.opts['external_auth'][token['eauth']])):
-                found = False
-                for group in token['groups']:
-                    if "{0}%".format(group) in self.opts['external_auth'][token['eauth']]:
-                        found = True
-                        break
-                if not found:
-                    log.warning('Authentication failure of type "token" occurred.')
-                    return ''
 
-            group_perm_keys = [item for item in self.opts['external_auth'][token['eauth']] if item.endswith('%')]  # The configured auth groups
+            # Fetch eauth config and collect users and groups configured for access
+            eauth_config = self.opts['external_auth'][token['eauth']]
+            eauth_users = []
+            eauth_groups = []
+            for entry in eauth_config:
+                if entry.endswith('%'):
+                    eauth_groups.append(entry.rstrip('%'))
+                else:
+                    eauth_users.append(entry)
 
-            # First we need to know if the user is allowed to proceed via any of their group memberships.
+            # If there are groups in the token, check if any of them are listed in the eauth config
             group_auth_match = False
-            for group_config in group_perm_keys:
-                group_config = group_config.rstrip('%')
-                for group in token['groups']:
-                    if group == group_config:
-                        group_auth_match = True
+            try:
+                if token.get('groups'):
+                    for group in token['groups']:
+                        if group in eauth_groups:
+                            group_auth_match = True
+                            break
+            except KeyError:
+                pass
+            if '*' not in eauth_users and token['name'] not in eauth_users and not group_auth_match:
+                log.warning('Authentication failure of type "token" occurred.')
+                return ''
 
+            # Compile list of authorized actions for the user
             auth_list = []
-
-            if '*' in self.opts['external_auth'][token['eauth']]:
-                auth_list.extend(self.opts['external_auth'][token['eauth']]['*'])
-            if token['name'] in self.opts['external_auth'][token['eauth']]:
-                auth_list.extend(self.opts['external_auth'][token['eauth']][token['name']])
+            # Add permissions for '*' or user-specific to the auth list
+            for user_key in ('*', token['name']):
+                auth_list.extend(eauth_config.get(user_key, []))
+            # Add any add'l permissions allowed by group membership
             if group_auth_match:
-                auth_list = self.ckminions.fill_auth_list_from_groups(self.opts['external_auth'][token['eauth']], token['groups'], auth_list)
+                auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
 
-            log.trace("compiled auth_list: {0}".format(auth_list))
+            log.trace("Compiled auth_list: {0}".format(auth_list))
 
             good = self.ckminions.auth_check(
                 auth_list,
@@ -1794,18 +1823,13 @@ class ClearFuncs(object):
                 )
                 return ''
             try:
-                # The username with which we are attempting to auth
-                name = self.loadauth.load_name(extra)
-                # The groups to which this user belongs
-                groups = self.loadauth.get_groups(extra)
-                # The configured auth groups
-                group_perm_keys = [
-                    item for item in self.opts['external_auth'][extra['eauth']]
-                    if item.endswith('%')
-                ]
+                name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
+                groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
+                if groups is None:
+                    groups = []
+                group_perm_keys = [item for item in self.opts['external_auth'][extra['eauth']] if item.endswith('%')]  # The configured auth groups
 
-                # First we need to know if the user is allowed to proceed via
-                # any of their group memberships.
+                # First we need to know if the user is allowed to proceed via any of their group memberships.
                 group_auth_match = False
                 for group_config in group_perm_keys:
                     group_config = group_config.rstrip('%')
@@ -1845,9 +1869,12 @@ class ClearFuncs(object):
                     return ''
 
             except Exception as exc:
+                type_, value_, traceback_ = sys.exc_info()
                 log.error(
                     'Exception occurred while authenticating: {0}'.format(exc)
                 )
+                log.error(traceback.format_exception(
+                    type_, value_, traceback_))
                 return ''
 
 #            auth_list = self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*']

@@ -34,8 +34,10 @@ Options
 
     By default as of version 0.9.8 the salt command returns data to the
     console as it is received from minions, but previous releases would return
-    data only after all data was received. To only return the data with a hard
-    timeout and after all minions have returned then use the static option.
+    data only after all data was received. Use the static option to only return
+    the data with a hard timeout and after all minions have returned.
+    Without the static option, you will get a separate JSON string per minion
+    which makes JSON output invalid as a whole.
 
 .. option:: --async
 

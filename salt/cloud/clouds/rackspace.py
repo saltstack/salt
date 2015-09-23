@@ -39,21 +39,8 @@ import logging
 import socket
 import pprint
 
-# Import libcloud
-try:
-    from libcloud.compute.base import NodeState
-    HAS_LIBCLOUD = True
-except ImportError:
-    HAS_LIBCLOUD = False
-
-# Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
-
 # Import salt libs
 import salt.utils
-
-# Import salt.cloud libs
-import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
 from salt.exceptions import (
@@ -62,8 +49,21 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
+# Import salt.cloud libs
+from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+import salt.utils.cloud
+
+# Import Third Party Libs
+try:
+    from libcloud.compute.base import NodeState
+    HAS_LIBCLOUD = True
+except ImportError:
+    HAS_LIBCLOUD = False
+
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'rackspace'
 
 
 # Some of the libcloud functions need to be in the same namespace as the
@@ -87,10 +87,10 @@ def __virtual__():
     '''
     Set up the libcloud functions and check for Rackspace configuration.
     '''
-    if not HAS_LIBCLOUD:
+    if get_configured_provider() is False:
         return False
 
-    if get_configured_provider() is False:
+    if get_dependencies() is False:
         return False
 
     return True
@@ -102,8 +102,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'rackspace',
+        __active_provider_name__ or __virtualname__,
         ('user', 'apikey')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBCLOUD}
     )
 
 
@@ -183,9 +193,9 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'rackspace',
-                                        vm_['profile']) is False:
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'rackspace',
+                                                           vm_['profile']) is False:
             return False
     except AttributeError:
         pass

@@ -173,7 +173,7 @@ def accept_key(pki_dir, pub, id_):
     the opts directory, this method places the pub key in the accepted
     keys dir and removes it from the unaccepted keys dir if that is the case.
     '''
-    for key_dir in ('minions', 'minions_pre', 'minions_rejected'):
+    for key_dir in 'minions', 'minions_pre', 'minions_rejected':
         key_path = os.path.join(pki_dir, key_dir)
         if not os.path.exists(key_path):
             os.makedirs(key_path)
@@ -954,6 +954,9 @@ def deploy_windows(host,
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
 
         smb_conn = salt.utils.smb.get_conn(host, username, password)
+        if smb_conn is False:
+            log.error('Please install impacket to enable SMB functionality')
+            return False
 
         creds = "-U '{0}%{1}' //{2}".format(
             username, password, host)
@@ -2037,7 +2040,7 @@ def check_auth(name, sock_dir=None, queue=None, timeout=300):
     This function is called from a multiprocess instance, to wait for a minion
     to become available to receive salt commands
     '''
-    event = salt.utils.event.SaltEvent('master', sock_dir)
+    event = salt.utils.event.SaltEvent('master', sock_dir, listen=True)
     starttime = time.mktime(time.localtime())
     newtimeout = timeout
     log.debug(
@@ -2455,7 +2458,7 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
 
     driver = next(six.iterkeys(opts['providers'][provider]))
     fname = '{0}.p'.format(minion_id)
-    for cachedir in ('requested', 'active'):
+    for cachedir in 'requested', 'active':
         path = os.path.join(base, cachedir, driver, provider, fname)
         log.debug('path: {0}'.format(path))
         if os.path.exists(path):
@@ -2525,7 +2528,7 @@ def update_bootstrap(config, url=None):
         url = default_url
     if not url:
         raise ValueError('Cant get any source to update')
-    if (url.startswith('http')) or ('://' in url):
+    if url.startswith('http') or '://' in url:
         log.debug('Updating the bootstrap-salt.sh script to latest stable')
         try:
             import requests

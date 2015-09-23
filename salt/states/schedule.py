@@ -62,7 +62,7 @@ Management of the Salt scheduler
         - args:
           - httpd
         - kwargs:
-          test: True
+            test: True
         - when:
             - Monday 5:00pm
             - Tuesday 3:00pm

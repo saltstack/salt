@@ -2,7 +2,7 @@
 Getting Started With SoftLayer
 ==============================
 
-SoftLayer is a public cloud provider, and baremetal hardware hosting provider.
+SoftLayer is a public cloud host, and baremetal hardware hosting service.
 
 Dependencies
 ============
@@ -11,7 +11,7 @@ available at PyPI:
 
 https://pypi.python.org/pypi/SoftLayer
 
-This package can be installed using `pip` or `easy_install`:
+This package can be installed using ``pip`` or ``easy_install``:
 
 .. code-block:: bash
 
@@ -50,16 +50,24 @@ Set up the cloud config at ``/etc/salt/cloud.providers``:
 
       driver: softlayer_hw
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Access Credentials
 ==================
-The `user` setting is the same user as is used to log into the SoftLayer
-Administration area. The `apikey` setting is found inside the Admin area after
+The ``user`` setting is the same user as is used to log into the SoftLayer
+Administration area. The ``apikey`` setting is found inside the Admin area after
 logging in:
 
-* Hover over the `Administrative` menu item.
-* Click the `API Access` link.
-* The `apikey` is located next to the `user` setting.
+* Hover over the ``Account`` menu item.
+* Click the ``Users`` link.
+* Find the ``API Key`` column and click ``View``.
 
 
 Profiles
@@ -94,13 +102,13 @@ Most of the above items are required; optional items are specified below.
 
 image
 -----
-Images to build an instance can be found using the `--list-images` option:
+Images to build an instance can be found using the ``--list-images`` option:
 
 .. code-block:: bash
 
     # salt-cloud --list-images my-softlayer
 
-The setting used will be labeled as `template`.
+The setting used will be labeled as ``template``.
 
 cpu_number
 ----------
@@ -132,7 +140,34 @@ instance.
 
 disk_size
 ---------
-The amount of disk space that will be allocated to this image, in megabytes.
+The amount of disk space that will be allocated to this image, in gigabytes.
+
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: 100
+
+Using Multiple Disks
+~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 2015.8.1
+
+SoftLayer allows up to 5 disks to be specified for a virtual machine upon
+creation. Multiple disks can be specified either as a list or a comma-delimited
+string. The first ``disk_size`` specified in the string or list will be the first
+disk size assigned to the VM.
+
+List Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: ['100', '20', '20']
+
+String Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      disk_size: '100, 20, 20'
 
 local_disk
 ----------
@@ -162,6 +197,19 @@ max_net_speed
 -------------
 Specifies the connection speed for the instance's network components. This
 setting is optional. By default, this is set to 10.
+
+post_uri
+--------
+Specifies the uri location of the script to be downloaded and run after the instance
+is provisioned.
+
+.. versionadded:: 2015.8.1
+
+Example:
+.. code-block:: yaml
+
+    base_softlayer_ubuntu:
+      post_uri: 'https://SOMESERVERIP:8000/myscript.sh'
 
 public_vlan
 -----------
@@ -384,7 +432,7 @@ The `globalIdentifier` returned in this list is necessary for the
 
 Optional Products for SoftLayer HW
 ==================================
-The softlayer_hw provider supports the ability to add optional products, which
+The softlayer_hw driver supports the ability to add optional products, which
 are supported by SoftLayer's API. These products each have an ID associated with
 them, that can be passed into Salt Cloud with the `optional_products` option:
 

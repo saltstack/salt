@@ -141,4 +141,6 @@ http://curvecp.org/
 Programming Intro
 =================
 
-:ref:`Raet Programming Introduction <raet-programming>`
+.. toctree:
+
+   programming_intro

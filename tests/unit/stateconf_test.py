@@ -16,6 +16,7 @@ ensure_in_syspath('../')
 import salt.loader
 import salt.config
 import integration
+from salt.exceptions import SaltRenderError
 from salt.ext.six.moves import StringIO
 
 # Import 3rd-party libs
@@ -206,6 +207,36 @@ extend:
       - name: echo overridden
     ''', sls='test.work')
         self.assertTrue('test.utils::some_state' in result['extend'])
+
+    def test_multilevel_relative_include_with_requisites(self):
+        for req in REQUISITES:
+            result = self._render_sls('''
+include:
+  - .shared
+  - ..utils
+  - ...helper
+
+state_id:
+  cmd.run:
+    - name: echo test
+    - cwd: /
+    - {0}:
+      - cmd: ..utils::some_state
+'''.format(req), sls='test.nested.work')
+            self.assertEqual(result['include'][0],
+                             {'base': 'test.nested.shared'})
+            self.assertEqual(result['include'][1], {'base': 'test.utils'})
+            self.assertEqual(result['include'][2], {'base': 'helper'})
+            self.assertEqual(
+                result['state_id']['cmd.run'][2][req][0]['cmd'],
+                'test.utils::some_state'
+            )
+
+    def test_multilevel_relative_include_beyond_top_level(self):
+        self.assertRaises(SaltRenderError, self._render_sls, '''
+include:
+  - ...shared
+''', sls='test.work')
 
     def test_start_state_generation(self):
         result = self._render_sls('''

@@ -1,3 +1,5 @@
+.. _execution-modules:
+
 =================
 Execution Modules
 =================
@@ -48,8 +50,90 @@ starts, so only the ``*.pyx`` file is required.
 
 .. _`Cython`: http://cython.org/
 
-Cross-Calling Modules
-=====================
+Zip Archives as Modules
+=======================
+Python 2.3 and higher allows developers to directly import zip archives containing Python code.
+By setting :conf_minion:`enable_zip_modules` to ``True`` in the minion config, the Salt loader
+will be able to import ``.zip`` files in this fashion.  This allows Salt module developers to
+package dependencies with their modules for ease of deployment, isolation, etc.
+
+For a user, Zip Archive modules behave just like other modules.  When executing a function from a
+module provided as the file ``my_module.zip``, a user would call a function within that module
+as ``my_module.<function>``.
+
+Creating a Zip Archive Module
+-----------------------------
+A Zip Archive module is structured similarly to a simple `Python package`_.  The ``.zip`` file contains
+a single directory with the same name as the module.  The module code traditionally in ``<module_name>.py``
+goes in ``<module_name>/__init__.py``.  The dependency packages are subdirectories of ``<module_name>/``.
+
+Here is an example directory structure for the ``lumberjack`` module, which has two library dependencies
+(``sleep`` and ``work``) to be included.
+
+.. code-block:: bash
+
+    modules $ ls -R lumberjack
+    __init__.py     sleep           work
+
+    lumberjack/sleep:
+    __init__.py
+
+    lumberjack/work:
+    __init__.py
+
+The contents of ``lumberjack/__init__.py`` show how to import and use these included libraries.
+
+.. code-block:: python
+
+    # Libraries included in lumberjack.zip
+    from lumberjack import sleep, work
+
+
+    def is_ok(person):
+        ''' Checks whether a person is really a lumberjack '''
+        return sleep.all_night(person) and work.all_day(person)
+
+Then, create the zip:
+
+.. code-block:: bash
+
+    modules $ zip -r lumberjack lumberjack
+      adding: lumberjack/ (stored 0%)
+      adding: lumberjack/__init__.py (deflated 39%)
+      adding: lumberjack/sleep/ (stored 0%)
+      adding: lumberjack/sleep/__init__.py (deflated 7%)
+      adding: lumberjack/work/ (stored 0%)
+      adding: lumberjack/work/__init__.py (deflated 7%)
+    modules $ unzip -l lumberjack.zip
+    Archive:  lumberjack.zip
+      Length     Date   Time    Name
+     --------    ----   ----    ----
+            0  08-21-15 20:08   lumberjack/
+          348  08-21-15 20:08   lumberjack/__init__.py
+            0  08-21-15 19:53   lumberjack/sleep/
+           83  08-21-15 19:53   lumberjack/sleep/__init__.py
+            0  08-21-15 19:53   lumberjack/work/
+           81  08-21-15 19:21   lumberjack/work/__init__.py
+     --------                   -------
+          512                   6 files
+
+Once placed in :conf_master:`file_roots`, Salt users can distribute and use ``lumberjack.zip`` like any other module.
+
+.. code-block:: bash
+
+    $ sudo salt minion1 saltutil.sync_modules
+    minion1:
+      - modules.lumberjack
+    $ sudo salt minion1 lumberjack.is_ok 'Michael Palin'
+    minion1:
+      True
+
+.. _`Python package`: https://docs.python.org/2/tutorial/modules.html#packages
+
+.. _cross-calling-execution-modules:
+
+Cross Calling Execution Modules
+===============================
 
 All of the Salt execution modules are available to each other and modules can call
 functions available in other execution modules.
@@ -68,8 +152,8 @@ Salt modules can be cross-called by accessing the value in the ``__salt__`` dict
     def foo(bar):
         return __salt__['cmd.run'](bar)
 
-This code will call the `run` function in the :mod:`cmd <salt.modules.cmdmod>` and pass the argument
-``bar`` to it.
+This code will call the `run` function in the :mod:`cmd <salt.modules.cmdmod>`
+module and pass the argument ``bar`` to it.
 
 
 Preloaded Execution Module Data
@@ -154,15 +238,6 @@ The ``__virtual__`` function is used to return either a
 False is returned then the module is not loaded, if a string is returned then
 the module is loaded with the name of the string.
 
-.. note::
-
-   Optionally, modules may additionally return a list of reasons that a module could
-   not be loaded. For example, if a dependency for 'my_mod' was not met, a
-   __virtual__ function could do as follows:
-
-    return False, ['My Module must be installed before this module can be
-    used.']
-
 This means that the package manager modules can be presented as the ``pkg`` module
 regardless of what the actual module is named.
 
@@ -180,6 +255,16 @@ function. Some examples:
 .. note::
     Modules which return a string from ``__virtual__`` that is already used by a module that
     ships with Salt will _override_ the stock module.
+
+Returning Error Information from ``__virtual__``
+------------------------------------------------
+
+Optionally, modules may additionally return a list of reasons that a module could
+not be loaded. For example, if a dependency for 'my_mod' was not met, a
+__virtual__ function could do as follows:
+
+ return False, ['My Module must be installed before this module can be
+ used.']
 
 
 Documentation
@@ -248,6 +333,22 @@ on.
 
 The platform field is a comma-delimited list of platforms that this module is
 known to run on.
+
+Log Output
+==========
+
+You can call the logger from custom modules to write messages to the minion
+logs. The following code snippet demonstrates writing log messages:
+
+.. code-block:: python
+
+    import logging
+
+    log = logging.getLogger(__name__)
+
+    log.info('Here is Some Information')
+    log.warning('You Should Not Do That')
+    log.error('It Is Busted')
 
 Private Functions
 =================

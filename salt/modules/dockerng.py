@@ -19,11 +19,10 @@ option. This will give users a couple release cycles to modify their scripts,
 SLS files, etc. to use the new functionality, rather than forcing users to
 change everything immediately.
 
-In the **Carbon** release of Salt (slated for late summer/early fall 2015),
-this execution module will take the place of the default Docker execution
-module, and backwards-compatible naming will be maintained for a couple
-releases after that to allow users time to replace references to ``dockerng``
-with ``docker``.
+In the **Carbon** release of Salt (due early 2016), this execution module will
+take the place of the default Docker execution module, and backwards-compatible
+naming will be maintained for a couple releases after that to allow users time
+to replace references to ``dockerng`` with ``docker``.
 
 
 Installation Prerequisites
@@ -103,6 +102,20 @@ The second way is to use separate pillar variables ending in
 Both methods can be combined; any registry configured under
 ``docker-registries`` or ``*-docker-registries`` will be detected.
 
+Configuration Options
+---------------------
+
+The following options can be set in the :ref:`minion config
+<configuration-salt-minion>`:
+
+- ``docker.url``: URL to the docker service (default: local socket).
+- ``docker.version``: API version to use (default: currently 1.4 API).
+- ``docker.exec_driver``: Execution driver to use, one of the following:
+    - nsenter
+    - lxc-attach
+    - docker-exec
+
+    See :ref:`Executing Commands Within a Running Container <docker-execution-driver>`.
 
 Functions
 ---------
@@ -330,7 +343,7 @@ argument name:
 '''
 
 VALID_CREATE_OPTS = {
-    'command': {
+    'cmd': {
         'path': 'Config:Cmd',
     },
     'hostname': {
@@ -1086,25 +1099,25 @@ def _validate_input(action,
             raise SaltInvocationError(key + ' must be a list of strings')
 
     # Custom validation functions for container creation options
-    def _valid_command():  # pylint: disable=unused-variable
+    def _valid_cmd():  # pylint: disable=unused-variable
         '''
         Must be either a string or a list of strings. Value will be translated
         to a list of strings
         '''
-        if kwargs.get('command') is None:
+        if kwargs.get('cmd') is None:
             # No need to validate
             return
-        if isinstance(kwargs['command'], six.string_types):
+        if isinstance(kwargs['cmd'], six.string_types):
             # Translate command into a list of strings
             try:
-                kwargs['command'] = shlex.split(kwargs['command'])
+                kwargs['cmd'] = shlex.split(kwargs['cmd'])
             except AttributeError:
                 pass
         try:
-            _valid_stringlist('command')
+            _valid_stringlist('cmd')
         except SaltInvocationError:
             raise SaltInvocationError(
-                'command must be a string or list of strings'
+                'cmd must be a string or list of strings'
             )
 
     def _valid_user():  # pylint: disable=unused-variable
@@ -2494,10 +2507,13 @@ def create(image,
     image
         Image from which to create the container
 
-    command
+    cmd or command
         Command to run in the container
 
-        Example: ``command=bash``
+        Example: ``cmd=bash`` or ``command=bash``
+
+        .. versionchanged:: 2015.8.1
+            ``cmd`` is now also accepted
 
     hostname
         Hostname of the container. If not provided, and if a ``name`` has been
@@ -2630,6 +2646,14 @@ def create(image,
         # Create a CentOS 7 container that will stay running once started
         salt myminion dockerng.create centos:7 name=mycent7 interactive=True tty=True command=bash
     '''
+    if 'command' in kwargs:
+        if 'cmd' in kwargs:
+            raise SaltInvocationError(
+                'Only one of \'cmd\' and \'command\' can be used. Both '
+                'arguments are equivalent.'
+            )
+        kwargs['cmd'] = kwargs.pop('command')
+
     try:
         # Try to inspect the image, if it fails then we know we need to pull it
         # first.
@@ -2653,6 +2677,18 @@ def create(image,
             val = VALID_CREATE_OPTS[key]
             if 'api_name' in val:
                 create_kwargs[val['api_name']] = create_kwargs.pop(key)
+
+    # Added to manage api change in 1.19.
+    # mem_limit and memswap_limit must be provided in host_config object
+    if salt.utils.version_cmp(version()['ApiVersion'], '1.18') == 1:
+        create_kwargs['host_config'] = docker.utils.create_host_config(
+            mem_limit=create_kwargs.get('mem_limit'),
+            memswap_limit=create_kwargs.get('memswap_limit')
+        )
+        if 'mem_limit' in create_kwargs:
+            del create_kwargs['mem_limit']
+        if 'memswap_limit' in create_kwargs:
+            del create_kwargs['memswap_limit']
 
     log.debug(
         'dockerng.create is using the following kwargs to create '

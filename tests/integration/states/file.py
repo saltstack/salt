@@ -1096,6 +1096,17 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
             self.assertSaltTrueReturn(ret)
         finally:
+            if os.path.isfile(name):
+                os.remove(name)
+
+        try:
+            # Parent directory exists but file does not and makedirs is False
+            ret = self.run_state(
+                'file.append', name=name, text='cheese'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(name))
+        finally:
             shutil.rmtree(
                 os.path.join(integration.TMP, 'issue_1864'),
                 ignore_errors=True
@@ -1754,6 +1765,23 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
             )
         finally:
             os.remove(source)
+
+    def test_issue_25250_force_copy_deletes(self):
+        '''
+        ensure force option in copy state does not delete target file
+        '''
+        dest = os.path.join(integration.TMP, 'dest')
+        source = os.path.join(integration.TMP, 'source')
+        shutil.copyfile(os.path.join(integration.FILES, 'hosts'), source)
+        shutil.copyfile(os.path.join(integration.FILES, 'file/base/cheese'), dest)
+
+        self.run_state('file.copy', name=dest, source=source, force=True)
+        self.assertTrue(os.path.exists(dest))
+        self.assertTrue(filecmp.cmp(source, dest))
+
+        os.remove(source)
+        os.remove(dest)
+
 
 if __name__ == '__main__':
     from integration import run_tests

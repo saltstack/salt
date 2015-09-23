@@ -41,7 +41,7 @@ class LocalemodTestCase(TestCase):
         Test for Get the current system locale
         '''
         with patch.dict(localemod.__grains__, {'os_family': ['Arch']}):
-            with patch.object(localemod, '_localectl_get', return_value=True):
+            with patch.object(localemod, '_locale_get', return_value=True):
                 self.assertTrue(localemod.get_locale())
 
         with patch.dict(localemod.__grains__, {'os_family': ['Gentoo']}):
@@ -114,7 +114,7 @@ class LocalemodTestCase(TestCase):
         '''
         Tests the return of successful gen_locale on Debian system without a charmap
         '''
-        def file_search(search, pattern):
+        def file_search(search, pattern, flags):
             '''
             mock file.search
             '''
@@ -164,7 +164,7 @@ class LocalemodTestCase(TestCase):
         '''
         Tests the return of successful gen_locale on Gentoo system without a charmap
         '''
-        def file_search(search, pattern):
+        def file_search(search, pattern, flags):
             '''
             mock file.search
             '''

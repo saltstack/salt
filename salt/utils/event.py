@@ -57,6 +57,7 @@ import os
 import time
 import errno
 import signal
+import fnmatch
 import hashlib
 import logging
 import datetime
@@ -122,8 +123,8 @@ def get_event(node, sock_dir=None, transport='zeromq', opts=None, listen=True):
     # TODO: AIO core is separate from transport
     if transport in ('zeromq', 'tcp'):
         if node == 'master':
-            return MasterEvent(sock_dir, opts)
-        return SaltEvent(node, sock_dir, opts)
+            return MasterEvent(sock_dir, opts, listen=listen)
+        return SaltEvent(node, sock_dir, opts, listen=listen)
     elif transport == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.RAETEvent(node,
@@ -138,7 +139,7 @@ def get_master_event(opts, sock_dir, listen=True):
     '''
     # TODO: AIO core is separate from transport
     if opts['transport'] in ('zeromq', 'tcp'):
-        return MasterEvent(sock_dir, opts)
+        return MasterEvent(sock_dir, opts, listen=listen)
     elif opts['transport'] == 'raet':
         import salt.utils.raetevent
         return salt.utils.raetevent.MasterEvent(
@@ -172,7 +173,7 @@ class SaltEvent(object):
     RAET compatible
     The base class used to manage salt events
     '''
-    def __init__(self, node, sock_dir=None, opts=None):
+    def __init__(self, node, sock_dir=None, opts=None, listen=True):
         self.serial = salt.payload.Serial({'serial': 'msgpack'})
         self.context = zmq.Context()
         self.poller = zmq.Poller()
@@ -186,8 +187,10 @@ class SaltEvent(object):
         if salt.utils.is_windows() and not hasattr(opts, 'ipc_mode'):
             opts['ipc_mode'] = 'tcp'
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
-        self.subscribe()
+        self.pending_tags = []
         self.pending_events = []
+        if not self.cpub:
+            self.connect_pub()
         self.__load_cache_regex()
 
     @classmethod
@@ -257,18 +260,36 @@ class SaltEvent(object):
         )
         return puburi, pulluri
 
-    def subscribe(self, tag=None):
+    def subscribe(self, tag=None, match_type=None):
         '''
         Subscribe to events matching the passed tag.
-        '''
-        if not self.cpub:
-            self.connect_pub()
 
-    def unsubscribe(self, tag=None):
+        If you do not subscribe to a tag, events will be discarded by calls to
+        get_event that request a different tag. In contexts where many different
+        jobs are outstanding it is important to subscribe to prevent one call
+        to get_event from discarding a response required by a subsequent call
+        to get_event.
+        '''
+        if tag is None:
+            return
+        match_func = self._get_match_func(match_type)
+        self.pending_tags.append([tag, match_func])
+
+    def unsubscribe(self, tag, match_type=None):
         '''
         Un-subscribe to events matching the passed tag.
         '''
-        return
+        if tag is None:
+            return
+        match_func = self._get_match_func(match_type)
+
+        self.pending_tags.remove([tag, match_func])
+
+        old_events = self.pending_events
+        self.pending_events = []
+        for evt in old_events:
+            if any(pmatch_func(evt['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
+                self.pending_events.append(evt)
 
     def connect_pub(self):
         '''
@@ -307,13 +328,13 @@ class SaltEvent(object):
             match_type = self.opts.get('event_match_type', 'startswith')
         return getattr(self, '_match_tag_{0}'.format(match_type), None)
 
-    def _check_pending(self, tag, pending_tags, match_func=None):
+    def _check_pending(self, tag, match_func=None):
         """Check the pending_events list for events that match the tag
 
         :param tag: The tag to search for
         :type tag: str
-        :param pending_tags: List of tags to preserve
-        :type pending_tags: list[str]
+        :param tags_regex: List of re expressions to search for also
+        :type tags_regex: list[re.compile()]
         :return:
         """
         if match_func is None:
@@ -325,13 +346,17 @@ class SaltEvent(object):
             if match_func(evt['tag'], tag):
                 if ret is None:
                     ret = evt
+                    log.trace('get_event() returning cached event = {0}'.format(ret))
                 else:
                     self.pending_events.append(evt)
-            elif any(match_func(evt['tag'], ptag) for ptag in pending_tags):
+            elif any(pmatch_func(evt['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
                 self.pending_events.append(evt)
+            else:
+                log.trace('get_event() discarding cached event that no longer has any subscriptions = {0}'.format(evt))
         return ret
 
-    def _match_tag_startswith(self, event_tag, search_tag):
+    @staticmethod
+    def _match_tag_startswith(event_tag, search_tag):
         '''
         Check if the event_tag matches the search check.
         Uses startswith to check.
@@ -339,7 +364,8 @@ class SaltEvent(object):
         '''
         return event_tag.startswith(search_tag)
 
-    def _match_tag_endswith(self, event_tag, search_tag):
+    @staticmethod
+    def _match_tag_endswith(event_tag, search_tag):
         '''
         Check if the event_tag matches the search check.
         Uses endswith to check.
@@ -347,7 +373,8 @@ class SaltEvent(object):
         '''
         return event_tag.endswith(search_tag)
 
-    def _match_tag_find(self, event_tag, search_tag):
+    @staticmethod
+    def _match_tag_find(event_tag, search_tag):
         '''
         Check if the event_tag matches the search check.
         Uses find to check.
@@ -363,20 +390,34 @@ class SaltEvent(object):
         '''
         return self.cache_regex.get(search_tag).search(event_tag) is not None
 
-    def _get_event(self, wait, tag, pending_tags, match_func=None):
+    def _match_tag_fnmatch(self, event_tag, search_tag):
+        '''
+        Check if the event_tag matches the search check.
+        Uses fnmatch to check.
+        Return True (matches) or False (no match)
+        '''
+        return fnmatch.fnmatch(event_tag, search_tag)
+
+    def _get_event(self, wait, tag, match_func=None, no_block=False):
         if match_func is None:
             match_func = self._get_match_func()
         start = time.time()
         timeout_at = start + wait
-        while not wait or time.time() <= timeout_at:
+        run_once = False
+        if no_block is True:
+            wait = 0
+        while (run_once is False and not wait) or time.time() <= timeout_at:
+            if no_block is True:
+                if run_once is True:
+                    break
+                # Trigger that at least a single iteration has gone through
+                run_once = True
             try:
                 # convert to milliseconds
                 socks = dict(self.poller.poll(wait * 1000))
                 if socks.get(self.sub) != zmq.POLLIN:
                     continue
 
-                # Please do not use non-blocking mode here. Reliability is
-                # more important than pure speed on the event bus.
                 ret = self.get_event_block()
             except zmq.ZMQError as ex:
                 if ex.errno == errno.EAGAIN or ex.errno == errno.EINTR:
@@ -384,8 +425,10 @@ class SaltEvent(object):
                 else:
                     raise
 
-            if not match_func(ret['tag'], tag):     # tag not match
-                if any(match_func(ret['tag'], ptag) for ptag in pending_tags):
+            if not match_func(ret['tag'], tag):
+                # tag not match
+                if any(pmatch_func(ret['tag'], ptag) for ptag, pmatch_func in self.pending_tags):
+                    log.trace('get_event() caching unwanted event = {0}'.format(ret))
                     self.pending_events.append(ret)
                 if wait:  # only update the wait timeout if we had one
                     wait = timeout_at - time.time()
@@ -393,11 +436,17 @@ class SaltEvent(object):
 
             log.trace('get_event() received = {0}'.format(ret))
             return ret
-
+        log.trace('_get_event() waited {0} seconds and received nothing'.format(wait * 1000))
         return None
 
-    def get_event(self, wait=5, tag='', full=False, use_pending=False,
-                  pending_tags=None, match_type=None):
+    def get_event(self,
+                  wait=5,
+                  tag='',
+                  full=False,
+                  use_pending=None,
+                  pending_tags=None,
+                  match_type=None,
+                  no_block=False):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
@@ -405,21 +454,11 @@ class SaltEvent(object):
 
         IF wait is 0 then block forever.
 
-        New in Boron always checks the list of pending events
-
-        New in @TBD optionally set match_type
-
-        use_pending
-            Defines whether to keep all unconsumed events in a pending_events
-            list, or to discard events that don't match the requested tag.  If
-            set to True, MAY CAUSE MEMORY LEAKS.
-
-        pending_tags
-            Add any events matching the listed tags to the pending queue.
-            Still MAY CAUSE MEMORY LEAKS but less likely than use_pending
-            assuming you later get_event for the tags you've listed here
-
-            New in Boron
+        tag
+            Only return events matching the given tag. If not specified, or set
+            to an empty string, all events are returned. It is recommended to
+            always be selective on what is to be returned in the event that
+            multiple requests are being multiplexed
 
         match_type
             Set the function to match the search tag with event tags.
@@ -427,20 +466,48 @@ class SaltEvent(object):
              - 'endswith' : search for event tags that end with tag
              - 'find' : search for event tags that contain tag
              - 'regex' : regex search '^' + tag event tags
+             - 'fnmatch' : fnmatch tag event tags matching
             Default is opts['event_match_type'] or 'startswith'
 
-            New in @TBD
+            .. versionadded:: 2015.8.0
+
+        no_block
+            Define if getting the event should be a blocking call or not.
+            Defaults to False to keep backwards compatibility.
+
+            .. versionadded:: 2015.8.0
+
+        Notes:
+
+        Searches cached publications first. If no cached publications are found
+        that match the given tag specification, new publications are received
+        and checked.
+
+        If a publication is received that does not match the tag specification,
+        it is DISCARDED unless it is subscribed to via subscribe() which will
+        cause it to be cached.
+
+        If a caller is not going to call get_event immediately after sending a
+        request, it MUST subscribe the result to ensure the response is not lost
+        should other regions of code call get_event for other purposes.
         '''
-
+        if use_pending is not None:
+            salt.utils.warn_until(
+                'Nitrogen',
+                'The \'use_pending\' keyword argument is deprecated and is simply ignored. '
+                'Please stop using it since it\'s support will be removed in {version}.'
+            )
+        if pending_tags is not None:
+            salt.utils.warn_until(
+                'Nitrogen',
+                'The \'pending_tags\' keyword argument is deprecated and is simply ignored. '
+                'Please stop using it since it\'s support will be removed in {version}.'
+            )
         match_func = self._get_match_func(match_type)
-        if use_pending:
-            pending_tags = ['']
-        elif pending_tags is None:
-            pending_tags = []
 
-        ret = self._check_pending(tag, pending_tags, match_func)
+        ret = self._check_pending(tag, match_func)
         if ret is None:
-            ret = self._get_event(wait, tag, pending_tags, match_func)
+            ret = self._get_event(wait, tag, match_func, no_block)
 
         if ret is None or full:
             return ret
@@ -606,8 +673,8 @@ class MasterEvent(SaltEvent):
     RAET compatible
     Create a master event management object
     '''
-    def __init__(self, sock_dir, opts=None):
-        super(MasterEvent, self).__init__('master', sock_dir, opts)
+    def __init__(self, sock_dir, opts=None, listen=True):
+        super(MasterEvent, self).__init__('master', sock_dir, opts, listen=listen)
 
 
 class LocalClientEvent(MasterEvent):
@@ -640,9 +707,9 @@ class MinionEvent(SaltEvent):
     RAET compatible
     Create a master event management object
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, listen=True):
         super(MinionEvent, self).__init__(
-            'minion', sock_dir=opts.get('sock_dir', None), opts=opts)
+            'minion', sock_dir=opts.get('sock_dir', None), opts=opts, listen=listen)
 
 
 class AsyncEventPublisher(object):
@@ -720,13 +787,13 @@ class AsyncEventPublisher(object):
                     # We're already trying the default system path, stop now!
                     raise
 
-            if not os.path.isdir(default_minion_sock_dir):
-                try:
-                    os.makedirs(default_minion_sock_dir, 0o755)
-                except OSError as exc:
-                    log.error('Could not create SOCK_DIR: {0}'.format(exc))
-                    # Let's stop at this stage
-                    raise
+                if not os.path.isdir(default_minion_sock_dir):
+                    try:
+                        os.makedirs(default_minion_sock_dir, 0o755)
+                    except OSError as exc:
+                        log.error('Could not create SOCK_DIR: {0}'.format(exc))
+                        # Let's stop at this stage
+                        raise
 
         # Create the pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
@@ -904,7 +971,7 @@ class EventReturn(multiprocessing.Process):
         signal.signal(signal.SIGTERM, self.sig_stop)
 
         salt.utils.appendproctitle(self.__class__.__name__)
-        self.event = get_event('master', opts=self.opts)
+        self.event = get_event('master', opts=self.opts, listen=True)
         events = self.event.iter_events(full=True)
         self.event.fire_event({}, 'salt/event_listen/start')
         try:
@@ -947,7 +1014,6 @@ class StateFire(object):
     '''
     def __init__(self, opts, auth=None):
         self.opts = opts
-        self.event = SaltEvent(opts, 'minion')
         if not auth:
             self.auth = salt.crypt.SAuth(self.opts)
         else:

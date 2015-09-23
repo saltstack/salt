@@ -5,6 +5,9 @@ Create and verify ANSI X9.31 RSA signatures using OpenSSL libcrypto
 
 # python libs
 from __future__ import absolute_import
+import glob
+import sys
+import os
 
 # salt libs
 import salt.utils
@@ -12,7 +15,6 @@ import salt.utils
 # 3rd-party libs
 from ctypes import cdll, c_char_p, c_int, c_void_p, pointer, create_string_buffer
 from ctypes.util import find_library
-import sys
 
 
 def _load_libcrypto():
@@ -21,8 +23,18 @@ def _load_libcrypto():
     '''
     if sys.platform.startswith('win'):
         return cdll.LoadLibrary('libeay32')
+    elif getattr(sys, 'frozen', False) and salt.utils.is_smartos():
+        return cdll.LoadLibrary(glob.glob(os.path.join(
+            os.path.dirname(sys.executable),
+            'libcrypto.so*'))[0])
     else:
         lib = find_library('crypto')
+        if not lib and salt.utils.is_smartos():
+            # smartos does not have libraries in std location
+            lib = glob.glob(os.path.join(
+                '/opt/local/lib',
+                'libcrypto.so*'))
+            lib = lib[0] if len(lib) > 0 else None
         if lib:
             return cdll.LoadLibrary(lib)
         raise OSError('Cannot locate OpenSSL libcrypto')
