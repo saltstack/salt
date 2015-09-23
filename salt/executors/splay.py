@@ -84,8 +84,4 @@ class SplayExecutor(ModuleExecutorBase):
         my_delay = self._calc_splay(__grains__['id'], splaytime=self.splaytime)
         log.debug("Splay is sleeping {0} secs on {1}".format(my_delay, self.fun_name))
         time.sleep(my_delay)
-        result = self.executor.execute()
-        if not isinstance(result, dict):
-            result = {'result': result}
-        result['splaytime'] = str(my_delay)
-        return result
+        return self.executor.execute()

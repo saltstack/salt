@@ -45,7 +45,7 @@ class MockState(object):
         '''
         flag = None
 
-        def __init__(self, opts, pillar=False):
+        def __init__(self, opts, pillar=False, pillar_enc=None):
             pass
 
         def verify_data(self, data):
@@ -133,10 +133,10 @@ class MockState(object):
         flag = False
         opts = {'state_top': ""}
 
-        def __init__(self, opts, pillar=None, kwargs=None):
-            pillar = pillar
-            kwargs = kwargs
-            self.state = MockState.State(opts)
+        def __init__(self, opts, pillar=None, jid=None, pillar_enc=None):
+            self.state = MockState.State(opts,
+                                         pillar=pillar,
+                                         pillar_enc=pillar_enc)
 
         def render_state(self, sls, saltenv, mods, matches, local=False):
             '''
