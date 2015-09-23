@@ -195,27 +195,10 @@ def __virtual__():
             continue
 
         parameters = details['ec2']
-
-        if not os.path.exists(parameters['private_key']):
-            raise SaltCloudException(
-                'The EC2 key file \'{0}\' used in the \'{1}\' provider '
-                'configuration does not exist\n'.format(
-                    parameters['private_key'],
-                    provider
-                )
-            )
-
-        key_mode = str(
-            oct(stat.S_IMODE(os.stat(parameters['private_key']).st_mode))
-        )
-        if key_mode not in ('0400', '0600'):
-            raise SaltCloudException(
-                'The EC2 key file \'{0}\' used in the \'{1}\' provider '
-                'configuration needs to be set to mode 0400 or 0600\n'.format(
-                    parameters['private_key'],
-                    provider
-                )
-            )
+        if salt.utils.cloud.check_key_path_and_mode(
+                provider, parameters['private_key']
+        ) is False:
+            return False
 
     return __virtualname__
 
