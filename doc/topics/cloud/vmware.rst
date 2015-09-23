@@ -132,6 +132,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
           SCSI controller 3:
             type: paravirtual
             bus_sharing: physical
+        ide:
+          IDE controller 1
 
       domain: mycompany.com
       dns_servers:
@@ -139,10 +141,11 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         - 123.127.255.241
         - 123.127.255.242
 
-      # If cloning from template, either resourcepool or cluster MUST be specified!
+      # If cloning from template or creating without cloning, either resourcepool or cluster MUST be specified!
       resourcepool: Resources
       cluster: Prod
 
+      # If creating without cloning, datastore and folder MUST be specified!
       datastore: HUGE-DATASTORE-Cluster
       folder: Development
       datacenter: DC1
@@ -168,12 +171,14 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         /srv/salt/yum/epel.repo: /etc/yum.repos.d/epel.repo
 
       hardware_version: 10
+      guest_id: centos64Guest
 
 ``provider``
     Enter the name that was specified when the cloud provider config was created.
 
 ``clonefrom``
-    Enter the name of the VM/template to clone from.
+    Enter the name of the VM/template to clone from. If not specified, the VM will be created
+    without cloning.
 
 ``num_cpus``
     Enter the number of vCPUS that you want the VM/template to have. If not specified,
@@ -207,11 +212,20 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             Enter the mode of connection only if ``device_type: client_device``. Currently
             supported modes are ``passthrough`` and ``atapi``. This field is ignored if
             ``device_type: datastore_iso_file``. Default is ``mode: passthrough``
+        controller
+            Specify IDE controller on which to attach the drive. Must be specified when
+            creating both a controller and a drive at the same time.
 
     disk
         Enter the disk specification here. If the hard disk doesn\'t exist, it will
         be created with the provided size. If the hard disk already exists, it will
         be expanded if the provided size is greater than the current size of the disk.
+
+        size
+            Enter the size of disk
+        controller
+            Enter the controller on which to attach the disk. Must be specified when
+            creating both a controller and a disk at the same time.
 
     network
         Enter the network adapter specification here. If the network adapter doesn\'t
@@ -273,6 +287,9 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 
             no
                 Virtual disks cannot be shared between virtual machines.
+
+    ide
+        Specify to add a IDE adapter.
 
 ``domain``
     Enter the global domain name to be used for DNS. If not specified and if the VM name
@@ -393,3 +410,13 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 ``hardware_version``
     Specify the virtual hardware version for the vm/template that is supported by the
     host.
+
+``guest_id``
+    Specify the guest id of the VM. For a full list of supported values see the
+    VMware vSphere documentation:
+
+    http://pubs.vmware.com/vsphere-60/topic/com.vmware.wssdk.apiref.doc/vim.vm.GuestOsDescriptor.GuestOsIdentifier.html
+
+    .. note::
+
+      - For a clone operation, this argument is ignored.
