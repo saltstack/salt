@@ -1299,7 +1299,15 @@ def _modify_eni_properties(eni_id, properties=None):
     while retries > 0:
         retries = retries - 1
 
-        result = query(params, return_root=True)
+        # result = query(params, return_root=True)
+
+        result = aws.query(params,
+                           return_root=True,
+                           location=get_location(),
+                           provider=get_provider(),
+                           opts=__opts__,
+                           sigver='4')
+
         if isinstance(result, dict) and result.get('error'):
             time.sleep(1)
             continue
