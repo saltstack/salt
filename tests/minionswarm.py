@@ -14,6 +14,7 @@ import time
 import signal
 import optparse
 import subprocess
+import random
 import tempfile
 import shutil
 import sys
@@ -25,6 +26,18 @@ import salt
 import yaml
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
+
+OSES = [
+        'Arch',
+        'Ubuntu',
+        'Debian',
+        'CentOS',
+        'Fedora',
+        'Gentoo',
+        'AIX',
+        'Solaris',
+        ]
 
 
 def parse():
@@ -58,6 +71,12 @@ def parse():
         help=('Give the minions an alternative id prefix, this is used '
               'when minions from many systems are being aggregated onto '
               'a single master'))
+    parser.add_option(
+        '--rand-os',
+        dest='rand_os',
+        default=False,
+        action='store_true',
+        help='Each Minion claims a different os grain')
     parser.add_option(
         '-k',
         '--keep-modules',
@@ -246,7 +265,8 @@ class MinionSwarm(Swarm):
             'user': self.opts['user'],
             'cachedir': os.path.join(dpath, 'cache'),
             'master': self.opts['master'],
-            'log_file': os.path.join(dpath, 'minion.log')
+            'log_file': os.path.join(dpath, 'minion.log'),
+            'grains': {},
         }
 
         if self.opts['transport'] == 'zeromq':
@@ -277,6 +297,9 @@ class MinionSwarm(Swarm):
             fn_prefixes = (fn_.partition('.')[0] for fn_ in os.listdir(modpath))
             ignore = [fn_prefix for fn_prefix in fn_prefixes if fn_prefix not in keep]
             data['disable_modules'] = ignore
+
+        if self.opts['rand_os']:
+            data['grains']['os'] = random.choice(OSES)
 
         with open(path, 'w+') as fp_:
             yaml.dump(data, fp_)
