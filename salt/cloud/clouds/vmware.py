@@ -2336,12 +2336,10 @@ def create(vm_):
         )
     elif not clone_type:
         raise SaltCloudSystemExit(
-            'You must either specify a cluster or a resource pool when not cloning.'
+            'You must either specify a cluster or a resource pool when creating.'
         )
     else:
         log.debug("Using resource pool used by the {0} {1}".format(clone_type, vm_['clonefrom']))
-
-    log.trace('resourcepool_ref: {0}'.format(resourcepool_ref))
 
     # Either a datacenter or a folder can be optionally specified when cloning, required when creating.
     # If not specified when cloning, the existing VM/template\'s parent folder is used.
@@ -2366,8 +2364,6 @@ def create(vm_):
     else:
         log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
         folder_ref = object_ref.parent
-
-    log.trace('folder_ref: {0}'.format(folder_ref))
 
     if 'clonefrom' in vm_:
         # Create the relocation specs
@@ -2535,7 +2531,7 @@ def create(vm_):
                 task = object_ref.Clone(folder_ref, vm_name, clone_spec)
                 _wait_for_task(task, vm_name, "clone", 5, 'info')
         else:
-            log.info("Creating {0} without cloning".format(vm_['name']))
+            log.info('Creating {0}'.format(vm_['name']))
 
             task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref)
             _wait_for_task(task, vm_name, "create", 5, 'info')
@@ -2549,6 +2545,11 @@ def create(vm_):
         return {'Error': err_msg}
 
     new_vm_ref = _get_mor_by_property(vim.VirtualMachine, vm_name)
+
+    # Find how to power on in CreateVM_Task (if possible), for now this will do
+    if not clone_type and power:
+        task = new_vm_ref.PowerOn()
+        _wait_for_task(task, vm_name, 'power', 5, 'info')
 
     # If it a template or if it does not need to be powered on then do not wait for the IP
     if not template and power:
