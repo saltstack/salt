@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import salt.utils
 import time
 import logging
+import os
 from subprocess import list2cmdline
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import range
@@ -45,9 +46,13 @@ def has_powershell():
 
         salt '*' service.has_powershell
     '''
-    return 'powershell' in __salt__['cmd.run'](
-            ['where', 'powershell'], python_shell=False
-        )
+    for path in os.environ["PATH"].split(os.pathsep):
+        path = path.strip('"')
+        fullpath = os.path.join(path, "powershell.exe")
+        fullpath = os.path.normpath(fullpath)
+        if os.path.isfile(fullpath) and os.access(fullpath, os.X_OK):
+            return True
+    return False
 
 
 def get_enabled():
@@ -241,7 +246,6 @@ def restart(name):
 
 def create_win_salt_restart_task():
     '''
-
     Create a task in Windows task scheduler to enable restarting the salt-minion
 
     CLI Example:
@@ -390,7 +394,7 @@ def create(name,
            obj=None,
            password=None,
            **kwargs):
-    '''
+    r'''
     Create the named service.
 
     .. versionadded:: 2015.8.0

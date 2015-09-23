@@ -73,9 +73,13 @@ def get_path():
 
         salt '*' win_path.get_path
     '''
-    ret = __salt__['reg.read_key']('HKEY_LOCAL_MACHINE',
+    ret = __salt__['reg.read_value']('HKEY_LOCAL_MACHINE',
                                    'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
-                                   'PATH').split(';')
+                                   'PATH')
+    if isinstance(ret, dict):
+        ret = ret['vdata'].split(';')
+    if isinstance(ret, str):
+        ret = ret.split(';')
 
     # Trim ending backslash
     return list(map(_normalize_dir, ret))
@@ -148,7 +152,7 @@ def add(path, index=0):
 
     # Add it to the Path
     sysPath.insert(index, path)
-    regedit = __salt__['reg.set_key'](
+    regedit = __salt__['reg.set_value'](
         'HKEY_LOCAL_MACHINE',
         'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
         'PATH',
@@ -190,7 +194,7 @@ def remove(path):
     except ValueError:
         return True
 
-    regedit = __salt__['reg.set_key'](
+    regedit = __salt__['reg.set_value'](
         'HKEY_LOCAL_MACHINE',
         'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
         'PATH',
