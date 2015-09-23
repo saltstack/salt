@@ -270,6 +270,8 @@ def _get_reg_software():
     reg_software = {}
     # This is a list of default OS reg entries that don't seem to be installed
     # software and no version information exists on any of these items
+    # Also, some MS Office updates don't register a product name which means
+    # their information is useless.
     ignore_list = ['AddressBook',
                    'Connection Manager',
                    'DirectDrawEx',
@@ -280,8 +282,8 @@ def _get_reg_software():
                    'IEData',
                    'MobileOptionPack',
                    'SchedulingAgent',
-                   'WIC'
-                   ]
+                   'WIC',
+                   'Not Found']
     encoding = locale.getpreferredencoding()
 
     #attempt to corral the wild west of the multiple ways to install
@@ -319,11 +321,8 @@ def _get_reg_software():
                     prd_uninst_key,
                     "DisplayVersion")
                 if name not in ignore_list:
-                    if prd_name != 'Not Found':
-                        # some MS Office updates don't register a product name which means
-                        # their information is useless
-                        if prd_name != '':
-                            reg_software[prd_name] = prd_ver
+                    if prd_name != '':
+                        reg_software[prd_name] = prd_ver
     return reg_software
 
 
