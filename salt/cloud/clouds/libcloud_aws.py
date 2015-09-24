@@ -34,7 +34,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import stat
 import uuid
 import pprint
 import logging
@@ -101,29 +100,14 @@ def __virtual__():
         return False
 
     for provider, details in six.iteritems(__opts__['providers']):
-        if 'provider' not in details or details['provider'] != 'aws':
+        if 'aws' not in details:
             continue
 
-        if not os.path.exists(details['private_key']):
-            raise SaltCloudException(
-                'The AWS key file \'{0}\' used in the \'{1}\' provider '
-                'configuration does not exist\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
-
-        keymode = str(
-            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
-        )
-        if keymode not in ('0400', '0600'):
-            raise SaltCloudException(
-                'The AWS key file \'{0}\' used in the \'{1}\' provider '
-                'configuration needs to be set to mode 0400 or 0600\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
+        parameters = details['aws']
+        if salt.utils.cloud.check_key_path_and_mode(
+            provider, parameters['private_key']
+        ) is False:
+            return False
 
     global avail_images, avail_sizes, script, list_nodes
     global avail_locations, list_nodes_full, list_nodes_select, get_image
