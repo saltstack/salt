@@ -253,6 +253,7 @@ def proxy(opts, functions, whitelist=None, loaded_base_name=None):
     '''
     Returns the proxy module for this salt-proxy-minion
     '''
+    dirs = _module_dirs(opts, 'proxy', 'proxy')
     return LazyLoader(_module_dirs(opts, 'proxy', 'proxy'),
                       opts,
                       tag='proxy',

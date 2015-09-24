@@ -6,3 +6,11 @@ Version 2015.8.1 is a bugfix release for :doc:`2015.8.0
 </topics/releases/2015.8.0>`.
 
 Changes:
+
+- Some issues with proxy minions were corrected.
+
+Known Issues:
+
+- Proxy minions currently cannot execute a highstate because of the way
+  the proxymodule is being loaded internally.  This will be fixed in a
+  future release.
