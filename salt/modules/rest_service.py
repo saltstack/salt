@@ -11,7 +11,7 @@ __proxyenabled__ = ['rest_sample']
 log = logging.getLogger(__name__)
 
 __func_alias__ = {
-    'reload_': 'reload'
+    'list_': 'list'
 }
 
 # Define the module's virtual name
@@ -39,6 +39,19 @@ def get_all():
     '''
     proxy_fn = 'rest_sample'+ '.service_list'
     return __opts__['proxymodule'][proxy_fn]()
+
+
+def list_():
+    '''
+    Return a list of all available services
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.list
+    '''
+    return get_all()
 
 
 def start(name, sig=None):
