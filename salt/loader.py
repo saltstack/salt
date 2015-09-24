@@ -158,6 +158,8 @@ def minion_mods(
                      whitelist=whitelist,
                      loaded_base_name=loaded_base_name)
 
+    ret.pack['__salt__'] = ret
+
     # Load any provider overrides from the configuration file providers option
     #  Note: Providers can be pkg, service, user or group - not to be confused
     #        with cloud providers.
@@ -175,8 +177,6 @@ def minion_mods(
                     for func in funcs:
                         f_key = '{0}{1}'.format(mod, func[func.rindex('.'):])
                         ret[f_key] = funcs[func]
-
-    ret.pack['__salt__'] = ret
 
     return ret
 
