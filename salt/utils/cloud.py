@@ -74,6 +74,8 @@ NSTATES = {
 }
 
 SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
+SSH_PASSWORD_PROMP_SUDO_RE = \
+    re.compile(r'(?:.*sudo)(?:.*)[Pp]assword(?: for .*)?:', re.M)
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -654,17 +656,29 @@ def wait_for_winexesvc(host, port, username, password, timeout=900, gateway=None
     start = time.time()
     log.debug(
         'Attempting winexe connection to host {0} on port {1}'.format(
-            host, port
+            host,
+            port
         )
     )
-    creds = '-U {0}%{1} //{2}'.format(
-            username, password, host)
+    creds = "-U '{0}%{1}' //{2}".format(
+        username,
+        password,
+        host
+    )
+    logging_creds = "-U '{0}%XXX-REDACTED-XXX' //{1}".format(
+        username,
+        host
+    )
+
     trycount = 0
     while True:
         trycount += 1
         try:
             # Shell out to winexe to check %TEMP%
-            ret_code = win_cmd('winexe {0} "sc query winexesvc"'.format(creds))
+            ret_code = win_cmd(
+                'winexe {0} "sc query winexesvc"'.format(creds),
+                logging_command=logging_creds
+            )
             if ret_code == 0:
                 log.debug('winexe connected...')
                 return True
@@ -688,9 +702,17 @@ def validate_windows_cred(host, username='Administrator', password=None):
     '''
     Check if the windows credentials are valid
     '''
-    retcode = win_cmd('winexe -U {0}%{1} //{2} "hostname"'.format(
-        username, password, host
-    ))
+    cmd = "winexe -U '{0}%{1}' //{2} \"hostname\"".format(
+            username,
+            password,
+            host
+        )
+    logging_cmd = "winexe -U '{0}%XXX-REDACTED-XXX' //{1} \"hostname\"".format(
+        username,
+        host
+    )
+
+    retcode = win_cmd(cmd, logging_command=logging_cmd)
     return retcode == 0
 
 
@@ -803,16 +825,35 @@ def deploy_windows(host,
             )
         )
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-        creds = '-U {0}%{1} //{2}'.format(
-            username, password, host)
+
+        creds = "-U '{0}%{1}' //{2}".format(
+            username,
+            password,
+            host
+        )
+        logging_creds = "-U '{0}%XXX-REDACTED-XXX' //{1}".format(
+            username,
+            host
+        )
         # Shell out to smbclient to create C:\salttmp\
-        win_cmd('smbclient {0}/c$ -c "mkdir salttemp; exit;"'.format(creds))
+        smb_tmp_cmd = 'smbclient {0}/c$ -c "mkdir salttemp; exit;"'.format(creds)
+        logging_smb_tmp_cmd = 'smbclient {0}/c$ -c "mkdir salttemp; exit;"'.format(logging_creds)
+        win_cmd(smb_tmp_cmd, logging_command=logging_smb_tmp_cmd)
+
         # Shell out to smbclient to create C:\salt\conf\pki\minion
-        win_cmd('smbclient {0}/c$ -c "mkdir salt; mkdir salt\\conf; mkdir salt\\conf\\pki; mkdir salt\\conf\\pki\\minion; exit;"'.format(creds))
+        smb_minon_cmd = 'smbclient {0}/c$ -c "mkdir salt; mkdir salt\\conf; ' \
+                        'mkdir salt\\conf\\pki; mkdir salt\\conf\\pki\\minion; ' \
+                        'exit;"'.format(creds)
+        logging_smb_minon_cmd = 'smbclient {0}/c$ -c "mkdir salt; mkdir salt\\conf; ' \
+                                'mkdir salt\\conf\\pki; mkdir salt\\conf\\pki\\minion; ' \
+                                'exit;"'.format(logging_creds)
+        win_cmd(smb_minon_cmd, logging_command=logging_smb_minon_cmd)
+
         # Shell out to smbclient to copy over minion keys
-        ## minion_pub, minion_pem
+        # minion_pub, minion_pem
         kwargs = {'hostname': host,
-                  'creds': creds}
+                  'creds': creds,
+                  'logging_creds': logging_creds}
 
         if minion_pub:
             smb_file('salt\\conf\\pki\\minion\\minion.pub', minion_pub, kwargs)
@@ -827,15 +868,33 @@ def deploy_windows(host,
         comps = win_installer.split('/')
         local_path = '/'.join(comps[:-1])
         installer = comps[-1]
-        win_cmd('smbclient {0}/c$ -c "cd salttemp; prompt; lcd {1}; mput {2}; exit;"'.format(
-            creds, local_path, installer
-        ))
+        smb_cd_cmd = 'smbclient {0}/c$ -c "cd salttemp; prompt; lcd {1}; ' \
+                     'mput {2}; exit;"'.format(creds,
+                                               local_path,
+                                               installer)
+        logging_smb_cd_cmd = 'smbclient {0}/c$ -c "cd salttemp; prompt; ' \
+                             'lcd {1}; mput {2}; exit;"'.format(logging_creds,
+                                                                local_path,
+                                                                installer)
+
+        win_cmd(smb_cd_cmd, logging_cmd=logging_smb_cd_cmd)
+
         # Shell out to winexe to execute win_installer
-        ## We don't actually need to set the master and the minion here since
-        ## the minion config file will be set next via smb_file
-        win_cmd('winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
-            creds, installer, master, name
-        ))
+        # We don't actually need to set the master and the minion here since
+        # the minion config file will be set next via impacket
+        cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
+            creds,
+            installer,
+            master,
+            name
+        )
+        logging_cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
+            logging_creds,
+            installer,
+            master,
+            name
+        )
+        win_cmd(cmd, logging_command=logging_cmd)
 
         # Shell out to smbclient to copy over minion_conf
         if minion_conf:
@@ -868,23 +927,40 @@ def deploy_windows(host,
                 salt_config_to_yaml(minion_conf, line_break='\r\n'),
                 kwargs
             )
+
         # Shell out to smbclient to delete C:\salttmp\ and installer file
-        ## Unless keep_tmp is True
+        # Unless keep_tmp is True
         if not keep_tmp:
-            win_cmd('smbclient {0}/c$ -c "del salttemp\\{1}; prompt; exit;"'.format(
-                creds,
-                installer,
-            ))
-            win_cmd('smbclient {0}/c$ -c "rmdir salttemp; prompt; exit;"'.format(
-                creds,
-            ))
+            cmd = 'smbclient {0}/c$ -c "del salttemp\\{1}; ' \
+                  'prompt; exit;"'.format(creds,
+                                          installer)
+            logging_cmd = 'smbclient {0}/c$ -c "del salttemp\\{1}; ' \
+                          'prompt; exit;"'.format(logging_creds,
+                                                  installer)
+            win_cmd(cmd, logging_command=logging_cmd)
+
+            cmd = 'smbclient {0}/c$ -c "rmdir salttemp; ' \
+                  'prompt; exit;"'.format(creds)
+            logging_cmd = 'smbclient {0}/c$ -c "rmdir salttemp; ' \
+                          'prompt; exit;"'.format(logging_creds)
+            win_cmd(cmd, logging_command=logging_cmd)
+
         # Shell out to winexe to ensure salt-minion service started
-        win_cmd('winexe {0} "sc stop salt-minion"'.format(
+        stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
             creds,
-        ))
-        win_cmd('winexe {0} "sc start salt-minion"'.format(
-            creds,
-        ))
+        )
+        logging_stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
+            logging_creds
+        )
+        win_cmd(stop_cmd, logging_command=logging_stop_cmd)
+
+        time.sleep(5)
+
+        start_cmd = 'winexe {0} "sc start salt-minion"'.format(creds)
+        logging_start_cmd = 'winexe {0} "sc start salt-minion"'.format(
+            logging_creds
+        )
+        win_cmd(start_cmd, logging_command=logging_start_cmd)
 
         # Fire deploy action
         fire_event(
@@ -976,7 +1052,7 @@ def deploy_script(host,
                 )
             )
             newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-            kwargs = {
+            ssh_kwargs = {
                 'hostname': host,
                 'port': port,
                 'username': username,
@@ -985,21 +1061,20 @@ def deploy_script(host,
                 'sudo_password': sudo_password,
             }
             if gateway:
-                kwargs['ssh_gateway'] = gateway['ssh_gateway']
-                kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
-                kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
+                ssh_kwargs['ssh_gateway'] = gateway['ssh_gateway']
+                ssh_kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
+                ssh_kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
-                kwargs['key_filename'] = key_filename
-            elif password:
-                log.debug('Using {0} as the password'.format(password))
-                kwargs['password'] = password
+                ssh_kwargs['key_filename'] = key_filename
+            elif password and kwargs.get('has_ssh_agent', False) is False:
+                ssh_kwargs['password'] = password
 
             if root_cmd('test -e \'{0}\''.format(tmp_dir), tty, sudo,
-                        allow_failure=True, **kwargs):
+                        allow_failure=True, **ssh_kwargs):
                 ret = root_cmd(('sh -c "( mkdir -p \'{0}\' &&'
                                 ' chmod 700 \'{0}\' )"').format(tmp_dir),
-                               tty, sudo, **kwargs)
+                               tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant create temporary '
@@ -1011,7 +1086,7 @@ def deploy_script(host,
                     if len(comps) > 1 or comps[0] != 'tmp':
                         ret = root_cmd(
                             'chown {0}. \'{1}\''.format(username, tmp_dir),
-                            tty, sudo, **kwargs
+                            tty, sudo, **ssh_kwargs
                         )
                         if ret:
                             raise SaltCloudSystemExit(
@@ -1046,23 +1121,23 @@ def deploy_script(host,
                     remote_dir = os.path.dirname(remote_file)
 
                 if remote_dir not in remote_dirs:
-                    root_cmd('mkdir -p \'{0}\''.format(remote_dir), tty, sudo, **kwargs)
+                    root_cmd('mkdir -p \'{0}\''.format(remote_dir), tty, sudo, **ssh_kwargs)
                     remote_dirs.append(remote_dir)
                 sftp_file(
-                    remote_file, kwargs=kwargs, local_file=local_file
+                    remote_file, kwargs=ssh_kwargs, local_file=local_file
                 )
                 file_map_success.append({local_file: remote_file})
 
             # Minion configuration
             if minion_pem:
-                sftp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
+                sftp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, ssh_kwargs)
                 ret = root_cmd('chmod 600 \'{0}/minion.pem\''.format(tmp_dir),
-                               tty, sudo, **kwargs)
+                               tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}/minion.pem'.format(tmp_dir))
             if minion_pub:
-                sftp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
+                sftp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, ssh_kwargs)
 
             if minion_conf:
                 if not isinstance(minion_conf, dict):
@@ -1078,25 +1153,25 @@ def deploy_script(host,
                     sftp_file(
                         '{0}/grains'.format(tmp_dir),
                         salt_config_to_yaml(minion_grains),
-                        kwargs
+                        ssh_kwargs
                     )
                 sftp_file(
                     '{0}/minion'.format(tmp_dir),
                     salt_config_to_yaml(minion_conf),
-                    kwargs
+                    ssh_kwargs
                 )
 
             # Master configuration
             if master_pem:
-                sftp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
+                sftp_file('{0}/master.pem'.format(tmp_dir), master_pem, ssh_kwargs)
                 ret = root_cmd('chmod 600 \'{0}/master.pem\''.format(tmp_dir),
-                               tty, sudo, **kwargs)
+                               tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}/master.pem'.format(tmp_dir))
 
             if master_pub:
-                sftp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
+                sftp_file('{0}/master.pub'.format(tmp_dir), master_pub, ssh_kwargs)
 
             if master_conf:
                 if not isinstance(master_conf, dict):
@@ -1111,7 +1186,7 @@ def deploy_script(host,
                 sftp_file(
                     '{0}/master'.format(tmp_dir),
                     salt_config_to_yaml(master_conf),
-                    kwargs
+                    ssh_kwargs
                 )
 
             # XXX: We need to make these paths configurable
@@ -1121,25 +1196,25 @@ def deploy_script(host,
                 # Create remote temp dir
                 ret = root_cmd(
                     'mkdir \'{0}\''.format(preseed_minion_keys_tempdir),
-                    tty, sudo, **kwargs
+                    tty, sudo, **ssh_kwargs
                 )
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant create {0}'.format(preseed_minion_keys_tempdir))
                 ret = root_cmd(
                     'chmod 700 \'{0}\''.format(preseed_minion_keys_tempdir),
-                    tty, sudo, **kwargs
+                    tty, sudo, **ssh_kwargs
                 )
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}'.format(
                             preseed_minion_keys_tempdir))
-                if kwargs['username'] != 'root':
+                if ssh_kwargs['username'] != 'root':
                     root_cmd(
                         'chown {0} \'{1}\''.format(
-                            kwargs['username'], preseed_minion_keys_tempdir
+                            ssh_kwargs['username'], preseed_minion_keys_tempdir
                         ),
-                        tty, sudo, **kwargs
+                        tty, sudo, **ssh_kwargs
                     )
 
                 # Copy pre-seed minion keys
@@ -1147,14 +1222,14 @@ def deploy_script(host,
                     rpath = os.path.join(
                         preseed_minion_keys_tempdir, minion_id
                     )
-                    sftp_file(rpath, minion_key, kwargs)
+                    sftp_file(rpath, minion_key, ssh_kwargs)
 
-                if kwargs['username'] != 'root':
+                if ssh_kwargs['username'] != 'root':
                     root_cmd(
                         'chown -R root \'{0}\''.format(
                             preseed_minion_keys_tempdir
                         ),
-                        tty, sudo, **kwargs
+                        tty, sudo, **ssh_kwargs
                     )
                     if ret:
                         raise SaltCloudSystemExit(
@@ -1165,11 +1240,11 @@ def deploy_script(host,
             if script:
                 # got strange escaping issues with sudoer, going onto a
                 # subshell fixes that
-                sftp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
+                sftp_file('{0}/deploy.sh'.format(tmp_dir), script, ssh_kwargs)
                 ret = root_cmd(
                     ('sh -c "( chmod +x \'{0}/deploy.sh\' )";'
                      'exit $?').format(tmp_dir),
-                    tty, sudo, **kwargs)
+                    tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}/deploy.sh'.format(tmp_dir))
@@ -1230,17 +1305,17 @@ def deploy_script(host,
                     sftp_file(
                         '{0}/environ-deploy-wrapper.sh'.format(tmp_dir),
                         '\n'.join(environ_script_contents),
-                        kwargs
+                        ssh_kwargs
                     )
                     root_cmd(
                         'chmod +x \'{0}/environ-deploy-wrapper.sh\''.format(tmp_dir),
-                        tty, sudo, **kwargs
+                        tty, sudo, **ssh_kwargs
                     )
                     # The deploy command is now our wrapper
                     deploy_command = '\'{0}/environ-deploy-wrapper.sh\''.format(
                         tmp_dir,
                     )
-                if root_cmd(deploy_command, tty, sudo, **kwargs) != 0:
+                if root_cmd(deploy_command, tty, sudo, **ssh_kwargs) != 0:
                     raise SaltCloudSystemExit(
                         'Executing the command {0!r} failed'.format(
                             deploy_command
@@ -1251,14 +1326,14 @@ def deploy_script(host,
                 # Remove the deploy script
                 if not keep_tmp:
                     root_cmd('rm -f \'{0}/deploy.sh\''.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/deploy.sh'.format(tmp_dir))
                     if script_env:
                         root_cmd(
                             'rm -f \'{0}/environ-deploy-wrapper.sh\''.format(
                                 tmp_dir
                             ),
-                            tty, sudo, **kwargs
+                            tty, sudo, **ssh_kwargs
                         )
                         log.debug(
                             'Removed {0}/environ-deploy-wrapper.sh'.format(
@@ -1274,32 +1349,32 @@ def deploy_script(host,
                 # Remove minion configuration
                 if minion_pub:
                     root_cmd('rm -f \'{0}/minion.pub\''.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/minion.pub'.format(tmp_dir))
                 if minion_pem:
                     root_cmd('rm -f \'{0}/minion.pem\''.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/minion.pem'.format(tmp_dir))
                 if minion_conf:
                     root_cmd('rm -f \'{0}/grains\''.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/grains'.format(tmp_dir))
                     root_cmd('rm -f \'{0}/minion\''.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/minion'.format(tmp_dir))
 
                 # Remove master configuration
                 if master_pub:
                     root_cmd('rm -f \'{0}/master.pub\''.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/master.pub'.format(tmp_dir))
                 if master_pem:
                     root_cmd('rm -f \'{0}/master.pem\''.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/master.pem'.format(tmp_dir))
                 if master_conf:
                     root_cmd('rm -f \'{0}/master\''.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/master'.format(tmp_dir))
 
                 # Remove pre-seed keys directory
@@ -1307,7 +1382,7 @@ def deploy_script(host,
                     root_cmd(
                         'rm -rf \'{0}\''.format(
                             preseed_minion_keys_tempdir
-                        ), tty, sudo, **kwargs
+                        ), tty, sudo, **ssh_kwargs
                     )
                     log.debug(
                         'Removed {0}'.format(preseed_minion_keys_tempdir)
@@ -1330,7 +1405,7 @@ def deploy_script(host,
                     )
                     root_cmd(
                         'salt-call {0}'.format(start_action),
-                        tty, sudo, **kwargs
+                        tty, sudo, **ssh_kwargs
                     )
                     log.info(
                         'Finished executing {0} on the salt-minion'.format(
@@ -1399,7 +1474,15 @@ def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
         while True:
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
-                if (
+                # if authenticating with an SSH key and 'sudo' is found
+                # in the password prompt
+                if ('key_filename' in kwargs and kwargs['key_filename']
+                    and SSH_PASSWORD_PROMP_SUDO_RE.search(stdout)
+                ):
+                    proc.sendline(kwargs['sudo_password'])
+                # elif authenticating via password and haven't exhausted our
+                # password_retires
+                elif (
                     kwargs.get('password', None)
                     and (sent_password < password_retries)
                 ):
@@ -1527,11 +1610,28 @@ def smb_file(dest_path, contents, kwargs):
     comps = dest_path.split('\\')
     dest_dir = '\\'.join(comps[:-1])
     dest_file = comps[-1]
-    cmd = 'smbclient {0}/c$ -c "cd {3}; prompt; lcd {1}; del {4}; mput {2}; rename {2} {4}; exit;"'.format(
-        kwargs['creds'], src_dir, src_file, dest_dir, dest_file
-    )
-    log.debug('SCP command: {0!r}'.format(cmd))
-    win_cmd(cmd)
+
+    cmd = 'smbclient {0}/c$ -c "cd {3}; prompt; lcd {1}; del {4}; mput {2}; ' \
+          'rename {2} {4}; exit;"'.format(kwargs['creds'],
+                                          src_dir,
+                                          src_file,
+                                          dest_dir,
+                                          dest_file)
+
+    logging_creds = kwargs.get('logging_creds', None)
+    if logging_creds is None:
+        logging_cmd = cmd
+    else:
+        logging_cmd = 'smbclient {0}/c$ -c "cd {3}; prompt; ' \
+                      'lcd {1}; del {4}; mput {2}; rename {2} {4}; ' \
+                      'exit;"'.format(logging_creds,
+                                      src_dir,
+                                      src_file,
+                                      dest_dir,
+                                      dest_file)
+    log.debug('SCP command: {0!r}'.format(logging_cmd))
+
+    win_cmd(cmd, logging_command=logging_cmd)
 
 
 def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
@@ -1625,6 +1725,7 @@ def win_cmd(command, **kwargs):
     '''
     Wrapper for commands to be run against Windows boxes
     '''
+    logging_command = kwargs.get('logging_command', None)
     try:
         proc = NonBlockingPopen(
             command,
@@ -1632,19 +1733,31 @@ def win_cmd(command, **kwargs):
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stream_stds=kwargs.get('display_ssh_output', True),
+            logging_command=logging_command,
         )
-        log.debug(
-            'Executing command(PID {0}): {1!r}'.format(
-                proc.pid, command
+
+        if logging_command is None:
+            log.debug(
+                'Executing command(PID {0}): {1!r}'.format(
+                    proc.pid,
+                    command
+                )
             )
-        )
+        else:
+            log.debug(
+                'Executing command(PID {0}): {1!r}'.format(
+                    proc.pid,
+                    logging_command
+                )
+            )
+
         proc.poll_and_read_until_finish()
         proc.communicate()
         return proc.returncode
     except Exception as err:
         log.error(
             'Failed to execute command {0!r}: {1}\n'.format(
-                command, err
+                logging_command, err
             ),
             exc_info=True
         )
@@ -1656,15 +1769,17 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     '''
     Wrapper for commands to be run as root
     '''
+    logging_command = command
+    sudo_password = kwargs.get('sudo_password', None)
+
     if sudo:
-        if 'sudo_password' in kwargs and kwargs['sudo_password'] is not None:
-            command = 'echo "{1}" | sudo -S {0}'.format(
-                command,
-                kwargs['sudo_password'],
-            )
-        else:
+        if sudo_password is None:
             command = 'sudo {0}'.format(command)
-        log.debug('Using sudo to run command {0}'.format(command))
+            logging_command = command
+        else:
+            logging_command = 'sudo -S "XXX-REDACTED-XXX" {0}'.format(command)
+            command = 'sudo -S {0}'.format(command)
+        log.debug('Using sudo to run command {0}'.format(logging_command))
 
     ssh_args = []
 
@@ -1739,10 +1854,14 @@ def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     if 'port' in kwargs:
         ssh_args.extend(['-p {0}'.format(kwargs['port'])])
 
-    cmd = 'ssh {0} {1[username]}@{1[hostname]} {2}'.format(
-        ' '.join(ssh_args), kwargs, pipes.quote(command)
+    cmd = 'ssh {0} {1[username]}@{1[hostname]} '.format(
+        ' '.join(ssh_args),
+        kwargs
     )
-    log.debug('SSH command: {0!r}'.format(cmd))
+    logging_command = cmd + logging_command
+    cmd = cmd + pipes.quote(command)
+
+    log.debug('SSH command: {0!r}'.format(logging_command))
     retcode = _exec_ssh_cmd(cmd, allow_failure=allow_failure, **kwargs)
     return retcode
 
