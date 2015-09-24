@@ -1630,7 +1630,7 @@ def smb_file(dest_path, contents, kwargs):
                                       dest_dir,
                                       dest_file)
     log.debug('SCP command: {0!r}'.format(logging_cmd))
-    
+
     win_cmd(cmd, logging_command=logging_cmd)
 
 
