@@ -119,11 +119,11 @@ def _get_conn(ret):
     user = _options.get('user')
     password = _options.get('password')
     indexes = _options.get('indexes', False)
-    '''
-    at some point we should remove support for 
-    pymongo versions < 2.3 until then there are
-    a bunch of these sections that need to be supported
-    '''
+
+    # at some point we should remove support for 
+    # pymongo versions < 2.3 until then there are
+    # a bunch of these sections that need to be supported
+
     if float(version) > 2.3:
         conn = pymongo.MongoClient(host, port)
     else:
@@ -169,13 +169,13 @@ def returner(ret):
     sdata = {'minion': ret['id'], 'jid': ret['jid'], 'return': back, 'fun': ret['fun'], 'full_ret': full_ret}
     if 'out' in ret:
         sdata['out'] = ret['out']
-    '''
-    save returns in the saltReturns collection in the json format:
-     { 'minion': <minion_name>, 'jid': <job_id>, 'return': <return info with dots removed>,
-       'fun': <function>, 'full_ret': <unformatted return with dots removed>}
-       
-    again we run into the issue with deprecated code from previous versions
-    '''
+
+    # save returns in the saltReturns collection in the json format:
+    # { 'minion': <minion_name>, 'jid': <job_id>, 'return': <return info with dots removed>,
+    #  'fun': <function>, 'full_ret': <unformatted return with dots removed>}
+    #
+    # again we run into the issue with deprecated code from previous versions
+    
     if float(version) > 2.3:
         #using .copy() to ensure original data for load is unchanged
         mdb.saltReturns.insert_one(sdata.copy())
