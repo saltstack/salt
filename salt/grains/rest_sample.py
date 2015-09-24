@@ -2,17 +2,12 @@
 '''
 Generate baseline proxy minion grains
 '''
-import logging
-
 __proxyenabled__ = ['rest_sample']
 
 __virtualname__ = 'rest_sample'
 
-log = logging.getLogger(__file__)
-
 
 def __virtual__():
-    log.debug('In RestExample grains virtual-------------------------------')
     if 'proxy' not in __opts__:
         return False
     else:
