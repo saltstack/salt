@@ -133,7 +133,7 @@ def _get_conn(ret):
     if user and password:
         mdb.authenticate(user, password)
     
-     if indexes:
+    if indexes:
         if float(version) > 2.3:
             mdb.saltReturns.create_index('minion')
             mdb.saltReturns.create_index('jid')
