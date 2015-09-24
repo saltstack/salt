@@ -8,6 +8,27 @@ Management of Docker containers
 This is the state module to accompany the :mod:`dockerng
 <salt.modules.dockerng>` execution module.
 
+
+Why Make a Second Docker State Module?
+--------------------------------------
+
+We have received a lot of feedback on our Docker support. In the process of
+implementing recommended improvements, it became obvious that major changes
+needed to be made to the functions and return data. In the end, a complete
+rewrite was done.
+
+The changes being too significant, it was decided that making a separate
+execution module and state module (called ``dockerng``) would be the best
+option. This will give users a couple release cycles to modify their scripts,
+SLS files, etc. to use the new functionality, rather than forcing users to
+change everything immediately.
+
+In the **Carbon** release of Salt (due in 2016), this execution module will
+take the place of the default Docker execution module, and backwards-compatible
+naming will be maintained for a couple releases after that to allow users time
+to replace references to ``dockerng`` with ``docker``.
+
+
 .. note::
 
     To pull from a Docker registry, authentication must be configured. See
