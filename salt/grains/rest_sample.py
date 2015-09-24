@@ -10,6 +10,7 @@ __virtualname__ = 'rest_sample'
 
 log = logging.getLogger(__file__)
 
+
 def __virtual__():
     log.debug('In RestExample grains virtual-------------------------------')
     if 'proxy' not in __opts__:
