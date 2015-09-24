@@ -2299,7 +2299,7 @@ def create(vm_):
         'hardware_version', vm_, __opts__, search_global=False, default=None
     )
     guest_id = config.get_cloud_config_value(
-        'guest_id', vm_, __opts__, search_global=False, default=None
+        'image', vm_, __opts__, search_global=False, default=None
     )
 
     if 'clonefrom' in vm_:
