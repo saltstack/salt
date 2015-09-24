@@ -375,7 +375,7 @@ class ArchiveTestCase(TestCase):
             0
         ]
         trim_100 = (['file1'] * 100)
-        trim_100.append("List trimmed after 100 files."),
+        trim_100.append("List trimmed after 100 files.")
         expected = [
             trim_100,
             ['file2'] * 200,

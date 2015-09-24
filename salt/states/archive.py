@@ -132,7 +132,7 @@ def extracted(name,
     trim_output
         The number of files we should output on success before the rest are trimmed, if this is
         set to True then it will default to 100
-        
+
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
