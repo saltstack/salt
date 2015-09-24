@@ -71,7 +71,6 @@ To use the EC2 cloud module, set up the cloud configuration at
 from __future__ import absolute_import
 import os
 import sys
-import stat
 import time
 import uuid
 import pprint
@@ -195,27 +194,10 @@ def __virtual__():
             continue
 
         parameters = details['ec2']
-
-        if not os.path.exists(parameters['private_key']):
-            raise SaltCloudException(
-                'The EC2 key file \'{0}\' used in the \'{1}\' provider '
-                'configuration does not exist\n'.format(
-                    parameters['private_key'],
-                    provider
-                )
-            )
-
-        key_mode = str(
-            oct(stat.S_IMODE(os.stat(parameters['private_key']).st_mode))
-        )
-        if key_mode not in ('0400', '0600'):
-            raise SaltCloudException(
-                'The EC2 key file \'{0}\' used in the \'{1}\' provider '
-                'configuration needs to be set to mode 0400 or 0600\n'.format(
-                    parameters['private_key'],
-                    provider
-                )
-            )
+        if salt.utils.cloud.check_key_path_and_mode(
+                provider, parameters['private_key']
+        ) is False:
+            return False
 
     return __virtualname__
 
@@ -2060,13 +2042,19 @@ def wait_for_instance(
                     },
                     call='action',
                 )
-                log.debug(password_data)
                 win_passwd = password_data.get('password', None)
                 if win_passwd is None:
+                    log.debug(password_data)
                     # This wait is so high, because the password is unlikely to
                     # be generated for at least 4 minutes
                     time.sleep(60)
                 else:
+                    logging_data = password_data
+
+                    logging_data['password'] = 'XXX-REDACTED-XXX'
+                    logging_data['passwordData'] = 'XXX-REDACTED-XXX'
+                    log.debug(logging_data)
+
                     vm_['win_password'] = win_passwd
                     break
 

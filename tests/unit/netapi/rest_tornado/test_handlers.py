@@ -314,10 +314,15 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         '''
         self._app.mod_opts['cors_origin'] = '*'
 
-        response = self.fetch('/', method='OPTIONS')
+        request_headers = 'X-Auth-Token, accept, content-type'
+        preflight_headers = {'Access-Control-Request-Headers': request_headers,
+                             'Access-Control-Request-Method': 'GET'}
+
+        response = self.fetch('/', method='OPTIONS', headers=preflight_headers)
         headers = response.headers
 
-        self.assertEqual(headers['Access-Control-Allow-Headers'], 'X-Auth-Token')
+        self.assertEqual(response.code, 204)
+        self.assertEqual(headers['Access-Control-Allow-Headers'], request_headers)
         self.assertEqual(headers['Access-Control-Expose-Headers'], 'X-Auth-Token')
         self.assertEqual(headers['Access-Control-Allow-Methods'], 'OPTIONS, GET, POST')
 
@@ -341,11 +346,40 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         '''
         Test valid logins
         '''
+
+        # Test in form encoded
         response = self.fetch('/login',
                                method='POST',
                                body=urlencode(self.auth_creds),
                                headers={'Content-Type': self.content_type_map['form']})
 
+        self.assertEqual(response.code, 200)
+        response_obj = json.loads(response.body)['return'][0]
+        self.assertEqual(response_obj['perms'], self.opts['external_auth']['auto'][self.auth_creds_dict['username']])
+        self.assertIn('token', response_obj)  # TODO: verify that its valid?
+        self.assertEqual(response_obj['user'], self.auth_creds_dict['username'])
+        self.assertEqual(response_obj['eauth'], self.auth_creds_dict['eauth'])
+
+        # Test in JSON
+        response = self.fetch('/login',
+                               method='POST',
+                               body=json.dumps(self.auth_creds_dict),
+                               headers={'Content-Type': self.content_type_map['json']})
+
+        self.assertEqual(response.code, 200)
+        response_obj = json.loads(response.body)['return'][0]
+        self.assertEqual(response_obj['perms'], self.opts['external_auth']['auto'][self.auth_creds_dict['username']])
+        self.assertIn('token', response_obj)  # TODO: verify that its valid?
+        self.assertEqual(response_obj['user'], self.auth_creds_dict['username'])
+        self.assertEqual(response_obj['eauth'], self.auth_creds_dict['eauth'])
+
+        # Test in YAML
+        response = self.fetch('/login',
+                               method='POST',
+                               body=yaml.dump(self.auth_creds_dict),
+                               headers={'Content-Type': self.content_type_map['yaml']})
+
+        self.assertEqual(response.code, 200)
         response_obj = json.loads(response.body)['return'][0]
         self.assertEqual(response_obj['perms'], self.opts['external_auth']['auto'][self.auth_creds_dict['username']])
         self.assertIn('token', response_obj)  # TODO: verify that its valid?
@@ -383,6 +417,31 @@ class TestSaltAuthHandler(SaltnadoTestCase):
                                headers={'Content-Type': self.content_type_map['form']})
 
         self.assertEqual(response.code, 401)
+
+    def test_login_invalid_data_structure(self):
+        '''
+        Test logins with either list or string JSON payload
+        '''
+        response = self.fetch('/login',
+                               method='POST',
+                               body=json.dumps(self.auth_creds),
+                               headers={'Content-Type': self.content_type_map['form']})
+
+        self.assertEqual(response.code, 400)
+
+        response = self.fetch('/login',
+                               method='POST',
+                               body=json.dumps(42),
+                               headers={'Content-Type': self.content_type_map['form']})
+
+        self.assertEqual(response.code, 400)
+
+        response = self.fetch('/login',
+                               method='POST',
+                               body=json.dumps('mystring42'),
+                               headers={'Content-Type': self.content_type_map['form']})
+
+        self.assertEqual(response.code, 400)
 
 
 @skipIf(HAS_TORNADO is False, 'The tornado package needs to be installed')  # pylint: disable=W0223
