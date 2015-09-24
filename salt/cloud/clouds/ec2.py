@@ -1299,8 +1299,6 @@ def _modify_eni_properties(eni_id, properties=None):
     while retries > 0:
         retries = retries - 1
 
-        # result = query(params, return_root=True)
-
         result = aws.query(params,
                            return_root=True,
                            location=get_location(),
