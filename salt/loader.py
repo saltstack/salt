@@ -196,7 +196,7 @@ def minion_mods(
             # sometimes providers opts is not to diverge modules but
             # for other configuration
             try:
-                funcs = raw_mod(opts, providers[mod], ret.items())
+                funcs = raw_mod(opts, providers[mod], ret)
             except TypeError:
                 break
             else:
