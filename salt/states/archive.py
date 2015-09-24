@@ -41,7 +41,8 @@ def extracted(name,
               tar_options=None,
               source_hash=None,
               if_missing=None,
-              keep=False):
+              keep=False,
+              trim_output=False):
     '''
     .. versionadded:: 2014.1.0
 
@@ -127,6 +128,11 @@ def extracted(name,
 
     keep
         Keep the archive in the minion's cache
+
+    trim_output
+        The number of files we should output on success before the rest are trimmed, if this is
+        set to True then it will default to 100
+        
     '''
     ret = {'name': name, 'result': None, 'changes': {}, 'comment': ''}
     valid_archives = ('tar', 'rar', 'zip')
@@ -208,9 +214,9 @@ def extracted(name,
 
     log.debug('Extract {0} in {1}'.format(filename, name))
     if archive_format == 'zip':
-        files = __salt__['archive.cmd_unzip'](filename, name)
+        files = __salt__['archive.cmd_unzip'](filename, name, trim_output=trim_output)
     elif archive_format == 'rar':
-        files = __salt__['archive.unrar'](filename, name)
+        files = __salt__['archive.unrar'](filename, name, trim_output=trim_output)
     else:
         if tar_options is None:
             with closing(tarfile.open(filename, 'r')) as tar:

@@ -356,6 +356,39 @@ class ArchiveTestCase(TestCase):
             )
             self.assertFalse(mock.called)
 
+    @patch('salt.utils.which_bin', lambda exe: exe)
+    def test_trim_files(self):
+        source = 'file.tar.gz'
+        tmp_dir = 'temp'
+        files = [
+            '\n'.join(['file1'] * 200),
+            '\n'.join(['file2'] * 200),
+            'this\nthat\nother',
+            'this\nthat\nother',
+            'this\nthat\nother'
+        ]
+        trim_opt = [
+            True,
+            False,
+            3,
+            1,
+            0
+        ]
+        trim_100 = (['file1'] * 100)
+        trim_100.append("List trimmed after 100 files."),
+        expected = [
+            trim_100,
+            ['file2'] * 200,
+            ['this', 'that', 'other'],
+            ['this', 'List trimmed after 1 files.'],
+            ['List trimmed after 0 files.'],
+        ]
+
+        for test_files, test_trim_opts, test_expected in zip(files, trim_opt, expected):
+            with patch.dict(archive.__salt__, {'cmd.run': MagicMock(return_value=test_files)}):
+                ret = archive.unrar(source, tmp_dir, trim_output=test_trim_opts)
+                self.assertEqual(ret, test_expected)
+
 
 if __name__ == '__main__':
     from integration import run_tests
