@@ -2560,6 +2560,8 @@ def is_profile_configured(opts, provider, profile_name):
 
     if driver not in non_image_drivers:
         required_keys.append('image')
+    elif driver == 'vmware':
+        required_keys.append('clonefrom')
 
     if driver not in non_size_drivers:
         required_keys.append('size')

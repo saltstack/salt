@@ -169,7 +169,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         /srv/salt/yum/epel.repo: /etc/yum.repos.d/epel.repo
 
       hardware_version: 10
-      guest_id: centos64Guest
+      image: centos64Guest
 
 ``provider``
     Enter the name that was specified when the cloud provider config was created.
@@ -409,7 +409,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Specify the virtual hardware version for the vm/template that is supported by the
     host.
 
-``guest_id``
+``image``
     Specify the guest id of the VM. For a full list of supported values see the
     VMware vSphere documentation:
 
@@ -514,7 +514,7 @@ A full example:
       num_cpus: 2
       memory: 8GB
 
-      guest_id: debian7_64Guest
+      image: debian7_64Guest
 
       devices:
         scsi:
@@ -538,8 +538,8 @@ A full example:
 
 .. note::
 
-    While ``guest_id`` is not required when creating a VM it is recommended to
+    While ``image`` is not required when creating a VM it is recommended to
     specify it. Depending on VMware version an exact match might not
     be available, in those cases the closest match should be used.
     See the above example where a Debian 8 VM is created using the Debian 7
-    ``guest_id``.
+    ``image``.
