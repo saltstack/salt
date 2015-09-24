@@ -180,7 +180,7 @@ def returner(ret):
     # save returns in the saltReturns collection in the json format:
     # { 'minion': <minion_name>, 'jid': <job_id>, 'return': <return info with dots removed>,
     #   'fun': <function>, 'full_ret': <unformatted return with dots removed>}
-    #   
+    #
     # again we run into the issue with deprecated code from previous versions
 
     if float(version) > 2.3:
