@@ -14,6 +14,7 @@ __func_alias__ = {
     'list_': 'list'
 }
 
+
 # Define the module's virtual name
 __virtualname__ = 'service'
 
@@ -31,6 +32,8 @@ def get_all():
     '''
     Return a list of all available services
 
+    .. versionadded:: 2015.8.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -43,7 +46,9 @@ def get_all():
 
 def list_():
     '''
-    Return a list of all available services
+    Return a list of all available services.
+
+    .. versionadded: 2015.8.1
 
     CLI Example:
 
@@ -57,6 +62,8 @@ def list_():
 def start(name, sig=None):
     '''
     Start the specified service on the rest_sample
+
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -73,6 +80,8 @@ def stop(name, sig=None):
     '''
     Stop the specified service on the rest_sample
 
+    .. versionadded:: 2015.8.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -86,6 +95,8 @@ def stop(name, sig=None):
 def restart(name, sig=None):
     '''
     Restart the specified service with rest_sample
+
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -102,6 +113,8 @@ def status(name, sig=None):
     '''
     Return the status for a service via rest_sample, returns a bool
     whether the service is running.
+
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -121,6 +134,9 @@ def status(name, sig=None):
 def running(name, sig=None):
     '''
     Return whether this service is running.
+
+    .. versionadded:: 2015.8.0
+
     '''
     return status(name).get(name, False)
 
@@ -128,5 +144,8 @@ def running(name, sig=None):
 def enabled(name, sig=None):
     '''
     Only the 'redbull' service is 'enabled' in the test
+
+    .. versionadded:: 2015.8.1
+
     '''
     return name == 'redbull'
