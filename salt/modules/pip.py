@@ -435,14 +435,20 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     process_dependency_links
         Enable the processing of dependency links
 
-    use_vt
-        Use VT terminal emulation (see ouptut while installing)
-
     env_vars
         Set environment variables that some builds will depend on. For example,
         a Python C-module may have a Makefile that needs INCLUDE_PATH set to
-        pick up a header file while compiling.
+        pick up a header file while compiling.  This must be in the form of a
+        dictionary or a mapping.
 
+        Example:
+
+        .. code-block:: bash
+
+            salt '*' pip.install django_app env_vars="{'CUSTOM_PATH': '/opt/django_app'}"
+
+    use_vt
+        Use VT terminal emulation (see ouptut while installing)
 
     CLI Example:
 
@@ -718,7 +724,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         cmd.append('--process-dependency-links')
 
     if env_vars:
-        os.environ.update(env_vars)
+        if isinstance(env_vars, dict):
+            os.environ.update(env_vars)
+        else:
+            raise CommandExecutionError('env_vars {0} is not a dictionary'.format(env_vars))
 
     try:
         cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt, runas=user)
