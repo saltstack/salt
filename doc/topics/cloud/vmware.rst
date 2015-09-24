@@ -26,7 +26,7 @@ This package can be installed using `pip` or `easy_install`:
 
 Configuration
 =============
-The VMware cloud module needs the vCenter URL, username and password to be
+The VMware cloud module needs the vCenter or ESXi URL, username and password to be
 set up in the cloud configuration at
 ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
 
@@ -132,6 +132,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
           SCSI controller 3:
             type: paravirtual
             bus_sharing: physical
+        ide:
+          IDE controller 1
 
       domain: mycompany.com
       dns_servers:
@@ -139,7 +141,6 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         - 123.127.255.241
         - 123.127.255.242
 
-      # If cloning from template, either resourcepool or cluster MUST be specified!
       resourcepool: Resources
       cluster: Prod
 
@@ -168,12 +169,14 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
         /srv/salt/yum/epel.repo: /etc/yum.repos.d/epel.repo
 
       hardware_version: 10
+      image: centos64Guest
 
 ``provider``
     Enter the name that was specified when the cloud provider config was created.
 
 ``clonefrom``
-    Enter the name of the VM/template to clone from.
+    Enter the name of the VM/template to clone from. If not specified, the VM will be created
+    without cloning.
 
 ``num_cpus``
     Enter the number of vCPUS that you want the VM/template to have. If not specified,
@@ -207,11 +210,20 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
             Enter the mode of connection only if ``device_type: client_device``. Currently
             supported modes are ``passthrough`` and ``atapi``. This field is ignored if
             ``device_type: datastore_iso_file``. Default is ``mode: passthrough``
+        controller
+            Specify IDE controller on which to attach the drive. Must be specified when
+            creating both a controller and a drive at the same time.
 
     disk
         Enter the disk specification here. If the hard disk doesn\'t exist, it will
         be created with the provided size. If the hard disk already exists, it will
         be expanded if the provided size is greater than the current size of the disk.
+
+        size
+            Enter the size of disk
+        controller
+            Enter the controller on which to attach the disk. Must be specified when
+            creating both a controller and a disk at the same time.
 
     network
         Enter the network adapter specification here. If the network adapter doesn\'t
@@ -273,6 +285,9 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 
             no
                 Virtual disks cannot be shared between virtual machines.
+
+    ide
+        Specify to add a IDE adapter.
 
 ``domain``
     Enter the global domain name to be used for DNS. If not specified and if the VM name
@@ -393,3 +408,138 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 ``hardware_version``
     Specify the virtual hardware version for the vm/template that is supported by the
     host.
+
+``image``
+    Specify the guest id of the VM. For a full list of supported values see the
+    VMware vSphere documentation:
+
+    http://pubs.vmware.com/vsphere-60/topic/com.vmware.wssdk.apiref.doc/vim.vm.GuestOsDescriptor.GuestOsIdentifier.html
+
+    .. note::
+
+      - For a clone operation, this argument is ignored.
+
+Cloning a VM
+=============
+
+Cloning is the easiest and preferred way to work with VMs in the VMware driver.
+
+.. note::
+
+    - Cloning operations are unsupported on standalone ESXi hosts, a vCenter is required.
+
+A minimal profile:
+
+.. code-block:: yaml
+
+    my-minimal-clone:
+      provider: my-vcenter
+      clonefrom: 'clone-me'
+
+When cloning all profile configuration is optional and everything that is set
+specifies what is supposed to be different or added to the clone.
+
+A disk example:
+
+.. code-block:: yaml
+
+    my-disk-example:
+      provider: my-vcenter
+      clonefrom: 'clone-me'
+
+      devices:
+        disk:
+          Hard disk 1:
+            size: 30
+
+Depending on the configuration of the VM that is to be cloned, the disk in the resulting clone will differ.
+
+- If the VM has no disk named 'Hard disk 1' an empty disk with the specified size will be added to the clone.
+
+- If the VM has a disk named 'Hard disk 1' and the size specified is larger than the original, a copy of the disk with the size specified will be added to the clone.
+
+- If the VM has a disk named 'Hard disk 1' and the size specified is small than the original, a copy of the disk with the original size will be added to the clone.
+
+Cloning a template
+==================
+
+Cloning a template works much like cloning a VM with the exception that a resource pool or cluster must be
+specified where the clone is to be created.
+
+A minimal example:
+
+.. code-block:: yaml
+
+    my-template-clone:
+     provider: my-vcenter
+     clonefrom: 'my-template'
+     resourcepool: Resources
+
+Creating a VM
+=============
+
+.. versionadded:: Boron
+
+Creating a VM from scratch generally means that more settings must be specified in the profile
+since there is nothing to copy settings from.
+
+.. note::
+
+    Unlike most cloud drivers using prepared images, creating VMs needs an installation method
+    that requires no interaction. For example a preseeded ISO, a kickstart URL or network PXE boot.
+
+A minimal profile:
+
+.. code-block:: yaml
+
+    my-minimal-profile:
+      provider: my-esxi-host
+      datastore: datastore1
+      resourcepool: Resources
+      folder: vm
+
+While the above example contains the only required settings when creating a VM the resulting
+VM only has 1 VCPU, 32MB of RAM and has no storage or networking.
+
+A full example:
+
+.. code-block:: yaml
+
+    my-working-example:
+      provider: my-esxi-host
+      datastore: datastore1
+      resourcepool: Resources
+      folder: vm
+
+      num_cpus: 2
+      memory: 8GB
+
+      image: debian7_64Guest
+
+      devices:
+        scsi:
+          SCSI controller 0:
+            type: lsiLogic_sas
+        ide:
+          IDE controller 0
+        disk:
+          Hard disk 0:
+            controller: 'SCSI controller 0'
+            size: 20
+        cd:
+          CD/DVD drive 0:
+            controller: 'IDE controller 0'
+            device_type: datastore_iso_file
+            iso_path: '[datastore1] debian-8-with-preseed.iso'
+        network:
+          Network adapter 0:
+            name: 'VM Network'
+            swith_type: standard
+
+.. note::
+
+    While ``image`` is not required when creating a VM it is recommended to
+    specify it. Depending on VMware version an exact match might not
+    be available, in those cases the closest match should be used.
+    See the above example where a Debian 8 VM is created using the Debian 7
+    ``image``.
