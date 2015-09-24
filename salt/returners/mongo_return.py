@@ -96,7 +96,7 @@ def _get_options(ret):
              'port': 'port',
              'db': 'db',
              'user': 'user',
-             'password': 'password'
+             'password': 'password',
              'indexes': 'indexes'}
 
     _options = salt.returners.get_returner_options(__virtualname__,
