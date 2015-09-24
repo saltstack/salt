@@ -2518,7 +2518,7 @@ class ProxyMinion(Minion):
 
         if ('{0}.init'.format(fq_proxyname) not in self.opts['proxymodule']
             or '{0}.shutdown'.format(fq_proxyname) not in self.opts['proxymodule']):
-            log.error('Proxymodule {0} is missing an init() or a shutdown() or both.'.format(fq_proxyname));
+            log.error('Proxymodule {0} is missing an init() or a shutdown() or both.'.format(fq_proxyname))
             log.error('Check your proxymodule.  Salt-proxy aborted.')
             self._running = False
             raise SaltSystemExit(code=-1)

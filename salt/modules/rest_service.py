@@ -104,11 +104,13 @@ def status(name, sig=None):
     if resp['comment'] == 'running':
         return True
 
+
 def running(name, sig=None):
     '''
     Return whether this service is running.
     '''
     return status(name).get(name, False)
+
 
 def enabled(name, sig=None):
     '''
