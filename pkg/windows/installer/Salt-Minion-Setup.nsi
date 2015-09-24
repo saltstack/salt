@@ -113,34 +113,34 @@ FunctionEnd
 Function updateMinionConfig
 
   ClearErrors
-  FileOpen $0 "$INSTDIR\conf\minion" "r"                     ; open target file for reading
-  GetTempFileName $R0                           ; get new temp file name
-  FileOpen $1 $R0 "w"                            ; open temp file for writing
+  FileOpen $0 "$INSTDIR\conf\minion" "r"              ; open target file for reading
+  GetTempFileName $R0                                 ; get new temp file name
+  FileOpen $1 $R0 "w"                                 ; open temp file for writing
   loop:
-     FileRead $0 $2                              ; read line from target file
+     FileRead $0 $2                                   ; read line from target file
      IfErrors done
      ${If} $MasterHost_State != ""
-     ${AndIf} $MasterHost_State != "salt"                                ; check if end of file reached
-       StrCmp $2 "#master: salt$\r$\n" 0 +2      ; compare line with search string with CR/LF
-          StrCpy $2 "master: $MasterHost_State$\r$\n"    ; change line
-       StrCmp $2 "#master: salt" 0 +2            ; compare line with search string without CR/LF (at the end of the file)
-          StrCpy $2 "master: $MasterHost_State"          ; change line
+     ${AndIf} $MasterHost_State != "salt"             ; check if end of file reached
+       StrCmp $2 "#master: salt$\r$\n" 0 +2           ; compare line with search string with CR/LF
+          StrCpy $2 "master: $MasterHost_State$\r$\n" ; change line
+       StrCmp $2 "#master: salt" 0 +2                 ; compare line with search string without CR/LF (at the end of the file)
+          StrCpy $2 "master: $MasterHost_State"       ; change line
      ${EndIf}
      ${If} $MinionName_State != ""
      ${AndIf} $MinionName_State != "hostname"
-       StrCmp $2 "#id:$\r$\n" 0 +2      ; compare line with search string with CR/LF
-          StrCpy $2 "id: $MinionName_State$\r$\n"    ; change line
-       StrCmp $2 "#id:" 0 +2            ; compare line with search string without CR/LF (at the end of the file)
-          StrCpy $2 "id: $MinionName_State"          ; change line
+       StrCmp $2 "#id:$\r$\n" 0 +2                    ; compare line with search string with CR/LF
+          StrCpy $2 "id: $MinionName_State$\r$\n"     ; change line
+       StrCmp $2 "#id:" 0 +2                          ; compare line with search string without CR/LF (at the end of the file)
+          StrCpy $2 "id: $MinionName_State"           ; change line
      ${EndIf}
-     FileWrite $1 $2                             ; write changed or unchanged line to temp file
+     FileWrite $1 $2                                  ; write changed or unchanged line to temp file
      Goto loop
 
   done:
-     FileClose $0                                ; close target file
-     FileClose $1                                ; close temp file
-     Delete "$INSTDIR\conf\minion"                           ; delete target file
-     CopyFiles /SILENT $R0 "$INSTDIR\conf\minion"            ; copy temp file to target file
+     FileClose $0                                     ; close target file
+     FileClose $1                                     ; close temp file
+     Delete "$INSTDIR\conf\minion"                    ; delete target file
+     CopyFiles /SILENT $R0 "$INSTDIR\conf\minion"     ; copy temp file to target file
      Delete $R0
 
 FunctionEnd
@@ -156,40 +156,6 @@ ShowUnInstDetails show
 
 Section "MainSection" SEC01
 
-  ; Remove previous version of salt, but don't remove conf and key
-  ; Service must be stopped to delete files that are in use
-  ExecWait "net stop salt-minion"
-  ; Remove the service in case we're installing over an older version
-  ; It will be recreated later
-  ExecWait "sc delete salt-minion"
-
-  ; Delete everything except conf and var
-  ClearErrors
-  FindFirst $0 $1 $INSTDIR\*
-
-  loop:
-    IfFileExists "$INSTDIR\$1\*.*" IsDir IsFile
-
-    IsDir:
-      ${IfNot} $1 == "."
-      ${AndIfNot} $1 == ".."
-      ${AndIfNot} $1 == "conf"
-      ${AndIfNot} $1 == "var"
-        RMDir /r "$INSTDIR\$1"
-      ${EndIf}
-
-    IsFile:
-      DELETE "$INSTDIR\$1"
-
-    FindNext $0 $1
-    IfErrors done
-
-    Goto loop
-
-  done:
-    FindClose $0
-
-  Sleep 3000
   SetOutPath "$INSTDIR\"
   SetOverwrite try
   CreateDirectory $INSTDIR\conf\pki\minion
@@ -238,6 +204,34 @@ FunctionEnd
 
 
 Function .onInit
+
+  ; Check for existing installation
+  ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" "UninstallString"
+  StrCmp $R0 "" confFind
+
+  ; Found existing installation, prompt to uninstall
+  MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "${PRODUCT_NAME} is already installed. $\n$\nClick `OK` to remove the existing installation." /SD IDOK IDOK uninst
+  Abort
+
+  uninst:
+    ; Make sure we're in the right directory
+    ${If} $INSTDIR == "c:\salt\bin\Scripts"
+      StrCpy $INSTDIR "C:\salt"
+    ${EndIf}
+
+    ; Stop and remove the salt-minion service
+    ExecWait "net stop salt-minion"
+    ExecWait "sc delete salt-minion"
+
+    ; Remove salt binaries and batch files
+    Delete "$INSTDIR\uninst.exe"
+    Delete "$INSTDIR\nssm.exe"
+    Delete "$INSTDIR\salt*"
+    RMDir /r "$INSTDIR\bin"
+
+    ; Remove registry entries
+    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
+    DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"
 
   confFind:
   IfFileExists "$INSTDIR\conf\minion" confFound confNotFound
@@ -339,7 +333,7 @@ Section Uninstall
   Delete "$INSTDIR\uninst.exe"
   Delete "$INSTDIR\nssm.exe"
   Delete "$INSTDIR\salt*"
-  Delete "$INSTDIR\bin"
+  RMDir /r "$INSTDIR\bin"
 
   ${If} $INSTDIR != 'Program Files'
   ${AndIf} $INSTDIR != 'Program Files (x86)'
