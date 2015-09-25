@@ -33,7 +33,6 @@ from salt.utils.openstack.swift import SaltSwift
 import salt.ext.six.moves.BaseHTTPServer as BaseHTTPServer
 from salt.ext.six.moves.urllib.error import HTTPError, URLError
 from salt.ext.six.moves.urllib.parse import urlparse, urlunparse
-from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # pylint: enable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
@@ -598,22 +597,9 @@ class Client(object):
 
         destfp = None
         try:
-            if no_cache:
-                result = []
-
-                def on_chunk(chunk):
-                    result.append(chunk)
-            else:
-                dest_tmp = "{0}.part".format(dest)
-                destfp = salt.utils.fopen(dest_tmp, 'wb')
-
-                def on_chunk(chunk):
-                    destfp.write(chunk)
-
             query = salt.utils.http.query(
                 fixed_url,
                 stream=True,
-                streaming_callback=on_chunk,
                 username=url_data.username,
                 password=url_data.password,
                 **get_kwargs
@@ -621,10 +607,11 @@ class Client(object):
             if 'handle' not in query:
                 raise MinionError('Error: {0}'.format(query['error']))
             if no_cache:
-                return ''.join(result)
+                return query['handle'].body
             else:
-                destfp.close()
-                destfp = None
+                dest_tmp = "{0}.part".format(dest)
+                with salt.utils.fopen(dest_tmp, 'wb') as destfp:
+                    destfp.write(query['handle'].body)
                 # Can't just do an os.rename() here, this results in a
                 # WindowsError being raised when the destination path exists on
                 # a Windows machine. Have to remove the file.
