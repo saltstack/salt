@@ -130,6 +130,10 @@ def _get_conn(ret):
     password = _options.get('password')
     indexes = _options.get('indexes', False)
 
+    # at some point we should remove support for
+    # pymongo versions < 2.3 until then there are
+    # a bunch of these sections that need to be supported
+
     if float(version) > 2.3:
         conn = pymongo.MongoClient(host, port)
     else:
@@ -140,10 +144,14 @@ def _get_conn(ret):
         mdb.authenticate(user, password)
 
     if indexes:
-        mdb.saltReturns.create_index('minion')
-        mdb.saltReturns.create_index('jid')
-
-        mdb.jobs.create_index('jid')
+        if float(version) > 2.3:
+            mdb.saltReturns.create_index('minion')
+            mdb.saltReturns.create_index('jid')
+            mdb.jobs.create_index('jid')
+        else:
+            mdb.saltReturns.ensure_index('minion')
+            mdb.saltReturns.ensure_index('jid')
+            mdb.jobs.ensure_index('jid')
 
     return conn, mdb
 
@@ -168,10 +176,18 @@ def returner(ret):
     sdata = {'minion': ret['id'], 'jid': ret['jid'], 'return': back, 'fun': ret['fun'], 'full_ret': full_ret}
     if 'out' in ret:
         sdata['out'] = ret['out']
+
     # save returns in the saltReturns collection in the json format:
     # { 'minion': <minion_name>, 'jid': <job_id>, 'return': <return info with dots removed>,
     #   'fun': <function>, 'full_ret': <unformatted return with dots removed>}
-    mdb.saltReturns.insert(sdata)
+    #
+    # again we run into the issue with deprecated code from previous versions
+
+    if float(version) > 2.3:
+        #using .copy() to ensure that the original data is not changed, raising issue with pymongo team
+        mdb.saltReturns.insert_one(sdata.copy())
+    else:
+        mdb.saltReturns.insert(sdata.copy())
 
 
 def save_load(jid, load):
@@ -179,7 +195,11 @@ def save_load(jid, load):
     Save the load for a given job id
     '''
     conn, mdb = _get_conn(ret=None)
-    mdb.jobs.insert(load)
+    if float(version) > 2.3:
+        #using .copy() to ensure original data for load is unchanged
+        mdb.jobs.insert_one(load.copy())
+    else:
+        mdb.jobs.insert(load.copy())
 
 
 def get_load(jid):
@@ -187,7 +207,7 @@ def get_load(jid):
     Return the load associated with a given job id
     '''
     conn, mdb = _get_conn(ret=None)
-    ret = mdb.jobs.find_one({'jid': jid})
+    ret = mdb.jobs.find_one({'jid': jid}, {'_id': 0})
     return ret['load']
 
 
@@ -197,7 +217,7 @@ def get_jid(jid):
     '''
     conn, mdb = _get_conn(ret=None)
     ret = {}
-    rdata = mdb.saltReturns.find({'jid': jid})
+    rdata = mdb.saltReturns.find({'jid': jid}, {'_id': 0})
     if rdata:
         for data in rdata:
             minion = data['minion']
@@ -212,7 +232,7 @@ def get_fun(fun):
     '''
     conn, mdb = _get_conn(ret=None)
     ret = {}
-    rdata = mdb.saltReturns.find_one({'fun': fun})
+    rdata = mdb.saltReturns.find_one({'fun': fun}, {'_id': 0})
     if rdata:
         ret = rdata
     return ret
