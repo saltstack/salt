@@ -254,6 +254,11 @@ def build_schedule_item(name, **kwargs):
     else:
         schedule[name]['name'] = name
 
+    if 'enabled' in kwargs:
+        schedule[name]['enabled'] = kwargs['enabled']
+    else:
+        schedule[name]['enabled'] = True
+
     if 'jid_include' not in kwargs or kwargs['jid_include']:
         schedule[name]['jid_include'] = True
 
