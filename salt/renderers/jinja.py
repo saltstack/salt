@@ -169,9 +169,9 @@ yaml_encode
       baz: {{ zap|yaml_encode }}
       {%- endload %}
 
-   In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
-   identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
-   identical.
+  In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
+  identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
+  identical.
 
 yaml_dquote
   Serializes a string into a properly-escaped YAML double-quoted
@@ -190,11 +190,11 @@ yaml_dquote
       baz: {{ baz|yaml_dquote }}
       {%- endload %}
 
-   In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
-   identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
-   identical.  If variable contents are not guaranteed to be a string
-   then it is better to use ``yaml_encode`` which handles all YAML
-   scalar types.
+  In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
+  identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
+  identical.  If variable contents are not guaranteed to be a string
+  then it is better to use ``yaml_encode`` which handles all YAML
+  scalar types.
 
 yaml_squote
    Similar to the ``yaml_dquote`` filter but with single quotes.  Note
