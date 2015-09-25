@@ -99,6 +99,12 @@ def targets(tgt, tgt_type='glob', **kwargs):  # pylint: disable=W0613
     )
     if key_filename:
         ret['tgt']['priv'] = key_filename
+        
+    sudo = salt.config.get_cloud_config_value(
+        'sudo', vm_, cloud_opts, search_global=False, default=None
+    )
+    if sudo:
+        ret['tgt']['sudo'] = sudo
 
     return ret
 
