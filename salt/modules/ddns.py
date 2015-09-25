@@ -8,8 +8,13 @@ Support for RFC 2136 dynamic DNS updates.
     support this (the keyname is only needed if the keyring contains more
     than one key)::
 
-        keyring: keyring file (default=None)
+        keyfile: keyring file (default=None)
         keyname: key name in file (default=None)
+        keyalgorithm: algorithm used to create the key
+                      (default='HMAC-MD5.SIG-ALG.REG.INT').
+            Other possible values: hmac-sha1, hmac-sha224, hmac-sha256,
+                hmac-sha384, hmac-sha512
+
 
     The keyring file needs to be in json format and the key name needs to end
     with an extra period in the file, similar to this:
