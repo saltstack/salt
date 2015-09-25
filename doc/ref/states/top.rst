@@ -317,9 +317,10 @@ For the following discussion of top file compilation, assume the following
 configuration:
 
 
-``/etc/salt/master``
+``/etc/salt/master``:
 
 .. code-block:: yaml
+
     <snip>
     file_roots:
       first_env:
@@ -328,7 +329,8 @@ configuration:
         - /srv/salt/second
 
 
-``/srv/salt/first/top.sls:``
+``/srv/salt/first/top.sls``:
+
 .. code-block:: yaml
 
     first_env:
