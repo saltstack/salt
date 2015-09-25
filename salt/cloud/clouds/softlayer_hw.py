@@ -445,7 +445,7 @@ def create(vm_):
     }
 
     optional_products = config.get_cloud_config_value(
-        'optional_products', vm_, __opts__, default=True
+        'optional_products', vm_, __opts__, default=[]
     )
     for product in optional_products:
         kwargs['prices'].append({'id': product})
