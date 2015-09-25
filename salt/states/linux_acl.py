@@ -9,7 +9,7 @@ Ensure a Linux ACL is present
      root:
        acl.present:
          - name: /root
-         - acl_type: users
+         - acl_type: user
          - acl_name: damian
          - perms: rwx
 
