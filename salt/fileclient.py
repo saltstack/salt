@@ -512,8 +512,7 @@ class Client(object):
         ret.sort()
         return ret
 
-    def get_url(self, url, dest, makedirs=False, saltenv='base',
-                env=None, no_cache=False):
+    def get_url(self, url, dest, makedirs=False, saltenv='base', env=None, no_cache=False):
         '''
         Get a single file from a URL.
         '''
@@ -598,78 +597,21 @@ class Client(object):
 
         destfp = None
         try:
-            if no_cache:
-                result = []
-
-                def on_chunk(chunk):
-                    result.append(chunk)
-            else:
-                dest_tmp = "{0}.part".format(dest)
-                destfp = salt.utils.fopen(dest_tmp, 'wb')
-
-                def on_chunk(chunk):
-                    destfp.write(chunk)
-
             query = salt.utils.http.query(
                 fixed_url,
                 stream=True,
-                streaming_callback=on_chunk,
                 username=url_data.username,
                 password=url_data.password,
                 **get_kwargs
             )
-
             if 'handle' not in query:
                 raise MinionError('Error: {0}'.format(query['error']))
-
-            try:
-                content_length = int(query['handle'].headers['Content-Length'])
-            except (AttributeError, KeyError, ValueError):
-                # Shouldn't happen but don't let this raise an exception.
-                # Instead, just don't do content length checking below.
-                log.warning(
-                    'No Content-Length header in HTTP response from fetch of '
-                    '{0}, or Content-Length is non-numeric'.format(fixed_url)
-                )
-                content_length = None
-
             if no_cache:
-                content = ''.join(result)
-                if content_length is not None \
-                        and len(content) > content_length:
-                    return content[-content_length:]
-                else:
-                    return content
+                return query['handle'].body
             else:
-                destfp.close()
-                destfp = None
-                dest_tmp_size = os.path.getsize(dest_tmp)
-                if content_length is not None \
-                        and dest_tmp_size > content_length:
-                    log.warning(
-                        'Size of file downloaded from {0} ({1}) does not '
-                        'match the Content-Length ({2}). This is probably due '
-                        'to an upstream bug in tornado '
-                        '(https://github.com/tornadoweb/tornado/issues/1518). '
-                        'Re-writing the file to correct this.'.format(
-                            fixed_url,
-                            dest_tmp_size,
-                            content_length
-                        )
-                    )
-                    dest_tmp_bak = dest_tmp + '.bak'
-                    salt.utils.files.rename(dest_tmp, dest_tmp_bak)
-                    with salt.utils.fopen(dest_tmp_bak, 'rb') as fp_bak:
-                        fp_bak.seek(dest_tmp_size - content_length)
-                        with salt.utils.fopen(dest_tmp, 'wb') as fp_new:
-                            while True:
-                                chunk = fp_bak.read(
-                                    self.opts['file_buffer_size']
-                                )
-                                if not chunk:
-                                    break
-                                fp_new.write(chunk)
-                    os.remove(dest_tmp_bak)
+                dest_tmp = "{0}.part".format(dest)
+                with salt.utils.fopen(dest_tmp, 'wb') as destfp:
+                    destfp.write(query['handle'].body)
                 salt.utils.files.rename(dest_tmp, dest)
                 return dest
         except HTTPError as exc:
