@@ -160,13 +160,15 @@ def get(consul_url=None, key=None, recurse=False, decode=False, raw=False):
 
         salt '*' consul.list key='web' recurse='True' decode='True'
 
-        By default values stored in Consul are base64 encoded, passing the
-        decode option will show them as the decoded values.
+    By default values stored in Consul are base64 encoded, passing the
+    decode option will show them as the decoded values.
+
+    .. code-block:: bash
 
         salt '*' consul.list key='web' recurse='True' decode='True' raw='True'
 
-        By default Consult will return other information about the key, the raw
-        option will return only the raw value.
+    By default Consult will return other information about the key, the raw
+    option will return only the raw value.
 
     '''
     ret = {}

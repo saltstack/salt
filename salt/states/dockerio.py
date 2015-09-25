@@ -77,7 +77,7 @@ Available Functions
 
   .. note::
 
-      The ``port_bindings`` argument above is a dictionary. The double
+      The ``ports`` argument above is a dictionary. The double
       indentation is required for PyYAML to load the data structure
       properly as a python dictionary. More information can be found
       :ref:`here <nested-dict-indentation>`
@@ -474,20 +474,13 @@ def loaded(name, tag='latest', source=None, source_hash='', force=False):
 
         .. note::
 
-            See first the documentation for salt file.managed
-            <http://docs.saltstack.com/en/latest/ref/states/all/_
-            salt.states.file.html#salt.states.file.managed>
+            See first the documentation for Salt `file.managed
+            <http://docs.saltstack.com/en/latest/ref/states/all/salt.states.file.html#salt.states.file.managed>`_
 
     source_hash
         This can be one of the following:
             1. a source hash string
             2. the URI of a file that contains source hash strings
-
-            .. note::
-
-                See first the documentation for salt file.managed
-                <http://docs.saltstack.com/en/latest/ref/states/all/_
-                salt.states.file.html#salt.states.file.managed>
 
     force
         Load even if the image exists
@@ -640,9 +633,8 @@ def installed(name,
         List of volumes (see notes for the running function)
 
     For other parameters, see absolutely first the salt.modules.dockerio
-    execution module and the docker-py python bindings for docker
-    documentation
-    <https://github.com/dotcloud/docker-py#api>`_ for
+    execution module and the `docker-py python bindings for docker
+    documentation <https://github.com/dotcloud/docker-py#api>`_ for
     `docker.create_container`.
 
     .. note::
