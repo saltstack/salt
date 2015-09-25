@@ -17,6 +17,7 @@ To work with an etcd server you must configure an etcd profile in the Salt
 Master configuration, for example:
 
 .. code-block:: yaml
+
     my_etd_config:
       etcd.host: 127.0.0.1
       etcd.port: 4001
@@ -25,6 +26,7 @@ You can also configure etcd without a profile however it is recommended that
 you use profiles:
 
 .. code-block:: yaml
+
     etcd.host: 127.0.0.1
     etcd.port: 4001
 
@@ -38,6 +40,7 @@ Available Functions
   means you can watch these states for changes.
 
   .. code-block:: yaml
+
       /foo/bar/baz:
         etcd.set:
           - value: foo
@@ -45,7 +48,7 @@ Available Functions
 
 - ``wait_set``
 
-  Performs the same functionality as``set`` but only if a watch requisite is ``True``.
+  Performs the same functionality as ``set`` but only if a watch requisite is ``True``.
 
   .. code-block:: yaml
 
@@ -67,13 +70,14 @@ Available Functions
   not exist then no changes will occur.
 
   .. code-block:: yaml
+
       /foo/bar/baz:
         etcd.rm:
           - profile: my_etcd_config
 
 - ``wait_rm``
 
-  Performs the same functionality as``rm`` but only if a watch requisite is ``True``.
+  Performs the same functionality as ``rm`` but only if a watch requisite is ``True``.
 
   .. code-block:: yaml
 
