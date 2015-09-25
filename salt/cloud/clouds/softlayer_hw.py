@@ -118,6 +118,8 @@ def avail_locations(call=None):
 
     available = conn.getAvailableLocations(id=50)
     for location in available:
+        if location.get('isAvailable', 0) is 0:
+            continue
         ret[location['locationId']]['available'] = True
 
     return ret
@@ -443,7 +445,7 @@ def create(vm_):
     }
 
     optional_products = config.get_cloud_config_value(
-        'optional_products', vm_, __opts__, default=True
+        'optional_products', vm_, __opts__, default=[]
     )
     for product in optional_products:
         kwargs['prices'].append({'id': product})
@@ -454,9 +456,9 @@ def create(vm_):
     )
     kwargs['prices'].append({'id': port_speed})
 
-    # Default is 248 (5000 GB Bandwidth)
+    # Default is 1800 (0 GB Bandwidth)
     bandwidth = config.get_cloud_config_value(
-        'bandwidth', vm_, __opts__, default=248
+        'bandwidth', vm_, __opts__, default=1800
     )
     kwargs['prices'].append({'id': bandwidth})
 
