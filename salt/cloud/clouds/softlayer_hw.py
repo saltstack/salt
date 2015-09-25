@@ -456,9 +456,9 @@ def create(vm_):
     )
     kwargs['prices'].append({'id': port_speed})
 
-    # Default is 248 (5000 GB Bandwidth)
+    # Default is 1800 (0 GB Bandwidth)
     bandwidth = config.get_cloud_config_value(
-        'bandwidth', vm_, __opts__, default=248
+        'bandwidth', vm_, __opts__, default=1800
     )
     kwargs['prices'].append({'id': bandwidth})
 
