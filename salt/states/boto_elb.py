@@ -229,10 +229,10 @@ def present(
         profile=None,
         wait_for_sync=True):
     '''
-    Ensure the IAM role exists.
+    Ensure the ELB exists.
 
     name
-        Name of the IAM role.
+        Name of the ELB.
 
     availability_zones
         A list of availability zones for this ELB.
