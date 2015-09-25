@@ -898,7 +898,7 @@ class Minion(MinionBase):
         if modules_max_memory is True:
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
 
-        executors = salt.loader.executors(self.opts, functions, )
+        executors = salt.loader.executors(self.opts, functions)
 
         return functions, returners, errors, executors
 
@@ -1044,7 +1044,7 @@ class Minion(MinionBase):
                         executors[-1] = 'sudo.get'  # replace
                     else:
                         executors.append('sudo.get')  # append
-                log.trace("Executors list    {0}".format(executors))
+                log.trace("Executors list {0}".format(executors))
 
                 # Get executors
                 def get_executor(name):

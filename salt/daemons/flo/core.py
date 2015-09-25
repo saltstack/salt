@@ -669,8 +669,7 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
         self.utils.value = salt.loader.utils(self.opts.value)
         self.modules.value = salt.loader.minion_mods(self.opts.value, utils=self.utils.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
-        self.module_executors = salt.loader.executors(self.opts, self.modules.value)
-
+        self.module_executors.value = salt.loader.executors(self.opts.value, self.modules.value)
 
         self.utils.value.clear()
         self.modules.value.clear()
