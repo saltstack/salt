@@ -63,7 +63,7 @@ def _config(name, key=None, **kwargs):
 
 def _get_keyring(keyfile):
     keyring = None
-    if keyfile and __salt__['file.file_exists'](keyfile):
+    if keyfile:
         with salt.utils.fopen(keyfile) as _f:
             keyring = dns.tsigkeyring.from_text(json.load(_f))
     return keyring
