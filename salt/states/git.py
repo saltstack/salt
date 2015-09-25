@@ -1712,7 +1712,7 @@ def config_unset(name,
             key=key,
             value_regex=None,
             user=user,
-            ignore_retcode=True
+            ignore_retcode=True,
             **{'global': global_}
         )
 
@@ -1726,7 +1726,7 @@ def config_unset(name,
                 key=name,
                 value_regex=value_regex,
                 all=all_,
-                user=user
+                user=user,
                 **{'global': global_}
             )
         except CommandExecutionError as exc:
@@ -1749,7 +1749,7 @@ def config_unset(name,
         key=key,
         value_regex=None,
         user=user,
-        ignore_retcode=True
+        ignore_retcode=True,
         **{'global': global_}
     )
 
@@ -1768,7 +1768,7 @@ def config_unset(name,
             key=key,
             value_regex=value_regex,
             user=user,
-            ignore_retcode=True
+            ignore_retcode=True,
             **{'global': global_}
         )
 
@@ -1959,7 +1959,7 @@ def config_set(name,
             key=name,
             value=value,
             multivar=multivar,
-            user=user
+            user=user,
             **{'global': global_}
         )
     except CommandExecutionError as exc:
