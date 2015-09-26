@@ -93,7 +93,7 @@ def create(vm_info):
             }
     @return dict of resulting vm. !!!Passwords cand and should be included!!!
     """
-
+    log.debug("Creating virtualbox with %s" % vm_info)
     try:
         # Check for required profile parameters before sending any API calls.
         if vm_info['profile'] and config.is_profile_configured(__opts__,
@@ -105,6 +105,7 @@ def create(vm_info):
 
     # For now we can only clone
     if 'clone_from' not in vm_info:
+        log.error('"clone_from" not in profile configuration!')
         return False
 
     salt.utils.cloud.fire_event(
