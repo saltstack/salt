@@ -1,14 +1,17 @@
 """
-A salt cloud provider that lets you use virtualbox on your machine and act as a cloud.
+A salt cloud provider that lets you use virtualbox on your machine
+and act as a cloud.
 
 For now this will only clone existing VMs. It's best to create a template
 from which we will clone.
 
-Followed https://docs.saltstack.com/en/latest/topics/cloud/cloud.html#non-libcloud-based-modules
+Followed
+https://docs.saltstack.com/en/latest/topics/cloud/cloud.html#non-libcloud-based-modules
 to create this.
 
 Dicts provided by salt:
-    __opts__ : contains the options used to run Salt Cloud, as well as a set of configuration and environment variables
+    __opts__ : contains the options used to run Salt Cloud,
+        as well as a set of configuration and environment variables
 """
 
 # Import python libs
@@ -40,12 +43,14 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'virtualbox'
 
+
 def __virtual__():
     """
-    This function determines whether or not to make this cloud module available upon execution.
+    This function determines whether or not
+    to make this cloud module available upon execution.
     Most often, it uses get_configured_provider() to determine
      if the necessary configuration has been set up.
-    It may also check for necessary imports, to decide whether to load the module.
+    It may also check for necessary imports decide whether to load the module.
     In most cases, it will return a True or False value.
     If the name of the driver used does not match the filename,
      then that name should be returned instead of True.
@@ -64,6 +69,7 @@ def __virtual__():
     # return __virtualname__
     return True
 
+
 def get_configured_provider():
     '''
     Return the first configured instance.
@@ -71,18 +77,22 @@ def get_configured_provider():
     configured = config.is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
-        () # keys we need from the provider configuration
+        ()  # keys we need from the provider configuration
     )
     log.debug("First virtualbox configuration %s" % configured)
     return configured
 
+
 def create(vm_info):
     """
     Creates a virtual machine from the given VM information.
-    This is what is used to request a virtual machine to be created by the cloud provider, wait for it to become available, and then (optionally) log in and install Salt on it.
+    This is what is used to request a virtual machine to be created by the
+    cloud provider, wait for it to become available,
+    and then (optionally) log in and install Salt on it.
 
     Fires:
-        "starting create" : This event is tagged salt/cloud/<vm name>/creating. The payload contains the names of the VM, profile and provider.
+        "starting create" : This event is tagged salt/cloud/<vm name>/creating.
+        The payload contains the names of the VM, profile and provider.
 
     @param vm_info {dict}
             {
@@ -96,9 +106,11 @@ def create(vm_info):
     log.debug("Creating virtualbox with %s" % vm_info)
     try:
         # Check for required profile parameters before sending any API calls.
-        if vm_info['profile'] and config.is_profile_configured(__opts__,
-                                                           __active_provider_name__ or 'virtualbox',
-                                                           vm_['profile']) is False:
+        if vm_info['profile'] and config.is_profile_configured(
+                    __opts__,
+                    __active_provider_name__ or 'virtualbox',
+                    vm_info['profile']
+                ) is False:
             return False
     except AttributeError:
         pass
@@ -120,7 +132,8 @@ def create(vm_info):
         transport=__opts__['transport']
     )
 
-    #TODO Calculate kwargs with parameters required by virtualbox to create the virtual machine.
+    # TODO Calculate kwargs with parameters required by virtualbox
+    # to create the virtual machine.
     request_kwargs = {
         'name': vm_info['name'],
         'profile': vm_info['profile']
@@ -136,8 +149,9 @@ def create(vm_info):
     # TODO request a new VM!
     vm_result = vb_create_vm(**request_kwargs)
 
-    #TODO Prepare deployment of salt on the vm
-    #  Any private data, including passwords and keys (including public keys) should be stripped from the deploy kwargs before the event is fired.
+    # TODO Prepare deployment of salt on the vm
+    # Any private data, including passwords and keys (including public keys)
+    # should be stripped from the deploy kwargs before the event is fired.
     deploy_kwargs = {
     }
 
@@ -180,6 +194,7 @@ def vb_create_vm(**kwargs):
     @return dict of resulting VM
     """
     pass
+
 
 def vb_start_vm(**kwargs):
     """
