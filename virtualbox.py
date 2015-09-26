@@ -96,7 +96,7 @@ def create(vm_info):
 
     try:
         # Check for required profile parameters before sending any API calls.
-        if vm_['profile'] and config.is_profile_configured(__opts__,
+        if vm_info['profile'] and config.is_profile_configured(__opts__,
                                                            __active_provider_name__ or 'virtualbox',
                                                            vm_['profile']) is False:
             return False
