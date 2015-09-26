@@ -38,6 +38,8 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'virtualbox'
+
 def __virtual__():
     """
     This function determines whether or not to make this cloud module available upon execution.
