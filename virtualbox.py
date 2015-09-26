@@ -1,6 +1,8 @@
 """
 A salt cloud provider that lets you use virtualbox on your machine and act as a cloud.
-It can be used in co
+
+For now this will only clone existing VMs. It's best to create a template
+from which we will clone.
 
 Followed https://docs.saltstack.com/en/latest/topics/cloud/cloud.html#non-libcloud-based-modules
 to create this.
@@ -83,9 +85,24 @@ def create(vm_info):
                 name: <str>
                 profile: <dict>
                 provider: <provider>
+                clone_from: <vm_name>
             }
     @return dict of resulting vm. !!!Passwords cand and should be included!!!
     """
+
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'virtualbox',
+                                                           vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # For now we can only clone
+    if 'clone_from' not in vm_info:
+        return False
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
