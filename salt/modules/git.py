@@ -146,15 +146,16 @@ def _git_run(command, cwd=None, runas=None, identity=None,
         # try each of the identities, independently
         for id_file in identity:
             if 'salt://' in id_file:
-                try:
-                    id_file = __salt__['cp.cache_file'](id_file)
-                except IOError as e:
-                    log.debug(e)
-                    raise CommandExecutionError(
-                        'identity \'{0}\' does not exist.'.format(
-                            id_file
-                        )
-                    )
+                _id_file = id_file
+                id_file = __salt__['cp.cache_file'](id_file)
+                if not id_file:
+                    log.error('identity {0} does not exist.'.format(_id_file))
+                    continue
+            else:
+                if not __salt__['file.file_exists'](id_file):
+                    log.error('identity {0} does not exist.'.format(id_file))
+                    continue
+
             env = {
                 'GIT_IDENTITY': id_file
             }
