@@ -68,11 +68,13 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    return config.is_provider_configured(
+    configured = config.is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
-        (,) # keys we need from the provider configuration
+        () # keys we need from the provider configuration
     )
+    log.debug("First virtualbox configuration %s" % configured)
+    return configured
 
 def create(vm_info):
     """
