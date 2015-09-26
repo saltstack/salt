@@ -2133,7 +2133,10 @@ def list_containers(**kwargs):
     '''
     ret = set()
     for item in six.itervalues(ps_(all=kwargs.get('all', False))):
-        for c_name in [x.lstrip('/') for x in item.get('Names', [])]:
+        names = item.get('Names')
+        if not names:
+            continue
+        for c_name in [x.lstrip('/') for x in names]:
             ret.add(c_name)
     return sorted(ret)
 
