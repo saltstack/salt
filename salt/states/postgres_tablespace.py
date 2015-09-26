@@ -2,6 +2,7 @@
 '''
 Management of PostgreSQL tablespace
 ===================================
+
 The postgres_tablespace module is used to create and manage Postgres
 tablespaces.
 
