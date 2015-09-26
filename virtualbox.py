@@ -67,7 +67,7 @@ def get_configured_provider():
     return config.is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
-        ('subscription_id', 'certificate_path')
+        (,) # keys we need from the provider configuration
     )
 
 def create(vm_info):
