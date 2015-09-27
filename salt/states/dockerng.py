@@ -1365,15 +1365,15 @@ def running(name,
         ret['comment'] = 'The \'image\' argument is required'
         return ret
 
-    if 'command' in kwargs:
-        if 'cmd' in kwargs:
+    if 'cmd' in kwargs:
+        if 'command' in kwargs:
             ret['comment'] = (
                 'Only one of \'cmd\' and \'command\' can be used. Both '
                 'arguments are equivalent.'
             )
             ret['result'] = False
             return ret
-        kwargs['cmd'] = kwargs.pop('command')
+        kwargs['command'] = kwargs.pop('cmd')
 
     try:
         image = ':'.join(_get_repo_tag(image))
