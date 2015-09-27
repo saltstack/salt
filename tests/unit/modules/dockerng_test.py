@@ -78,6 +78,33 @@ class DockerngTestCase(TestCase):
             mine_send.assert_called_with('dockerng.ps', verbose=True, all=True,
                                          host=True)
 
+    @patch.object(dockerng_mod, 'images', MagicMock())
+    @patch.object(dockerng_mod, 'inspect_image')
+    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    def test_create_with_arg_cmd(self, *args):
+        '''
+        When cmd argument is passed check it is renamed to command.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {}
+        client = Mock()
+        client.api_version = '1.19'
+        client.create_host_config.return_value = host_config
+        client.create_container.return_value = {}
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.create('image', cmd='ls', name='ctn')
+        client.create_container.assert_called_once_with(
+            command='ls',
+            host_config=host_config,
+            image='image',
+            name='ctn')
+
 
 if __name__ == '__main__':
     from integration import run_tests
