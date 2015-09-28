@@ -1508,7 +1508,7 @@ class GitBase(object):
             self.cache_root = os.path.join(self.opts['cachedir'], self.role)
         self.env_cache = os.path.join(self.cache_root, 'envs.p')
         self.hash_cachedir = os.path.join(
-            self.cache_root, self.role, 'hash')
+            self.cache_root, 'hash')
         self.file_list_cachedir = os.path.join(
             self.opts['cachedir'], 'file_lists', self.role)
 
