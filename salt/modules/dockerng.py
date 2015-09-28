@@ -343,7 +343,7 @@ argument name:
 '''
 
 VALID_CREATE_OPTS = {
-    'cmd': {
+    'command': {
         'path': 'Config:Cmd',
     },
     'hostname': {
@@ -1099,25 +1099,25 @@ def _validate_input(action,
             raise SaltInvocationError(key + ' must be a list of strings')
 
     # Custom validation functions for container creation options
-    def _valid_cmd():  # pylint: disable=unused-variable
+    def _valid_command():  # pylint: disable=unused-variable
         '''
         Must be either a string or a list of strings. Value will be translated
         to a list of strings
         '''
-        if kwargs.get('cmd') is None:
+        if kwargs.get('command') is None:
             # No need to validate
             return
-        if isinstance(kwargs['cmd'], six.string_types):
+        if isinstance(kwargs['command'], six.string_types):
             # Translate command into a list of strings
             try:
-                kwargs['cmd'] = shlex.split(kwargs['cmd'])
+                kwargs['command'] = shlex.split(kwargs['command'])
             except AttributeError:
                 pass
         try:
-            _valid_stringlist('cmd')
+            _valid_stringlist('command')
         except SaltInvocationError:
             raise SaltInvocationError(
-                'cmd must be a string or list of strings'
+                'command/cmd must be a string or list of strings'
             )
 
     def _valid_user():  # pylint: disable=unused-variable
@@ -2507,10 +2507,10 @@ def create(image,
     image
         Image from which to create the container
 
-    cmd or command
+    command or cmd
         Command to run in the container
 
-        Example: ``cmd=bash`` or ``command=bash``
+        Example: ``command=bash`` or ``cmd=bash``
 
         .. versionchanged:: 2015.8.1
             ``cmd`` is now also accepted
@@ -2646,13 +2646,13 @@ def create(image,
         # Create a CentOS 7 container that will stay running once started
         salt myminion dockerng.create centos:7 name=mycent7 interactive=True tty=True command=bash
     '''
-    if 'command' in kwargs:
-        if 'cmd' in kwargs:
+    if 'cmd' in kwargs:
+        if 'command' in kwargs:
             raise SaltInvocationError(
-                'Only one of \'cmd\' and \'command\' can be used. Both '
+                'Only one of \'command\' and \'cmd\' can be used. Both '
                 'arguments are equivalent.'
             )
-        kwargs['cmd'] = kwargs.pop('command')
+        kwargs['command'] = kwargs.pop('cmd')
 
     try:
         # Try to inspect the image, if it fails then we know we need to pull it
