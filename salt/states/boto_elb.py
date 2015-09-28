@@ -335,8 +335,7 @@ def present(
             name, region, key, keyid, profile
         )
         for cname in cnames:
-            _ret = __salt__['state.single'](
-                'boto_route53.present',
+            _ret = __states__['boto_route53.present'](
                 name=cname.get('name'),
                 value=lb['dns_name'],
                 zone=cname.get('zone'),
@@ -912,7 +911,7 @@ def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profil
             "keyid": keyid,
             "profile": profile,
         }
-        ret = __salt__["state.single"]('boto_cloudwatch_alarm.present', **kwargs)
+        ret = __states__['boto_cloudwatch_alarm.present'](**kwargs)
         results = next(six.itervalues(ret))
         if not results["result"]:
             merged_return_value["result"] = results["result"]

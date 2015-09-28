@@ -408,7 +408,7 @@ def present(
         for cfg in launch_config:
             args.update(cfg)
         if not __opts__['test']:
-            lc_ret = __salt__['state.single']('boto_lc.present', **args)
+            lc_ret = __states__['boto_lc.present'](**args)
             lc_ret = next(six.itervalues(lc_ret))
             if lc_ret['result'] is True and lc_ret['changes']:
                 if 'launch_config' not in ret['changes']:
@@ -612,7 +612,7 @@ def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profil
             'keyid': keyid,
             'profile': profile,
         }
-        ret = __salt__['state.single']('boto_cloudwatch_alarm.present', **kwargs)
+        ret = __states__['boto_cloudwatch_alarm.present'](**kwargs)
         results = next(six.itervalues(ret))
         if not results['result']:
             merged_return_value['result'] = False
