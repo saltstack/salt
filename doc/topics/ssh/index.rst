@@ -66,13 +66,13 @@ Deploy ssh key for salt-ssh
 By default, salt-ssh will generate key pairs for ssh, the default path will be
 /etc/salt/pki/master/ssh/salt-ssh.rsa
 
-You can using ssh-copy-id(the openssh key deploy tool) to deploy key to your servers.
+You can use ssh-copy-id, (the OpenSSH key deployment tool) to deploy keys to your servers.
 
 .. code-block:: bash
 
    ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa user@server.demo.com
 
-And you can create a simple shell scripts, named salt-ssh-copy-id.sh
+One could also create e a simple shell script, named salt-ssh-copy-id.sh as follows:
 
 .. code-block:: bash
 
@@ -84,14 +84,16 @@ And you can create a simple shell scripts, named salt-ssh-copy-id.sh
    ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa $1
 
 
-Don't forget chmod +x salt-ssh-copy-id.sh, then you can quick copy key:
+.. note::
+
+Be certain to chmod +x salt-ssh-copy-id.sh.
 
 .. code-block:: bash
 
    ./salt-ssh-copy-id.sh user@server1.host.com
    ./salt-ssh-copy-id.sh user@server2.host.com
 
-Once you success deploy key to your servers, you can continue enjoy salt-ssh
+Once keys are successfully deployed, salt-ssh can be used to control them.
 
 
 Calling Salt SSH
