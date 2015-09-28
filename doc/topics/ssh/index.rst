@@ -60,6 +60,40 @@ address. A more elaborate roster can be created:
     sudo works only if NOPASSWD is set for user in /etc/sudoers:
     ``fred ALL=(ALL) NOPASSWD: ALL``
 
+Deploy ssh key for salt-ssh
+===========================
+
+By default, salt-ssh will generate key pairs for ssh, the default path will be
+/etc/salt/pki/master/ssh/salt-ssh.rsa
+
+You can using ssh-copy-id(the openssh key deploy tool) to deploy key to your servers.
+
+.. code-block:: bash
+
+   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa user@server.demo.com
+
+And you can create a simple shell scripts, named salt-ssh-copy-id.sh
+
+.. code-block:: bash
+
+   #!/bin/bash
+   if [ -z $1 ]; then
+      echo $0 user@host.com
+      exit 0
+   fi
+   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa $1
+
+
+Don't forget chmod +x salt-ssh-copy-id.sh, then you can quick copy key:
+
+.. code-block:: bash
+
+   ./salt-ssh-copy-id.sh user@server1.host.com
+   ./salt-ssh-copy-id.sh user@server2.host.com
+
+Once you success deploy key to your servers, you can continue enjoy salt-ssh
+
+
 Calling Salt SSH
 ================
 
