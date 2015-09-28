@@ -347,7 +347,6 @@ def present(
                 keyid=keyid,
                 profile=profile
             )
-            _ret = _ret.values()[0]
             ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
             ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
             if not _ret['result']:
@@ -911,8 +910,7 @@ def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profil
             "keyid": keyid,
             "profile": profile,
         }
-        ret = __states__['boto_cloudwatch_alarm.present'](**kwargs)
-        results = next(six.itervalues(ret))
+        results = __states__['boto_cloudwatch_alarm.present'](**kwargs)
         if not results["result"]:
             merged_return_value["result"] = results["result"]
         if results.get("changes", {}) != {}:
