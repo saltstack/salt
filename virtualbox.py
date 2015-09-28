@@ -26,6 +26,8 @@ import salt.config as config
 from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
 
+log = logging.getLogger(__name__)
+
 # Import virtualbox libs
 HAS_LIBS = False
 try:
@@ -36,12 +38,10 @@ try:
     HAS_LIBS = True
 
 except ImportError:
-    pass
-
-
-log = logging.getLogger(__name__)
+    log.error("Couldn't import VirtualBox API")
 
 __virtualname__ = 'virtualbox'
+_virtualboxManager = None
 
 
 def __virtual__():
@@ -147,7 +147,7 @@ def create(vm_info):
         transport=__opts__['transport']
     )
     # TODO request a new VM!
-    vm_result = vb_create_vm(**request_kwargs)
+    vm_result = vb_clone_vm(**request_kwargs)
 
     # TODO Prepare deployment of salt on the vm
     # Any private data, including passwords and keys (including public keys)
@@ -185,15 +185,53 @@ def create(vm_info):
 
 
 # -----------------------------
-# Virtualbox method
+# Virtualbox methods
 # -----------------------------
-def vb_create_vm(**kwargs):
+
+def vb_get_manager():
+    # This code initializes VirtualBox manager with default style
+    # and parameters
+    global _virtualboxManager
+    if _virtualboxManager is None:
+        _virtualboxManager = VirtualBoxManager(None, None)
+    vbox = _virtualboxManager.vbox
+    return vbox
+
+
+def vb_clone_vm(
+        name=None,
+        clone_from=None,
+        timeout=10000):
     """
     Tells virtualbox to create a VM
 
     @return dict of resulting VM
     """
-    pass
+    vbox = vb_get_manager()
+    log.info("Create virtualbox machine %s from %s" % (name, clone_from))
+
+    source_machine = vbox.findMachine(clone_from)
+
+    groups = None
+    osTypeId = "Other"
+    new_machine = vbox.createMachine(
+        None,  # Settings file
+        name,
+        groups,
+        osTypeId,
+        None  # flags
+    )
+
+    progress = source_machine.cloneTo(
+        new_machine,
+        0,  # CloneMode
+        None  # CloneOptions : None = Full?
+    )
+
+    progress.waitForCompletion(timeout)
+    info("Finished clone of %s" % source_machine)
+
+    vbox.registerMachine(new_machine)
 
 
 def vb_start_vm(**kwargs):
@@ -203,3 +241,16 @@ def vb_start_vm(**kwargs):
 
     @return dict of started VM, contains IP addresses and what not
     """
+
+
+def vb_destroy_machine(name=None, timeout=10000):
+    """
+
+    @param timeout int timeout in milliseconds
+    """
+    info("Destroying machine %s" % name)
+    machine = vbox.findMachine(name)
+    files = machine.unregister(2)
+    progress = machine.deleteConfig(files)
+    progress.waitForCompletion(timeout)
+    info("Finished destroying machine %s" % name)
