@@ -560,7 +560,7 @@ def dependency_information(include_salt_cloud=False):
         ('pycparser', 'pycparser', '__version__'),
         ('gitdb', 'gitdb', '__version__'),
         ('gitpython', 'gitpython', '__version__'),
-        ('python-gnupg', 'python-gnupg', '__version__'),
+        ('python-gnupg', 'gnupg', '__version__'),
         ('mysql-python', 'mysql-python', '__version__'),
         ('cherrypy', 'cherrypy', '__version__'),
     ]
