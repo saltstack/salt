@@ -366,9 +366,9 @@ def sync_returners(saltenv=None, refresh=True):
 
 def sync_outputters(saltenv=None, refresh=True):
     '''
-    Sync the outputters from the _outputters directory on the salt master file
+    Sync the outputters from the _output directory on the salt master file
     server. This function is environment aware, pass the desired environment
-    to grab the contents of the _outputters directory, base is the default
+    to grab the contents of the _output directory, base is the default
     environment.
 
     CLI Example:
@@ -377,7 +377,7 @@ def sync_outputters(saltenv=None, refresh=True):
 
         salt '*' saltutil.sync_outputters
     '''
-    ret = _sync('outputters', saltenv)
+    ret = _sync('output', saltenv)
     if refresh:
         refresh_modules()
     return ret
@@ -425,7 +425,7 @@ def sync_all(saltenv=None, refresh=True):
     ret['grains'] = sync_grains(saltenv, False)
     ret['renderers'] = sync_renderers(saltenv, False)
     ret['returners'] = sync_returners(saltenv, False)
-    ret['outputters'] = sync_outputters(saltenv, False)
+    ret['output'] = sync_outputters(saltenv, False)
     ret['utils'] = sync_utils(saltenv, False)
     if refresh:
         refresh_modules()

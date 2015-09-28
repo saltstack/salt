@@ -23,7 +23,7 @@ The directories are prepended with an underscore:
 - :file:`_renderers`
 - :file:`_returners`
 - :file:`_states`
-- :file:`_outputters`
+- :file:`_output`
 - :file:`_utils`
 
 The contents of these directories need to be synced over to the minions after
