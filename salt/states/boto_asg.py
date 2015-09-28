@@ -442,7 +442,6 @@ def present(
             args.update(d)
         if not __opts__['test']:
             lc_ret = __states__['boto_lc.present'](**args)
-            lc_ret = lc_ret.values()[0]
             if lc_ret['result'] is True and lc_ret['changes']:
                 if 'launch_config' not in ret['changes']:
                     ret['changes']['launch_config'] = {}
@@ -713,8 +712,7 @@ def _alarms_present(name, min_size_equals_max_size, alarms, alarms_from_pillar, 
             'keyid': keyid,
             'profile': profile,
         }
-        ret = __states__['boto_cloudwatch_alarm.present'](**kwargs)
-        results = ret.values()[0]
+        results = __states__['boto_cloudwatch_alarm.present'](**kwargs)
         if not results['result']:
             merged_return_value['result'] = False
         if results.get('changes', {}) != {}:
