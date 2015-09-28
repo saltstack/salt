@@ -314,7 +314,7 @@ def latest(name,
                     __salt__['git.submodule'](target,
                                               user=user,
                                               identity=identity,
-                                              opts='--recursive')
+                                              opts='--recursive --init')
 
                 try:
                     new_rev = __salt__['git.revision'](cwd=target, user=user)
@@ -377,7 +377,7 @@ def latest(name,
                 __salt__['git.submodule'](target,
                                           user=user,
                                           identity=identity,
-                                          opts='--recursive')
+                                          opts='--recursive --init')
 
             new_rev = None
             if not bare:
