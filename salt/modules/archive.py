@@ -388,7 +388,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
 
 @salt.utils.decorators.which('unzip')
 def cmd_unzip(zip_file, dest, excludes=None,
-              template=None, options=None, runas=None):
+              template=None, options=None, runas=None, trim_output=False):
     '''
     .. versionadded:: 2015.5.0
         In versions 2014.7.x and earlier, this function was known as
@@ -432,6 +432,10 @@ def cmd_unzip(zip_file, dest, excludes=None,
 
         .. versionadded:: 2015.5.0
 
+    trim_output : False
+        The number of files we should output on success before the rest are trimmed, if this is
+        set to True then it will default to 100
+
     CLI Example:
 
     .. code-block:: bash
@@ -451,14 +455,16 @@ def cmd_unzip(zip_file, dest, excludes=None,
     if excludes is not None:
         cmd.append('-x')
         cmd.extend(excludes)
-    return __salt__['cmd.run'](cmd,
+    files = __salt__['cmd.run'](cmd,
                                template=template,
                                runas=runas,
                                python_shell=False).splitlines()
 
+    return _trim_files(files, trim_output)
+
 
 @salt.utils.decorators.depends('zipfile', fallback_function=cmd_unzip)
-def unzip(zip_file, dest, excludes=None, template=None, runas=None):
+def unzip(zip_file, dest, excludes=None, template=None, runas=None, trim_output=False):
     '''
     Uses the ``zipfile`` Python module to unpack zip files
 
@@ -490,6 +496,10 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None):
     runas : None
         Unpack the zip file as the specified user. Defaults to the user under
         which the minion is running.
+
+    trim_output : False
+        The number of files we should output on success before the rest are trimmed, if this is
+        set to True then it will default to 100
 
     CLI Example:
 
@@ -555,7 +565,7 @@ def unzip(zip_file, dest, excludes=None, template=None, runas=None):
                 'Exception encountered unpacking zipfile: {0}'.format(exc)
             )
 
-    return cleaned_files
+    return _trim_files(cleaned_files, trim_output)
 
 
 @salt.utils.decorators.which('rar')
@@ -607,7 +617,7 @@ def rar(rarfile, sources, template=None, cwd=None, runas=None):
 
 
 @salt.utils.decorators.which_bin(('unrar', 'rar'))
-def unrar(rarfile, dest, excludes=None, template=None, runas=None):
+def unrar(rarfile, dest, excludes=None, template=None, runas=None, trim_output=False):
     '''
     Uses `rar for Linux`_ to unpack rar files
 
@@ -627,6 +637,10 @@ def unrar(rarfile, dest, excludes=None, template=None, runas=None):
 
             salt '*' archive.unrar template=jinja /tmp/rarfile.rar /tmp/{{grains.id}}/ excludes=file_1,file_2
 
+    trim_output : False
+        The number of files we should output on success before the rest are trimmed, if this is
+        set to True then it will default to 100
+
     CLI Example:
 
     .. code-block:: bash
@@ -643,10 +657,12 @@ def unrar(rarfile, dest, excludes=None, template=None, runas=None):
         for exclude in excludes:
             cmd.extend(['-x', '{0}'.format(exclude)])
     cmd.append('{0}'.format(dest))
-    return __salt__['cmd.run'](cmd,
+    files = __salt__['cmd.run'](cmd,
                                template=template,
                                runas=runas,
                                python_shell=False).splitlines()
+
+    return _trim_files(files, trim_output)
 
 
 def _render_filenames(filenames, zip_file, saltenv, template):
@@ -700,3 +716,16 @@ def _render_filenames(filenames, zip_file, saltenv, template):
     filenames = _render(filenames)
     zip_file = _render(zip_file)
     return (filenames, zip_file)
+
+
+def _trim_files(files, trim_output):
+    # Trim the file list for output
+    count = 100
+    if not isinstance(trim_output, bool):
+        count = trim_output
+
+    if not(isinstance(trim_output, bool) and trim_output is False) and len(files) > count:
+        files = files[:count]
+        files.append("List trimmed after {0} files.".format(count))
+
+    return files
