@@ -68,7 +68,7 @@ NOTSET = object()
 
 def __virtual__():
     '''
-    Only load if the dockerio execution module is available
+    Only load if the dockerng execution module is available
     '''
     if 'dockerng.version' in __salt__:
         global _validate_input  # pylint: disable=global-statement
