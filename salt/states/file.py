@@ -1369,7 +1369,7 @@ def managed(name,
     if contents_grains:
         contents = __salt__['grains.get'](contents_grains)
         if not contents:
-            return _error(ret, 'contents_grain {0} results in empty contents'.format(contents_grain))
+            return _error(ret, 'contents_grain {0} results in empty contents'.format(contents_grains))
 
     # ensure contents is a string
     if contents:
