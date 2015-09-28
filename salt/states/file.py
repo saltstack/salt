@@ -1364,8 +1364,12 @@ def managed(name,
 
     if contents_pillar:
         contents = __salt__['pillar.get'](contents_pillar)
+        if not contents:
+            return _error(ret, 'contents_pillar {0} results in empty contents'.format(contents_pillar))
     if contents_grains:
         contents = __salt__['grains.get'](contents_grains)
+        if not contents:
+            return _error(ret, 'contents_grain {0} results in empty contents'.format(contents_grain))
 
     # ensure contents is a string
     if contents:
