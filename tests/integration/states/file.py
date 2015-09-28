@@ -1067,7 +1067,8 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
 
     def test_append_issue_1864_makedirs(self):
         '''
-        file.append but create directories if needed as an option
+        file.append but create directories if needed as an option, and create
+        the file if it doesn't exist
         '''
         fname = 'append_issue_1864_makedirs'
         name = os.path.join(integration.TMP, fname)
@@ -1109,6 +1110,54 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(
                 os.path.join(integration.TMP, 'issue_1864'),
+                ignore_errors=True
+            )
+
+    def test_prepend_issue_27401_makedirs(self):
+        '''
+        file.prepend but create directories if needed as an option, and create
+        the file if it doesn't exist
+        '''
+        fname = 'prepend_issue_27401'
+        name = os.path.join(integration.TMP, fname)
+        try:
+            self.assertFalse(os.path.exists(name))
+        except AssertionError:
+            os.remove(name)
+        try:
+            # Non existing file get's touched
+            if os.path.isfile(name):
+                # left over
+                os.remove(name)
+            ret = self.run_state(
+                'file.prepend', name=name, text='cheese', makedirs=True
+            )
+            self.assertSaltTrueReturn(ret)
+        finally:
+            if os.path.isfile(name):
+                os.remove(name)
+
+        # Nested directory and file get's touched
+        name = os.path.join(integration.TMP, 'issue_27401', fname)
+        try:
+            ret = self.run_state(
+                'file.prepend', name=name, text='cheese', makedirs=True
+            )
+            self.assertSaltTrueReturn(ret)
+        finally:
+            if os.path.isfile(name):
+                os.remove(name)
+
+        try:
+            # Parent directory exists but file does not and makedirs is False
+            ret = self.run_state(
+                'file.prepend', name=name, text='cheese'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertTrue(os.path.isfile(name))
+        finally:
+            shutil.rmtree(
+                os.path.join(integration.TMP, 'issue_27401'),
                 ignore_errors=True
             )
 
