@@ -26,6 +26,10 @@ dockerng_mod.__context__ = {'docker.docker_version': ''}
 dockerng_mod.__salt__ = {}
 
 
+def _docker_py_version():
+    return dockerng_mod.docker.version_info if dockerng_mod.HAS_DOCKER_PY else None
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class DockerngTestCase(TestCase):
     '''
@@ -78,6 +82,8 @@ class DockerngTestCase(TestCase):
             mine_send.assert_called_with('dockerng.ps', verbose=True, all=True,
                                          host=True)
 
+    @skipIf(_docker_py_version() < (1, 4, 0),
+            'docker module must be installed to run this test or is too old. >=1.4.0')
     @patch.object(dockerng_mod, 'images', MagicMock())
     @patch.object(dockerng_mod, 'inspect_image')
     @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
