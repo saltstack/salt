@@ -352,8 +352,8 @@ def _compare(actual, create_kwargs, runtime_kwargs):
                     continue
 
             elif isinstance(data, list):
-                # Compare two sorted lists of items. Won't work for "cmd" or
-                # "entrypoint" because those are both shell commands and the
+                # Compare two sorted lists of items. Won't work for "command"
+                # or "entrypoint" because those are both shell commands and the
                 # original order matters. It will, however, work for "volumes"
                 # because even though "volumes" is a sub-dict nested within the
                 # "actual" dict sorted(somedict) still just gives you a sorted
@@ -753,7 +753,7 @@ def running(name,
 
     **CONTAINER CONFIGURATION PARAMETERS**
 
-    cmd or command
+    command or cmd
         Command to run in the container
 
         .. code-block:: yaml
@@ -761,7 +761,7 @@ def running(name,
             foo:
               dockerng.running:
                 - image: bar/baz:latest
-                - cmd: bash
+                - command: bash
 
         OR
 
@@ -770,7 +770,7 @@ def running(name,
             foo:
               dockerng.running:
                 - image: bar/baz:latest
-                - command: bash
+                - cmd: bash
 
         .. versionchanged:: 2015.8.1
             ``cmd`` is now also accepted
@@ -1368,7 +1368,7 @@ def running(name,
     if 'cmd' in kwargs:
         if 'command' in kwargs:
             ret['comment'] = (
-                'Only one of \'cmd\' and \'command\' can be used. Both '
+                'Only one of \'command\' and \'cmd\' can be used. Both '
                 'arguments are equivalent.'
             )
             ret['result'] = False

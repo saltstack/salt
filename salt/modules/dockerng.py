@@ -1117,7 +1117,7 @@ def _validate_input(action,
             _valid_stringlist('command')
         except SaltInvocationError:
             raise SaltInvocationError(
-                'cmd must be a string or list of strings'
+                'command/cmd must be a string or list of strings'
             )
 
     def _valid_user():  # pylint: disable=unused-variable
@@ -2507,10 +2507,10 @@ def create(image,
     image
         Image from which to create the container
 
-    cmd or command
+    command or cmd
         Command to run in the container
 
-        Example: ``cmd=bash`` or ``command=bash``
+        Example: ``command=bash`` or ``cmd=bash``
 
         .. versionchanged:: 2015.8.1
             ``cmd`` is now also accepted
@@ -2649,7 +2649,7 @@ def create(image,
     if 'cmd' in kwargs:
         if 'command' in kwargs:
             raise SaltInvocationError(
-                'Only one of \'cmd\' and \'command\' can be used. Both '
+                'Only one of \'command\' and \'cmd\' can be used. Both '
                 'arguments are equivalent.'
             )
         kwargs['command'] = kwargs.pop('cmd')
