@@ -262,7 +262,7 @@ def parse_args_and_kwargs(func, args, data=None):
     return load_args_and_kwargs(func, args, data=data)
 
 
-def load_args_and_kwargs(func, args, data=None):
+def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
     '''
     Detect the args and kwargs that need to be passed to a function call, and
     check them against what was passed.
@@ -316,7 +316,7 @@ def load_args_and_kwargs(func, args, data=None):
         else:
             _args.append(arg)
 
-    if invalid_kwargs:
+    if invalid_kwargs and not ignore_invalid:
         salt.utils.invalid_kwargs(invalid_kwargs)
 
     if argspec.keywords and isinstance(data, dict):
