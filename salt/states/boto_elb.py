@@ -380,7 +380,6 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
               - instance-id2
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
-    ret['name'] = name
     lb = __salt__['boto_elb.exists'](name, region, key, keyid, profile)
     if lb:
         health = __salt__['boto_elb.get_instance_health'](name,
@@ -911,7 +910,7 @@ def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profil
             "profile": profile,
         }
         results = __states__['boto_cloudwatch_alarm.present'](**kwargs)
-        if not results["result"]:
+        if not results.get('result'):
             merged_return_value["result"] = results["result"]
         if results.get("changes", {}) != {}:
             merged_return_value["changes"][info["name"]] = results["changes"]
