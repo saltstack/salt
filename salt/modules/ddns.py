@@ -34,6 +34,7 @@ try:
     import dns.query
     import dns.update
     import dns.tsigkeyring
+
     dns_support = True
 except ImportError as e:
     dns_support = False
@@ -74,7 +75,8 @@ def _get_keyring(keyfile):
     return keyring
 
 
-def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True, **kwargs):
+def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True,
+             **kwargs):
     '''
     Add, replace, or update the A and PTR (reverse) records for a host.
 
@@ -98,7 +100,8 @@ def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True, **kwargs
         popped.append(p)
         zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
         name = '.'.join(popped)
-        ptr = update(zone, name, ttl, 'PTR', fqdn, nameserver, replace, **kwargs)
+        ptr = update(zone, name, ttl, 'PTR', fqdn, nameserver, replace,
+                     **kwargs)
         if ptr:
             return True
     return res
@@ -137,13 +140,15 @@ def delete_host(zone, name, nameserver='127.0.0.1', **kwargs):
             popped.append(p)
             zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
             name = '.'.join(popped)
-            ptr = delete(zone, name, 'PTR', fqdn, nameserver=nameserver, **kwargs)
+            ptr = delete(zone, name, 'PTR', fqdn, nameserver=nameserver,
+                         **kwargs)
         if ptr:
             res = True
     return res
 
 
-def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False, **kwargs):
+def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1',
+           replace=False, **kwargs):
     '''
     Add, replace, or update a DNS record.
     nameserver must be an IP address and the minion running this module
@@ -166,7 +171,8 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False,
 
     keyring = _get_keyring(_config('keyfile', **kwargs))
     keyname = _config('keyname', **kwargs)
-    keyalgorithm = _config('keyalgorithm', **kwargs) or 'HMAC-MD5.SIG-ALG.REG.INT'
+    keyalgorithm = _config('keyalgorithm',
+                           **kwargs) or 'HMAC-MD5.SIG-ALG.REG.INT'
 
     is_exist = False
     for rrset in answer.answer:
@@ -176,7 +182,8 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False,
                     is_exist = True
                     break
 
-    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname, keyalgorithm=keyalgorithm)
+    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname,
+                                   keyalgorithm=keyalgorithm)
     if replace:
         dns_update.replace(name, ttl, rdata)
     elif not is_exist:
@@ -187,7 +194,8 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False,
     return True
 
 
-def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1', **kwargs):
+def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1',
+           **kwargs):
     '''
     Delete a DNS record.
 
@@ -207,9 +215,11 @@ def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1', **kwargs)
 
     keyring = _get_keyring(_config('keyfile', **kwargs))
     keyname = _config('keyname', **kwargs)
-    keyalgorithm = _config('keyalgorithm', **kwargs) or 'HMAC-MD5.SIG-ALG.REG.INT'
+    keyalgorithm = _config('keyalgorithm',
+                           **kwargs) or 'HMAC-MD5.SIG-ALG.REG.INT'
 
-    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname, keyalgorithm=keyalgorithm)
+    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname,
+                                   keyalgorithm=keyalgorithm)
 
     if rdtype:
         rdtype = dns.rdatatype.from_text(rdtype)
