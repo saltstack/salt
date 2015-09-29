@@ -223,6 +223,8 @@ def present(
         cnames=None,
         alarms=None,
         alarms_from_pillar="boto_elb_alarms",
+        listener_policies=None,
+        tags=None,
         region=None,
         key=None,
         keyid=None,
@@ -265,8 +267,11 @@ def present(
         state will override those from pillar.
 
     cnames
-        A list of cname dicts with attributes: name, zone, ttl, and identifier.
+        A list of cname dicts with attributes needed for the DNS add_record state.
+        By default the boto_route53.add_record state will be used, which requires: name, zone, ttl, and identifier.
         See the boto_route53 state for information about these attributes.
+        Other DNS modules can be called by specifying the provider keyword.
+        the cnames dict will be passed to the state as kwargs.
 
     alarms:
         a dictionary of name->boto_cloudwatch_alarm sections to be associated with this ELB.
@@ -277,6 +282,19 @@ def present(
     alarms_from_pillar:
         name of pillar dict that contains alarm settings.   Alarms defined for this specific
         state will override those from pillar.
+
+    listener_policies:
+        list of dict cookie policies for http/https listeners
+        - listener_policies:
+            - listener: 80
+              policy: LBCookieStickinessPolicy|AppCookieStickinessPolicy
+              cookie: app_cookie_name|lb_cookie_expiration_period
+
+    tags
+        dict of tags
+        Example:
+            - tags:
+                MYTAG: My Tag Value
 
     region
         Region to connect to.
@@ -335,19 +353,24 @@ def present(
             name, region, key, keyid, profile
         )
         for cname in cnames:
+            _ret = None
+            dns_provider = 'boto_route53'
+            cname['record_type'] = 'CNAME'
+            cname['value'] = lb['dns_name']
+            if cname.has_key('provider'):
+                dns_provider = cname.pop('provider')
+            if dns_provider == 'boto_route53':
+                if not cname.has_key('profile'):
+                    cname['profile'] = profile
+                if not cname.has_key('key'):
+                    cname['key'] = key
+                if not cname.has_key('keyid'):
+                    cname['keyid'] = keyid
+                if not cname.has_key('region'):
+                    cname['region'] = region
             _ret = __salt__['state.single'](
-                'boto_route53.present',
-                name=cname.get('name'),
-                value=lb['dns_name'],
-                zone=cname.get('zone'),
-                record_type='CNAME',
-                identifier=cname.get('identifier', None),
-                ttl=cname.get('ttl', None),
-                region=region,
-                key=key,
-                keyid=keyid,
-                profile=profile
-            )
+                '.'.join([dns_provider, 'present']),
+                **cname)
             _ret = _ret.values()[0]
             ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
             ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
@@ -356,6 +379,20 @@ def present(
                 if ret['result'] is False:
                     return ret
     _ret = _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
+    _ret = _listener_policies_present(name, listener_policies, region, key, keyid, profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
+    _ret = _tags_present(name, tags, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -479,6 +516,8 @@ def _elb_present(
         vpc_id = __salt__['boto_vpc.get_subnet_association'](
             subnets, region, key, keyid, profile
         )
+        if vpc_id.has_key('vpc_id'):
+            vpc_id = vpc_id['vpc_id']
         if not vpc_id:
             msg = 'Subnets {0} do not map to a valid vpc id.'.format(subnets)
             raise SaltInvocationError(msg)
@@ -948,4 +987,184 @@ def absent(
             ret['comment'] = 'Failed to delete {0} ELB.'.format(name)
     else:
         ret['comment'] = '{0} ELB does not exist.'.format(name)
+    return ret
+
+def _tags_present(name,
+        tags,
+        region,
+        key,
+        keyid,
+        profile):
+    '''
+    helper function to validate tags on elb
+    '''
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    if tags:
+        lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
+
+        tags_to_add = tags
+        tags_to_update = {}
+        tags_to_remove = []
+        if lb['tags']:
+            for _tag in lb['tags'].keys():
+                if not _tag in tags.keys():
+                    if not _tag in tags_to_remove:
+                        tags_to_remove.append(_tag)
+                else:
+                    if tags[_tag] != lb['tags'][_tag]:
+                        tags_to_update[_tag] = tags[_tag]
+                    tags_to_add.pop(_tag)
+        if tags_to_remove:
+            if __opts__['test']:
+                msg = 'The following tag{0} set to be removed: {1}.'.format(
+                        ('s are' if len(tags_to_remove) > 1 else ' is'), ', '.join(tags_to_remove))
+                ret['comment'] = ' '.join([ret['comment'], msg])
+                ret['result'] = None
+            else:
+                _ret = __salt__['boto_elb.delete_elb_tags'](
+                            name,
+                            tags_to_remove,
+                            region,
+                            key,
+                            keyid,
+                            profile)
+                if not _ret:
+                    ret['result'] = False
+                    msg = 'Error attempting to delete tag {0}.'.format(_tag)
+                    ret['comment'] = ' '.join([ret['comment'], msg])
+                    return ret
+                if not ret['changes'].has_key('old'):
+                    ret['changes'] = dictupdate.update(ret['changes'], {'old':{'tags':{}}})
+                ret['changes']['old']['tags'][_tag] = lb['tags'][_tag]
+        if tags_to_add or tags_to_update:
+            if __opts__['test']:
+                if tags_to_add:
+                    msg = 'The following tag{0} set to be added: {1}.'.format(
+                            ('s are' if len(tags_to_add.keys()) > 1 else ' is'),
+                            ', '.join(tags_to_add.keys()))
+                    ret['comment'] = ' '. join([ret['comment'], msg])
+                    ret['result'] = None
+                if tags_to_update:
+                    msg = 'The following tag {0} set to be updated: {1}.'.format(
+                            ('values are' if len(tags_to_update.keys()) > 1 else 'value is'),
+                            ', '.join(tags_to_update.keys()))
+                    ret['comment'] = ' '. join([ret['comment'], msg])
+                    ret['result'] = None
+            else:
+                all_tag_changes = dictupdate.update(tags_to_add, tags_to_update)
+                _ret = __salt__['boto_elb.set_elb_tags'](
+                            name,
+                            all_tag_changes,
+                            region,
+                            key,
+                            keyid,
+                            profile)
+                if not _ret:
+                    ret['result'] = False
+                    msg = 'Error attempting to set tags.'
+                    ret['comment'] = ' '.join([ret['comment'], msg])
+                    return ret
+                if not ret['changes'].has_key('old'):
+                    ret['changes'] = dictupdate.update(ret['changes'], {'old':{'tags':{}}})
+                if not ret['changes'].has_key('new'):
+                    ret['changes'] = dictupdate.update(ret['changes'], {'new':{'tags':{}}})
+                for tag in all_tag_changes:
+                    ret['changes']['new']['tags'][tag] = tags[tag]
+                    if lb.has_key('tags'):
+                        if lb['tags'].has_key(tag):
+                            ret['changes']['old']['tags'][tag] = lb['tags'][tag]
+    return ret
+
+def _listener_policies_present(name,
+        listener_policies,
+        region,
+        key,
+        keyid,
+        profile):
+    '''
+    helper function to validate listener policies
+    '''
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    if listener_policies:
+        lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
+
+        for _listeners in lb['listeners']:
+            remove_policy = True
+            for _lp in listener_policies:
+                if _lp['listener'] == _listeners[0]:
+                    remove_policy = False
+                else:
+                    remove_policy = True
+                    break
+            if remove_policy:
+                lp = __salt__['boto_elb.get_listener_policy'](name, _lp['listener'], region, key, keyid, profile)
+                if isinstance(lp, dict):
+                    if __opts__['test']:
+                        msg = 'Listener policy for {0} to be removed.'.format(lp['listener'])
+                        ret['comment'] = ' '.join([ret['comment'], msg])
+                        ret['result'] = None
+                    else:
+                        _ret = __salt__['boto_elb.set_listener_policy'](
+                                    name,
+                                    lp['listener'],
+                                    lp['policy'],
+                                    None,
+                                    True,
+                                    region,
+                                    key,
+                                    keyid,
+                                    profile)
+                        if not ret['changes'].has_key('old'):
+                            ret['changes'] = dictupdate.update(ret['changes'], {'old':{'listener policies':[]}})
+                        ret['changes']['old']['listener policies'].append(lp)
+
+        for _lp in listener_policies:
+            update_policy = False
+            add_policy = False
+
+            lp = __salt__['boto_elb.get_listener_policy'](name, _lp['listener'], region, key, keyid, profile)
+            if isinstance(lp, dict):
+                if _lp['policy'].lower() == lp['policy'].lower() and str(_lp['cookie']) == str(lp['cookie']):
+                    update_policy = False
+                else:
+                    if __opts__['test']:
+                        msg = 'Listener {0} policy to be updated.'.format(_lp['listener'])
+                        ret['comment'] = ' '.join([ret['comment'], msg])
+                        ret['result'] = None
+                    else:
+                        update_policy = True
+            else:
+                if __opts__['test']:
+                    msg = 'Listener {0} policy to be added.'.format(_lp['listener'])
+                    ret['comment'] = ' '.join([ret['comment'], msg])
+                    ret['result'] = None
+                else:
+                    add_policy = True
+            if update_policy or add_policy:
+                _ret = __salt__['boto_elb.set_listener_policy'](
+                            name,
+                            _lp['listener'],
+                            _lp['policy'],
+                            _lp['cookie'],
+                            False,
+                            region,
+                            key,
+                            keyid,
+                            profile)
+                if _ret:
+                    msg = 'Listener {0} policy updated.'.format(_lp['listener'])
+                    ret['comment'] = ' '.join([ret['comment'], msg])
+                    if not ret['changes'].has_key('old'):
+                        ret['changes'] = dictupdate.update(ret['changes'], {'old':{'listener policies':[]}})
+                    if not ret['changes'].has_key('new'):
+                        ret['changes'] = dictupdate.update(ret['changes'], {'new':{'listener policies':[]}})
+                    if isinstance(lp, dict):
+                        ret['changes']['old']['listener policies'].append(dictupdate.update(lp, {'listener': _lp['listener']}))
+                    ret['changes']['new']['listener policies'].append(_lp)
+                else:
+                    ret['result'] = False
+                    return ret
+            else:
+                msg = 'Listener policies are already set.'
+                ret['comment'] = ' '.join([ret['comment'], msg])
     return ret

@@ -77,6 +77,8 @@ except ImportError:
 
 # Import Salt libs
 from salt.ext.six import string_types
+from salt.utils.boto_elb_tag import TagDescriptions as TagDescriptions
+from salt.utils.boto_elb_tag import TagSet as TagSet
 import salt.utils.odict as odict
 
 
@@ -129,6 +131,7 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
         ret = {}
         ret['availability_zones'] = lb.availability_zones
         listeners = []
+        listener_policies = []
         for _listener in lb.listeners:
             # Making this a list makes our life easier and is also the only way
             # to include the certificate.
@@ -138,12 +141,18 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
             # get the certificate. So. Much. Hate.
             if _listener.ssl_certificate_id:
                 complex_listener.append(_listener.ssl_certificate_id)
+            if _listener.policy_names:
+                _listener_policy = _get_listener_policy_info(lb, _listener.policy_names[0])
+                _listener_policy['listener'] = _listener.load_balancer_port
+                listener_policies.append(_listener_policy)
             listeners.append(complex_listener)
         ret['listeners'] = listeners
+        ret['listener policies'] = listener_policies
         ret['subnets'] = lb.subnets
         ret['security_groups'] = lb.security_groups
         ret['scheme'] = lb.scheme
         ret['dns_name'] = lb.dns_name
+        ret['tags'] = _get_all_tags(conn, name)
         return ret
     except boto.exception.BotoServerError as error:
         log.debug(error)
@@ -686,3 +695,223 @@ def get_instance_health(name, region=None, key=None, keyid=None, profile=None, i
     except boto.exception.BotoServerError as error:
         log.debug(error)
         return []
+
+def get_listener_policy(name, listener, region=None, key=None, keyid=None, profile=None):
+    '''
+    gets the policy details of a specific listener port
+
+    name
+        name of the elb
+
+    listener
+        the listener port to retrieve details on
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    lb = conn.get_all_load_balancers(load_balancer_names=[name])
+    lb = lb[0]
+    for _listener in lb.listeners:
+        if _listener.load_balancer_port == listener:
+            log.debug('found the listener')
+            if _listener.policy_names:
+                ret = _get_listener_policy_info(lb, _listener.policy_names[0])
+                return ret
+            else:
+                return 'The specified listener does not have any policies.'
+    return 'The specified listener was not found.'
+
+
+def _get_listener_policy_info(lb_object, policy_name):
+    '''
+    gets the details of a policy name
+    '''
+    lb_cookie_policies = lb_object.policies.lb_cookie_stickiness_policies
+    app_cookie_policies = lb_object.policies.app_cookie_stickiness_policies
+
+    for p in lb_cookie_policies:
+        if p.policy_name == policy_name:
+            return {'policy': 'LBCookieStickinessPolicy', 'name': p.policy_name, 'cookie': p.cookie_expiration_period}
+    for p in app_cookie_policies:
+        if p.policy_name == policy_name:
+            return {'policy': 'AppCookieStickiness', 'name': p.policy_name, 'cookie': p.cookie_name}
+    return None
+
+
+def set_listener_policy(name, listener, policy, cookie, disable_policy=False, region=None, key=None, keyid=None, profile=None):
+    '''
+    sets a sticky session policy to a listener port
+
+    name
+        name of the elb
+
+    listener
+        listener port to configure the sticky policy for
+
+    policy
+        the sticky policy type, either LBCookieStickinessPolicy or AppCookieStickinessPolicy
+
+    cookie
+        the cookie info, either the cookie lifetime for lbcookie or the cookie name for an appcookie
+
+    disable_policy
+        disable the currently set policy, policy_type and cookie_info will be ignored if this is True
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    lb = conn.get_all_load_balancers(load_balancer_names=[name])
+    lb = lb[0]
+    found_listener = False
+    for _listener in lb.listeners:
+        if _listener.load_balancer_port == listener:
+            found_listener = True
+            existing_policy_name = lb.listeners[0].policy_names
+            if existing_policy_name:
+                existing_policy_name = existing_policy_name[0]
+            else:
+                existing_policy_name = ''
+            break
+
+    if found_listener:
+        new_policy = False
+        pName = None
+        if disable_policy != True:
+            if policy.lower() == 'lbcookiestickinesspolicy':
+                pName = 'LBCookieStickinessPolicy-{0}-{1}'.format(lb.name, hash('{0}-{1}'.format(lb.name, cookie)))
+                if existing_policy_name != pName:
+                    p = lb.create_cookie_stickiness_policy(int(cookie), pName)
+                    new_policy = True
+            elif policy.lower() == 'appcookiestickinesspolicy':
+                pName = 'AppCookieStickinessPolicy-{0}-{1}'.format(lb.name, hash('{0}-{1}'.format(lb.name, cookie)))
+                if existing_policy_name != pName:
+                    p = lb.create_app_cookie_stickiness_policy(cookie, pName)
+                    new_policy = True
+            else:
+                msg = 'Invalid policy type {0} specified.'.format(policy.lower())
+                log.debug(msg)
+                return False
+        else:
+            pName = ''
+        if new_policy or disable_policy:
+            log.debug('Attempting to set listener policy for port {0} to policy {1}'.format(listener, pName))
+            lb.set_policies_of_listener(listener, pName)
+        if (existing_policy_name and new_policy) or disable_policy:
+            log.debug('Attempting to delete existing policy {0}'.format(existing_policy_name[0]))
+            lb.delete_policy(existing_policy_name[0])
+        return True
+    else:
+        log.debug('Listener {0} not found'.format(listener))
+    return False
+
+
+def set_elb_tags(name, tags, region=None, key=None, keyid=None, profile=None):
+    '''
+    Add the tags on an ELB
+
+    name
+        name of the ELB
+
+    tags
+        dict of name/value pair tags
+
+    '''
+
+    if exists(name, region, key, keyid, profile):
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        ret = _add_tags(conn, name, tags)
+        return ret
+    else:
+        return False
+
+
+def delete_elb_tags(name, tags, region=None, key=None, keyid=None, profile=None):
+    '''
+    Add the tags on an ELB
+
+    name
+        name of the ELB
+
+    tags
+        list of tags to remove
+
+    '''
+    if exists(name, region, key, keyid, profile):
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        ret = _remove_tags(conn, name, tags)
+        return ret
+    else:
+        return False
+
+
+def _build_tag_param_list(params, tags):
+    '''
+    helper function to build a tag parameter list to send
+    '''
+    keys = sorted(tags.keys())
+    i = 1
+    for key in keys:
+        value = tags[key]
+        params['Tags.member.{0}.Key'.format(i)] = key
+        if value is not None:
+            params['Tags.member.{0}.Value'.format(i)] = value
+        i += 1
+
+
+def _get_all_tags(conn, load_balancer_names=None):
+    """
+    Retrieve all the metadata tags associated with your ELB(s).
+
+    :type load_balancer_names: list
+    :param load_balancer_names: An optional list of load balancer names.
+
+    :rtype: list
+    :return: A list of :class:`boto.ec2.elb.tag.Tag` objects
+    """
+    params = {}
+    if load_balancer_names:
+        conn.build_list_params(params, load_balancer_names,
+                               'LoadBalancerNames.member.%d')
+
+    tags = conn.get_object('DescribeTags', params, TagDescriptions,
+                           verb='POST')
+    if tags[load_balancer_names]:
+        return tags[load_balancer_names]
+    else:
+        return None
+
+
+def _add_tags(conn, load_balancer_names, tags):
+    """
+    Create new metadata tags for the specified resource ids.
+
+    :type load_balancer_names: list
+    :param load_balancer_names: A list of load balancer names.
+
+    :type tags: dict
+    :param tags: A dictionary containing the name/value pairs.
+                 If you want to create only a tag name, the
+                 value for that tag should be the empty string
+                 (e.g. '').
+    """
+    params = {}
+    conn.build_list_params(params, load_balancer_names,
+                           'LoadBalancerNames.member.%d')
+    _build_tag_param_list(params, tags)
+    return conn.get_status('AddTags', params, verb='POST')
+
+
+def _remove_tags(conn, load_balancer_names, tags):
+    """
+    Delete metadata tags for the specified resource ids.
+
+    :type load_balancer_names: list
+    :param load_balancer_names: A list of load balancer names.
+
+    :type tags: list
+    :param tags: A list containing just tag names for the tags to be
+                 deleted.
+    """
+    params = {}
+    conn.build_list_params(params, load_balancer_names,
+                           'LoadBalancerNames.member.%d')
+    conn.build_list_params(params, tags,
+                           'Tags.member.%d.Key')
+    return conn.get_status('RemoveTags', params, verb='POST')
+
