@@ -46,15 +46,17 @@ Connection module for Amazon Autoscale Groups
 
 # Import Python libs
 from __future__ import absolute_import
+import datetime
 import logging
 import json
+import yaml
 import sys
 import email.mime.multipart
 
 log = logging.getLogger(__name__)
+DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 # Import third party libs
-import yaml
 import salt.ext.six as six
 try:
     import boto
@@ -163,6 +165,21 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
                     ("cooldown", policy.cooldown)
                 ])
             )
+        # scheduled actions
+        actions = conn.get_all_scheduled_actions(as_group=name)
+        ret['scheduled_actions'] = {}
+        for action in actions:
+            end_time = None
+            if action.end_time:
+                end_time = action.end_time.isoformat()
+            ret['scheduled_actions'][action.name] = dict([
+              ("min_size", action.min_size),
+              ("max_size", action.max_size),
+              ("desired_capacity", int(action.desired_capacity)), #  AWS bug
+              ("start_time", action.start_time.isoformat()),
+              ("end_time", end_time),
+              ("recurrence", action.recurrence)
+            ])
         return ret
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -174,7 +191,7 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
            health_check_type=None, health_check_period=None,
            placement_group=None, vpc_zone_identifier=None, tags=None,
            termination_policies=None, suspended_processes=None,
-           scaling_policies=None, region=None,
+           scaling_policies=None, scheduled_actions=None, region=None,
            notification_arn=None, notification_types=None,
            key=None, keyid=None, profile=None):
     '''
@@ -215,6 +232,8 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         termination_policies = json.loads(termination_policies)
     if isinstance(suspended_processes, six.string_types):
         suspended_processes = json.loads(suspended_processes)
+    if isinstance(scheduled_actions, six.string_types):
+        scheduled_actions = json.loads(scheduled_actions)
     try:
         _asg = autoscale.AutoScalingGroup(
             name=name, launch_config=launch_config_name,
@@ -231,6 +250,8 @@ def create(name, launch_config_name, availability_zones, min_size, max_size,
         conn.create_auto_scaling_group(_asg)
         # create scaling policies
         _create_scaling_policies(conn, name, scaling_policies)
+        # create scheduled actions
+        _create_scheduled_actions(conn, name, scheduled_actions)
         # create notifications
         if notification_arn and notification_types:
             conn.put_notification_configuration(_asg, notification_arn, notification_types)
@@ -248,7 +269,7 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
            health_check_type=None, health_check_period=None,
            placement_group=None, vpc_zone_identifier=None, tags=None,
            termination_policies=None, suspended_processes=None,
-           scaling_policies=None,
+           scaling_policies=None, scheduled_actions=None,
            notification_arn=None, notification_types=None,
            region=None, key=None, keyid=None, profile=None):
     '''
@@ -292,6 +313,8 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         termination_policies = json.loads(termination_policies)
     if isinstance(suspended_processes, six.string_types):
         suspended_processes = json.loads(suspended_processes)
+    if isinstance(scheduled_actions, six.string_types):
+        scheduled_actions = json.loads(scheduled_actions)
     try:
         _asg = autoscale.AutoScalingGroup(
             connection=conn,
@@ -325,6 +348,13 @@ def update(name, launch_config_name, availability_zones, min_size, max_size,
         for policy in conn.get_all_policies(as_group=name):
             conn.delete_policy(policy.name, autoscale_group=name)
         _create_scaling_policies(conn, name, scaling_policies)
+        # ### scheduled actions
+        # delete all scheduled actions, then recreate them
+        for scheduled_action in conn.get_all_scheduled_actions(as_group=name):
+            conn.delete_scheduled_action(
+                scheduled_action.name, autoscale_group=name
+            )
+        _create_scheduled_actions(conn, name, scheduled_actions)
         return True, ''
     except boto.exception.BotoServerError as e:
         log.debug(e)
@@ -345,6 +375,30 @@ def _create_scaling_policies(conn, as_name, scaling_policies):
                 min_adjustment_step=policy.get("min_adjustment_step", None),
                 cooldown=policy["cooldown"])
             conn.create_scaling_policy(policy)
+
+
+def _create_scheduled_actions(conn, as_name, scheduled_actions):
+    '''
+    Helper function to create scheduled actions
+    '''
+    if scheduled_actions:
+        for name, action in scheduled_actions.iteritems():
+            if 'start_time' in action and isinstance(action['start_time'], six.string_types):
+                action['start_time'] = datetime.datetime.strptime(
+                    action['start_time'], DATE_FORMAT
+                )
+            if 'end_time' in action and isinstance(action['end_time'], six.string_types):
+                action['end_time'] = datetime.datetime.strptime(
+                    action['end_time'], DATE_FORMAT
+                )
+            conn.create_scheduled_group_action(as_name, name,
+                desired_capacity=action.get('desired_capacity'),
+                min_size=action.get('min_size'),
+                max_size=action.get('max_size'),
+                start_time=action.get('start_time'),
+                end_time=action.get('end_time'),
+                recurrence=action.get('recurrence')
+            )
 
 
 def delete(name, force=False, region=None, key=None, keyid=None, profile=None):
@@ -523,14 +577,17 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
     return None
 
 
-def get_instances(name, lifecycle_state="InService", health_status="Healthy", attribute="private_ip_address", region=None, key=None, keyid=None, profile=None):
-    """return attribute of all instances in the named autoscale group.
+def get_instances(name, lifecycle_state="InService", health_status="Healthy",
+                  attribute="private_ip_address", region=None, key=None,
+                  keyid=None, profile=None):
+    '''
+    return attribute of all instances in the named autoscale group.
 
     CLI example::
 
         salt-call boto_asg.get_instances my_autoscale_group_name
 
-    """
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     ec2_conn = _get_ec2_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
