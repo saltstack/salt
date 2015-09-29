@@ -984,6 +984,7 @@ _OS_FAMILY_MAP = {
     'OpenSolaris Development': 'Solaris',
     'OpenSolaris': 'Solaris',
     'Arch ARM': 'Arch',
+    'Manjaro': 'Arch',
     'ALT': 'RedHat',
     'Trisquel': 'Debian',
     'GCEL': 'Debian',
