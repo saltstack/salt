@@ -382,6 +382,7 @@ def _get_product_information(reg_hive, reg_key, reg_handle):
     except WindowsError:
         pass
 
+    return products
 
 def refresh_db(saltenv='base'):
     '''
