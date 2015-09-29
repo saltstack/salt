@@ -36,25 +36,6 @@ def __virtual__():
     return False
 
 
-def has_powershell():
-    '''
-    Confirm if Powershell is available
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' service.has_powershell
-    '''
-    for path in os.environ["PATH"].split(os.pathsep):
-        path = path.strip('"')
-        fullpath = os.path.join(path, "powershell.exe")
-        fullpath = os.path.normpath(fullpath)
-        if os.path.isfile(fullpath) and os.access(fullpath, os.X_OK):
-            return True
-    return False
-
-
 def get_enabled():
     '''
     Return the enabled services
@@ -235,12 +216,10 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    if has_powershell():
-        if 'salt-minion' in name:
-            create_win_salt_restart_task()
-            return execute_salt_restart_task()
-        cmd = 'Restart-Service {0}'.format(_cmd_quote(name))
-        return not __salt__['cmd.retcode'](cmd, shell='powershell', python_shell=True)
+    if 'salt-minion' in name:
+        create_win_salt_restart_task()
+        return execute_salt_restart_task()
+
     return stop(name) and start(name)
 
 
@@ -254,7 +233,7 @@ def create_win_salt_restart_task():
 
         salt '*' service.create_win_salt_restart_task()
     '''
-    cmd = 'schtasks /RU "System" /Create /TN restart-salt-minion /TR "powershell Restart-Service salt-minion" /sc ONCE /sd 01/01/1975 /st 01:00 /F /V1 /Z'
+    cmd = 'schtasks /RU "System" /Create /TN restart-salt-minion /TR "cmd /C ping -n 3 127.0.0.1>nul && net stop salt-minion && net start salt-minion" /sc ONCE /sd 01/01/1975 /st 01:00 /F /V1 /Z'
 
     return __salt__['cmd.shell'](cmd)
 
