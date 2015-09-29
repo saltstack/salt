@@ -384,6 +384,7 @@ def _get_product_information(reg_hive, reg_key, reg_handle):
 
     return products
 
+
 def refresh_db(saltenv='base'):
     '''
     Just recheck the repository and return a dict::
