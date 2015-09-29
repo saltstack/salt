@@ -215,3 +215,4 @@ def snapshot(name, suffix=None):
     '''
 
     return _virt_call(name, 'snapshot', 'saved', 'Snapshot has been taken', suffix=suffix)
+    
