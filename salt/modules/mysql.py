@@ -1612,7 +1612,8 @@ def grant_exists(grant,
     grants = user_grants(user, host, **connection_args)
 
     if grants is False:
-        log.debug('Grant does not exist, or is perhaps not ordered properly?')
+        log.error('Grant does not exist or may not be ordered properly. In some cases, '
+                  'this could also indicate a connection error. Check your configuration.')
         return False
 
     target_tokens = None
