@@ -115,7 +115,7 @@ class BotoElbTestCase(TestCase):
                          'boto_elb.get_health_check': mock_health_check,
                          'boto_elb.get_elb_config': mock_elb}):
             with patch.dict(boto_elb.__opts__, {'test': False}):
-                with patch.dict(boto_elb.__states__, {'boto_route53.present', MagicMock(return_value=ret1)}):
+                with patch.dict(boto_elb.__states__, {'boto_route53.present': MagicMock(return_value=ret1)}):
                     ret = boto_elb.present(
                         name,
                         listeners,
