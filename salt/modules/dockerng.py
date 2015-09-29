@@ -28,13 +28,13 @@ to replace references to ``dockerng`` with ``docker``.
 Installation Prerequisites
 --------------------------
 
-This execution module requires at least version 1.0.0 of both docker-py_ and
+This execution module requires at least version 1.4.0 of both docker-py_ and
 Docker_. docker-py can easily be installed using :py:func:`pip.install
 <salt.modules.pip.install>`:
 
 .. code-block:: bash
 
-    salt myminion pip.install docker-py
+    salt myminion pip.install docker-py>=1.4.0
 
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 .. _Docker: https://www.docker.com/
@@ -234,6 +234,7 @@ import distutils.version  # pylint: disable=import-error,no-name-in-module,unuse
 import fnmatch
 import functools
 import gzip
+import inspect as inspect_module
 import json
 import logging
 import os
@@ -256,6 +257,7 @@ import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import docker
+    import docker.utils
     HAS_DOCKER_PY = True
 except ImportError:
     HAS_DOCKER_PY = False
@@ -287,7 +289,7 @@ __func_alias__ = {
 
 # Minimum supported versions
 MIN_DOCKER = (1, 0, 0)
-MIN_DOCKER_PY = (1, 0, 0)
+MIN_DOCKER_PY = (1, 4, 0)
 
 VERSION_RE = r'([\d.]+)'
 
@@ -2681,14 +2683,11 @@ def create(image,
     # Added to manage api change in 1.19.
     # mem_limit and memswap_limit must be provided in host_config object
     if salt.utils.version_cmp(version()['ApiVersion'], '1.18') == 1:
-        create_kwargs['host_config'] = docker.utils.create_host_config(
-            mem_limit=create_kwargs.get('mem_limit'),
-            memswap_limit=create_kwargs.get('memswap_limit')
+        client = __context__['docker.client']
+        host_config_args = inspect_module.getargspec(docker.utils.create_host_config).args
+        create_kwargs['host_config'] = client.create_host_config(
+            **dict((arg, create_kwargs.pop(arg, None)) for arg in host_config_args if arg != 'version')
         )
-        if 'mem_limit' in create_kwargs:
-            del create_kwargs['mem_limit']
-        if 'memswap_limit' in create_kwargs:
-            del create_kwargs['memswap_limit']
 
     log.debug(
         'dockerng.create is using the following kwargs to create '

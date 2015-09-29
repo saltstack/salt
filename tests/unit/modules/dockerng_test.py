@@ -111,6 +111,34 @@ class DockerngTestCase(TestCase):
             image='image',
             name='ctn')
 
+    @skipIf(_docker_py_version() < (1, 4, 0),
+            'docker module must be installed to run this test or is too old. >=1.4.0')
+    @patch.object(dockerng_mod, 'images', MagicMock())
+    @patch.object(dockerng_mod, 'inspect_image')
+    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    def test_create_send_host_config(self, *args):
+        '''
+        Check host_config object is passed to create_container.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {'PublishAllPorts': True}
+        client = Mock()
+        client.api_version = '1.19'
+        client.create_host_config.return_value = host_config
+        client.create_container.return_value = {}
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.create('image', name='ctn', publish_all_ports=True)
+        client.create_container.assert_called_once_with(
+            host_config=host_config,
+            image='image',
+            name='ctn')
+
 
 if __name__ == '__main__':
     from integration import run_tests
