@@ -15,7 +15,7 @@ from distutils.version import LooseVersion  # pylint: disable=import-error,no-na
 import salt.ext.six as six
 # pylint: disable=import-error
 try:
-    import _winreg
+    from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
     HAS_DEPENDENCIES = True
 except ImportError:
     HAS_DEPENDENCIES = False
@@ -382,22 +382,6 @@ def _get_product_information(reg_hive, reg_key, reg_handle):
     except WindowsError:
         pass
 
-    return products
-
-def _get_machine_keys():
-    '''
-    This will return the hive 'const' value and some registry keys where
-    installed software information has been known to exist for the
-    HKEY_LOCAL_MACHINE hive
-    '''
-    machine_hive_and_keys = {}
-    machine_keys = [
-        "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
-        "Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
-    ]
-    machine_hive = _winreg.HKEY_LOCAL_MACHINE
-    machine_hive_and_keys[machine_hive] = machine_keys
-    return machine_hive_and_keys
 
 def refresh_db(saltenv='base'):
     '''
