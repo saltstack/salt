@@ -49,7 +49,6 @@ from __future__ import absolute_import
 import datetime
 import logging
 import json
-import yaml
 import sys
 import email.mime.multipart
 
@@ -57,6 +56,7 @@ log = logging.getLogger(__name__)
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 # Import third party libs
+import yaml
 import salt.ext.six as six
 try:
     import boto
