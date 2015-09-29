@@ -23,6 +23,7 @@ from salt.states import boto_elb
 
 boto_elb.__salt__ = {}
 boto_elb.__opts__ = {}
+boto_elb.__states__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -59,9 +60,7 @@ class BotoElbTestCase(TestCase):
         mock_true_bool = MagicMock(return_value=True)
         mock_attributes = MagicMock(return_value=attrs)
         mock_health_check = MagicMock(return_value=health_check)
-        mock_ret = MagicMock(return_value={'myelb': ret1})
 
-        mock = MagicMock(return_value={})
         with patch.dict(boto_elb.__salt__,
                         {'config.option': mock,
                          'boto_elb.exists': mock_false_bool,
@@ -78,61 +77,56 @@ class BotoElbTestCase(TestCase):
                 self.assertFalse(ret['result'])
 
         mock = MagicMock(return_value={})
-        mock_ret = MagicMock(return_value={'myelb': ret1})
         with patch.dict(boto_elb.__salt__,
                         {'config.option': mock,
                          'boto_elb.exists': mock_false_bool,
                          'boto_elb.create': mock_true_bool,
                          'boto_elb.get_attributes': mock_attributes,
                          'boto_elb.get_health_check': mock_health_check,
-                         'boto_elb.get_elb_config': mock,
-                         'state.single': mock_ret}):
+                         'boto_elb.get_elb_config': mock}):
             with patch.dict(boto_elb.__opts__, {'test': False}):
-                ret = boto_elb.present(
-                    name,
-                    listeners,
-                    availability_zones=avail_zones,
-                    health_check=health_check,
-                    alarms=alarms
-                )
-                self.assertTrue(boto_elb.__salt__['boto_elb.exists'].called)
-                self.assertTrue(boto_elb.__salt__['boto_elb.create'].called)
-                self.assertTrue(boto_elb.__salt__['state.single'].called)
-                self.assertFalse(
-                    boto_elb.__salt__['boto_elb.get_attributes'].called
-                )
-                self.assertTrue(
-                    boto_elb.__salt__['boto_elb.get_health_check'].called
-                )
-                self.assertIn('ELB myelb created.', ret['comment'])
-                self.assertTrue(ret['result'])
+                with patch.dict(boto_elb.__states__, {'boto_cloudwatch_alarm.present': MagicMock(return_value=ret1)}):
+                    ret = boto_elb.present(
+                        name,
+                        listeners,
+                        availability_zones=avail_zones,
+                        health_check=health_check,
+                        alarms=alarms
+                    )
+                    self.assertTrue(boto_elb.__salt__['boto_elb.exists'].called)
+                    self.assertTrue(boto_elb.__salt__['boto_elb.create'].called)
+                    self.assertTrue(boto_elb.__states__['boto_cloudwatch_alarm.present'].called)
+                    self.assertFalse(
+                        boto_elb.__salt__['boto_elb.get_attributes'].called
+                    )
+                    self.assertTrue(
+                        boto_elb.__salt__['boto_elb.get_health_check'].called
+                    )
+                    self.assertIn('ELB myelb created.', ret['comment'])
+                    self.assertTrue(ret['result'])
 
         mock = MagicMock(return_value={})
         mock_elb = MagicMock(return_value={'dns_name': 'myelb.amazon.com'})
-        mock_ret = MagicMock(return_value={'myelb': ret1})
         with patch.dict(boto_elb.__salt__,
                         {'config.option': mock,
                          'boto_elb.exists': mock_false_bool,
                          'boto_elb.create': mock_true_bool,
                          'boto_elb.get_attributes': mock_attributes,
                          'boto_elb.get_health_check': mock_health_check,
-                         'boto_elb.get_elb_config': mock_elb,
-                         'state.single': mock_ret}):
+                         'boto_elb.get_elb_config': mock_elb}):
             with patch.dict(boto_elb.__opts__, {'test': False}):
-                ret = boto_elb.present(
-                    name,
-                    listeners,
-                    availability_zones=avail_zones,
-                    health_check=health_check,
-                    cnames=cnames
-                )
-                self.assertTrue(boto_elb.__salt__['state.single'].called)
-                cname_call = boto_elb.__salt__['state.single'].mock_calls[0]
-                self.assertEqual(
-                    cname_call[1][0],
-                    'boto_route53.present'
-                )
-                self.assertTrue(ret['result'])
+                with patch.dict(boto_elb.__states__, {'boto_route53.present': MagicMock(return_value=ret1)}):
+                    ret = boto_elb.present(
+                        name,
+                        listeners,
+                        availability_zones=avail_zones,
+                        health_check=health_check,
+                        cnames=cnames
+                    )
+                    mock_changes = {'new': {'elb': 'myelb'}, 'old': {'elb': None}}
+                    self.assertTrue(boto_elb.__states__['boto_route53.present'].called)
+                    self.assertEqual(mock_changes, ret['changes'])
+                    self.assertTrue(ret['result'])
 
     # 'register_instances' function tests: 1
 
