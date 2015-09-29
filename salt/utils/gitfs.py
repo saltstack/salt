@@ -742,7 +742,7 @@ class Pygit2(GitProvider):
         for line in subprocess.Popen(
                 'git ls-remote origin',
                 shell=True,
-                close_fds=True,
+                close_fds=not salt.utils.is_windows(),
                 cwd=self.repo.workdir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT).communicate()[0].splitlines():
