@@ -35,10 +35,7 @@ import integration
 log = logging.getLogger(__name__)
 
 
-def _worktrees_supported():
-    '''
-    Check if the git version is 2.5.0 or later
-    '''
+def _git_version():
     git_version = subprocess.Popen(
         ['git', '--version'],
         shell=False,
@@ -49,9 +46,16 @@ def _worktrees_supported():
         log.debug('Git not installed')
         return False
     log.debug('Detected git version ' + git_version)
+    return LooseVersion(git_version.split()[-1])
+
+
+def _worktrees_supported():
+    '''
+    Check if the git version is 2.5.0 or later
+    '''
     try:
-        return LooseVersion(git_version.split()[-1]) >= LooseVersion('2.5.0')
-    except Exception:
+        return _git_version() >= LooseVersion('2.5.0')
+    except AttributeError:
         return False
 
 
@@ -894,6 +898,13 @@ class GitModuleTest(integration.ModuleCase):
         This tests git.worktree_add, git.is_worktree, git.list_worktrees,
         git.worktree_rm, and git.worktree_prune
         '''
+        # We don't need to enclose this comparison in a try/except, since the
+        # decorator would skip this test if git is not installed and we'd never
+        # get here in the first place.
+        if _git_version() >= LooseVersion('2.6.0'):
+            worktree_add_prefix = 'Preparing '
+        else:
+            worktree_add_prefix = 'Enter '
         worktree_path = tempfile.mkdtemp(dir=integration.TMP)
         worktree_basename = os.path.basename(worktree_path)
         worktree_path2 = tempfile.mkdtemp(dir=integration.TMP)
@@ -902,11 +913,11 @@ class GitModuleTest(integration.ModuleCase):
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path],
         )
-        self.assertTrue('Enter ' + worktree_path in ret)
+        self.assertTrue(worktree_add_prefix + worktree_path in ret)
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path2]
         )
-        self.assertTrue('Enter ' + worktree_path2 in ret)
+        self.assertTrue(worktree_add_prefix + worktree_path2 in ret)
         # Check if this new path is a worktree
         self.assertTrue(self.run_function('git.is_worktree', [worktree_path]))
         # Check if the main repo is a worktree
