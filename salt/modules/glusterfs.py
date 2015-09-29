@@ -27,7 +27,7 @@ def __virtual__():
     '''
     if salt.utils.which('gluster'):
         return True
-    return False
+    return (False, 'glusterfs server is not installed')
 
 
 def list_peers():
