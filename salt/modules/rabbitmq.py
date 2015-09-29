@@ -15,6 +15,8 @@ import string
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
+import salt.ext.six as six
+from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)

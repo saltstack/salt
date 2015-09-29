@@ -1083,7 +1083,11 @@ def symlink(src, link):
         return True
     except pywinerror as exc:
         raise CommandExecutionError(
-            'Could not create {0!r} - [{1}] {2}'.format(link, exc.winerror, exc.strerror)
+            'Could not create \'{0}\' - [{1}] {2}'.format(
+                link,
+                exc.winerror,
+                exc.strerror
+            )
         )
 
 

@@ -12,11 +12,10 @@ from __future__ import absolute_import
 # Import python libs
 import errno
 import logging
-import os
 
 # Import salt libs
 import salt.utils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
