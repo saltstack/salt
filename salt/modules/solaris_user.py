@@ -7,14 +7,15 @@ Manage users with the useradd command
 from __future__ import absolute_import
 try:
     import pwd
+    HAS_PWD = True
 except ImportError:
-    pass
+    HAS_PWD = False
+import copy
 import logging
-from copy import deepcopy
 
 # Import salt libs
 import salt.utils
-from salt.ext.six import string_types
+import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -27,8 +28,14 @@ def __virtual__():
     '''
     Set the user module if the kernel is SunOS
     '''
-
-    return __virtualname__ if __grains__['kernel'] == 'SunOS' else False
+    if __grains__['kernel'] == 'SunOS':
+        if not HAS_PWD:
+            log.warning(
+                'pwd module not found, user management will not be possible'
+            )
+        else:
+            return __virtualname__
+    return False
 
 
 def _get_gecos(name):
@@ -106,7 +113,7 @@ def add(name,
     if kwargs:
         log.warning('Invalid kwargs passed to user.add')
 
-    if isinstance(groups, string_types):
+    if isinstance(groups, six.string_types):
         groups = groups.split(',')
     cmd = ['useradd']
     if shell:
@@ -313,7 +320,7 @@ def chgroups(name, groups, append=False):
 
         salt '*' user.chgroups foo wheel,root True
     '''
-    if isinstance(groups, string_types):
+    if isinstance(groups, six.string_types):
         groups = groups.split(',')
     ugrps = set(list_groups(name))
     if ugrps == set(groups):
