@@ -559,7 +559,7 @@ def dependency_information(include_salt_cloud=False):
         ('cffi', 'cffi', '__version__'),
         ('pycparser', 'pycparser', '__version__'),
         ('gitdb', 'gitdb', '__version__'),
-        ('gitpython', 'gitpython', '__version__'),
+        ('gitpython', 'git', '__version__'),
         ('python-gnupg', 'gnupg', '__version__'),
         ('mysql-python', 'MySQLdb', '__version__'),
         ('cherrypy', 'cherrypy', '__version__'),
