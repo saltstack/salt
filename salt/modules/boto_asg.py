@@ -382,6 +382,10 @@ def get_cloud_init_mime(cloud_init):
     if isinstance(cloud_init, six.string_types):
         cloud_init = json.loads(cloud_init)
     _cloud_init = email.mime.multipart.MIMEMultipart()
+    if 'boothooks' in cloud_init:
+        for script_name, script in six.iteritems(cloud_init['boothooks']):
+            _script = email.mime.text.MIMEText(script, 'cloud-boothook')
+            _cloud_init.attach(_script)
     if 'scripts' in cloud_init:
         for script_name, script in six.iteritems(cloud_init['scripts']):
             _script = email.mime.text.MIMEText(script, 'x-shellscript')

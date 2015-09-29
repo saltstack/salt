@@ -62,6 +62,10 @@ and autoscale groups are completely dependent on each other.
             - '/dev/sda1':
                 size: 20
         - cloud_init:
+            boothooks:
+              'disable-master.sh': |
+                #!/bin/bash
+                echo "manual" > /etc/init/salt-master.override
             scripts:
               'run_salt.sh': |
                 #!/bin/bash
