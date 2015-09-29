@@ -8,14 +8,9 @@ from __future__ import absolute_import
 import salt.utils
 import time
 import logging
-import os
 from subprocess import list2cmdline
 from salt.ext.six.moves import zip
 from salt.ext.six.moves import range
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
 
 log = logging.getLogger(__name__)
 
