@@ -29,6 +29,7 @@ from salt.exceptions import CommandExecutionError
 
 __virtualname__ = 'virt'
 
+
 def __virtual__():
     '''
     Only if virt module is available.
@@ -146,7 +147,6 @@ def stopped(name):
     return _virt_call(name, 'shutdown', 'stopped', "Machine has been shut down")
 
 
-
 def running(name, **kwargs):
     '''
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -171,7 +171,8 @@ def running(name, **kwargs):
     ret = {'name': name,
            'changes': {},
            'result': True,
-           'comment': '"%s" is running' % (name)}
+           'comment': '{0} is running'.format(name)
+           }
 
     kwargs = salt.utils.clean_kwargs(**kwargs)
     cpu = kwargs.pop('cpu', False)
@@ -184,14 +185,14 @@ def running(name, **kwargs):
             if __salt__['virt.vm_state'](name) != 'running':
                 __salt__['virt.start'](name)
                 ret['changes'][name] = 'Domain started'
-                ret['comment'] = 'Domain "%s" started' % (name)
+                ret['comment'] = 'Domain {0} started'.format(name)
         except CommandExecutionError:
             kwargs = salt.utils.clean_kwargs(**kwargs)
             __salt__['virt.init'](name, cpu=cpu, mem=mem, image=image, **kwargs)
             ret['changes'][name] = 'Domain defined and started'
-            ret['comment'] = 'Domain "%s" defined and started' % (name)
-    except:
-        ret['comment'] = 'Domain "%s" exists and is running' % (name)
+            ret['comment'] = 'Domain {0} defined and started'.format(name)
+    except libvirt.libvirtError:
+        ret['comment'] = 'Domain {0} exists and is running'.format(name)
 
     return ret
 
@@ -214,5 +215,3 @@ def snapshot(name, suffix=None):
     '''
 
     return _virt_call(name, 'snapshot', 'saved', 'Snapshot has been taken', suffix=suffix)
-
-
