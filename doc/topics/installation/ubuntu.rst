@@ -2,7 +2,7 @@
 Ubuntu Installation
 ===================
 
-.. _installation-debian-repo:
+.. _installation-ubuntu-repo:
 
 Installation from the SaltStack Repository
 ==========================================
