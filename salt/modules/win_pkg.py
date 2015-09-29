@@ -379,7 +379,7 @@ def _get_product_information(reg_hive, reg_key, reg_handle):
                 if displayName != '':
                     products[displayName] = displayVersion
 
-    except WindowsError:
+    except WindowsError:  # pylint: disable=E0602
         pass
 
     return products
