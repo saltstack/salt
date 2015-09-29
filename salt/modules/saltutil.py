@@ -390,23 +390,25 @@ def sync_returners(saltenv=None, refresh=True):
     return ret
 
 
-def sync_outputters(saltenv=None, refresh=True):
+def sync_output(saltenv=None, refresh=True):
     '''
-    Sync the outputters from the _outputters directory on the salt master file
-    server. This function is environment aware, pass the desired environment
-    to grab the contents of the _outputters directory, base is the default
+    Sync the output modules from the _output directory on the salt master file
+    server. This function is environment aware. Pass the desired environment
+    to grab the contents of the _output directory. Base is the default
     environment.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' saltutil.sync_outputters
+        salt '*' saltutil.sync_output
     '''
-    ret = _sync('outputters', saltenv)
+    ret = _sync('output', saltenv)
     if refresh:
         refresh_modules()
     return ret
+
+sync_outputters = sync_output
 
 
 def sync_utils(saltenv=None, refresh=True):
@@ -453,7 +455,7 @@ def sync_all(saltenv=None, refresh=True):
     '''
     Sync down all of the dynamic modules from the file server for a specific
     environment. This function synchronizes custom modules, states, beacons,
-    grains, returners, outputters, renderers, and utils.
+    grains, returners, output modules, renderers, and utils.
 
     refresh : True
         Also refresh the execution modules available to the minion.
@@ -489,7 +491,7 @@ def sync_all(saltenv=None, refresh=True):
     ret['grains'] = sync_grains(saltenv, False)
     ret['renderers'] = sync_renderers(saltenv, False)
     ret['returners'] = sync_returners(saltenv, False)
-    ret['outputters'] = sync_outputters(saltenv, False)
+    ret['output'] = sync_output(saltenv, False)
     ret['utils'] = sync_utils(saltenv, False)
     ret['log_handlers'] = sync_log_handlers(saltenv, False)
     if refresh:

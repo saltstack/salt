@@ -1658,7 +1658,9 @@ def replace(path,
     repl
         The replacement text
     count
-        Maximum number of pattern occurrences to be replaced
+        Maximum number of pattern occurrences to be replaced.  Defaults to 0.
+        If count is a positive integer n, only n occurrences will be replaced,
+        otherwise all occurrences will be replaced.
     flags (list or int)
         A list of flags defined in the :ref:`re module documentation
         <contents-of-module-re>`. Each list item should be a string that will
@@ -1823,7 +1825,7 @@ def replace(path,
                 if prepend_if_not_found or append_if_not_found:
                     # Search for content, so we don't continue pre/appending
                     # the content if it's been pre/appended in a previous run.
-                    if re.search('^{0}$'.format(content), line):
+                    if re.search('^{0}$'.format(re.escape(content)), line):
                         # Content was found, so set found.
                         found = True
 

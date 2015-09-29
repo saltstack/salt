@@ -2540,7 +2540,11 @@ class BaseHighState(object):
         '''
         Returns the high data derived from the top file
         '''
-        tops = self.get_tops()
+        try:
+            tops = self.get_tops()
+        except SaltRenderError as err:
+            log.error('Unable to render top file: ' + str(err.error))
+            return {}
         return self.merge_tops(tops)
 
     def top_matches(self, top):
@@ -3053,7 +3057,7 @@ class BaseHighState(object):
             top = self.get_top()
         except SaltRenderError as err:
             ret[tag_name]['comment'] = 'Unable to render top file: '
-            ret[tag_name]['comment'] += err.error
+            ret[tag_name]['comment'] += str(err.error)
             return ret
         except Exception:
             trb = traceback.format_exc()
@@ -3062,7 +3066,7 @@ class BaseHighState(object):
         err += self.verify_tops(top)
         matches = self.top_matches(top)
         if not matches:
-            msg = ('No Top file or external nodes data matches found')
+            msg = 'No Top file or external nodes data matches found.'
             ret[tag_name]['comment'] = msg
             return ret
         matches = self.matches_whitelist(matches, whitelist)

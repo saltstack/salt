@@ -311,6 +311,8 @@ dl{margin-bottom:15px}
 dd p{margin-top:0}
 dd ul,dd table{margin-bottom:10px}
 dd{margin-top:3px;margin-bottom:10px;margin-left:30px}
+dd table{table-layout:fixed;width:100%}
+dd table th.field-name{width:20%}
 dl.glossary dt{font-weight:700;font-size:1.1em}
 .field-list ul{margin:0;padding-left:1em}
 .field-list p{margin:0}
