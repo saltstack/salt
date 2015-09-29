@@ -446,17 +446,18 @@ def image_present(name,
     image = ':'.join(_get_repo_tag(name))
     all_tags = __salt__['dockerng.list_tags']()
 
-    if image in all_tags and not force:
-        ret['result'] = True
-        ret['comment'] = 'Image \'{0}\' already present'.format(name)
-        return ret
-    elif force:
-        try:
-            image_info = __salt__['dockerng.inspect_image'](name)
-        except Exception as exc:
-            ret['comment'] = \
-                'Unable to get info for image \'{0}\': {1}'.format(name, exc)
+    if image in all_tags:
+        if not force:
+            ret['result'] = True
+            ret['comment'] = 'Image \'{0}\' already present'.format(name)
             return ret
+        else:
+            try:
+                image_info = __salt__['dockerng.inspect_image'](name)
+            except Exception as exc:
+                ret['comment'] = \
+                    'Unable to get info for image \'{0}\': {1}'.format(name, exc)
+                return ret
     else:
         image_info = None
 
