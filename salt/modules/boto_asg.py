@@ -175,7 +175,8 @@ def get_config(name, region=None, key=None, keyid=None, profile=None):
             ret['scheduled_actions'][action.name] = dict([
               ("min_size", action.min_size),
               ("max_size", action.max_size),
-              ("desired_capacity", int(action.desired_capacity)), #  AWS bug
+              # AWS bug
+              ("desired_capacity", int(action.desired_capacity)),
               ("start_time", action.start_time.isoformat()),
               ("end_time", end_time),
               ("recurrence", action.recurrence)
