@@ -418,6 +418,8 @@ def eni_absent(
 def snapshot_created(name, ami_name, instance_name, wait_until_available=True, wait_timeout_seconds=300, **kwargs):
     '''
     Create a snapshot from the given instance
+
+    .. versionadded:: Boron
     '''
     ret = {'name': name,
            'result': True,
@@ -426,12 +428,12 @@ def snapshot_created(name, ami_name, instance_name, wait_until_available=True, w
            }
 
     if not __salt__['boto_ec2.create_image'](ami_name=ami_name, instance_name=instance_name, **kwargs):
-        ret['comment'] = 'Failed to create new AMI {}'.format(ami_name)
+        ret['comment'] = 'Failed to create new AMI {ami_name}'.format(ami_name=ami_name)
         ret['result'] = False
         return ret
 
-    ret['comment'] = 'Created new AMI {}'.format(ami_name)
-    ret['changes']['new'] = { ami_name: ami_name }
+    ret['comment'] = 'Created new AMI {ami_name}'.format(ami_name=ami_name)
+    ret['changes']['new'] = {ami_name: ami_name}
     if not wait_until_available:
         return ret
 
@@ -441,7 +443,7 @@ def snapshot_created(name, ami_name, instance_name, wait_until_available=True, w
         if image.state == 'available':
             break
         if time() - starttime > wait_timeout_seconds:
-            ret['comment'] = 'AMI still in state {} after timeout'.format(image.state)
+            ret['comment'] = 'AMI still in state {state} after timeout'.format(state=image.state)
             ret['result'] = False
             return ret
         sleep(5)
