@@ -2030,8 +2030,6 @@ def request_instance(vm_):
 
     if LIBCLOUD_VERSION_INFO > (0, 15, 1):
 
-        # This only exists in current trunk of libcloud and should be in next
-        # release
         kwargs.update({
             'ex_disk_type': config.get_cloud_config_value(
                 'ex_disk_type', vm_, __opts__, default='pd-standard'),
@@ -2040,7 +2038,10 @@ def request_instance(vm_):
             'ex_disks_gce_struct': config.get_cloud_config_value(
                 'ex_disks_gce_struct', vm_, __opts__, default=None),
             'ex_service_accounts': config.get_cloud_config_value(
-                'ex_service_accounts', vm_, __opts__, default=None)
+                'ex_service_accounts', vm_, __opts__, default=None),
+            'ex_can_ip_forward': config.get_cloud_config_value(
+                'ip_forwarding', vm_, __opts__, default=False
+            )
         })
         if kwargs.get('ex_disk_type') not in ('pd-standard', 'pd-ssd'):
             raise SaltCloudSystemExit(
