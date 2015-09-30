@@ -248,5 +248,3 @@ def disabled(name):
         salt '*' service.daemontools <service name>
     '''
     return not enabled(name)
-
-
