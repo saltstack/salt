@@ -368,7 +368,7 @@ def present(
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if vpc_zone_identifier:
         vpc_id = __salt__['boto_vpc.get_subnet_association'](vpc_zone_identifier, region, key, keyid, profile)
-        if vpc_id.has_key('vpc_id'):
+        if 'vpc_id' in vpc_id:
             vpc_id = vpc_id['vpc_id']
         log.debug('Auto Scaling Group {0} is associated with VPC ID {1}'
                   .format(name, vpc_id))
@@ -700,7 +700,7 @@ def absent(
             if remove_lc:
                 lc_deleted = __salt__['boto_asg.delete_launch_configuration'](asg['launch_config_name'], region, key, keyid, profile)
                 if lc_deleted:
-                    if not ret['changes'].has_key('launch_config'):
+                    if 'launch_config' not in ret['changes']:
                         ret['changes']['launch_config'] = {}
                     ret['changes']['launch_config']['deleted'] = asg['launch_config_name']
                 else:
