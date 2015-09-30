@@ -25,6 +25,8 @@ configuration is needed to pull from these repositories.
 
 These packages are usually available within a few days of upstream release.
 
+.. _freebsd-upstream:
+
 SaltStack repo
 ==============
 

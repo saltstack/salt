@@ -8,6 +8,27 @@ Management of Docker containers
 This is the state module to accompany the :mod:`dockerng
 <salt.modules.dockerng>` execution module.
 
+
+Why Make a Second Docker State Module?
+--------------------------------------
+
+We have received a lot of feedback on our Docker support. In the process of
+implementing recommended improvements, it became obvious that major changes
+needed to be made to the functions and return data. In the end, a complete
+rewrite was done.
+
+The changes being too significant, it was decided that making a separate
+execution module and state module (called ``dockerng``) would be the best
+option. This will give users a couple release cycles to modify their scripts,
+SLS files, etc. to use the new functionality, rather than forcing users to
+change everything immediately.
+
+In the **Carbon** release of Salt (due in 2016), this execution module will
+take the place of the default Docker execution module, and backwards-compatible
+naming will be maintained for a couple releases after that to allow users time
+to replace references to ``dockerng`` with ``docker``.
+
+
 .. note::
 
     To pull from a Docker registry, authentication must be configured. See
@@ -47,7 +68,7 @@ NOTSET = object()
 
 def __virtual__():
     '''
-    Only load if the dockerio execution module is available
+    Only load if the dockerng execution module is available
     '''
     if 'dockerng.version' in __salt__:
         global _validate_input  # pylint: disable=global-statement
@@ -331,8 +352,8 @@ def _compare(actual, create_kwargs, runtime_kwargs):
                     continue
 
             elif isinstance(data, list):
-                # Compare two sorted lists of items. Won't work for "cmd" or
-                # "entrypoint" because those are both shell commands and the
+                # Compare two sorted lists of items. Won't work for "command"
+                # or "entrypoint" because those are both shell commands and the
                 # original order matters. It will, however, work for "volumes"
                 # because even though "volumes" is a sub-dict nested within the
                 # "actual" dict sorted(somedict) still just gives you a sorted
@@ -425,17 +446,18 @@ def image_present(name,
     image = ':'.join(_get_repo_tag(name))
     all_tags = __salt__['dockerng.list_tags']()
 
-    if image in all_tags and not force:
-        ret['result'] = True
-        ret['comment'] = 'Image \'{0}\' already present'.format(name)
-        return ret
-    elif image in all_tags and force:
-        try:
-            image_info = __salt__['dockerng.inspect_image'](name)
-        except Exception as exc:
-            ret['comment'] = \
-                'Unable to get info for image \'{0}\': {1}'.format(name, exc)
+    if image in all_tags:
+        if not force:
+            ret['result'] = True
+            ret['comment'] = 'Image \'{0}\' already present'.format(name)
             return ret
+        else:
+            try:
+                image_info = __salt__['dockerng.inspect_image'](name)
+            except Exception as exc:
+                ret['comment'] = \
+                    'Unable to get info for image \'{0}\': {1}'.format(name, exc)
+                return ret
     else:
         image_info = None
 
@@ -732,7 +754,7 @@ def running(name,
 
     **CONTAINER CONFIGURATION PARAMETERS**
 
-    cmd or command
+    command or cmd
         Command to run in the container
 
         .. code-block:: yaml
@@ -740,7 +762,7 @@ def running(name,
             foo:
               dockerng.running:
                 - image: bar/baz:latest
-                - cmd: bash
+                - command: bash
 
         OR
 
@@ -749,7 +771,7 @@ def running(name,
             foo:
               dockerng.running:
                 - image: bar/baz:latest
-                - command: bash
+                - cmd: bash
 
         .. versionchanged:: 2015.8.1
             ``cmd`` is now also accepted
@@ -1344,15 +1366,15 @@ def running(name,
         ret['comment'] = 'The \'image\' argument is required'
         return ret
 
-    if 'command' in kwargs:
-        if 'cmd' in kwargs:
+    if 'cmd' in kwargs:
+        if 'command' in kwargs:
             ret['comment'] = (
-                'Only one of \'cmd\' and \'command\' can be used. Both '
+                'Only one of \'command\' and \'cmd\' can be used. Both '
                 'arguments are equivalent.'
             )
             ret['result'] = False
             return ret
-        kwargs['cmd'] = kwargs.pop('command')
+        kwargs['command'] = kwargs.pop('cmd')
 
     try:
         image = ':'.join(_get_repo_tag(image))

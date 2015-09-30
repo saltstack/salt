@@ -803,7 +803,7 @@ class Minion(MinionBase):
         just return the value of the return_retry_timer.
         '''
         msg = 'Minion return retry timer set to {0} seconds'
-        if self.opts['return_retry_random']:
+        if self.opts.get('return_retry_random'):
             try:
                 random_retry = randint(1, self.opts['return_retry_timer'])
             except ValueError:
@@ -818,8 +818,8 @@ class Minion(MinionBase):
                 log.debug(msg.format(random_retry) + ' (randomized)')
                 return random_retry
         else:
-            log.debug(msg.format(self.opts['return_retry_timer']))
-            return self.opts['return_retry_timer']
+            log.debug(msg.format(self.opts.get('return_retry_timer')))
+            return self.opts.get('return_retry_timer')
 
     def _prep_mod_opts(self):
         '''
@@ -2548,9 +2548,18 @@ class ProxyMinion(Minion):
 
         self.opts['proxymodule'] = salt.loader.proxy(self.opts, None, loaded_base_name=fq_proxyname)
         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
-        proxy_fn = self.opts['proxymodule'].loaded_base_name + '.init'
-        self.opts['proxymodule'][proxy_fn](self.opts)
 
+        if ('{0}.init'.format(fq_proxyname) not in self.opts['proxymodule']
+            or '{0}.shutdown'.format(fq_proxyname) not in self.opts['proxymodule']):
+            log.error('Proxymodule {0} is missing an init() or a shutdown() or both.'.format(fq_proxyname))
+            log.error('Check your proxymodule.  Salt-proxy aborted.')
+            self._running = False
+            raise SaltSystemExit(code=-1)
+
+        proxy_fn = self.opts['proxymodule'].loaded_base_name + '.init'
+
+        self.opts['proxymodule'][proxy_fn](self.opts)
+        # reload ?!?
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
