@@ -42,17 +42,17 @@ class PwUserTestCase(TestCase):
         Test for adding a user
         '''
         with patch.dict(pw_user.__grains__, {'os_family': 'RedHat'}):
-            mock = MagicMock(return_value={'retcode': 0, 'stdout': 'salt'})
-            with patch.dict(pw_user.__salt__, {'cmd.run_all': mock}):
+            mock = MagicMock(return_value=0)
+            with patch.dict(pw_user.__salt__, {'cmd.retcode': mock}):
                 self.assertTrue(pw_user.add('a'))
 
     def test_delete(self):
         '''
         Test for deleting a user
         '''
-        mock = MagicMock(return_value={'retcode': 0})
-        with patch.dict(pw_user.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(pw_user.delete('A'), 1)
+        mock = MagicMock(return_value=0)
+        with patch.dict(pw_user.__salt__, {'cmd.retcode': mock}):
+            self.assertTrue(pw_user.delete('A'))
 
     def test_getent(self):
         '''
