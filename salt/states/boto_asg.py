@@ -574,11 +574,10 @@ def _determine_scaling_policies(scaling_policies, scaling_policies_from_pillar):
     return scaling_policies
 
 
-def _determine_notification_info(
-    notification_arn,
-    notification_arn_from_pillar,
-    notification_types,
-    notification_types_from_pillar):
+def _determine_notification_info(notification_arn,
+                                 notification_arn_from_pillar,
+                                 notification_types,
+                                 notification_types_from_pillar):
     '''helper method for present.  ensure that notification_configs are set'''
     pillar_arn_list = __salt__['config.option'](notification_arn_from_pillar, {})
     pillar_arn = None
