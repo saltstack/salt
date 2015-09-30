@@ -552,7 +552,7 @@ def get_public_key(key, asObj=False):
 
     if isinstance(key, M2Crypto.X509.X509):
         rsa = key.get_pubkey().get_rsa()
-        text = "None"
+        text = ''
     else:
         text = _text_or_file(key)
         text = get_pem_entry(text)
