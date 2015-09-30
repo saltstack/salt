@@ -58,20 +58,6 @@ class RsyncTestCase(TestCase):
 
             self.assertEqual(rsync.version(), {'stdout': 'C'})
 
-    def test_config(self):
-        '''
-        Test for return rsync config
-        '''
-        mock_file = MagicMock(side_effect=[False, True, True])
-        with patch.object(os.path, 'isfile', mock_file):
-            self.assertRaises(CommandExecutionError, rsync.config)
-
-            mock = MagicMock(side_effect=[IOError('f'), 'A'])
-            with patch.dict(rsync.__salt__, {'cmd.run_all': mock}):
-                self.assertRaises(CommandExecutionError, rsync.config)
-
-                self.assertEqual(rsync.config('confile'), 'A')
-
 
 if __name__ == '__main__':
     from integration import run_tests
