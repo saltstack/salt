@@ -147,6 +147,21 @@ def stopped(name):
     return _virt_call(name, 'shutdown', 'stopped', "Machine has been shut down")
 
 
+def powered_off(name):
+    '''
+    Stops a VM by power off.
+
+    .. versionadded:: Boron
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.stopped
+    '''
+
+    return _virt_call(name, 'stop', 'unpowered', 'Machine has been powered off')
+
+
 def running(name, **kwargs):
     '''
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -215,3 +230,117 @@ def snapshot(name, suffix=None):
     '''
 
     return _virt_call(name, 'snapshot', 'saved', 'Snapshot has been taken', suffix=suffix)
+
+
+# Deprecated states
+def rebooted(name):
+    '''
+    Reboots VMs
+
+    .. versionadded:: Boron
+
+    :param name:
+    :return:
+    '''
+
+    return _virt_call(name, 'reboot', 'rebooted', "Machine has been rebooted")
+
+
+def unpowered(name):
+    '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.powered_off` instead.
+
+    Stops a VM by power off.
+
+    .. versionadded:: Boron
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.stopped
+    '''
+
+    return _virt_call(name, 'stop', 'unpowered', 'Machine has been powered off')
+
+
+def saved(name, suffix=None):
+    '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.snapshot` instead.
+
+    Takes a snapshot of a particular VM or by a UNIX-style wildcard.
+
+    .. versionadded:: Boron
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.saved:
+            - suffix: periodic
+
+        domain*:
+          virt.saved:
+            - suffix: periodic
+    '''
+
+    return _virt_call(name, 'snapshot', 'saved', 'Snapshots has been taken', suffix=suffix)
+
+
+def reverted(name, snapshot=None, cleanup=False):
+    '''
+    .. deprecated:: Boron
+
+    Reverts to the particular snapshot.
+
+    .. versionadded:: Boron
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.reverted:
+            - cleanup: True
+
+        domain_name_1:
+          virt.reverted:
+            - snapshot: snapshot_name
+            - cleanup: False
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    try:
+        domains = fnmatch.filter(__salt__['virt.list_domains'](), name)
+        if not domains:
+            ret['comment'] = 'No domains found for criteria "{0}"'.format(name)
+        else:
+            ignored_domains = list()
+            if len(domains) > 1:
+                ret['changes'] = {'reverted': list()}
+            for domain in domains:
+                result = {}
+                try:
+                    result = __salt__['virt.revert_snapshot'](domain, snapshot=snapshot, cleanup=cleanup)
+                    result = {'domain': domain, 'current': result['reverted'], 'deleted': result['deleted']}
+                except CommandExecutionError as err:
+                    if len(domains) > 1:
+                        ignored_domains.append({'domain': domain, 'issue': str(err)})
+                if len(domains) > 1:
+                    if result:
+                        ret['changes']['reverted'].append(result)
+                else:
+                    ret['changes'] = result
+                    break
+
+            ret['result'] = len(domains) != len(ignored_domains)
+            if ret['result']:
+                ret['comment'] = 'Domain{0} has been reverted'.format(len(domains) > 1 and "s" or "")
+            if ignored_domains:
+                ret['changes']['ignored'] = ignored_domains
+            if not ret['changes']['reverted']:
+                ret['changes'].pop('reverted')
+    except libvirt.libvirtError as err:
+        ret['comment'] = str(err)
+    except CommandExecutionError as err:
+        ret['comment'] = str(err)
+
+    return ret
