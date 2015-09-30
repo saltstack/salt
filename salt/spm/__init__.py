@@ -155,20 +155,21 @@ class SPMClient(object):
             )
 
         if 'dependencies' in formula_def:
-            if not isinstance(formula_def['dependencies'], list):
-                formula_def['dependencies'] = [formula_def['dependencies']]
-            needs = []
-            for dep in formula_def['dependencies']:
-                if not isinstance(dep, string_types):
+            self.repo_metadata = self._get_repo_metadata()
+            self.avail_pkgs = {}
+            for repo in self.repo_metadata:
+                if not isinstance(self.repo_metadata[repo]['packages'], dict):
                     continue
-                data = self.pkgdb['{0}.info'.format(self.db_prov)](dep, self.db_conn)
-                if data is not None:
-                    continue
-                needs.append(dep)
-            raise SPMPackageError(
-                'Cannot install {0}, the following dependencies are needed:\n\n{1}'.format(
-                    formula_def['name'], '\n'.join(needs))
-            )
+                for pkg in self.repo_metadata[repo]['packages']:
+                    self.avail_pkgs[pkg] = repo
+
+            needs, unavail = self._resolve_deps(formula_def)
+
+            if len(unavail) > 0:
+                raise SPMPackageError(
+                    'Cannot install {0}, the following dependencies are needed:\n\n{1}'.format(
+                        formula_def['name'], '\n'.join(unavail))
+                )
 
         if pkg_name is None:
             msg = 'Installing package from file {0}'.format(pkg_file)
@@ -229,6 +230,50 @@ class SPMClient(object):
                 )
 
         formula_tar.close()
+
+    def _resolve_deps(self, formula_def):
+        '''
+        Return a list of packages which need to be installed, to resolve all
+        dependencies
+        '''
+        pkg_info = self.pkgdb['{0}.info'.format(self.db_prov)](formula_def['name'])
+        if not isinstance(pkg_info, dict):
+            pkg_info = {}
+
+        can_has = {}
+        cant_has = []
+        for dep in formula_def.get('dependencies', '').split(','):
+            dep = dep.strip()
+            if not dep:
+                continue
+            if self.pkgdb['{0}.info'.format(self.db_prov)](dep):
+                continue
+
+            if dep in self.avail_pkgs:
+                can_has[dep] = self.avail_pkgs[dep]
+            else:
+                cant_has.append(dep)
+
+        inspected = []
+        to_inspect = can_has.copy()
+        while len(to_inspect) > 0:
+            dep = to_inspect.keys()[0]
+            del to_inspect[dep]
+
+            # Don't try to resolve the same package more than once
+            if dep in inspected:
+                continue
+            inspected.append(dep)
+
+            repo_contents = self.repo_metadata.get(can_has[dep], {})
+            repo_packages = repo_contents.get('packages', {})
+            dep_formula = repo_packages.get(dep, {}).get('info', {})
+
+            also_can, also_cant = self._resolve_deps(dep_formula)
+            can_has.update(also_can)
+            cant_has = sorted(set(cant_has + also_cant))
+
+        return can_has, cant_has
 
     def _traverse_repos(self, callback, repo_name=None):
         '''
