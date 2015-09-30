@@ -42,6 +42,8 @@ The information which can be stored in a roster `target` is the following:
         # Optional parameters
         port:        # The target system's ssh port number
         sudo:        # Boolean to run command via sudo
+        tty:         # Boolean: Set this option to True if sudo is also set to
+                     # True and requiretty is also set on the target system
         priv:        # File path to ssh private key, defaults to salt-ssh.rsa
         timeout:     # Number of seconds to wait for response when establishing
                      # an SSH connection

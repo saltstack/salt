@@ -93,14 +93,22 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
 def rename(src, dst):
     '''
     On Windows, os.rename() will fail with a WindowsError exception if a file
-    exists at the destination path. This function removes the destination path
-    first before attempting the os.rename().
+    exists at the destination path. This function checks for this error and if
+    found, it deletes the destination path first.
     '''
     try:
-        os.remove(dst)
+        os.rename(src, dst)
     except OSError as exc:
-        if exc.errno != errno.ENOENT:
-            raise MinionError(
-                'Error: Unable to remove {0}: {1}'.format(dst, exc.strerror)
-            )
-    os.rename(src, dst)
+        if exc.errno != errno.EEXIST:
+            raise
+        try:
+            os.remove(dst)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                raise MinionError(
+                    'Error: Unable to remove {0}: {1}'.format(
+                        dst,
+                        exc.strerror
+                    )
+                )
+        os.rename(src, dst)

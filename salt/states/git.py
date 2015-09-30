@@ -1584,10 +1584,11 @@ def config_unset(name,
     all : False
         If ``True``, unset all matches
 
-    repo : None
-        An optional location of a git repository for local operations
+    repo
+        Location of the git repository for which the config value should be
+        set. Required unless ``global`` is set to ``True``.
 
-    user : None
+    user
         Optional name of a user as whom `git config` will be run
 
     global : False
@@ -1659,11 +1660,12 @@ def config_unset(name,
 
     # Get matching keys/values
     pre_matches = __salt__['git.config_get_regexp'](
-        cwd='global' if global_ else repo,
+        cwd=repo,
         key=key,
         value_regex=value_regex,
         user=user,
-        ignore_retcode=True
+        ignore_retcode=True,
+        **{'global': global_}
     )
 
     if not pre_matches:
@@ -1706,11 +1708,12 @@ def config_unset(name,
         # Get all keys matching the key expression, so we can accurately report
         # on changes made.
         pre = __salt__['git.config_get_regexp'](
-            cwd='global' if global_ else repo,
+            cwd=repo,
             key=key,
             value_regex=None,
             user=user,
-            ignore_retcode=True
+            ignore_retcode=True,
+            **{'global': global_}
         )
 
     failed = []
@@ -1719,11 +1722,12 @@ def config_unset(name,
     for key_name in pre_matches:
         try:
             __salt__['git.config_unset'](
-                cwd='global' if global_ else repo,
+                cwd=repo,
                 key=name,
                 value_regex=value_regex,
                 all=all_,
-                user=user
+                user=user,
+                **{'global': global_}
             )
         except CommandExecutionError as exc:
             msg = 'Failed to unset \'{0}\''.format(key_name)
@@ -1741,11 +1745,12 @@ def config_unset(name,
         )
 
     post = __salt__['git.config_get_regexp'](
-        cwd='global' if global_ else repo,
+        cwd=repo,
         key=key,
         value_regex=None,
         user=user,
-        ignore_retcode=True
+        ignore_retcode=True,
+        **{'global': global_}
     )
 
     for key_name, values in six.iteritems(pre):
@@ -1759,11 +1764,12 @@ def config_unset(name,
         post_matches = post
     else:
         post_matches = __salt__['git.config_get_regexp'](
-            cwd='global' if global_ else repo,
+            cwd=repo,
             key=key,
             value_regex=value_regex,
             user=user,
-            ignore_retcode=True
+            ignore_retcode=True,
+            **{'global': global_}
         )
 
     if post_matches:
@@ -1809,10 +1815,11 @@ def config_set(name,
 
         .. versionadded:: 2015.8.0
 
-    repo : None
-        An optional location of a git repository for local operations
+    repo
+        Location of the git repository for which the config value should be
+        set. Required unless ``global`` is set to ``True``.
 
-    user : None
+    user
         Optional name of a user as whom `git config` will be run
 
     global : False
@@ -1920,11 +1927,11 @@ def config_set(name,
 
     # Get current value
     pre = __salt__['git.config_get'](
-        cwd='global' if global_ else repo,
+        cwd=repo,
         key=name,
         user=user,
         ignore_retcode=True,
-        **{'all': True}
+        **{'all': True, 'global': global_}
     )
 
     if desired == pre:
@@ -1948,11 +1955,12 @@ def config_set(name,
     try:
         # Set/update config value
         post = __salt__['git.config_set'](
-            cwd='global' if global_ else repo,
+            cwd=repo,
             key=name,
             value=value,
             multivar=multivar,
-            user=user
+            user=user,
+            **{'global': global_}
         )
     except CommandExecutionError as exc:
         return _fail(

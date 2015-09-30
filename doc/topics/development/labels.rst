@@ -288,6 +288,9 @@ with labels.
 ``Story``
     The issue is used by a SaltStack engineer to track progress on multiple related issues in a single place.
 
+``Stretch``
+    The issue is an optional goal for the current sprint but may not be delivered.
+
 ``ZD``
     The issue is related to a Zendesk customer support ticket.
 

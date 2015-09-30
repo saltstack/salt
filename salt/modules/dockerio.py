@@ -5,7 +5,7 @@ Management of Docker Containers
 .. versionadded:: 2014.1.0
 
 .. deprecated:: 2015.8.0
-    Future feature development will be done only in :mod:`docker-ng
+    Future feature development will be done only in :mod:`dockerng
     <salt.modules.dockerng>`. See the documentation for this module for
     information on the deprecation path.
 
