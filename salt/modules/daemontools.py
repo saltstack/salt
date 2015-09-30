@@ -21,6 +21,7 @@ import os.path
 import re
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError
 
 # Function alias to not shadow built-ins.
@@ -40,6 +41,12 @@ for service_dir in VALID_SERVICE_DIRS:
     if os.path.exists(service_dir):
         SERVICE_DIR = service_dir
         break
+
+
+def __virtual__():
+    # Ensure that daemontools is installed properly.
+    BINS = {'svc', 'supervise', 'svok'}
+    return all(salt.utils.which(bin) for bin in BINS)
 
 
 def _service_path(name):
