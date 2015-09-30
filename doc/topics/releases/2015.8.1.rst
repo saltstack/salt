@@ -7,10 +7,37 @@ Version 2015.8.1 is a bugfix release for :doc:`2015.8.0
 
 Changes:
 
+- Add support for ``spm.d/*.conf`` configuration of SPM (:issue:`27010`)
+- Fix ``proxy`` grains breakage for non-proxy minions (:issue:`27039`)
+- Fix global key management for git state
+- Fix passing http auth to ``util.http`` from ``state.file`` (:issue:`21917`)
+- Fix ``multiprocessing: True`` in windows (on by default`)
+- Add ``pkg.info`` to pkg modules
+- Fix name of ``serial`` grain (this was accidentally renamed in 2015.8.0`)
+- Merge config values from ``master.d``/``minion.d`` conf files (rather than flat update`)
+- Clean grains cache on grains sync (:issue:`19853`)
+- Remove streamed response for fileclient to avoid HTTP redirection problems (:issue:`27093`)
+- Fixed incorrect warning about ``osrelease`` grain (:issue:`27065`)
+- Fix authentication via Salt-API with tokens (:issue:`27270`)
+- Fix winrepo downloads from https locations (:issue:`27081`)
+- Fix potential error with salt-call as non-root user (:issue:`26889`)
+- Fix global minion provider overrides (:issue:`27209`)
+- Fix backward compatibility issues for pecl modules
+- Fix Windows uninstaller to only remove ``./bin``, ``salt*``, ``nssm.exe``, ``uninst.exe`` (:issue:`27383`)
+- Fix misc issues with mongo returner.
+- Add sudo option to cloud config files (:issue:`27398`)
+- Fix regression in RunnerClient argument handling (:issue:`25107`)
+- Fix ``dockerng.running`` replacing creation hostconfig with runtime hostconfig (:issue:`27265`)
+- Fix dockerng.running replacing creation hostconfig with runtime hostconfig (:issue:`27265`)
+- Increased performance on boto asg/elb states due to ``__states__`` integration
+- Windows minion no longer requires powershell to restart (:issue:`26629`)
+- Fix x509 module to support recent versions of OpenSSL (:issue:`27326`)
 - Some issues with proxy minions were corrected.
+
 
 Known Issues:
 
 - Proxy minions currently cannot execute a highstate because of the way
   the proxymodule is being loaded internally.  This will be fixed in a
   future release.
+
