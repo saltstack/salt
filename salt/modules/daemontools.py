@@ -15,6 +15,7 @@ so it can be used to maintain services using the ``provider`` argument:
 from __future__ import absolute_import
 
 # Import python libs
+import logging
 import os
 import os.path
 import re
