@@ -71,30 +71,30 @@ The package definition file should look similar to this example for Firefox:
 .. code-block:: yaml
 
     firefox:
-      17.0.1:
+      '17.0.1':
         installer: 'salt://win/repo/firefox/English/Firefox Setup 17.0.1.exe'
         full_name: Mozilla Firefox 17.0.1 (x86 en-US)
         locale: en_US
         reboot: False
-        install_flags: ' -ms'
+        install_flags: '-ms'
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
-        uninstall_flags: ' /S'
-      16.0.2:
+        uninstall_flags: '/S'
+      '16.0.2':
         installer: 'salt://win/repo/firefox/English/Firefox Setup 16.0.2.exe'
         full_name: Mozilla Firefox 16.0.2 (x86 en-US)
         locale: en_US
         reboot: False
-        install_flags: ' -ms'
+        install_flags: '-ms'
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
-        uninstall_flags: ' /S'
-      15.0.1:
+        uninstall_flags: '/S'
+      '15.0.1':
         installer: 'salt://win/repo/firefox/English/Firefox Setup 15.0.1.exe'
         full_name: Mozilla Firefox 15.0.1 (x86 en-US)
         locale: en_US
         reboot: False
-        install_flags: ' -ms'
+        install_flags: '-ms'
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
-        uninstall_flags: ' /S'
+        uninstall_flags: '/S'
 
 More examples can be found here: https://github.com/saltstack/salt-winrepo
 

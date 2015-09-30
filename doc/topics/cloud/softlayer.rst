@@ -278,8 +278,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       image: 13963
       # 2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram
       size: 1921
-      # 250GB SATA II
-      hdd: 19
+      # 500GB SATA II
+      hdd: 1267
       # San Jose 01
       location: 168642
       domain: example.com
@@ -318,15 +318,14 @@ contain. The `id` will be the setting to be used in the profile.
 
 hdd
 ---
-There are currently two sizes of hard disk drive (HDD) that are available for
+There is currently only one size of hard disk drive (HDD) that is available for
 hardware instances on SoftLayer:
 
 .. code-block:: yaml
 
-    19: 250GB SATA II
     1267: 500GB SATA II
 
-The `hdd` setting in the profile will be either 19 or 1267. Other sizes may be
+The `hdd` setting in the profile should be 1267. Other sizes may be
 added in the future.
 
 location
@@ -444,8 +443,8 @@ them, that can be passed into Salt Cloud with the `optional_products` option:
       image: 13963
       # 2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram
       size: 1921
-      # 250GB SATA II
-      hdd: 19
+      # 500GB SATA II
+      hdd: 1267
       # San Jose 01
       location: 168642
       domain: example.com

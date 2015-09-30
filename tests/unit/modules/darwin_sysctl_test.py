@@ -95,7 +95,7 @@ class DarwinSysctlTestCase(TestCase):
         Tests successful write to existing sysctl file
         '''
         to_write = '#\n# Kernel sysctl configuration\n#\n'
-        m_calls_list = [call.writelines(['net.inet.icmp.icmplim=50'])]
+        m_calls_list = [call.writelines(['net.inet.icmp.icmplim=50', '\n'])]
         with patch('salt.utils.fopen', mock_open(read_data=to_write)) as m_open:
             darwin_sysctl.persist('net.inet.icmp.icmplim', 50, config=to_write)
             helper_open = m_open()
