@@ -287,24 +287,12 @@ def _get_certificate_obj(cert):
     '''
     Returns a certificate object based on PEM text.
     '''
+    if isinstance(cert, M2Crypto.X509.X509):
+        return cert
+
     text = _text_or_file(cert)
     text = get_pem_entry(text, pem_type='CERTIFICATE')
     return M2Crypto.X509.load_cert_string(text)
-
-
-def _get_public_key_obj(public_key):
-    '''
-    Returns a public key object based on PEM text.
-    '''
-    public_key = _text_or_file(public_key)
-    public_key = get_pem_entry(public_key)
-    public_key = get_public_key(public_key)
-    bio = M2Crypto.BIO.MemoryBuffer()
-    bio.write(public_key)
-    rsapubkey = M2Crypto.RSA.load_pub_key_bio(bio)
-    evppubkey = M2Crypto.EVP.PKey()
-    evppubkey.assign_rsa(rsapubkey)
-    return evppubkey
 
 
 def _get_private_key_obj(private_key):
@@ -427,10 +415,7 @@ def read_certificate(certificate):
 
         salt '*' x509.read_certificate /etc/pki/mycert.crt
     '''
-    if isinstance(certificate, M2Crypto.X509.X509):
-        cert = certificate
-    else:
-        cert = _get_certificate_obj(certificate)
+    cert = _get_certificate_obj(certificate)
 
     ret = {
         # X509 Verison 3 has a value of 2 in the field.
@@ -449,7 +434,7 @@ def read_certificate(certificate):
         'Issuer Hash': _dec2hex(cert.get_issuer().as_hash()),
         'Not Before': cert.get_not_before().get_datetime().strftime('%Y-%m-%d %H:%M:%S'),
         'Not After': cert.get_not_after().get_datetime().strftime('%Y-%m-%d %H:%M:%S'),
-        'Public Key': get_public_key(cert.as_pem())
+        'Public Key': get_public_key(cert)
     }
 
     exts = OrderedDict()
@@ -550,7 +535,7 @@ def read_crl(crl):
     return crlparsed
 
 
-def get_public_key(key):
+def get_public_key(key, asObj=False):
     '''
     Returns a string containing the public key in PEM format.
 
@@ -564,12 +549,20 @@ def get_public_key(key):
 
         salt '*' x509.get_public_key /etc/pki/mycert.cer
     '''
-    text = _text_or_file(key)
 
-    text = get_pem_entry(text)
+    if isinstance(key, M2Crypto.X509.X509):
+        rsa = key.get_pubkey().get_rsa()
+        text = ''
+    else:
+        text = _text_or_file(key)
+        text = get_pem_entry(text)
 
     if text.startswith('-----BEGIN PUBLIC KEY-----'):
-        return text
+        if not asObj:
+            return text
+        bio = M2Crypto.BIO.MemoryBuffer()
+        bio.write(text)
+        rsa = M2Crypto.RSA.load_pub_key_bio(bio)
 
     bio = M2Crypto.BIO.MemoryBuffer()
     if text.startswith('-----BEGIN CERTIFICATE-----'):
@@ -581,6 +574,11 @@ def get_public_key(key):
     if (text.startswith('-----BEGIN PRIVATE KEY-----') or
             text.startswith('-----BEGIN RSA PRIVATE KEY-----')):
         rsa = M2Crypto.RSA.load_key_string(text)
+
+    if asObj:
+        evppubkey = M2Crypto.EVP.PKey()
+        evppubkey.assign_rsa(rsa)
+        return evppubkey
 
     rsa.save_pub_key_bio(bio)
     return bio.read_all()
@@ -1144,7 +1142,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         subject = csr.get_subject()
         csrexts = read_csr(kwargs['csr'])['X509v3 Extensions']
 
-    cert.set_pubkey(_get_public_key_obj(kwargs['public_key']))
+    cert.set_pubkey(get_public_key(kwargs['public_key'], asObj=True))
 
     for entry, num in six.iteritems(subject.nid):                  # pylint: disable=unused-variable
         if entry in kwargs:
@@ -1187,14 +1185,14 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         cert_props['Issuer Public Key'] = get_public_key(kwargs['signing_private_key'])
         return cert_props
 
-    if not verify_private_key(kwargs['signing_private_key'], signing_cert.as_pem()):
+    if not verify_private_key(kwargs['signing_private_key'], signing_cert):
         raise salt.exceptions.SaltInvocationError('signing_private_key: {0}'
                 'does no match signing_cert: {1}'.format(kwargs['signing_private_key'],
                                                          kwargs['signing_cert']))
 
     cert.sign(_get_private_key_obj(kwargs['signing_private_key']), kwargs['algorithm'])
 
-    if not verify_signature(cert.as_pem(), signing_pub_key=signing_cert.as_pem()):
+    if not verify_signature(cert, signing_pub_key=signing_cert):
         raise salt.exceptions.SaltInvocationError('failed to verify certificate signature')
 
     if 'copypath' in kwargs:
@@ -1240,7 +1238,7 @@ def create_csr(path=None, text=False, **kwargs):
 
     if 'public_key' not in kwargs:
         raise salt.exceptions.SaltInvocationError('public_key is required')
-    csr.set_pubkey(_get_public_key_obj(kwargs['public_key']))
+    csr.set_pubkey(get_public_key(kwargs['public_key'], asObj=True))
 
     for entry, num in six.iteritems(subject.nid):                  # pylint: disable=unused-variable
         if entry in kwargs:
@@ -1315,7 +1313,7 @@ def verify_signature(certificate, signing_pub_key=None):
     cert = _get_certificate_obj(certificate)
 
     if signing_pub_key:
-        signing_pub_key = _get_public_key_obj(signing_pub_key)
+        signing_pub_key = get_public_key(signing_pub_key, asObj=True)
 
     return bool(cert.verify(pkey=signing_pub_key) == 1)
 

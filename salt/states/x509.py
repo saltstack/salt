@@ -47,7 +47,7 @@ the mine where it can be easily retrieved by other minions.
 
     salt-minion:
       service.running:
-        - enabled
+        - enable: True
         - listen:
           - file: /etc/salt/minion.d/signing_policies.conf
 
@@ -56,6 +56,9 @@ the mine where it can be easily retrieved by other minions.
         - source: salt://signing_policies.conf
 
     /etc/pki:
+      file.directory: []
+
+    /etc/pki/issued_certs:
       file.directory: []
 
     /etc/pki/ca.key:
@@ -122,10 +125,12 @@ handle properly formatting the text before writing the output.
 /srv/salt/cert.sls
 
 .. code-block:: yaml
+    /usr/local/share/ca-certificates:
+      file.directory: []
 
-    /usr/local/share/ca-certificates/intca.crt
+    /usr/local/share/ca-certificates/intca.crt:
       x509.pem_managed:
-        - text: {{ salt['mine.get']('pki', 'x509.get_pem_entries')['pki']['/etc/pki/ca.crt']|replace('\\n', '') }}
+        - text: {{ salt['mine.get']('ca', 'x509.get_pem_entries')['ca']['/etc/pki/ca.crt']|replace('\\n', '') }}
 
 
 This state creates a private key then requests a certificate signed by ca according to the www policy.
