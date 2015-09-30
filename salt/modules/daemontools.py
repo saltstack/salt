@@ -27,6 +27,8 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
+log = logging.getLogger(__name__)
+
 VALID_SERVICE_DIRS = [
     '/service',
     '/var/service',
