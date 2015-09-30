@@ -346,7 +346,6 @@ def get_network(network_name,
         ('' if network_view is None else '&network_view=' + network_view))
     log.debug('Requst url is "{0}"'.format(url))
     ret = _process_return_data(requests.get(url,
-                                            '',
                                             auth=(infoblox_user, infoblox_password),
                                             verify=sslVerify))
     if ret:
@@ -420,7 +419,6 @@ def get_record(record_name,
         )
     log.debug('Requst url is "{0}"'.format(url))
     ret = _process_return_data(requests.get(url,
-                                            '',
                                             auth=(infoblox_user, infoblox_password),
                                             verify=sslVerify))
     if ret:
