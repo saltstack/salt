@@ -231,10 +231,11 @@ def enabled(name, **kwargs):
     down_file = os.path.join(SERVICE_DIR, name, 'down')
 
     return (
-        os.path.isfile(run_file)
-        and os.access(run_file, os.X_OK)
-        and not os.path.isfile(down_file)
+        os.path.isfile(run_file) and
+        os.access(run_file, os.X_OK) and not
+        os.path.isfile(down_file)
     )
+
 
 def disabled(name):
     '''
