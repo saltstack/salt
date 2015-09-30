@@ -445,16 +445,14 @@ def create(vm_):
     swap_disk_id = create_swap_disk(vm_, node_id)['DiskID']
 
     # Add private IP address if requested
-    use_private_ip = get_private_ip(vm_)
-    if use_private_ip:
+    if get_private_ip(vm_):
         create_private_ip(vm_, node_id)
 
     # Create a ConfigID using disk ids
     config_id = create_config(kwargs={'name': vm_['name'],
                                       'linode_id': node_id,
                                       'root_disk_id': root_disk_id,
-                                      'swap_disk_id': swap_disk_id,
-                                      'helper_network': True})['ConfigID']
+                                      'swap_disk_id': swap_disk_id})['ConfigID']
     # Boot the Linode
     boot(kwargs={'linode_id': node_id,
                  'config_id': config_id,
@@ -471,10 +469,7 @@ def create(vm_):
     data['private_ips'] = ips['private_ips']
     data['public_ips'] = ips['public_ips']
 
-    if use_private_ip:
-        vm_['ssh_host'] = data['private_ips'][0]
-    else:
-        vm_['ssh_host'] = data['public_ips'][0]
+    vm_['ssh_host'] = data['public_ips'][0]
 
     # If a password wasn't supplied in the profile or provider config, set it now.
     vm_['password'] = get_password(vm_)
