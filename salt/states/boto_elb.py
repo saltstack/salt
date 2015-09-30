@@ -205,6 +205,7 @@ import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
+
 def __virtual__():
     '''
     Only load if boto is available.
@@ -359,16 +360,16 @@ def present(
             dns_provider = 'boto_route53'
             cname['record_type'] = 'CNAME'
             cname['value'] = lb['dns_name']
-            if cname.has_key('provider'):
+            if 'provider' in cname:
                 dns_provider = cname.pop('provider')
             if dns_provider == 'boto_route53':
-                if not cname.has_key('profile'):
+                if not 'profile' in cname:
                     cname['profile'] = profile
-                if not cname.has_key('key'):
+                if not 'key' in cname:
                     cname['key'] = key
-                if not cname.has_key('keyid'):
+                if not 'keyid' in cname:
                     cname['keyid'] = keyid
-                if not cname.has_key('region'):
+                if not 'region' in cname:
                     cname['region'] = region
             _ret = __salt__['state.single'](
                 '.'.join([dns_provider, 'present']),
@@ -438,7 +439,7 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
                 new.append(value)
         if len(new) == 0:
             ret['comment'] = 'Instance/s {0} already exist.' \
-                              ''.format(str(instances).strip('[]'))
+                        ''.format(str(instances).strip('[]'))
             ret['result'] = True
         else:
             if __opts__['test']:
@@ -521,7 +522,7 @@ def _elb_present(
         vpc_id = __salt__['boto_vpc.get_subnet_association'](
             subnets, region, key, keyid, profile
         )
-        if vpc_id.has_key('vpc_id'):
+        if 'vpc_id' in vpc_id:
             vpc_id = vpc_id['vpc_id']
         if not vpc_id:
             msg = 'Subnets {0} do not map to a valid vpc id.'.format(subnets)
@@ -1018,12 +1019,13 @@ def absent(
         ret['comment'] = '{0} ELB does not exist.'.format(name)
     return ret
 
+
 def _tags_present(name,
-        tags,
-        region,
-        key,
-        keyid,
-        profile):
+                  tags,
+                  region,
+                  key,
+                  keyid,
+                  profile):
     '''
     helper function to validate tags on elb
     '''
@@ -1036,8 +1038,8 @@ def _tags_present(name,
         tags_to_remove = []
         if lb['tags']:
             for _tag in lb['tags'].keys():
-                if not _tag in tags.keys():
-                    if not _tag in tags_to_remove:
+                if _tag not in tags.keys():
+                    if _tag not in tags_to_remove:
                         tags_to_remove.append(_tag)
                 else:
                     if tags[_tag] != lb['tags'][_tag]:
@@ -1062,7 +1064,7 @@ def _tags_present(name,
                     msg = 'Error attempting to delete tag {0}.'.format(tags_to_remove)
                     ret['comment'] = ' '.join([ret['comment'], msg])
                     return ret
-                if not ret['changes'].has_key('old'):
+                if 'old' not in ret['changes']:
                     ret['changes'] = dictupdate.update(ret['changes'], {'old':{'tags':{}}})
                 for _tag in tags_to_remove:
                     ret['changes']['old']['tags'][_tag] = lb['tags'][_tag]
@@ -1094,27 +1096,28 @@ def _tags_present(name,
                     msg = 'Error attempting to set tags.'
                     ret['comment'] = ' '.join([ret['comment'], msg])
                     return ret
-                if not ret['changes'].has_key('old'):
+                if 'old' not in ret['changes']:
                     ret['changes'] = dictupdate.update(ret['changes'], {'old':{'tags':{}}})
-                if not ret['changes'].has_key('new'):
+                if 'new' not in ret['changes']:
                     ret['changes'] = dictupdate.update(ret['changes'], {'new':{'tags':{}}})
                 for tag in all_tag_changes:
                     ret['changes']['new']['tags'][tag] = tags[tag]
-                    if lb.has_key('tags'):
+                    if 'tags' in lb:
                         if lb['tags']:
-                            if lb['tags'].has_key(tag):
+                            if tag in lb['tags']:
                                 ret['changes']['old']['tags'][tag] = lb['tags'][tag]
         if not tags_to_update and not tags_to_remove and not tags_to_add:
             msg = 'Tags are already set.'
             ret['comment'] = ' '.join([ret['comment'], msg])
     return ret
 
+
 def _listener_policies_present(name,
-        listener_policies,
-        region,
-        key,
-        keyid,
-        profile):
+                               listener_policies,
+                               region,
+                               key,
+                               keyid,
+                               profile):
     '''
     helper function to validate listener policies
     '''
@@ -1152,7 +1155,7 @@ def _listener_policies_present(name,
                                 key,
                                 keyid,
                                 profile)
-                    if not ret['changes'].has_key('old'):
+                    if 'old' not in ret['changes']:
                         ret['changes'] = dictupdate.update(ret['changes'], {'old':{'listener policies':[]}})
                     ret['changes']['old']['listener policies'].append(lp)
     for _lp in listener_policies:
@@ -1191,9 +1194,9 @@ def _listener_policies_present(name,
             if _ret:
                 msg = 'Listener {0} policy updated.'.format(_lp['listener'])
                 ret['comment'] = ' '.join([ret['comment'], msg])
-                if not ret['changes'].has_key('old'):
+                if 'old' not in ret['changes']:
                     ret['changes'] = dictupdate.update(ret['changes'], {'old':{'listener policies':[]}})
-                if not ret['changes'].has_key('new'):
+                if 'new' not in ret['changes']:
                     ret['changes'] = dictupdate.update(ret['changes'], {'new':{'listener policies':[]}})
                 if isinstance(lp, dict):
                     ret['changes']['old']['listener policies'].append(dictupdate.update(lp, {'listener': _lp['listener']}))

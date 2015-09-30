@@ -696,6 +696,7 @@ def get_instance_health(name, region=None, key=None, keyid=None, profile=None, i
         log.debug(error)
         return []
 
+
 def get_listener_policy(name, listener, region=None, key=None, keyid=None, profile=None):
     '''
     gets the policy details of a specific listener port
@@ -772,7 +773,7 @@ def set_listener_policy(name, listener, policy, cookie, disable_policy=False, re
     if found_listener:
         new_policy = False
         pName = None
-        if disable_policy != True:
+        if not disable_policy:
             if policy.lower() == 'lbcookiestickinesspolicy':
                 pName = 'LBCookieStickinessPolicy-{0}-{1}'.format(lb.name, hash('{0}-{1}'.format(lb.name, cookie)))
                 if existing_policy_name != pName:
@@ -914,4 +915,3 @@ def _remove_tags(conn, load_balancer_names, tags):
     conn.build_list_params(params, tags,
                            'Tags.member.%d.Key')
     return conn.get_status('RemoveTags', params, verb='POST')
-
