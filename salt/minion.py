@@ -92,6 +92,7 @@ import salt.defaults.exitcodes
 import salt.cli.daemons
 
 from salt.defaults import DEFAULT_TARGET_DELIM
+from salt.executors import FUNCTION_EXECUTORS
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.exceptions import (
@@ -802,7 +803,7 @@ class Minion(MinionBase):
         just return the value of the return_retry_timer.
         '''
         msg = 'Minion return retry timer set to {0} seconds'
-        if self.opts['return_retry_random']:
+        if self.opts.get('return_retry_random'):
             try:
                 random_retry = randint(1, self.opts['return_retry_timer'])
             except ValueError:
@@ -817,8 +818,8 @@ class Minion(MinionBase):
                 log.debug(msg.format(random_retry) + ' (randomized)')
                 return random_retry
         else:
-            log.debug(msg.format(self.opts['return_retry_timer']))
-            return self.opts['return_retry_timer']
+            log.debug(msg.format(self.opts.get('return_retry_timer')))
+            return self.opts.get('return_retry_timer')
 
     def _prep_mod_opts(self):
         '''
@@ -897,7 +898,7 @@ class Minion(MinionBase):
         if modules_max_memory is True:
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
 
-        executors = salt.loader.executors(self.opts)
+        executors = salt.loader.executors(self.opts, functions)
 
         return functions, returners, errors, executors
 
@@ -1038,14 +1039,24 @@ class Minion(MinionBase):
                 elif not isinstance(executors, list) or not executors:
                     raise SaltInvocationError("Wrong executors specification: {0}. String or non-empty list expected".
                         format(executors))
-                if opts.get('sudo_user', ''):
-                    executors[-1] = 'sudo.get'
+                if opts.get('sudo_user', '') and executors[-1] != 'sudo.get':
+                    if executors[-1] in FUNCTION_EXECUTORS:
+                        executors[-1] = 'sudo.get'  # replace
+                    else:
+                        executors.append('sudo.get')  # append
+                log.trace("Executors list {0}".format(executors))
+
+                # Get executors
+                def get_executor(name):
+                    executor_class = minion_instance.executors.get(name)
+                    if executor_class is None:
+                        raise SaltInvocationError("Executor '{0}' is not available".format(name))
+                    return executor_class
                 # Get the last one that is function executor
-                executor = minion_instance.executors[
-                    "{0}".format(executors.pop())](opts, data, func, args, kwargs)
+                executor = get_executor(executors.pop())(opts, data, func, args, kwargs)
                 # Instantiate others from bottom to the top
                 for executor_name in reversed(executors):
-                    executor = minion_instance.executors["{0}".format(executor_name)](opts, data, executor)
+                    executor = get_executor(executor_name)(opts, data, executor)
                 return_data = executor.execute()
 
                 if isinstance(return_data, types.GeneratorType):
@@ -2537,9 +2548,18 @@ class ProxyMinion(Minion):
 
         self.opts['proxymodule'] = salt.loader.proxy(self.opts, None, loaded_base_name=fq_proxyname)
         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
-        proxy_fn = self.opts['proxymodule'].loaded_base_name + '.init'
-        self.opts['proxymodule'][proxy_fn](self.opts)
 
+        if ('{0}.init'.format(fq_proxyname) not in self.opts['proxymodule']
+            or '{0}.shutdown'.format(fq_proxyname) not in self.opts['proxymodule']):
+            log.error('Proxymodule {0} is missing an init() or a shutdown() or both.'.format(fq_proxyname))
+            log.error('Check your proxymodule.  Salt-proxy aborted.')
+            self._running = False
+            raise SaltSystemExit(code=-1)
+
+        proxy_fn = self.opts['proxymodule'].loaded_base_name + '.init'
+
+        self.opts['proxymodule'][proxy_fn](self.opts)
+        # reload ?!?
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)

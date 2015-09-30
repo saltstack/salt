@@ -742,7 +742,7 @@ class Pygit2(GitProvider):
         for line in subprocess.Popen(
                 'git ls-remote origin',
                 shell=True,
-                close_fds=True,
+                close_fds=not salt.utils.is_windows(),
                 cwd=self.repo.workdir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT).communicate()[0].splitlines():
@@ -1508,7 +1508,7 @@ class GitBase(object):
             self.cache_root = os.path.join(self.opts['cachedir'], self.role)
         self.env_cache = os.path.join(self.cache_root, 'envs.p')
         self.hash_cachedir = os.path.join(
-            self.cache_root, self.role, 'hash')
+            self.cache_root, 'hash')
         self.file_list_cachedir = os.path.join(
             self.opts['cachedir'], 'file_lists', self.role)
 
@@ -1609,7 +1609,7 @@ class GitBase(object):
                 pass
         to_remove = []
         for item in cachedir_ls:
-            if item in ('gitfs', 'refs'):
+            if item in ('hash', 'refs'):
                 continue
             path = os.path.join(self.cache_root, item)
             if os.path.isdir(path):

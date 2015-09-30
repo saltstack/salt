@@ -13,6 +13,7 @@ except ImportError:
 
 import ast
 import re
+import salt.loader
 import logging
 log = logging.getLogger(__name__)
 
@@ -186,6 +187,8 @@ def beacon(config):
                     ret.append({'tag': interface, 'interface': interface, 'change': _ret_diff})
 
     if coalesce and changes:
+        grains_info = salt.loader.grains(__opts__, True)
+        __grains__.update(grains_info)
         ret.append({'tag': 'result', 'changes': changes})
 
     return ret

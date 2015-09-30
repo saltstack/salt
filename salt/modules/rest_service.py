@@ -1,41 +1,69 @@
 # -*- coding: utf-8 -*-
 '''
-Service support for the REST example
+Provide the service module for the proxy-minion REST sample
 '''
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import logging
+
+__proxyenabled__ = ['rest_sample']
 
 log = logging.getLogger(__name__)
 
-__proxyenabled__ = ['rest_sample']
-# Define the module's virtual name
-__virtualname__ = 'service'
-
-# Don't shadow built-ins.
 __func_alias__ = {
     'list_': 'list'
 }
 
 
+# Define the module's virtual name
+__virtualname__ = 'service'
+
+
 def __virtual__():
     '''
-    Only work on RestExampleOS
+    Only work on systems that are a proxy minion
     '''
-    # Enable on these platforms only.
-    enable = set((
-        'RestExampleOS',
-        'proxy',
-    ))
-    if __grains__['os'] in enable:
+    if __grains__['os'] == 'proxy':
         return __virtualname__
     return False
 
 
-def start(name):
+def get_all():
     '''
-    Start the specified service
+    Return a list of all available services
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.get_all
+    '''
+    proxy_fn = 'rest_sample'+ '.service_list'
+    return __opts__['proxymodule'][proxy_fn]()
+
+
+def list_():
+    '''
+    Return a list of all available services.
+
+    .. versionadded: 2015.8.1
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.list
+    '''
+    return get_all()
+
+
+def start(name, sig=None):
+    '''
+    Start the specified service on the rest_sample
+
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -43,12 +71,16 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    return __opts__['proxymodule']['rest_sample.service_start'](name)
+
+    proxy_fn = 'rest_sample'+ '.service_start'
+    return __opts__['proxymodule'][proxy_fn](name)
 
 
-def stop(name):
+def stop(name, sig=None):
     '''
-    Stop the specified service
+    Stop the specified service on the rest_sample
+
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -56,12 +88,15 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    return __opts__['proxymodule']['rest_sample.service_stop'](name)
+    proxy_fn = 'rest_sample'+ '.service_stop'
+    return __opts__['proxymodule'][proxy_fn](name)
 
 
-def restart(name):
+def restart(name, sig=None):
     '''
-    Restart the named service
+    Restart the specified service with rest_sample
+
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -70,13 +105,16 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
 
-    return __opts__['proxymodule']['rest_sample.service_restart'](name)
+    proxy_fn = 'rest_sample'+ '.service_restart'
+    return __opts__['proxymodule'][proxy_fn](name)
 
 
-def status(name):
+def status(name, sig=None):
     '''
-    Return the status for a service, returns a bool whether the service is
-    running.
+    Return the status for a service via rest_sample, returns a bool
+    whether the service is running.
+
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -84,17 +122,30 @@ def status(name):
 
         salt '*' service.status <service name>
     '''
-    return __opts__['proxymodule']['rest_sample.service_status'](name)
+
+    proxy_fn = 'rest_sample' + '.service_status'
+    resp = __opts__['proxymodule'][proxy_fn](name)
+    if resp['comment'] == 'stopped':
+        return False
+    if resp['comment'] == 'running':
+        return True
 
 
-def list_():
+def running(name, sig=None):
     '''
-    List services.
+    Return whether this service is running.
 
-    CLI Example:
+    .. versionadded:: 2015.8.0
 
-    .. code-block:: bash
-
-        salt '*' service.list <service name>
     '''
-    return __opts__['proxymodule']['rest_sample.service_list']()
+    return status(name).get(name, False)
+
+
+def enabled(name, sig=None):
+    '''
+    Only the 'redbull' service is 'enabled' in the test
+
+    .. versionadded:: 2015.8.1
+
+    '''
+    return name == 'redbull'

@@ -6,7 +6,7 @@ Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt
 *Generated at: 2015-09-09T18:15:43Z*
 
 This list includes all pull requests merged into the 2015.8 branch between the
-forking of the branch from develop and the release of 12015.8.0.
+forking of the branch from develop and the release of 2015.8.0.
 
 Statistics:
 
