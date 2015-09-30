@@ -368,6 +368,8 @@ def present(
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if vpc_zone_identifier:
         vpc_id = __salt__['boto_vpc.get_subnet_association'](vpc_zone_identifier, region, key, keyid, profile)
+        if vpc_id.has_key('vpc_id'):
+            vpc_id = vpc_id['vpc_id']
         log.debug('Auto Scaling Group {0} is associated with VPC ID {1}'
                   .format(name, vpc_id))
     else:
@@ -652,6 +654,7 @@ def _recursive_compare(v1, v2):
 def absent(
         name,
         force=False,
+        remove_lc=False,
         region=None,
         key=None,
         keyid=None,
@@ -664,6 +667,9 @@ def absent(
 
     force
         Force deletion of autoscale group.
+
+    remove_lc
+        Remove the launch config of the autoscale group.
 
     region
         The region to connect to.
@@ -691,6 +697,16 @@ def absent(
         deleted = __salt__['boto_asg.delete'](name, force, region, key, keyid,
                                               profile)
         if deleted:
+            if remove_lc:
+                lc_deleted = __salt__['boto_asg.delete_launch_configuration'](asg['launch_config_name'], region, key, keyid, profile)
+                if lc_deleted:
+                    if not ret['changes'].has_key('launch_config'):
+                        ret['changes']['launch_config'] = {}
+                    ret['changes']['launch_config']['deleted'] = asg['launch_config_name']
+                else:
+                    ret['result'] = False
+                    ret['comment'] = ' '.join([ret['comment'], 'Failed to delete launch configuration.'])
+
             ret['changes']['old'] = asg
             ret['changes']['new'] = None
             ret['comment'] = 'Deleted autoscale group.'
