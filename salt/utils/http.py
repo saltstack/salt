@@ -810,26 +810,26 @@ def sanitize_url(url, hide_fields):
                 comps_list = pair.split('&')
                 if url_tmp:
                     url_tmp = url_tmp.split('&')
-                    url_tmp = _sanitize_components(url_tmp, field)
+                    url_tmp = _sanitize_url_components(url_tmp, field)
                 else:
-                    url_tmp = _sanitize_components(comps_list, field)
+                    url_tmp = _sanitize_url_components(comps_list, field)
             log_url += url_tmp
         return log_url.rstrip('&')
     else:
         return str(url)
 
 
-def _sanitize_components(comp_list, field):
+def _sanitize_url_components(comp_list, field):
     '''
-    Use a recursive method to sanitize each component of the url.
+    Recursive function to sanitize each component of the url.
     '''
     if len(comp_list) == 0:
         return ''
     elif comp_list[0].startswith('{0}='.format(field)):
         ret = '{0}=XXXXXXXXXX&'.format(field)
         comp_list.remove(comp_list[0])
-        return ret + _sanitize_components(comp_list, field)
+        return ret + _sanitize_url_components(comp_list, field)
     else:
         ret = '{0}&'.format(comp_list[0])
         comp_list.remove(comp_list[0])
-        return ret + _sanitize_components(comp_list, field)
+        return ret + _sanitize_url_components(comp_list, field)
