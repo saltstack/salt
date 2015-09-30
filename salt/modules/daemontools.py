@@ -221,6 +221,8 @@ def enabled(name, **kwargs):
     - an executable ./run file exist
     - a file named "down" does not exist
 
+    .. versionadded:: 2015.5.6
+
     name
         Service name
 
@@ -247,6 +249,8 @@ def enabled(name, **kwargs):
 def disabled(name):
     '''
     Return True if the named service is enabled, false otherwise
+
+    .. versionadded:: 2015.5.6
 
     CLI Example:
 
