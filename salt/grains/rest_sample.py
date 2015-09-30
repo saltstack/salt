@@ -19,7 +19,7 @@ def kernel():
 
 
 def os():
-    return {'os': 'proxy'}
+    return {'os': 'RestExampleOS'}
 
 
 def location():
