@@ -245,6 +245,6 @@ def disabled(name):
 
     .. code-block:: bash
 
-        salt '*' service.daemontools <service name>
+        salt '*' daemontools.disabled <service name>
     '''
     return not enabled(name)
