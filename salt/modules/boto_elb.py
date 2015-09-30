@@ -1,917 +1,1183 @@
 # -*- coding: utf-8 -*-
 '''
-Connection module for Amazon ELB
+Manage ELBs
 
 .. versionadded:: 2014.7.0
 
-:configuration: This module accepts explicit elb credentials but can also utilize
-    IAM roles assigned to the instance trough Instance Profiles. Dynamic
-    credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at:
+Create and destroy ELBs. Be aware that this interacts with Amazon's
+services, and so may incur charges.
 
-    .. code-block:: text
+This module uses ``boto``, which can be installed via package, or pip.
 
-        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+This module accepts explicit elb credentials but can also utilize
+IAM roles assigned to the instance through Instance Profiles. Dynamic
+credentials are then automatically obtained from AWS API and no further
+configuration is necessary. More information available `here
+<http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_.
 
-    If IAM roles are not used you need to specify them either in a pillar or
-    in the minion's config file:
+If IAM roles are not used you need to specify them either in a pillar file or
+in the minion's config file:
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
-        elb.keyid: GKTADJGHEIQSXMKKRBJ08H
-        elb.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+    elb.keyid: GKTADJGHEIQSXMKKRBJ08H
+    elb.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    A region may also be specified in the configuration:
+It's also possible to specify ``key``, ``keyid`` and ``region`` via a profile, either
+passed in as a dict, or as a string to pull from pillars or minion config:
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
-        elb.region: us-east-1
+    myprofile:
+        keyid: GKTADJGHEIQSXMKKRBJ08H
+        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+        region: us-east-1
 
-    If a region is not specified, the default is us-east-1.
+.. code-block:: yaml
 
-    It's also possible to specify key, keyid and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config:
+    Ensure myelb ELB exists:
+        boto_elb.present:
+            - name: myelb
+            - region: us-east-1
+            - availability_zones:
+                - us-east-1a
+                - us-east-1c
+                - us-east-1d
+            - keyid: GKTADJGHEIQSXMKKRBJ08H
+            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            - listeners:
+                - elb_port: 443
+                  instance_port: 80
+                  elb_protocol: HTTPS
+                  instance_protocol: HTTP
+                  certificate: 'arn:aws:iam::1111111:server-certificate/mycert'
+                - elb_port: 8210
+                  instance_port: 8210
+                  elb_protocol: TCP
+            - health_check:
+                target: 'HTTP:80/'
+            - attributes:
+                cross_zone_load_balancing:
+                  enabled: true
+                access_log:
+                  enabled: true
+                  s3_bucket_name: 'mybucket'
+                  s3_bucket_prefix: 'my-logs'
+                  emit_interval: 5
+            - cnames:
+                - name: mycname.example.com.
+                  zone: example.com.
+                  ttl: 60
+                - name: myothercname.example.com.
+                  zone: example.com.
 
-    .. code-block:: yaml
+    # Using a profile from pillars
+    Ensure myelb ELB exists:
+        boto_elb.present:
+            - name: myelb
+            - region: us-east-1
+            - profile: myelbprofile
 
-        myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+    # Passing in a profile
+    Ensure myelb ELB exists:
+        boto_elb.present:
+            - name: myelb
+            - region: us-east-1
+            - profile:
+                keyid: GKTADJGHEIQSXMKKRBJ08H
+                key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-:depends: boto >= 2.33.0
+It's possible to specify attributes from pillars by specifying a pillar. You
+can override the values defined in the pillard by setting the attributes on the
+resource. The module will use the default pillar key 'boto_elb_attributes',
+which allows you to set default attributes for all ELB resources.
+
+Setting the attributes pillar:
+
+.. code-block:: yaml
+
+    my_elb_attributes:
+      cross_zone_load_balancing:
+        enabled: true
+      connection_draining:
+        enabled: true
+        timeout: 20
+      access_log:
+        enabled: true
+        s3_bucket_name: 'mybucket'
+        s3_bucket_prefix: 'my-logs'
+        emit_interval: 5
+
+Overriding the attribute values on the resource:
+
+.. code-block:: yaml
+
+    Ensure myelb ELB exists:
+        boto_elb.present:
+            - name: myelb
+            - region: us-east-1
+            - attributes_from_pillar: my_elb_attributes
+            # override cross_zone_load_balancing:enabled
+            - attributes:
+                cross_zone_load_balancing:
+                  enabled: false
+            - profile: myelbprofile
+
+It's possible to specify cloudwatch alarms that will be setup along with the
+ELB. Note the alarm name will be defined by the name attribute provided, plus
+the ELB resource name.
+
+.. code-block:: yaml
+
+    Ensure myelb ELB exists:
+        boto_elb.present:
+            - name: myelb
+            - region: us-east-1
+            - profile: myelbprofile
+            - alarms:
+                UnHealthyHostCount:
+                  name: 'ELB UnHealthyHostCount **MANAGED BY SALT**'
+                  attributes:
+                    metric: UnHealthyHostCount
+                    namespace: AWS/ELB
+                    statistic: Average
+                    comparison: '>='
+                    threshold: 1.0
+                    period: 600
+                    evaluation_periods: 6
+                    unit: null
+                    description: ELB UnHealthyHostCount
+                    alarm_actions: ['arn:aws:sns:us-east-1:12345:myalarm']
+                    insufficient_data_actions: []
+                    ok_actions: ['arn:aws:sns:us-east-1:12345:myalarm']
+
+You can also use alarms from pillars, and override values from the pillar
+alarms by setting overrides on the resource. Note that 'boto_elb_alarms'
+will be used as a default value for all resources, if defined and can be
+used to ensure alarms are always set for a resource.
+
+Setting the alarms in a pillar:
+
+.. code-block:: yaml
+
+    my_elb_alarm:
+      UnHealthyHostCount:
+        name: 'ELB UnHealthyHostCount **MANAGED BY SALT**'
+        attributes:
+          metric: UnHealthyHostCount
+          namespace: AWS/ELB
+          statistic: Average
+          comparison: '>='
+          threshold: 1.0
+          period: 600
+          evaluation_periods: 6
+          unit: null
+          description: ELB UnHealthyHostCount
+          alarm_actions: ['arn:aws:sns:us-east-1:12345:myalarm']
+          insufficient_data_actions: []
+          ok_actions: ['arn:aws:sns:us-east-1:12345:myalarm']
+
+Overriding the alarm values on the resource:
+
+.. code-block:: yaml
+
+    Ensure myelb ELB exists:
+        boto_elb.present:
+            - name: myelb
+            - region: us-east-1
+            - profile: myelbprofile
+            - alarms_from_pillar: my_elb_alarm
+            # override UnHealthyHostCount:attributes:threshold
+            - alarms:
+                UnHealthyHostCount:
+                  attributes:
+                    threshold: 2.0
 '''
-# keep lint from choking on _get_conn and _cache_id
-#pylint: disable=E0602
 
+# Import Python Libs
 from __future__ import absolute_import
 
-# Import Python libs
+# Import Salt Libs
 import logging
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
-import json
+import salt.utils.dictupdate as dictupdate
+from salt.exceptions import SaltInvocationError
 import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
-# Import third party libs
-try:
-    import boto
-    # connection settings were added in 2.33.0
-    required_boto_version = '2.33.0'
-    if (_LooseVersion(boto.__version__) <
-            _LooseVersion(required_boto_version)):
-        msg = 'boto_elb requires boto {0}.'.format(required_boto_version)
-        logging.debug(msg)
-        raise ImportError()
-    import boto.ec2
-    from boto.ec2.elb import HealthCheck
-    from boto.ec2.elb.attributes import AccessLogAttribute
-    from boto.ec2.elb.attributes import ConnectionDrainingAttribute
-    from boto.ec2.elb.attributes import ConnectionSettingAttribute
-    from boto.ec2.elb.attributes import CrossZoneLoadBalancingAttribute
-    logging.getLogger('boto').setLevel(logging.CRITICAL)
-    HAS_BOTO = True
-except ImportError:
-    HAS_BOTO = False
-
-# Import Salt libs
-from salt.ext.six import string_types
-from salt.utils.boto_elb_tag import TagDescriptions as TagDescriptions
-from salt.utils.boto_elb_tag import TagSet as TagSet
-import salt.utils.odict as odict
-
-
 def __virtual__():
     '''
-    Only load if boto libraries exist.
+    Only load if boto is available.
     '''
-    if not HAS_BOTO:
-        return False
-    __utils__['boto.assign_funcs'](__name__, 'elb', module='ec2.elb')
-    return True
+    return 'boto_elb' if 'boto_elb.exists' in __salt__ else False
 
 
-def exists(name, region=None, key=None, keyid=None, profile=None):
+def present(
+        name,
+        listeners,
+        availability_zones=None,
+        subnets=None,
+        security_groups=None,
+        scheme='internet-facing',
+        health_check=None,
+        attributes=None,
+        attributes_from_pillar="boto_elb_attributes",
+        cnames=None,
+        alarms=None,
+        alarms_from_pillar="boto_elb_alarms",
+        listener_policies=None,
+        tags=None,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None,
+        wait_for_sync=True):
     '''
-    Check to see if an ELB exists.
+    Ensure the ELB exists.
 
-    CLI example::
+    name
+        Name of the ELB.
 
-        salt myminion boto_elb.exists myelb region=us-east-1
+    availability_zones
+        A list of availability zones for this ELB.
+
+    listeners
+        A list of listener lists; example::
+
+        [
+            ['443', 'HTTPS', 'arn:aws:iam::1111111:server-certificate/mycert'],
+            ['8443', '80', 'HTTPS', 'HTTP', 'arn:aws:iam::1111111:server-certificate/mycert']
+        ]
+
+    subnets
+        A list of subnet IDs in your VPC to attach to your LoadBalancer.
+
+    security_groups
+        The security groups assigned to your LoadBalancer within your VPC.
+
+    scheme
+        The type of a LoadBalancer. internet-facing or internal. Once set, can not be modified.
+
+    health_check
+        A dict defining the health check for this ELB.
+
+    attributes
+        A dict defining the attributes to set on this ELB.
+
+    attributes_from_pillar
+        name of pillar dict that contains attributes.   Attributes defined for this specific
+        state will override those from pillar.
+
+    cnames
+        A list of cname dicts with attributes needed for the DNS add_record state.
+        By default the boto_route53.add_record state will be used, which requires: name, zone, ttl, and identifier.
+        See the boto_route53 state for information about these attributes.
+        Other DNS modules can be called by specifying the provider keyword.
+        the cnames dict will be passed to the state as kwargs.
+
+    alarms:
+        a dictionary of name->boto_cloudwatch_alarm sections to be associated with this ELB.
+        All attributes should be specified except for dimension which will be
+        automatically set to this ELB.
+        See the boto_cloudwatch_alarm state for information about these attributes.
+
+    alarms_from_pillar:
+        name of pillar dict that contains alarm settings.   Alarms defined for this specific
+        state will override those from pillar.
+
+    listener_policies:
+        list of dict cookie policies for http/https listeners
+        - listener_policies:
+            - listener: 80
+              policy: LBCookieStickinessPolicy|AppCookieStickinessPolicy
+              cookie: app_cookie_name|lb_cookie_expiration_period
+
+    tags
+        dict of tags
+        Example:
+            - tags:
+                MYTAG: My Tag Value
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+
+    wait_for_sync
+        Wait for an INSYNC change status from Route53.
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    try:
-        elb = conn.get_all_load_balancers(load_balancer_names=[name])
-        if elb:
-            return True
-        else:
-            msg = 'The load balancer does not exist in region {0}'.format(region)
-            log.debug(msg)
-            return False
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        return False
-
-
-def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
-    '''
-    Check to see if an ELB exists.
-
-    CLI example::
-
-        salt myminion boto_elb.exists myelb region=us-east-1
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    try:
-        lb = conn.get_all_load_balancers(load_balancer_names=[name])
-        lb = lb[0]
-        ret = {}
-        ret['availability_zones'] = lb.availability_zones
-        listeners = []
-        listener_policies = []
-        for _listener in lb.listeners:
-            # Making this a list makes our life easier and is also the only way
-            # to include the certificate.
-            complex_listener = list(_listener.get_complex_tuple())
-            # boto, you're *killing* me with this. boto doesn't include the
-            # certificate when calling get_complex_tuple, so you need to also
-            # get the certificate. So. Much. Hate.
-            if _listener.ssl_certificate_id:
-                complex_listener.append(_listener.ssl_certificate_id)
-            if _listener.policy_names:
-                _listener_policy = _get_listener_policy_info(lb, _listener.policy_names[0])
-                _listener_policy['listener'] = _listener.load_balancer_port
-                listener_policies.append(_listener_policy)
-            listeners.append(complex_listener)
-        ret['listeners'] = listeners
-        ret['listener policies'] = listener_policies
-        ret['subnets'] = lb.subnets
-        ret['security_groups'] = lb.security_groups
-        ret['scheme'] = lb.scheme
-        ret['dns_name'] = lb.dns_name
-        ret['tags'] = _get_all_tags(conn, name)
-        return ret
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        return []
-
-
-def create(name, availability_zones, listeners=None, subnets=None,
-           security_groups=None, scheme='internet-facing',
-           region=None, key=None, keyid=None,
-           profile=None):
-    '''
-    Create an ELB
-
-    CLI example to create an ELB::
-
-        salt myminion boto_elb.create myelb '["us-east-1a", "us-east-1e"]' listeners='[[443, 80, "HTTPS", "HTTP", "arn:aws:iam::1111111:server-certificate/mycert"]]' region=us-east-1
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    if __salt__['boto_elb.exists'](name, region, key, keyid, profile):
-        return True
-    if isinstance(availability_zones, string_types):
-        availability_zones = json.loads(availability_zones)
-    if isinstance(listeners, string_types):
-        listeners = json.loads(listeners)
-    # Combining listeners and complex_listeners together makes our lives
-    # easier in some ways, especially since during introspection you can
-    # only get a combined set of listeners back from boto; however, boto
-    # requires us to send in separate listeners and complex listeners and
-    # the only real difference is the size. It feels like amazon/boto hate
-    # developers and wish to make us suffer.
-    _listeners = []
-    _complex_listeners = []
-    for listener in listeners:
-        if len(listener) <= 3:
-            _listeners.append(listener)
-        else:
-            _complex_listeners.append(listener)
-    try:
-        lb = conn.create_load_balancer(name, availability_zones, _listeners,
-                                       subnets, security_groups, scheme,
-                                       _complex_listeners)
-        if lb:
-            log.info('Created ELB {0}'.format(name))
-            return True
-        else:
-            msg = 'Failed to create ELB {0}'.format(name)
-            log.error(msg)
-            return False
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to create ELB {0}: {1}'.format(name, error)
-        log.error(msg)
-        return False
-
-
-def delete(name, region=None, key=None, keyid=None, profile=None):
-    '''
-    Delete an ELB.
-
-    CLI example to delete an ELB::
-
-        salt myminion boto_elb.delete myelb region=us-east-1
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    if not __salt__['boto_elb.exists'](name, region, key, keyid, profile):
-        return True
-    try:
-        conn.delete_load_balancer(name)
-        msg = 'Deleted ELB {0}.'.format(name)
-        log.info(msg)
-        return True
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to delete ELB {0}'.format(name)
-        log.error(msg)
-        return False
-
-
-def create_listeners(name, listeners=None, region=None, key=None, keyid=None,
-                     profile=None):
-    '''
-    Create listeners on an ELB.
-
-    CLI example::
-
-        salt myminion boto_elb.create_listeners myelb listeners='[["HTTPS", "HTTP", 443, 80, "arn:aws:iam::11  11111:server-certificate/mycert"]]'
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    if isinstance(listeners, string_types):
-        listeners = json.loads(listeners)
-    # Combining listeners and complex_listeners together makes our lives
-    # easier in some ways, especially since during introspection you can
-    # only get a combined set of listeners back from boto; however, boto
-    # requires us to send in separate listeners and complex listeners and
-    # the only real difference is the size. It feels like amazon/boto hate
-    # developers and wish to make us suffer.
-    _listeners = []
-    _complex_listeners = []
-    for listener in listeners:
-        if len(listener) <= 3:
-            _listeners.append(listener)
-        else:
-            _complex_listeners.append(listener)
-    try:
-        conn.create_load_balancer_listeners(name, _listeners,
-                                            _complex_listeners)
-        msg = 'Created ELB listeners on {0}'.format(name)
-        log.info(msg)
-        return True
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to create ELB listeners on {0}: {1}'.format(name, error)
-        log.error(msg)
-        return False
-
-
-def delete_listeners(name, ports, region=None, key=None, keyid=None,
-                     profile=None):
-    '''
-    Delete listeners on an ELB.
-
-    CLI example::
-
-        salt myminion boto_elb.delete_listeners myelb '[80,443]'
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    if isinstance(ports, string_types):
-        ports = json.loads(ports)
-    try:
-        conn.delete_load_balancer_listeners(name, ports)
-        msg = 'Deleted ELB listeners on {0}'.format(name)
-        log.info(msg)
-        return True
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to delete ELB listeners on {0}: {1}'.format(name, error)
-        log.error(msg)
-        return False
-
-
-def apply_security_groups(name, security_groups, region=None, key=None,
-                          keyid=None, profile=None):
-    '''
-    Apply security groups to ELB.
-
-    CLI example::
-
-        salt myminion boto_elb.apply_security_groups myelb '["mysecgroup1"]'
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    if isinstance(security_groups, string_types):
-        security_groups = json.loads(security_groups)
-    try:
-        conn.apply_security_groups_to_lb(name, security_groups)
-        msg = 'Applied security_groups on ELB {0}'.format(name)
-        log.info(msg)
-        return True
-    except boto.exception.BotoServerError as e:
-        log.debug(e)
-        msg = 'Failed to appply security_groups on ELB {0}: {1}'
-        msg = msg.format(name, e.message)
-        log.error(msg)
-        return False
-
-
-def enable_availability_zones(name, availability_zones, region=None, key=None,
-                              keyid=None, profile=None):
-    '''
-    Enable availability zones for ELB.
-
-    CLI example::
-
-        salt myminion boto_elb.enable_availability_zones myelb '["us-east-1a"]'
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    if isinstance(availability_zones, string_types):
-        availability_zones = json.loads(availability_zones)
-    try:
-        conn.enable_availability_zones(name, availability_zones)
-        msg = 'Enabled availability_zones on ELB {0}'.format(name)
-        log.info(msg)
-        return True
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to enable availability_zones on ELB {0}: {1}'.format(name, error)
-        log.error(msg)
-        return False
-
-
-def disable_availability_zones(name, availability_zones, region=None, key=None,
-                               keyid=None, profile=None):
-    '''
-    Disable availability zones for ELB.
-
-    CLI example::
-
-        salt myminion boto_elb.disable_availability_zones myelb '["us-east-1a"]'
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    if isinstance(availability_zones, string_types):
-        availability_zones = json.loads(availability_zones)
-    try:
-        conn.disable_availability_zones(name, availability_zones)
-        msg = 'Disabled availability_zones on ELB {0}'.format(name)
-        log.info(msg)
-        return True
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to disable availability_zones on ELB {0}: {1}'.format(name, error)
-        log.error(msg)
-        return False
-
-
-def attach_subnets(name, subnets, region=None, key=None, keyid=None,
-                   profile=None):
-    '''
-    Attach ELB to subnets.
-
-    CLI example::
-
-        salt myminion boto_elb.attach_subnets myelb '["mysubnet"]'
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    if isinstance(subnets, string_types):
-        subnets = json.loads(subnets)
-    try:
-        conn.attach_lb_to_subnets(name, subnets)
-        msg = 'Attached ELB {0} on subnets.'.format(name)
-        log.info(msg)
-        return True
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to attach ELB {0} on subnets: {1}'.format(name, error)
-        log.error(msg)
-        return False
-
-
-def detach_subnets(name, subnets, region=None, key=None, keyid=None,
-                   profile=None):
-    '''
-    Detach ELB from subnets.
-
-    CLI example::
-
-        salt myminion boto_elb.detach_subnets myelb '["mysubnet"]'
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    if isinstance(subnets, string_types):
-        subnets = json.loads(subnets)
-    try:
-        conn.detach_lb_from_subnets(name, subnets)
-        msg = 'Detached ELB {0} from subnets.'.format(name)
-        log.info(msg)
-        return True
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        msg = 'Failed to detach ELB {0} from subnets: {1}'.format(name, error)
-        log.error(msg)
-        return False
-
-
-def get_attributes(name, region=None, key=None, keyid=None, profile=None):
-    '''
-    Check to see if attributes are set on an ELB.
-
-    CLI example::
-
-        salt myminion boto_elb.get_attributes myelb
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    try:
-        lbattrs = conn.get_all_lb_attributes(name)
-        ret = odict.OrderedDict()
-        ret['access_log'] = odict.OrderedDict()
-        ret['cross_zone_load_balancing'] = odict.OrderedDict()
-        ret['connection_draining'] = odict.OrderedDict()
-        ret['connecting_settings'] = odict.OrderedDict()
-        al = lbattrs.access_log
-        czlb = lbattrs.cross_zone_load_balancing
-        cd = lbattrs.connection_draining
-        cs = lbattrs.connecting_settings
-        ret['access_log']['enabled'] = al.enabled
-        ret['access_log']['s3_bucket_name'] = al.s3_bucket_name
-        ret['access_log']['s3_bucket_prefix'] = al.s3_bucket_prefix
-        ret['access_log']['emit_interval'] = al.emit_interval
-        ret['cross_zone_load_balancing']['enabled'] = czlb.enabled
-        ret['connection_draining']['enabled'] = cd.enabled
-        ret['connection_draining']['timeout'] = cd.timeout
-        ret['connecting_settings']['idle_timeout'] = cs.idle_timeout
-        return ret
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        log.error('ELB {0} does not exist: {1}'.format(name, error))
-        return {}
-
-
-def set_attributes(name, attributes, region=None, key=None, keyid=None,
-                   profile=None):
-    '''
-    Set attributes on an ELB.
-
-    CLI example to set attributes on an ELB::
-
-        salt myminion boto_elb.set_attributes myelb '{"access_log": {"enabled": "true", "s3_bucket_name": "mybucket", "s3_bucket_prefix": "mylogs/", "emit_interval": "5"}}' region=us-east-1
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    al = attributes.get('access_log', {})
-    czlb = attributes.get('cross_zone_load_balancing', {})
-    cd = attributes.get('connection_draining', {})
-    cs = attributes.get('connecting_settings', {})
-    if not al and not czlb and not cd and not cs:
-        log.error('No supported attributes for ELB.')
-        return False
-    if al:
-        _al = AccessLogAttribute()
-        _al.enabled = al.get('enabled', False)
-        if not _al.enabled:
-            msg = 'Access log attribute configured, but enabled config missing'
-            log.error(msg)
-            return False
-        _al.s3_bucket_name = al.get('s3_bucket_name', None)
-        _al.s3_bucket_prefix = al.get('s3_bucket_prefix', None)
-        _al.emit_interval = al.get('emit_interval', None)
-        added_attr = conn.modify_lb_attribute(name, 'accessLog', _al)
-        if added_attr:
-            log.info('Added access_log attribute to {0} elb.'.format(name))
-        else:
-            msg = 'Failed to add access_log attribute to {0} elb.'
-            log.error(msg.format(name))
-            return False
-    if czlb:
-        _czlb = CrossZoneLoadBalancingAttribute()
-        _czlb.enabled = czlb['enabled']
-        added_attr = conn.modify_lb_attribute(name, 'crossZoneLoadBalancing',
-                                              _czlb.enabled)
-        if added_attr:
-            msg = 'Added cross_zone_load_balancing attribute to {0} elb.'
-            log.info(msg.format(name))
-        else:
-            log.error('Failed to add cross_zone_load_balancing attribute.')
-            return False
-    if cd:
-        _cd = ConnectionDrainingAttribute()
-        _cd.enabled = cd['enabled']
-        _cd.timeout = cd.get('timeout', 300)
-        added_attr = conn.modify_lb_attribute(name, 'connectionDraining', _cd)
-        if added_attr:
-            msg = 'Added connection_draining attribute to {0} elb.'
-            log.info(msg.format(name))
-        else:
-            log.error('Failed to add connection_draining attribute.')
-            return False
-    if cs:
-        _cs = ConnectionSettingAttribute()
-        _cs.idle_timeout = cs.get('idle_timeout', 60)
-        added_attr = conn.modify_lb_attribute(name, 'connectingSettings', _cs)
-        if added_attr:
-            msg = 'Added connecting_settings attribute to {0} elb.'
-            log.info(msg.format(name))
-        else:
-            log.error('Failed to add connecting_settings attribute.')
-            return False
-    return True
-
-
-def get_health_check(name, region=None, key=None, keyid=None, profile=None):
-    '''
-    Get the health check configured for this ELB.
-
-    CLI example::
-
-        salt myminion boto_elb.get_health_check myelb
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    try:
-        lb = conn.get_all_load_balancers(load_balancer_names=[name])
-        lb = lb[0]
-        ret = odict.OrderedDict()
-        hc = lb.health_check
-        ret['interval'] = hc.interval
-        ret['target'] = hc.target
-        ret['healthy_threshold'] = hc.healthy_threshold
-        ret['timeout'] = hc.timeout
-        ret['unhealthy_threshold'] = hc.unhealthy_threshold
-        return ret
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        log.error('ELB {0} does not exist: {1}'.format(name, error))
-        return {}
-
-
-def set_health_check(name, health_check, region=None, key=None, keyid=None,
-                     profile=None):
-    '''
-    Set attributes on an ELB.
-
-    CLI example to set attributes on an ELB::
-
-        salt myminion boto_elb.set_health_check myelb '{"target": "HTTP:80/"}'
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    hc = HealthCheck(**health_check)
-    try:
-        conn.configure_health_check(name, hc)
-        log.info('Configured health check on ELB {0}'.format(name))
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        log.info('Failed to configure health check on ELB {0}: {1}'.format(name, error))
-        return False
-    return True
+    # load data from attributes_from_pillar and merge with attributes
+    tmp = __salt__['config.option'](attributes_from_pillar, {})
+    if attributes:
+        attributes = dictupdate.update(tmp, attributes)
+    else:
+        attributes = tmp
+
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    _ret = _elb_present(name, availability_zones, listeners, subnets,
+                        security_groups, scheme, region, key, keyid, profile)
+    ret['changes'] = _ret['changes']
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
+
+    if attributes:
+        _ret = _attributes_present(name, attributes, region, key, keyid, profile)
+        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
+
+    _ret = _health_check_present(name, health_check, region, key, keyid,
+                                 profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
+    if cnames:
+        lb = __salt__['boto_elb.get_elb_config'](
+            name, region, key, keyid, profile
+        )
+        for cname in cnames:
+            _ret = None
+            dns_provider = 'boto_route53'
+            cname['record_type'] = 'CNAME'
+            cname['value'] = lb['dns_name']
+            if cname.has_key('provider'):
+                dns_provider = cname.pop('provider')
+            if dns_provider == 'boto_route53':
+                if not cname.has_key('profile'):
+                    cname['profile'] = profile
+                if not cname.has_key('key'):
+                    cname['key'] = key
+                if not cname.has_key('keyid'):
+                    cname['keyid'] = keyid
+                if not cname.has_key('region'):
+                    cname['region'] = region
+            _ret = __salt__['state.single'](
+                '.'.join([dns_provider, 'present']),
+                **cname)
+            _ret = _ret.values()[0]
+            ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+            ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+            if not _ret['result']:
+                ret['result'] = _ret['result']
+                if ret['result'] is False:
+                    return ret
+    _ret = _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
+    _ret = _listener_policies_present(name, listener_policies, region, key, keyid, profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
+    _ret = _tags_present(name, tags, region, key, keyid, profile)
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
+        if ret['result'] is False:
+            return ret
+    return ret
 
 
 def register_instances(name, instances, region=None, key=None, keyid=None,
                        profile=None):
     '''
-    Register instances with an ELB.  Instances is either a string
-    instance id or a list of string instance id's.
+    Add instance/s to load balancer
 
-    Returns:
+    .. versionadded:: 2015.8.0
 
-    - ``True``: instance(s) registered successfully
-    - ``False``: instance(s) failed to be registered
+    .. code-block:: yaml
 
-    CLI example::
-
-        salt myminion boto_elb.register_instances myelb instance_id
-        salt myminion boto_elb.register_instances myelb "[instance_id,instance_id]"
+        add-instances:
+          boto_elb.register_instances:
+            - name: myloadbalancer
+            - instances:
+              - instance-id1
+              - instance-id2
     '''
-    # convert instances to list type, enabling consistent use of instances
-    # variable throughout the register_instances method
-    if isinstance(instances, str) or isinstance(instances, six.text_type):
-        instances = [instances]
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    try:
-        registered_instances = conn.register_instances(name, instances)
-    except boto.exception.BotoServerError as error:
-        log.warn(error)
-        return False
-    registered_instance_ids = [instance.id for instance in
-                               registered_instances]
-    # register_failues is a set that will contain any instances that were not
-    # able to be registered with the given ELB
-    register_failures = set(instances).difference(set(registered_instance_ids))
-    if register_failures:
-        log.warn('Instance(s): {0} not registered with ELB {1}.'
-                 .format(list(register_failures), name))
-        register_result = False
-    else:
-        register_result = True
-    return register_result
-
-
-def deregister_instances(name, instances, region=None, key=None, keyid=None,
-                         profile=None):
-    '''
-    Deregister instances with an ELB.  Instances is either a string
-    instance id or a list of string instance id's.
-
-    Returns:
-
-    - ``True``: instance(s) deregistered successfully
-    - ``False``: instance(s) failed to be deregistered
-    - ``None``: instance(s) not valid or not registered, no action taken
-
-    CLI example::
-
-        salt myminion boto_elb.deregister_instances myelb instance_id
-        salt myminion boto_elb.deregister_instances myelb "[instance_id, instance_id]"
-    '''
-    # convert instances to list type, enabling consistent use of instances
-    # variable throughout the deregister_instances method
-    if isinstance(instances, str) or isinstance(instances, six.text_type):
-        instances = [instances]
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    try:
-        registered_instances = conn.deregister_instances(name, instances)
-    except boto.exception.BotoServerError as error:
-        # if the instance(s) given as an argument are not members of the ELB
-        # boto returns error.error_code == 'InvalidInstance'
-        # deregister_instances returns "None" because the instances are
-        # effectively deregistered from ELB
-        if error.error_code == 'InvalidInstance':
-            log.warn('One or more of instance(s) {0} are not part of ELB {1}.'
-                     ' deregister_instances not performed.'
-                     .format(instances, name))
-            return None
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret['name'] = name
+    lb = __salt__['boto_elb.exists'](name, region, key, keyid, profile)
+    if lb:
+        health = __salt__['boto_elb.get_instance_health'](name,
+                                                          region,
+                                                          key,
+                                                          keyid,
+                                                          profile)
+        nodes = []
+        new = []
+        for value in health:
+            nodes.append(value['instance_id'])
+        for value in instances:
+            if value not in nodes:
+                new.append(value)
+        if len(new) == 0:
+            ret['comment'] = 'Instance/s {0} already exist.' \
+                              ''.format(str(instances).strip('[]'))
+            ret['result'] = True
         else:
-            log.warn(error)
-            return False
-    registered_instance_ids = [instance.id for instance in
-                               registered_instances]
-    # deregister_failures is a set that will contain any instances that were
-    # unable to be deregistered from the given ELB
-    deregister_failures = set(instances).intersection(set(registered_instance_ids))
-    if deregister_failures:
-        log.warn('Instance(s): {0} not deregistered from ELB {1}.'
-                 .format(list(deregister_failures), name))
-        deregister_result = False
-    else:
-        deregister_result = True
-    return deregister_result
-
-
-def get_instance_health(name, region=None, key=None, keyid=None, profile=None, instances=None):
-    '''
-    Get a list of instances and their health state
-
-    CLI example::
-
-        salt myminion boto_elb.get_instance_health myelb
-        salt myminion boto_elb.get_instance_health myelb region=us-east-1 instances="[instance_id,instance_id]"
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    try:
-        instance_states = conn.describe_instance_health(name, instances)
-        ret = []
-        for _instance in instance_states:
-            ret.append({'instance_id': _instance.instance_id,
-                        'description': _instance.description,
-                        'state': _instance.state,
-                        'reason_code': _instance.reason_code
-                        })
-        return ret
-    except boto.exception.BotoServerError as error:
-        log.debug(error)
-        return []
-
-def get_listener_policy(name, listener, region=None, key=None, keyid=None, profile=None):
-    '''
-    gets the policy details of a specific listener port
-
-    name
-        name of the elb
-
-    listener
-        the listener port to retrieve details on
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    lb = conn.get_all_load_balancers(load_balancer_names=[name])
-    lb = lb[0]
-    for _listener in lb.listeners:
-        if _listener.load_balancer_port == listener:
-            log.debug('found the listener')
-            if _listener.policy_names:
-                ret = _get_listener_policy_info(lb, _listener.policy_names[0])
+            if __opts__['test']:
+                ret['comment'] = 'ELB {0} is set to register : {1}.'.format(name, new)
+                ret['result'] = None
                 return ret
+            state = __salt__['boto_elb.register_instances'](name,
+                                                            instances,
+                                                            region,
+                                                            key,
+                                                            keyid,
+                                                            profile)
+            if state:
+                ret['comment'] = 'Load Balancer {0} has been changed' \
+                                 ''.format(name)
+                ret['changes']['old'] = '\n'.join(nodes)
+                new = set().union(nodes, instances)
+                ret['changes']['new'] = '\n'.join(list(new))
+                ret['result'] = True
             else:
-                return 'The specified listener does not have any policies.'
-    return 'The specified listener was not found.'
+                ret['comment'] = 'Load balancer {0} failed to add instances' \
+                                 ''.format(name)
+                ret['result'] = False
+    else:
+        ret['comment'] = 'Could not find lb {0}'.format(name)
+    return ret
 
 
-def _get_listener_policy_info(lb_object, policy_name):
-    '''
-    gets the details of a policy name
-    '''
-    lb_cookie_policies = lb_object.policies.lb_cookie_stickiness_policies
-    app_cookie_policies = lb_object.policies.app_cookie_stickiness_policies
+def _elb_present(
+        name,
+        availability_zones,
+        listeners,
+        subnets,
+        security_groups,
+        scheme,
+        region,
+        key,
+        keyid,
+        profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    if not (availability_zones or subnets):
+        raise SaltInvocationError('Either availability_zones or subnets must'
+                                  ' be provided as arguments.')
+    if availability_zones and subnets:
+        raise SaltInvocationError('availability_zones and subnets are mutually'
+                                  ' exclusive arguments.')
+    if not listeners:
+        listeners = []
+    _listeners = []
+    for listener in listeners:
+        if len(listener) < 3:
+            raise SaltInvocationError('Listeners must have at minimum port,'
+                                      ' instance_port and protocol values in'
+                                      ' the provided list.')
+        for config in ('elb_port', 'instance_port', 'elb_protocol'):
+            if not listener.get(config):
+                raise SaltInvocationError(
+                    '{0} is a required value for listeners.'.format(config)
+                )
 
-    for p in lb_cookie_policies:
-        if p.policy_name == policy_name:
-            return {'policy': 'LBCookieStickinessPolicy', 'name': p.policy_name, 'cookie': p.cookie_expiration_period}
-    for p in app_cookie_policies:
-        if p.policy_name == policy_name:
-            return {'policy': 'AppCookieStickiness', 'name': p.policy_name, 'cookie': p.cookie_name}
-    return None
-
-
-def set_listener_policy(name, listener, policy, cookie, disable_policy=False, region=None, key=None, keyid=None, profile=None):
-    '''
-    sets a sticky session policy to a listener port
-
-    name
-        name of the elb
-
-    listener
-        listener port to configure the sticky policy for
-
-    policy
-        the sticky policy type, either LBCookieStickinessPolicy or AppCookieStickinessPolicy
-
-    cookie
-        the cookie info, either the cookie lifetime for lbcookie or the cookie name for an appcookie
-
-    disable_policy
-        disable the currently set policy, policy_type and cookie_info will be ignored if this is True
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    lb = conn.get_all_load_balancers(load_balancer_names=[name])
-    lb = lb[0]
-    found_listener = False
-    for _listener in lb.listeners:
-        if _listener.load_balancer_port == listener:
-            found_listener = True
-            existing_policy_name = lb.listeners[0].policy_names
-            if existing_policy_name:
-                existing_policy_name = existing_policy_name[0]
-            else:
-                existing_policy_name = ''
-            break
-
-    if found_listener:
-        new_policy = False
-        pName = None
-        if disable_policy != True:
-            if policy.lower() == 'lbcookiestickinesspolicy':
-                pName = 'LBCookieStickinessPolicy-{0}-{1}'.format(lb.name, hash('{0}-{1}'.format(lb.name, cookie)))
-                if existing_policy_name != pName:
-                    p = lb.create_cookie_stickiness_policy(int(cookie), pName)
-                    new_policy = True
-            elif policy.lower() == 'appcookiestickinesspolicy':
-                pName = 'AppCookieStickinessPolicy-{0}-{1}'.format(lb.name, hash('{0}-{1}'.format(lb.name, cookie)))
-                if existing_policy_name != pName:
-                    p = lb.create_app_cookie_stickiness_policy(cookie, pName)
-                    new_policy = True
-            else:
-                msg = 'Invalid policy type {0} specified.'.format(policy.lower())
-                log.debug(msg)
-                return False
+        listener['elb_protocol'] = listener['elb_protocol'].upper()
+        if listener['elb_protocol'] == 'HTTPS' and 'certificate' not in listener:
+            raise SaltInvocationError('certificate is a required value for'
+                                      ' listeners if HTTPS is set for'
+                                      ' elb_protocol.')
+        # We define all listeners as complex listeners.
+        if not listener.get('instance_protocol'):
+            listener['instance_protocol'] = listener['elb_protocol'].upper()
         else:
-            pName = ''
-        if new_policy or disable_policy:
-            log.debug('Attempting to set listener policy for port {0} to policy {1}'.format(listener, pName))
-            lb.set_policies_of_listener(listener, pName)
-        if (existing_policy_name and new_policy) or disable_policy:
-            log.debug('Attempting to delete existing policy {0}'.format(existing_policy_name[0]))
-            lb.delete_policy(existing_policy_name[0])
-        return True
+            listener['instance_protocol'] = listener['instance_protocol'].upper()
+        _listener = [listener['elb_port'], listener['instance_port'],
+                     listener['elb_protocol'], listener['instance_protocol']]
+        if 'certificate' in listener:
+            _listener.append(listener['certificate'])
+        _listeners.append(_listener)
+    if subnets:
+        vpc_id = __salt__['boto_vpc.get_subnet_association'](
+            subnets, region, key, keyid, profile
+        )
+        if vpc_id.has_key('vpc_id'):
+            vpc_id = vpc_id['vpc_id']
+        if not vpc_id:
+            msg = 'Subnets {0} do not map to a valid vpc id.'.format(subnets)
+            raise SaltInvocationError(msg)
+        security_groups = __salt__['boto_secgroup.convert_to_group_ids'](
+            security_groups, vpc_id, region, key, keyid, profile
+        )
+        if not security_groups:
+            msg = 'Security groups {0} do not map to valid security group ids.'
+            msg = msg.format(security_groups)
+            raise SaltInvocationError(msg)
+    exists = __salt__['boto_elb.exists'](name, region, key, keyid, profile)
+    if not exists:
+        if __opts__['test']:
+            ret['comment'] = 'ELB {0} is set to be created.'.format(name)
+            ret['result'] = None
+            return ret
+        created = __salt__['boto_elb.create'](name, availability_zones,
+                                              _listeners, subnets,
+                                              security_groups, scheme, region,
+                                              key, keyid, profile)
+        if created:
+            ret['changes']['old'] = {'elb': None}
+            ret['changes']['new'] = {'elb': name}
+            ret['comment'] = 'ELB {0} created.'.format(name)
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create {0} ELB.'.format(name)
     else:
-        log.debug('Listener {0} not found'.format(listener))
-    return False
+        ret['comment'] = 'ELB {0} present.'.format(name)
+        _ret = _security_groups_present(
+            name, security_groups, region, key, keyid, profile
+        )
+        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
+        _ret = _listeners_present(name, _listeners, region, key, keyid,
+                                  profile)
+        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+            if ret['result'] is False:
+                return ret
+        if availability_zones:
+            _ret = _zones_present(name, availability_zones, region, key, keyid,
+                                  profile)
+            ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+            ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+            if not _ret['result']:
+                ret['result'] = _ret['result']
+                if ret['result'] is False:
+                    return ret
+        elif subnets:
+            _ret = _subnets_present(name, subnets, region, key, keyid,
+                                    profile)
+            ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+            ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+            if not _ret['result']:
+                ret['result'] = _ret['result']
+    return ret
 
 
-def set_elb_tags(name, tags, region=None, key=None, keyid=None, profile=None):
+def _listeners_present(
+        name,
+        listeners,
+        region,
+        key,
+        keyid,
+        profile):
     '''
-    Add the tags on an ELB
-
-    name
-        name of the ELB
-
-    tags
-        dict of name/value pair tags
-
+    helper function to verify listener policies
     '''
-
-    if exists(name, region, key, keyid, profile):
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        ret = _add_tags(conn, name, tags)
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
+    if not lb:
+        msg = '{0} ELB configuration could not be retrieved.'.format(name)
+        ret['comment'] = msg
+        ret['result'] = False
         return ret
-    else:
-        return False
+    if not listeners:
+        listeners = []
+    to_delete = []
+    to_create = []
+    for listener in listeners:
+        if listener not in lb['listeners']:
+            to_create.append(listener)
+    for listener in lb['listeners']:
+        if listener not in listeners:
+            to_delete.append(listener[0])
+    if to_create or to_delete:
+        if __opts__['test']:
+            msg = 'ELB {0} set to have listeners modified.'.format(name)
+            ret['comment'] = msg
+            ret['result'] = None
+            return ret
+        if to_delete:
+            deleted = __salt__['boto_elb.delete_listeners'](name, to_delete,
+                                                            region, key, keyid,
+                                                            profile)
+            if deleted:
+                ret['comment'] = 'Deleted listeners on {0} ELB.'.format(name)
+            else:
+                msg = 'Failed to delete listeners on {0} ELB.'.format(name)
+                ret['comment'] = msg
+                ret['result'] = False
+        if to_create:
+            created = __salt__['boto_elb.create_listeners'](name, to_create,
+                                                            region, key, keyid,
+                                                            profile)
+            if created:
+                msg = 'Created listeners on {0} ELB.'
+                ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
+            else:
+                msg = 'Failed to create listeners on {0} ELB.'
+                ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
+                ret['result'] = False
+        ret['changes']['old'] = {'listeners': lb['listeners']}
+        lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid,
+                                                 profile)
+        ret['changes']['new'] = {'listeners': lb['listeners']}
+    return ret
 
 
-def delete_elb_tags(name, tags, region=None, key=None, keyid=None, profile=None):
-    '''
-    Add the tags on an ELB
-
-    name
-        name of the ELB
-
-    tags
-        list of tags to remove
-
-    '''
-    if exists(name, region, key, keyid, profile):
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        ret = _remove_tags(conn, name, tags)
+def _security_groups_present(
+        name,
+        security_groups,
+        region,
+        key,
+        keyid,
+        profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
+    if not lb:
+        msg = '{0} ELB configuration could not be retrieved.'.format(name)
+        ret['comment'] = msg
+        ret['result'] = False
         return ret
+    if not security_groups:
+        security_groups = []
+    change_needed = False
+    if set(security_groups) != set(lb['security_groups']):
+        change_needed = True
+    if change_needed:
+        if __opts__['test']:
+            msg = 'ELB {0} set to have security groups modified.'.format(name)
+            ret['comment'] = msg
+            ret['result'] = None
+            return ret
+        changed = __salt__['boto_elb.apply_security_groups'](
+            name, security_groups, region, key, keyid, profile
+        )
+        if changed:
+            msg = 'Modified security_groups on {0} ELB.'.format(name)
+            ret['comment'] = msg
+        else:
+            msg = 'Failed to modify security_groups on {0} ELB.'.format(name)
+            ret['comment'] = msg
+            ret['result'] = False
+        ret['changes']['old'] = {'security_groups': lb['security_groups']}
+        ret['changes']['new'] = {'security_groups': security_groups}
     else:
-        return False
+        ret['comment'] = 'security_groups already set on ELB {0}.'.format(name)
+    return ret
 
 
-def _build_tag_param_list(params, tags):
-    '''
-    helper function to build a tag parameter list to send
-    '''
-    keys = sorted(tags.keys())
-    i = 1
-    for key in keys:
-        value = tags[key]
-        params['Tags.member.{0}.Key'.format(i)] = key
-        if value is not None:
-            params['Tags.member.{0}.Value'.format(i)] = value
-        i += 1
-
-
-def _get_all_tags(conn, load_balancer_names=None):
-    """
-    Retrieve all the metadata tags associated with your ELB(s).
-
-    :type load_balancer_names: list
-    :param load_balancer_names: An optional list of load balancer names.
-
-    :rtype: list
-    :return: A list of :class:`boto.ec2.elb.tag.Tag` objects
-    """
-    params = {}
-    if load_balancer_names:
-        conn.build_list_params(params, load_balancer_names,
-                               'LoadBalancerNames.member.%d')
-
-    tags = conn.get_object('DescribeTags', params, TagDescriptions,
-                           verb='POST')
-    if tags[load_balancer_names]:
-        return tags[load_balancer_names]
+def _attributes_present(
+        name,
+        attributes,
+        region,
+        key,
+        keyid,
+        profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    _attributes = __salt__['boto_elb.get_attributes'](name, region, key, keyid,
+                                                      profile)
+    if not _attributes:
+        if not __opts__['test']:
+            ret['result'] = False
+        msg = 'Failed to retrieve attributes for ELB {0}.'.format(name)
+        ret['comment'] = msg
+        return ret
+    attrs_to_set = []
+    if 'cross_zone_load_balancing' in attributes:
+        czlb = attributes['cross_zone_load_balancing']
+        _czlb = _attributes['cross_zone_load_balancing']
+        if czlb['enabled'] != _czlb['enabled']:
+            attrs_to_set.append('cross_zone_load_balancing')
+    if 'connection_draining' in attributes:
+        cd = attributes['connection_draining']
+        _cd = _attributes['connection_draining']
+        if (cd['enabled'] != _cd['enabled']
+                or cd.get('timeout', 300) != _cd.get('timeout')):
+            attrs_to_set.append('connection_draining')
+    if 'connecting_settings' in attributes:
+        cs = attributes['connecting_settings']
+        _cs = _attributes['connecting_settings']
+        if cs['idle_timeout'] != _cs['idle_timeout']:
+            attrs_to_set.append('connecting_settings')
+    if 'access_log' in attributes:
+        for attr, val in six.iteritems(attributes['access_log']):
+            if str(_attributes['access_log'][attr]) != str(val):
+                attrs_to_set.append('access_log')
+        if 's3_bucket_prefix' in attributes['access_log']:
+            sbp = attributes['access_log']['s3_bucket_prefix']
+            if sbp.startswith('/') or sbp.endswith('/'):
+                raise SaltInvocationError('s3_bucket_prefix can not start or'
+                                          ' end with /.')
+    if attrs_to_set:
+        if __opts__['test']:
+            ret['comment'] = 'ELB {0} set to have attributes set.'.format(name)
+            ret['result'] = None
+            return ret
+        was_set = __salt__['boto_elb.set_attributes'](name, attributes,
+                                                      region, key, keyid,
+                                                      profile)
+        if was_set:
+            ret['changes']['old'] = {'attributes': _attributes}
+            ret['changes']['new'] = {'attributes': attributes}
+            ret['comment'] = 'Set attributes on ELB {0}.'.format(name)
+        else:
+            ret['result'] = False
+            msg = 'Failed to set attributes on ELB {0}.'.format(name)
+            ret['comment'] = msg
     else:
-        return None
+        ret['comment'] = 'Attributes already set on ELB {0}.'.format(name)
+    return ret
 
 
-def _add_tags(conn, load_balancer_names, tags):
-    """
-    Create new metadata tags for the specified resource ids.
+def _health_check_present(
+        name,
+        health_check,
+        region,
+        key,
+        keyid,
+        profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    if not health_check:
+        health_check = {}
+    _health_check = __salt__['boto_elb.get_health_check'](name, region, key,
+                                                          keyid, profile)
+    if not _health_check:
+        if not __opts__['test']:
+            ret['result'] = False
+        msg = 'Failed to retrieve health_check for ELB {0}.'.format(name)
+        ret['comment'] = msg
+        return ret
+    need_to_set = False
+    for attr, val in six.iteritems(health_check):
+        if str(_health_check[attr]) != str(val):
+            need_to_set = True
+    if need_to_set:
+        if __opts__['test']:
+            msg = 'ELB {0} set to have health check set.'.format(name)
+            ret['result'] = True
+            ret['comment'] = msg
+            return ret
+        was_set = __salt__['boto_elb.set_health_check'](name, health_check,
+                                                        region, key, keyid,
+                                                        profile)
+        if was_set:
+            ret['changes']['old'] = {'health_check': _health_check}
+            _health_check = __salt__['boto_elb.get_health_check'](name, region,
+                                                                  key, keyid,
+                                                                  profile)
+            ret['changes']['new'] = {'health_check': _health_check}
+            ret['comment'] = 'Set health check on ELB {0}.'.format(name)
+        else:
+            ret['result'] = False
+            msg = 'Failed to set health check on ELB {0}.'.format(name)
+            ret['comment'] = msg
+    else:
+        ret['comment'] = 'Health check already set on ELB {0}.'.format(name)
+    return ret
 
-    :type load_balancer_names: list
-    :param load_balancer_names: A list of load balancer names.
 
-    :type tags: dict
-    :param tags: A dictionary containing the name/value pairs.
-                 If you want to create only a tag name, the
-                 value for that tag should be the empty string
-                 (e.g. '').
-    """
-    params = {}
-    conn.build_list_params(params, load_balancer_names,
-                           'LoadBalancerNames.member.%d')
-    _build_tag_param_list(params, tags)
-    return conn.get_status('AddTags', params, verb='POST')
+def _zones_present(
+        name,
+        availability_zones,
+        region,
+        key,
+        keyid,
+        profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
+    if not lb:
+        if not __opts__['test']:
+            ret['result'] = False
+        msg = 'Failed to retrieve ELB {0}.'.format(name)
+        ret['comment'] = msg
+        return ret
+    to_enable = []
+    to_disable = []
+    _zones = lb['availability_zones']
+    for zone in availability_zones:
+        if zone not in _zones:
+            to_enable.append(zone)
+    for zone in _zones:
+        if zone not in availability_zones:
+            to_disable.append(zone)
+    if to_enable or to_disable:
+        if __opts__['test']:
+            msg = 'ELB {0} to have availability zones set.'.format(name)
+            ret['comment'] = msg
+            ret['result'] = None
+            return ret
+        if to_enable:
+            enabled = __salt__['boto_elb.enable_availability_zones'](name,
+                                                                     to_enable,
+                                                                     region,
+                                                                     key,
+                                                                     keyid,
+                                                                     profile)
+            if enabled:
+                msg = 'Enabled availability zones on {0} ELB.'.format(name)
+                ret['comment'] = msg
+            else:
+                msg = 'Failed to enable availability zones on {0} ELB.'
+                ret['comment'] = msg.format(name)
+                ret['result'] = False
+        if to_disable:
+            disabled = __salt__['boto_elb.disable_availability_zones'](name,
+                                                                       to_disable,
+                                                                       region,
+                                                                       key,
+                                                                       keyid,
+                                                                       profile)
+            if disabled:
+                msg = 'Disabled availability zones on {0} ELB.'
+                ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
+            else:
+                msg = 'Failed to disable availability zones on {0} ELB.'
+                ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
+                ret['result'] = False
+        ret['changes']['old'] = {'availability_zones':
+                                 lb['availability_zones']}
+        lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid,
+                                                 profile)
+        ret['changes']['new'] = {'availability_zones':
+                                 lb['availability_zones']}
+    else:
+        msg = 'Availability zones already set on ELB {0}.'.format(name)
+        ret['comment'] = msg
+    return ret
 
 
-def _remove_tags(conn, load_balancer_names, tags):
-    """
-    Delete metadata tags for the specified resource ids.
+def _subnets_present(
+        name,
+        subnets,
+        region,
+        key,
+        keyid,
+        profile):
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    if not subnets:
+        subnets = []
+    lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
+    if not lb:
+        if not __opts__['test']:
+            ret['result'] = False
+        msg = 'Failed to retrieve ELB {0}.'.format(name)
+        ret['comment'] = msg
+        return ret
+    to_enable = []
+    to_disable = []
+    _subnets = lb['subnets']
+    for subnet in subnets:
+        if subnet not in _subnets:
+            to_enable.append(subnet)
+    for subnet in _subnets:
+        if subnet not in subnets:
+            to_disable.append(subnet)
+    if to_enable or to_disable:
+        if __opts__['test']:
+            msg = 'ELB {0} to have subnets set.'.format(name)
+            ret['comment'] = msg
+            ret['result'] = None
+            return ret
+        if to_enable:
+            attached = __salt__['boto_elb.attach_subnets'](name, to_enable,
+                                                           region, key, keyid,
+                                                           profile)
+            if attached:
+                msg = 'Attached subnets on {0} ELB.'.format(name)
+                ret['comment'] = msg
+            else:
+                msg = 'Failed to attach subnets on {0} ELB.'
+                ret['comment'] = msg.format(name)
+                ret['result'] = False
+        if to_disable:
+            detached = __salt__['boto_elb.detach_subnets'](name, to_disable,
+                                                           region, key, keyid,
+                                                           profile)
+            if detached:
+                msg = 'Detached subnets on {0} ELB.'
+                ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
+            else:
+                msg = 'Failed to detach subnets on {0} ELB.'
+                ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
+                ret['result'] = False
+        ret['changes']['old'] = {'subnets': lb['subnets']}
+        lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid,
+                                                 profile)
+        ret['changes']['new'] = {'subnets': lb['subnets']}
+    else:
+        msg = 'Subnets already set on ELB {0}.'.format(name)
+        ret['comment'] = msg
+    return ret
 
-    :type load_balancer_names: list
-    :param load_balancer_names: A list of load balancer names.
 
-    :type tags: list
-    :param tags: A list containing just tag names for the tags to be
-                 deleted.
-    """
-    params = {}
-    conn.build_list_params(params, load_balancer_names,
-                           'LoadBalancerNames.member.%d')
-    conn.build_list_params(params, tags,
-                           'Tags.member.%d.Key')
-    return conn.get_status('RemoveTags', params, verb='POST')
+def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profile):
+    '''helper method for present.  ensure that cloudwatch_alarms are set'''
+    # load data from alarms_from_pillar
+    tmp = __salt__['config.option'](alarms_from_pillar, {})
+    # merge with data from alarms
+    if alarms:
+        tmp = dictupdate.update(tmp, alarms)
+    # set alarms, using boto_cloudwatch_alarm.present
+    merged_return_value = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    for _, info in six.iteritems(tmp):
+        # add elb to name and description
+        info["name"] = name + " " + info["name"]
+        info["attributes"]["description"] = name + " " + info["attributes"]["description"]
+        # add dimension attribute
+        info["attributes"]["dimensions"] = {"LoadBalancerName": [name]}
+        # set alarm
+        kwargs = {
+            "name": info["name"],
+            "attributes": info["attributes"],
+            "region": region,
+            "key": key,
+            "keyid": keyid,
+            "profile": profile,
+        }
+        ret = __salt__["state.single"]('boto_cloudwatch_alarm.present', **kwargs)
+        results = next(six.itervalues(ret))
+        if not results["result"]:
+            merged_return_value["result"] = results["result"]
+        if results.get("changes", {}) != {}:
+            merged_return_value["changes"][info["name"]] = results["changes"]
+        if "comment" in results:
+            merged_return_value["comment"] += results["comment"]
+    return merged_return_value
 
+
+def absent(
+        name,
+        region=None,
+        key=None,
+        keyid=None,
+        profile=None):
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+
+    exists = __salt__['boto_elb.exists'](name, region, key, keyid, profile)
+    if exists:
+        if __opts__['test']:
+            ret['comment'] = 'ELB {0} is set to be removed.'.format(name)
+            ret['result'] = None
+            return ret
+        deleted = __salt__['boto_elb.delete'](name, region, key, keyid,
+                                              profile)
+        if deleted:
+            ret['changes']['old'] = {'elb': name}
+            ret['changes']['new'] = {'elb': None}
+            ret['comment'] = 'ELB {0} deleted.'.format(name)
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to delete {0} ELB.'.format(name)
+    else:
+        ret['comment'] = '{0} ELB does not exist.'.format(name)
+    return ret
+
+def _tags_present(name,
+        tags,
+        region,
+        key,
+        keyid,
+        profile):
+    '''
+    helper function to validate tags on elb
+    '''
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    if tags:
+        lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
+
+        tags_to_add = tags
+        tags_to_update = {}
+        tags_to_remove = []
+        if lb['tags']:
+            for _tag in lb['tags'].keys():
+                if not _tag in tags.keys():
+                    if not _tag in tags_to_remove:
+                        tags_to_remove.append(_tag)
+                else:
+                    if tags[_tag] != lb['tags'][_tag]:
+                        tags_to_update[_tag] = tags[_tag]
+                    tags_to_add.pop(_tag)
+        if tags_to_remove:
+            if __opts__['test']:
+                msg = 'The following tag{0} set to be removed: {1}.'.format(
+                        ('s are' if len(tags_to_remove) > 1 else ' is'), ', '.join(tags_to_remove))
+                ret['comment'] = ' '.join([ret['comment'], msg])
+                ret['result'] = None
+            else:
+                _ret = __salt__['boto_elb.delete_elb_tags'](
+                            name,
+                            tags_to_remove,
+                            region,
+                            key,
+                            keyid,
+                            profile)
+                if not _ret:
+                    ret['result'] = False
+                    msg = 'Error attempting to delete tag {0}.'.format(_tag)
+                    ret['comment'] = ' '.join([ret['comment'], msg])
+                    return ret
+                if not ret['changes'].has_key('old'):
+                    ret['changes'] = dictupdate.update(ret['changes'], {'old':{'tags':{}}})
+                for _tag in tags_to_remove:
+                    ret['changes']['old']['tags'][_tag] = lb['tags'][_tag]
+        if tags_to_add or tags_to_update:
+            if __opts__['test']:
+                if tags_to_add:
+                    msg = 'The following tag{0} set to be added: {1}.'.format(
+                            ('s are' if len(tags_to_add.keys()) > 1 else ' is'),
+                            ', '.join(tags_to_add.keys()))
+                    ret['comment'] = ' '. join([ret['comment'], msg])
+                    ret['result'] = None
+                if tags_to_update:
+                    msg = 'The following tag {0} set to be updated: {1}.'.format(
+                            ('values are' if len(tags_to_update.keys()) > 1 else 'value is'),
+                            ', '.join(tags_to_update.keys()))
+                    ret['comment'] = ' '.join([ret['comment'], msg])
+                    ret['result'] = None
+            else:
+                all_tag_changes = dictupdate.update(tags_to_add, tags_to_update)
+                _ret = __salt__['boto_elb.set_elb_tags'](
+                            name,
+                            all_tag_changes,
+                            region,
+                            key,
+                            keyid,
+                            profile)
+                if not _ret:
+                    ret['result'] = False
+                    msg = 'Error attempting to set tags.'
+                    ret['comment'] = ' '.join([ret['comment'], msg])
+                    return ret
+                if not ret['changes'].has_key('old'):
+                    ret['changes'] = dictupdate.update(ret['changes'], {'old':{'tags':{}}})
+                if not ret['changes'].has_key('new'):
+                    ret['changes'] = dictupdate.update(ret['changes'], {'new':{'tags':{}}})
+                for tag in all_tag_changes:
+                    ret['changes']['new']['tags'][tag] = tags[tag]
+                    if lb.has_key('tags'):
+                        if lb['tags']:
+                            if lb['tags'].has_key(tag):
+                                ret['changes']['old']['tags'][tag] = lb['tags'][tag]
+        if not tags_to_update and not tags_to_remove and not tags_to_add:
+            msg = 'Tags are already set.'
+            ret['comment'] = ' '.join([ret['comment'], msg])
+    return ret
+
+def _listener_policies_present(name,
+        listener_policies,
+        region,
+        key,
+        keyid,
+        profile):
+    '''
+    helper function to validate listener policies
+    '''
+    if not listener_policies:
+        listener_policies = []
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    #if listener_policies:
+    lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
+
+    for _listeners in lb['listeners']:
+        log.debug('checking listener {0}'.format(_listeners))
+        remove_policy = True
+        for _lp in listener_policies:
+            if _lp['listener'] == _listeners[0]:
+                remove_policy = False
+            else:
+                remove_policy = True
+                break
+        if remove_policy:
+            lp = __salt__['boto_elb.get_listener_policy'](name, _listeners[0], region, key, keyid, profile)
+            log.debug('get_listener_policy returned {0}'.format(lp))
+            if isinstance(lp, dict):
+                if __opts__['test']:
+                    msg = 'Listener policy for {0} to be removed.'.format(lp['listener'])
+                    ret['comment'] = ' '.join([ret['comment'], msg])
+                    ret['result'] = None
+                else:
+                    _ret = __salt__['boto_elb.set_listener_policy'](
+                                name,
+                                _listeners[0],
+                                lp['policy'],
+                                None,
+                                True,
+                                region,
+                                key,
+                                keyid,
+                                profile)
+                    if not ret['changes'].has_key('old'):
+                        ret['changes'] = dictupdate.update(ret['changes'], {'old':{'listener policies':[]}})
+                    ret['changes']['old']['listener policies'].append(lp)
+    for _lp in listener_policies:
+        update_policy = False
+        add_policy = False
+
+        lp = __salt__['boto_elb.get_listener_policy'](name, _lp['listener'], region, key, keyid, profile)
+        if isinstance(lp, dict):
+            if _lp['policy'].lower() == lp['policy'].lower() and str(_lp['cookie']) == str(lp['cookie']):
+                update_policy = False
+            else:
+                if __opts__['test']:
+                    msg = 'Listener {0} policy to be updated.'.format(_lp['listener'])
+                    ret['comment'] = ' '.join([ret['comment'], msg])
+                    ret['result'] = None
+                else:
+                    update_policy = True
+        else:
+            if __opts__['test']:
+                msg = 'Listener {0} policy to be added.'.format(_lp['listener'])
+                ret['comment'] = ' '.join([ret['comment'], msg])
+                ret['result'] = None
+            else:
+                add_policy = True
+        if update_policy or add_policy:
+            _ret = __salt__['boto_elb.set_listener_policy'](
+                        name,
+                        _lp['listener'],
+                        _lp['policy'],
+                        _lp['cookie'],
+                        False,
+                        region,
+                        key,
+                        keyid,
+                        profile)
+            if _ret:
+                msg = 'Listener {0} policy updated.'.format(_lp['listener'])
+                ret['comment'] = ' '.join([ret['comment'], msg])
+                if not ret['changes'].has_key('old'):
+                    ret['changes'] = dictupdate.update(ret['changes'], {'old':{'listener policies':[]}})
+                if not ret['changes'].has_key('new'):
+                    ret['changes'] = dictupdate.update(ret['changes'], {'new':{'listener policies':[]}})
+                if isinstance(lp, dict):
+                    ret['changes']['old']['listener policies'].append(dictupdate.update(lp, {'listener': _lp['listener']}))
+                ret['changes']['new']['listener policies'].append(_lp)
+            else:
+                ret['result'] = False
+                return ret
+        else:
+            msg = 'Listener policies are already set.'
+            ret['comment'] = ' '.join([ret['comment'], msg])
+    return ret
