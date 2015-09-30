@@ -1071,8 +1071,9 @@ def _tags_present(name,
                 for tag in all_tag_changes:
                     ret['changes']['new']['tags'][tag] = tags[tag]
                     if lb.has_key('tags'):
-                        if lb['tags'].has_key(tag):
-                            ret['changes']['old']['tags'][tag] = lb['tags'][tag]
+                        if lb['tags']:
+                            if lb['tags'].has_key(tag):
+                                ret['changes']['old']['tags'][tag] = lb['tags'][tag]
     return ret
 
 def _listener_policies_present(name,
