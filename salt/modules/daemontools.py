@@ -16,6 +16,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import os.path
 import re
 
 # Import salt libs
@@ -201,3 +202,47 @@ def get_all():
         raise CommandExecutionError("Could not find service directory.")
     #- List all daemontools services in
     return sorted(os.listdir(SERVICE_DIR))
+
+
+def enabled(name, **kwargs):
+    '''
+    Return True if the named service is enabled, false otherwise
+    A service is considered enabled if in your service directory:
+    - an executable ./run file exist
+    - a file named "down" does not exist
+
+    name
+        Service name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' daemontools.enabled <service name>
+    '''
+    if not available(name):
+        log.error('Service {0} not found'.format(name))
+        return False
+
+    run_file = os.path.join(SERVICE_DIR, 'run')
+    down_file = os.path.join(SERVICE_DIR, 'down')
+
+    return (
+        os.path.isfile(run_file)
+        and os.access(run_file, os.X_OK)
+        and not os.path.isfile(down_file)
+    )
+
+def disabled(name):
+    '''
+    Return True if the named service is enabled, false otherwise
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.daemontools <service name>
+    '''
+    return not enabled(name)
+
+
