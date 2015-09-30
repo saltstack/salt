@@ -343,7 +343,7 @@ class SaltCloud(parsers.SaltCloudParser):
                 if dmap.get('existing', None):
                     for name in dmap['existing']:
                         if 'ec2' in dmap['existing'][name]['provider']:
-                            msg = 'Already running, or is terminated and has the same name.'
+                            msg = 'Instance already exists, or is terminated and has the same name.'
                         else:
                             msg = 'Already running.'
                         ret[name] = {'Message': msg}
