@@ -25,7 +25,7 @@ __virtualname__ = 'service'
 
 def __virtual__():
     '''
-    Only work on systems which default to systemd
+    Only work on FreeBSD
     '''
     # Disable on these platforms, specific service modules exist:
     if __grains__['os'] == 'FreeBSD':
