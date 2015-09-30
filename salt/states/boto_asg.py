@@ -368,6 +368,8 @@ def present(
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     if vpc_zone_identifier:
         vpc_id = __salt__['boto_vpc.get_subnet_association'](vpc_zone_identifier, region, key, keyid, profile)
+        if 'vpc_id' in vpc_id:
+            vpc_id = vpc_id['vpc_id']
         log.debug('Auto Scaling Group {0} is associated with VPC ID {1}'
                   .format(name, vpc_id))
     else:
@@ -571,11 +573,10 @@ def _determine_scaling_policies(scaling_policies, scaling_policies_from_pillar):
     return scaling_policies
 
 
-def _determine_notification_info(
-    notification_arn,
-    notification_arn_from_pillar,
-    notification_types,
-    notification_types_from_pillar):
+def _determine_notification_info(notification_arn,
+                                 notification_arn_from_pillar,
+                                 notification_types,
+                                 notification_types_from_pillar):
     '''helper method for present.  ensure that notification_configs are set'''
     pillar_arn_list = __salt__['config.option'](notification_arn_from_pillar, {})
     pillar_arn = None
@@ -650,6 +651,7 @@ def _recursive_compare(v1, v2):
 def absent(
         name,
         force=False,
+        remove_lc=False,
         region=None,
         key=None,
         keyid=None,
@@ -662,6 +664,9 @@ def absent(
 
     force
         Force deletion of autoscale group.
+
+    remove_lc
+        Remove the launch config of the autoscale group.
 
     region
         The region to connect to.
@@ -689,6 +694,16 @@ def absent(
         deleted = __salt__['boto_asg.delete'](name, force, region, key, keyid,
                                               profile)
         if deleted:
+            if remove_lc:
+                lc_deleted = __salt__['boto_asg.delete_launch_configuration'](asg['launch_config_name'], region, key, keyid, profile)
+                if lc_deleted:
+                    if 'launch_config' not in ret['changes']:
+                        ret['changes']['launch_config'] = {}
+                    ret['changes']['launch_config']['deleted'] = asg['launch_config_name']
+                else:
+                    ret['result'] = False
+                    ret['comment'] = ' '.join([ret['comment'], 'Failed to delete launch configuration.'])
+
             ret['changes']['old'] = asg
             ret['changes']['new'] = None
             ret['comment'] = 'Deleted autoscale group.'
