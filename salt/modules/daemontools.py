@@ -224,8 +224,8 @@ def enabled(name, **kwargs):
         log.error('Service {0} not found'.format(name))
         return False
 
-    run_file = os.path.join(SERVICE_DIR, 'run')
-    down_file = os.path.join(SERVICE_DIR, 'down')
+    run_file = os.path.join(SERVICE_DIR, name, 'run')
+    down_file = os.path.join(SERVICE_DIR, name, 'down')
 
     return (
         os.path.isfile(run_file)
