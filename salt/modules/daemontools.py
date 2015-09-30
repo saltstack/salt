@@ -45,7 +45,7 @@ for service_dir in VALID_SERVICE_DIRS:
 
 def __virtual__():
     # Ensure that daemontools is installed properly.
-    BINS = {'svc', 'supervise', 'svok'}
+    BINS = frozenset(('svc', 'supervise', 'svok'))
     return all(salt.utils.which(b) for b in BINS)
 
 
