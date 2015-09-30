@@ -32,6 +32,7 @@ import salt.log
 import salt.loader
 import salt.minion
 import salt.roster
+import salt.serializers.yaml
 import salt.state
 import salt.utils
 import salt.utils.args
@@ -655,7 +656,7 @@ class Single(object):
                     'sock_dir': '/',
                     'log_file': 'salt-call.log'
                 })
-        self.minion_config = yaml.dump(self.minion_opts)
+        self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
         self.target = kwargs
         self.target.update(args)
         self.serial = salt.payload.Serial(opts)
