@@ -10,9 +10,20 @@ The Salt Mine is used to collect arbitrary data from minions and store it on
 the master. This data is then made available to all minions via the
 :py:mod:`salt.modules.mine` module.
 
-The data is gathered on the minion and sent back to the master where only
-the most recent data is maintained (if long term data is required use
-returners or the external job cache).
+Mine data is gathered on the minion and sent back to the master where only the
+most recent data is maintained (if long term data is required use returners or
+the external job cache).
+
+Mine vs Grains
+==============
+
+Mine data is designed to be much more up-to-date than grain data. Grains are
+refreshed on a very limited basis and are largely static data. Mines are
+designed to replace slow peer publishing calls when Minions need data from
+other Minions. Rather than having a Minion reach out to all the other Minions
+for a piece of data, the Salt Mine, running on the Master, can collect it from
+all the Minions every :ref:`mine-interval`, resulting in
+almost fresh data at any given time, with much less overhead.
 
 Mine Functions
 ==============
@@ -50,6 +61,8 @@ calls of the same function with different arguments.
       loopback_ip_addrs:
         mine_function: network.ip_addrs
         lo: True
+
+.. _mine_interval:
 
 Mine Interval
 =============
