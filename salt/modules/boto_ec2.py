@@ -723,6 +723,7 @@ def create_network_interface(
     vpc_id = __salt__['boto_vpc.get_subnet_association'](
         [subnet_id], region=region, key=key, keyid=keyid, profile=profile
     )
+    vpc_id = vpc_id.get('vpc_id')
     if not vpc_id:
         msg = 'subnet_id {0} does not map to a valid vpc id.'.format(subnet_id)
         r['error'] = {'message': msg}
