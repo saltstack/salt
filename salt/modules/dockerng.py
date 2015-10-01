@@ -658,7 +658,7 @@ def _get_client(timeout=None):
     Set those keys in your configuration tree somehow:
 
         - docker.url: URL to the docker service
-        - docker.version: API version to use
+        - docker.version: API version to use (default: "auto")
     '''
     if 'docker.client' not in __context__:
         client_kwargs = {}
@@ -671,6 +671,9 @@ def _get_client(timeout=None):
         if 'base_url' not in client_kwargs and 'DOCKER_HOST' in os.environ:
             # Check if the DOCKER_HOST environment variable has been set
             client_kwargs['base_url'] = os.environ.get('DOCKER_HOST')
+
+        if 'version' not in client_kwargs:
+            client_kwargs['version'] = 'auto'
 
         __context__['docker.client'] = docker.Client(**client_kwargs)
 
