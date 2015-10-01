@@ -476,6 +476,7 @@ def _elb_present(
         vpc_id = __salt__['boto_vpc.get_subnet_association'](
             subnets, region, key, keyid, profile
         )
+        vpc_id = vpc_id.get('vpc_id')
         if not vpc_id:
             msg = 'Subnets {0} do not map to a valid vpc id.'.format(subnets)
             raise SaltInvocationError(msg)
