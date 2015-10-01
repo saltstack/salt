@@ -401,6 +401,7 @@ def present(
             keyid,
             profile
         )
+        vpc_id = vpc_id.get('vpc_id')
         log.debug('Auto Scaling Group {0} is associated with VPC ID {1}'
                   .format(name, vpc_id))
     else:
