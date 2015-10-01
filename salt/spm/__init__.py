@@ -25,6 +25,7 @@ import salt.loader
 import salt.utils
 import salt.utils.http as http
 import salt.syspaths as syspaths
+import salt.ext.six as six
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
 from salt.ext.six.moves import zip
@@ -236,7 +237,7 @@ class SPMClient(object):
         Return a list of packages which need to be installed, to resolve all
         dependencies
         '''
-        pkg_info = self.pkgdb['{0}.info'.format(self.db_prov)](formula_def['name'])
+        pkg_info = self._pkgdb_fun('info', formula_def['name'])
         if not isinstance(pkg_info, dict):
             pkg_info = {}
 
@@ -246,7 +247,7 @@ class SPMClient(object):
             dep = dep.strip()
             if not dep:
                 continue
-            if self.pkgdb['{0}.info'.format(self.db_prov)](dep):
+            if self._pkgdb_fun('info', dep):
                 continue
 
             if dep in self.avail_pkgs:
@@ -257,7 +258,7 @@ class SPMClient(object):
         inspected = []
         to_inspect = can_has.copy()
         while len(to_inspect) > 0:
-            dep = to_inspect.keys()[0]
+            dep = next(six.iterkeys(to_inspect))
             del to_inspect[dep]
 
             # Don't try to resolve the same package more than once
