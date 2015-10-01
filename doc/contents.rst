@@ -24,7 +24,9 @@ Salt Table of Contents
     topics/ext_processes/index
     topics/highavailability/index
     topics/topology/index
-    topics/transports/raet/index
+    topics/proxyminion/index
+    topics/spm/index
+    topics/transports/index
     topics/windows/index
     topics/cloud/index
     topics/netapi/index

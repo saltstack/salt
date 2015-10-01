@@ -16,6 +16,7 @@ import hashlib
 import imp
 import json
 import logging
+import numbers
 import os
 import pprint
 import random
@@ -554,8 +555,8 @@ def which(exe=None):
                     if _is_executable_file_or_link(full_path + ext):
                         return full_path + ext
         log.trace(
-            '{0!r} could not be found in the following search '
-            'path: {1!r}'.format(
+            '\'{0}\' could not be found in the following search '
+            'path: \'{1}\''.format(
                 exe, search_path
             )
         )
@@ -1029,7 +1030,7 @@ def format_call(fun,
     if extra:
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
-            msg = '{0[0]!r} is an invalid keyword argument for {1!r}'.format(
+            msg = '\'{0[0]}\' is an invalid keyword argument for \'{1}\''.format(
                 list(extra.keys()),
                 ret.get(
                     # In case this is being called for a state module
@@ -1039,8 +1040,8 @@ def format_call(fun,
                 )
             )
         else:
-            msg = '{0} and {1!r} are invalid keyword arguments for {2!r}'.format(
-                ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
+            msg = '{0} and \'{1}\' are invalid keyword arguments for \'{2}\''.format(
+                ', '.join(['\'{0}\''.format(e) for e in extra][:-1]),
                 list(extra.keys())[-1],
                 ret.get(
                     # In case this is being called for a state module
@@ -1107,6 +1108,11 @@ def istextfile(fp_, blocksize=512):
     elif not block:
         # An empty file is considered a valid text file
         return True
+    try:
+        block.decode('utf-8')
+        return True
+    except UnicodeDecodeError:
+        pass
 
     nontext = block.translate(None, text_characters)
     return float(len(nontext)) / len(block) <= 0.30
@@ -1356,7 +1362,7 @@ def subdict_match(data,
             try:
                 return re.match(pattern.lower(), str(target).lower())
             except Exception:
-                log.error('Invalid regex {0!r} in match'.format(pattern))
+                log.error('Invalid regex \'{0}\' in match'.format(pattern))
                 return False
         elif exact_match:
             return str(target).lower() == pattern.lower()
@@ -1403,8 +1409,8 @@ def subdict_match(data,
         splits = expr.split(delimiter)
         key = delimiter.join(splits[:idx])
         matchstr = delimiter.join(splits[idx:])
-        log.debug('Attempting to match {0!r} in {1!r} using delimiter '
-                  '{2!r}'.format(matchstr, key, delimiter))
+        log.debug('Attempting to match \'{0}\' in \'{1}\' using delimiter '
+                  '\'{2}\''.format(matchstr, key, delimiter))
         match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
         if match == {}:
             continue
@@ -1549,10 +1555,13 @@ def sanitize_win_path_string(winpath):
 
 
 @real_memoize
-def is_linux():
+def is_proxy():
     '''
-    Simple function to return if a host is Linux or not.
-    Note for a proxy minion, we need to return something else
+    Return True if this minion is a proxy minion.
+    Leverages the fact that is_linux() and is_windows
+    both return False for proxies.
+    TODO: Need to extend this for proxies that might run on
+    other Unices
     '''
     import __main__ as main
     # This is a hack.  If a proxy minion is started by other
@@ -1560,14 +1569,20 @@ def is_linux():
     # then this will fail.
     is_proxy = False
     try:
-        if 'salt-proxy-minion' in main.__file__:
+        if 'salt-proxy' in main.__file__:
             is_proxy = True
     except AttributeError:
         pass
-    if is_proxy:
-        return False
-    else:
-        return sys.platform.startswith('linux')
+    return is_proxy
+
+
+@real_memoize
+def is_linux():
+    '''
+    Simple function to return if a host is Linux or not.
+    Note for a proxy minion, we need to return something else
+    '''
+    return sys.platform.startswith('linux')
 
 
 @real_memoize
@@ -1618,6 +1633,29 @@ def is_smartos_globalzone():
             return True
 
         return False
+
+
+@real_memoize
+def is_smartos_zone():
+    '''
+    Function to return if host is SmartOS (Illumos) and not the gz
+    '''
+    if not is_smartos():
+        return False
+    else:
+        cmd = ['zonename']
+        try:
+            zonename = subprocess.Popen(
+                cmd, shell=False,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except OSError:
+            return False
+        if zonename.returncode:
+            return False
+        if zonename.stdout.read().strip() == 'global':
+            return False
+
+        return True
 
 
 @real_memoize
@@ -2112,7 +2150,7 @@ def warn_until(version,
         import inspect
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         raise RuntimeError(
-            'The warning triggered on filename {filename!r}, line number '
+            'The warning triggered on filename \'{filename}\', line number '
             '{lineno}, is supposed to be shown until version '
             '{until_version} is released. Current version is now '
             '{salt_version}. Please remove the warning.'.format(
@@ -2203,11 +2241,11 @@ def kwargs_warn_until(kwargs,
     _version_ = salt.version.SaltStackVersion(*_version_info_)
 
     if kwargs or _version_.info >= version.info:
-        arg_names = ', '.join('{0!r}'.format(key) for key in kwargs)
+        arg_names = ', '.join('\'{0}\''.format(key) for key in kwargs)
         warn_until(
             version,
             message='The following parameter(s) have been deprecated and '
-                    'will be removed in {0!r}: {1}.'.format(version.string,
+                    'will be removed in \'{0}\': {1}.'.format(version.string,
                                                             arg_names),
             category=category,
             stacklevel=stacklevel,
@@ -2259,9 +2297,21 @@ def compare_versions(ver1='', oper='==', ver2='', cmp_func=None):
     if cmp_result is None:
         return False
 
+    # Check if integer/long
+    if not isinstance(cmp_result, numbers.Integral):
+        log.error('The version comparison function did not return an '
+                  'integer/long.')
+        return False
+
     if oper == '!=':
         return cmp_result not in cmp_map['==']
     else:
+        # Gracefully handle cmp_result not in (-1, 0, 1).
+        if cmp_result < -1:
+            cmp_result = -1
+        elif cmp_result > 1:
+            cmp_result = 1
+
         return cmp_result in cmp_map[oper]
 
 
@@ -2498,7 +2548,7 @@ def get_group_list(user=None, include_default=True):
         raise Exception
     if hasattr(os, 'getgrouplist'):
         # Try os.getgrouplist, available in python >= 3.3
-        log.trace('Trying os.getgrouplist for {0!r}'.format(user))
+        log.trace('Trying os.getgrouplist for \'{0}\''.format(user))
         try:
             group_names = [
                 grp.getgrgid(grpid).gr_name for grpid in
@@ -2508,7 +2558,7 @@ def get_group_list(user=None, include_default=True):
             pass
     else:
         # Try pysss.getgrouplist
-        log.trace('Trying pysss.getgrouplist for {0!r}'.format(user))
+        log.trace('Trying pysss.getgrouplist for \'{0}\''.format(user))
         try:
             import pysss  # pylint: disable=import-error
             group_names = list(pysss.getgrouplist(user))
@@ -2518,7 +2568,7 @@ def get_group_list(user=None, include_default=True):
         # Fall back to generic code
         # Include the user's default group to behave like
         # os.getgrouplist() and pysss.getgrouplist() do
-        log.trace('Trying generic group list for {0!r}'.format(user))
+        log.trace('Trying generic group list for \'{0}\''.format(user))
         group_names = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
         try:
             default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
@@ -2539,7 +2589,7 @@ def get_group_list(user=None, include_default=True):
         except KeyError:
             # If for some reason the user does not have a default group
             pass
-    log.trace('Group list for user {0!r}: {1!r}'.format(user, sorted(ugroups)))
+    log.trace('Group list for user \'{0}\': \'{1}\''.format(user, sorted(ugroups)))
     return sorted(ugroups)
 
 
@@ -2780,3 +2830,24 @@ def is_list(value):
     Check if a variable is a list.
     '''
     return isinstance(value, list)
+
+
+def invalid_kwargs(invalid_kwargs, raise_exc=True):
+    '''
+    Raise a SaltInvocationError if invalid_kwargs is non-empty
+    '''
+    if invalid_kwargs:
+        if isinstance(invalid_kwargs, dict):
+            new_invalid = [
+                '{0}={1}'.format(x, y)
+                for x, y in six.iteritems(invalid_kwargs)
+            ]
+            invalid_kwargs = new_invalid
+    msg = (
+        'The following keyword arguments are not valid: {0}'
+        .format(', '.join(invalid_kwargs))
+    )
+    if raise_exc:
+        raise SaltInvocationError(msg)
+    else:
+        return msg

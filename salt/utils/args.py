@@ -114,7 +114,7 @@ def yamlify_arg(arg):
             # Only yamlify if it parses into a non-string type, to prevent
             # loss of content due to # as comment character
             parsed_arg = yamlloader.load(arg, Loader=yamlloader.SaltYamlSafeLoader)
-            if isinstance(parsed_arg, six.string_types):
+            if isinstance(parsed_arg, six.string_types) or parsed_arg is None:
                 return arg
             return parsed_arg
         if arg == 'None':
@@ -165,6 +165,6 @@ def get_function_argspec(func):
         aspec = inspect.getargspec(func.__call__)
         del aspec.args[0]  # self
     else:
-        raise TypeError('Cannot inspect argument list for {0!r}'.format(func))
+        raise TypeError('Cannot inspect argument list for \'{0}\''.format(func))
 
     return aspec

@@ -21,11 +21,12 @@ import subprocess
 THIN_ARCHIVE = 'salt-thin.tgz'
 EXT_ARCHIVE = 'salt-ext_mods.tgz'
 
-# Keep these in sync with salt/exitcodes.py
+# Keep these in sync with salt/defaults/exitcodes.py
 EX_THIN_DEPLOY = 11
 EX_THIN_CHECKSUM = 12
 EX_MOD_DEPLOY = 13
 EX_SCP_NOT_FOUND = 14
+EX_CANTCREAT = 73
 
 
 class OBJ(object):
@@ -134,7 +135,7 @@ def main(argv):  # pylint: disable=W0613
         unpack_thin(thin_path)
         # Salt thin now is available to use
     else:
-        scpstat = subprocess.Popen(['/bin/bash', '-c', 'command -v scp']).wait()
+        scpstat = subprocess.Popen(['/bin/sh', '-c', 'command -v scp']).wait()
         if not scpstat == 0:
             sys.exit(EX_SCP_NOT_FOUND)
 
@@ -146,7 +147,7 @@ def main(argv):  # pylint: disable=W0613
                 'ERROR: salt path "{0}" exists but is'
                 ' not a directory\n'.format(OPTIONS.saltdir)
             )
-            sys.exit(os.EX_CANTCREAT)
+            sys.exit(EX_CANTCREAT)
 
         version_path = os.path.join(OPTIONS.saltdir, 'version')
         if not os.path.exists(version_path) or not os.path.isfile(version_path):

@@ -144,11 +144,16 @@ def _render_tab(lst):
     return ret
 
 
-def _get_cron_cmdstr(path):
+def _get_cron_cmdstr(path, user=None):
     '''
     Returns a format string, to be used to build a crontab command.
     '''
-    return 'crontab {0}'.format(path)
+    cmd = 'crontab'
+
+    if user:
+        cmd += ' -u {0}'.format(user)
+
+    return '{0} {1}'.format(cmd, path)
 
 
 def write_cron_file(user, path):
@@ -161,8 +166,8 @@ def write_cron_file(user, path):
 
         salt '*' cron.write_cron_file root /tmp/new_cron
     '''
-    return __salt__['cmd.retcode'](_get_cron_cmdstr(path),
-                                   python_shell=False, runas=user) == 0
+    return __salt__['cmd.retcode'](_get_cron_cmdstr(path, user),
+                                   python_shell=False) == 0
 
 
 def write_cron_file_verbose(user, path):
@@ -175,8 +180,8 @@ def write_cron_file_verbose(user, path):
 
         salt '*' cron.write_cron_file_verbose root /tmp/new_cron
     '''
-    return __salt__['cmd.run_all'](_get_cron_cmdstr(path),
-                                   python_shell=False, runas=user)
+    return __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
+                                   python_shell=False)
 
 
 def _write_cron_lines(user, lines):
@@ -186,11 +191,8 @@ def _write_cron_lines(user, lines):
     path = salt.utils.mkstemp()
     with salt.utils.fopen(path, 'w+') as fp_:
         fp_.writelines(lines)
-    if __grains__.get('os_family') in ('Solaris', 'AIX') and user != "root":
-        __salt__['cmd.run']('chown {0} {1}'.format(user, path),
-                            python_shell=False)
-    ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path),
-                                  python_shell=False, runas=user)
+    ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
+                                  python_shell=False)
     os.remove(path)
     return ret
 
@@ -274,14 +276,20 @@ def list_tab(user):
                 ret['special'].append(dat)
             elif line.startswith('#'):
                 # It's a comment! Catch it!
-                comment = line.lstrip('# ')
+                comment_line = line.lstrip('# ')
+
                 # load the identifier if any
-                if SALT_CRON_IDENTIFIER in comment:
-                    parts = comment.split(SALT_CRON_IDENTIFIER)
-                    comment = parts[0].rstrip()
+                if SALT_CRON_IDENTIFIER in comment_line:
+                    parts = comment_line.split(SALT_CRON_IDENTIFIER)
+                    comment_line = parts[0].rstrip()
                     # skip leading :
                     if len(parts[1]) > 1:
                         identifier = parts[1][1:]
+
+                if comment is None:
+                    comment = comment_line
+                else:
+                    comment += '\n' + comment_line
             elif len(line.split()) > 5:
                 # Appears to be a standard cron line
                 comps = line.split()

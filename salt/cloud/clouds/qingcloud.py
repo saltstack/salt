@@ -26,9 +26,8 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 :depends: requests
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import time
 import json
 import pprint
@@ -37,12 +36,9 @@ import hmac
 import base64
 from hashlib import sha256
 
-# Import 3rd-party libs
-import requests
+# Import Salt Libs
 from salt.ext.six.moves.urllib.parse import quote as _quote  # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves import range
-
-# Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
@@ -52,9 +48,18 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
+# Import Third Party Libs
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'qingcloud'
 
 DEFAULT_QINGCLOUD_API_VERSION = 1
 DEFAULT_QINGCLOUD_SIGNATURE_VERSION = 1
@@ -68,7 +73,10 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -77,8 +85,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'qingcloud',
+        __active_provider_name__ or __virtualname__,
         ('access_key_id', 'secret_access_key', 'zone', 'key_filename')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'requests': HAS_REQUESTS}
     )
 
 
@@ -160,7 +178,7 @@ def query(params=None):
     if request.status_code != 200:
         raise SaltCloudSystemExit(
             'An error occurred while querying QingCloud. HTTP Code: {0}  '
-            'Error: {1!r}'.format(
+            'Error: \'{1}\''.format(
                 request.status_code,
                 request.text
             )
@@ -230,7 +248,7 @@ def _get_location(vm_=None):
         return vm_location
 
     raise SaltCloudNotFound(
-        'The specified location, {0!r}, could not be found.'.format(
+        'The specified location, \'{0}\', could not be found.'.format(
             vm_location
         )
     )
@@ -301,7 +319,7 @@ def _get_image(vm_):
         return vm_image
 
     raise SaltCloudNotFound(
-        'The specified image, {0!r}, could not be found.'.format(vm_image)
+        'The specified image, \'{0}\', could not be found.'.format(vm_image)
     )
 
 
@@ -422,7 +440,7 @@ def _get_size(vm_):
         return vm_size
 
     raise SaltCloudNotFound(
-        'The specified size, {0!r}, could not be found.'.format(vm_size)
+        'The specified size, \'{0}\', could not be found.'.format(vm_size)
     )
 
 
@@ -605,7 +623,7 @@ def show_instance(instance_id, call=None, kwargs=None):
 
     if items['total_count'] == 0:
         raise SaltCloudNotFound(
-            'The specified instance, {0!r}, could not be found.'.format(instance_id)
+            'The specified instance, \'{0}\', could not be found.'.format(instance_id)
         )
 
     full_node = items['instance_set'][0]
@@ -640,9 +658,9 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'qingcloud',
-                                        vm_['profile']) is False:
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'qingcloud',
+                                                           vm_['profile']) is False:
             return False
     except AttributeError:
         pass
@@ -718,10 +736,10 @@ def create(vm_):
     # The instance is booted and accessible, let's Salt it!
     salt.utils.cloud.bootstrap(vm_, __opts__)
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
 
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )

@@ -108,7 +108,7 @@ def _sync(form, saltenv=None):
         # Grab only the desired files (.py, .pyx, .so)
         cache.extend(
             __salt__['cp.cache_dir'](
-                source, sub_env, include_pat=r'E@\.(pyx?|so)$'
+                source, sub_env, include_pat=r'E@\.(pyx?|so|zip)$'
             )
         )
         local_cache_dir = os.path.join(
@@ -161,6 +161,13 @@ def _sync(form, saltenv=None):
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
         with salt.utils.fopen(mod_file, 'a+') as ofile:
             ofile.write('')
+    if form == 'grains' and \
+       __opts__.get('grains_cache') and \
+       os.path.isfile(os.path.join(__opts__['cachedir'], 'grains.cache.p')):
+        try:
+            os.remove(os.path.join(__opts__['cachedir'], 'grains.cache.p'))
+        except OSError:
+            log.error('Could not remove grains cache!')
     return ret
 
 
@@ -185,7 +192,7 @@ def update(version=None):
     '''
     Update the salt minion from the URL defined in opts['update_url']
     SaltStack, Inc provides the latest builds here:
-    update_url: http://docs.saltstack.com/downloads/
+    update_url: https://repo.saltstack.com/windows/
 
     Be aware that as of 2014-8-11 there's a bug in esky such that only the
     latest version available in the update_url can be downloaded and installed.
@@ -445,7 +452,8 @@ def sync_log_handlers(saltenv=None, refresh=True):
 def sync_all(saltenv=None, refresh=True):
     '''
     Sync down all of the dynamic modules from the file server for a specific
-    environment
+    environment. This function synchronizes custom modules, states, beacons,
+    grains, returners, outputters, renderers, and utils.
 
     refresh : True
         Also refresh the execution modules and pillar data available to the minion.
@@ -784,8 +792,21 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
 def _exec(client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
     ret = {}
     seen = 0
-    for ret_comp in client.cmd_iter(
-            tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
+    if 'batch' in kwargs:
+        _cmd = client.cmd_batch
+        cmd_kwargs = {
+            'tgt': tgt, 'fun': fun, 'arg': arg, 'expr_form': expr_form,
+            'ret': ret, 'kwarg': kwarg, 'batch': kwargs['batch'],
+        }
+        del kwargs['batch']
+    else:
+        _cmd = client.cmd_iter
+        cmd_kwargs = {
+            'tgt': tgt, 'fun': fun, 'arg': arg, 'timeout': timeout,
+            'expr_form': expr_form, 'ret': ret, 'kwarg': kwarg,
+        }
+    cmd_kwargs.update(kwargs)
+    for ret_comp in _cmd(**cmd_kwargs):
         ret.update(ret_comp)
         seen += 1
         # ret can be empty, so we cannot len the whole return dict
@@ -830,6 +851,14 @@ def cmd(tgt,
         client = _get_ssh_or_api_client(master_cfgfile, ssh)
         ret = _exec(
             client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs)
+    if 'batch' in kwargs:
+        old_ret, ret = ret, {}
+        for key, value in old_ret.items():
+            ret[key] = {
+                'out': value.get('out', 'highstate') if isinstance(value, dict) else 'highstate',
+                'ret': value,
+            }
+
     return ret
 
 
@@ -867,11 +896,11 @@ def cmd_iter(tgt,
         yield ret
 
 
-def runner(fun, **kwargs):
+def runner(_fun, **kwargs):
     '''
     Execute a runner module (this function must be run on the master)
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         The name of the function to run
@@ -894,14 +923,14 @@ def runner(fun, **kwargs):
     else:
         rclient = salt.runner.RunnerClient(__opts__)
 
-    return rclient.cmd(fun, [], kwarg=kwargs)
+    return rclient.cmd(_fun, kwarg=kwargs)
 
 
-def wheel(fun, **kwargs):
+def wheel(_fun, **kwargs):
     '''
     Execute a wheel module (this function must be run on the master)
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         The name of the function to run
@@ -915,7 +944,7 @@ def wheel(fun, **kwargs):
         salt '*' saltutil.wheel key.accept match=jerry
     '''
     wclient = salt.wheel.WheelClient(__opts__)
-    return wclient.cmd(fun, kwarg=kwargs)
+    return wclient.cmd(_fun, kwarg=kwargs)
 
 
 # this is the only way I could figure out how to get the REAL file_roots

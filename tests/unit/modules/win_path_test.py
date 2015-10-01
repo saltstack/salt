@@ -69,8 +69,8 @@ class WinPathTestCase(TestCase):
         '''
             Test to Returns the system path
         '''
-        mock = MagicMock(return_value='c:\\salt')
-        with patch.dict(win_path.__salt__, {'reg.read_key': mock}):
+        mock = MagicMock(return_value={'vdata': 'c:\\salt'})
+        with patch.dict(win_path.__salt__, {'reg.read_value': mock}):
             self.assertListEqual(win_path.get_path(), ['c:\\salt'])
 
     def test_exists(self):
@@ -85,12 +85,12 @@ class WinPathTestCase(TestCase):
         '''
             Test to add the directory to the SYSTEM path
         '''
-        mock = MagicMock(return_value=['c:\\salt'])
-        with patch.object(win_path, 'get_path', mock):
-            mock = MagicMock(return_value=True)
-            with patch.dict(win_path.__salt__, {'reg.set_key': mock}):
-                mock = MagicMock(side_effect=[True, False])
-                with patch.object(win_path, 'rehash', mock):
+        mock_get = MagicMock(return_value=['c:\\salt'])
+        with patch.object(win_path, 'get_path', mock_get):
+            mock_set = MagicMock(return_value=True)
+            with patch.dict(win_path.__salt__, {'reg.set_value': mock_set}):
+                mock_rehash = MagicMock(side_effect=[True, False])
+                with patch.object(win_path, 'rehash', mock_rehash):
                     self.assertTrue(win_path.add("c:\\salt", 1))
 
                     self.assertFalse(win_path.add("c:\\salt", 1))
@@ -99,14 +99,14 @@ class WinPathTestCase(TestCase):
         '''
             Test to remove the directory from the SYSTEM path
         '''
-        mock = MagicMock(side_effect=[[1], ['c:\\salt'], ['c:\\salt']])
-        with patch.object(win_path, 'get_path', mock):
+        mock_get = MagicMock(side_effect=[[1], ['c:\\salt'], ['c:\\salt']])
+        with patch.object(win_path, 'get_path', mock_get):
             self.assertTrue(win_path.remove("c:\\salt"))
 
-            mock = MagicMock(side_effect=[True, False])
-            with patch.dict(win_path.__salt__, {'reg.set_key': mock}):
-                mock = MagicMock(return_value="Salt")
-                with patch.object(win_path, 'rehash', mock):
+            mock_set = MagicMock(side_effect=[True, False])
+            with patch.dict(win_path.__salt__, {'reg.set_value': mock_set}):
+                mock_rehash = MagicMock(return_value="Salt")
+                with patch.object(win_path, 'rehash', mock_rehash):
                     self.assertEqual(win_path.remove("c:\\salt"), "Salt")
 
                 self.assertFalse(win_path.remove("c:\\salt"))

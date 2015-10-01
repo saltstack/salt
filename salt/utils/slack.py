@@ -24,6 +24,7 @@ from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 import salt.ext.six.moves.http_client
 from salt.version import __version__
 # pylint: enable=import-error,no-name-in-module
+import salt.utils.http
 
 log = logging.getLogger(__name__)
 

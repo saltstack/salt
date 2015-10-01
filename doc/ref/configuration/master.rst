@@ -417,7 +417,7 @@ configuration requirements. Read the returner's documentation.
 ``master_job_cache``
 --------------------
 
-.. versionadded:: 2014.7
+.. versionadded:: 2014.7.0
 
 Default: 'local_cache'
 
@@ -908,6 +908,41 @@ If set to 'changes', the output will be full unless the state didn't change.
 
     state_output: full
 
+.. conf_master:: state_aggregate
+
+``state_aggregate``
+-------------------
+
+Default: ``False``
+
+Automatically aggregate all states that have support for mod_aggregate by
+setting to ``True``. Or pass a list of state module names to automatically
+aggregate just those types.
+
+.. code-block:: yaml
+
+    state_aggregate:
+      - pkg
+
+.. code-block:: yaml
+
+    state_aggregate: True
+
+.. conf_master:: state_events
+
+``state_events``
+----------------
+
+Default: ``False``
+
+Send progress events as each function in a state run completes execution
+by setting to ``True``. Progress events are in the format
+``salt/job/<JID>/prog/<MID>/<RUN NUM>``.
+
+.. code-block:: yaml
+
+    state_events: True
+
 .. conf_master:: yaml_utf8
 
 ``yaml_utf8``
@@ -1027,6 +1062,14 @@ nothing is ignored.
       - '\*/somefolder/\*.bak'
       - '\*.swp'
 
+.. note::
+    Vim's .swp files are a common cause of Unicode errors in
+    :py:func:`file.recurse <salt.states.file.recurse>` states which use
+    templating. Unless there is a good reason to distribute them via the
+    fileserver, it is good practice to include ``'\*.swp'`` in the
+    :conf_master:`file_ignore_glob`.
+
+
 roots: Master's Local File Server
 ---------------------------------
 
@@ -1105,14 +1148,12 @@ Walkthrough <gitfs-per-remote-config>`.
 
 .. versionadded:: 2014.7.0
 
-Specify the provider to be used for gitfs. More information can be found in the
-:ref:`GitFS Walkthrough <gitfs-dependencies>`.
+Optional parameter used to specify the provider to be used for gitfs. More
+information can be found in the :ref:`GitFS Walkthrough <gitfs-dependencies>`.
 
-Specify one value among valid values: ``gitpython``, ``pygit2``, ``dulwich``
-
-.. _pygit2: https://github.com/libgit2/pygit2
-.. _GitPython: https://github.com/gitpython-developers/GitPython
-.. _dulwich: https://www.samba.org/~jelmer/dulwich/
+Must be one of the following: ``pygit2``, ``gitpython``, or ``dulwich``. If
+unset, then each will be tried in that same order, and the first one with a
+compatible version installed will be the provider that is used.
 
 .. code-block:: yaml
 
@@ -1125,11 +1166,11 @@ Specify one value among valid values: ``gitpython``, ``pygit2``, ``dulwich``
 
 Default: ``True``
 
-The ``gitfs_ssl_verify`` option specifies whether to ignore SSL certificate
-errors when contacting the gitfs backend. You might want to set this to
-``False`` if you're using a git backend that uses a self-signed certificate but
-keep in mind that setting this flag to anything other than the default of
-``True`` is a security concern, you may want to try using the ssh transport.
+Specifies whether or not to ignore SSL certificate errors when contacting the
+remote repository. You might want to set this to ``False`` if you're using a
+git repo that uses a self-signed certificate. However, keep in mind that
+setting this to anything other ``True`` is a considered insecure, and using an
+SSH-based transport (if available) may be a better option.
 
 .. code-block:: yaml
 
@@ -1907,10 +1948,26 @@ ext_pillar.
 
     ext_pillar_first: False
 
-.. _git-pillar-config-opts:
+.. _git_pillar-config-opts:
 
 Git External Pillar (git_pillar) Configuration Options
 ------------------------------------------------------
+
+.. conf_master:: git_pillar_provider
+
+``git_pillar_provider``
+***********************
+
+.. versionadded:: 2015.8.0
+
+Specify the provider to be used for git_pillar. Must be either ``pygit2`` or
+``gitpython``. If unset, then both will be tried in that same order, and the
+first one with a compatible version installed will be the provider that is
+used.
+
+.. code-block:: yaml
+
+    git_pillar_provider: gitpython
 
 .. conf_master:: git_pillar_base
 
@@ -1995,7 +2052,7 @@ environment irrespective of the branch/tag being used.
 .. conf_master:: git_pillar_root
 
 ``git_pillar_root``
-********************
+*******************
 
 .. versionadded:: 2015.8.0
 
@@ -2042,23 +2099,23 @@ files would be looked for in a subdirectory called ``pillar``.
 Default: ``True``
 
 Specifies whether or not to ignore SSL certificate errors when contacting the
-git_pillar remote repository. You might want to set this to ``False`` if you're
-using a git backend that uses a self-signed certificate but keep in mind that
-setting this flag to anything other than the default of ``True`` is a security
-concern, you may want to try using the ssh transport.
+remote repository. You might want to set this to ``False`` if you're using a
+git repo that uses a self-signed certificate. However, keep in mind that
+setting this to anything other ``True`` is a considered insecure, and using an
+SSH-based transport (if available) may be a better option.
 
 .. code-block:: yaml
 
     git_pillar_ssl_verify: True
 
-git_pillar Authentication Options
-*********************************
+Git External Pillar Authentication Options
+******************************************
 
-These parameters only currently apply to the pygit2 gitfs provider.
-Authentication works the same as it does in gitfs, as outlined in the
-:ref:`GitFS Walkthrough <gitfs-authentication>`, though the global
-configuration options are named differently to reflect that they are for
-git_pillar instead of gitfs.
+These parameters only currently apply to the ``pygit2``
+:conf_master:`git_pillar_provider`.  Authentication works the same as it does
+in gitfs, as outlined in the :ref:`GitFS Walkthrough <gitfs-authentication>`,
+though the global configuration options are named differently to reflect that
+they are for git_pillar instead of gitfs.
 
 .. conf_master:: git_pillar_user
 
@@ -2308,10 +2365,21 @@ master, specify the higher level master with this configuration value.
 
     syndic_master: masterofmasters
 
+You can optionally connect a syndic to multiple higher level masters by
+setting the 'syndic_master' value to a list:
+
+.. code-block:: yaml
+
+    syndic_master:
+      - masterofmasters1
+      - masterofmasters2
+
+Each higher level master must be set up in a multimaster configuration.
+
 .. conf_master:: syndic_master_port
 
 ``syndic_master_port``
------------------------
+----------------------
 
 Default: ``4506``
 
@@ -2654,57 +2722,238 @@ option then the master will log a warning message.
       - master.d/*
       - /etc/roles/webserver
 
+.. _winrepo-master-config-opts:
 
 Windows Software Repo Settings
 ==============================
 
+.. conf_master:: winrepo_provider
+
+``winrepo_provider``
+--------------------
+
+.. versionadded:: 2015.8.0
+
+Specify the provider to be used for winrepo. Must be either ``pygit2`` or
+``gitpython``. If unset, then both will be tried in that same order, and the
+first one with a compatible version installed will be the provider that is
+used.
+
+.. code-block:: yaml
+
+    winrepo_provider: gitpython
+
+.. conf_master:: winrepo_dir
 .. conf_master:: win_repo
 
-``win_repo``
-------------
+``winrepo_dir``
+---------------
+
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_repo`` to ``winrepo_dir``
 
 Default: ``/srv/salt/win/repo``
 
-Location of the repo on the master
-
+Location on the master where the :conf_master:`winrepo_remotes` are checked
+out.
 
 .. code-block:: yaml
 
-    win_repo: '/srv/salt/win/repo'
+    winrepo_dir: /srv/salt/win/repo
 
+.. conf_master:: winrepo_cachefile
 .. conf_master:: win_repo_mastercachefile
 
-``win_repo_mastercachefile``
-----------------------------
+``winrepo_cachefile``
+---------------------
 
-Default: ``/srv/salt/win/repo/winrepo.p``
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_repo_mastercachefile`` to ``winrepo_cachefile``
+
+Default: ``winrepo.p``
+
+Path relative to :conf_master:`winrepo_dir` where the winrepo cache should be
+created.
 
 .. code-block:: yaml
 
-    win_repo_mastercachefile: '/srv/salt/win/repo/winrepo.p'
+    winrepo_cachefile: winrepo.p
 
+.. conf_master:: winrepo_remotes
 .. conf_master:: win_gitrepos
 
-``win_gitrepos``
-----------------
+``winrepo_remotes``
+-------------------
+
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_gitrepos`` to ``winrepo_remotes``
+
+Default: ``['https://github.com/saltstack/salt-winrepo.git']``
+
+List of git repositories to checkout and include in the winrepo
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - https://github.com/saltstack/salt-winrepo.git
+
+To specify a specific revision of the repository, prepend a commit ID to the
+URL of the the repository:
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - '<commit_id> https://github.com/saltstack/salt-winrepo.git'
+
+Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
+ID is useful in that it allows one to revert back to a previous version in the
+event that an error is introduced in the latest revision of the repo.
+
+.. conf_master:: winrepo_branch
+
+``winrepo_branch``
+------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``master``
+
+If the branch is omitted from a winrepo remote, then this branch will be
+used instead. For example, in the configuration below, the first two remotes
+would use the ``winrepo`` branch/tag, while the third would use the ``foo``
+branch/tag.
+
+.. code-block:: yaml
+
+    winrepo_branch: winrepo
+
+    ext_pillar:
+      - git:
+        - https://mygitserver/winrepo1.git
+        - https://mygitserver/winrepo2.git:
+        - foo https://mygitserver/winrepo3.git
+
+.. conf_master:: winrepo_ssl_verify
+
+``winrepo_ssl_verify``
+----------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``True``
+
+Specifies whether or not to ignore SSL certificate errors when contacting the
+remote repository. You might want to set this to ``False`` if you're using a
+git repo that uses a self-signed certificate. However, keep in mind that
+setting this to anything other ``True`` is a considered insecure, and using an
+SSH-based transport (if available) may be a better option.
+
+.. code-block:: yaml
+
+    winrepo_ssl_verify: True
+
+Winrepo Authentication Options
+------------------------------
+
+These parameters only currently apply to the ``pygit2``
+:conf_master:`winrepo_provider`. Authentication works the same as it does in
+gitfs, as outlined in the :ref:`GitFS Walkthrough <gitfs-authentication>`,
+though the global configuration options are named differently to reflect that
+they are for winrepo instead of gitfs.
+
+.. conf_master:: winrepo_user
+
+``winrepo_user``
+****************
+
+.. versionadded:: 2015.8.0
 
 Default: ``''``
 
-List of git repositories to include with the local repo.
+Along with :conf_master:`winrepo_password`, is used to authenticate to HTTPS
+remotes.
 
 .. code-block:: yaml
 
-    win_gitrepos:
-      - 'https://github.com/saltstack/salt-winrepo.git'
+    winrepo_user: git
 
-To specify a specific revision of the repository, preface the
-repository location with a commit ID:
+.. conf_master:: winrepo_password
+
+``winrepo_password``
+********************
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`winrepo_user`, is used to authenticate to HTTPS
+remotes. This parameter is not required if the repository does not use
+authentication.
 
 .. code-block:: yaml
 
-    win_gitrepos:
-      - '<commit_id> https://github.com/saltstack/salt-winrepo.git'
+    winrepo_password: mypassword
 
-Replacing ``<commit_id>`` with the ID from GitHub. Specifying a commit
-ID is useful if you need to revert to a previous version if an error
-is introduced in the latest version.
+.. conf_master:: winrepo_insecure_auth
+
+``winrepo_insecure_auth``
+*************************
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+By default, Salt will not authenticate to an HTTP (non-HTTPS) remote. This
+parameter enables authentication over HTTP. **Enable this at your own risk.**
+
+.. code-block:: yaml
+
+    winrepo_insecure_auth: True
+
+.. conf_master:: winrepo_pubkey
+
+``winrepo_pubkey``
+******************
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`winrepo_privkey` (and optionally
+:conf_master:`winrepo_passphrase`), is used to authenticate to SSH remotes.
+
+.. code-block:: yaml
+
+    winrepo_pubkey: /path/to/key.pub
+
+.. conf_master:: winrepo_privkey
+
+``winrepo_privkey``
+*******************
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+Along with :conf_master:`winrepo_pubkey` (and optionally
+:conf_master:`winrepo_passphrase`), is used to authenticate to SSH remotes.
+
+.. code-block:: yaml
+
+    winrepo_privkey: /path/to/key
+
+.. conf_master:: winrepo_passphrase
+
+``winrepo_passphrase``
+**********************
+
+.. versionadded:: 2015.8.0
+
+Default: ``''``
+
+This parameter is optional, required only when the SSH key being used to
+authenticate is protected by a passphrase.
+
+.. code-block:: yaml
+
+    winrepo_passphrase: mypassphrase

@@ -1,3 +1,5 @@
+.. _windows:
+
 =======
 Windows
 =======
@@ -11,6 +13,7 @@ to control your Salt Minions on Windows.
 Many of the standard Salt modules have been ported to work on Windows and many
 of the Salt States currently work on Windows, as well.
 
+.. _windows-installer:
 
 Windows Installer
 =================
@@ -18,139 +21,16 @@ Windows Installer
 Salt Minion Windows installers can be found here. The output of `md5sum <salt
 minion exe>` should match the contents of the corresponding md5 file.
 
-.. admonition:: Download here
+**Latest stable build from the selected branch**:
+|windownload|
 
-    * 2015.5.2
-    * `Salt-Minion-2015.5.2-x86-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2015.5.2-x86-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2015.5.2-x86-Setup.exe.md5>`__
-    * `Salt-Minion-2015.5.2-AMD64-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2015.5.2-AMD64-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2015.5.2-AMD64-Setup.exe.md5>`__
+`Earlier builds from supported branches <https://repo.saltstack.com/windows/>`__
 
-    * 2015.5.1-3
-    * `Salt-Minion-2015.5.1-3-x86-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2015.5.1-3-x86-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2015.5.1-3-x86-Setup.exe.md5>`__
-    * `Salt-Minion-2015.5.1-3-AMD64-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2015.5.1-3-AMD64-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2015.5.1-3-AMD64-Setup.exe.md5>`__
-
-    * 2015.5.0-2
-    * `Salt-Minion-2015.5.0-2-x86-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2015.5.0-2-x86-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2015.5.0-2-x86-Setup.exe.md5>`__
-    * `Salt-Minion-2015.5.0-2-AMD64-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2015.5.0-2-AMD64-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2015.5.0-2-AMD64-Setup.exe.md5>`__
-
-    * 2014.7.5-2
-    * `Salt-Minion-2014.7.5-2-x86-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.5-2-x86-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.5-2-x86-Setup.exe.md5>`__
-    * `Salt-Minion-2014.7.5-2-AMD64-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.5-2-AMD64-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.5-2-AMD64-Setup.exe.md5>`__
-
-    * 2014.7.4
-    * `Salt-Minion-2014.7.4-x86-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.4-x86-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.4-x86-Setup.exe.md5>`__
-    * `Salt-Minion-2014.7.4-AMD64-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.4-AMD64-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.4-AMD64-Setup.exe.md5>`__
-
-    * 2014.7.2
-    * `Salt-Minion-2014.7.2-x86-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.2-x86-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.2-x86-Setup.exe.md5>`__
-    * `Salt-Minion-2014.7.2-AMD64-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.2-AMD64-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.2-AMD64-Setup.exe.md5>`__
-
-    * 2014.7.1
-    * `Salt-Minion-2014.7.1-x86-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.1-x86-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.1-x86-Setup.exe.md5>`__
-    * `Salt-Minion-2014.7.1-AMD64-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.1-AMD64-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.7.1-AMD64-Setup.exe.md5>`__
-
-    * 2014.7.0
-    * Salt-Minion-2014.7.0-1-win32-Setup.exe | md5
-    * Salt-Minion-2014.7.0-AMD64-Setup.exe | md5
-        .. note::
-
-            The 2014.7.0 installers have been removed because of a regression. Please use the 2014.7.1 release instead.
-
-    * 2014.1.13
-    * `Salt-Minion-2014.1.13-x86-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.1.13-x86-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.1.13-x86-Setup.exe.md5>`__
-    * `Salt-Minion-2014.1.13-AMD64-Setup.exe <http://docs.saltstack.com/downloads/Salt-Minion-2014.1.13-AMD64-Setup.exe>`__ | `md5 <http://docs.saltstack.com/downloads/Salt-Minion-2014.1.13-AMD64-Setup.exe.md5>`__
-
-    * 2014.1.11
-    * `Salt-Minion-2014.1.11-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.11-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.11-win32-Setup.exe.md5>`__
-    * `Salt-Minion-2014.1.11-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.11-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.11-AMD64-Setup.exe.md5>`__
-
-    * 2014.1.10
-    * `Salt-Minion-2014.1.10-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.10-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.10-win32-Setup.exe.md5>`__
-    * `Salt-Minion-2014.1.10-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.10-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.10-AMD64-Setup.exe.md5>`__
-
-    * 2014.1.7
-    * `Salt-Minion-2014.1.7-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.7-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.7-win32-Setup.exe.md5>`__
-    * `Salt-Minion-2014.1.7-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.7-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.7-AMD64-Setup.exe.md5>`__
-
-    * 2014.1.5
-    * `Salt-Minion-2014.1.5-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.5-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.5-win32-Setup.exe.md5>`__
-    * `Salt-Minion-2014.1.5-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.5-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.5-AMD64-Setup.exe.md5>`__
-
-    * 2014.1.4
-    * `Salt-Minion-2014.1.4-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.4-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.4-win32-Setup.exe.md5>`__
-    * `Salt-Minion-2014.1.4-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.4-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.4-AMD64-Setup.exe.md5>`__
-
-    * 2014.1.3-1  (packaging bugfix)
-    * `Salt-Minion-2014.1.3-1-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.3-1-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.3-1-win32-Setup.exe.md5>`__
-    * `Salt-Minion-2014.1.3-1-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.3-1-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.3-1-AMD64-Setup.exe.md5>`__
-
-    * 2014.1.3
-    * `Salt-Minion-2014.1.3-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.3-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.3-win32-Setup.exe.md5>`__
-    * `Salt-Minion-2014.1.3-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.3-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.3-AMD64-Setup.exe.md5>`__
-
-    * 2014.1.1
-    * `Salt-Minion-2014.1.1-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.1-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.1-win32-Setup.exe.md5>`__
-    * `Salt-Minion-2014.1.1-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.1-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.1-AMD64-Setup.exe.md5>`__
-
-
-    * 2014.1.0
-    * `Salt-Minion-2014.1.0-win32-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.0-win32-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.0-win32-Setup.exe.md5>`__
-    * `Salt-Minion-2014.1.0-AMD64-Setup.exe <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.0-AMD64-Setup.exe>`__ | `md5 <https://docs.saltstack.com/downloads/Salt-Minion-2014.1.0-AMD64-Setup.exe.md5>`__
-
-    * 0.17.5-2 (bugfix release)
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.5-2-win32-Setup.exe
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.5-2-AMD64-Setup.exe
-
-    * 0.17.5
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.5-win32-Setup.exe
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.5-AMD64-Setup.exe
-
-    * 0.17.4
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.4-win32-Setup.exe
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.4-AMD64-Setup.exe
-
-    * 0.17.2
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.2-win32-Setup.exe
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.2-AMD64-Setup.exe
-
-    * 0.17.1.1 - Windows Installer bugfix release
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.1.1-win32-Setup.exe
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.1.1-AMD64-Setup.exe
-
-    * 0.17.1
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.1-win32-Setup.exe
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.1-AMD64-Setup.exe
-
-    * 0.17.0
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.0-win32-Setup.exe
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.17.0-AMD64-Setup.exe
-
-    * 0.16.3
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.16.3-win32-Setup.exe
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.16.3-AMD64-Setup.exe
-
-    * 0.16.2
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.16.2-win32-Setup.exe
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.16.2-AMD64-Setup.exe
-
-    * 0.16.0
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.16.0-win32-Setup.exe
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.16.0-AMD64-Setup.exe
-
-    * 0.15.3
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.15.3-win32-Setup.exe
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.15.3-AMD64-Setup.exe
-
-    * 0.14.1
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.14.1-win32-Setup.exe
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.14.1-AMD64-Setup.exe
-
-    * 0.14.0
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.14.0-win32-Setup.exe
-    * https://docs.saltstack.com/downloads/Salt-Minion-0.14.0-AMD64-Setup.exe
+`Archived builds from unsupported branches <https://repo.saltstack.com/windows/archive/>`__
 
 .. note::
 
-    The executables above will install dependencies that the Salt minion
+    The installation executable installs dependencies that the Salt minion
     requires.
 
 The 64bit installer has been tested on Windows 7 64bit and Windows Server
@@ -169,9 +49,10 @@ Windows service.
 If the minion won't start, try installing the Microsoft Visual C++ 2008 x64 SP1
 redistributable. Allow all Windows updates to run salt-minion smoothly.
 
+.. _windows-installer-options:
 
-Silent Installer option
-=======================
+Silent Installer Options
+========================
 
 The installer can be run silently by providing the `/S` option at the command
 line. The options `/master` and `/minion-name` allow for configuring the master
@@ -181,6 +62,87 @@ installer:
 .. code-block:: bat
 
     Salt-Minion-0.17.0-Setup-amd64.exe /S /master=yoursaltmaster /minion-name=yourminionname
+
+
+Running the Salt Minion on Windows as an Unprivileged User
+==========================================================
+
+Notes:
+- These instructions were tested with Windows Server 2008 R2
+- They are generalizable to any version of Windows that supports a salt-minion
+
+A. Create the Unprivileged User that the Salt Minion will Run As
+----------------------------------------------------------------
+
+1. Click "Start", "Control Panel", "User Accounts"
+
+2. Click "Add or remove user accounts"
+
+3. Click "Create new account"
+
+4. Enter "salt-user" (or a name of your preference) in the "New account name" field
+
+5. Select the "Standard user" radio button
+
+6. Click the "Create Account" button
+
+7. Click on the newly created user account
+
+8. Click the "Create a password" link
+
+9. In the "New password" and "Confirm new password" fields, provide a password (e.g "SuperSecretMinionPassword4Me!")
+
+10. In the "Type a password hint" field, provide appropriate text (e.g. "My Salt Password")
+
+11. Click the "Create password" button
+
+12. Close the "Change an Account" window
+
+
+B. Add the New User to the Access Control List for the Salt Folder
+------------------------------------------------------------------
+
+1. In a File Explorer window, browse to the path where Salt is installed (the default path is C:\Salt)
+
+2. Right-click on the "Salt" folder and select "Properties"
+
+3. Click on the "Security" tab
+
+4. Click the "Edit" button
+
+5. Click the "Add" button
+
+6. Type the name of your designated Salt user and click the "OK" button
+
+7. Check the box to "Allow" the "Modify" permission
+
+8. Click the "OK" button
+
+9. Click the "OK" button to close the "Salt Properties" window
+
+
+C. Update the Windows Service User for the "salt-minion" Service
+----------------------------------------------------------------
+
+1. Click "Start", "Administrative Tools", "Services"
+
+2. In the list of Services, Right-Click on "salt-minion" and select "Properties"
+
+3. Click the "Log On" tab
+
+4. Click the "This account" radio button
+
+5. Provide the account credentials created in section A
+
+6. Click the "OK" button
+
+7. Click the "OK" button to the prompt confirming that the user "has been granted the Log On As A Service right"
+
+8. Click the "OK" button to the prompt confirming that "The new logon name will not take effect until you stop and restart the service"
+
+9. Right-Click on "salt-minion" and select "Stop"
+
+10. Right-Click on "salt-minion" and select "Start"
 
 
 Setting up a Windows build environment
@@ -262,8 +224,8 @@ Install the following software:
 Download the Prerequisite zip file for your CPU architecture from the
 SaltStack download site:
 
-* `Salt32.zip <http://docs.saltstack.com/downloads/windows-deps/Salt32.zip/>`_
-* `Salt64.zip <http://docs.saltstack.com/downloads/windows-deps/Salt64.zip/>`_
+* `Salt32.zip <http://repo.saltstack.com/windows/dependencies/Salt32.zip/>`_
+* `Salt64.zip <http://repo.saltstack.com/windows/dependencies/Salt64.zip/>`_
 
 These files contain all sofware required to build and develop salt. Unzip the
 contents of the file to ``C:\Salt-Dev\temp``.

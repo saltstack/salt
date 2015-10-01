@@ -6,8 +6,8 @@ Make me some salt!
 # Import python libs
 from __future__ import absolute_import
 import os
-import sys
 import warnings
+from salt.utils.verify import verify_log
 
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
@@ -112,9 +112,10 @@ class Master(parsers.MasterOptionParser):
                     os.remove(os.path.join(self.config['syndic_dir'], syndic_file))
         except OSError as err:
             logger.exception('Failed to prepare salt environment')
-            sys.exit(err.errno)
+            self.shutdown(err.errno)
 
         self.setup_logfile_logger()
+        verify_log(self.config)
         logger.info('Setting up the Salt Master')
 
         # TODO: AIO core is separate from transport
@@ -122,7 +123,7 @@ class Master(parsers.MasterOptionParser):
             if not verify_socket(self.config['interface'],
                                  self.config['publish_port'],
                                  self.config['ret_port']):
-                self.exit(4, 'The ports are not available to bind\n')
+                self.shutdown(4, 'The ports are not available to bind')
             self.config['interface'] = ip_bracket(self.config['interface'])
             migrations.migrate_paths(self.config)
 
@@ -150,19 +151,26 @@ class Master(parsers.MasterOptionParser):
         self.prepare()
         if check_user(self.config['user']):
             logger.info('The salt master is starting up')
-            self.master.start()
+            try:
+                self.master.start()
+            except KeyboardInterrupt:
+                logger.warn('The salt master is shutting down')
+            finally:
+                self.shutdown()
 
-    def shutdown(self):
+    def shutdown(self, exitcode=0, exitmsg=None):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
         logger.info('The salt master is shut down')
+        self.exit(exitcode, exitmsg)
 
 
 class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
     '''
     Create a minion server
     '''
+    # pylint: disable=no-member
     def prepare(self):
         '''
         Run the preparation sequence required to start a salt minion.
@@ -192,6 +200,7 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
                     confd = os.path.join(
                         os.path.dirname(self.config['conf_file']), 'minion.d'
                     )
+
                 v_dirs = [
                         self.config['pki_dir'],
                         self.config['cachedir'],
@@ -199,11 +208,13 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
                         self.config['extension_modules'],
                         confd,
                     ]
+
                 if self.config.get('transport') == 'raet':
                     v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))
                     v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'))
                     v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'))
                     v_dirs.append(os.path.join(self.config['cachedir'], 'raet'))
+
                 verify_env(
                     v_dirs,
                     self.config['user'],
@@ -220,15 +231,22 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
                     os.umask(current_umask)
         except OSError as err:
             logger.exception('Failed to prepare salt environment')
-            sys.exit(err.errno)
+            self.shutdown(err.errno)
 
         self.setup_logfile_logger()
+        verify_log(self.config)
         logger.info(
             'Setting up the Salt Minion "{0}"'.format(
                 self.config['id']
             )
         )
         migrations.migrate_paths(self.config)
+
+        # Bail out if we find a process running and it matches out pidfile
+        if self.check_running():
+            logger.exception('Salt minion is already running. Exiting.')
+            self.shutdown(1)
+
         # TODO: AIO core is separate from transport
         if self.config['transport'].lower() in ('zeromq', 'tcp'):
             # Late import so logging works correctly
@@ -271,10 +289,10 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
             logger.warn('Stopping the Salt Minion')
             if isinstance(exc, KeyboardInterrupt):
                 logger.warn('Exiting on Ctrl-c')
+                self.shutdown()
             else:
                 logger.error(str(exc))
-        finally:
-            self.shutdown()
+                self.shutdown(exc.code)
 
     def call(self, cleanup_protecteds):
         '''
@@ -299,23 +317,27 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
             logger.warn('Stopping the Salt Minion')
             if isinstance(exc, KeyboardInterrupt):
                 logger.warn('Exiting on Ctrl-c')
+                self.shutdown()
             else:
                 logger.error(str(exc))
-        finally:
-            self.shutdown()
+                self.shutdown(exc.code)
 
-    def shutdown(self):
+    def shutdown(self, exitcode=0, exitmsg=None):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
         logger.info('The salt minion is shut down')
+        self.exit(exitcode, exitmsg)
+    # pylint: enable=no-member
 
 
-class ProxyMinion(parsers.MinionOptionParser):  # pylint: disable=no-init
+class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
     '''
     Create a proxy minion server
     '''
-    def prepare(self, proxydetails):
+
+    # pylint: disable=no-member
+    def prepare(self):
         '''
         Run the preparation sequence required to start a salt minion.
 
@@ -324,6 +346,13 @@ class ProxyMinion(parsers.MinionOptionParser):  # pylint: disable=no-init
             super(YourSubClass, self).prepare()
         '''
         self.parse_args()
+
+        if not self.values.proxyid:
+            raise SaltSystemExit('salt-proxy requires --proxyid')
+
+        # Proxies get their ID from the command line.  This may need to change in
+        # the future.
+        self.config['id'] = self.values.proxyid
 
         try:
             if self.config['verify_env']:
@@ -344,55 +373,73 @@ class ProxyMinion(parsers.MinionOptionParser):  # pylint: disable=no-init
                     confd = os.path.join(
                         os.path.dirname(self.config['conf_file']), 'minion.d'
                     )
+
+                v_dirs = [
+                    self.config['pki_dir'],
+                    self.config['cachedir'],
+                    self.config['sock_dir'],
+                    self.config['extension_modules'],
+                    confd,
+                ]
+
+                if self.config.get('transport') == 'raet':
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'accepted'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'pending'))
+                    v_dirs.append(os.path.join(self.config['pki_dir'], 'rejected'))
+                    v_dirs.append(os.path.join(self.config['cachedir'], 'raet'))
+
                 verify_env(
-                    [
-                        self.config['pki_dir'],
-                        self.config['cachedir'],
-                        self.config['sock_dir'],
-                        self.config['extension_modules'],
-                        confd,
-                    ],
+                    v_dirs,
                     self.config['user'],
                     permissive=self.config['permissive_pki_access'],
                     pki_dir=self.config['pki_dir'],
                 )
-                if 'proxy_log' in proxydetails:
-                    logfile = proxydetails['proxy_log']
+                if 'proxy_log' in self.config:
+                    logfile = self.config['proxy_log']
                 else:
-                    logfile = None
+                    logfile = self.config['log_file']
                 if logfile is not None and not logfile.startswith(('tcp://',
                                                                    'udp://',
                                                                    'file://')):
                     # Logfile is not using Syslog, verify
+                    current_umask = os.umask(0o027)
                     verify_files([logfile], self.config['user'])
+                    os.umask(current_umask)
+
         except OSError as err:
             logger.exception('Failed to prepare salt environment')
-            sys.exit(err.errno)
+            self.shutdown(err.errno)
 
-        self.config['proxy'] = proxydetails
         self.setup_logfile_logger()
+        verify_log(self.config)
         logger.info(
             'Setting up a Salt Proxy Minion "{0}"'.format(
                 self.config['id']
             )
         )
         migrations.migrate_paths(self.config)
-        # Late import so logging works correctly
-        import salt.minion
-        # If the minion key has not been accepted, then Salt enters a loop
-        # waiting for it, if we daemonize later then the minion could halt
-        # the boot process waiting for a key to be accepted on the master.
-        # This is the latest safe place to daemonize
-        self.daemonize_if_required()
-        self.set_pidfile()
-        if isinstance(self.config.get('master'), list):
-            self.minion = salt.minion.MultiMinion(self.config)
-        else:
+        # TODO: AIO core is separate from transport
+        if self.config['transport'].lower() in ('zeromq', 'tcp'):
+            # Late import so logging works correctly
+            import salt.minion
+            # If the minion key has not been accepted, then Salt enters a loop
+            # waiting for it, if we daemonize later then the minion could halt
+            # the boot process waiting for a key to be accepted on the master.
+            # This is the latest safe place to daemonize
+            self.daemonize_if_required()
+            self.set_pidfile()
+            # TODO Proxy minions don't currently support failover
             self.minion = salt.minion.ProxyMinion(self.config)
+        else:
+            # For proxy minions, this doesn't work yet.
+            import salt.daemons.flo
+            self.daemonize_if_required()
+            self.set_pidfile()
+            self.minion = salt.daemons.flo.IofloMinion(self.config)
 
-    def start(self, proxydetails):
+    def start(self):
         '''
-        Start the actual minion.
+        Start the actual proxy minion.
 
         If sub-classed, don't **ever** forget to run:
 
@@ -400,26 +447,30 @@ class ProxyMinion(parsers.MinionOptionParser):  # pylint: disable=no-init
 
         NOTE: Run any required code before calling `super()`.
         '''
-        self.prepare(proxydetails)
         try:
-            self.minion.tune_in()
-            logger.info('The proxy minion is starting up')
+            self.prepare()
+            if check_user(self.config['user']):
+                logger.info('The proxy minion is starting up')
+                self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
             logger.warn('Stopping the Salt Proxy Minion')
             if isinstance(exc, KeyboardInterrupt):
                 logger.warn('Exiting on Ctrl-c')
+                self.shutdown()
             else:
                 logger.error(str(exc))
-        finally:
-            self.shutdown()
+                self.shutdown(exc.code)
 
-    def shutdown(self):
+    def shutdown(self, exitcode=0, exitmsg=None):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        if 'proxy' in self.minion.opts:
-            self.minion.opts['proxyobject'].shutdown(self.minion.opts)
+        if hasattr(self, 'minion') and 'proxymodule' in self.minion.opts:
+            proxy_fn = self.minion.opts['proxymodule'].loaded_base_name + '.shutdown'
+            self.minion.opts['proxymodule'][proxy_fn](self.minion.opts)
         logger.info('The proxy minion is shut down')
+        self.exit(exitcode, exitmsg)
+    # pylint: enable=no-member
 
 
 class Syndic(parsers.SyndicOptionParser):
@@ -457,9 +508,10 @@ class Syndic(parsers.SyndicOptionParser):
                     verify_files([logfile], self.config['user'])
         except OSError as err:
             logger.exception('Failed to prepare salt environment')
-            sys.exit(err.errno)
+            self.shutdown(err.errno)
 
         self.setup_logfile_logger()
+        verify_log(self.config)
         logger.info(
             'Setting up the Salt Syndic Minion "{0}"'.format(
                 self.config['id']
@@ -495,8 +547,9 @@ class Syndic(parsers.SyndicOptionParser):
                 logger.warn('Stopping the Salt Syndic Minion')
                 self.shutdown()
 
-    def shutdown(self):
+    def shutdown(self, exitcode=0, exitmsg=None):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
         logger.info('The salt syndic is shut down')
+        self.exit(exitcode, exitmsg)

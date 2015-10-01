@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2015.07.22"
+__ScriptVersion="2015.08.06"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -282,7 +282,7 @@ usage() {
       'install_<distro>_check_services' checks. You can also do this by
       touching /tmp/disable_salt_checks on the target host. Defaults \${BS_FALSE}
   -H  Use the specified http proxy for the installation
-  -Z  Enable external software source for newer ZeroMQ(Only available for RHEL/CentOS/Fedora based distributions)
+  -Z  Enable external software source for newer ZeroMQ(Only available for RHEL/CentOS/Fedora/Ubuntu based distributions)
 
 EOT
 }   # ----------  end of function usage  ----------
@@ -504,6 +504,7 @@ __exit_cleanup() {
         if [ $_KEEP_TEMP_FILES -eq $BS_FALSE ]; then
             # Clean up the checked out repository
             echodebug "Cleaning up the Salt Temporary Git Repository"
+            cd "${__SALT_GIT_CHECKOUT_PARENT_DIR}"
             rm -rf "${__SALT_GIT_CHECKOUT_DIR}"
         else
             echowarn "Not cleaning up the Salt Temporary git repository on request"
@@ -1326,14 +1327,8 @@ __check_end_of_life_versions() {
         ubuntu)
             # Ubuntu versions not supported
             #
-            #  < 10
-            #  = 10.10
-            #  = 11.04
-            #  = 11.10
-            if ([ "$DISTRO_MAJOR_VERSION" -eq 10 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]) || \
-               ([ "$DISTRO_MAJOR_VERSION" -eq 11 ] && [ "$DISTRO_MINOR_VERSION" -eq 04 ]) || \
-               ([ "$DISTRO_MAJOR_VERSION" -eq 11 ] && [ "$DISTRO_MINOR_VERSION" -eq 10 ]) || \
-               [ "$DISTRO_MAJOR_VERSION" -lt 10 ]; then
+            #  < 12.04
+            if [ "$DISTRO_MAJOR_VERSION" -lt 12 ]; then
                 echoerror "End of life distributions are not supported."
                 echoerror "Please consider upgrading to the next stable. See:"
                 echoerror "    https://wiki.ubuntu.com/Releases"
@@ -1766,14 +1761,20 @@ install_ubuntu_deps() {
     # Need python-apt for managing packages via Salt
     __PACKAGES="${__PACKAGES} python-apt"
 
-    echoinfo "Installing Python Requests/Chardet from Chris Lea's PPA repository"
-    if [ "$DISTRO_MAJOR_VERSION" -gt 11 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 11 ] && [ "$DISTRO_MINOR_VERSION" -gt 04 ]); then
-        # Above Ubuntu 11.04 add a -y flag
-        add-apt-repository -y "ppa:chris-lea/python-requests" || return 1
-        add-apt-repository -y "ppa:chris-lea/python-chardet" || return 1
-    else
-        add-apt-repository "ppa:chris-lea/python-requests" || return 1
-        add-apt-repository "ppa:chris-lea/python-chardet" || return 1
+    if [ "$DISTRO_MAJOR_VERSION" -lt 14 ]; then
+        echoinfo "Installing Python Requests/Chardet from Chris Lea's PPA repository"
+        if [ "$DISTRO_MAJOR_VERSION" -gt 11 ] || ([ "$DISTRO_MAJOR_VERSION" -eq 11 ] && [ "$DISTRO_MINOR_VERSION" -gt 04 ]); then
+            # Above Ubuntu 11.04 add a -y flag
+            add-apt-repository -y "ppa:chris-lea/python-requests" || return 1
+            add-apt-repository -y "ppa:chris-lea/python-chardet" || return 1
+            add-apt-repository -y "ppa:chris-lea/python-urllib3" || return 1
+            add-apt-repository -y "ppa:chris-lea/python-crypto" || return 1
+        else
+            add-apt-repository "ppa:chris-lea/python-requests" || return 1
+            add-apt-repository "ppa:chris-lea/python-chardet" || return 1
+            add-apt-repository "ppa:chris-lea/python-urllib3" || return 1
+            add-apt-repository "ppa:chris-lea/python-crypto" || return 1
+        fi
     fi
 
     __PACKAGES="${__PACKAGES} python-requests"
@@ -1839,13 +1840,17 @@ install_ubuntu_stable_deps() {
         add-apt-repository "ppa:$STABLE_PPA" || return 1
     fi
 
+    __PACKAGES=""
     if [ ! "$(echo "$STABLE_REV" | egrep '^(2015\.8|latest)$')" = "" ]; then
         # We need a recent tornado package
         __REQUIRED_TORNADO="tornado >= 4.0"
         check_pip_allowed "You need to allow pip based installations (-P) in order to install the python package '${__REQUIRED_TORNADO}'"
         if [ "$(which pip)" = "" ]; then
-            __apt_get_install_noinput python-setuptools python-pip
+            __PACKAGES="${__PACKAGES} python-setuptools python-pip"
         fi
+        __PACKAGES="${__PACKAGES} python-dev"
+        # shellcheck disable=SC2086
+        __apt_get_install_noinput $__PACKAGES
         pip install -U "${__REQUIRED_TORNADO}"
     fi
 
@@ -1887,14 +1892,18 @@ install_ubuntu_git_deps() {
 
     __git_clone_and_checkout || return 1
 
+    __PACKAGES=""
     if [ -f "${__SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
         # We're on the develop branch, install whichever tornado is on the requirements file
         __REQUIRED_TORNADO="$(grep tornado "${__SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
+            __PACKAGES="${__PACKAGES} python-dev"
             check_pip_allowed "You need to allow pip based installations (-P) in order to install the python package '${__REQUIRED_TORNADO}'"
             if [ "$(which pip)" = "" ]; then
-                __apt_get_install_noinput python-setuptools python-pip
+                __PACKAGES="${__PACKAGES} python-setuptools python-pip"
             fi
+            # shellcheck disable=SC2086
+            __apt_get_install_noinput $__PACKAGES
             pip install -U "${__REQUIRED_TORNADO}"
         fi
     fi
@@ -2389,6 +2398,7 @@ install_debian_git_deps() {
         __REQUIRED_TORNADO="$(grep tornado "${__SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             check_pip_allowed "You need to allow pip based installations (-P) in order to install the python package '${__REQUIRED_TORNADO}'"
+            __apt_get_install_noinput python-dev
             pip install -U "${__REQUIRED_TORNADO}" || return 1
         fi
     fi
@@ -3026,10 +3036,10 @@ install_centos_git() {
         _PYEXE=python2
     fi
     if [ -f "${__SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
-        $_PYEXE setup.py install --salt-config-dir="$_SALT_ETC_DIR" || \
-            $_PYEXE setup.py --salt-config-dir="$_SALT_ETC_DIR" install || return 1
+        $_PYEXE setup.py install --prefix=/usr --salt-config-dir="$_SALT_ETC_DIR" || \
+            $_PYEXE setup.py --prefix=/usr --salt-config-dir="$_SALT_ETC_DIR" install || return 1
     else
-        $_PYEXE setup.py install || return 1
+        $_PYEXE setup.py install --prefix=/usr || return 1
     fi
     return 0
 }

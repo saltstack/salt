@@ -21,12 +21,12 @@
 
 {% set script_files = [
     '_static/js/core.min.js',
-    '_static/js/webhelp.min_v1.4.1.js',
+    '_static/js/webhelp.min_v1.4.2.js',
 ] %}
 
 {% set css_files = [
     '_static/css/core.min.css',
-    '_static/css/webhelp.min_v1.4.1.css',
+    '_static/css/webhelp.min_v1.4.2.css',
 ] %}
 
 {%- macro relbar() %}
@@ -160,6 +160,12 @@
                             </div>
                             {% endif %}
 
+                            {% if build_type == "inactive" and on_saltstack %}
+                            <div id="dev-notification">
+                                <div class="alert alert-warning dev-notification-text releaselinks" role="alert"><i class="glyphicon glyphicon-cog"></i> You are viewing docs from a branch that is no longer active. You might want to view docs for the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a> release instead.</div>
+                            </div>
+                            {% endif %}
+
                             {%- block document %}
                             <div class="body-content">
                                 {% block body %} {% endblock %}
@@ -192,8 +198,11 @@
                                 {% elif build_type == "previous" %}
                                 <p>You are viewing docs for the previous stable release, {{ previous_release }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
 
+                                {% elif build_type == "inactive" %}
+                                <p>You are viewing docs for an inactive release, {{ previous_release }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
+
                                 {% elif build_type == "develop" %}
-                                <p>You are viewing docs built from a recent snapshot of the develop branch. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>, or to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release }}</a>.</p>
+                                <p>You are viewing docs built from a recent snapshot of the develop branch. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>.</p>
                                 {% endif %}
 
                                 <br>
@@ -203,12 +212,9 @@
 
                             <div class="col-sm-6">
 
-                                <a href="http://saltstack.com/saltstack-enterprise-4-0-now-with-gui/" target="_blank"><img class="nolightbox nav-banner" src="{{ pathto('_static/images/saltStack_enterprise_350x125.jpg', 1) }}"/></a>
+                                 <a href="http://saltstack.com/events/" target="_blank"><img class="nolightbox nav-banner center" src="{{ pathto('_static/images/saltStack_events_300x300.jpg', 1) }}"/></a>
 
-                                <br/><br/>
 
-                                <p><b>SaltStack Training</b></p>
-                                <p><a href="http://www.saltstack.com/training/">Now offering remote attendee training!</a></p>
                             </div>
                         </div>
                         {% endif %}
@@ -224,9 +230,9 @@
                 <a class="ss-logo" href="http://saltstack.com"><img width="250" height="63" class="nolightbox center" src="{{ pathto('_static/images/saltstack_logo.svg', 1) }}"></a>
 
                 {% if on_saltstack %}
-                <div class="versions {{ build_type }}">
+                <div class="releaselinks versions {{ build_type }}">
 
-                <a class="btn btn-secondary{% if build_type == "previous" %} active{% endif %}" id="previous"{% if build_type == "previous" %} title="View release notes"{% else %} title="Switch to docs for the previous stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ previous_release_dir }}/">{{ previous_release }}{% if build_type == "previous" %} <i class="glyphicon glyphicon-ok"></i>{%- endif %}</a>
+                <a class="btn btn-secondary{% if build_type == "previous" or build_type == "inactive" %} active{% endif %}" id="previous"{% if build_type == "previous" or build_type == "inactive" %} title="View release notes"{% else %} title="Switch to docs for the previous stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ previous_release_dir }}/">{{ previous_release }}{% if build_type == "previous" or build_type == "inactive" %} <i class="glyphicon glyphicon-ok"></i>{%- endif %}</a>
 
                 <a  class="btn btn-secondary{% if build_type == "latest" %} active{% endif %}" id="latest"{% if build_type == "latest" %} title="View release notes"{% else %} title="Switch to docs for the latest stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/latest/">{{ latest_release }}{% if build_type == "latest" %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
 
@@ -295,7 +301,7 @@
 
         <!--analytics-->
         <script type="text/javascript" language="javascript">llactid=23943</script>
-        <script type="text/javascript" language="javascript" src="http://t6.trackalyzer.com/trackalyze.js"></script>
+        <script type="text/javascript" language="javascript" src="https://trackalyzer.com/trackalyze_secure.js"></script>
 
         <script>
         var _gaq = _gaq || [];

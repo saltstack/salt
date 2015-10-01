@@ -2,9 +2,11 @@
 '''
 Return salt data via slack
 
-.. versionadded:: 2015.5.0
+..  versionadded:: 2015.5.0
 
 The following fields can be set in the minion conf file::
+
+.. code-block:: yaml
 
     slack.channel (required)
     slack.api_key (required)
@@ -12,10 +14,12 @@ The following fields can be set in the minion conf file::
     slack.as_user (required to see the profile picture of your bot)
     slack.profile (optional)
 
+
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
 the default location::
 
+.. code-block:: yaml
     slack.channel
     slack.api_key
     slack.username
@@ -23,6 +27,7 @@ the default location::
 
 Slack settings may also be configured as::
 
+.. code-block:: yaml
     slack:
         channel: RoomName
         api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

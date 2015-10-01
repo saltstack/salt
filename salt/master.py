@@ -6,6 +6,7 @@ involves preparing the three listeners and the workers needed by the master.
 
 # Import python libs
 from __future__ import absolute_import
+import copy
 import os
 import re
 import sys
@@ -13,7 +14,7 @@ import time
 import errno
 import logging
 import tempfile
-import multiprocessing
+import traceback
 
 # Import third party libs
 import zmq
@@ -48,6 +49,7 @@ import salt.fileserver
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
 import salt.transport.server
+import salt.log.setup
 import salt.utils.atomicfile
 import salt.utils.event
 import salt.utils.job
@@ -65,6 +67,7 @@ from salt.utils.debug import (
 )
 from salt.utils.event import tagify
 from salt.utils.master import ConnectedCache
+from salt.utils.process import MultiprocessingProcess
 
 try:
     import resource
@@ -125,18 +128,18 @@ class SMaster(object):
         return salt.daemons.masterapi.access_keys(self.opts)
 
 
-class Maintenance(multiprocessing.Process):
+class Maintenance(MultiprocessingProcess):
     '''
     A generalized maintenance process which performances maintenance
     routines.
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, **kwargs):
         '''
         Create a maintenance instance
 
         :param dict opts: The salt options
         '''
-        super(Maintenance, self).__init__()
+        super(Maintenance, self).__init__(**kwargs)
         self.opts = opts
         # How often do we perform the maintenance tasks
         self.loop_interval = int(self.opts['loop_interval'])
@@ -385,22 +388,11 @@ class Master(SMaster):
         errors = []
         critical_errors = []
 
-        if salt.utils.is_windows() and self.opts['user'] == 'root':
-            # 'root' doesn't typically exist on Windows. Use the current user
-            # home directory instead.
-            home = os.path.expanduser('~')
-        else:
-            home = os.path.expanduser('~' + self.opts['user'])
         try:
-            if salt.utils.is_windows() and not os.path.isdir(home):
-                # On Windows, Service account home directories may not
-                # initially exist. If this is the case, make sure the
-                # directory exists before continuing.
-                os.mkdir(home, 0o755)
-            os.chdir(home)
+            os.chdir('/')
         except OSError as err:
             errors.append(
-                'Cannot change to home directory {0} ({1})'.format(home, err)
+                'Cannot change to root directory ({1})'.format(err)
             )
 
         fileserver = salt.fileserver.Fileserver(self.opts)
@@ -419,13 +411,21 @@ class Master(SMaster):
         if not self.opts['fileserver_backend']:
             errors.append('No fileserver backends are configured')
 
-        if any('git' in ext_pillar
-               for ext_pillar in self.opts.get('ext_pillar', [])):
+        non_legacy_git_pillars = [
+            x for x in self.opts.get('ext_pillar', [])
+            if 'git' in x
+            and not isinstance(x['git'], six.string_types)
+        ]
+        if non_legacy_git_pillars:
+            new_opts = copy.deepcopy(self.opts)
+            new_opts['ext_pillar'] = non_legacy_git_pillars
             try:
                 # Init any values needed by the git ext pillar
-                salt.utils.gitfs.GitPillar(self.opts)
+                salt.utils.gitfs.GitPillar(new_opts)
             except FileserverConfigError as exc:
                 critical_errors.append(exc.strerror)
+            finally:
+                del new_opts
 
         if errors or critical_errors:
             for error in errors:
@@ -437,11 +437,12 @@ class Master(SMaster):
 
     # run_reqserver cannot be defined within a class method in order for it
     # to be picklable.
-    def run_reqserver(self):
+    def run_reqserver(self, **kwargs):
         reqserv = ReqServer(
             self.opts,
             self.key,
-            self.master_key)
+            self.master_key,
+            **kwargs)
         reqserv.run()
 
     def start(self):
@@ -450,7 +451,9 @@ class Master(SMaster):
         '''
         self._pre_flight()
         log.info(
-            'salt-master is starting as user {0!r}'.format(salt.utils.get_user())
+            'salt-master is starting as user \'{0}\''.format(
+                salt.utils.get_user()
+            )
         )
 
         enable_sigusr1_handler()
@@ -508,27 +511,32 @@ class Master(SMaster):
             time.sleep(2)
 
         log.info('Creating master request server process')
-        process_manager.add_process(self.run_reqserver)
+        kwargs = {}
+        if salt.utils.is_windows():
+            kwargs['log_queue'] = (
+                    salt.log.setup.get_multiprocessing_logging_queue())
+        process_manager.add_process(self.run_reqserver, kwargs=kwargs)
+
         try:
             process_manager.run()
         except KeyboardInterrupt:
             # Shut the master down gracefully on SIGINT
             log.warn('Stopping the Salt Master')
             process_manager.kill_children()
-            raise SystemExit('\nExiting on Ctrl-c')
+            log.warn('Exiting on Ctrl-c')
 
 
-class Halite(multiprocessing.Process):
+class Halite(MultiprocessingProcess):
     '''
     Manage the Halite server
     '''
-    def __init__(self, hopts):
+    def __init__(self, hopts, **kwargs):
         '''
         Create a halite instance
 
         :param dict hopts: The halite options
         '''
-        super(Halite, self).__init__()
+        super(Halite, self).__init__(**kwargs)
         self.hopts = hopts
 
     def run(self):
@@ -562,7 +570,7 @@ class ReqServer(object):
     Starts up the master request server, minions send results to this
     interface.
     '''
-    def __init__(self, opts, key, mkey):
+    def __init__(self, opts, key, mkey, log_queue=None):
         '''
         Create a request server
 
@@ -577,6 +585,7 @@ class ReqServer(object):
         self.master_key = mkey
         # Prepare the AES key
         self.key = key
+        self.log_queue = log_queue
 
     def __bind(self):
         '''
@@ -596,6 +605,10 @@ class ReqServer(object):
             chan.pre_fork(self.process_manager)
             req_channels.append(chan)
 
+        kwargs = {}
+        if salt.utils.is_windows():
+            kwargs['log_queue'] = self.log_queue
+
         for ind in range(int(self.opts['worker_threads'])):
             self.process_manager.add_process(MWorker,
                                              args=(self.opts,
@@ -603,8 +616,12 @@ class ReqServer(object):
                                                    self.key,
                                                    req_channels,
                                                    ),
+                                             kwargs=kwargs
                                              )
-        self.process_manager.run()
+        try:
+            self.process_manager.run()
+        except (KeyboardInterrupt, SystemExit):
+            self.process_manager.kill_children()
 
     def run(self):
         '''
@@ -613,7 +630,7 @@ class ReqServer(object):
         try:
             self.__bind()
         except KeyboardInterrupt:
-            log.warn('Stopping the Salt Master')
+            log.warn('Stopping the Salt Maste ReqServer')
             raise SystemExit('\nExiting on Ctrl-c')
 
     def destroy(self):
@@ -633,7 +650,7 @@ class ReqServer(object):
         self.destroy()
 
 
-class MWorker(multiprocessing.Process):
+class MWorker(MultiprocessingProcess):
     '''
     The worker multiprocess instance to manage the backend operations for the
     salt master.
@@ -642,7 +659,8 @@ class MWorker(multiprocessing.Process):
                  opts,
                  mkey,
                  key,
-                 req_channels):
+                 req_channels,
+                 **kwargs):
         '''
         Create a salt master worker process
 
@@ -653,7 +671,7 @@ class MWorker(multiprocessing.Process):
         :rtype: MWorker
         :return: Master worker
         '''
-        multiprocessing.Process.__init__(self)
+        MultiprocessingProcess.__init__(self, **kwargs)
         self.opts = opts
         self.req_channels = req_channels
 
@@ -667,7 +685,7 @@ class MWorker(multiprocessing.Process):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        multiprocessing.Process.__init__(self)
+        MultiprocessingProcess.__init__(self, log_queue=state['log_queue'])
         self.opts = state['opts']
         self.req_channels = state['req_channels']
         self.mkey = state['mkey']
@@ -681,6 +699,7 @@ class MWorker(multiprocessing.Process):
                 'mkey': self.mkey,
                 'key': self.key,
                 'k_mtime': self.k_mtime,
+                'log_queue': self.log_queue,
                 'secrets': SMaster.secrets}
 
     def __bind(self):
@@ -692,7 +711,10 @@ class MWorker(multiprocessing.Process):
         self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
-        self.io_loop.start()
+        try:
+            self.io_loop.start()
+        except KeyboardInterrupt:
+            self.io_loop.add_callback(self.io_loop.stop)
 
     @tornado.gen.coroutine
     def _handle_payload(self, payload):
@@ -905,17 +927,19 @@ class AESFuncs(object):
         A utility function to perform common verification steps.
 
         :param dict load: A payload received from a minion
-        :param list verify_keys: A list of strings that should be present in a given load
+        :param list verify_keys: A list of strings that should be present in a
+        given load
 
         :rtype: bool
         :rtype: dict
-        :return: The original load (except for the token) if the load can be verified. False if the load is invalid.
+        :return: The original load (except for the token) if the load can be
+        verified. False if the load is invalid.
         '''
         if any(key not in load for key in verify_keys):
             return False
         if 'tok' not in load:
             log.error(
-                'Received incomplete call from {0} for {1!r}, missing {2!r}'
+                'Received incomplete call from {0} for \'{1}\', missing \'{2}\''
                 .format(
                     load['id'],
                     inspect_stack()['co_name'],
@@ -964,11 +988,15 @@ class AESFuncs(object):
             if saltenv not in file_roots:
                 file_roots[saltenv] = []
         mopts['file_roots'] = file_roots
+        mopts['top_file_merging_strategy'] = self.opts['top_file_merging_strategy']
+        mopts['env_order'] = self.opts['env_order']
+        mopts['default_top'] = self.opts['default_top']
         if load.get('env_only'):
             return mopts
         mopts['renderer'] = self.opts['renderer']
         mopts['failhard'] = self.opts['failhard']
         mopts['state_top'] = self.opts['state_top']
+        mopts['state_top_saltenv'] = self.opts['state_top_saltenv']
         mopts['nodegroups'] = self.opts['nodegroups']
         mopts['state_auto_order'] = self.opts['state_auto_order']
         mopts['state_events'] = self.opts['state_events']
@@ -1062,12 +1090,13 @@ class AESFuncs(object):
             return False
         if 'tok' not in load:
             log.error(
-                'Received incomplete call from {0} for {1!r}, missing {2!r}'
-                .format(
+                'Received incomplete call from {0} for \'{1}\', missing '
+                '\'{2}\''.format(
                     load['id'],
                     inspect_stack()['co_name'],
                     'tok'
-                ))
+                )
+            )
             return False
         if not self.__verify_minion(load['id'], load['tok']):
             # The minion is not who it says it is!
@@ -1184,8 +1213,11 @@ class AESFuncs(object):
 
         :param dict load: The minion payload
         '''
-        salt.utils.job.store_job(
-            self.opts, load, event=self.event, mminion=self.mminion)
+        try:
+            salt.utils.job.store_job(
+                self.opts, load, event=self.event, mminion=self.mminion)
+        except salt.exception.SaltCacheError:
+            log.error('Could not store job information for load: {0}'.format(load))
 
     def _syndic_return(self, load):
         '''
@@ -1689,26 +1721,30 @@ class ClearFuncs(object):
         try:
             name = self.loadauth.load_name(clear_load)
             groups = self.loadauth.get_groups(clear_load)
-            if not ((name in self.opts['external_auth'][clear_load['eauth']]) |
-                    ('*' in self.opts['external_auth'][clear_load['eauth']])):
+            eauth_config = self.opts['external_auth'][clear_load['eauth']]
+            if '*' not in eauth_config and name not in eauth_config:
                 found = False
                 for group in groups:
-                    if "{0}%".format(group) in self.opts['external_auth'][clear_load['eauth']]:
+                    if "{0}%".format(group) in eauth_config:
                         found = True
                         break
                 if not found:
                     log.warning('Authentication failure of type "eauth" occurred.')
                     return ''
-                else:
-                    clear_load['groups'] = groups
-            if not self.loadauth.time_auth(clear_load):
+
+            clear_load['groups'] = groups
+            token = self.loadauth.mk_token(clear_load)
+            if not token:
                 log.warning('Authentication failure of type "eauth" occurred.')
                 return ''
-            return self.loadauth.mk_token(clear_load)
+            else:
+                return token
         except Exception as exc:
+            type_, value_, traceback_ = sys.exc_info()
             log.error(
                 'Exception occurred while authenticating: {0}'.format(exc)
             )
+            log.error(traceback.format_exception(type_, value_, traceback_))
             return ''
 
     def get_token(self, clear_load):
@@ -1752,40 +1788,46 @@ class ClearFuncs(object):
                     )
                 )
                 return ''
+
+            # Bail if the token is empty or if the eauth type specified is not allowed
             if not token or token['eauth'] not in self.opts['external_auth']:
                 log.warning('Authentication failure of type "token" occurred.')
                 return ''
-            if not ((token['name'] in self.opts['external_auth'][token['eauth']]) |
-                    ('*' in self.opts['external_auth'][token['eauth']])):
-                found = False
-                for group in token['groups']:
-                    if "{0}%".format(group) in self.opts['external_auth'][token['eauth']]:
-                        found = True
-                        break
-                if not found:
-                    log.warning('Authentication failure of type "token" occurred.')
-                    return ''
 
-            group_perm_keys = [item for item in self.opts['external_auth'][token['eauth']] if item.endswith('%')]  # The configured auth groups
+            # Fetch eauth config and collect users and groups configured for access
+            eauth_config = self.opts['external_auth'][token['eauth']]
+            eauth_users = []
+            eauth_groups = []
+            for entry in eauth_config:
+                if entry.endswith('%'):
+                    eauth_groups.append(entry.rstrip('%'))
+                else:
+                    eauth_users.append(entry)
 
-            # First we need to know if the user is allowed to proceed via any of their group memberships.
+            # If there are groups in the token, check if any of them are listed in the eauth config
             group_auth_match = False
-            for group_config in group_perm_keys:
-                group_config = group_config.rstrip('%')
-                for group in token['groups']:
-                    if group == group_config:
-                        group_auth_match = True
+            try:
+                if token.get('groups'):
+                    for group in token['groups']:
+                        if group in eauth_groups:
+                            group_auth_match = True
+                            break
+            except KeyError:
+                pass
+            if '*' not in eauth_users and token['name'] not in eauth_users and not group_auth_match:
+                log.warning('Authentication failure of type "token" occurred.')
+                return ''
 
+            # Compile list of authorized actions for the user
             auth_list = []
-
-            if '*' in self.opts['external_auth'][token['eauth']]:
-                auth_list.extend(self.opts['external_auth'][token['eauth']]['*'])
-            if token['name'] in self.opts['external_auth'][token['eauth']]:
-                auth_list.extend(self.opts['external_auth'][token['eauth']][token['name']])
+            # Add permissions for '*' or user-specific to the auth list
+            for user_key in ('*', token['name']):
+                auth_list.extend(eauth_config.get(user_key, []))
+            # Add any add'l permissions allowed by group membership
             if group_auth_match:
-                auth_list = self.ckminions.fill_auth_list_from_groups(self.opts['external_auth'][token['eauth']], token['groups'], auth_list)
+                auth_list = self.ckminions.fill_auth_list_from_groups(eauth_config, token['groups'], auth_list)
 
-            log.trace("compiled auth_list: {0}".format(auth_list))
+            log.trace("Compiled auth_list: {0}".format(auth_list))
 
             good = self.ckminions.auth_check(
                 auth_list,
@@ -1809,18 +1851,13 @@ class ClearFuncs(object):
                 )
                 return ''
             try:
-                # The username with which we are attempting to auth
-                name = self.loadauth.load_name(extra)
-                # The groups to which this user belongs
-                groups = self.loadauth.get_groups(extra)
-                # The configured auth groups
-                group_perm_keys = [
-                    item for item in self.opts['external_auth'][extra['eauth']]
-                    if item.endswith('%')
-                ]
+                name = self.loadauth.load_name(extra)  # The username we are attempting to auth with
+                groups = self.loadauth.get_groups(extra)  # The groups this user belongs to
+                if groups is None:
+                    groups = []
+                group_perm_keys = [item for item in self.opts['external_auth'][extra['eauth']] if item.endswith('%')]  # The configured auth groups
 
-                # First we need to know if the user is allowed to proceed via
-                # any of their group memberships.
+                # First we need to know if the user is allowed to proceed via any of their group memberships.
                 group_auth_match = False
                 for group_config in group_perm_keys:
                     group_config = group_config.rstrip('%')
@@ -1860,9 +1897,12 @@ class ClearFuncs(object):
                     return ''
 
             except Exception as exc:
+                type_, value_, traceback_ = sys.exc_info()
                 log.error(
                     'Exception occurred while authenticating: {0}'.format(exc)
                 )
+                log.error(traceback.format_exception(
+                    type_, value_, traceback_))
                 return ''
 
 #            auth_list = self.opts['external_auth'][extra['eauth']][name] if name in self.opts['external_auth'][extra['eauth']] else self.opts['external_auth'][extra['eauth']]['*']
@@ -2135,6 +2175,9 @@ class ClearFuncs(object):
 
             if 'metadata' in clear_load['kwargs']:
                 load['metadata'] = clear_load['kwargs'].get('metadata')
+
+            if 'module_executors' in clear_load['kwargs']:
+                load['module_executors'] = clear_load['kwargs'].get('module_executors')
 
         if 'user' in clear_load:
             log.info(

@@ -19,33 +19,46 @@ A REST API for Salt
 :client_libraries:
     - Java: https://github.com/SUSE/saltstack-netapi-client-java
     - Python: https://github.com/saltstack/pepper
+:setup:
+    All steps below are performed on the machine running the Salt Master
+    daemon. Configuration goes into the Master configuration file.
+
+    1.  Install ``salt-api``. (This step varies between OS and Linux distros.
+        Some package systems have a split package, others include salt-api in
+        the main Salt package. Ensure the ``salt-api --version`` output matches
+        the ``salt --version`` output.)
+    2.  Install CherryPy. (Read the version caveat in the section above.)
+    3.  Optional: generate self-signed SSL certificates.
+
+        Using a secure HTTPS connection is strongly recommended since Salt
+        eauth authentication credentials will be sent over the wire.
+
+        1.  Install the PyOpenSSL package.
+        2.  Generate a self-signed certificate using the
+            :py:func:`~salt.modules.tls.create_self_signed_cert` execution
+            function.
+
+            .. code-block:: bash
+
+                salt-call --local tls.create_self_signed_cert
+
+    4.  Edit the master config to create at least one external auth user or
+        group following the :ref:`full external auth instructions <acl-eauth>`.
+    5.  Edit the master config with the following production-ready example to
+        enable the ``rest_cherrypy`` module. (Adjust cert paths as needed, or
+        disable SSL (not recommended!).)
+
+        .. code-block:: yaml
+
+            rest_cherrypy:
+              port: 8000
+              ssl_crt: /etc/pki/tls/certs/localhost.crt
+              ssl_key: /etc/pki/tls/certs/localhost.key
+
+    6.  Restart the ``salt-master`` daemon.
+    7.  Start the ``salt-api`` daemon.
+
 :configuration:
-    All authentication is done through Salt's :ref:`external auth
-    <acl-eauth>` system which requires additional configuration not described
-    here.
-
-    Example production-ready configuration; add to the Salt master config file
-    and restart the ``salt-master`` and ``salt-api`` daemons:
-
-    .. code-block:: yaml
-
-        rest_cherrypy:
-          port: 8000
-          ssl_crt: /etc/pki/tls/certs/localhost.crt
-          ssl_key: /etc/pki/tls/certs/localhost.key
-
-    Using only a secure HTTPS connection is strongly recommended since Salt
-    authentication credentials will be sent over the wire.
-
-    A self-signed certificate can be generated using the
-    :py:func:`~salt.modules.tls.create_self_signed_cert` execution function.
-    Running this function requires pyOpenSSL and the ``salt-call`` script is
-    available in the ``salt-minion`` package.
-
-    .. code-block:: bash
-
-        salt-call --local tls.create_self_signed_cert
-
     All available configuration options are detailed below. These settings
     configure the CherryPy HTTP server and do not apply when using an external
     server such as Apache or Nginx.
@@ -118,24 +131,23 @@ The token may be sent in one of two ways:
 
   For example, using curl:
 
-  .. code-block:: bash
+    .. code-block:: bash
 
-      curl -sSk https://localhost:8000/login \
-            -H 'Accept: application/x-yaml' \
-            -d username=saltdev \
-            -d password=saltdev \
+        curl -sSk https://localhost:8000/login \\
+            -H 'Accept: application/x-yaml' \\
+            -d username=saltdev \\
+            -d password=saltdev \\
             -d eauth=auto
 
-  Copy the ``token`` value from the output and include it in subsequent
-  requests:
+Copy the ``token`` value from the output and include it in subsequent requests:
 
-  .. code-block:: bash
+    .. code-block:: bash
 
-      curl -sSk https://localhost:8000 \
-            -H 'Accept: application/x-yaml' \
-            -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\
-            -d client=local \
-            -d tgt='*' \
+        curl -sSk https://localhost:8000 \\
+            -H 'Accept: application/x-yaml' \\
+            -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\\
+            -d client=local \\
+            -d tgt='*' \\
             -d fun=test.ping
 
 * Sent via a cookie. This option is a convenience for HTTP clients that
@@ -146,19 +158,19 @@ The token may be sent in one of two ways:
   .. code-block:: bash
 
       # Write the cookie file:
-      curl -sSk https://localhost:8000/login \
-            -c ~/cookies.txt \
-            -H 'Accept: application/x-yaml' \
-            -d username=saltdev \
-            -d password=saltdev \
+      curl -sSk https://localhost:8000/login \\
+            -c ~/cookies.txt \\
+            -H 'Accept: application/x-yaml' \\
+            -d username=saltdev \\
+            -d password=saltdev \\
             -d eauth=auto
 
       # Read the cookie file:
-      curl -sSk https://localhost:8000 \
-            -b ~/cookies.txt \
-            -H 'Accept: application/x-yaml' \
-            -d client=local \
-            -d tgt='*' \
+      curl -sSk https://localhost:8000 \\
+            -b ~/cookies.txt \\
+            -H 'Accept: application/x-yaml' \\
+            -d client=local \\
+            -d tgt='*' \\
             -d fun=test.ping
 
 .. seealso:: You can bypass the session handling via the :py:class:`Run` URL.
@@ -349,6 +361,8 @@ def salt_api_acl_tool(username, request):
                         - 1.1.1.2
                     foo:
                         - 8.8.4.4
+                    bar:
+                        - '*'
 
     :param username: Username to check against the API.
     :type username: str
@@ -377,14 +391,14 @@ def salt_api_acl_tool(username, request):
         users = acl.get('users', {})
         if users:
             if username in users:
-                if ip in users[username]:
+                if ip in users[username] or '*' in users[username]:
                     logger.info(success_str.format(username, ip))
                     return True
                 else:
                     logger.info(failure_str.format(username, ip))
                     return False
             elif username not in users and '*' in users:
-                if ip in users['*']:
+                if ip in users['*'] or '*' in users['*']:
                     logger.info(success_str.format(username, ip))
                     return True
                 else:
@@ -889,7 +903,7 @@ class LowDataAdapter(object):
                     -d arg='du -sh .' \\
                     -d arg='/path/to/dir'
 
-            # Sending posiitonal args and Keyword args with JSON:
+            # Sending positional args and Keyword args with JSON:
             echo '[
                 {
                     "client": "local",
@@ -1065,6 +1079,9 @@ class Jobs(LowDataAdapter):
         .. http:get:: /jobs/(jid)
 
             List jobs or show a single job from the job cache.
+
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
 
             :status 200: |200|
             :status 401: |401|
@@ -1508,19 +1525,18 @@ class Login(LowDataAdapter):
         try:
             eauth = self.opts.get('external_auth', {}).get(token['eauth'], {})
 
-            if 'groups' in token:
+            # Get sum of '*' perms, user-specific perms, and group-specific perms
+            perms = eauth.get(token['name'], [])
+            perms.extend(eauth.get('*', []))
+
+            if 'groups' in token and token['groups'] is not False:
                 user_groups = set(token['groups'])
                 eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
 
-                perms = []
                 for group in user_groups & eauth_groups:
                     perms.extend(eauth['{0}%'.format(group)])
 
-                perms = perms or None
-            else:
-                perms = eauth.get(token['name'], eauth.get('*'))
-
-            if perms is None:
+            if not perms:
                 raise ValueError("Eauth permission list not found.")
         except (AttributeError, IndexError, KeyError, ValueError):
             logger.debug("Configuration for external_auth malformed for "
@@ -1905,21 +1921,21 @@ class WebsocketEndpoint(object):
 
         .. http:get:: /ws/(token)
 
-            :query format_events: The event stream will undergo server-side
-                formatting if the ``format_events`` URL parameter is included
-                in the request. This can be useful to avoid formatting on the
-                client-side:
+        :query format_events: The event stream will undergo server-side
+            formatting if the ``format_events`` URL parameter is included
+            in the request. This can be useful to avoid formatting on the
+            client-side:
 
-                .. code-block:: bash
+            .. code-block:: bash
 
-                    curl -NsS <...snip...> localhost:8000/ws?format_events
+                curl -NsS <...snip...> localhost:8000/ws?format_events
 
-            :reqheader X-Auth-Token: an authentication token from
-                :py:class:`~Login`.
+        :reqheader X-Auth-Token: an authentication token from
+            :py:class:`~Login`.
 
-            :status 101: switching to the websockets protocol
-            :status 401: |401|
-            :status 406: |406|
+        :status 101: switching to the websockets protocol
+        :status 401: |401|
+        :status 406: |406|
 
         **Example request:**
 

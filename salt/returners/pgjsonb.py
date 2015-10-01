@@ -56,7 +56,7 @@ Use the following Pg database schema:
     --
     DROP TABLE IF EXISTS jids;
     CREATE OR REPLACE TABLE jids (
-       jid varchar(255) NOT NULL primary key
+       jid varchar(255) NOT NULL primary key,
        load jsonb NOT NULL
     );
     CREATE INDEX idx_jids_jsonb on jids

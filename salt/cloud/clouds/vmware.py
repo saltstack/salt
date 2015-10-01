@@ -28,22 +28,24 @@ cloud configuration at
 
     my-vmware-config:
       driver: vmware
-      user: "DOMAIN\\user"
-      password: "verybadpass"
-      url: "vcenter01.domain.com"
+      user: 'DOMAIN\\user'
+      password: 'verybadpass'
+      url: '10.20.30.40'
 
-    vmware-vcenter02:
+    vcenter01:
       driver: vmware
-      user: "DOMAIN\\user"
-      password: "verybadpass"
-      url: "vcenter02.domain.com"
+      user: 'DOMAIN\\user'
+      password: 'verybadpass'
+      url: 'vcenter01.domain.com'
+      protocol: 'https'
+      port: 443
 
-    vmware-vcenter03:
+    vcenter02:
       driver: vmware
-      user: "DOMAIN\\user"
-      password: "verybadpass"
-      url: "vcenter03.domain.com"
-      protocol: "http"
+      user: 'DOMAIN\\user'
+      password: 'verybadpass'
+      url: 'vcenter02.domain.com'
+      protocol: 'http'
       port: 80
 
 .. note::
@@ -77,13 +79,12 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 
 # Attempt to import pyVim and pyVmomi libs
-HAS_LIBS = False
 try:
     from pyVim.connect import SmartConnect, Disconnect
     from pyVmomi import vim, vmodl
-    HAS_LIBS = True
+    HAS_PYVMOMI = True
 except Exception:
-    pass
+    HAS_PYVMOMI = False
 
 # Disable InsecureRequestWarning generated on python > 2.6
 try:
@@ -92,18 +93,22 @@ try:
 except Exception:
     pass
 
-# Import third party libs
 try:
     import salt.ext.six as six
+    HAS_SIX = True
 except ImportError:
     # Salt version <= 2014.7.0
     try:
         import six
     except ImportError:
-        HAS_LIBS = False
+        HAS_SIX = False
+
+IP_RE = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'vmware'
 
 
 # Only load in this module if the VMware configurations are in place
@@ -111,13 +116,13 @@ def __virtual__():
     '''
     Check for VMware configuration and if required libs are available.
     '''
-    if not HAS_LIBS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -126,8 +131,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'vmware',
+        __active_provider_name__ or __virtualname__,
         ('url', 'user', 'password',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'pyVmomi': HAS_PYVMOMI,
+        'six': HAS_SIX
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
@@ -202,11 +221,13 @@ def _get_si():
                     port=port
                 )
                 ssl._create_default_https_context = default_context
-            except:
-                err_msg = exc.msg if isinstance(exc, vim.fault.InvalidLogin) and hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the specified protocol or url or port'
+            except Exception as exc:
+                err_msg = exc.msg if hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the debug log for more information'
+                log.debug(exc)
                 raise SaltCloudSystemExit(err_msg)
         else:
-            err_msg = exc.msg if isinstance(exc, vim.fault.InvalidLogin) and hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the specified protocol or url or port'
+            err_msg = exc.msg if hasattr(exc, 'msg') else 'Could not connect to the specified vCenter server. Please check the debug log for more information'
+            log.debug(exc)
             raise SaltCloudSystemExit(err_msg)
 
     atexit.register(Disconnect, si)
@@ -346,7 +367,7 @@ def _get_network_adapter_type(adapter_type):
         return vim.vm.device.VirtualE1000e()
 
 
-def _edit_existing_network_adapter_helper(network_adapter, new_network_name, adapter_type, switch_type):
+def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_type, switch_type):
     adapter_type.strip().lower()
     switch_type.strip().lower()
 
@@ -451,7 +472,7 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     return network_spec
 
 
-def _edit_existing_scsi_adapter_helper(scsi_adapter, bus_sharing):
+def _edit_existing_scsi_adapter(scsi_adapter, bus_sharing):
     scsi_adapter.sharedBus = bus_sharing
     scsi_spec = vim.vm.device.VirtualDeviceSpec()
     scsi_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
@@ -507,6 +528,28 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     return scsi_spec
 
 
+def _add_new_ide_adapter_helper(ide_adapter_label, properties, bus_number):
+    '''
+    Helper function for adding new IDE controllers
+
+    .. versionadded:: Boron
+    '''
+    random_key = randint(-5050, -5000)
+
+    ide_spec = vim.vm.device.VirtualDeviceSpec()
+    ide_spec.device = vim.vm.device.VirtualIDEController()
+
+    ide_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
+
+    ide_spec.device.key = random_key
+    ide_spec.device.busNumber = bus_number
+    ide_spec.device.deviceInfo = vim.Description()
+    ide_spec.device.deviceInfo.label = ide_adapter_label
+    ide_spec.device.deviceInfo.summary = "IDE"
+
+    return ide_spec
+
+
 def _set_cd_or_dvd_backing_type(drive, device_type, mode, iso_path):
     if device_type == "datastore_iso_file":
         drive.backing = vim.vm.device.VirtualCdrom.IsoBackingInfo()
@@ -530,7 +573,7 @@ def _set_cd_or_dvd_backing_type(drive, device_type, mode, iso_path):
     return drive
 
 
-def _edit_existing_cd_or_dvd_drive_helper(drive, device_type, mode, iso_path):
+def _edit_existing_cd_or_dvd_drive(drive, device_type, mode, iso_path):
     device_type.strip().lower()
     mode.strip().lower()
 
@@ -573,7 +616,7 @@ def _add_new_cd_or_dvd_drive_helper(drive_label, controller_key, device_type, mo
     return drive_spec
 
 
-def _set_network_adapter_mapping_helper(adapter_specs):
+def _set_network_adapter_mapping(adapter_specs):
     adapter_mapping = vim.vm.customization.AdapterMapping()
     adapter_mapping.adapter = vim.vm.customization.IPSettings()
 
@@ -594,91 +637,83 @@ def _set_network_adapter_mapping_helper(adapter_specs):
     return adapter_mapping
 
 
-def _manage_devices(devices, vm):
+def _manage_devices(devices, vm=None):
     unit_number = 0
     bus_number = 0
     device_specs = []
     existing_disks_label = []
     existing_scsi_adapters_label = []
+    existing_ide_adapters_label = []
     existing_network_adapters_label = []
     existing_cd_drives_label = []
     ide_controllers = {}
     nics_map = []
 
-    # loop through all the devices the vm/template has
-    # check if the device needs to be created or configured
-    for device in vm.config.hardware.device:
-        if isinstance(device, vim.vm.device.VirtualDisk):
-            # this is a hard disk
-            if 'disk' in list(devices.keys()):
-                # there is atleast one disk specified to be created/configured
-                unit_number += 1
-                existing_disks_label.append(device.deviceInfo.label)
-                if device.deviceInfo.label in list(devices['disk'].keys()):
-                    size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
-                    size_kb = int(size_gb * 1024.0 * 1024.0)
-                    if device.capacityInKB < size_kb:
-                        # expand the disk
-                        disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
-                        device_specs.append(disk_spec)
+    # this would be None when we aren't cloning a VM
+    if vm:
+        # loop through all the devices the vm/template has
+        # check if the device needs to be created or configured
+        for device in vm.config.hardware.device:
+            if isinstance(device, vim.vm.device.VirtualDisk):
+                # this is a hard disk
+                if 'disk' in list(devices.keys()):
+                    # there is atleast one disk specified to be created/configured
+                    unit_number += 1
+                    existing_disks_label.append(device.deviceInfo.label)
+                    if device.deviceInfo.label in list(devices['disk'].keys()):
+                        size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
+                        size_kb = int(size_gb * 1024.0 * 1024.0)
+                        if device.capacityInKB < size_kb:
+                            # expand the disk
+                            disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
+                            device_specs.append(disk_spec)
 
-        elif isinstance(device.backing, vim.vm.device.VirtualEthernetCard.NetworkBackingInfo) or isinstance(device.backing, vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
-            # this is a network adapter
-            if 'network' in list(devices.keys()):
-                # there is atleast one network adapter specified to be created/configured
-                existing_network_adapters_label.append(device.deviceInfo.label)
-                if device.deviceInfo.label in list(devices['network'].keys()):
-                    network_name = devices['network'][device.deviceInfo.label]['name']
-                    adapter_type = devices['network'][device.deviceInfo.label]['adapter_type'] if 'adapter_type' in devices['network'][device.deviceInfo.label] else ''
-                    switch_type = devices['network'][device.deviceInfo.label]['switch_type'] if 'switch_type' in devices['network'][device.deviceInfo.label] else ''
-                    network_spec = _edit_existing_network_adapter_helper(device, network_name, adapter_type, switch_type)
-                    adapter_mapping = _set_network_adapter_mapping_helper(devices['network'][device.deviceInfo.label])
-                    device_specs.append(network_spec)
-                    nics_map.append(adapter_mapping)
+            elif isinstance(device.backing, vim.vm.device.VirtualEthernetCard.NetworkBackingInfo) or isinstance(device.backing, vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
+                # this is a network adapter
+                if 'network' in list(devices.keys()):
+                    # there is atleast one network adapter specified to be created/configured
+                    existing_network_adapters_label.append(device.deviceInfo.label)
+                    if device.deviceInfo.label in list(devices['network'].keys()):
+                        network_name = devices['network'][device.deviceInfo.label]['name']
+                        adapter_type = devices['network'][device.deviceInfo.label]['adapter_type'] if 'adapter_type' in devices['network'][device.deviceInfo.label] else ''
+                        switch_type = devices['network'][device.deviceInfo.label]['switch_type'] if 'switch_type' in devices['network'][device.deviceInfo.label] else ''
+                        network_spec = _edit_existing_network_adapter(device, network_name, adapter_type, switch_type)
+                        adapter_mapping = _set_network_adapter_mapping(devices['network'][device.deviceInfo.label])
+                        device_specs.append(network_spec)
+                        nics_map.append(adapter_mapping)
 
-        elif hasattr(device, 'scsiCtlrUnitNumber'):
-            # this is a scsi adapter
-            if 'scsi' in list(devices.keys()):
-                # there is atleast one scsi adapter specified to be created/configured
-                bus_number += 1
-                existing_scsi_adapters_label.append(device.deviceInfo.label)
-                if device.deviceInfo.label in list(devices['scsi'].keys()):
-                    # Modify the existing SCSI adapter
-                    scsi_adapter_properties = devices['scsi'][device.deviceInfo.label]
-                    bus_sharing = scsi_adapter_properties['bus_sharing'].strip().lower() if 'bus_sharing' in scsi_adapter_properties else None
-                    if bus_sharing and bus_sharing in ['virtual', 'physical', 'no']:
-                        bus_sharing = '{0}Sharing'.format(bus_sharing)
-                        if bus_sharing != device.sharedBus:
-                            # Only edit the SCSI adapter if bus_sharing is different
-                            scsi_spec = _edit_existing_scsi_adapter_helper(device, bus_sharing)
-                            device_specs.append(scsi_spec)
+            elif hasattr(device, 'scsiCtlrUnitNumber'):
+                # this is a scsi adapter
+                if 'scsi' in list(devices.keys()):
+                    # there is atleast one scsi adapter specified to be created/configured
+                    bus_number += 1
+                    existing_scsi_adapters_label.append(device.deviceInfo.label)
+                    if device.deviceInfo.label in list(devices['scsi'].keys()):
+                        # Modify the existing SCSI adapter
+                        scsi_adapter_properties = devices['scsi'][device.deviceInfo.label]
+                        bus_sharing = scsi_adapter_properties['bus_sharing'].strip().lower() if 'bus_sharing' in scsi_adapter_properties else None
+                        if bus_sharing and bus_sharing in ['virtual', 'physical', 'no']:
+                            bus_sharing = '{0}Sharing'.format(bus_sharing)
+                            if bus_sharing != device.sharedBus:
+                                # Only edit the SCSI adapter if bus_sharing is different
+                                scsi_spec = _edit_existing_scsi_adapter(device, bus_sharing)
+                                device_specs.append(scsi_spec)
 
-        elif isinstance(device, vim.vm.device.VirtualCdrom):
-            # this is a cd/dvd drive
-            if 'cd' in list(devices.keys()):
-                # there is atleast one cd/dvd drive specified to be created/configured
-                existing_cd_drives_label.append(device.deviceInfo.label)
-                if device.deviceInfo.label in list(devices['cd'].keys()):
-                    device_type = devices['cd'][device.deviceInfo.label]['device_type'] if 'device_type' in devices['cd'][device.deviceInfo.label] else ''
-                    mode = devices['cd'][device.deviceInfo.label]['mode'] if 'mode' in devices['cd'][device.deviceInfo.label] else ''
-                    iso_path = devices['cd'][device.deviceInfo.label]['iso_path'] if 'iso_path' in devices['cd'][device.deviceInfo.label] else ''
-                    cd_drive_spec = _edit_existing_cd_or_dvd_drive_helper(device, device_type, mode, iso_path)
-                    device_specs.append(cd_drive_spec)
+            elif isinstance(device, vim.vm.device.VirtualCdrom):
+                # this is a cd/dvd drive
+                if 'cd' in list(devices.keys()):
+                    # there is atleast one cd/dvd drive specified to be created/configured
+                    existing_cd_drives_label.append(device.deviceInfo.label)
+                    if device.deviceInfo.label in list(devices['cd'].keys()):
+                        device_type = devices['cd'][device.deviceInfo.label]['device_type'] if 'device_type' in devices['cd'][device.deviceInfo.label] else ''
+                        mode = devices['cd'][device.deviceInfo.label]['mode'] if 'mode' in devices['cd'][device.deviceInfo.label] else ''
+                        iso_path = devices['cd'][device.deviceInfo.label]['iso_path'] if 'iso_path' in devices['cd'][device.deviceInfo.label] else ''
+                        cd_drive_spec = _edit_existing_cd_or_dvd_drive(device, device_type, mode, iso_path)
+                        device_specs.append(cd_drive_spec)
 
-        elif isinstance(device, vim.vm.device.VirtualIDEController):
-            # this is a controller to add new cd drives to
-            ide_controllers[device.key] = len(device.device)
-
-    if 'disk' in list(devices.keys()):
-        disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
-        disks_to_create.sort()
-        log.debug("Hard disks to create: {0}".format(disks_to_create))
-        for disk_label in disks_to_create:
-            # create the disk
-            size_gb = float(devices['disk'][disk_label]['size'])
-            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number)
-            device_specs.append(disk_spec)
-            unit_number += 1
+            elif isinstance(device, vim.vm.device.VirtualIDEController):
+                # this is a controller to add new cd drives to
+                ide_controllers[device.key] = len(device.device)
 
     if 'network' in list(devices.keys()):
         network_adapters_to_create = list(set(devices['network'].keys()) - set(existing_network_adapters_label))
@@ -690,7 +725,7 @@ def _manage_devices(devices, vm):
             switch_type = devices['network'][network_adapter_label]['switch_type'] if 'switch_type' in devices['network'][network_adapter_label] else ''
             # create the network adapter
             network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type)
-            adapter_mapping = _set_network_adapter_mapping_helper(devices['network'][network_adapter_label])
+            adapter_mapping = _set_network_adapter_mapping(devices['network'][network_adapter_label])
             device_specs.append(network_spec)
             nics_map.append(adapter_mapping)
 
@@ -705,6 +740,34 @@ def _manage_devices(devices, vm):
             device_specs.append(scsi_spec)
             bus_number += 1
 
+    if 'disk' in list(devices.keys()):
+        disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
+        disks_to_create.sort()
+        log.debug("Hard disks to create: {0}".format(disks_to_create))
+        for disk_label in disks_to_create:
+            # create the disk
+            size_gb = float(devices['disk'][disk_label]['size'])
+            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number)
+            # When creating both the controller and the disk at the same time we need the randomly
+            # assigned (temporary) key of the newly created controller
+            if 'controller' in devices['disk'][disk_label]:
+                for spec in device_specs:
+                    if spec.device.deviceInfo.label == devices['disk'][disk_label]['controller']:
+                        disk_spec.device.controllerKey = spec.device.key
+
+            device_specs.append(disk_spec)
+            unit_number += 1
+
+    if 'ide' in list(devices.keys()):
+        ide_adapters_to_create = list(set(devices['ide'].keys()) - set(existing_ide_adapters_label))
+        ide_adapters_to_create.sort()
+        log.debug('IDE devices to create: {0}'.format(ide_adapters_to_create))
+        for ide_adapter_label in ide_adapters_to_create:
+            # create the ide adapter
+            ide_spec = _add_new_ide_adapter_helper(ide_adapter_label, None, bus_number)
+            device_specs.append(ide_spec)
+            bus_number += 1
+
     if 'cd' in list(devices.keys()):
         cd_drives_to_create = list(set(devices['cd'].keys()) - set(existing_cd_drives_label))
         cd_drives_to_create.sort()
@@ -714,6 +777,14 @@ def _manage_devices(devices, vm):
             device_type = devices['cd'][cd_drive_label]['device_type'] if 'device_type' in devices['cd'][cd_drive_label] else ''
             mode = devices['cd'][cd_drive_label]['mode'] if 'mode' in devices['cd'][cd_drive_label] else ''
             iso_path = devices['cd'][cd_drive_label]['iso_path'] if 'iso_path' in devices['cd'][cd_drive_label] else ''
+            # When creating both the controller and the disk at the same time we need the randomly
+            # assigned (temporary) key of the newly created controller
+            if 'controller' in devices['cd'][cd_drive_label]:
+                for spec in device_specs:
+                    if spec.device.deviceInfo.label == devices['cd'][cd_drive_label]['controller']:
+                        controller_key = spec.device.key
+                        ide_controllers[controller_key] = 0
+
             for ide_controller_key, num_devices in six.iteritems(ide_controllers):
                 if num_devices < 2:
                     controller_key = ide_controller_key
@@ -735,11 +806,10 @@ def _manage_devices(devices, vm):
     return ret
 
 
-def _wait_for_vmware_tools(vm_ref, max_wait_minute):
+def _wait_for_vmware_tools(vm_ref, max_wait):
     time_counter = 0
     starttime = time.time()
-    max_wait_second = int(max_wait_minute * 60)
-    while time_counter < max_wait_second:
+    while time_counter < max_wait:
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting for VMware tools to be running [{1} s]".format(vm_ref.name, time_counter))
         if str(vm_ref.summary.guest.toolsRunningStatus) == "guestToolsRunning":
@@ -748,38 +818,36 @@ def _wait_for_vmware_tools(vm_ref, max_wait_minute):
 
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
-    log.warning("[ {0} ] Timeout Reached. VMware tools still not running after waiting for {1} minutes".format(vm_ref.name, max_wait_minute))
+    log.warning("[ {0} ] Timeout Reached. VMware tools still not running after waiting for {1} seconds".format(vm_ref.name, max_wait))
     return False
 
 
-def _wait_for_ip(vm_ref, max_wait_minute):
-    max_wait_minute_vmware_tools = max_wait_minute - 5
-    max_wait_minute_ip = max_wait_minute - max_wait_minute_vmware_tools
-    vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_minute_vmware_tools)
+def _wait_for_ip(vm_ref, max_wait):
+    max_wait_vmware_tools = max_wait
+    max_wait_ip = max_wait
+    vmware_tools_status = _wait_for_vmware_tools(vm_ref, max_wait_vmware_tools)
     if not vmware_tools_status:
         return False
 
     time_counter = 0
     starttime = time.time()
-    max_wait_second = int(max_wait_minute_ip * 60)
-    while time_counter < max_wait_second:
+    while time_counter < max_wait_ip:
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting to retrieve IPv4 information [{1} s]".format(vm_ref.name, time_counter))
 
-        if vm_ref.summary.guest.ipAddress:
-            if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
-                log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
-                return vm_ref.summary.guest.ipAddress
+        if vm_ref.summary.guest.ipAddress and match(IP_RE, vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
+            log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
+            return vm_ref.summary.guest.ipAddress
 
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
-                    if match(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$', current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
+                    if match(IP_RE, current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
                         log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
                         return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
-    log.warning("[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} minutes".format(vm_ref.name, max_wait_minute_ip))
+    log.warning("[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} seconds".format(vm_ref.name, max_wait_ip))
     return False
 
 
@@ -843,69 +911,157 @@ def _format_instance_info_select(vm, selection):
         vm_select_info['id'] = vm["name"]
 
     if 'image' in selection:
-        vm_select_info['image'] = "{0} (Detected)".format(vm["config.guestFullName"])
+        vm_select_info['image'] = "{0} (Detected)".format(vm["config.guestFullName"]) if "config.guestFullName" in vm else "N/A"
 
     if 'size' in selection:
-        vm_select_info['size'] = u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"])
+        cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
+        ram = "{0} MB".format(vm["config.hardware.memoryMB"]) if "config.hardware.memoryMB" in vm else "N/A"
+        vm_select_info['size'] = u"cpu: {0}\nram: {1}".format(cpu, ram)
 
     if 'state' in selection:
-        vm_select_info['state'] = str(vm["summary.runtime.powerState"])
+        vm_select_info['state'] = str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A"
 
     if 'guest_id' in selection:
-        vm_select_info['guest_id'] = vm["config.guestId"]
+        vm_select_info['guest_id'] = vm["config.guestId"] if "config.guestId" in vm else "N/A"
 
     if 'hostname' in selection:
         vm_select_info['hostname'] = vm["object"].guest.hostName
 
     if 'path' in selection:
-        vm_select_info['path'] = vm["config.files.vmPathName"]
+        vm_select_info['path'] = vm["config.files.vmPathName"] if "config.files.vmPathName" in vm else "N/A"
 
     if 'tools_status' in selection:
         vm_select_info['tools_status'] = str(vm["guest.toolsStatus"]) if "guest.toolsStatus" in vm else "N/A"
 
-    if ('private_ips' or 'mac_address' or 'networks') in selection:
+    if 'private_ips' in selection or 'networks' in selection:
         network_full_info = {}
         ip_addresses = []
-        mac_addresses = []
 
-        for net in vm["guest.net"]:
-            network_full_info[net.network] = {
-                'connected': net.connected,
-                'ip_addresses': net.ipAddress,
-                'mac_address': net.macAddress
-            }
-            ip_addresses.extend(net.ipAddress)
-            mac_addresses.append(net.macAddress)
+        if "guest.net" in vm:
+            for net in vm["guest.net"]:
+                network_full_info[net.network] = {
+                    'connected': net.connected,
+                    'ip_addresses': net.ipAddress,
+                    'mac_address': net.macAddress
+                }
+                ip_addresses.extend(net.ipAddress)
 
         if 'private_ips' in selection:
             vm_select_info['private_ips'] = ip_addresses
 
-        if 'mac_address' in selection:
-            vm_select_info['mac_address'] = mac_addresses
-
         if 'networks' in selection:
             vm_select_info['networks'] = network_full_info
 
-    if 'devices' in selection:
+    if 'devices' in selection or 'mac_address' in selection or 'mac_addresses' in selection:
         device_full_info = {}
+        device_mac_addresses = []
+        if "config.hardware.device" in vm:
+            for device in vm["config.hardware.device"]:
+                device_full_info[device.deviceInfo.label] = {}
+                if 'devices' in selection:
+                    device_full_info[device.deviceInfo.label]['key'] = device.key,
+                    device_full_info[device.deviceInfo.label]['label'] = device.deviceInfo.label,
+                    device_full_info[device.deviceInfo.label]['summary'] = device.deviceInfo.summary,
+                    device_full_info[device.deviceInfo.label]['type'] = type(device).__name__.rsplit(".", 1)[1]
+
+                    if device.unitNumber:
+                        device_full_info[device.deviceInfo.label]['unitNumber'] = device.unitNumber
+
+                    if hasattr(device, 'connectable') and device.connectable:
+                        device_full_info[device.deviceInfo.label]['startConnected'] = device.connectable.startConnected
+                        device_full_info[device.deviceInfo.label]['allowGuestControl'] = device.connectable.allowGuestControl
+                        device_full_info[device.deviceInfo.label]['connected'] = device.connectable.connected
+                        device_full_info[device.deviceInfo.label]['status'] = device.connectable.status
+
+                    if hasattr(device, 'controllerKey') and device.controllerKey:
+                        device_full_info[device.deviceInfo.label]['controllerKey'] = device.controllerKey
+
+                    if hasattr(device, 'addressType'):
+                        device_full_info[device.deviceInfo.label]['addressType'] = device.addressType
+
+                    if hasattr(device, 'busNumber'):
+                        device_full_info[device.deviceInfo.label]['busNumber'] = device.busNumber
+
+                    if hasattr(device, 'device'):
+                        device_full_info[device.deviceInfo.label]['deviceKeys'] = device.device
+
+                    if hasattr(device, 'videoRamSizeInKB'):
+                        device_full_info[device.deviceInfo.label]['videoRamSizeInKB'] = device.videoRamSizeInKB
+
+                    if isinstance(device, vim.vm.device.VirtualDisk):
+                        device_full_info[device.deviceInfo.label]['capacityInKB'] = device.capacityInKB
+                        device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
+                        device_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
+
+                if hasattr(device, 'macAddress'):
+                    device_full_info[device.deviceInfo.label]['macAddress'] = device.macAddress
+                    device_mac_addresses.append(device.macAddress)
+
+        if 'devices' in selection:
+            vm_select_info['devices'] = device_full_info
+
+        if 'mac_address' in selection or 'mac_addresses' in selection:
+            vm_select_info['mac_addresses'] = device_mac_addresses
+
+    if 'storage' in selection:
+        storage_full_info = {
+            'committed': int(vm["summary.storage.committed"]) if "summary.storage.committed" in vm else "N/A",
+            'uncommitted': int(vm["summary.storage.uncommitted"]) if "summary.storage.uncommitted" in vm else "N/A",
+            'unshared': int(vm["summary.storage.unshared"]) if "summary.storage.unshared" in vm else "N/A"
+        }
+        vm_select_info['storage'] = storage_full_info
+
+    if 'files' in selection:
+        file_full_info = {}
+        if "layoutEx.file" in file:
+            for file in vm["layoutEx.file"]:
+                file_full_info[file.key] = {
+                    'key': file.key,
+                    'name': file.name,
+                    'size': file.size,
+                    'type': file.type
+                }
+        vm_select_info['files'] = file_full_info
+
+    return vm_select_info
+
+
+def _format_instance_info(vm):
+    device_full_info = {}
+    device_mac_addresses = []
+    if "config.hardware.device" in vm:
         for device in vm["config.hardware.device"]:
             device_full_info[device.deviceInfo.label] = {
                 'key': device.key,
                 'label': device.deviceInfo.label,
                 'summary': device.deviceInfo.summary,
-                'type': type(device).__name__.rsplit(".", 1)[1],
-                'unitNumber': device.unitNumber
+                'type': type(device).__name__.rsplit(".", 1)[1]
             }
 
-            if hasattr(device.backing, 'network'):
+            if device.unitNumber:
+                device_full_info[device.deviceInfo.label]['unitNumber'] = device.unitNumber
+
+            if hasattr(device, 'connectable') and device.connectable:
+                device_full_info[device.deviceInfo.label]['startConnected'] = device.connectable.startConnected
+                device_full_info[device.deviceInfo.label]['allowGuestControl'] = device.connectable.allowGuestControl
+                device_full_info[device.deviceInfo.label]['connected'] = device.connectable.connected
+                device_full_info[device.deviceInfo.label]['status'] = device.connectable.status
+
+            if hasattr(device, 'controllerKey') and device.controllerKey:
+                device_full_info[device.deviceInfo.label]['controllerKey'] = device.controllerKey
+
+            if hasattr(device, 'addressType'):
                 device_full_info[device.deviceInfo.label]['addressType'] = device.addressType
+
+            if hasattr(device, 'macAddress'):
                 device_full_info[device.deviceInfo.label]['macAddress'] = device.macAddress
+                device_mac_addresses.append(device.macAddress)
 
             if hasattr(device, 'busNumber'):
                 device_full_info[device.deviceInfo.label]['busNumber'] = device.busNumber
 
             if hasattr(device, 'device'):
-                device_full_info[device.deviceInfo.label]['devices'] = device.device
+                device_full_info[device.deviceInfo.label]['deviceKeys'] = device.device
 
             if hasattr(device, 'videoRamSizeInKB'):
                 device_full_info[device.deviceInfo.label]['videoRamSizeInKB'] = device.videoRamSizeInKB
@@ -915,18 +1071,14 @@ def _format_instance_info_select(vm, selection):
                 device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
                 device_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
 
-        vm_select_info['devices'] = device_full_info
+    storage_full_info = {
+        'committed': int(vm["summary.storage.committed"]) if "summary.storage.committed" in vm else "N/A",
+        'uncommitted': int(vm["summary.storage.uncommitted"]) if "summary.storage.uncommitted" in vm else "N/A",
+        'unshared': int(vm["summary.storage.unshared"]) if "summary.storage.unshared" in vm else "N/A"
+    }
 
-    if 'storage' in selection:
-        storage_full_info = {
-            'committed': vm["summary.storage.committed"],
-            'uncommitted': vm["summary.storage.uncommitted"],
-            'unshared': vm["summary.storage.unshared"]
-        }
-        vm_select_info['storage'] = storage_full_info
-
-    if 'files' in selection:
-        file_full_info = {}
+    file_full_info = {}
+    if "layoutEx.file" in vm:
         for file in vm["layoutEx.file"]:
             file_full_info[file.key] = {
                 'key': file.key,
@@ -934,82 +1086,35 @@ def _format_instance_info_select(vm, selection):
                 'size': file.size,
                 'type': file.type
             }
-        vm_select_info['files'] = file_full_info
-
-    return vm_select_info
-
-
-def _format_instance_info(vm):
-    device_full_info = {}
-    for device in vm["config.hardware.device"]:
-        device_full_info[device.deviceInfo.label] = {
-            'key': device.key,
-            'label': device.deviceInfo.label,
-            'summary': device.deviceInfo.summary,
-            'type': type(device).__name__.rsplit(".", 1)[1],
-            'unitNumber': device.unitNumber
-        }
-
-        if hasattr(device.backing, 'network'):
-            device_full_info[device.deviceInfo.label]['addressType'] = device.addressType
-            device_full_info[device.deviceInfo.label]['macAddress'] = device.macAddress
-
-        if hasattr(device, 'busNumber'):
-            device_full_info[device.deviceInfo.label]['busNumber'] = device.busNumber
-
-        if hasattr(device, 'device'):
-            device_full_info[device.deviceInfo.label]['devices'] = device.device
-
-        if hasattr(device, 'videoRamSizeInKB'):
-            device_full_info[device.deviceInfo.label]['videoRamSizeInKB'] = device.videoRamSizeInKB
-
-        if isinstance(device, vim.vm.device.VirtualDisk):
-            device_full_info[device.deviceInfo.label]['capacityInKB'] = device.capacityInKB
-            device_full_info[device.deviceInfo.label]['diskMode'] = device.backing.diskMode
-            device_full_info[device.deviceInfo.label]['fileName'] = device.backing.fileName
-
-    storage_full_info = {
-        'committed': int(vm["summary.storage.committed"]),
-        'uncommitted': int(vm["summary.storage.uncommitted"]),
-        'unshared': int(vm["summary.storage.unshared"])
-    }
-
-    file_full_info = {}
-    for file in vm["layoutEx.file"]:
-        file_full_info[file.key] = {
-            'key': file.key,
-            'name': file.name,
-            'size': file.size,
-            'type': file.type
-        }
 
     network_full_info = {}
     ip_addresses = []
-    mac_addresses = []
-    for net in vm["guest.net"]:
-        network_full_info[net.network] = {
-            'connected': net.connected,
-            'ip_addresses': net.ipAddress,
-            'mac_address': net.macAddress
-        }
-        ip_addresses.extend(net.ipAddress)
-        mac_addresses.append(net.macAddress)
+    if "guest.net" in vm:
+        for net in vm["guest.net"]:
+            network_full_info[net.network] = {
+                'connected': net.connected,
+                'ip_addresses': net.ipAddress,
+                'mac_address': net.macAddress
+            }
+            ip_addresses.extend(net.ipAddress)
 
+    cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
+    ram = "{0} MB".format(vm["config.hardware.memoryMB"]) if "config.hardware.memoryMB" in vm else "N/A"
     vm_full_info = {
         'id': str(vm['name']),
-        'image': "{0} (Detected)".format(vm["config.guestFullName"]),
-        'size': u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"]),
-        'state': str(vm["summary.runtime.powerState"]),
+        'image': "{0} (Detected)".format(vm["config.guestFullName"]) if "config.guestFullName" in vm else "N/A",
+        'size': u"cpu: {0}\nram: {1}".format(cpu, ram),
+        'state': str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A",
         'private_ips': ip_addresses,
         'public_ips': [],
         'devices': device_full_info,
         'storage': storage_full_info,
         'files': file_full_info,
-        'guest_id': str(vm["config.guestId"]),
+        'guest_id': str(vm["config.guestId"]) if "config.guestId" in vm else "N/A",
         'hostname': str(vm["object"].guest.hostName),
-        'mac_address': mac_addresses,
+        'mac_addresses': device_mac_addresses,
         'networks': network_full_info,
-        'path': str(vm["config.files.vmPathName"]),
+        'path': str(vm["config.files.vmPathName"]) if "config.files.vmPathName" in vm else "N/A",
         'tools_status': str(vm["guest.toolsStatus"]) if "guest.toolsStatus" in vm else "N/A"
     }
 
@@ -1407,11 +1512,13 @@ def list_nodes(kwargs=None, call=None):
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
+        cpu = vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A"
+        ram = "{0} MB".format(vm["config.hardware.memoryMB"]) if "config.hardware.memoryMB" in vm else "N/A"
         vm_info = {
             'id': vm["name"],
-            'image': "{0} (Detected)".format(vm["config.guestFullName"]),
-            'size': u"cpu: {0}\nram: {1}MB".format(vm["config.hardware.numCPU"], vm["config.hardware.memoryMB"]),
-            'state': str(vm["summary.runtime.powerState"]),
+            'image': "{0} (Detected)".format(vm["config.guestFullName"]) if "config.guestFullName" in vm else "N/A",
+            'size': u"cpu: {0}\nram: {1}".format(cpu, ram),
+            'state': str(vm["summary.runtime.powerState"]) if "summary.runtime.powerState" in vm else "N/A",
             'private_ips': [vm["guest.ipAddress"]] if "guest.ipAddress" in vm else [],
             'public_ips': []
         }
@@ -1518,10 +1625,10 @@ def list_nodes_select(call=None):
     if 'state' in selection:
         vm_properties.append("summary.runtime.powerState")
 
-    if ('private_ips' or 'mac_address' or 'networks') in selection:
+    if 'private_ips' in selection or 'networks' in selection:
         vm_properties.append("guest.net")
 
-    if 'devices' in selection:
+    if 'devices' in selection or 'mac_address' in selection or 'mac_addresses' in selection:
         vm_properties.append("config.hardware.device")
 
     if 'storage' in selection:
@@ -1599,7 +1706,7 @@ def show_instance(name, call=None):
             return _format_instance_info(vm)
 
 
-def avail_images():
+def avail_images(call=None):
     '''
     Return a list of all the templates present in this VMware environment with basic
     details
@@ -1610,6 +1717,11 @@ def avail_images():
 
         salt-cloud --list-images my-vmware-config
     '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option.'
+        )
 
     templates = {}
     vm_properties = [
@@ -1623,15 +1735,83 @@ def avail_images():
     vm_list = _get_mors_with_properties(vim.VirtualMachine, vm_properties)
 
     for vm in vm_list:
-        if vm["config.template"]:
+        if "config.template" in vm and vm["config.template"]:
             templates[vm["name"]] = {
                 'name': vm["name"],
-                'guest_fullname': vm["config.guestFullName"],
-                'cpus': vm["config.hardware.numCPU"],
-                'ram': vm["config.hardware.memoryMB"]
+                'guest_fullname': vm["config.guestFullName"] if "config.guestFullName" in vm else "N/A",
+                'cpus': vm["config.hardware.numCPU"] if "config.hardware.numCPU" in vm else "N/A",
+                'ram': vm["config.hardware.memoryMB"] if "config.hardware.memoryMB" in vm else "N/A"
             }
 
     return templates
+
+
+def avail_locations(call=None):
+    '''
+    Return a list of all the available locations/datacenters in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --list-locations my-vmware-config
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option.'
+        )
+
+    return list_datacenters(call='function')
+
+
+def avail_sizes(call=None):
+    '''
+    Return a list of all the available sizes in this VMware environment.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --list-sizes my-vmware-config
+
+    .. note::
+
+        Since sizes are built into templates, this function will return
+        an empty dictionary.
+
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_sizes function must be called with '
+            '-f or --function, or with the --list-sizes option.'
+        )
+
+    log.warning(
+        'Because sizes are built into templates with VMware, there are no sizes '
+        'to return.'
+    )
+
+    return {}
+
+
+def list_templates(kwargs=None, call=None):
+    '''
+    List all the templates present in this VMware environment
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f list_templates my-vmware-config
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The list_templates function must be called with '
+            '-f or --function.'
+        )
+
+    return {'Templates': avail_images(call='function')}
 
 
 def list_folders(kwargs=None, call=None):
@@ -2109,8 +2289,17 @@ def create(vm_):
     deploy = config.get_cloud_config_value(
         'deploy', vm_, __opts__, search_global=False, default=True
     )
+    wait_for_ip_timeout = config.get_cloud_config_value(
+        'wait_for_ip_timeout', vm_, __opts__, default=20 * 60
+    )
     domain = config.get_cloud_config_value(
         'domain', vm_, __opts__, search_global=False, default='local'
+    )
+    hardware_version = config.get_cloud_config_value(
+        'hardware_version', vm_, __opts__, search_global=False, default=None
+    )
+    guest_id = config.get_cloud_config_value(
+        'image', vm_, __opts__, search_global=False, default=None
     )
 
     if 'clonefrom' in vm_:
@@ -2122,49 +2311,61 @@ def create(vm_):
             raise SaltCloudSystemExit(
                 'The VM/template that you have specified under clonefrom does not exist.'
             )
+    else:
+        clone_type = None
+        object_ref = None
 
-        # Either a cluster, or a resource pool must be specified when cloning from template.
-        if resourcepool:
-            resourcepool_ref = _get_mor_by_property(vim.ResourcePool, resourcepool)
-            if not resourcepool_ref:
-                log.error("Specified resource pool: '{0}' does not exist".format(resourcepool))
-                if clone_type == "template":
-                    raise SaltCloudSystemExit('You must specify a resource pool that exists.')
-        elif cluster:
-            cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster)
-            if not cluster_ref:
-                log.error("Specified cluster: '{0}' does not exist".format(cluster))
-                if clone_type == "template":
-                    raise SaltCloudSystemExit('You must specify a cluster that exists.')
-            else:
-                resourcepool_ref = cluster_ref.resourcePool
-        elif clone_type == "template":
-            raise SaltCloudSystemExit(
-                'You must either specify a cluster or a resource pool when cloning from a template.'
-            )
+    # Either a cluster, or a resource pool must be specified when cloning from template or creating.
+    if resourcepool:
+        resourcepool_ref = _get_mor_by_property(vim.ResourcePool, resourcepool)
+        if not resourcepool_ref:
+            log.error("Specified resource pool: '{0}' does not exist".format(resourcepool))
+            if not clone_type or clone_type == "template":
+                raise SaltCloudSystemExit('You must specify a resource pool that exists.')
+    elif cluster:
+        cluster_ref = _get_mor_by_property(vim.ClusterComputeResource, cluster)
+        if not cluster_ref:
+            log.error("Specified cluster: '{0}' does not exist".format(cluster))
+            if not clone_type or clone_type == "template":
+                raise SaltCloudSystemExit('You must specify a cluster that exists.')
         else:
-            log.debug("Using resource pool used by the {0} {1}".format(clone_type, vm_['clonefrom']))
+            resourcepool_ref = cluster_ref.resourcePool
+    elif clone_type == "template":
+        raise SaltCloudSystemExit(
+            'You must either specify a cluster or a resource pool when cloning from a template.'
+        )
+    elif not clone_type:
+        raise SaltCloudSystemExit(
+            'You must either specify a cluster or a resource pool when creating.'
+        )
+    else:
+        log.debug("Using resource pool used by the {0} {1}".format(clone_type, vm_['clonefrom']))
 
-        # Either a datacenter or a folder can be optionally specified
-        # If not specified, the existing VM/template\'s parent folder is used.
-        if folder:
-            folder_ref = _get_mor_by_property(vim.Folder, folder)
-            if not folder_ref:
-                log.error("Specified folder: '{0}' does not exist".format(folder))
-                log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
-                folder_ref = object_ref.parent
-        elif datacenter:
-            datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter)
-            if not datacenter_ref:
-                log.error("Specified datacenter: '{0}' does not exist".format(datacenter))
-                log.debug("Using datacenter folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
-                folder_ref = object_ref.parent
-            else:
-                folder_ref = datacenter_ref.vmFolder
-        else:
+    # Either a datacenter or a folder can be optionally specified when cloning, required when creating.
+    # If not specified when cloning, the existing VM/template\'s parent folder is used.
+    if folder:
+        folder_ref = _get_mor_by_property(vim.Folder, folder)
+        if not folder_ref:
+            log.error("Specified folder: '{0}' does not exist".format(folder))
             log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
             folder_ref = object_ref.parent
+    elif datacenter:
+        datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter)
+        if not datacenter_ref:
+            log.error("Specified datacenter: '{0}' does not exist".format(datacenter))
+            log.debug("Using datacenter folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
+            folder_ref = object_ref.parent
+        else:
+            folder_ref = datacenter_ref.vmFolder
+    elif not clone_type:
+        raise SaltCloudSystemExit(
+            'You must either specify a folder or a datacenter when creating not cloning.'
+        )
+    else:
+        log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
+        folder_ref = object_ref.parent
 
+    if 'clonefrom' in vm_:
         # Create the relocation specs
         reloc_spec = vim.vm.RelocateSpec()
 
@@ -2193,39 +2394,62 @@ def create(vm_):
                 reloc_spec.host = host_ref
             else:
                 log.error("Specified host: '{0}' does not exist".format(host))
+    else:
+        if not datastore:
+            raise SaltCloudSystemExit(
+                'You must specify a datastore when creating not cloning.'
+            )
+        else:
+            datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
+            if not datastore_ref:
+                raise SaltCloudSystemExit("Specified datastore: '{0}' does not exist".format(datastore))
 
-        # Create the config specs
-        config_spec = vim.vm.ConfigSpec()
+    # Create the config specs
+    config_spec = vim.vm.ConfigSpec()
 
-        if num_cpus:
-            log.debug("Setting cpu to: {0}".format(num_cpus))
-            config_spec.numCPUs = int(num_cpus)
+    # If the hardware version is specified and if it is different from the current
+    # hardware version, then schedule a hardware version upgrade
+    if hardware_version:
+        hardware_version = "vmx-{0}".format(str(hardware_version).zfill(2))
+        if hardware_version != object_ref.config.version:
+            log.debug("Scheduling hardware version upgrade from {0} to {1}".format(object_ref.config.version, hardware_version))
+            scheduled_hardware_upgrade = vim.vm.ScheduledHardwareUpgradeInfo()
+            scheduled_hardware_upgrade.upgradePolicy = 'always'
+            scheduled_hardware_upgrade.versionKey = hardware_version
+            config_spec.scheduledHardwareUpgradeInfo = scheduled_hardware_upgrade
+        else:
+            log.debug("Virtual hardware version already set to {1}".format(hardware_version))
 
-        if memory:
-            try:
-                memory_num, memory_unit = findall(r"[^\W\d_]+|\d+.\d+|\d+", memory)
-                if memory_unit.lower() == "mb":
-                    memory_mb = int(memory_num)
-                elif memory_unit.lower() == "gb":
-                    memory_mb = int(float(memory_num)*1024.0)
-                else:
-                    err_msg = "Invalid memory type specified: '{0}'".format(memory_unit)
-                    log.error(err_msg)
-                    return {'Error': err_msg}
-            except (TypeError, ValueError):
-                memory_mb = int(memory)
-            log.debug("Setting memory to: {0} MB".format(memory_mb))
-            config_spec.memoryMB = memory_mb
+    if num_cpus:
+        log.debug("Setting cpu to: {0}".format(num_cpus))
+        config_spec.numCPUs = int(num_cpus)
 
-        if devices:
-            specs = _manage_devices(devices, object_ref)
-            config_spec.deviceChange = specs['device_specs']
+    if memory:
+        try:
+            memory_num, memory_unit = findall(r"[^\W\d_]+|\d+.\d+|\d+", memory)
+            if memory_unit.lower() == "mb":
+                memory_mb = int(memory_num)
+            elif memory_unit.lower() == "gb":
+                memory_mb = int(float(memory_num)*1024.0)
+            else:
+                err_msg = "Invalid memory type specified: '{0}'".format(memory_unit)
+                log.error(err_msg)
+                return {'Error': err_msg}
+        except (TypeError, ValueError):
+            memory_mb = int(memory)
+        log.debug("Setting memory to: {0} MB".format(memory_mb))
+        config_spec.memoryMB = memory_mb
 
-        if extra_config:
-            for key, value in six.iteritems(extra_config):
-                option = vim.option.OptionValue(key=key, value=value)
-                config_spec.extraConfig.append(option)
+    if devices:
+        specs = _manage_devices(devices, object_ref)
+        config_spec.deviceChange = specs['device_specs']
 
+    if extra_config:
+        for key, value in six.iteritems(extra_config):
+            option = vim.option.OptionValue(key=key, value=value)
+            config_spec.extraConfig.append(option)
+
+    if 'clonefrom' in vm_:
         # Create the clone specs
         clone_spec = vim.vm.CloneSpec(
             template=template,
@@ -2233,24 +2457,24 @@ def create(vm_):
             config=config_spec
         )
 
-        if devices and 'network' in list(devices.keys()):
-            if "Windows" not in object_ref.config.guestFullName:
-                global_ip = vim.vm.customization.GlobalIPSettings()
-                if 'dns_servers' in list(vm_.keys()):
-                    global_ip.dnsServerList = vm_['dns_servers']
+        if devices and 'network' in list(devices.keys()) and 'Windows' not in object_ref.config.guestFullName:
+            global_ip = vim.vm.customization.GlobalIPSettings()
 
-                identity = vim.vm.customization.LinuxPrep()
-                hostName = vm_name.split('.')[0]
-                domainName = vm_name.split('.', 1)[-1]
-                identity.hostName = vim.vm.customization.FixedName(name=hostName)
-                identity.domain = domainName if hostName != domainName else domain
+            if 'dns_servers' in list(vm_.keys()):
+                global_ip.dnsServerList = vm_['dns_servers']
 
-                custom_spec = vim.vm.customization.Specification(
-                    globalIPSettings=global_ip,
-                    identity=identity,
-                    nicSettingMap=specs['nics_map']
-                )
-                clone_spec.customization = custom_spec
+            identity = vim.vm.customization.LinuxPrep()
+            hostName = vm_name.split('.')[0]
+            domainName = vm_name.split('.', 1)[-1]
+            identity.hostName = vim.vm.customization.FixedName(name=hostName)
+            identity.domain = domainName if hostName != domainName else domain
+
+            custom_spec = vim.vm.customization.Specification(
+                globalIPSettings=global_ip,
+                identity=identity,
+                nicSettingMap=specs['nics_map']
+            )
+            clone_spec.customization = custom_spec
 
         if not template:
             clone_spec.powerOn = power
@@ -2258,16 +2482,27 @@ def create(vm_):
         log.debug('clone_spec set to:\n{0}'.format(
             pprint.pformat(clone_spec))
         )
+    else:
+        config_spec.name = vm_name
+        config_spec.files = vim.vm.FileInfo()
+        config_spec.files.vmPathName = '[{0}] {1}/{1}.vmx'.format(datastore, vm_name)
+        config_spec.guestId = guest_id
 
-        try:
+        log.debug('config_spec set to:\n{0}'.format(
+            pprint.pformat(config_spec))
+        )
+
+    try:
+        salt.utils.cloud.fire_event(
+            'event',
+            'requesting instance',
+            'salt/cloud/{0}/requesting'.format(vm_['name']),
+            {'kwargs': vm_},
+            transport=__opts__['transport']
+        )
+
+        if 'clonefrom' in vm_:
             log.info("Creating {0} from {1}({2})".format(vm_['name'], clone_type, vm_['clonefrom']))
-            salt.utils.cloud.fire_event(
-                'event',
-                'requesting instance',
-                'salt/cloud/{0}/requesting'.format(vm_['name']),
-                {'kwargs': vm_},
-                transport=__opts__['transport']
-            )
 
             if datastore and not datastore_ref and datastore_cluster_ref:
                 # datastore cluster has been specified so apply Storage DRS recomendations
@@ -2295,48 +2530,53 @@ def create(vm_):
                 # clone the VM/template
                 task = object_ref.Clone(folder_ref, vm_name, clone_spec)
                 _wait_for_task(task, vm_name, "clone", 5, 'info')
-        except Exception as exc:
-            err_msg = 'Error creating {0}: {1}'.format(vm_['name'], exc)
-            log.error(
-                err_msg,
-                # Show the traceback if the debug logging level is enabled
-                exc_info_on_loglevel=logging.DEBUG
-            )
-            return {'Error': err_msg}
+        else:
+            log.info('Creating {0}'.format(vm_['name']))
 
-        new_vm_ref = _get_mor_by_property(vim.VirtualMachine, vm_name)
-
-        # If it a template or if it does not need to be powered on then do not wait for the IP
-        if not template and power:
-            ip = _wait_for_ip(new_vm_ref, 20)
-            if ip:
-                log.info("[ {0} ] IPv4 is: {1}".format(vm_name, ip))
-                # ssh or smb using ip and install salt only if deploy is True
-                if deploy:
-                    vm_['key_filename'] = key_filename
-                    vm_['ssh_host'] = ip
-
-                    salt.utils.cloud.bootstrap(vm_, __opts__)
-
-        data = show_instance(vm_name, call='action')
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'created instance',
-            'salt/cloud/{0}/created'.format(vm_['name']),
-            {
-                'name': vm_['name'],
-                'profile': vm_['profile'],
-                'provider': vm_['driver'],
-            },
-            transport=__opts__['transport']
+            task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref)
+            _wait_for_task(task, vm_name, "create", 5, 'info')
+    except Exception as exc:
+        err_msg = 'Error creating {0}: {1}'.format(vm_['name'], exc)
+        log.error(
+            err_msg,
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
         )
-        return data
-
-    else:
-        err_msg = "clonefrom option hasn\'t been specified. Exiting."
-        log.error(err_msg)
         return {'Error': err_msg}
+
+    new_vm_ref = _get_mor_by_property(vim.VirtualMachine, vm_name)
+
+    # Find how to power on in CreateVM_Task (if possible), for now this will do
+    if not clone_type and power:
+        task = new_vm_ref.PowerOn()
+        _wait_for_task(task, vm_name, 'power', 5, 'info')
+
+    # If it a template or if it does not need to be powered on then do not wait for the IP
+    if not template and power:
+        ip = _wait_for_ip(new_vm_ref, wait_for_ip_timeout)
+        if ip:
+            log.info("[ {0} ] IPv4 is: {1}".format(vm_name, ip))
+            # ssh or smb using ip and install salt only if deploy is True
+            if deploy:
+                vm_['key_filename'] = key_filename
+                vm_['ssh_host'] = ip
+
+                salt.utils.cloud.bootstrap(vm_, __opts__)
+
+    data = show_instance(vm_name, call='action')
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'created instance',
+        'salt/cloud/{0}/created'.format(vm_['name']),
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['driver'],
+        },
+        transport=__opts__['transport']
+    )
+    return data
 
 
 def create_datacenter(kwargs=None, call=None):
@@ -3206,17 +3446,17 @@ def add_host(kwargs=None, call=None):
 
         .. code-block:: yaml
 
-            vmware-vcenter01:
-              provider: vmware
-              user: "DOMAIN\\user"
-              password: "verybadpass"
-              url: "vcenter01.domain.com"
+            vcenter01:
+              driver: vmware
+              user: 'DOMAIN\\user'
+              password: 'verybadpass'
+              url: 'vcenter01.domain.com'
 
               # Required when adding a host system
-              esxi_host_user: "root"
-              esxi_host_password: "myhostpassword"
+              esxi_host_user: 'root'
+              esxi_host_password: 'myhostpassword'
               # Optional fields that can be specified when adding a host system
-              esxi_host_ssl_thumbprint: "12:A3:45:B6:CD:7E:F8:90:A1:BC:23:45:D6:78:9E:FA:01:2B:34:CD"
+              esxi_host_ssl_thumbprint: '12:A3:45:B6:CD:7E:F8:90:A1:BC:23:45:D6:78:9E:FA:01:2B:34:CD'
 
         The SSL thumbprint of the host system can be optionally specified by setting
         ``esxi_host_ssl_thumbprint`` under your provider configuration. To get the SSL

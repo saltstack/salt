@@ -11,6 +11,7 @@ import string
 
 # Import Salt Testing Libs
 from salttesting.helpers import ensure_in_syspath, expensiveTest
+from salttesting import skipIf
 
 ensure_in_syspath('../../../')
 
@@ -34,6 +35,7 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'gogrid'
 
 
+@skipIf(True, 'waiting on bug report fixes from #13365')
 class GoGridTest(integration.ShellCase):
     '''
     Integration tests for the GoGrid cloud provider in Salt-Cloud
@@ -93,7 +95,7 @@ class GoGridTest(integration.ShellCase):
         # delete the instance
         try:
             self.assertIn(
-                'True',
+                INSTANCE_NAME + ':',
                 [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))]
             )
         except AssertionError:
@@ -103,13 +105,12 @@ class GoGridTest(integration.ShellCase):
         '''
         Clean up after tests
         '''
-        name = 'gogrid-testing'
         query = self.run_cloud('--query')
-        ret_str = '        {0}:'.format(name)
+        ret_str = '        {0}:'.format(INSTANCE_NAME)
 
         # if test instance is still present, delete it
         if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(name))
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
 
 
 if __name__ == '__main__':

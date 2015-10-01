@@ -18,6 +18,7 @@ This state is useful for sending messages to Hipchat during state runs.
         - api_version: v1
 
 The api key can be specified in the master or minion configuration like below:
+
 .. code-block:: yaml
 
     hipchat:

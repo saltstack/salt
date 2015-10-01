@@ -176,7 +176,7 @@ class Terminal(object):
             self.stream_stdout = stream_stdout
         else:
             raise TerminalException(
-                'Don\'t know how to handle {0!r} as the VT\'s '
+                'Don\'t know how to handle \'{0}\' as the VT\'s '
                 '\'stream_stdout\' parameter.'.format(stream_stdout)
             )
 
@@ -195,7 +195,7 @@ class Terminal(object):
             self.stream_stderr = stream_stderr
         else:
             raise TerminalException(
-                'Don\'t know how to handle {0!r} as the VT\'s '
+                'Don\'t know how to handle \'{0}\' as the VT\'s '
                 '\'stream_stderr\' parameter.'.format(stream_stderr)
             )
         # <---- Direct Streaming Setup ---------------------------------------

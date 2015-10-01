@@ -174,7 +174,7 @@ def alias_get(indices=None, aliases=None, hosts=None, profile=None):
     return None
 
 
-def document_create(index, doc_type, body=None, hosts=None, profile=None):
+def document_create(index, doc_type, body=None, id=None, hosts=None, profile=None):
     '''
     Create a document in a specified index
 
@@ -184,7 +184,7 @@ def document_create(index, doc_type, body=None, hosts=None, profile=None):
     '''
     es = _get_instance(hosts, profile)
     try:
-        result = es.index(index=index, doc_type=doc_type, body=body)  # TODO error handling
+        result = es.index(index=index, doc_type=doc_type, body=body, id=id)  # TODO error handling
         return True
     except elasticsearch.exceptions.NotFoundError:
         return None

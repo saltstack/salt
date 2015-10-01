@@ -89,7 +89,7 @@ def list_nodes(**kwargs):
     nodes = list_nodes_full()
     for node in nodes:
         ret[node] = {}
-        for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
+        for prop in 'id', 'image', 'size', 'state', 'private_ips', 'public_ips':
             ret[node][prop] = nodes[node][prop]
 
     return ret
@@ -249,15 +249,22 @@ def create(vm_):
         timeout=config.get_cloud_config_value(
             'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
     )
+    __opts__['hard_timeout'] = config.get_cloud_config_value(
+        'hard_timeout',
+        get_configured_provider(),
+        __opts__,
+        search_global=False,
+        default=15,
+    )
 
     # Bootstrap
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     ret.update(show_instance(vm_['name'], call='action'))
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
         vm_, pprint.pformat(data)
             )
     )

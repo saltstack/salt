@@ -52,6 +52,7 @@ import time
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
+import salt.utils.compat
 import salt.ext.six as six
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
@@ -82,9 +83,13 @@ def __virtual__():
         return False
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
         return False
-    else:
+    return True
+
+
+def __init__(opts):
+    salt.utils.compat.pack_dunder(__name__)
+    if HAS_BOTO:
         __utils__['boto.assign_funcs'](__name__, 'ec2')
-        return True
 
 
 def get_zones(region=None, key=None, keyid=None, profile=None):
@@ -141,6 +146,90 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
             if return_objs:
                 return instances
             return [instance.id for instance in instances]
+        else:
+            return False
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
+        return False
+
+
+def create_image(ami_name, instance_id=None, instance_name=None, tags=None, region=None,
+                 key=None, keyid=None, profile=None, description=None, no_reboot=False,
+                 dry_run=False):
+    '''
+    Given instance properties that define exactly one instance, create AMI and return AMI-id.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.create_instance ami_name instance_name=myinstance
+        salt myminion boto_ec2.create_instance another_ami_name tags='{"mytag": "value"}' description='this is my ami'
+
+    '''
+
+    instances = find_instances(instance_id=instance_id, name=instance_name, tags=tags,
+                               region=region, key=key, keyid=keyid, profile=profile,
+                               return_objs=True)
+
+    if not instances:
+        log.error('Source instance not found')
+        return False
+    if len(instances) > 1:
+        log.error('Multiple instances found, must match exactly only one instance to create an image from')
+        return False
+
+    instance = instances[0]
+    try:
+        return instance.create_image(ami_name, description=description,
+                                     no_reboot=no_reboot, dry_run=dry_run)
+    except boto.exception.BotoServerError as exc:
+        log.error(exc)
+        return False
+
+
+def find_images(ami_name=None, executable_by=None, owners=None, image_ids=None, tags=None,
+                region=None, key=None, keyid=None, profile=None, return_objs=False):
+
+    '''
+    Given image properties, find and return matching AMI ids
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.find_instances tags='{"mytag": "value"}'
+
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    try:
+        filter_parameters = {'filters': {}}
+
+        if image_ids:
+            filter_parameters['image_ids'] = [image_ids]
+
+        if executable_by:
+            filter_parameters['executable_by'] = [executable_by]
+
+        if owners:
+            filter_parameters['owners'] = [owners]
+
+        if ami_name:
+            filter_parameters['filters']['name'] = ami_name
+
+        if tags:
+            for tag_name, tag_value in six.iteritems(tags):
+                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+        images = conn.get_all_images(**filter_parameters)
+        log.debug('The filters criteria {0} matched the following '
+                  'images:{1}'.format(filter_parameters, images))
+
+        if images:
+            if return_objs:
+                return images
+            return [image.id for image in images]
         else:
             return False
     except boto.exception.BotoServerError as exc:
@@ -501,3 +590,347 @@ def set_attribute(attribute, attribute_value, instance_name=None, instance_id=No
     except boto.exception.BotoServerError as exc:
         log.error(exc)
         return False
+
+
+def get_network_interface_id(name, region=None, key=None, keyid=None,
+                             profile=None):
+    '''
+    Get an Elastic Network Interface id from its name tag.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.get_network_interface_id name=my_eni
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    r = {}
+    try:
+        enis = conn.get_all_network_interfaces(filters={'tag:Name': name})
+    except boto.exception.EC2ResponseError as e:
+        r['error'] = __utils__['boto.get_error'](e)
+    if not enis:
+        r['error'] = {'message': 'No ENIs found.'}
+    elif len(enis) > 1:
+        r['error'] = {'message': 'Name specified is tagged on multiple ENIs.'}
+    if 'error' in r:
+        return r
+    eni = enis[0]
+    r['result'] = eni.id
+    return r
+
+
+def get_network_interface(name=None, network_interface_id=None, region=None,
+                          key=None, keyid=None, profile=None):
+    '''
+    Get an Elastic Network Interface.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.get_network_interface name=my_eni
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    r = {}
+    result = _get_network_interface(conn, name, network_interface_id)
+    if 'error' in result:
+        if result['error']['message'] == 'No ENIs found.':
+            r['result'] = None
+            return r
+        return result
+    eni = result['result']
+    r['result'] = _describe_network_interface(eni)
+    return r
+
+
+def _get_network_interface(conn, name=None, network_interface_id=None):
+    r = {}
+    if not (name or network_interface_id):
+        raise SaltInvocationError(
+            'Either name or network_interface_id must be provided.'
+        )
+    try:
+        if network_interface_id:
+            enis = conn.get_all_network_interfaces([network_interface_id])
+        else:
+            enis = conn.get_all_network_interfaces(filters={'tag:Name': name})
+    except boto.exception.EC2ResponseError as e:
+        r['error'] = __utils__['boto.get_error'](e)
+    if not enis:
+        r['error'] = {'message': 'No ENIs found.'}
+    elif len(enis) > 1:
+        r['error'] = {'message': 'Name specified is tagged on multiple ENIs.'}
+    if 'error' in r:
+        return r
+    eni = enis[0]
+    r['result'] = eni
+    return r
+
+
+def _describe_network_interface(eni):
+    r = {}
+    for attr in ['status', 'description', 'availability_zone', 'requesterId',
+                 'requester_managed', 'mac_address', 'private_ip_address',
+                 'vpc_id', 'id', 'source_dest_check', 'owner_id', 'tags',
+                 'subnet_id', 'associationId', 'publicDnsName', 'owner_id',
+                 'ipOwnerId', 'publicIp', 'allocationId']:
+        if hasattr(eni, attr):
+            r[attr] = getattr(eni, attr)
+    r['region'] = eni.region.name
+    r['groups'] = []
+    for group in eni.groups:
+        r['groups'].append({'name': group.name, 'id': group.id})
+    r['private_ip_addresses'] = []
+    for address in eni.private_ip_addresses:
+        r['private_ip_addresses'].append(
+            {'private_ip_address': address.private_ip_address,
+             'primary': address.primary}
+        )
+    r['attachment'] = {}
+    for attr in ['status', 'attach_time', 'device_index',
+                 'delete_on_termination', 'instance_id',
+                 'instance_owner_id', 'id']:
+        if hasattr(eni.attachment, attr):
+            r['attachment'][attr] = getattr(eni.attachment, attr)
+    return r
+
+
+def create_network_interface(
+        name, subnet_id, private_ip_address=None, description=None,
+        groups=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Create an Elastic Network Interface.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.create_network_interface my_eni subnet-12345 description=my_eni groups=['my_group']
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    r = {}
+    result = _get_network_interface(conn, name)
+    if 'result' in result:
+        r['error'] = {'message': 'An ENI with this Name tag already exists.'}
+        return r
+    vpc_id = __salt__['boto_vpc.get_subnet_association'](
+        [subnet_id], region=region, key=key, keyid=keyid, profile=profile
+    )
+    if not vpc_id:
+        msg = 'subnet_id {0} does not map to a valid vpc id.'.format(subnet_id)
+        r['error'] = {'message': msg}
+        return r
+    _groups = __salt__['boto_secgroup.convert_to_group_ids'](
+        groups, vpc_id=vpc_id, region=region, key=key,
+        keyid=keyid, profile=profile
+    )
+    try:
+        eni = conn.create_network_interface(
+            subnet_id,
+            private_ip_address=private_ip_address,
+            description=description,
+            groups=_groups
+        )
+        eni.add_tag('Name', name)
+    except boto.exception.EC2ResponseError as e:
+        r['error'] = __utils__['boto.get_error'](e)
+        return r
+    r['result'] = _describe_network_interface(eni)
+    return r
+
+
+def delete_network_interface(
+        name=None, network_interface_id=None, region=None, key=None,
+        keyid=None, profile=None):
+    '''
+    Create an Elastic Network Interface.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.create_network_interface my_eni subnet-12345 description=my_eni groups=['my_group']
+    '''
+    if not (name or network_interface_id):
+        raise SaltInvocationError(
+            'Either name or network_interface_id must be provided.'
+        )
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    r = {}
+    result = _get_network_interface(conn, name, network_interface_id)
+    if 'error' in result:
+        return result
+    eni = result['result']
+    try:
+        info = _describe_network_interface(eni)
+        network_interface_id = info['id']
+    except KeyError:
+        r['error'] = {'message': 'ID not found for this network interface.'}
+        return r
+    try:
+        r['result'] = conn.delete_network_interface(network_interface_id)
+    except boto.exception.EC2ResponseError as e:
+        r['error'] = __utils__['boto.get_error'](e)
+    return r
+
+
+def attach_network_interface(
+        name=None, network_interface_id=None, instance_id=None,
+        device_index=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Attach an Elastic Network Interface.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.create_network_interface my_eni subnet-12345 description=my_eni groups=['my_group']
+    '''
+    if not (name or network_interface_id):
+        raise SaltInvocationError(
+            'Either name or network_interface_id must be provided.'
+        )
+    if not (instance_id and device_index):
+        raise SaltInvocationError(
+            'instance_id and device_index are required parameters.'
+        )
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    r = {}
+    result = _get_network_interface(conn, name, network_interface_id)
+    if 'error' in result:
+        return result
+    eni = result['result']
+    try:
+        info = _describe_network_interface(eni)
+        network_interface_id = info['id']
+    except KeyError:
+        r['error'] = {'message': 'ID not found for this network interface.'}
+        return r
+    try:
+        r['result'] = conn.attach_network_interface(
+            network_interface_id, instance_id, device_index
+        )
+    except boto.exception.EC2ResponseError as e:
+        r['error'] = __utils__['boto.get_error'](e)
+    return r
+
+
+def detach_network_interface(
+        name=None, network_interface_id=None, attachment_id=None,
+        force=False, region=None, key=None, keyid=None, profile=None):
+    '''
+    Detach an Elastic Network Interface.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.detach_network_interface my_eni
+    '''
+    if not (name or network_interface_id or attachment_id):
+        raise SaltInvocationError(
+            'Either name or network_interface_id or attachment_id must be'
+            ' provided.'
+        )
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    r = {}
+    if not attachment_id:
+        result = _get_network_interface(conn, name, network_interface_id)
+        if 'error' in result:
+            return result
+        eni = result['result']
+        info = _describe_network_interface(eni)
+        try:
+            attachment_id = info['attachment']['id']
+        except KeyError:
+            r['error'] = {'message': 'Attachment id not found for this ENI.'}
+            return r
+    try:
+        r['result'] = conn.detach_network_interface(attachment_id, force)
+    except boto.exception.EC2ResponseError as e:
+        r['error'] = __utils__['boto.get_error'](e)
+    return r
+
+
+def modify_network_interface_attribute(
+        name=None, network_interface_id=None, attr=None,
+        value=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Modify an attribute of an Elastic Network Interface.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_ec2.modify_network_interface_attribute my_eni attr=description value='example description'
+    '''
+    if not (name or network_interface_id):
+        raise SaltInvocationError(
+            'Either name or network_interface_id must be provided.'
+        )
+    if attr is None and value is None:
+        raise SaltInvocationError(
+            'attr and value must be provided.'
+        )
+    r = {}
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    result = _get_network_interface(conn, name, network_interface_id)
+    if 'error' in result:
+        return result
+    eni = result['result']
+    info = _describe_network_interface(eni)
+    network_interface_id = info['id']
+    # munge attr into what the API requires
+    if attr == 'groups':
+        _attr = 'groupSet'
+    elif attr == 'source_dest_check':
+        _attr = 'sourceDestCheck'
+    elif attr == 'delete_on_termination':
+        _attr = 'deleteOnTermination'
+    else:
+        _attr = attr
+    _value = value
+    if info.get('vpc_id') and _attr == 'groupSet':
+        _value = __salt__['boto_secgroup.convert_to_group_ids'](
+            value, vpc_id=info.get('vpc_id'), region=region, key=key,
+            keyid=keyid, profile=profile
+        )
+        if not _value:
+            r['error'] = {
+                'message': ('Security groups do not map to valid security'
+                            ' group ids')
+            }
+            return r
+    _attachment_id = None
+    if _attr == 'deleteOnTermination':
+        try:
+            _attachment_id = info['attachment']['id']
+        except KeyError:
+            r['error'] = {
+                'message': ('No attachment id found for this ENI. The ENI must'
+                            ' be attached before delete_on_termination can be'
+                            ' modified')
+            }
+            return r
+    try:
+        r['result'] = conn.modify_network_interface_attribute(
+            network_interface_id, _attr, _value, attachment_id=_attachment_id
+        )
+    except boto.exception.EC2ResponseError as e:
+        r['error'] = __utils__['boto.get_error'](e)
+    return r

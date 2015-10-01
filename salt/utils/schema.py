@@ -408,6 +408,7 @@ class SchemaMeta(six.with_metaclass(Prepareable, type)):
         # Mark the instance as a configuration document/section
         attrs['__config__'] = True
         attrs['__flatten__'] = False
+        attrs['__config_name__'] = None
 
         # Let's record the configuration items/sections
         items = {}
@@ -424,6 +425,7 @@ class SchemaMeta(six.with_metaclass(Prepareable, type)):
 
         # Iterate through attrs to discover items/config sections
         for key, value in six.iteritems(attrs):
+            entry_name = None
             if not hasattr(value, '__item__') and not hasattr(value, '__config__'):
                 continue
             if hasattr(value, '__item__'):
@@ -432,10 +434,12 @@ class SchemaMeta(six.with_metaclass(Prepareable, type)):
                     # It's an item instance without a title, make the title
                     # it's name
                     value.title = key
-                items[key] = value
+                entry_name = value.__item_name__ or key
+                items[entry_name] = value
             if hasattr(value, '__config__'):
-                sections[key] = value
-            order.append(key)
+                entry_name = value.__config_name__ or key
+                sections[entry_name] = value
+            order.append(entry_name)
 
         attrs['_order'] = order
         attrs['_items'] = items
@@ -444,6 +448,7 @@ class SchemaMeta(six.with_metaclass(Prepareable, type)):
 
     def __call__(cls, flatten=False, allow_additional_items=False, **kwargs):
         instance = object.__new__(cls)
+        instance.__config_name__ = kwargs.pop('name', None)
         if flatten is True:
             # This configuration block is to be treated as a part of the
             # configuration for which it was defined as an attribute, not as
@@ -469,14 +474,20 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
     def __new__(mcs, name, bases, attrs):
         # Register the class as an item class
         attrs['__item__'] = True
+        attrs['__item_name__'] = None
         # Instantiate an empty list to store the config item attribute names
         attributes = []
         for base in reversed(bases):
             try:
+                base_attributes = getattr(base, '_attributes', [])
+                if base_attributes:
+                    attributes.extend(base_attributes)
                 # Extend the attributes with the base argspec argument names
                 # but skip "self"
                 for argname in inspect.getargspec(base.__init__).args:
                     if argname == 'self' or argname in attributes:
+                        continue
+                    if argname == 'name':
                         continue
                     attributes.append(argname)
             except TypeError:
@@ -498,6 +509,10 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
         for key in kwargs.keys():
             # Store the kwarg keys as the instance attributes for the
             # serialization step
+            if key == 'name':
+                # This is the item name to override the class attribute name
+                instance.__item_name__ = kwargs.pop(key)
+                continue
             if key not in instance._attributes:
                 instance._attributes.append(key)
         # Init the class
@@ -552,6 +567,7 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
         cls.after_items_update = []
         for name in cls._order:
             skip_order = False
+            item_name = None
             if name in cls._sections:
                 section = cls._sections[name]
                 serialized_section = section.serialize(None if section.__flatten__ is True else name)
@@ -572,22 +588,27 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
 
             if name in cls._items:
                 config = cls._items[name]
+                item_name = config.__item_name__ or name
                 # Handle the configuration items defined in the class instance
                 if config.__flatten__ is True:
                     serialized_config = config.serialize()
                     cls.after_items_update.append(serialized_config)
                     skip_order = True
                 else:
-                    properties[name] = config.serialize()
+                    properties[item_name] = config.serialize()
 
                 if config.required:
                     # If it's a required item, add it to the required list
-                    required.append(name)
+                    required.append(item_name)
 
             if skip_order is False:
                 # Store the order of the item
-                if name not in ordering:
-                    ordering.append(name)
+                if item_name is not None:
+                    if item_name not in ordering:
+                        ordering.append(item_name)
+                else:
+                    if name not in ordering:
+                        ordering.append(name)
 
         if properties:
             serialized['properties'] = properties
@@ -611,6 +632,21 @@ class Schema(six.with_metaclass(SchemaMeta, object)):
             serialized['x-ordering'] = ordering
         serialized['additionalProperties'] = cls.__allow_additional_items__
         return serialized
+
+    @classmethod
+    def defaults(cls):
+        serialized = cls.serialize()
+        defaults = {}
+        for name, details in serialized['properties'].items():
+            if 'default' in details:
+                defaults[name] = details['default']
+                continue
+            if 'properties' in details:
+                for sname, sdetails in details['properties'].items():
+                    if 'default' in sdetails:
+                        defaults.setdefault(name, {})[sname] = sdetails['default']
+                continue
+        return defaults
 
     @classmethod
     def as_requirements_item(cls):
@@ -1085,24 +1121,25 @@ class ArrayItem(BaseSchemaItem):
         super(ArrayItem, self).__init__(**kwargs)
 
     def __validate_attributes__(self):
-        if not self.items:
+        if not self.items and not self.additional_items:
             raise RuntimeError(
-                'The passed items must not be empty'
+                'One of items or additional_items must be passed.'
             )
-        if isinstance(self.items, (list, tuple)):
-            for item in self.items:
-                if not isinstance(item, (Schema, SchemaItem)):
-                    raise RuntimeError(
-                        'All items passed in the item argument tuple/list must be '
-                        'a subclass of Schema, SchemaItem or BaseSchemaItem, '
-                        'not {0}'.format(type(item))
-                    )
-        elif not isinstance(self.items, (Schema, SchemaItem)):
-            raise RuntimeError(
-                'The items argument passed must be a subclass of '
-                'Schema, SchemaItem or BaseSchemaItem, not '
-                '{0}'.format(type(self.items))
-            )
+        if self.items is not None:
+            if isinstance(self.items, (list, tuple)):
+                for item in self.items:
+                    if not isinstance(item, (Schema, SchemaItem)):
+                        raise RuntimeError(
+                            'All items passed in the item argument tuple/list must be '
+                            'a subclass of Schema, SchemaItem or BaseSchemaItem, '
+                            'not {0}'.format(type(item))
+                        )
+            elif not isinstance(self.items, (Schema, SchemaItem)):
+                raise RuntimeError(
+                    'The items argument passed must be a subclass of '
+                    'Schema, SchemaItem or BaseSchemaItem, not '
+                    '{0}'.format(type(self.items))
+                )
 
     def __get_items__(self):
         if isinstance(self.items, (Schema, SchemaItem)):
@@ -1188,9 +1225,9 @@ class DictItem(BaseSchemaItem):
         super(DictItem, self).__init__(**kwargs)
 
     def __validate_attributes__(self):
-        if not self.properties and not self.pattern_properties:
+        if not self.properties and not self.pattern_properties and not self.additional_properties:
             raise RuntimeError(
-                'One of properties or pattern properties must be passed'
+                'One of properties, pattern_properties or additional_properties must be passed'
             )
         if self.properties is not None:
             if not isinstance(self.properties, (Schema, dict)):
@@ -1256,6 +1293,22 @@ class DictItem(BaseSchemaItem):
     def __call__(self, flatten=False):
         self.__flatten__ = flatten
         return self
+
+    def serialize(self):
+        result = super(DictItem, self).serialize()
+        required = []
+        if self.properties is not None:
+            if isinstance(self.properties, Schema):
+                serialized = self.properties.serialize()
+                if 'required' in serialized:
+                    required.extend(serialized['required'])
+            else:
+                for key, prop in self.properties.items():
+                    if prop.required:
+                        required.append(key)
+        if required:
+            result['required'] = required
+        return result
 
 
 class RequirementsItem(SchemaItem):

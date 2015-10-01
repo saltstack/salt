@@ -22,7 +22,6 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       verify_ssl: True
 
 :maintainer: Frank Klaassen <frank@cloudright.nl>
-:maturity: new
 :depends: requests >= 2.2.1
 :depends: IPy >= 0.81
 '''
@@ -34,6 +33,7 @@ import pprint
 import logging
 
 # Import salt libs
+import salt.ext.six as six
 import salt.utils
 
 # Import salt cloud libs
@@ -45,12 +45,7 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
-# Import 3rd-party libs
-import salt.ext.six as six
-
-# Get logging started
-log = logging.getLogger(__name__)
-
+# Import Third Party Libs
 try:
     import requests
     HAS_REQUESTS = True
@@ -63,18 +58,23 @@ try:
 except ImportError:
     HAS_IPY = False
 
+# Get logging started
+log = logging.getLogger(__name__)
+
+__virtualname__ = 'proxmox'
+
 
 def __virtual__():
     '''
     Check for PROXMOX configurations
     '''
-    if not (HAS_IPY and HAS_REQUESTS):
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -83,8 +83,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'proxmox',
+        __active_provider_name__ or __virtualname__,
         ('user',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'requests': HAS_REQUESTS,
+        'IPy': HAS_IPY
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
@@ -174,7 +188,7 @@ def query(conn_type, option, post_data=None):
         log.error(response)
 
 
-def _getVmByName(name, allDetails=False):
+def _get_vm_by_name(name, allDetails=False):
     '''
     Since Proxmox works based op id's rather than names as identifiers this
     requires some filtering to retrieve the required information.
@@ -187,7 +201,7 @@ def _getVmByName(name, allDetails=False):
     return False
 
 
-def _getVmById(vmid, allDetails=False):
+def _get_vm_by_id(vmid, allDetails=False):
     '''
     Retrieve a VM based on the ID.
     '''
@@ -219,7 +233,7 @@ def _check_ip_available(ip_addr):
             log.debug('IP "{0}" is already defined'.format(ip_addr))
             return False
 
-    log.debug('IP {0!r} is available to be defined'.format(ip_addr))
+    log.debug('IP \'{0}\' is available to be defined'.format(ip_addr))
     return True
 
 
@@ -488,9 +502,9 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'proxmox',
-                                        vm_['profile']) is False:
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'proxmox',
+                                                           vm_['profile']) is False:
             return False
     except AttributeError:
         pass
@@ -589,9 +603,9 @@ def create(vm_):
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     # Report success!
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
@@ -638,7 +652,7 @@ def create_node(vm_):
     vmhost = vm_['host']
     newnode['vmid'] = _get_next_vmid()
 
-    for prop in ('cpuunits', 'description', 'memory', 'onboot'):
+    for prop in 'cpuunits', 'description', 'memory', 'onboot':
         if prop in vm_:  # if the property is set, use it for the VM request
             newnode[prop] = vm_[prop]
 
@@ -648,12 +662,12 @@ def create_node(vm_):
         newnode['ostemplate'] = vm_['image']
 
         # optional VZ settings
-        for prop in ('cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid'):
+        for prop in 'cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid', 'storage':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
-        for prop in ('acpi', 'cores', 'cpu', 'pool'):
+        for prop in 'acpi', 'cores', 'cpu', 'pool', 'storage':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
@@ -774,7 +788,7 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
-    vmobj = _getVmByName(name)
+    vmobj = _get_vm_by_name(name)
     if vmobj is not None:
         # stop the vm
         if get_vm_status(vmid=vmobj['vmid'])['status'] != 'stopped':
@@ -809,11 +823,11 @@ def set_vm_status(status, name=None, vmid=None):
     if vmid is not None:
         log.debug('set_vm_status: via ID - VMID {0} ({1}): {2}'.format(
                   vmid, name, status))
-        vmobj = _getVmById(vmid)
+        vmobj = _get_vm_by_id(vmid)
     else:
         log.debug('set_vm_status: via name - VMID {0} ({1}): {2}'.format(
                   vmid, name, status))
-        vmobj = _getVmByName(name)
+        vmobj = _get_vm_by_name(name)
 
     if not vmobj or 'node' not in vmobj or 'type' not in vmobj or 'vmid' not in vmobj:
         log.error('Unable to set status {0} for {1} ({2})'.format(
@@ -839,10 +853,10 @@ def get_vm_status(vmid=None, name=None):
     '''
     if vmid is not None:
         log.debug('get_vm_status: VMID {0}'.format(vmid))
-        vmobj = _getVmById(vmid)
+        vmobj = _get_vm_by_id(vmid)
     elif name is not None:
         log.debug('get_vm_status: name {0}'.format(name))
-        vmobj = _getVmByName(name)
+        vmobj = _get_vm_by_name(name)
     else:
         log.debug("get_vm_status: No ID or NAME given")
         raise SaltCloudExecutionFailure

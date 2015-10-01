@@ -235,9 +235,18 @@ def mounted(name,
                 # Some filesystems have options which should not force a remount.
                 mount_ignore_fs_keys = {
                         'ramfs': ['size']
-                        }
+                }
+
+                # Some options are translated once mounted
+                mount_translate_options = {
+                    'tcp': 'proto=tcp',
+                    'udp': 'proto=udp',
+                }
 
                 for opt in opts:
+                    if opt in mount_translate_options:
+                        opt = mount_translate_options[opt]
+
                     keyval_option = opt.split('=')[0]
                     if keyval_option in mount_invisible_keys:
                         opt = keyval_option

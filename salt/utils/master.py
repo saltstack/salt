@@ -102,7 +102,7 @@ class MasterPillarUtil(object):
         self.grains_fallback = grains_fallback
         self.pillar_fallback = pillar_fallback
         log.debug(
-            'Init settings: tgt: {0!r}, expr_form: {1!r}, saltenv: {2!r}, '
+            'Init settings: tgt: \'{0}\', expr_form: \'{1}\', saltenv: \'{2}\', '
             'use_cached_grains: {3}, use_cached_pillar: {4}, '
             'grains_fallback: {5}, pillar_fallback: {6}'.format(
                 tgt, expr_form, saltenv, use_cached_grains, use_cached_pillar,
@@ -343,7 +343,7 @@ class MasterPillarUtil(object):
         if clear_mine:
             clear_what.append('mine')
         if clear_mine_func is not None:
-            clear_what.append('mine_func: {0!r}'.format(clear_mine_func))
+            clear_what.append('mine_func: \'{0}\''.format(clear_mine_func))
         if not len(clear_what):
             log.debug('No cached data types specified for clearing.')
             return False

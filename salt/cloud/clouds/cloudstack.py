@@ -38,9 +38,9 @@ from salt.exceptions import SaltCloudSystemExit
 # pylint: disable=import-error
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
-    HASLIBS = True
+    HAS_LIBS = True
 except ImportError:
-    HASLIBS = False
+    HAS_LIBS = False
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -69,7 +69,10 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -80,6 +83,16 @@ def get_configured_provider():
         __opts__,
         __active_provider_name__ or __virtualname__,
         ('apikey', 'secretkey', 'host', 'path')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBS}
     )
 
 
@@ -223,9 +236,9 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'cloudstack',
-                                        vm_['profile']) is False:
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'cloudstack',
+                                                           vm_['profile']) is False:
             return False
     except AttributeError:
         pass
@@ -356,9 +369,9 @@ def create(vm_):
     if 'password' in data.extra:
         del data.extra['password']
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )

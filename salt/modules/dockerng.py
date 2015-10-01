@@ -5,8 +5,8 @@ Management of Docker Containers
 .. versionadded:: 2015.8.0
 
 
-Why Make a Second Docker Module?
---------------------------------
+Why Make a Second Docker Execution Module?
+------------------------------------------
 
 We have received a lot of feedback on our Docker support. In the process of
 implementing recommended improvements, it became obvious that major changes
@@ -19,23 +19,22 @@ option. This will give users a couple release cycles to modify their scripts,
 SLS files, etc. to use the new functionality, rather than forcing users to
 change everything immediately.
 
-In the **Carbon** release of Salt (slated for late summer/early fall 2015),
-this execution module will take the place of the default Docker execution
-module, and backwards-compatible naming will be maintained for a couple
-releases after that to allow users time to replace references to ``dockerng``
-with ``docker``.
+In the **Carbon** release of Salt (due in 2016), this execution module will
+take the place of the default Docker execution module, and backwards-compatible
+naming will be maintained for a couple releases after that to allow users time
+to replace references to ``dockerng`` with ``docker``.
 
 
 Installation Prerequisites
 --------------------------
 
-This execution module requires at least version 1.0.0 of both docker-py_ and
+This execution module requires at least version 1.4.0 of both docker-py_ and
 Docker_. docker-py can easily be installed using :py:func:`pip.install
 <salt.modules.pip.install>`:
 
 .. code-block:: bash
 
-    salt myminion pip.install docker-py
+    salt myminion pip.install docker-py>=1.4.0
 
 .. _docker-py: https://pypi.python.org/pypi/docker-py
 .. _Docker: https://www.docker.com/
@@ -103,6 +102,20 @@ The second way is to use separate pillar variables ending in
 Both methods can be combined; any registry configured under
 ``docker-registries`` or ``*-docker-registries`` will be detected.
 
+Configuration Options
+---------------------
+
+The following options can be set in the :ref:`minion config
+<configuration-salt-minion>`:
+
+- ``docker.url``: URL to the docker service (default: local socket).
+- ``docker.version``: API version to use (default: currently 1.4 API).
+- ``docker.exec_driver``: Execution driver to use, one of the following:
+    - nsenter
+    - lxc-attach
+    - docker-exec
+
+    See :ref:`Executing Commands Within a Running Container <docker-execution-driver>`.
 
 Functions
 ---------
@@ -221,6 +234,7 @@ import distutils.version  # pylint: disable=import-error,no-name-in-module,unuse
 import fnmatch
 import functools
 import gzip
+import inspect as inspect_module
 import json
 import logging
 import os
@@ -243,6 +257,7 @@ import salt.ext.six as six
 # pylint: disable=import-error
 try:
     import docker
+    import docker.utils
     HAS_DOCKER_PY = True
 except ImportError:
     HAS_DOCKER_PY = False
@@ -274,7 +289,7 @@ __func_alias__ = {
 
 # Minimum supported versions
 MIN_DOCKER = (1, 0, 0)
-MIN_DOCKER_PY = (1, 0, 0)
+MIN_DOCKER_PY = (1, 4, 0)
 
 VERSION_RE = r'([\d.]+)'
 
@@ -656,6 +671,11 @@ def _get_client(timeout=None):
         if 'base_url' not in client_kwargs and 'DOCKER_HOST' in os.environ:
             # Check if the DOCKER_HOST environment variable has been set
             client_kwargs['base_url'] = os.environ.get('DOCKER_HOST')
+
+        if 'version' not in client_kwargs:
+            # Let docker-py auto detect docker version incase
+            # it's not defined by user.
+            client_kwargs['version'] = 'auto'
 
         __context__['docker.client'] = docker.Client(**client_kwargs)
 
@@ -1104,7 +1124,7 @@ def _validate_input(action,
             _valid_stringlist('command')
         except SaltInvocationError:
             raise SaltInvocationError(
-                'command must be a string or list of strings'
+                'command/cmd must be a string or list of strings'
             )
 
     def _valid_user():  # pylint: disable=unused-variable
@@ -1277,7 +1297,7 @@ def _validate_input(action,
                         )
                     if not isinstance(val, six.string_types):
                         raise SaltInvocationError(
-                            'Environment values must be strings {key}={val!r}'
+                            'Environment values must be strings {key}=\'{val}\''
                             .format(key=key, val=val))
                     repacked_env[key] = val
             kwargs['environment'] = repacked_env
@@ -1285,7 +1305,7 @@ def _validate_input(action,
             for key, val in six.iteritems(kwargs['environment']):
                 if not isinstance(val, six.string_types):
                     raise SaltInvocationError(
-                        'Environment values must be strings {key}={val!r}'
+                        'Environment values must be strings {key}=\'{val}\''
                         .format(key=key, val=val))
         elif not isinstance(kwargs['environment'], dict):
             raise SaltInvocationError(
@@ -2115,7 +2135,10 @@ def list_containers(**kwargs):
     '''
     ret = set()
     for item in six.itervalues(ps_(all=kwargs.get('all', False))):
-        for c_name in [x.lstrip('/') for x in item.get('Names', [])]:
+        names = item.get('Names')
+        if not names:
+            continue
+        for c_name in [x.lstrip('/') for x in names]:
             ret.add(c_name)
     return sorted(ret)
 
@@ -2275,7 +2298,7 @@ def ps_(**kwargs):
                 continue
             for item in container:
                 c_state = 'running' \
-                    if container['Status'].lower().startswith('up ') \
+                    if container.get('Status', '').lower().startswith('up ') \
                     else 'stopped'
                 bucket = __context__.setdefault('docker.ps', {}).setdefault(
                     c_state, {})
@@ -2494,10 +2517,13 @@ def create(image,
     image
         Image from which to create the container
 
-    command
+    command or cmd
         Command to run in the container
 
-        Example: ``command=bash``
+        Example: ``command=bash`` or ``cmd=bash``
+
+        .. versionchanged:: 2015.8.1
+            ``cmd`` is now also accepted
 
     hostname
         Hostname of the container. If not provided, and if a ``name`` has been
@@ -2630,6 +2656,14 @@ def create(image,
         # Create a CentOS 7 container that will stay running once started
         salt myminion dockerng.create centos:7 name=mycent7 interactive=True tty=True command=bash
     '''
+    if 'cmd' in kwargs:
+        if 'command' in kwargs:
+            raise SaltInvocationError(
+                'Only one of \'command\' and \'cmd\' can be used. Both '
+                'arguments are equivalent.'
+            )
+        kwargs['command'] = kwargs.pop('cmd')
+
     try:
         # Try to inspect the image, if it fails then we know we need to pull it
         # first.
@@ -2653,6 +2687,15 @@ def create(image,
             val = VALID_CREATE_OPTS[key]
             if 'api_name' in val:
                 create_kwargs[val['api_name']] = create_kwargs.pop(key)
+
+    # Added to manage api change in 1.19.
+    # mem_limit and memswap_limit must be provided in host_config object
+    if salt.utils.version_cmp(version()['ApiVersion'], '1.18') == 1:
+        client = __context__['docker.client']
+        host_config_args = inspect_module.getargspec(docker.utils.create_host_config).args
+        create_kwargs['host_config'] = client.create_host_config(
+            **dict((arg, create_kwargs.pop(arg, None)) for arg in host_config_args if arg != 'version')
+        )
 
     log.debug(
         'dockerng.create is using the following kwargs to create '
@@ -4532,8 +4575,12 @@ def _script(name,
         try:
             os.remove(path)
         except (IOError, OSError) as exc:
-            log.error('cmd.script: Unable to clean tempfile {0!r}: {1}'
-                      .format(path, exc))
+            log.error(
+                'cmd.script: Unable to clean tempfile \'{0}\': {1}'.format(
+                    path,
+                    exc
+                )
+            )
 
     path = salt.utils.mkstemp(dir='/tmp',
                               prefix='salt',

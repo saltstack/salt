@@ -38,7 +38,7 @@ import salt.utils.rsax931
 import salt.utils.verify
 import salt.version
 from salt.exceptions import (
-    AuthenticationError, SaltClientError, SaltReqTimeoutError
+    AuthenticationError, SaltClientError, SaltReqTimeoutError, SaltSystemExit
 )
 
 import tornado.gen
@@ -85,6 +85,7 @@ def gen_keys(keydir, keyname, keysize, user=None):
     priv = '{0}.pem'.format(base)
     pub = '{0}.pub'.format(base)
 
+    salt.utils.reinit_crypto()
     gen = RSA.generate(bits=keysize, e=65537)
     if os.path.isfile(priv):
         # Between first checking and the generation another process has made
@@ -550,7 +551,7 @@ class AsyncAuth(object):
                 'Salt Minion.\nThe master public key can be found '
                 'at:\n{1}'.format(salt.version.__version__, m_pub_fn)
             )
-            sys.exit(42)
+            raise SaltSystemExit('Invalid master key')
         if self.opts.get('syndic_master', False):  # Is syndic
             syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
             if syndic_finger:

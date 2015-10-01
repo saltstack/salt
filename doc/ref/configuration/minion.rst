@@ -82,9 +82,9 @@ The option can can also be set to a list of masters, enabling
 
 .. versionadded:: 2014.7.0
 
-Default: ``standard``
+Default: ``str``
 
-The type of the :conf_minion:`master` variable. Can be ``standard``, ``failover`` or
+The type of the :conf_minion:`master` variable. Can be ``str``, ``failover`` or
 ``func``.
 
 .. code-block:: yaml
@@ -198,7 +198,7 @@ need to be changed to the ownership of the new user.
 .. conf_minion:: sudo_user
 
 ``sudo_user``
---------
+-------------
 
 Default: ``''``
 
@@ -553,7 +553,7 @@ be able to execute a certain module. The sys module is built into the minion
 and cannot be disabled.
 
 This setting can also tune the minion, as all modules are loaded into ram
-disabling modules will lover the minion's ram footprint.
+disabling modules will lower the minion's ram footprint.
 
 .. code-block:: yaml
 
@@ -660,6 +660,23 @@ This setting requires that ``gcc`` and ``cython`` are installed on the minion
 .. code-block:: yaml
 
     cython_enable: False
+
+.. conf_minion:: enable_zip_modules
+
+``enable_zip_modules``
+----------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``False``
+
+Set this value to true to enable loading of zip archives as extension modules.
+This allows for packing module code with specific dependencies to avoid conflicts
+and/or having to install specific modules' dependencies in system libraries.
+
+.. code-block:: yaml
+
+    enable_zip_modules: False
 
 .. conf_minion:: providers
 
@@ -891,6 +908,21 @@ minion to clean the keys.
 
     open_mode: False
 
+.. conf_minion:: master_finger
+
+``master_finger``
+-----------------
+
+Default: ``''``
+
+Fingerprint of the master public key to validate the identity of your Salt master
+before the initial key exchange. The master fingerprint can be found by running
+"salt-key -F master" on the Salt master.
+
+.. code-block:: yaml
+
+   master_finger: 'ba:30:65:2a:d6:9e:20:4f:d8:b2:f3:a7:d4:65:11:13'
+
 .. conf_minion:: verify_master_pubkey_sign
 
 
@@ -999,7 +1031,7 @@ Examples:
 ``log_level``
 -------------
 
-Default: ``warning``
+Default: ``info``
 
 The level of messages to send to the console. See also :conf_log:`log_level`.
 
@@ -1013,7 +1045,7 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 ``log_level_logfile``
 ---------------------
 
-Default: ``warning``
+Default: ``info``
 
 The level of messages to send to the log file. See also
 :conf_log:`log_level_logfile`. When it is not set explicitly
@@ -1207,3 +1239,85 @@ have other services that need to go with it.
 .. code-block:: yaml
 
     update_restart_services: ['salt-minion']
+
+
+.. _winrepo-minion-config-opts:
+
+Standalone Minion Windows Software Repo Settings
+================================================
+
+.. important::
+    To use these config options, the minion must be running in masterless mode
+    (set :conf_minion:`file_client` to ``local``).
+
+.. conf_minion:: winrepo_dir
+.. conf_minion:: win_repo
+
+``winrepo_dir``
+---------------
+
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_repo`` to ``winrepo_dir``. Also, this option did not
+    have a default value until this version.
+
+Default: ``C:\salt\srv\salt\win\repo``
+
+Location on the minion where the :conf_minion:`winrepo_remotes` are checked
+out.
+
+.. code-block:: yaml
+
+    winrepo_dir: 'D:\winrepo'
+
+.. conf_minion:: winrepo_cachefile
+.. conf_minion:: win_repo_cachefile
+
+``winrepo_cachefile``
+---------------------
+
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_repo_cachefile`` to ``winrepo_cachefile``. Also,
+    this option did not have a default value until this version.
+
+Default: ``winrepo.p``
+
+Path relative to :conf_minion:`winrepo_dir` where the winrepo cache should be
+created.
+
+.. code-block:: yaml
+
+    winrepo_cachefile: winrepo.p
+
+.. conf_minion:: winrepo_remotes
+.. conf_minion:: win_gitrepos
+
+``winrepo_remotes``
+-------------------
+
+.. versionchanged:: 2015.8.0
+    Renamed from ``win_gitrepos`` to ``winrepo_remotes``. Also, this option did
+    not have a default value until this version.
+
+
+.. versionadded:: 2015.8.0
+
+Default: ``['https://github.com/saltstack/salt-winrepo.git']``
+
+List of git repositories to checkout and include in the winrepo
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - https://github.com/saltstack/salt-winrepo.git
+
+To specify a specific revision of the repository, prepend a commit ID to the
+URL of the the repository:
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - '<commit_id> https://github.com/saltstack/salt-winrepo.git'
+
+Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
+ID is useful in that it allows one to revert back to a previous version in the
+event that an error is introduced in the latest revision of the repo.

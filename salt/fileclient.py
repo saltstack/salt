@@ -22,6 +22,7 @@ import salt.payload
 import salt.transport
 import salt.fileserver
 import salt.utils
+import salt.utils.files
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.gzip_util
@@ -102,10 +103,10 @@ class Client(object):
             # Backwards compatibility
             saltenv = env
 
-        dest = os.path.join(self.opts['cachedir'],
-                            'files',
-                            saltenv,
-                            path)
+        dest = salt.utils.path_join(self.opts['cachedir'],
+                                    'files',
+                                    saltenv,
+                                    path)
         destdir = os.path.dirname(dest)
         cumask = os.umask(63)
         if not os.path.isdir(destdir):
@@ -219,7 +220,7 @@ class Client(object):
             path = path + '/'
 
         log.info(
-            'Caching directory {0!r} for environment {1!r}'.format(
+            'Caching directory \'{0}\' for environment \'{1}\''.format(
                 path, saltenv
             )
         )
@@ -389,7 +390,7 @@ class Client(object):
         if limit_traversal:
             if saltenv not in self.opts['file_roots']:
                 log.warning(
-                    'During an attempt to list states for saltenv {0!r}, '
+                    'During an attempt to list states for saltenv \'{0}\', '
                     'the environment could not be found in the configured '
                     'file roots'.format(saltenv)
                 )
@@ -531,7 +532,7 @@ class Client(object):
             # Local filesystem
             if not os.path.isabs(url_data.path):
                 raise CommandExecutionError(
-                    'Path {0!r} is not absolute'.format(url_data.path)
+                    'Path \'{0}\' is not absolute'.format(url_data.path)
                 )
             return url_data.path
 
@@ -563,7 +564,9 @@ class Client(object):
                                     service_url=self.opts.get('s3.service_url',
                                                               None),
                                     verify_ssl=self.opts.get('s3.verify_ssl',
-                                                             True))
+                                                              True),
+                                    location=self.opts.get('s3.location',
+                                                              None))
                 return dest
             except Exception:
                 raise MinionError('Could not fetch from {0}'.format(url))
@@ -591,6 +594,8 @@ class Client(object):
             get_kwargs['auth'] = (url_data.username, url_data.password)
         else:
             fixed_url = url
+
+        destfp = None
         try:
             query = salt.utils.http.query(
                 fixed_url,
@@ -601,25 +606,14 @@ class Client(object):
             )
             if 'handle' not in query:
                 raise MinionError('Error: {0}'.format(query['error']))
-            response = query['handle']
-            chunk_size = 32 * 1024
-            if not no_cache:
-                with salt.utils.fopen(dest, 'wb') as destfp:
-                    if hasattr(response, 'iter_content'):
-                        for chunk in response.iter_content(chunk_size=chunk_size):
-                            destfp.write(chunk)
-                    else:
-                        while True:
-                            chunk = response.buffer.read(chunk_size)
-                            destfp.write(chunk)
-                            if len(chunk) < chunk_size:
-                                break
-                return dest
+            if no_cache:
+                return query['handle'].body
             else:
-                if hasattr(response, 'text'):
-                    return response.text
-                else:
-                    return response['text']
+                dest_tmp = "{0}.part".format(dest)
+                with salt.utils.fopen(dest_tmp, 'wb') as destfp:
+                    destfp.write(query['handle'].body)
+                salt.utils.files.rename(dest_tmp, dest)
+                return dest
         except HTTPError as exc:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
                 exc.code,
@@ -627,6 +621,9 @@ class Client(object):
                 *BaseHTTPServer.BaseHTTPRequestHandler.responses[exc.code]))
         except URLError as exc:
             raise MinionError('Error reading {0}: {1}'.format(url, exc.reason))
+        finally:
+            if destfp is not None:
+                destfp.close()
 
     def get_template(
             self,
@@ -974,7 +971,7 @@ class RemoteClient(Client):
         hash_server = self.hash_file(path, saltenv)
         if hash_server == '':
             log.debug(
-                'Could not find file from saltenv {0!r}, {1!r}'.format(
+                'Could not find file from saltenv \'{0}\', \'{1}\''.format(
                     saltenv, path
                 )
             )
@@ -997,34 +994,31 @@ class RemoteClient(Client):
             rel_path = self._check_proto(path)
 
             log.debug(
-                'In saltenv {0!r}, looking at rel_path {1!r} to resolve {2!r}'.format(
-                    saltenv, rel_path, path
-                )
+                'In saltenv \'{0}\', looking at rel_path \'{1}\' to resolve '
+                '\'{2}\''.format(saltenv, rel_path, path)
             )
             with self._cache_loc(rel_path, saltenv) as cache_dest:
                 dest2check = cache_dest
 
         log.debug(
-            'In saltenv {0!r}, ** considering ** path {1!r} to resolve {2!r}'.format(
-                saltenv, dest2check, path
-            )
+            'In saltenv \'{0}\', ** considering ** path \'{1}\' to resolve '
+            '\'{2}\''.format(saltenv, dest2check, path)
         )
 
         if dest2check and os.path.isfile(dest2check):
             hash_local = self.hash_file(dest2check, saltenv)
             if hash_local == hash_server:
                 log.info(
-                    'Fetching file from saltenv {0!r}, ** skipped ** '
-                    'latest already in cache {1!r}'.format(
+                    'Fetching file from saltenv \'{0}\', ** skipped ** '
+                    'latest already in cache \'{1}\''.format(
                         saltenv, path
                     )
                 )
                 return dest2check
 
         log.debug(
-            'Fetching file from saltenv {0!r}, ** attempting ** {1!r}'.format(
-                saltenv, path
-            )
+            'Fetching file from saltenv \'{0}\', ** attempting ** '
+            '\'{1}\''.format(saltenv, path)
         )
         d_tries = 0
         transport_tries = 0
@@ -1098,15 +1092,13 @@ class RemoteClient(Client):
         if fn_:
             fn_.close()
             log.info(
-                'Fetching file from saltenv {0!r}, ** done ** {1!r}'.format(
-                    saltenv, path
-                )
+                'Fetching file from saltenv \'{0}\', ** done ** '
+                '\'{1}\''.format(saltenv, path)
             )
         else:
             log.debug(
-                'In saltenv {0!r}, we are ** missing ** the file {1!r}'.format(
-                    saltenv, path
-                )
+                'In saltenv \'{0}\', we are ** missing ** the file '
+                '\'{1}\''.format(saltenv, path)
             )
 
         return dest

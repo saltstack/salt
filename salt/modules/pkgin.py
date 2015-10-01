@@ -32,15 +32,17 @@ def _check_pkgin():
     ppath = salt.utils.which('pkgin')
     if ppath is None:
         # pkgin was not found in $PATH, try to find it via LOCALBASE
-        localbase = __salt__['cmd.run'](
-            'pkg_info -Q LOCALBASE pkgin',
-            output_loglevel='trace'
-        )
-        if localbase is not None:
-            ppath = '{0}/bin/pkgin'.format(localbase)
-            if not os.path.exists(ppath):
-                return None
-
+        try:
+            localbase = __salt__['cmd.run'](
+               'pkg_info -Q LOCALBASE pkgin',
+                output_loglevel='trace'
+            )
+            if localbase is not None:
+                ppath = '{0}/bin/pkgin'.format(localbase)
+                if not os.path.exists(ppath):
+                    return None
+        except CommandExecutionError:
+            return None
     return ppath
 
 

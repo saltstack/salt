@@ -244,7 +244,7 @@ except ImportError:
                 try:
                     if not self:
                         return '{0}()'.format(self.__class__.__name__)
-                    return '{0}({1!r})'.format(self.__class__.__name__, list(self.items()))
+                    return '{0}(\'{1}\')'.format(self.__class__.__name__, list(self.items()))
                 finally:
                     del _repr_running[call_key]
 

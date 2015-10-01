@@ -26,7 +26,9 @@ import time
 import pprint
 import logging
 
-# Import 3rd-party libs
+# Import Salt libs
+import salt.utils
+from salt._compat import ElementTree as ET
 # pylint: disable=import-error,no-name-in-module
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
@@ -38,10 +40,6 @@ from salt.ext.six.moves.urllib.request import (
         install_opener as _install_opener
 )
 # pylint: enable=import-error,no-name-in-module
-
-# Import salt libs
-import salt.utils
-from salt._compat import ElementTree as ET
 
 # Import salt cloud libs
 import salt.utils.cloud
@@ -56,6 +54,8 @@ from salt.exceptions import (
 # Get logging started
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'parallels'
+
 
 # Only load in this module if the PARALLELS configurations are in place
 def __virtual__():
@@ -65,7 +65,7 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -74,8 +74,8 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'parallels',
-        ('user',)
+        __active_provider_name__ or __virtualname__,
+        ('user', 'password', 'url',)
     )
 
 
@@ -271,9 +271,9 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'parallels',
-                                        vm_['profile']) is False:
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'parallels',
+                                                           vm_['profile']) is False:
             return False
     except AttributeError:
         pass
@@ -350,9 +350,9 @@ def create(vm_):
     vm_['ssh_host'] = public_ip
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )

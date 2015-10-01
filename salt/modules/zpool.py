@@ -244,9 +244,9 @@ def create(pool_name, *vdevs, **kwargs):
                 ret['retcode'] = 3
                 return ret
             mode = os.stat(vdev).st_mode
-            if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
-                # Not a block device or file vdev so error and return
-                ret[vdev] = '{0} is not a block device or a file vdev'.format(vdev)
+            if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode) and not stat.S_ISCHR(mode):
+                # Not a block device, file vdev, or character special device so error and return
+                ret[vdev] = '{0} is not a block device, a file vdev, or character special device'.format(vdev)
                 ret['retcode'] = 4
                 return ret
         dlist.append(vdev)

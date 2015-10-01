@@ -87,11 +87,13 @@ class NovaServer(object):
         return self.__dict__
 
 
-def get_entry(dict_, key, value):
+def get_entry(dict_, key, value, raise_error=True):
     for entry in dict_:
         if entry[key] == value:
             return entry
-    raise SaltCloudSystemExit('Unable to find {0} in {1}.'.format(key, dict_))
+    if raise_error is True:
+        raise SaltCloudSystemExit('Unable to find {0} in {1}.'.format(key, dict_))
+    return {}
 
 
 def sanatize_novaclient(kwargs):
@@ -194,25 +196,25 @@ class SaltNova(OpenStackComputeShell):
 
         self.compute_conn = client.Client(**self.kwargs)
 
-        if region_name is not None:
-            servers_endpoints = get_entry(
-                self.catalog,
-                'type',
-                'volume'
-            )['endpoints']
-            self.kwargs['bypass_url'] = get_entry(
-                servers_endpoints,
-                'region',
-                region_name
-            )['publicURL']
+        volume_endpoints = get_entry(self.catalog, 'type', 'volume', raise_error=False).get('endpoints', {})
+        if volume_endpoints:
+            if region_name is not None:
+                self.kwargs['bypass_url'] = get_entry(
+                    volume_endpoints,
+                    'region',
+                    region_name
+                )['publicURL']
 
-        self.kwargs['service_type'] = 'volume'
-        self.volume_conn = client.Client(**self.kwargs)
-        if hasattr(self, 'extensions'):
-            self.expand_extensions()
+            self.volume_conn = client.Client(**self.kwargs)
+            if hasattr(self, 'extensions'):
+                self.expand_extensions()
+        else:
+            self.volume_conn = None
 
     def expand_extensions(self):
         for connection in (self.compute_conn, self.volume_conn):
+            if connection is None:
+                continue
             for extension in self.extensions:
                 for attr in extension.module.__dict__:
                     if not inspect.isclass(getattr(extension.module, attr)):
@@ -301,6 +303,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         Organize information about a volume from the volume_id
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         volume = nt_ks.volumes.get(volume_id)
         response = {'name': volume.display_name,
@@ -316,6 +320,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         List all block volumes
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         volumes = nt_ks.volumes.list(search_opts=search_opts)
         response = {}
@@ -334,6 +340,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         Show one volume
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         volumes = self.volume_list(
             search_opts={'display_name': name},
@@ -351,6 +359,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         Create a block device
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         response = nt_ks.volumes.create(
             size=size,
@@ -366,6 +376,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         Delete a block device
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         try:
             volume = self.volume_show(name)
@@ -875,13 +887,110 @@ class SaltNova(OpenStackComputeShell):
         nets = nt_ks.virtual_interfaces.create(networkid, serverid)
         return nets
 
+    def floating_ip_pool_list(self):
+        '''
+        List all floating IP pools
+
+        .. versionadded:: Boron
+        '''
+        nt_ks = self.compute_conn
+        pools = nt_ks.floating_ip_pools.list()
+        response = {}
+        for pool in pools:
+            response[pool.name] = {
+                'name': pool.name,
+            }
+        return response
+
+    def floating_ip_list(self):
+        '''
+        List floating IPs
+
+        .. versionadded:: Boron
+        '''
+        nt_ks = self.compute_conn
+        floating_ips = nt_ks.floating_ips.list()
+        response = {}
+        for floating_ip in floating_ips:
+            response[floating_ip.ip] = {
+                'ip': floating_ip.ip,
+                'fixed_ip': floating_ip.fixed_ip,
+                'id': floating_ip.id,
+                'instance_id': floating_ip.instance_id,
+                'pool': floating_ip.pool
+            }
+        return response
+
+    def floating_ip_show(self, ip):
+        '''
+        Show info on specific floating IP
+
+        .. versionadded:: Boron
+        '''
+        nt_ks = self.compute_conn
+        floating_ips = nt_ks.floating_ips.list()
+        for floating_ip in floating_ips:
+            if floating_ip.ip == ip:
+                return floating_ip
+        return {}
+
+    def floating_ip_create(self, pool=None):
+        '''
+        Allocate a floating IP
+
+        .. versionadded:: Boron
+        '''
+        nt_ks = self.compute_conn
+        floating_ip = nt_ks.floating_ips.create(pool)
+        response = {
+            'ip': floating_ip.ip,
+            'fixed_ip': floating_ip.fixed_ip,
+            'id': floating_ip.id,
+            'instance_id': floating_ip.instance_id,
+            'pool': floating_ip.pool
+        }
+        return response
+
+    def floating_ip_delete(self, floating_ip):
+        '''
+        De-allocate a floating IP
+
+        .. versionadded:: Boron
+        '''
+        ip = self.floating_ip_show(floating_ip)
+        nt_ks = self.compute_conn
+        return nt_ks.floating_ips.delete(ip)
+
+    def floating_ip_associate(self, server_name, floating_ip):
+        '''
+        Associate floating IP address to server
+
+        .. versionadded:: Boron
+        '''
+        nt_ks = self.compute_conn
+        server_ = self.server_by_name(server_name)
+        server = nt_ks.servers.get(server_.__dict__['id'])
+        server.add_floating_ip(floating_ip)
+        return self.floating_ip_list()[floating_ip]
+
+    def floating_ip_disassociate(self, server_name, floating_ip):
+        '''
+        Disassociate a floating IP from server
+
+        .. versionadded:: Boron
+        '''
+        nt_ks = self.compute_conn
+        server_ = self.server_by_name(server_name)
+        server = nt_ks.servers.get(server_.__dict__['id'])
+        server.remove_floating_ip(floating_ip)
+        return self.floating_ip_list()[floating_ip]
+
 # The following is a list of functions that need to be incorporated in the
 # nova module. This list should be updated as functions are added.
 #
 # absolute-limits     Print a list of absolute limits for a user
 # actions             Retrieve server actions.
 # add-fixed-ip        Add new IP address to network.
-# add-floating-ip     Add a floating IP address to a server.
 # aggregate-add-host  Add the host to the specified aggregate.
 # aggregate-create    Create a new aggregate with the specified details.
 # aggregate-delete    Delete the aggregate by its id.
@@ -911,11 +1020,6 @@ class SaltNova(OpenStackComputeShell):
 #                     and name.
 # endpoints           Discover endpoints that get returned from the
 #                     authenticate services
-# floating-ip-create  Allocate a floating IP for the current tenant.
-# floating-ip-delete  De-allocate a floating IP.
-# floating-ip-list    List floating ips for this tenant.
-# floating-ip-pool-list
-#                     List all floating ip pools.
 # get-vnc-console     Get a vnc console to a server.
 # host-action         Perform a power action on a host.
 # host-update         Update host settings.
@@ -930,7 +1034,6 @@ class SaltNova(OpenStackComputeShell):
 # reboot              Reboot a server.
 # rebuild             Shutdown, re-image, and re-boot a server.
 # remove-fixed-ip     Remove an IP address from a server.
-# remove-floating-ip  Remove a floating IP address from a server.
 # rename              Rename a server.
 # rescue              Rescue a server.
 # resize              Resize a server.

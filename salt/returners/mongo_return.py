@@ -57,6 +57,7 @@ import salt.ext.six as six
 try:
     import pymongo
     version = pymongo.version
+    version = '.'.join(version.split('.')[:2])
     HAS_PYMONGO = True
 except ImportError:
     HAS_PYMONGO = False
@@ -94,8 +95,9 @@ def _get_options(ret):
     attrs = {'host': 'host',
              'port': 'port',
              'db': 'db',
-             'username': 'username',
-             'password': 'password'}
+             'user': 'user',
+             'password': 'password',
+             'indexes': 'indexes'}
 
     _options = salt.returners.get_returner_options(__virtualname__,
                                                    ret,
@@ -116,6 +118,11 @@ def _get_conn(ret):
     db_ = _options.get('db')
     user = _options.get('user')
     password = _options.get('password')
+    indexes = _options.get('indexes', False)
+
+    # at some point we should remove support for
+    # pymongo versions < 2.3 until then there are
+    # a bunch of these sections that need to be supported
 
     if float(version) > 2.3:
         conn = pymongo.MongoClient(host, port)
@@ -125,6 +132,19 @@ def _get_conn(ret):
 
     if user and password:
         mdb.authenticate(user, password)
+
+    if indexes:
+        if float(version) > 2.3:
+            mdb.saltReturns.create_index('minion')
+            mdb.saltReturns.create_index('jid')
+
+            mdb.jobs.create_index('jid')
+        else:
+            mdb.saltReturns.ensure_index('minion')
+            mdb.saltReturns.ensure_index('jid')
+
+            mdb.jobs.ensure_index('jid')
+
     return conn, mdb
 
 
@@ -149,10 +169,18 @@ def returner(ret):
     sdata = {'minion': ret['id'], 'jid': ret['jid'], 'return': back, 'fun': ret['fun'], 'full_ret': full_ret}
     if 'out' in ret:
         sdata['out'] = ret['out']
-        # save returns in the saltReturns collection in the json format:
+
+    # save returns in the saltReturns collection in the json format:
     # { 'minion': <minion_name>, 'jid': <job_id>, 'return': <return info with dots removed>,
-    #   'fun': <function>, 'full_ret': <unformatted return with dots removed>}
-    mdb.saltReturns.insert(sdata)
+    #  'fun': <function>, 'full_ret': <unformatted return with dots removed>}
+
+    # again we run into the issue with deprecated code from previous versions
+
+    if float(version) > 2.3:
+        #using .copy() to ensure original data for load is unchanged
+        mdb.saltReturns.insert_one(sdata.copy())
+    else:
+        mdb.saltReturns.insert(sdata.copy())
 
 
 def get_jid(jid):
@@ -161,7 +189,7 @@ def get_jid(jid):
     '''
     conn, mdb = _get_conn(ret=None)
     ret = {}
-    rdata = mdb.saltReturns.find({'jid': jid})
+    rdata = mdb.saltReturns.find({'jid': jid}, {'_id': 0})
     if rdata:
         for data in rdata:
             minion = data['minion']
@@ -176,7 +204,7 @@ def get_fun(fun):
     '''
     conn, mdb = _get_conn(ret=None)
     ret = {}
-    rdata = mdb.saltReturns.find_one({'fun': fun})
+    rdata = mdb.saltReturns.find_one({'fun': fun}, {'_id': 0})
     if rdata:
         ret = rdata
     return ret

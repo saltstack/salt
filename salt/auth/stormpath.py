@@ -5,16 +5,16 @@ Provide authentication using Stormpath.
 This driver requires some extra configuration beyond that which Stormpath
 normally requires.
 
-  .. code-block:: yaml
+.. code-block:: yaml
 
-  stormpath:
-    apiid: 1234567890
-    apikey: 1234567890/ABCDEF
-    # Can use an application ID
-    application: 6789012345
-    # Or can use a directory ID
-    directory: 3456789012
-    # But not both
+    stormpath:
+      apiid: 1234567890
+      apikey: 1234567890/ABCDEF
+      # Can use an application ID
+      application: 6789012345
+      # Or can use a directory ID
+      directory: 3456789012
+      # But not both
 
 .. versionadded:: 2015.8.0
 '''

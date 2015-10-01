@@ -229,46 +229,46 @@ def row_present(name,
             changes['result'] = False
             changes['comment'] = 'More than one row matched the specified query'
         elif len(rows) == 1:
-            if update:
-                if __opts__['test']:
-                    changes['result'] = True
-                    changes['comment'] = "Row will be update in " + table
+            for key, value in data.iteritems():
+                if key in rows[0] and rows[0][key] != value:
+                    if update:
+                        if __opts__['test']:
+                            changes['result'] = True
+                            changes['comment'] = "Row will be update in " + table
 
-                else:
-                    columns = []
-                    params = []
-                    for key, value in data.iteritems():
-                        columns.append("`" + key + "`=?")
-                        params.append(value)
+                        else:
+                            columns = []
+                            params = []
+                            for key, value in data.iteritems():
+                                columns.append("`" + key + "`=?")
+                                params.append(value)
 
-                    if where_args is not None:
-                        params += where_args
+                            if where_args is not None:
+                                params += where_args
 
-                    sql = "UPDATE `" + table + "` SET "
-                    sql += ",".join(columns)
-                    sql += " WHERE "
-                    sql += where_sql
-                    cursor = conn.execute(sql, params)
-                    conn.commit()
-                    if cursor.rowcount == 1:
-                        changes['result'] = True
-                        changes['comment'] = "Row updated"
-                        changes['changes']['old'] = rows[0]
-                        changes['changes']['new'] = data
+                            sql = "UPDATE `" + table + "` SET "
+                            sql += ",".join(columns)
+                            sql += " WHERE "
+                            sql += where_sql
+                            cursor = conn.execute(sql, params)
+                            conn.commit()
+                            if cursor.rowcount == 1:
+                                changes['result'] = True
+                                changes['comment'] = "Row updated"
+                                changes['changes']['old'] = rows[0]
+                                changes['changes']['new'] = data
+                            else:
+                                changes['result'] = False
+                                changes['comment'] = "Row update failed"
                     else:
-                        changes['result'] = False
-                        changes['comment'] = "Row update failed"
-
-            else:
-                for key, value in data.iteritems():
-                    if key in rows[0] and rows[0][key] != value:
                         changes['result'] = False
                         changes['comment'] = "Existing data does" + \
                                              "not match desired state"
                         break
-                if changes['result'] is None:
-                    changes['result'] = True
-                    changes['comment'] = "Row exists"
+
+            if changes['result'] is None:
+                changes['result'] = True
+                changes['comment'] = "Row exists"
         else:
             if __opts__['test']:
                 changes['result'] = True

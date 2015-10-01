@@ -665,6 +665,7 @@ class Single(object):
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                     'sock_dir': '/',
+                    'log_file': 'salt-call.log'
                 })
         self.minion_config = yaml.dump(self.minion_opts)
         self.target = kwargs
@@ -967,10 +968,10 @@ ARGS = {9}\n'''.format(self.minion_config,
             pass
 
         # Execute shim
-        ret = self.shell.exec_cmd('/bin/sh $HOME/{0}'.format(target_shim_file))
+        ret = self.shell.exec_cmd('/bin/sh \'$HOME/{0}\''.format(target_shim_file))
 
         # Remove shim from target system
-        self.shell.exec_cmd('rm $HOME/{0}'.format(target_shim_file))
+        self.shell.exec_cmd('rm \'$HOME/{0}\''.format(target_shim_file))
 
         return ret
 

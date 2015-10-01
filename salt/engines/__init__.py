@@ -12,6 +12,7 @@ import logging
 import salt
 import salt.loader
 import salt.utils
+from salt.utils.process import MultiprocessingProcess
 
 log = logging.getLogger(__name__)
 
@@ -59,15 +60,15 @@ def start_engines(opts, proc_mgr):
                     )
 
 
-class Engine(multiprocessing.Process):
+class Engine(MultiprocessingProcess):
     '''
     Execute the given engine in a new process
     '''
-    def __init__(self, opts, fun, config, funcs, runners):
+    def __init__(self, opts, fun, config, funcs, runners, **kwargs):
         '''
         Set up the process executor
         '''
-        super(Engine, self).__init__()
+        super(Engine, self).__init__(**kwargs)
         self.opts = opts
         self.config = config
         self.fun = fun

@@ -247,7 +247,7 @@ def get_location(conn, vm_):
             return img
 
     raise SaltCloudNotFound(
-        'The specified location, {0!r}, could not be found.'.format(
+        'The specified location, \'{0}\', could not be found.'.format(
             vm_location
         )
     )
@@ -278,7 +278,7 @@ def get_image(conn, vm_):
             return img
 
     raise SaltCloudNotFound(
-        'The specified image, {0!r}, could not be found.'.format(vm_image)
+        'The specified image, \'{0}\', could not be found.'.format(vm_image)
     )
 
 
@@ -295,7 +295,7 @@ def get_size(conn, vm_):
         if vm_size and str(vm_size) in (str(size.id), str(size.name)):
             return size
     raise SaltCloudNotFound(
-        'The specified size, {0!r}, could not be found.'.format(vm_size)
+        'The specified size, \'{0}\', could not be found.'.format(vm_size)
     )
 
 
@@ -343,10 +343,11 @@ def destroy(name, conn=None, call=None):
     profile = None
     if 'metadata' in node.extra and 'profile' in node.extra['metadata']:
         profile = node.extra['metadata']['profile']
+
     flush_mine_on_destroy = False
-    if profile is not None and profile in profiles:
-        if 'flush_mine_on_destroy' in profiles[profile]:
-            flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+    if profile and profile in profiles and 'flush_mine_on_destroy' in profiles[profile]:
+        flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+
     if flush_mine_on_destroy:
         log.info('Clearing Salt Mine: {0}'.format(name))
 
@@ -372,7 +373,14 @@ def destroy(name, conn=None, call=None):
             transport=__opts__['transport']
         )
         if __opts__['delete_sshkeys'] is True:
-            salt.utils.cloud.remove_sshkey(getattr(node, __opts__.get('ssh_interface', 'public_ips'))[0])
+            public_ips = getattr(node, __opts__.get('ssh_interface', 'public_ips'))
+            if public_ips:
+                salt.utils.cloud.remove_sshkey(public_ips[0])
+
+            private_ips = getattr(node, __opts__.get('ssh_interface', 'private_ips'))
+            if private_ips:
+                salt.utils.cloud.remove_sshkey(private_ips[0])
+
         if __opts__.get('update_cachedir', False) is True:
             salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
 
@@ -428,6 +436,7 @@ def list_nodes(conn=None, call=None):
         ret[node.name] = {
             'id': node.id,
             'image': node.image,
+            'name': node.name,
             'private_ips': node.private_ips,
             'public_ips': node.public_ips,
             'size': node.size,
@@ -495,7 +504,7 @@ def conn_has_method(conn, method_name):
         return True
 
     log.error(
-        'Method {0!r} not yet supported!'.format(
+        'Method \'{0}\' not yet supported!'.format(
             method_name
         )
     )

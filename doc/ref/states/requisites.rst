@@ -4,6 +4,8 @@
 Requisites and Other Global State Arguments
 ===========================================
 
+.. _requisites-fire-event:
+
 Fire Event Notifications
 ========================
 

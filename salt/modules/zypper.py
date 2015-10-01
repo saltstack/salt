@@ -95,7 +95,33 @@ def list_upgrades(refresh=True):
 list_updates = list_upgrades
 
 
-def info(*names, **kwargs):
+def info_installed(*names):
+    '''
+    Return the information of the named package(s), installed on the system.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.info_installed <package1>
+        salt '*' pkg.info_installed <package1> <package2> <package3> ...
+    '''
+    ret = dict()
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names).items():
+        t_nfo = dict()
+        # Translate dpkg-specific keys to a common structure
+        for key, value in pkg_nfo.items():
+            if key == 'source_rpm':
+                t_nfo['source'] = value
+            else:
+                t_nfo[key] = value
+
+        ret[pkg_name] = t_nfo
+
+    return ret
+
+
+def info_available(*names, **kwargs):
     '''
     Return the information of the named package available for the system.
 
@@ -103,8 +129,8 @@ def info(*names, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' pkg.info <package name>
-        salt '*' pkg.info <package1> <package2> <package3> ...
+        salt '*' pkg.info_available <package1>
+        salt '*' pkg.info_available <package1> <package2> <package3> ...
     '''
     ret = {}
 
@@ -124,7 +150,7 @@ def info(*names, **kwargs):
     # Run in batches
     while batch:
         cmd = 'zypper info -t package {0}'.format(' '.join(batch[:batch_size]))
-        pkg_info.extend(re.split("----*", __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')))
+        pkg_info.extend(re.split(r"----*", __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')))
         batch = batch[batch_size:]
 
     for pkg_data in pkg_info:
@@ -138,6 +164,24 @@ def info(*names, **kwargs):
             ret[name] = nfo
 
     return ret
+
+
+def info(*names, **kwargs):
+    '''
+    .. deprecated:: Nitrogen
+       Use :py:func:`~salt.modules.pkg.info_available` instead.
+
+    Return the information of the named package available for the system.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.info <package1>
+        salt '*' pkg.info <package1> <package2> <package3> ...
+    '''
+    salt.utils.warn_until('Nitrogen', "Please use 'pkg.info_available' instead")
+    return info_available(*names)
 
 
 def latest_version(*names, **kwargs):
@@ -162,7 +206,7 @@ def latest_version(*names, **kwargs):
         return ret
 
     names = sorted(list(set(names)))
-    package_info = info(*names)
+    package_info = info_available(*names)
     for name in names:
         pkg_info = package_info.get(name)
         if pkg_info is not None and pkg_info.get('status', '').lower() in ['not installed', 'out-of-date']:
@@ -514,6 +558,7 @@ def install(name=None,
             pkgs=None,
             sources=None,
             downloadonly=None,
+            skip_verify=False,
             **kwargs):
     '''
     Install the passed package(s), add refresh=True to run 'zypper refresh'
@@ -540,6 +585,9 @@ def install(name=None,
 
     downloadonly
         Only download the packages, do not install.
+
+    skip_verify
+        Skip the GPG verification check (e.g., ``--no-gpg-checks``)
 
     version
         Can be either a version number, or the combination of a comparison
@@ -637,6 +685,8 @@ def install(name=None,
     cmd_install = ['zypper', '--non-interactive']
     if not refresh:
         cmd_install.append('--no-refresh')
+    if skip_verify:
+        cmd_install.append('--no-gpg-checks')
     cmd_install += ['install', '--name', '--auto-agree-with-licenses']
     if downloadonly:
         cmd_install.append('--download-only')
@@ -671,7 +721,7 @@ def install(name=None,
     return salt.utils.compare_dicts(old, new)
 
 
-def upgrade(refresh=True):
+def upgrade(refresh=True, skip_verify=False):
     '''
     Run a full system upgrade, a zypper upgrade
 
@@ -685,6 +735,13 @@ def upgrade(refresh=True):
     .. code-block:: bash
 
         salt '*' pkg.upgrade
+
+
+    Options:
+
+    skip_verify
+        Skip the GPG verification check (e.g., ``--no-gpg-checks``)
+
     '''
     ret = {'changes': {},
            'result': True,
@@ -694,7 +751,10 @@ def upgrade(refresh=True):
     if salt.utils.is_true(refresh):
         refresh_db()
     old = list_pkgs()
-    cmd = 'zypper --non-interactive update --auto-agree-with-licenses'
+    cmd = 'zypper --non-interactive'
+    if skip_verify:
+        cmd += ' --no-gpg-checks'
+    cmd += ' update --auto-agree-with-licenses'
     call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
     if call['retcode'] != 0:
         ret['result'] = False

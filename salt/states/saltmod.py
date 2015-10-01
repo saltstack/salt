@@ -56,7 +56,8 @@ def state(
         fail_minions=None,
         allow_fail=0,
         concurrent=False,
-        timeout=None):
+        timeout=None,
+        batch=None):
     '''
     Invoke a state run on a given target
 
@@ -213,6 +214,9 @@ def state(
         ret['result'] = False
         return ret
 
+    if batch is not None:
+        cmd_kw['batch'] = str(batch)
+
     cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
 
     changes = {}
@@ -300,7 +304,8 @@ def function(
         fail_function=None,
         arg=None,
         kwarg=None,
-        timeout=None):
+        timeout=None,
+        batch=None):
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
 
@@ -359,6 +364,9 @@ def function(
         tgt_type = expr_form
     elif not tgt_type and not expr_form:
         tgt_type = 'glob'
+
+    if batch is not None:
+        cmd_kw['batch'] = str(batch)
 
     cmd_kw['expr_form'] = tgt_type
     cmd_kw['ssh'] = ssh
@@ -443,11 +451,12 @@ def wait_for_event(
         name,
         id_list,
         event_id='id',
-        timeout=300):
+        timeout=300,
+        node='master'):
     '''
     Watch Salt's event bus and block until a condition is met
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         An event tag to watch for; supports Reactor-style globbing.
@@ -489,7 +498,7 @@ def wait_for_event(
     ret = {'name': name, 'changes': {}, 'comment': '', 'result': False}
 
     sevent = salt.utils.event.get_event(
-            'master',
+            node,
             __opts__['sock_dir'],
             __opts__['transport'],
             opts=__opts__,
@@ -549,7 +558,7 @@ def runner(name, **kwargs):
     '''
     Execute a runner module on the master
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         The name of the function to run
@@ -578,7 +587,7 @@ def wheel(name, **kwargs):
     '''
     Execute a wheel module on the master
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         The name of the function to run

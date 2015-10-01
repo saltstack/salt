@@ -156,6 +156,7 @@ Full list of builtin state modules
     service
     slack
     smtp
+    splunk
     splunk_search
     sqlite3
     ssh_auth
@@ -168,6 +169,7 @@ Full list of builtin state modules
     sysctl
     syslog_ng
     sysrc
+    telemetry_alert
     test
     timezone
     tls

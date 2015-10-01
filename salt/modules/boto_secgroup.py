@@ -89,7 +89,7 @@ def __virtual__():
 
 
 def exists(name=None, region=None, key=None, keyid=None, profile=None,
-           vpc_id=None, group_id=None):
+           vpc_id=None, group_id=None, vpc_name=None):
     '''
     Check to see if an security group exists.
 
@@ -99,7 +99,8 @@ def exists(name=None, region=None, key=None, keyid=None, profile=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    group = _get_group(conn, name, vpc_id, group_id, region)
+    group = _get_group(conn, name, vpc_id, group_id, region, vpc_name,
+                       key, keyid, profile)
     if group:
         return True
     else:
@@ -131,13 +132,16 @@ def _split_rules(rules):
     return split
 
 
-def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None):  # pylint: disable=W0613
+def _get_group(conn, name=None, vpc_id=None, group_id=None, region=None,
+               vpc_name=None, key=None, keyid=None, profile=None):  # pylint: disable=W0613
     '''
     Get a group object given a name, name and vpc_id or group_id. Return a
     boto.ec2.securitygroup.SecurityGroup object if the group is found, else
     return None.
     '''
     if name:
+        if vpc_name:
+            vpc_id = __salt__['boto_vpc.check_vpc'](vpc_id, vpc_name, region, key, keyid, profile)
         if vpc_id is None:
             log.debug('getting group for {0}'.format(name))
             group_filter = {'group-name': name}
@@ -211,7 +215,8 @@ def _parse_rules(sg, rules):
     return _rules
 
 
-def get_group_id(name, vpc_id=None, region=None, key=None, keyid=None, profile=None):
+def get_group_id(name, vpc_id=None, region=None, key=None, keyid=None,
+                 profile=None, vpc_name=None):
     '''
     Get a Group ID given a Group Name or Group Name and VPC ID
 
@@ -221,15 +226,16 @@ def get_group_id(name, vpc_id=None, region=None, key=None, keyid=None, profile=N
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    group = _get_group(conn, name, vpc_id, region)
+    group = _get_group(conn, name, vpc_id, region, vpc_name, key, keyid,
+                       profile)
     if group:
         return group.id
     else:
         return False
 
 
-def convert_to_group_ids(groups, vpc_id, region=None, key=None, keyid=None,
-                         profile=None):
+def convert_to_group_ids(groups, vpc_id=None, region=None, key=None, keyid=None,
+                         profile=None, vpc_name=None):
     '''
     Given a list of security groups and a vpc_id, convert_to_group_ids will
     convert all list items in the given list to security group ids.
@@ -248,7 +254,8 @@ def convert_to_group_ids(groups, vpc_id, region=None, key=None, keyid=None,
         else:
             log.debug('calling boto_secgroup.get_group_id for'
                       ' group name {0}'.format(group))
-            group_id = get_group_id(group, vpc_id, region, key, keyid, profile)
+            group_id = get_group_id(group, vpc_id, region, key, keyid,
+                                    profile, vpc_name)
             log.debug('group name {0} has group id {1}'.format(
                 group, group_id)
             )
@@ -258,7 +265,7 @@ def convert_to_group_ids(groups, vpc_id, region=None, key=None, keyid=None,
 
 
 def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
-               profile=None, vpc_id=None):
+               profile=None, vpc_id=None, vpc_name=None):
     '''
     Get the configuration for a security group.
 
@@ -268,7 +275,8 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    sg = _get_group(conn, name, vpc_id, group_id, region)
+    sg = _get_group(conn, name, vpc_id, group_id, region, vpc_name, key,
+                    keyid, profile)
     if sg:
         ret = odict.OrderedDict()
         ret['name'] = sg.name
@@ -288,7 +296,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
 
 
 def create(name, description, vpc_id=None, region=None, key=None, keyid=None,
-           profile=None):
+           profile=None, vpc_name=None):
     '''
     Create a security group.
 
@@ -298,6 +306,8 @@ def create(name, description, vpc_id=None, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
+    if vpc_name:
+        vpc_id = __salt__['boto_vpc.check_vpc'](vpc_id, vpc_name, region, key, keyid, profile)
     created = conn.create_security_group(name, description, vpc_id)
     if created:
         log.info('Created security group {0}.'.format(name))
@@ -309,7 +319,7 @@ def create(name, description, vpc_id=None, region=None, key=None, keyid=None,
 
 
 def delete(name=None, group_id=None, region=None, key=None, keyid=None,
-           profile=None, vpc_id=None):
+           profile=None, vpc_id=None, vpc_name=None):
     '''
     Delete a security group.
 
@@ -319,7 +329,8 @@ def delete(name=None, group_id=None, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    group = _get_group(conn, name, vpc_id, group_id, region)
+    group = _get_group(conn, name, vpc_id, group_id, region, vpc_name,
+                       key, keyid, profile)
     if group:
         deleted = conn.delete_security_group(group_id=group.id)
         if deleted:
@@ -339,7 +350,8 @@ def authorize(name=None, source_group_name=None,
               source_group_owner_id=None, ip_protocol=None,
               from_port=None, to_port=None, cidr_ip=None, group_id=None,
               source_group_group_id=None, region=None, key=None,
-              keyid=None, profile=None, vpc_id=None, egress=False):
+              keyid=None, profile=None, vpc_id=None, egress=False,
+              vpc_name=None):
     '''
     Add a new rule to an existing security group.
 
@@ -349,7 +361,8 @@ def authorize(name=None, source_group_name=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    group = _get_group(conn, name, vpc_id, group_id, region)
+    group = _get_group(conn, name, vpc_id, group_id, region, vpc_name,
+                       key, keyid, profile)
     if group:
         try:
             added = None
@@ -389,7 +402,8 @@ def revoke(name=None, source_group_name=None,
            source_group_owner_id=None, ip_protocol=None,
            from_port=None, to_port=None, cidr_ip=None, group_id=None,
            source_group_group_id=None, region=None, key=None,
-           keyid=None, profile=None, vpc_id=None, egress=False):
+           keyid=None, profile=None, vpc_id=None, egress=False,
+           vpc_name=None):
     '''
     Remove a rule from an existing security group.
 
@@ -399,7 +413,8 @@ def revoke(name=None, source_group_name=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    group = _get_group(conn, name, vpc_id, group_id, region)
+    group = _get_group(conn, name, vpc_id, group_id, region, vpc_name,
+                       key, keyid, profile)
     if group:
         try:
             revoked = None
@@ -434,3 +449,45 @@ def revoke(name=None, source_group_name=None,
     else:
         log.debug('Failed to remove rule from security group.')
         return False
+
+
+def _find_vpcs(vpc_id=None, vpc_name=None, cidr=None, tags=None,
+               region=None, key=None, keyid=None, profile=None):
+
+    '''
+    Given VPC properties, find and return matching VPC ids.
+    Borrowed from boto_vpc; these could be refactored into a common library
+    '''
+
+    if all((vpc_id, vpc_name)):
+        raise SaltInvocationError('Only one of vpc_name or vpc_id may be '
+                                  'provided.')
+
+    if not any((vpc_id, vpc_name, tags, cidr)):
+        raise SaltInvocationError('At least one of the following must be '
+                                  'provided: vpc_id, vpc_name, cidr or tags.')
+
+    local_get_conn = __utils__['boto.get_connection_func']('vpc')
+    conn = local_get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    filter_parameters = {'filters': {}}
+
+    if vpc_id:
+        filter_parameters['vpc_ids'] = [vpc_id]
+
+    if cidr:
+        filter_parameters['filters']['cidr'] = cidr
+
+    if vpc_name:
+        filter_parameters['filters']['tag:Name'] = vpc_name
+
+    if tags:
+        for tag_name, tag_value in six.iteritems(tags):
+            filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+
+    vpcs = conn.get_all_vpcs(**filter_parameters)
+    log.debug('The filters criteria {0} matched the following VPCs:{1}'.format(filter_parameters, vpcs))
+
+    if vpcs:
+        return [vpc.id for vpc in vpcs]
+    else:
+        return []

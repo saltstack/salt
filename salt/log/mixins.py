@@ -73,7 +73,7 @@ class NewStyleClassMixIn(object):
 
 class ExcInfoOnLogLevelFormatMixIn(object):
     '''
-    Logging handler class mixin to properly handle including exc_info on a pre logging handler basis
+    Logging handler class mixin to properly handle including exc_info on a per logging handler basis
     '''
 
     def format(self, record):

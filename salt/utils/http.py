@@ -3,7 +3,7 @@
 Utils for making various web calls. Primarily designed for REST, SOAP, webhooks
 and the like, but also useful for basic HTTP testing.
 
-.. versionaddedd:: 2015.2
+.. versionadded:: 2015.5.0
 '''
 
 # Import python libs
@@ -20,6 +20,7 @@ import os.path
 import pprint
 import socket
 import urllib
+import inspect
 
 import ssl
 try:
@@ -60,6 +61,7 @@ from salt.ext.six.moves.urllib.error import URLError
 
 # Don't need a try/except block, since Salt depends on tornado
 import tornado.httputil
+import tornado.simple_httpclient
 from tornado.httpclient import HTTPClient
 
 try:
@@ -124,6 +126,7 @@ def query(url,
           headers_out=None,
           decode_out=None,
           stream=False,
+          streaming_callback=None,
           handle=False,
           agent=USERAGENT,
           hide_fields=None,
@@ -241,8 +244,6 @@ def query(url,
     if not auth:
         if username and password:
             auth = (username, password)
-        else:
-            auth = None
 
     if agent == USERAGENT:
         agent = '{0} http.query()'.format(agent)
@@ -318,7 +319,7 @@ def query(url,
             urllib_request.HTTPCookieProcessor(sess_cookies)
         ]
 
-        if url.startswith('https') or port == 443:
+        if url.startswith('https'):
             hostname = request.get_host()
             handlers[0] = urllib_request.HTTPSHandler(1)
             if not HAS_MATCHHOSTNAME:
@@ -328,8 +329,12 @@ def query(url,
                 log.warn(('SSL certificate verification has been explicitly '
                          'disabled. THIS CONNECTION MAY NOT BE SECURE!'))
             else:
+                if ':' in hostname:
+                    hostname, port = hostname.split(':')
+                else:
+                    port = 443
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect((hostname, 443))
+                sock.connect((hostname, int(port)))
                 sockwrap = ssl.wrap_socket(
                     sock,
                     ca_certs=ca_bundle,
@@ -408,18 +413,44 @@ def query(url,
         if isinstance(data, dict):
             data = urllib.urlencode(data)
 
+        if verify_ssl:
+            req_kwargs['ca_certs'] = ca_bundle
+
+        max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
+        timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
+
+        client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+        supports_max_body_size = 'max_body_size' in client_argspec.args
+
         try:
-            result = HTTPClient().fetch(
-                url_full,
-                method=method,
-                headers=header_dict,
-                auth_username=username,
-                auth_password=password,
-                body=data,
-                validate_cert=verify_ssl,
-                allow_nonstandard_methods=True,
-                **req_kwargs
-            )
+            if supports_max_body_size:
+                result = HTTPClient(max_body_size=max_body).fetch(
+                    url_full,
+                    method=method,
+                    headers=header_dict,
+                    auth_username=username,
+                    auth_password=password,
+                    body=data,
+                    validate_cert=verify_ssl,
+                    allow_nonstandard_methods=True,
+                    streaming_callback=streaming_callback,
+                    request_timeout=timeout,
+                    **req_kwargs
+                )
+            else:
+                result = HTTPClient().fetch(
+                    url_full,
+                    method=method,
+                    headers=header_dict,
+                    auth_username=username,
+                    auth_password=password,
+                    body=data,
+                    validate_cert=verify_ssl,
+                    allow_nonstandard_methods=True,
+                    streaming_callback=streaming_callback,
+                    request_timeout=timeout,
+                    **req_kwargs
+                )
         except tornado.httpclient.HTTPError as exc:
             ret['status'] = exc.code
             ret['error'] = str(exc)
@@ -546,7 +577,6 @@ def get_ca_bundle(opts=None):
 
     # Check Salt first
     for salt_root in file_roots.get('base', []):
-        log.debug('file_roots is {0}'.format(salt_root))
         for path in ('cacert.pem', 'ca-bundle.crt'):
             if os.path.exists(path):
                 return path

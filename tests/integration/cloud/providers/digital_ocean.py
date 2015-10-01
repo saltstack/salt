@@ -10,6 +10,7 @@ import random
 import string
 
 # Import Salt Testing Libs
+from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
@@ -36,6 +37,8 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'digital_ocean'
 
 
+@skipIf(True, 'Valid provider configs are not available for the DigitalOcean v1 API '
+              'in conjunction with the configs needed for v2 API.')
 class DigitalOceanTest(integration.ShellCase):
     '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
@@ -85,9 +88,8 @@ class DigitalOceanTest(integration.ShellCase):
         Tests the return of running the --list-images command for digital ocean
         '''
         image_list = self.run_cloud('--list-images {0}'.format(PROVIDER_NAME))
-
         self.assertIn(
-            '14.10 x64',
+            '14.04 x64',
             [i.strip() for i in image_list]
         )
 
@@ -96,7 +98,6 @@ class DigitalOceanTest(integration.ShellCase):
         Tests the return of running the --list-locations command for digital ocean
         '''
         _list_locations = self.run_cloud('--list-locations {0}'.format(PROVIDER_NAME))
-
         self.assertIn(
             'San Francisco 1',
             [i.strip() for i in _list_locations]
@@ -106,11 +107,10 @@ class DigitalOceanTest(integration.ShellCase):
         '''
         Tests the return of running the --list-sizes command for digital ocean
         '''
-        _list_size = self.run_cloud('--list-sizes {0}'.format(PROVIDER_NAME))
-
+        _list_sizes = self.run_cloud('--list-sizes {0}'.format(PROVIDER_NAME))
         self.assertIn(
             '16gb',
-            [i.strip() for i in _list_size]
+            [i.strip() for i in _list_sizes]
         )
 
     def test_key_management(self):

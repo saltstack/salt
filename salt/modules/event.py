@@ -7,9 +7,9 @@ from __future__ import absolute_import
 # Import Python libs
 import collections
 import logging
+import os
 import sys
 import traceback
-import os
 
 # Import salt libs
 import salt.crypt

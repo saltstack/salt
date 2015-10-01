@@ -66,6 +66,7 @@ from Crypto.Signature import PKCS1_v1_5
 
 # Import salt libs
 import salt.ext.six as six
+from salt.ext.six.moves import http_client  # pylint: disable=import-error,no-name-in-module
 import salt.utils.http
 import salt.utils.cloud
 import salt.config as config
@@ -78,12 +79,10 @@ from salt.exceptions import (
     SaltCloudNotFound,
 )
 
-# Import 3rd-party libs
-import salt.ext.six as six
-from salt.ext.six.moves import http_client  # pylint: disable=import-error,no-name-in-module
-
 # Get logging started
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'joyent'
 
 JOYENT_API_HOST_SUFFIX = '.api.joyentcloud.com'
 JOYENT_API_VERSION = '~7.2'
@@ -117,8 +116,7 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    conn = None
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -127,7 +125,7 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'joyent',
+        __active_provider_name__ or __virtualname__,
         ('user', 'password')
     )
 
@@ -145,7 +143,7 @@ def get_image(vm_):
         return images[vm_image]
 
     raise SaltCloudNotFound(
-        'The specified image, {0!r}, could not be found.'.format(vm_image)
+        'The specified image, \'{0}\', could not be found.'.format(vm_image)
     )
 
 
@@ -162,7 +160,7 @@ def get_size(vm_):
         return sizes[vm_size]
 
     raise SaltCloudNotFound(
-        'The specified size, {0!r}, could not be found.'.format(vm_size)
+        'The specified size, \'{0}\', could not be found.'.format(vm_size)
     )
 
 
@@ -244,9 +242,9 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'joyent',
-                                        vm_['profile']) is False:
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'joyent',
+                                                           vm_['profile']) is False:
             return False
     except AttributeError:
         pass
@@ -585,7 +583,7 @@ def has_method(obj, method_name):
         return True
 
     log.error(
-        'Method {0!r} not yet supported!'.format(
+        'Method \'{0}\' not yet supported!'.format(
             method_name
         )
     )
@@ -1040,7 +1038,7 @@ def query(action=None,
     if command:
         path += '/{0}'.format(command)
 
-    log.debug('User: {0!r} on PATH: {1}'.format(user, path))
+    log.debug('User: \'{0}\' on PATH: {1}'.format(user, path))
 
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%a, %d %b %Y %H:%M:%S %Z').strip()

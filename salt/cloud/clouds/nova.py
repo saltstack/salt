@@ -88,40 +88,30 @@ will be created without the rest of the interfaces
 Note: For rackconnect v3, rackconnectv3 needs to be specified with the
 rackconnect v3 cloud network as its variable.
 '''
-from __future__ import absolute_import
 # pylint: disable=E0102
 
-# The import section is mostly libcloud boilerplate
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import socket
 import pprint
 import yaml
 
-# Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+# Import Salt Libs
 import salt.ext.six as six
+import salt.utils
+import salt.client
 try:
     from salt.utils.openstack import nova
+    import novaclient.exceptions
     HAS_NOVA = True
 except NameError as exc:
     HAS_NOVA = False
 
+# Import Salt Cloud Libs
+from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
 import salt.utils.cloud
-
-# Import nova libs
-try:
-    import novaclient.exceptions
-except ImportError:
-    pass
-
-# Import salt libs
-import salt.utils
-import salt.client
-
-# Import salt.cloud libs
 import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
@@ -133,7 +123,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
-# Import netaddr IP matching
 try:
     from netaddr import all_matching_cidrs
     HAS_NETADDR = True
@@ -143,6 +132,8 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 request_log = logging.getLogger('requests')
+
+__virtualname__ = 'nova'
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
@@ -157,7 +148,14 @@ def __virtual__():
     Check for Nova configurations
     '''
     request_log.setLevel(getattr(logging, __opts__.get('requests_log_level', 'warning').upper()))
-    return HAS_NOVA
+
+    if get_configured_provider() is False:
+        return False
+
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -166,7 +164,23 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'nova'
+        __active_provider_name__ or __virtualname__,
+        ('user', 'tenant', 'identity_url', 'compute_region',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'libcloud': HAS_LIBCLOUD,
+        'netaddr': HAS_NETADDR,
+        'nova': HAS_NOVA,
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
@@ -231,7 +245,7 @@ def get_image(conn, vm_):
         return image['id']
     except novaclient.exceptions.NotFound as exc:
         raise SaltCloudNotFound(
-            'The specified image, {0!r}, could not be found: {1}'.format(
+            'The specified image, \'{0}\', could not be found: {1}'.format(
                 vm_image,
                 str(exc)
             )
@@ -266,7 +280,7 @@ def get_size(conn, vm_):
         if vm_size and str(vm_size) in (str(sizes[size]['id']), str(size)):
             return sizes[size]['id']
     raise SaltCloudNotFound(
-        'The specified size, {0!r}, could not be found.'.format(vm_size)
+        'The specified size, \'{0}\', could not be found.'.format(vm_size)
     )
 
 
@@ -383,10 +397,11 @@ def destroy(name, conn=None, call=None):
     profile = None
     if 'metadata' in node.extra and 'profile' in node.extra['metadata']:
         profile = node.extra['metadata']['profile']
+
     flush_mine_on_destroy = False
-    if profile is not None and profile in profiles:
-        if 'flush_mine_on_destroy' in profiles[profile]:
-            flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+    if profile and profile in profiles and 'flush_mine_on_destroy' in profiles[profile]:
+        flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+
     if flush_mine_on_destroy:
         log.info('Clearing Salt Mine: {0}'.format(name))
         salt_client = salt.client.get_local_client(__opts__['conf_file'])
@@ -543,9 +558,9 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'nova',
-                                        vm_['profile']) is False:
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'nova',
+                                                           vm_['profile']) is False:
             return False
     except AttributeError:
         pass
@@ -556,7 +571,7 @@ def create(vm_):
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined ssh_key_file {0!r} does not exist'.format(
+            'The defined ssh_key_file \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -585,7 +600,7 @@ def create(vm_):
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
+            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
             vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
                 salt.config.get_cloud_config_value(
                     'keysize',
@@ -703,10 +718,9 @@ def create(vm_):
                     if private_ip not in data.private_ips and not ignore_ip:
                         result.append(private_ip)
 
-        if rackconnect(vm_) is True:
-            if ssh_interface(vm_) != 'private_ips' or rackconnectv3:
-                data.public_ips = access_ip
-                return data
+        if rackconnect(vm_) is True and (ssh_interface(vm_) != 'private_ips' or rackconnectv3):
+            data.public_ips = access_ip
+            return data
 
         if cloudnetwork(vm_) is True:
             data.public_ips = access_ip
@@ -773,9 +787,9 @@ def create(vm_):
     if 'password' in ret['extra']:
         del ret['extra']['password']
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
@@ -855,8 +869,8 @@ def list_nodes(call=None, **kwargs):
             'image': server_tmp['image']['id'],
             'size': server_tmp['flavor']['id'],
             'state': server_tmp['state'],
-            'private_ips': public,
-            'public_ips': private,
+            'private_ips': private,
+            'public_ips': public,
         }
     return ret
 
@@ -1054,3 +1068,111 @@ def virtual_interface_create(name, net_name, **kwargs):
     '''
     conn = get_conn()
     return conn.virtual_interface_create(name, net_name)
+
+
+def floating_ip_pool_list(call=None):
+    '''
+    List all floating IP pools
+
+    .. versionadded:: Boron
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_pool_list action must be called with -f or --function'
+        )
+
+    conn = get_conn()
+    return conn.floating_ip_pool_list()
+
+
+def floating_ip_list(call=None):
+    '''
+    List floating IPs
+
+    .. versionadded:: Boron
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_list action must be called with -f or --function'
+        )
+
+    conn = get_conn()
+    return conn.floating_ip_list()
+
+
+def floating_ip_create(kwargs, call=None):
+    '''
+    Allocate a floating IP
+
+    .. versionadded:: Boron
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_create action must be called with -f or --function'
+        )
+
+    if 'pool' not in kwargs:
+        log.error('pool is required')
+        return False
+
+    conn = get_conn()
+    return conn.floating_ip_create(kwargs['pool'])
+
+
+def floating_ip_delete(kwargs, call=None):
+    '''
+    De-allocate floating IP
+
+    .. versionadded:: Boron
+    '''
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The floating_ip_delete action must be called with -f or --function'
+        )
+
+    if 'floating_ip' not in kwargs:
+        log.error('floating_ip is required')
+        return False
+
+    conn = get_conn()
+    return conn.floating_ip_delete(kwargs['floating_ip'])
+
+
+def floating_ip_associate(name, kwargs, call=None):
+    '''
+    Associate a floating IP address to a server
+
+    .. versionadded:: Boron
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The floating_ip_associate action must be called with -a of --action.'
+        )
+
+    if 'floating_ip' not in kwargs:
+        log.error('floating_ip is required')
+        return False
+
+    conn = get_conn()
+    conn.floating_ip_associate(name, kwargs['floating_ip'])
+    return list_nodes()[name]
+
+
+def floating_ip_disassociate(name, kwargs, call=None):
+    '''
+    Disassociate a floating IP from a server
+
+    .. versionadded:: Boron
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The floating_ip_disassociate action must be called with -a of --action.'
+        )
+
+    if 'floating_ip' not in kwargs:
+        log.error('floating_ip is required')
+        return False
+
+    conn = get_conn()
+    conn.floating_ip_disassociate(name, kwargs['floating_ip'])
+    return list_nodes()[name]

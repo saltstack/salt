@@ -24,9 +24,9 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 
 :depends: requests
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import json
 import pprint
@@ -37,14 +37,8 @@ import sys
 import base64
 from hashlib import sha1
 
-# Import 3rd-party libs
+# Import Salt libs
 from salt.ext.six.moves.urllib.parse import quote as _quote  # pylint: disable=import-error,no-name-in-module
-
-try:
-    import requests
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
 
 # Import salt cloud libs
 import salt.utils.cloud
@@ -55,6 +49,13 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+
+# Import Third Party Libs
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -78,13 +79,13 @@ def __virtual__():
     '''
     Check for aliyun configurations
     '''
-    if not HAS_REQUESTS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -93,8 +94,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'aliyun',
+        __active_provider_name__ or __virtualname__,
         ('id', 'key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'requests': HAS_REQUESTS}
     )
 
 
@@ -384,7 +395,7 @@ def get_image(vm_):
     if vm_image and str(vm_image) in images:
         return images[vm_image]['ImageId']
     raise SaltCloudNotFound(
-        'The specified image, {0!r}, could not be found.'.format(vm_image)
+        'The specified image, \'{0}\', could not be found.'.format(vm_image)
     )
 
 
@@ -403,7 +414,7 @@ def get_securitygroup(vm_):
     if securitygroup and str(securitygroup) in sgs:
         return sgs[securitygroup]['SecurityGroupId']
     raise SaltCloudNotFound(
-        'The specified security group, {0!r}, could not be found.'.format(
+        'The specified security group, \'{0}\', could not be found.'.format(
             securitygroup)
     )
 
@@ -424,7 +435,7 @@ def get_size(vm_):
         return sizes[vm_size]['InstanceTypeId']
 
     raise SaltCloudNotFound(
-        'The specified size, {0!r}, could not be found.'.format(vm_size)
+        'The specified size, \'{0}\', could not be found.'.format(vm_size)
     )
 
 
@@ -443,7 +454,7 @@ def __get_location(vm_):
     if vm_location and str(vm_location) in locations:
         return locations[vm_location]['RegionId']
     raise SaltCloudNotFound(
-        'The specified location, {0!r}, could not be found.'.format(
+        'The specified location, \'{0}\', could not be found.'.format(
             vm_location
         )
     )
@@ -570,9 +581,9 @@ def create(vm_):
     '''
     try:
         # Check for required profile parameters before sending any API calls.
-        if config.is_profile_configured(__opts__,
-                                        __active_provider_name__ or 'aliyun',
-                                        vm_['profile']) is False:
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'aliyun',
+                                                           vm_['profile']) is False:
             return False
     except AttributeError:
         pass
@@ -660,9 +671,9 @@ def create(vm_):
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data.__dict__)
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
@@ -705,7 +716,7 @@ def _compute_signature(parameters, access_key_secret):
     sortedParameters = sorted(list(parameters.items()), key=lambda items: items[0])
 
     canonicalizedQueryString = ''
-    for (k, v) in sortedParameters:
+    for k, v in sortedParameters:
         canonicalizedQueryString += '&' + percent_encode(k) \
             + '=' + percent_encode(v)
 
@@ -755,7 +766,7 @@ def query(params=None):
     if request.status_code != 200:
         raise SaltCloudSystemExit(
             'An error occurred while querying aliyun ECS. HTTP Code: {0}  '
-            'Error: {1!r}'.format(
+            'Error: \'{1}\''.format(
                 request.status_code,
                 request.text
             )
@@ -879,8 +890,8 @@ def _get_node(name):
         except KeyError:
             attempts -= 1
             log.debug(
-                'Failed to get the data for the node {0!r}. Remaining '
-                'attempts {1}'.format(
+                'Failed to get the data for node \'{0}\'. Remaining '
+                'attempts: {1}'.format(
                     name, attempts
                 )
             )

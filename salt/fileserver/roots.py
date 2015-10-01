@@ -230,7 +230,10 @@ def file_hash(load, fnd):
     cache_dir = os.path.dirname(cache_path)
     # make cache directory if it doesn't exist
     if not os.path.exists(cache_dir):
-        os.makedirs(cache_dir)
+        try:
+            os.makedirs(cache_dir)
+        except OSError:
+            pass
     # save the cache object "hash:mtime"
     cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
     with salt.utils.flopen(cache_path, 'w') as fp_:

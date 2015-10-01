@@ -22,7 +22,7 @@ ensure_in_syspath('../../')
 from salt.states import openstack_config
 
 openstack_config.__salt__ = {}
-openstack_config.__opts__ = {}
+openstack_config.__opts__ = {'test': False}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)

@@ -95,8 +95,10 @@ class TestSaltEvent(TestCase):
     def assertGotEvent(self, evt, data, msg=None):
         self.assertIsNotNone(evt, msg)
         for key in data:
-            self.assertIn(key, evt, msg)
-            self.assertEqual(data[key], evt[key], msg)
+            self.assertIn(key, evt, '{0}: Key {1} missing'.format(msg, key))
+            assertMsg = '{0}: Key {1} value mismatch, {2} != {3}'
+            assertMsg = assertMsg.format(msg, key, data[key], evt[key])
+            self.assertEqual(data[key], evt[key], assertMsg)
 
     def test_master_event(self):
         me = event.MasterEvent(SOCK_DIR, listen=False)
@@ -159,20 +161,43 @@ class TestSaltEvent(TestCase):
             )
         )
 
-    def test_event_subscription(self):
+    def test_event_single(self):
         '''Test a single event is received'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt1, {'data': 'foo1'})
+
+    def test_event_single_no_block(self):
+        '''Test a single event is received, no block'''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR, listen=True)
+            start = time.time()
+            finish = start + 5
+            evt1 = me.get_event(wait=0, tag='evt1', no_block=True)
+            # We should get None and way before the 5 seconds wait since it's
+            # non-blocking, otherwise it would wait for an event which we
+            # didn't even send
+            self.assertIsNone(evt1, None)
+            self.assertLess(start, finish)
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            evt1 = me.get_event(wait=0, tag='evt1')
+            self.assertGotEvent(evt1, {'data': 'foo1'})
+
+    def test_event_single_wait_0_no_block_False(self):
+        '''Test a single event is received with wait=0 and no_block=False and doesn't spin the while loop'''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            # This is too fast and will be None but assures we're not blocking
+            evt1 = me.get_event(wait=0, tag='evt1', no_block=False)
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
     def test_event_timeout(self):
         '''Test no event is received if the timeout is reached'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='evt1')
             self.assertGotEvent(evt1, {'data': 'foo1'})
@@ -183,89 +208,91 @@ class TestSaltEvent(TestCase):
         '''Test no wait timeout, we should block forever, until we get one '''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
-            me.fire_event({'data': 'foo1'}, 'evt1')
-            me.fire_event({'data': 'foo2'}, 'evt2')
-            evt = me.get_event(tag='evt2', wait=0)
+            with eventsender_process({'data': 'foo2'}, 'evt2', 5):
+                evt = me.get_event(tag='evt2', wait=0, no_block=False)
             self.assertGotEvent(evt, {'data': 'foo2'})
 
-    def test_event_subscription_matching(self):
-        '''Test a subscription startswith matching'''
+    def test_event_matching(self):
+        '''Test a startswith match'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
-            evt1 = me.get_event(tag='evt1')
+            evt1 = me.get_event(tag='ev')
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
-    def test_event_subscription_matching_all(self):
-        '''Test a subscription matching'''
+    def test_event_matching_regex(self):
+        '''Test a regex match'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            evt1 = me.get_event(tag='^ev', match_type='regex')
+            self.assertGotEvent(evt1, {'data': 'foo1'})
+
+    def test_event_matching_all(self):
+        '''Test an all match'''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR, listen=True)
             me.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me.get_event(tag='')
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
-    def test_event_not_subscribed(self):
-        '''Test get event ignores non-subscribed events'''
+    def test_event_matching_all_when_tag_is_None(self):
+        '''Test event matching all when not passing a tag'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
-            with eventsender_process({'data': 'foo1'}, 'evt1', 5):
-                me.fire_event({'data': 'foo1'}, 'evt2')
-                evt1 = me.get_event(tag='evt1', wait=10)
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            evt1 = me.get_event()
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
-    def test_event_multiple_subscriptions(self):
-        '''Test multiple subscriptions do not interfere'''
+    def test_event_not_subscribed(self):
+        '''Test get_event drops non-subscribed events'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
-            with eventsender_process({'data': 'foo1'}, 'evt1', 5):
-                me.fire_event({'data': 'foo1'}, 'evt2')
-                evt1 = me.get_event(tag='evt1', wait=10)
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            me.fire_event({'data': 'foo2'}, 'evt2')
+            evt2 = me.get_event(tag='evt2')
+            evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt2, {'data': 'foo2'})
+            self.assertIsNone(evt1)
+
+    def test_event_subscription_cache(self):
+        '''Test subscriptions cache a message until requested'''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me.subscribe('evt1')
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            me.fire_event({'data': 'foo2'}, 'evt2')
+            evt2 = me.get_event(tag='evt2')
+            evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt2, {'data': 'foo2'})
+            self.assertGotEvent(evt1, {'data': 'foo1'})
+
+    def test_event_subscriptions_cache_regex(self):
+        '''Test regex subscriptions cache a message until requested'''
+        with eventpublisher_process():
+            me = event.MasterEvent(SOCK_DIR, listen=True)
+            me.subscribe('e..1$', 'regex')
+            me.fire_event({'data': 'foo1'}, 'evt1')
+            me.fire_event({'data': 'foo2'}, 'evt2')
+            evt2 = me.get_event(tag='evt2')
+            evt1 = me.get_event(tag='evt1')
+            self.assertGotEvent(evt2, {'data': 'foo2'})
             self.assertGotEvent(evt1, {'data': 'foo1'})
 
     def test_event_multiple_clients(self):
         '''Test event is received by multiple clients'''
         with eventpublisher_process():
             me1 = event.MasterEvent(SOCK_DIR, listen=True)
-            me1.subscribe()
             me2 = event.MasterEvent(SOCK_DIR, listen=True)
-            me2.subscribe()
+            # We need to sleep here to avoid a race condition wherein
+            # the second socket may not be connected by the time the first socket
+            # sends the event.
+            time.sleep(0.5)
             me1.fire_event({'data': 'foo1'}, 'evt1')
             evt1 = me1.get_event(tag='evt1')
             self.assertGotEvent(evt1, {'data': 'foo1'})
-            # Can't replicate this failure in the wild, need to fix the
-            # test system bug here
-            #evt2 = me2.get_event(tag='evt1')
-            #self.assertGotEvent(evt2, {'data': 'foo1'})
-
-    def test_event_nested_subs(self):
-        '''Test nested event subscriptions do not drop events, issue #8580'''
-        with eventpublisher_process():
-            me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
-            me.fire_event({'data': 'foo1'}, 'evt1')
-            me.fire_event({'data': 'foo2'}, 'evt2')
-            # Since we now drop unrelated events to avoid memory leaks, see http://goo.gl/2n3L09 commit bcbc5340ef, the
-            # calls below will return None and will drop the unrelated events
-            evt2 = me.get_event(tag='evt2')
-            evt1 = me.get_event(tag='evt1')
-            self.assertGotEvent(evt2, {'data': 'foo2'})
-            # This one will be None because we're dripping unrelated events
-            self.assertIsNone(evt1)
-
-            # Fire events again
-            me.fire_event({'data': 'foo3'}, 'evt3')
-            me.fire_event({'data': 'foo4'}, 'evt4')
-            # We not force unrelated pending events not to be dropped, so both of the event below work and are not
-            # None
-            evt2 = me.get_event(tag='evt4', use_pending=True)
-            evt1 = me.get_event(tag='evt3', use_pending=True)
-            self.assertGotEvent(evt2, {'data': 'foo4'})
-            self.assertGotEvent(evt1, {'data': 'foo3'})
+            evt2 = me2.get_event(tag='evt1')
+            self.assertGotEvent(evt2, {'data': 'foo1'})
 
     @expectedFailure
     def test_event_nested_sub_all(self):
@@ -273,7 +300,6 @@ class TestSaltEvent(TestCase):
         # Show why not to call get_event(tag='')
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
             me.fire_event({'data': 'foo1'}, 'evt1')
             me.fire_event({'data': 'foo2'}, 'evt2')
             evt2 = me.get_event(tag='')
@@ -285,7 +311,6 @@ class TestSaltEvent(TestCase):
         '''Test a large number of events, one at a time'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
             for i in range(500):
                 me.fire_event({'data': '{0}'.format(i)}, 'testevents')
                 evt = me.get_event(tag='testevents')
@@ -295,7 +320,6 @@ class TestSaltEvent(TestCase):
         '''Test a large number of events, send all then recv all'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
             # Must not exceed zmq HWM
             for i in range(500):
                 me.fire_event({'data': '{0}'.format(i)}, 'testevents')
@@ -309,7 +333,6 @@ class TestSaltEvent(TestCase):
         '''Tests that sending an event through fire_master generates expected event'''
         with eventpublisher_process():
             me = event.MasterEvent(SOCK_DIR, listen=True)
-            me.subscribe()
             data = {'data': 'foo1'}
             me.fire_master(data, 'test_master')
 

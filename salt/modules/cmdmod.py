@@ -8,16 +8,17 @@ access to the master root execution access to all salt minions.
 from __future__ import absolute_import
 
 # Import python libs
-import time
 import functools
 import glob
+import json
 import logging
 import os
+import shlex
 import shutil
 import subprocess
 import sys
+import time
 import traceback
-import shlex
 from salt.utils import vt
 
 # Import salt libs
@@ -51,6 +52,19 @@ def __virtual__():
     with pdb a bit harder so lets do it this way instead.
     '''
     return __virtualname__
+
+
+def _check_cb(cb_):
+    '''
+    If the callback is None or is not callable, return a lambda that returns
+    the value passed.
+    '''
+    if cb_ is not None:
+        if hasattr(cb_, '__call__'):
+            return cb_
+        else:
+            log.error('log_callback is not callable, ignoring')
+    return lambda x: x
 
 
 def _python_shell_default(python_shell, __pub_jid):
@@ -200,6 +214,7 @@ def _run(cmd,
          stdout=subprocess.PIPE,
          stderr=subprocess.PIPE,
          output_loglevel='debug',
+         log_callback=None,
          runas=None,
          shell=DEFAULT_SHELL,
          python_shell=False,
@@ -224,6 +239,8 @@ def _run(cmd,
             'Attempt to run a shell command with what may be an invalid shell! '
             'Check to ensure that the shell <{0}> is valid for this user.'
             .format(shell))
+
+    log_callback = _check_cb(log_callback)
 
     # Set the default working directory to the home directory of the user
     # salt-minion is running as. Defaults to home directory of user under which
@@ -335,11 +352,12 @@ def _run(cmd,
         # Always log the shell commands at INFO unless quiet logging is
         # requested. The command output is what will be controlled by the
         # 'loglevel' parameter.
-        log.info(
+        msg = (
             'Executing command {0!r} {1}in directory {2!r}'.format(
                 cmd, 'as user {0!r} '.format(runas) if runas else '', cwd
             )
         )
+        log.info(log_callback(msg))
 
     if reset_system_locale is True:
         if not salt.utils.is_windows():
@@ -446,7 +464,8 @@ def _run(cmd,
         if timeout:
             to = ' (timeout: {0}s)'.format(timeout)
         if _check_loglevel(output_loglevel) is not None:
-            log.debug('Running {0} in VT{1}'.format(cmd, to))
+            msg = 'Running {0} in VT{1}'.format(cmd, to)
+            log.debug(log_callback(msg))
         stdout, stderr = '', ''
         now = time.time()
         if timeout:
@@ -544,6 +563,7 @@ def _run_quiet(cmd,
                 stdin=stdin,
                 stderr=subprocess.STDOUT,
                 output_loglevel='quiet',
+                log_callback=None,
                 shell=shell,
                 python_shell=python_shell,
                 env=env,
@@ -582,6 +602,7 @@ def _run_all_quiet(cmd,
                 python_shell=python_shell,
                 env=env,
                 output_loglevel='quiet',
+                log_callback=None,
                 template=template,
                 umask=umask,
                 timeout=timeout,
@@ -603,6 +624,7 @@ def run(cmd,
         rstrip=True,
         umask=None,
         output_loglevel='debug',
+        log_callback=None,
         timeout=None,
         reset_system_locale=True,
         ignore_retcode=False,
@@ -772,6 +794,7 @@ def run(cmd,
                rstrip=rstrip,
                umask=umask,
                output_loglevel=output_loglevel,
+               log_callback=log_callback,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
@@ -779,6 +802,8 @@ def run(cmd,
                pillarenv=kwargs.get('pillarenv'),
                pillar_override=kwargs.get('pillar'),
                use_vt=use_vt)
+
+    log_callback = _check_cb(log_callback)
 
     if 'pid' in ret and '__pub_jid' in kwargs:
         # Stuff the child pid in the JID file
@@ -806,11 +831,12 @@ def run(cmd,
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
-            log.error(
+            msg = (
                 'Command {0!r} failed with return code: {1}'
                 .format(cmd, ret['retcode'])
             )
-        log.log(lvl, 'output: {0}'.format(ret['stdout']))
+            log.error(log_callback(msg))
+        log.log(lvl, 'output: {0}'.format(log_callback(ret['stdout'])))
     return ret['stdout']
 
 
@@ -825,6 +851,7 @@ def shell(cmd,
         rstrip=True,
         umask=None,
         output_loglevel='debug',
+        log_callback=None,
         quiet=False,
         timeout=None,
         reset_system_locale=True,
@@ -986,6 +1013,7 @@ def shell(cmd,
         rstrip=rstrip,
         umask=umask,
         output_loglevel=output_loglevel,
+        log_callback=log_callback,
         quiet=quiet,
         timeout=timeout,
         reset_system_locale=reset_system_locale,
@@ -1008,6 +1036,7 @@ def run_stdout(cmd,
                rstrip=True,
                umask=None,
                output_loglevel='debug',
+               log_callback=None,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
@@ -1148,6 +1177,7 @@ def run_stdout(cmd,
                rstrip=rstrip,
                umask=umask,
                output_loglevel=output_loglevel,
+               log_callback=log_callback,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
@@ -1156,19 +1186,22 @@ def run_stdout(cmd,
                pillar_override=kwargs.get('pillar'),
                use_vt=use_vt)
 
+    log_callback = _check_cb(log_callback)
+
     lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
-            log.error(
+            msg = (
                 'Command {0!r} failed with return code: {1}'
                 .format(cmd, ret['retcode'])
             )
+            log.error(log_callback(msg))
         if ret['stdout']:
-            log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
+            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
         if ret['stderr']:
-            log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
         if ret['retcode']:
             log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret['stdout']
@@ -1186,6 +1219,7 @@ def run_stderr(cmd,
                rstrip=True,
                umask=None,
                output_loglevel='debug',
+               log_callback=None,
                timeout=None,
                reset_system_locale=True,
                ignore_retcode=False,
@@ -1325,6 +1359,7 @@ def run_stderr(cmd,
                rstrip=rstrip,
                umask=umask,
                output_loglevel=output_loglevel,
+               log_callback=log_callback,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
@@ -1333,19 +1368,22 @@ def run_stderr(cmd,
                pillarenv=kwargs.get('pillarenv'),
                pillar_override=kwargs.get('pillar'))
 
+    log_callback = _check_cb(log_callback)
+
     lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
-            log.error(
+            msg = (
                 'Command {0!r} failed with return code: {1}'
                 .format(cmd, ret['retcode'])
             )
+            log.error(log_callback(msg))
         if ret['stdout']:
-            log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
+            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
         if ret['stderr']:
-            log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
         if ret['retcode']:
             log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret['stderr']
@@ -1363,6 +1401,7 @@ def run_all(cmd,
             rstrip=True,
             umask=None,
             output_loglevel='debug',
+            log_callback=None,
             timeout=None,
             reset_system_locale=True,
             ignore_retcode=False,
@@ -1502,6 +1541,7 @@ def run_all(cmd,
                rstrip=rstrip,
                umask=umask,
                output_loglevel=output_loglevel,
+               log_callback=log_callback,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
                ignore_retcode=ignore_retcode,
@@ -1510,19 +1550,22 @@ def run_all(cmd,
                pillar_override=kwargs.get('pillar'),
                use_vt=use_vt)
 
+    log_callback = _check_cb(log_callback)
+
     lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
-            log.error(
+            msg = (
                 'Command {0!r} failed with return code: {1}'
                 .format(cmd, ret['retcode'])
             )
+            log.error(log_callback(msg))
         if ret['stdout']:
-            log.log(lvl, 'stdout: {0}'.format(ret['stdout']))
+            log.log(lvl, 'stdout: {0}'.format(log_callback(ret['stdout'])))
         if ret['stderr']:
-            log.log(lvl, 'stderr: {0}'.format(ret['stderr']))
+            log.log(lvl, 'stderr: {0}'.format(log_callback(ret['stderr'])))
         if ret['retcode']:
             log.log(lvl, 'retcode: {0}'.format(ret['retcode']))
     return ret
@@ -1539,6 +1582,7 @@ def retcode(cmd,
             template=None,
             umask=None,
             output_loglevel='debug',
+            log_callback=None,
             timeout=None,
             reset_system_locale=True,
             ignore_retcode=False,
@@ -1680,6 +1724,7 @@ def retcode(cmd,
               template=template,
               umask=umask,
               output_loglevel=output_loglevel,
+              log_callback=log_callback,
               timeout=timeout,
               reset_system_locale=reset_system_locale,
               ignore_retcode=ignore_retcode,
@@ -1688,16 +1733,19 @@ def retcode(cmd,
               pillar_override=kwargs.get('pillar'),
               use_vt=use_vt)
 
+    log_callback = _check_cb(log_callback)
+
     lvl = _check_loglevel(output_loglevel)
     if lvl is not None:
         if not ignore_retcode and ret['retcode'] != 0:
             if lvl < LOG_LEVELS['error']:
                 lvl = LOG_LEVELS['error']
-            log.error(
+            msg = (
                 'Command {0!r} failed with return code: {1}'
                 .format(cmd, ret['retcode'])
             )
-        log.log(lvl, 'output: {0}'.format(ret['stdout']))
+            log.error(log_callback(msg))
+        log.log(lvl, 'output: {0}'.format(log_callback(ret['stdout'])))
     return ret['retcode']
 
 
@@ -1712,6 +1760,7 @@ def _retcode_quiet(cmd,
                    template=None,
                    umask=None,
                    output_loglevel='quiet',
+                   log_callback=None,
                    timeout=None,
                    reset_system_locale=True,
                    ignore_retcode=False,
@@ -1733,6 +1782,7 @@ def _retcode_quiet(cmd,
                    template=template,
                    umask=umask,
                    output_loglevel=output_loglevel,
+                   log_callback=log_callback,
                    timeout=timeout,
                    reset_system_locale=reset_system_locale,
                    ignore_retcode=ignore_retcode,
@@ -1752,6 +1802,7 @@ def script(source,
            template=None,
            umask=None,
            output_loglevel='debug',
+           log_callback=None,
            quiet=False,
            timeout=None,
            reset_system_locale=True,
@@ -1934,6 +1985,7 @@ def script(source,
                cwd=cwd,
                stdin=stdin,
                output_loglevel=output_loglevel,
+               log_callback=log_callback,
                runas=runas,
                shell=shell,
                python_shell=python_shell,
@@ -1964,6 +2016,7 @@ def script_retcode(source,
                    __env__=None,
                    saltenv='base',
                    output_loglevel='debug',
+                   log_callback=None,
                    use_vt=False,
                    **kwargs):
     '''
@@ -2109,6 +2162,7 @@ def script_retcode(source,
                   __env__=__env__,
                   saltenv=saltenv,
                   output_loglevel=output_loglevel,
+                  log_callback=log_callback,
                   use_vt=use_vt,
                   **kwargs)['retcode']
 
@@ -2231,6 +2285,7 @@ def run_chroot(root,
                rstrip=True,
                umask=None,
                output_loglevel='quiet',
+               log_callback=None,
                quiet=False,
                timeout=None,
                reset_system_locale=True,
@@ -2377,6 +2432,7 @@ def run_chroot(root,
                    rstrip=rstrip,
                    umask=umask,
                    output_loglevel=output_loglevel,
+                   log_callback=log_callback,
                    quiet=quiet,
                    timeout=timeout,
                    reset_system_locale=reset_system_locale,
@@ -2461,3 +2517,78 @@ def shells():
         except OSError:
             log.error("File '{0}' was not found".format(shells_fn))
     return ret
+
+
+def powershell(cmd,
+        cwd=None,
+        stdin=None,
+        runas=None,
+        shell=DEFAULT_SHELL,
+        env=None,
+        clean_env=False,
+        template=None,
+        rstrip=True,
+        umask=None,
+        output_loglevel='debug',
+        quiet=False,
+        timeout=None,
+        reset_system_locale=True,
+        ignore_retcode=False,
+        saltenv='base',
+        use_vt=False,
+        **kwargs):
+    '''
+    Execute the passed PowerShell command and return the output as a string.
+
+    .. versionadded:: Boron
+
+    .. warning ::
+
+        This passes the cmd argument directly to PowerShell
+        without any further processing! Be absolutely sure that you
+        have properly santized the command passed to this function
+        and do not use untrusted inputs.
+
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
+
+    CLI Example:
+
+    .. code-block:: powershell
+
+        salt '*' cmd.powershell "$PSVersionTable.CLRVersion"
+    '''
+    if 'python_shell' in kwargs:
+        python_shell = kwargs.pop('python_shell')
+    else:
+        python_shell = True
+
+    # Append PowerShell Object formatting
+    cmd = '{0} | ConvertTo-Json -Depth 32'.format(cmd)
+
+    # Retrieve the response, while overriding shell with 'powershell'
+    response = run(cmd,
+        cwd=cwd,
+        stdin=stdin,
+        runas=runas,
+        shell='powershell',
+        env=env,
+        clean_env=clean_env,
+        template=template,
+        rstrip=rstrip,
+        umask=umask,
+        output_loglevel=output_loglevel,
+        quiet=quiet,
+        timeout=timeout,
+        reset_system_locale=reset_system_locale,
+        ignore_retcode=ignore_retcode,
+        saltenv=saltenv,
+        use_vt=use_vt,
+        python_shell=python_shell,
+        **kwargs)
+
+    try:
+        return json.loads(response)
+    except Exception:
+        log.error("Error converting PowerShell JSON return", exc_info=True)
+        return {}

@@ -50,8 +50,8 @@ _ETHTOOL_CONFIG_OPTS = [
     'gso', 'gro', 'lro'
 ]
 _RH_CONFIG_OPTS = [
-    'domain', 'peerdns', 'defroute',
-    'mtu', 'static-routes', 'gateway'
+    'domain', 'peerdns', 'peerntp', 'defroute',
+    'mtu', 'static-routes', 'gateway', 'zone'
 ]
 _RH_CONFIG_BONDING_OPTS = [
     'mode', 'miimon', 'arp_interval',
@@ -634,7 +634,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     elif 'netmask' in opts:
         result['netmask'] = opts['netmask']
 
-    for opt in ['ipaddr', 'master', 'srcaddr', 'delay', 'domain', 'gateway', 'uuid', 'nickname']:
+    for opt in ['ipaddr', 'master', 'srcaddr', 'delay', 'domain', 'gateway', 'uuid', 'nickname', 'zone']:
         if opt in opts:
             result[opt] = opts[opt]
 
@@ -965,7 +965,7 @@ def build_routes(iface, **settings):
     '''
 
     template = 'rh6_route_eth.jinja'
-    if float(__grains__['osrelease']) < 6:
+    if __grains__['osrelease'][0] < 6:
         template = 'route_eth.jinja'
     log.debug('Template name: ' + template)
 

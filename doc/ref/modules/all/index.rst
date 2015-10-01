@@ -65,6 +65,7 @@ Full list of builtin execution modules
     cpan
     cron
     cyg
+    cytest
     daemontools
     darwin_pkgutil
     darwin_sysctl
@@ -72,6 +73,7 @@ Full list of builtin execution modules
     ddns
     deb_apache
     deb_postgres
+    debbuild
     debconfmod
     debian_ip
     debian_service
@@ -130,6 +132,7 @@ Full list of builtin execution modules
     incron
     influx
     ini_manage
+    inspectlib
     introspect
     ipmi
     ipset
@@ -174,6 +177,7 @@ Full list of builtin execution modules
     nacl
     nagios
     nagios_rpc
+    netaddress
     netbsd_sysctl
     netbsdservice
     netscaler
@@ -256,6 +260,7 @@ Full list of builtin execution modules
     shadow
     slack_notify
     smartos_imgadm
+    smartos_virt
     smartos_vmadm
     smbios
     smf
@@ -268,6 +273,7 @@ Full list of builtin execution modules
     solarispkg
     solr
     splay
+    splunk
     splunk_search
     sqlite3
     ssh
@@ -284,7 +290,9 @@ Full list of builtin execution modules
     sysrc
     system
     system_profiler
+    system_rest_sample
     systemd
+    telemetry
     temp
     test
     test_virtual
