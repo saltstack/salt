@@ -1540,7 +1540,7 @@ def remove_image(image):
 def inspect_image(image):
     '''
     Inspect the status of an image and return relative data. This is similar to
-    ``docker inspect`` command but only for images
+    ``docker inspect`` command but only for images.
 
     image
         name of the image
