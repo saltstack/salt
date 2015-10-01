@@ -360,7 +360,7 @@ def create_group(group_name, path=None, region=None, key=None, keyid=None,
     '''
     if not path:
         path = '/'
-    if get_group(group_name, region, key, keyid, profile):
+    if get_group(group_name, region=region, key=key, keyid=keyid, profile=profile):
         return True
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
@@ -418,8 +418,8 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
         msg = 'Username : {0} does not exist.'
         log.error(msg.format(user_name, group_name))
         return False
-    if user_exists_in_group(user_name, group_name, region=None, key=None, keyid=None,
-                            profile=None):
+    if user_exists_in_group(user_name, group_name, region=region, key=key, keyid=keyid,
+                            profile=profile):
         return True
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
@@ -447,7 +447,7 @@ def user_exists_in_group(user_name, group_name, region=None, key=None, keyid=Non
 
         salt myminion boto_iam.user_exists_in_group myuser mygroup
     '''
-    group = get_group(group_name=group_name, region=region, key=key, keyid=keyid,
+    group = get_group(group_name, region=region, key=key, keyid=keyid,
                       profile=profile)
     if group:
         for _users in group['get_group_response']['get_group_result']['users']:
@@ -505,7 +505,7 @@ def put_group_policy(group_name, policy_name, policy_json, region=None, key=None
 
         salt myminion boto_iam.put_group_policy mygroup policyname policyrules
     '''
-    group = get_group(group_name, region, key, keyid, profile)
+    group = get_group(group_name, region=region, key=key, keyid=keyid, profile=profile)
     if not group:
         log.error('Group {0} does not exist'.format(group_name))
         return False
