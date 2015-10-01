@@ -342,7 +342,11 @@ class SaltCloud(parsers.SaltCloudParser):
 
                 if dmap.get('existing', None):
                     for name in dmap['existing']:
-                        ret[name] = {'Message': 'Already running'}
+                        if 'ec2' in dmap['existing'][name]['provider']:
+                            msg = 'Instance already exists, or is terminated and has the same name.'
+                        else:
+                            msg = 'Already running.'
+                        ret[name] = {'Message': msg}
 
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was a query error: {0}'
