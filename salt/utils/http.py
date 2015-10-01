@@ -10,6 +10,12 @@ and the like, but also useful for basic HTTP testing.
 from __future__ import absolute_import
 import json
 import logging
+# pylint: disable=no-name-in-module
+import salt.ext.six.moves.http_cookiejar
+import salt.ext.six.moves.urllib as urllib
+# pylint: enable=no-name-in-module
+from salt.ext.six import string_types
+from salt._compat import ElementTree as ET
 import os.path
 import pprint
 import socket

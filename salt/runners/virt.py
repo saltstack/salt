@@ -68,12 +68,10 @@ def query(hyper=None, quiet=False):
     try:
         for info in client.cmd_iter('virtual:physical',
                                     'virt.full_info', expr_form='grain'):
-            if not info:
-                continue
             if not isinstance(info, dict):
                 continue
             chunk = {}
-            id_ = next(info.iterkeys())
+            id_ = next(six.iterkeys(info))
             if hyper:
                 if hyper != id_:
                     continue

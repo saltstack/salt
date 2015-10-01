@@ -25,6 +25,7 @@ import salt.utils.minions
 import salt.wheel
 import salt.version
 from salt.utils.event import tagify
+import salt.ext.six as six
 from salt.exceptions import SaltClientError
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
@@ -44,7 +45,7 @@ def status(output=True):
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
         minions = client.cmd('*', 'test.ping', timeout=__opts__['timeout'])
-    except SaltClientError as client_error:
+    except six.SaltClientError as client_error:
         print(client_error)
         return ret
 
@@ -84,7 +85,7 @@ def key_regen():
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
         client.cmd('*', 'saltutil.regen_keys')
-    except SaltClientError as client_error:
+    except six.SaltClientError as client_error:
         print(client_error)
         return False
 
@@ -577,7 +578,7 @@ def versions():
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
         minions = client.cmd('*', 'test.version', timeout=__opts__['timeout'])
-    except SaltClientError as client_error:
+    except six.SaltClientError as client_error:
         print(client_error)
         return ret
 

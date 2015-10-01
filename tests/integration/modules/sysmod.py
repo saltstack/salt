@@ -61,6 +61,11 @@ class SysModuleTest(integration.ModuleCase):
         allow_failure = (
                 'cp.recv',
                 'lxc.run_cmd',
+                'lxc.cmd_run',
+                'lxc.cmd_run_stdout',
+                'lxc.cmd_run_stderr',
+                'lxc.cmd_run_all',
+                'lxc.cmd_retcode',
                 'pkg.expand_repo_def',
                 'runtests_decorators.depends',
                 'runtests_decorators.depends_will_fallback',

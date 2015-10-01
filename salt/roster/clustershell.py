@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
+:requires: clustershell
+
+https://github.com/cea-hpc/clustershell
+
 This roster resolves hostname in a pdsh/clustershell style.
 
 :depends: clustershell, https://github.com/cea-hpc/clustershell

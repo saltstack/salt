@@ -107,6 +107,7 @@ import logging
 import hashlib
 import salt.utils
 from salt._compat import string_types
+from salt.ext import six
 from salt.ext.six.moves import range as _range
 from datetime import datetime
 from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
@@ -1410,7 +1411,19 @@ def create_ca_signed_cert(ca_name,
     cert.set_issuer(ca_cert.get_subject())
     cert.set_pubkey(req.get_pubkey())
 
-    cert.add_extensions(exts)
+    extensions_list = []
+    for name, edata in six.iteritems(extensions):
+        if not isinstance(edata, dict):
+            continue
+        for opt in ['critical', 'options']:
+            if opt not in edata:
+                break
+        else:
+            extensions_list.append(OpenSSL.crypto.X509Extension(
+                                   name,
+                                   edata['critical'],
+                                   edata['options']))
+    cert.add_extensions(extensions_list)
 
     cert.sign(ca_key, digest)
 

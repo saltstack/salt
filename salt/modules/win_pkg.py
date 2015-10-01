@@ -261,6 +261,56 @@ def _search_software(target):
     return search_results
 
 
+def _get_msi_software():
+    '''
+    Uses powershell to search the msi product databases, returns a
+    dict keyed on the product name as the key and the version as the
+    value. If powershell is not available, returns `{}`
+    '''
+    win32_products = {}
+
+    # Don't use WMI to select from `Win32_product`, that has nasty
+    # side effects. Use the `WindowsInstaller.Installer` COM object's
+    # `ProductsEx`. Jumping through powershell because `ProductsEx` is
+    # a get property that takes 3 arguments, and `win32com` can't call
+    # that
+    #
+    # see https://github.com/saltstack/salt/issues/12550 for detail
+
+    # powershell script to fetch (name, version) from COM, and write
+    # without word-wrapping. Attempting to target minimal powershell
+    # versions
+    ps = '''
+$msi = New-Object -ComObject WindowsInstaller.Installer;
+$msi.GetType().InvokeMember('ProductsEx', 'GetProperty', $null, $msi, ('', 's-1-1-0', 7))
+| select @{
+      name='name';
+      expression={$_.GetType().InvokeMember('InstallProperty', 'GetProperty', $null, $_, ('ProductName'))}
+    },
+    @{
+      name='version';
+      expression={$_.GetType().InvokeMember('InstallProperty', 'GetProperty', $null, $_, ('VersionString'))}
+    }
+| Write-host
+'''.replace('\n', ' ')  # make this a one-liner
+
+    ret = __salt__['cmd.run_all'](ps, shell='powershell', python_shell=True)
+    # sometimes the powershell reflection fails on a single product,
+    # giving us a non-zero return code AND useful output. Ignore RC
+    # and just try to process stdout, which should empty if the cmd
+    # failed.
+    #
+    # each line of output looks like:
+    #
+    # `@{name=PRD_NAME; version=PRD_VER}`
+    pattern = r'@{name=(.+); version=(.+)}'
+    for match in re.finditer(pattern, ret['stdout']):
+        (prd_name, prd_ver) = match.groups()
+        win32_products[prd_name] = prd_ver
+
+    return win32_products
+
+
 def _get_reg_software():
     '''
     This searches the uninstall keys in the registry to find
@@ -341,6 +391,39 @@ def _get_machine_keys():
     machine_hive = win32con.HKEY_LOCAL_MACHINE
     machine_hive_and_keys[machine_hive] = machine_keys
     return machine_hive_and_keys
+
+
+def _get_user_keys():
+    '''
+    This will return the hive 'const' value and some registry keys where
+    installed software information has been known to exist for the
+    HKEY_USERS hive
+    '''
+    user_hive_and_keys = {}
+    user_keys = []
+    users_hive = win32con.HKEY_USERS
+    # skip some built in and default users since software information in these
+    # keys is limited
+    skip_users = ['.DEFAULT',
+                  'S-1-5-18',
+                  'S-1-5-19',
+                  'S-1-5-20']
+    sw_uninst_key = "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+    reg_handle = win32api.RegOpenKeyEx(
+        users_hive,
+        '',
+        0,
+        win32con.KEY_READ)
+    for name, num, blank, time in win32api.RegEnumKeyEx(reg_handle):
+        # this is some identical key of a sid that contains some software names
+        # but no detailed information about the software installed for that user
+        if '_Classes' in name:
+            break
+        if name not in skip_users:
+            usr_sw_uninst_key = "\\".join([name, sw_uninst_key])
+            user_keys.append(usr_sw_uninst_key)
+    user_hive_and_keys[users_hive] = user_keys
+    return user_hive_and_keys
 
 
 def _get_reg_value(reg_hive, reg_key, value_name=''):

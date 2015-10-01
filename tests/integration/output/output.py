@@ -14,7 +14,6 @@ from salttesting.mixins import RUNTIME_VARS
 ensure_in_syspath('../../')
 
 # Import Salt libs
-import integration
 from salt.output import display_output
 import salt.config
 

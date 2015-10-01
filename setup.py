@@ -522,7 +522,7 @@ class CloudSdist(Sdist):
                         )
                     )
             except ImportError:
-                req = urlopen(url)
+                req = urllib2.urlopen(url)
 
                 if req.getcode() == 200:
                     script_contents = req.read()
@@ -774,7 +774,7 @@ class InstallLib(install_lib):
                     chmod.append(idx)
         for idx in chmod:
             filename = out[idx]
-            os.chmod(filename, 0o755)
+            os.chmod(filename, 0755)
 # <---- Custom Distutils/Setuptools Commands -------------------------------------------------------------------------
 
 
@@ -896,8 +896,6 @@ class SaltDistribution(distutils.dist.Distribution):
 
     def update_metadata(self):
         for attrname in dir(self):
-            if attrname.startswith('__'):
-                continue
             attrvalue = getattr(self, attrname, None)
             if attrvalue == 0:
                 continue
@@ -906,10 +904,7 @@ class SaltDistribution(distutils.dist.Distribution):
             if hasattr(self.metadata, 'set_{0}'.format(attrname)):
                 getattr(self.metadata, 'set_{0}'.format(attrname))(attrvalue)
             elif hasattr(self.metadata, attrname):
-                try:
-                    setattr(self.metadata, attrname, attrvalue)
-                except AttributeError:
-                    pass
+                setattr(self.metadata, attrname, attrvalue)
 
     def discover_packages(self):
         modules = []

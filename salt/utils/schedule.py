@@ -776,6 +776,7 @@ class Schedule(object):
             seconds = 0
             cron = 0
             now = int(time.time())
+            time_conflict = False
 
             if 'until' in data:
                 if not _WHEN_SUPPORTED:
@@ -790,6 +791,16 @@ class Schedule(object):
                                   'skipping job: {0}.'.format(data['name']))
                         continue
 
+            for item in ['seconds', 'minutes', 'hours', 'days']:
+                if item in data and 'when' in data:
+                    time_conflict = True
+                if item in data and 'cron' in data:
+                    time_conflict = True
+
+            if time_conflict:
+                log.error('Unable to use "seconds", "minutes",'
+                          '"hours", or "days" with '
+                          '"when" or "cron" options. Ignoring.')
             if 'after' in data:
                 if not _WHEN_SUPPORTED:
                     log.error('Missing python-dateutil.'
