@@ -51,7 +51,6 @@ import logging
 import re
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import salt.ext.six as six
-import salt.utils.boto
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -114,6 +113,7 @@ def exists(name=None, region=None, key=None, keyid=None, profile=None,
     else:
         return False
 
+
 def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
     '''
     Check whether a VPC with the given name or id exists.
@@ -133,7 +133,6 @@ def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
         log.info('VPC {0} does not exist.'.format(vpc_id))
         return None
     return vpc_id
-
 
 
 def _get_id(vpc_name=None, cidr=None, tags=None, region=None, key=None,
