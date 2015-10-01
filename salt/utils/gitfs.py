@@ -124,7 +124,6 @@ class GitProvider(object):
         self.env_whitelist = self.opts.get(
             '{0}_env_whitelist'.format(self.role), [])
         repo_conf = copy.deepcopy(per_remote_defaults)
-        bad_per_remote_conf = False
 
         per_remote_collisions = [x for x in override_params
                                  if x in PER_REMOTE_ONLY]
