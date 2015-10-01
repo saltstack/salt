@@ -87,7 +87,6 @@ import logging
 
 # Import salt libs
 import salt.utils.dictupdate as dictupdate
-import salt.utils.boto
 from salt.exceptions import SaltInvocationError
 from salt.ext.six import string_types
 
