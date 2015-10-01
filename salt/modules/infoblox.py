@@ -3,6 +3,9 @@
 Module for managing Infoblox
 
 Will look for pillar data infoblox:server, infoblox:user, infoblox:password if not passed to functions
+
+.. versionadded:: Boron
+
 :depends:
         - requests
 '''
@@ -97,6 +100,12 @@ def delete_record(name,
 
     sslVerify
         should ssl verification be done on the connection to the Infoblox REST API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt my-minion infoblox.delete_record some.dns.record MyInfobloxView A sslVerify=False
     '''
     infoblox_server, infoblox_user, infoblox_password = _conn_info_check(infoblox_server,
                                                                          infoblox_user,
@@ -169,7 +178,11 @@ def update_record(name,
     sslVerify
         should ssl verification be done on the connection to the Infoblox REST API
 
-    salt '*' infoblox.update_cname alias.network.name canonical.network.name
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' infoblox.update_record alias.network.name canonical.network.name MyInfobloxView cname sslVerify=False
     '''
 
     infoblox_server, infoblox_user, infoblox_password = _conn_info_check(infoblox_server,
@@ -257,7 +270,11 @@ def add_record(name,
     sslVerify
         should ssl verification be done on the connection to the Infoblox REST API
 
-    salt '*' infoblox.add_cname alias.network.name canonical.network.name
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'myminion' infoblox.add_record alias.network.name canonical.network.name MyView
     '''
 
     infoblox_server, infoblox_user, infoblox_password = _conn_info_check(infoblox_server,
@@ -329,6 +346,33 @@ def get_network(network_name,
                 sslVerify=True):
     '''
     get a network from infoblox
+
+    network_name
+        The name of the network in IPAM
+
+    network_view
+        The name of the network view the network belongs to
+
+    infoblox_server
+        the infoblox server hostname (can also use the infoblox:server pillar)
+
+    infoblox_user
+        the infoblox user to connect with (can also use the infoblox:user pillar)
+
+    infoblox_password
+        the infoblox user's password (can also use the infolblox:password pillar)
+
+    infoblox_api_version
+        the infoblox api verison to use
+
+    sslVerify
+        should ssl verification be done on the connection to the Infoblox REST API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion infoblox.get_network '10.0.0.0/8'
     '''
 
     records = []
@@ -363,7 +407,7 @@ def get_network(network_name,
 
 
 def get_record(record_name,
-               infoblox_record_type='host',
+               record_type='host',
                infoblox_server=None,
                infoblox_user=None,
                infoblox_password=None,
@@ -376,7 +420,7 @@ def get_record(record_name,
     record_name
         name of the record to search for
 
-    infoblox_record_type
+    record_type
         type of reacord to search for (host, cname, a, etc...defaults to host)
 
     infoblox_server
@@ -396,6 +440,12 @@ def get_record(record_name,
 
     sslVerify
         should ssl verification be done on the connection to the Infoblox REST API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion infoblox.get_record some.host.com A sslVerify=False
     '''
 
     #TODO - verify record type (A, AAAA, CNAME< HOST, MX, PTR, SVR, TXT, host_ipv4addr, host_ipv6addr, naptr)
@@ -413,9 +463,9 @@ def get_record(record_name,
         infoblox_server,
         infoblox_api_version,
         record_name,
-        infoblox_record_type,
+        record_type,
         ('' if dns_view is None else '&view=' + dns_view),
-        ('&_return_fields%2B=aliases' if infoblox_record_type == 'host' else '')
+        ('&_return_fields%2B=aliases' if record_type == 'host' else '')
         )
     log.debug('Requst url is "{0}"'.format(url))
     ret = _process_return_data(requests.get(url,

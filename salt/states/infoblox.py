@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
 states for infoblox stuff
+
+ensures a record is either present or absent in an Infoblox DNS system
+
+.. versionadded:: Boron
 '''
 from __future__ import absolute_import
 
@@ -52,6 +56,17 @@ def present(name,
 
     verify_ssl
         verify SSL certificates
+
+    Example:
+
+    .. code-block:: yaml
+
+        some-state:
+            infoblox.present:
+              - name: some.dns.record
+              - value: 10.1.1.3
+              - record_type: host
+              - sslVerify: False
     '''
     record_type = record_type.lower()
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
@@ -159,6 +174,16 @@ def absent(name,
     verify_ssl
         verify SSL certificates
 
+    Example:
+
+    .. code-block:: yaml
+
+        some-state:
+            infoblox.absent:
+              - name: some.dns.record
+              - record_type: host
+              - dns_view: MyView
+              - sslVerify: False
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     record = __salt__['infoblox.get_record'](name,
