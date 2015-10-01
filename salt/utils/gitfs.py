@@ -189,7 +189,7 @@ class GitProvider(object):
                         )
                     log.critical(msg)
                 else:
-                    log.critical(
+                    msg = (
                         'Invalid {0} configuration parameter \'{1}\' in '
                         'remote {2}. Valid parameters are: {3}.'.format(
                             self.role,
@@ -203,6 +203,7 @@ class GitProvider(object):
                             ' See the GitFS Walkthrough in the Salt '
                             'documentation for further information.'
                         )
+                    log.critical(msg)
 
                 per_remote_errors = True
             if per_remote_errors:
