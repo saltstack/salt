@@ -27,15 +27,19 @@ except ImportError:
 import salt.utils
 from salt.exceptions import CommandExecutionError
 
+__virtualname__ = 'virt'
+
 
 def __virtual__():
     '''
-    Only if libvirt bindings for Python are installed.
+    Only if virt module is available.
 
     :return:
     '''
 
-    return HAS_LIBVIRT
+    if 'virt.node_info' in __salt__:
+        return __virtualname__
+    return False
 
 
 def keys(name, basepath='/etc/pki'):
@@ -128,19 +132,6 @@ def _virt_call(domain, function, section, comment, **kwargs):
     return ret
 
 
-def rebooted(name):
-    '''
-    Reboots VMs
-
-    .. versionadded:: Boron
-
-    :param name:
-    :return:
-    '''
-
-    return _virt_call(name, 'reboot', 'rebooted', "Machine has been rebooted")
-
-
 def stopped(name):
     '''
     Stops a VM by shutting it down nicely.
@@ -156,7 +147,7 @@ def stopped(name):
     return _virt_call(name, 'shutdown', 'stopped', "Machine has been shut down")
 
 
-def unpowered(name):
+def powered_off(name):
     '''
     Stops a VM by power off.
 
@@ -171,9 +162,9 @@ def unpowered(name):
     return _virt_call(name, 'stop', 'unpowered', 'Machine has been powered off')
 
 
-def running(name):
+def running(name, **kwargs):
     '''
-    Starts a VM.
+    Starts an existing guest, or defines and starts a new VM with specified arguments.
 
     .. versionadded:: Boron
 
@@ -181,13 +172,103 @@ def running(name):
 
         domain_name:
           virt.running
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.running:
+            - cpu: 2
+            - mem: 2048
+            - eth0_mac: 00:00:6a:53:00:e3
+
     '''
 
-    return _virt_call(name, 'start', 'running', 'Machine has been started')
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': '{0} is running'.format(name)
+           }
+
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    cpu = kwargs.pop('cpu', False)
+    mem = kwargs.pop('mem', False)
+    image = kwargs.pop('image', False)
+
+    try:
+        try:
+            __salt__['virt.vm_state'](name)
+            if __salt__['virt.vm_state'](name) != 'running':
+                __salt__['virt.start'](name)
+                ret['changes'][name] = 'Domain started'
+                ret['comment'] = 'Domain {0} started'.format(name)
+        except CommandExecutionError:
+            kwargs = salt.utils.clean_kwargs(**kwargs)
+            __salt__['virt.init'](name, cpu=cpu, mem=mem, image=image, **kwargs)
+            ret['changes'][name] = 'Domain defined and started'
+            ret['comment'] = 'Domain {0} defined and started'.format(name)
+    except libvirt.libvirtError:
+        ret['comment'] = 'Domain {0} exists and is running'.format(name)
+
+    return ret
+
+
+def snapshot(name, suffix=None):
+    '''
+    Takes a snapshot of a particular VM or by a UNIX-style wildcard.
+
+    .. versionadded:: Boron
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.snapshot:
+            - suffix: periodic
+
+        domain*:
+          virt.snapshot:
+            - suffix: periodic
+    '''
+
+    return _virt_call(name, 'snapshot', 'saved', 'Snapshot has been taken', suffix=suffix)
+
+
+# Deprecated states
+def rebooted(name):
+    '''
+    Reboots VMs
+
+    .. versionadded:: Boron
+
+    :param name:
+    :return:
+    '''
+
+    return _virt_call(name, 'reboot', 'rebooted', "Machine has been rebooted")
+
+
+def unpowered(name):
+    '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.powered_off` instead.
+
+    Stops a VM by power off.
+
+    .. versionadded:: Boron
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.stopped
+    '''
+
+    return _virt_call(name, 'stop', 'unpowered', 'Machine has been powered off')
 
 
 def saved(name, suffix=None):
     '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.snapshot` instead.
+
     Takes a snapshot of a particular VM or by a UNIX-style wildcard.
 
     .. versionadded:: Boron
@@ -208,6 +289,8 @@ def saved(name, suffix=None):
 
 def reverted(name, snapshot=None, cleanup=False):
     '''
+    .. deprecated:: Boron
+
     Reverts to the particular snapshot.
 
     .. versionadded:: Boron
