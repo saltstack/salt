@@ -2037,10 +2037,13 @@ def create(vm_=None, call=None):
         'ex_network': __get_network(conn, vm_),
         'ex_tags': __get_tags(vm_),
         'ex_metadata': __get_metadata(vm_),
-        'external_ip': config.get_cloud_config_value(
-                'external_ip', vm_, __opts__, default='ephemeral'
-            )
     }
+    external_ip = config.get_cloud_config_value(
+        'external_ip', vm_, __opts__, default='ephemeral'
+    )
+    if isinstance(external_ip, str) and external_ip.lower() == 'ephemeral':
+        external_ip = 'ephemeral'
+    kwargs['external_ip'] = external_ip
 
     if LIBCLOUD_VERSION_INFO > (0, 15, 1):
 
