@@ -1644,10 +1644,10 @@ def ns():
                     elif directive == 'domain':
                         domain = arg[0]
                     elif directive == 'search':
-                        for domain in itertools.takewhile(
+                        for entry in itertools.takewhile(
                                 lambda x: not x.startswith('#'), arg[1:]):
-                            if domain not in search:
-                                search.append(domain)
+                            if entry not in search:
+                                search.append(entry)
                 except (IndexError, RuntimeError):
                     continue
 
