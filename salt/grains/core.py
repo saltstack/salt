@@ -1660,7 +1660,7 @@ def dns():
             'search': search
         }
 
-        return {'dns' : ret}
+        return {'dns': ret}
     except IOError:
         return {}
 
