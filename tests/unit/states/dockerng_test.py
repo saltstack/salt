@@ -434,6 +434,32 @@ class DockerngTestCase(TestCase):
                                   'name': 'cont',
                                   'result': False})
 
+    def test_running_with_labels(self):
+        '''
+        Test dockerng.running with labels parameter.
+        '''
+        dockerng_create = Mock()
+        __salt__ = {'dockerng.list_containers': MagicMock(),
+                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.pull': MagicMock(),
+                    'dockerng.state': MagicMock(),
+                    'dockerng.inspect_image': MagicMock(),
+                    'dockerng.create': dockerng_create,
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            dockerng_state.running(
+                'cont',
+                image='image:latest',
+                labels=['LABEL1', 'LABEL2'],
+                )
+        dockerng_create.assert_called_with(
+            'image:latest',
+            validate_input=False,
+            name='cont',
+            labels=['LABEL1', 'LABEL2'],
+            client_timeout=60)
+
 
 if __name__ == '__main__':
     from integration import run_tests
