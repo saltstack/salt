@@ -439,11 +439,14 @@ def snapshot_created(name, ami_name, instance_name, wait_until_available=True, w
 
     starttime = time()
     while True:
-        image, = __salt__['boto_ec2.find_images'](ami_name=ami_name, return_objs=True)
-        if image.state == 'available':
+        images = __salt__['boto_ec2.find_images'](ami_name=ami_name, return_objs=True)
+        if images and images[0].state == 'available':
             break
         if time() - starttime > wait_timeout_seconds:
-            ret['comment'] = 'AMI still in state {state} after timeout'.format(state=image.state)
+            if images:
+                ret['comment'] = 'AMI still in state {state} after timeout'.format(state=images[0].state)
+            else:
+                ret['comment'] = 'AMI with name {ami_name} not found after timeout.'.format(ami_name=ami_name)
             ret['result'] = False
             return ret
         sleep(5)
