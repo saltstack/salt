@@ -150,9 +150,9 @@ def _get_group(conn=None, name=None, vpc_id=None, vpc_name=None, group_id=None,
     a boto.ec2.securitygroup.SecurityGroup object if the group is found, else
     return None.
     '''
-    if not _exactly_one((vpc_name, vpc_id)):
-        raise SaltInvocationError('One (but not both) of vpc_id or vpc_name '
-                                  'must be provided.')
+    if vpc_name and vpc_id:
+        raise SaltInvocationError('The params \'vpc_id\' and \'vpc_name\' '
+                                  'are mutually exclusive.')
 
     if not vpc_id and vpc_name:
         try:
