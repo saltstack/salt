@@ -582,8 +582,8 @@ def _tags_present(name,
         tags_to_remove = []
         if sg.get('tags'):
             for existing_tag in sg['tags'].keys():
-                if not existing_tag in tags:
-                    if not existing_tag in tags_to_remove:
+                if existing_tag not in tags:
+                    if existing_tag not in tags_to_remove:
                         tags_to_remove.append(existing_tag)
                 else:
                     if tags[existing_tag] != sg['tags'][existing_tag]:
@@ -610,7 +610,7 @@ def _tags_present(name,
                     msg = 'Error attempting to delete tags {1}.'.format(tags_to_remove)
                     ret['comment'] = ' '.join([ret['comment'], msg])
                     return ret
-                if not 'old' in ret['changes']:
+                if 'old' not in ret['changes']:
                     ret['changes'] = dictupdate.update(ret['changes'], {'old': {'tags': {}}})
                 for rem_tag in tags_to_remove:
                     ret['changes']['old']['tags'][rem_tag] = sg['tags'][rem_tag]
