@@ -1614,11 +1614,12 @@ def hwaddr_interfaces():
     return {'hwaddr_interfaces': ret}
 
 
-def ns():
+def dns():
     '''
     Parse the resolver configuration file
     '''
-    if salt.utils.is_windows():
+
+    if salt.utils.is_windows() or 'proxyminion' in __opts__:
         return {}
 
     ns4 = []
