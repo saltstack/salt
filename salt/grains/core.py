@@ -12,6 +12,7 @@ as those returned here
 
 # Import python libs
 from __future__ import absolute_import
+import itertools
 import os
 import socket
 import sys
@@ -1611,6 +1612,56 @@ def hwaddr_interfaces():
         if 'hwaddr' in ifaces[face]:
             ret[face] = ifaces[face]['hwaddr']
     return {'hwaddr_interfaces': ret}
+
+
+def ns():
+    '''
+    Parse the resolver configuration file
+    '''
+    if salt.utils.is_windows():
+        return {}
+
+    ns4 = []
+    ns6 = []
+    search = []
+    domain = None
+
+    try:
+        with salt.utils.fopen('/etc/resolv.conf') as f:
+            for line in f:
+                line = line.strip().split()
+
+                try:
+                    (directive, arg) = (line[0].lower(), line[1:])
+                    if directive == 'nameserver':
+                        ip_addr = arg[0]
+                        if (salt.utils.network.is_ipv4(ip_addr) and
+                                ip_addr not in ns4):
+                            ns4.append(ip_addr)
+                        elif (salt.utils.network.is_ipv6(ip_addr) and
+                                ip_addr not in ns6):
+                            ns6.append(ip_addr)
+                    elif directive == 'domain':
+                        domain = arg[0]
+                    elif directive == 'search':
+                        for domain in itertools.takewhile(
+                                lambda x: not x.startswith('#'), arg[1:]):
+                            if domain not in search:
+                                search.append(domain)
+                except (IndexError, RuntimeError):
+                    continue
+
+        ret = {
+            'ip4_nameservers' : ns4,
+            'ip6_nameservers' : ns6,
+            'nameservers' :
+            'domain' : domain,
+            'search' : search
+        }
+
+        return {'dns' : ret}
+    except IOError:
+        return {}
 
 
 def get_machine_id():
