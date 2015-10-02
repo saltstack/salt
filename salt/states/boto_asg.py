@@ -793,7 +793,7 @@ def absent(
             ret['result'] = None
             if remove_lc:
                 msg = 'Launch configuration {0} is set to be deleted.'.format(asg['launch_config_name'])
-                ret['comment'] = ' '.join([ret['comment'], msg')
+                ret['comment'] = ' '.join([ret['comment'], msg])
             return ret
         deleted = __salt__['boto_asg.delete'](name, force, region, key, keyid,
                                               profile)
