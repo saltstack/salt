@@ -1617,6 +1617,8 @@ def hwaddr_interfaces():
 def dns():
     '''
     Parse the resolver configuration file
+
+     .. versionadded:: Boron
     '''
 
     if salt.utils.is_windows() or 'proxyminion' in __opts__:
