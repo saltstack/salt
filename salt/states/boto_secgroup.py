@@ -376,7 +376,7 @@ def _rules_present(
             _source_group_name = rule.get('source_group_name', None)
             if _source_group_name:
                 _group_id = __salt__['boto_secgroup.get_group_id'](
-                    _source_group_name, vpc_id, vpc_id, region, key, keyid, profile
+                    _source_group_name, vpc_id, vpc_name, region, key, keyid, profile
                 )
                 if not _group_id:
                     msg = ('source_group_name {0} does not map to a valid'
