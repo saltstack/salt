@@ -755,7 +755,8 @@ def absent(
         region=None,
         key=None,
         keyid=None,
-        profile=None):
+        profile=None,
+        remove_lc=False):
     '''
     Ensure the named autoscale group is deleted.
 
@@ -764,6 +765,9 @@ def absent(
 
     force
         Force deletion of autoscale group.
+
+    remove_lc
+        Delete the launch config as well.
 
     region
         The region to connect to.
@@ -787,10 +791,26 @@ def absent(
         if __opts__['test']:
             ret['comment'] = 'Autoscale group set to be deleted.'
             ret['result'] = None
+            if remove_lc:
+                msg = 'Launch configuration {0} is set to be deleted.'.format(asg['launch_config_name'])
+                ret['comment'] = ' '.join([ret['comment'], msg')
             return ret
         deleted = __salt__['boto_asg.delete'](name, force, region, key, keyid,
                                               profile)
         if deleted:
+            if remove_lc:
+                lc_deleted = __salt__['boto_asg.delete_launch_configuration'](asg['launch_config_name'],
+                                                                              region,
+                                                                              key,
+                                                                              keyid,
+                                                                              profile)
+                if lc_deleted:
+                    if 'launch_config' not in ret['changes']:
+                        ret['changes']['launch_config'] = {}
+                    ret['changes']['launch_config']['deleted'] = asg['launch_config_name']
+                else:
+                    ret['result'] = False
+                    ret['comment'] = ' '.join([ret['comment'], 'Failed to delete launch configuration.'])
             ret['changes']['old'] = asg
             ret['changes']['new'] = None
             ret['comment'] = 'Deleted autoscale group.'
