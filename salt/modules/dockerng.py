@@ -589,7 +589,7 @@ def _ensure_exists(wrapped):
 
 def _refresh_mine_cache(wrapped):
     '''
-    Decorator to trig a refresh of salt mine data.
+    Decorator to trigger a refresh of salt mine data.
     '''
     @functools.wraps(wrapped)
     def wrapper(*args, **kwargs):
@@ -2467,7 +2467,7 @@ def top(name):
 
 def version():
     '''
-    Returns a dictionary of Docker version information. Equivlent to running
+    Returns a dictionary of Docker version information. Equivalent to running
     the ``docker version`` Docker CLI command.
 
     CLI Example:
