@@ -345,7 +345,8 @@ def present(
                 region=region,
                 key=key,
                 keyid=keyid,
-                profile=profile
+                profile=profile,
+                wait_for_sync=wait_for_sync
             )
             ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
             ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
