@@ -233,11 +233,14 @@ deleted when you destroy an instance, set delete_boot_pd to True.
 ssh_interface
 -------------
 
+.. versionadded:: 2015.5.0
+
 Specify whether to use public or private IP for deploy script.
 
 Valid options are:
-* private_ips: The salt-master is also hosted with GCE
-* public_ips: The salt-master is hosted outside of GCE
+
+- private_ips: The salt-master is also hosted with GCE
+- public_ips: The salt-master is hosted outside of GCE
 
 external_ip
 -----------
@@ -245,8 +248,9 @@ external_ip
 Per instance setting: Used a named fixed IP address to this host.
 
 Valid options are:
-* ephemeral - The host will use a GCE ephemeral IP
-* None - No external IP will be configured on this host.
+
+- ephemeral: The host will use a GCE ephemeral IP
+- None: No external IP will be configured on this host.
 
 Optionally, pass the name of a GCE address to use a fixed IP address.
 If the address does not already exist, it will be created.
