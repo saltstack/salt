@@ -130,24 +130,46 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
         ret['availability_zones'] = lb.availability_zones
         listeners = []
         for _listener in lb.listeners:
-            # Making this a list makes our life easier and is also the only way
-            # to include the certificate.
-            complex_listener = list(_listener.get_complex_tuple())
-            # boto, you're *killing* me with this. boto doesn't include the
-            # certificate when calling get_complex_tuple, so you need to also
-            # get the certificate. So. Much. Hate.
+            listener_dict = {}
+            listener_dict['elb_port'] = _listener.load_balancer_port
+            listener_dict['elb_protocol'] = _listener.protocol
+            listener_dict['instance_port'] = _listener.instance_port
+            listener_dict['instance_protocol'] = _listener.instance_protocol
+            listener_dict['policies'] = _listener.policy_names
             if _listener.ssl_certificate_id:
-                complex_listener.append(_listener.ssl_certificate_id)
-            listeners.append(complex_listener)
+                listener_dict['certificate'] = _listener.ssl_certificate_id
+            listeners.append(listener_dict)
         ret['listeners'] = listeners
         ret['subnets'] = lb.subnets
         ret['security_groups'] = lb.security_groups
         ret['scheme'] = lb.scheme
         ret['dns_name'] = lb.dns_name
+        lb_policy_lists = [
+            lb.policies.app_cookie_stickiness_policies,
+            lb.policies.lb_cookie_stickiness_policies,
+            lb.policies.other_policies
+            ]
+        policies = []
+        for policy_list in lb_policy_lists:
+            policies += [p.policy_name for p in policy_list]
+        ret['policies'] = policies
         return ret
     except boto.exception.BotoServerError as error:
         log.debug(error)
         return []
+
+
+def listener_dict_to_tuple(listener):
+    # We define all listeners as complex listeners.
+    if 'instance_protocol' not in listener:
+        instance_protocol = listener['elb_protocol'].upper()
+    else:
+        instance_protocol = listener['instance_protocol'].upper()
+    listener_tuple = [listener['elb_port'], listener['instance_port'],
+                      listener['elb_protocol'], instance_protocol]
+    if 'certificate' in listener:
+        listener_tuple.append(listener['certificate'])
+    return tuple(listener_tuple)
 
 
 def create(name, availability_zones, listeners=None, subnets=None,
@@ -159,31 +181,20 @@ def create(name, availability_zones, listeners=None, subnets=None,
 
     CLI example to create an ELB::
 
-        salt myminion boto_elb.create myelb '["us-east-1a", "us-east-1e"]' listeners='[[443, 80, "HTTPS", "HTTP", "arn:aws:iam::1111111:server-certificate/mycert"]]' region=us-east-1
+        salt myminion boto_elb.create myelb '["us-east-1a", "us-east-1e"]' listeners='{"elb_port": 443, "elb_protocol": "HTTPS", ...}' region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    if __salt__['boto_elb.exists'](name, region, key, keyid, profile):
+    if exists(name, region, key, keyid, profile):
         return True
     if isinstance(availability_zones, string_types):
         availability_zones = json.loads(availability_zones)
     if isinstance(listeners, string_types):
         listeners = json.loads(listeners)
-    # Combining listeners and complex_listeners together makes our lives
-    # easier in some ways, especially since during introspection you can
-    # only get a combined set of listeners back from boto; however, boto
-    # requires us to send in separate listeners and complex listeners and
-    # the only real difference is the size. It feels like amazon/boto hate
-    # developers and wish to make us suffer.
-    _listeners = []
     _complex_listeners = []
     for listener in listeners:
-        if len(listener) <= 3:
-            _listeners.append(listener)
-        else:
-            _complex_listeners.append(listener)
+        _complex_listeners.append(listener_dict_to_tuple(listener))
     try:
-        lb = conn.create_load_balancer(name, availability_zones, _listeners,
+        lb = conn.create_load_balancer(name, availability_zones, [],
                                        subnets, security_groups, scheme,
                                        _complex_listeners)
         if lb:
@@ -210,7 +221,7 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not __salt__['boto_elb.exists'](name, region, key, keyid, profile):
+    if not exists(name, region, key, keyid, profile):
         return True
     try:
         conn.delete_load_balancer(name)
@@ -237,22 +248,11 @@ def create_listeners(name, listeners=None, region=None, key=None, keyid=None,
 
     if isinstance(listeners, string_types):
         listeners = json.loads(listeners)
-    # Combining listeners and complex_listeners together makes our lives
-    # easier in some ways, especially since during introspection you can
-    # only get a combined set of listeners back from boto; however, boto
-    # requires us to send in separate listeners and complex listeners and
-    # the only real difference is the size. It feels like amazon/boto hate
-    # developers and wish to make us suffer.
-    _listeners = []
     _complex_listeners = []
     for listener in listeners:
-        if len(listener) <= 3:
-            _listeners.append(listener)
-        else:
-            _complex_listeners.append(listener)
+        _complex_listeners.append(listener_dict_to_tuple(listener))
     try:
-        conn.create_load_balancer_listeners(name, _listeners,
-                                            _complex_listeners)
+        conn.create_load_balancer_listeners(name, [], _complex_listeners)
         msg = 'Created ELB listeners on {0}'.format(name)
         log.info(msg)
         return True
@@ -686,3 +686,60 @@ def get_instance_health(name, region=None, key=None, keyid=None, profile=None, i
     except boto.exception.BotoServerError as error:
         log.debug(error)
         return []
+
+
+def create_policy(name, policy_name, policy_type, policy, region=None,
+                  key=None, keyid=None, profile=None):
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if not exists(name, region, key, keyid, profile):
+        return False
+    try:
+        success = conn.create_lb_policy(name, policy_name, policy_type, policy)
+        if success:
+            log.info('Created policy {0} on ELB {1}'.format(policy_name, name))
+            return True
+        else:
+            msg = 'Failed to create policy {0} on ELB {1}'.format(policy_name, name)
+            log.error(msg)
+            return False
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to create policy {0} on ELB {1}: {2}'.format(policy_name, name, e.message)
+        log.error(msg)
+        return False
+
+
+def delete_policy(name, policy_name, region=None, key=None, keyid=None,
+                  profile=None):
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if not exists(name, region, key, keyid, profile):
+        return True
+    try:
+        conn.delete_lb_policy(name, policy_name)
+        log.info('Deleted policy {0} on ELB {1}'.format(policy_name, name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to delete policy {0} on ELB {1}: {2}'.format(policy_name, name, e.message)
+        log.error(msg)
+        return False
+
+
+def set_listener_policy(name, port, policies=None, region=None, key=None,
+                        keyid=None, profile=None):
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if not exists(name, region, key, keyid, profile):
+        return True
+    if policies is None:
+        policies = []
+    try:
+        conn.set_lb_policies_of_listener(name, port, policies)
+        log.info('Set policies {0} on ELB {1} listener {2}'.format(policies, name, port))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        log.info('Failed to set policy {0} on ELB {1} listener {2}: {3}'.format(policies, name, port, e.message))
+        return False
+    return True
