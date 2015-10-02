@@ -51,6 +51,7 @@ import logging
 import re
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import salt.ext.six as six
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
