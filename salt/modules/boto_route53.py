@@ -27,7 +27,8 @@ Connection module for Amazon Route53
 
         route53.region: us-east-1
 
-    If a region is not specified, the default is us-east-1.
+    If a region is not specified, the default is 'universal', which is what the boto_route53
+    library expects, rather than None.
 
     It's also possible to specify key, keyid and region via a profile, either
     as a passed in dict, or as a string to pull from pillars or minion config:
@@ -109,6 +110,9 @@ def zone_exists(zone, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_route53.zone_exists example.org
     '''
+    if region is None:
+        region = 'universal'
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     return bool(conn.get_zone(zone))
@@ -125,6 +129,9 @@ def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
 
         salt myminion boto_route53.create_zone example.org
     '''
+    if region is None:
+        region = 'universal'
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     _zone = conn.get_zone(zone, private_zone=private, vpc_id=vpc_id,
@@ -147,6 +154,9 @@ def delete_zone(zone, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_route53.delete_zone example.org
     '''
+    if region is None:
+        region = 'universal'
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     _zone = conn.get_zone(zone)
@@ -174,6 +184,9 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
 
         salt myminion boto_route53.get_record test.example.org example.org A
     '''
+    if region is None:
+        region = 'universal'
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if split_dns:
@@ -216,6 +229,9 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
 
         salt myminion boto_route53.add_record test.example.org 1.1.1.1 example.org A
     '''
+    if region is None:
+        region = 'universal'
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if split_dns:
@@ -255,6 +271,9 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
 
         salt myminion boto_route53.modify_record test.example.org 1.1.1.1 example.org A
     '''
+    if region is None:
+        region = 'universal'
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if split_dns:
@@ -294,6 +313,9 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
 
         salt myminion boto_route53.delete_record test.example.org example.org A
     '''
+    if region is None:
+        region = 'universal'
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if split_dns:
