@@ -51,7 +51,6 @@ import logging
 import re
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import salt.ext.six as six
-from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -100,14 +99,7 @@ def exists(name=None, region=None, key=None, keyid=None, profile=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not vpc_id and vpc_name:
-        try:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
-        except boto.exception.BotoServerError as e:
-            log.debug(e)
-            return False
-
-    group = _get_group(conn, name, vpc_id, group_id, region, key, keyid, profile)
+    group = _get_group(conn, name, vpc_id, vpc_name, group_id, region, key, keyid, profile)
     if group:
         return True
     else:
@@ -150,13 +142,24 @@ def _split_rules(rules):
     return split
 
 
-def _get_group(conn=None, name=None, vpc_id=None, group_id=None,
+def _get_group(conn=None, name=None, vpc_id=None, vpc_name=None, group_id=None,
                region=None, key=None, keyid=None, profile=None):  # pylint: disable=W0613
     '''
     Get a group object given a name, name and vpc_id/vpc_name or group_id. Return
     a boto.ec2.securitygroup.SecurityGroup object if the group is found, else
     return None.
     '''
+    if not _exactly_one((vpc_name, vpc_id)):
+        raise SaltInvocationError('One (but not both) of vpc_id or vpc_name '
+                                  'must be provided.')
+
+    if not vpc_id and vpc_name:
+        try:
+            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        except boto.exception.BotoServerError as e:
+            log.debug(e)
+            return None
+
     if name:
         if vpc_id is None:
             log.debug('getting group for {0}'.format(name))
@@ -242,14 +245,7 @@ def get_group_id(name, vpc_id=None, vpc_name=None, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not vpc_id and vpc_name:
-        try:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
-        except boto.exception.BotoServerError as e:
-            log.debug(e)
-            return False
-
-    group = _get_group(conn, name, vpc_id, region, key, keyid, profile)
+    group = _get_group(conn, name, vpc_id, vpc_name, region, key, keyid, profile)
     if group:
         return group.id
     else:
@@ -296,14 +292,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not vpc_id and vpc_name:
-        try:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
-        except boto.exception.BotoServerError as e:
-            log.debug(e)
-            return None
-
-    sg = _get_group(conn, name, vpc_id, group_id, region, key, keyid, profile)
+    sg = _get_group(conn, name, vpc_id, vpc_name, group_id, region, key, keyid, profile)
     if sg:
         ret = odict.OrderedDict()
         ret['name'] = sg.name
@@ -361,14 +350,7 @@ def delete(name=None, group_id=None, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not vpc_id and vpc_name:
-        try:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
-        except boto.exception.BotoServerError as e:
-            log.debug(e)
-            return False
-
-    group = _get_group(conn, name, vpc_id, group_id, region, key, keyid, profile)
+    group = _get_group(conn, name, vpc_id, vpc_name, group_id, region, key, keyid, profile)
     if group:
         deleted = conn.delete_security_group(group_id=group.id)
         if deleted:
@@ -398,14 +380,7 @@ def authorize(name=None, source_group_name=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not vpc_id and vpc_name:
-        try:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
-        except boto.exception.BotoServerError as e:
-            log.debug(e)
-            return False
-
-    group = _get_group(conn, name, vpc_id, group_id, region, key, keyid, profile)
+    group = _get_group(conn, name, vpc_id, vpc_name, group_id, region, key, keyid, profile)
     if group:
         try:
             added = None
@@ -455,14 +430,7 @@ def revoke(name=None, source_group_name=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not vpc_id and vpc_name:
-        try:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
-        except boto.exception.BotoServerError as e:
-            log.debug(e)
-            return False
-
-    group = _get_group(conn, name, vpc_id, group_id, region, key, keyid, profile)
+    group = _get_group(conn, name, vpc_id, vpc_name, group_id, region, key, keyid, profile)
     if group:
         try:
             revoked = None
