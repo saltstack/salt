@@ -437,9 +437,9 @@ def create(vm_):
     swap_disk_id = create_swap_disk(vm_, node_id)['DiskID']
 
     # Add private IP address if requested
-    private_ip_assignment = get_private_ip()
+    private_ip_assignment = get_private_ip(vm_)
     if private_ip_assignment:
-        create_private_ip(vm_, node_id)
+        create_private_ip(node_id)
 
     # Define which ssh_interface to use
     ssh_interface = _get_ssh_interface(vm_)
@@ -447,7 +447,7 @@ def create(vm_):
         # If ssh_interface is set to use private_ips, but assign_private_ip
         # wasn't set to True, let's help out and create a private ip.
         if private_ip_assignment is False:
-            create_private_ip(vm_, node_id)
+            create_private_ip(node_id)
             private_ip_assignment = True
 
     # Create a ConfigID using disk ids

@@ -203,18 +203,20 @@ are:
 * private_ips: The salt-master is also hosted within Linode.
 
 If specifying ``private_ips``, the Linodes must be hosted within the same data
-center and have the Network Helper enabled. The instance that is running the
-Salt-Cloud provisioning command must also have a private IP assigned to it.
+center and have the Network Helper enabled on your entire account. The instance
+that is running the Salt-Cloud provisioning command must also have a private IP
+assigned to it.
 
 Newer accounts created on Linode have the Network Helper setting enabled by default,
-account-wide. If you're running into problems, be sure to restart the instance that
-is running Salt Cloud after adding its own private IP address or enabling the Network
-Helper. Best results are found when the Network Helper is enabled across your entire
-Linode account. Please see `Linode's Network Helper`_ or `Static IP Configuration`_
-documentation for more information.
+account-wide. Legacy accounts do not have this setting enabled by default. To enable
+the Network Helper on your Linode account, please see `Linode's Network Helper`_
+documentation.
+
+If you're running into problems, be sure to restart the instance that is running
+Salt Cloud after adding its own private IP address or enabling the Network
+Helper.
 
 .. _Linode's Network Helper: https://www.linode.com/docs/platform/network-helper
-.. _Static IP Configuration: https://www.linode.com/docs/networking/linux-static-ip-configuration
 
 clonefrom
 ---------
