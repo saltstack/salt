@@ -363,7 +363,9 @@ def user_present(name, policies=None, policies_from_pillars=None, password=None,
         The password for the new user. Must comply with account policy.
 
     path (string)
-        The path of the user. Default is '/'
+        The path of the user. Default is '/'.
+
+        .. versionadded:: 2015.8.2
 
     region (string)
         Region to connect to.
@@ -498,12 +500,15 @@ def _case_password(ret, name, password, region=None, key=None, keyid=None, profi
     return ret
 
 
-def group_present(name, policies=None, policies_from_pillars=None, users=None, region=None, key=None, keyid=None, profile=None):
+def group_present(name, policies=None, policies_from_pillars=None, users=None, region=None, key=None, keyid=None, profile=None, path='/'):
     '''
     Ensure the IAM group is present
 
     name (string)
         The name of the new group.
+
+    path (string)
+        The path for the group, defaults to '/'
 
     policies (dict)
         A dict of IAM group policy documents.
@@ -549,7 +554,7 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, r
             ret['comment'] = 'IAM group {0} is set to be created.'.format(name)
             ret['result'] = None
             return ret
-        created = __salt__['boto_iam.create_group'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
+        created = __salt__['boto_iam.create_group'](group_name=name, path=path, region=region, key=key, keyid=keyid, profile=profile)
         if not created:
             ret['comment'] = 'Failed to create IAM group {0}.'.format(name)
             ret['result'] = False
@@ -591,7 +596,7 @@ def _case_group(ret, users, group_name, group_result, region, key, keyid, profil
                 ret['comment'] = 'User {0} is set to be added to group {1}.'.format(user, group_name)
                 ret['result'] = None
             else:
-                __salt__['boto_iam.add_user_to_group'](user, group_name, region, key, keyid, profile)
+                addret = __salt__['boto_iam.add_user_to_group'](user, group_name, region=region, key=key, keyid=keyid, profile=profile)
                 ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been added to group {1}.'.format(user, group_name)])
                 ret['changes'][user] = group_name
     for user in _users:
@@ -600,8 +605,8 @@ def _case_group(ret, users, group_name, group_result, region, key, keyid, profil
                 ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is set to be removed from group {1}.'.format(user, group_name)])
                 ret['result'] = None
             else:
-                __salt__['boto_iam.remove_user_from_group'](group_name=group_name, user_name=user, region=region,
-                                                            key=key, keyid=keyid, profile=profile)
+                remret = __salt__['boto_iam.remove_user_from_group'](group_name=group_name, user_name=user, region=region,
+                                                                     key=key, keyid=keyid, profile=profile)
                 ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been removed from group {1}.'.format(user, group_name)])
                 ret['changes'][user] = 'Removed from group {0}.'.format(group_name)
     return ret
