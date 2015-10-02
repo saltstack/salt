@@ -66,6 +66,7 @@ except ImportError:
     HAS_BOTO = False
 
 import salt.utils.odict as odict
+from salt.exceptions import SaltInvocationError
 
 
 def __virtual__():
