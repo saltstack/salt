@@ -1624,7 +1624,7 @@ def ns():
     ns4 = []
     ns6 = []
     search = []
-    domain = None
+    domain = ''
 
     try:
         with salt.utils.fopen('/etc/resolv.conf') as f:
