@@ -28,10 +28,15 @@ from collections import Callable
 import salt.ext.six as six
 
 try:
-    from collections import OrderedDict  # pylint: disable=E0611,minimum-python-version
+    # pylint: disable=E0611,minimum-python-versioin
+    import collections
+    class OrderedDict(collections.OrderedDict):
+        __hash__ = None
 except ImportError:
     try:
-        from ordereddict import OrderedDict
+        import ordereddict
+        class OrderedDict(ordereddict.OrderedDict):
+            __hash_ = None
     except ImportError:
         # {{{ http://code.activestate.com/recipes/576693/ (r9)
         # Backport of OrderedDict() class that runs on Python 2.4, 2.5, 2.6, 2.7 and pypy.
@@ -60,6 +65,7 @@ except ImportError:
             # The circular doubly linked list starts and ends with a sentinel element.
             # The sentinel element never gets deleted (this simplifies the algorithm).
             # Each link is stored as a list of length three:  [PREV, NEXT, KEY].
+            __hash_ = None
 
             def __init__(self, *args, **kwds):  # pylint: disable=E1003
                 '''Initialize an ordered dictionary.  Signature is the same as for
