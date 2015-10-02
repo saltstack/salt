@@ -1647,10 +1647,8 @@ def dns():
                     elif directive == 'domain':
                         domain = arg[0]
                     elif directive == 'search':
-                        for entry in itertools.takewhile(
-                                lambda x: not x.startswith('#'), arg[1:]):
-                            if entry not in search:
-                                search.append(entry)
+                        search = list(itertools.takewhile(
+                            lambda x: not x.startswith('#'), arg[1:]))
                 except (IndexError, RuntimeError):
                     continue
 
