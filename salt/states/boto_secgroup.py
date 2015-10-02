@@ -58,6 +58,9 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                   cidr_ip:
                     - 10.0.0.0/0
                     - 192.168.0.0/0
+            - tags:
+                SomeTag: 'My Tag Value'
+                SomeOtherTag: 'Other Tag Value'
             - region: us-east-1
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -131,6 +134,8 @@ def present(
 
     tags
         List of key:value pairs of tags to set on the security group
+
+        .. versionadded:: Boron
 
     rules
         A list of ingress rule dicts.
