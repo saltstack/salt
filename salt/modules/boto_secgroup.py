@@ -505,6 +505,8 @@ def set_tags(tags,
     '''
     sets tags on a security group
 
+    .. versionadded:: Boron
+
     tags
         a dict of key:value pair of tags to set on the security group
 
@@ -562,6 +564,8 @@ def delete_tags(tags,
                 profile=None):
     '''
     deletes tags from a security group
+
+    .. versionadded:: Boron
 
     tags
         a list of tags to remove
