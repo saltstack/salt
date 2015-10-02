@@ -1652,11 +1652,11 @@ def ns():
                     continue
 
         ret = {
-            'ip4_nameservers' : ns4,
-            'ip6_nameservers' : ns6,
-            'nameservers' :
-            'domain' : domain,
-            'search' : search
+            'nameservers': ns4 + ns6,
+            'ip4_nameservers': ns4,
+            'ip6_nameservers': ns6,
+            'domain': domain,
+            'search': search
         }
 
         return {'dns' : ret}
