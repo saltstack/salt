@@ -31,7 +31,9 @@ import select
 import logging
 import subprocess
 
-if subprocess.mswindows:
+mswindows = (sys.platform == "win32")
+
+if mswindows:
     # pylint: disable=F0401,W0611
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
@@ -349,7 +351,7 @@ class Terminal(object):
     # <---- Context Manager Methods ------------------------------------------
 
 # ----- Platform Specific Methods ------------------------------------------->
-    if subprocess.mswindows:
+    if mswindows:
         # ----- Windows Methods --------------------------------------------->
         def _execute(self):
             raise NotImplementedError
