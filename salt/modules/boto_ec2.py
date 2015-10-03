@@ -165,8 +165,8 @@ def get_eip_address_info(addresses=None, allocation_ids=None, region=None, key=N
                    'network_interface_id', 'network_interface_owner_id', 'public_ip',
                    'private_ip_address']
 
-    return [dict(zip(interesting, map(lambda x: getattr(address, x), interesting)))
-                for address in ret]
+    return [dict(zip(interesting, map(lambda x: getattr(address, x), # pylint: disable=W0141,W1699
+                interesting))) for address in ret]
 
 
 def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile=None):
