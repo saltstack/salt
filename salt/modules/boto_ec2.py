@@ -131,8 +131,8 @@ def get_all_eip_addresses(addresses=None, allocation_ids=None, region=None,
 
         salt-call boto_ec2.get_all_eip_addresses
     '''
-    return [ x.public_ip for x in _get_all_eip_addresses(addresses, allocation_ids, region,
-                key, keyid, profile) ]
+    return [x.public_ip for x in _get_all_eip_addresses(addresses, allocation_ids, region,
+                key, keyid, profile)]
 
 
 def get_eip_address_info(addresses=None, allocation_ids=None, region=None, key=None,
@@ -154,19 +154,19 @@ def get_eip_address_info(addresses=None, allocation_ids=None, region=None, key=N
         salt-call boto_ec2.get_eip_address_info addresses=52.4.2.15
     '''
     if type(addresses) == (type('string')):
-        addresses = [ addresses ]
+        addresses = [addresses]
     if type(allocation_ids) == (type('string')):
-        allocation_ids = [ allocation_ids ]
+        allocation_ids = [allocation_ids]
 
     ret = _get_all_eip_addresses(addresses=addresses, allocation_ids=allocation_ids,
                        region=region, key=key, keyid=keyid, profile=profile)
 
-    interesting = [ 'allocation_id', 'association_id', 'domain', 'instance_id',
-                    'network_interface_id', 'network_interface_owner_id', 'public_ip',
-                    'private_ip_address' ]
+    interesting = ['allocation_id', 'association_id', 'domain', 'instance_id',
+                   'network_interface_id', 'network_interface_owner_id', 'public_ip',
+                   'private_ip_address']
 
-    return [ dict(zip(interesting, map(lambda x: getattr(address, x), interesting)))
-                for address in ret ]
+    return [dict(zip(interesting, map(lambda x: getattr(address, x), interesting)))
+                for address in ret]
 
 
 def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile=None):
@@ -198,15 +198,15 @@ def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile
         log.error(e)
         return False
 
-    interesting = [ 'allocation_id', 'association_id', 'domain', 'instance_id',
-                    'network_interface_id', 'network_interface_owner_id', 'public_ip',
-                    'private_ip_address' ]
+    interesting = ['allocation_id', 'association_id', 'domain', 'instance_id',
+                   'network_interface_id', 'network_interface_owner_id', 'public_ip',
+                   'private_ip_address']
 
-    return dict(zip(interesting, map(lambda x: getattr(address, x), interesting)))
+    return dict(zip(interesting, map(lambda x: getattr(address, x), interesting))) # pylint: disable=W1699,W0141
 
 
 def release_eip_address(public_ip=None, allocation_id=None, region=None, key=None,
-										keyid=None, profile=None):
+                        keyid=None, profile=None):
     '''
     Free an Elastic IP address.  Pass either a public IP address to release a 'standard'
     EC2 Elastic IP address, or an AllocationId to release a VPC Elastic IP address.
@@ -272,8 +272,8 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
             return False
 
     if not instance_id:
-      log.error("Given instance_name cannot be mapped to an instance_id")
-      return False
+        log.error("Given instance_name cannot be mapped to an instance_id")
+        return False
 
     try:
         return conn.associate_address(instance_id=instance_id, public_ip=public_ip,
