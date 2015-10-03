@@ -37,7 +37,7 @@ except ImportError:
     try:
         import ordereddict
 
-        class OrderedDict(ordereddict.OrderedDict): # pylint: disable=W0232
+        class OrderedDict(ordereddict.OrderedDict):  # pylint: disable=W0232
             __hash_ = None
     except ImportError:
         # {{{ http://code.activestate.com/recipes/576693/ (r9)
