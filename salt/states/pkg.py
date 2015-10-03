@@ -933,6 +933,10 @@ def installed(
 
     if version is not None and version == 'latest':
         version = __salt__['pkg.latest_version'](name)
+        # If version is empty, it means the latest version is installed
+        # so we grab that version to avoid passing an empty string
+        if not version:
+            version = __salt__['pkg.version'](name)
 
     kwargs['allow_updates'] = allow_updates
     result = _find_install_targets(name, version, pkgs, sources,
