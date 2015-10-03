@@ -28,7 +28,7 @@ from collections import Callable
 import salt.ext.six as six
 
 try:
-    # pylint: disable=E0611,minimum-python-versioin
+    # pylint: disable=E0611,minimum-python-version
     import collections
 
     class OrderedDict(collections.OrderedDict):
