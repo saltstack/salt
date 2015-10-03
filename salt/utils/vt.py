@@ -29,7 +29,6 @@ import errno
 import signal
 import select
 import logging
-import subprocess
 
 mswindows = (sys.platform == "win32")
 
