@@ -30,11 +30,13 @@ import salt.ext.six as six
 try:
     # pylint: disable=E0611,minimum-python-versioin
     import collections
+
     class OrderedDict(collections.OrderedDict):
         __hash__ = None
 except ImportError:
     try:
         import ordereddict
+
         class OrderedDict(ordereddict.OrderedDict):
             __hash_ = None
     except ImportError:
