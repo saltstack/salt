@@ -824,8 +824,8 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
            'changes': {}
            }
 
-    route_table = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags, region=region,
-                                                            key=key, keyid=keyid, profile=profile)
+    route_table = __salt__['boto_vpc.describe_route_table'](route_table_name=route_table_name, tags=tags,
+                                                            region=region, key=key, keyid=keyid, profile=profile)
     if 'error' in route_table:
         msg = 'Could not retrieve configuration for route table {0}: {1}`.'.format(route_table_name,
                                                                                    route_table['error']['message'])
@@ -853,6 +853,15 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
                     ret['result'] = False
                     return ret
                 _r['gateway_id'] = r['id']
+            if i.get('instance_name'):
+                r = __salt__['boto_ec2.get_id'](name=i['instance_name'], region=region,
+                                                key=key, keyid=keyid, profile=profile)
+                if r is None:
+                    msg = 'Instance {0} does not exist.'.format(i['instance_name'])
+                    ret['comment'] = msg
+                    ret['result'] = False
+                    return ret
+                _r['instance_id'] = r
             _routes.append(_r)
 
     to_delete = []
