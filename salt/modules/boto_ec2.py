@@ -401,10 +401,10 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
                 return instances
             return [instance.id for instance in instances]
         else:
-            return False
+            return []
     except boto.exception.BotoServerError as exc:
         log.error(exc)
-        return False
+        return []
 
 
 def create_image(ami_name, instance_id=None, instance_name=None, tags=None, region=None,
@@ -780,8 +780,12 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
     try:
         if instance_name:
             instances = find_instances(name=instance_name, region=region, key=key, keyid=keyid, profile=profile)
-            if len(instances) != 1:
-                raise CommandExecutionError('Found more than one EC2 instance matching the criteria.')
+            if len(instances) > 1:
+                log.error('Found more than one EC2 instance matching the criteria.')
+                return False
+            elif len(instances) < 1:
+                log.error('Found no EC2 instance matching the criteria.')
+                return False
             instance_id = instances[0]
         instance_attribute = conn.get_instance_attribute(instance_id, attribute)
         if not instance_attribute:
