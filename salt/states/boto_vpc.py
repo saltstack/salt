@@ -230,6 +230,190 @@ def absent(name, tags=None, region=None, key=None, keyid=None, profile=None):
     return ret
 
 
+def dhcp_options_present(name, dhcp_options_id=None, vpc_name=None, vpc_id=None,
+                         domain_name=None, domain_name_servers=None, ntp_servers=None,
+                         netbios_name_servers=None, netbios_node_type=None,
+                         tags=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure a set of DHCP options with the given settings exist.
+
+    name
+        (string)
+        Name of the DHCP options.
+
+    vpc_name
+        (string)
+        Name of a VPC to which the options should be associated.  Either
+        vpc_name or vpc_id must be provided.
+
+    vpc_id
+        (string)
+        Id of a VPC to which the options should be associated.  Either
+        vpc_name or vpc_id must be provided.
+
+    domain_name
+        (string)
+        Domain name to be assiciated with this option set.
+
+    domain_name_servers
+        (list of strings)
+        The IP address(es) of up to four domain name servers.
+
+    ntp_servers
+        (list of strings)
+        The IP address(es) of up to four desired NTP servers.
+
+    netbios_name_servers
+        (list of strings)
+        The IP address(es) of up to four NetBIOS name servers.
+
+    netbios_node_type
+        (string)
+        The NetBIOS node type (1, 2, 4, or 8).  For more information about
+        the allowed values, see RFC 2132.  The recommended is 2 at this
+        time (broadcast and multicast are currently not supported).
+
+    tags
+        (dict of key:value pairs)
+        A set of tags to be added.
+
+    region
+        (string)
+        Region to connect to.
+
+    key
+        (string)
+        Secret key to be used.
+
+    keyid
+        (string)
+        Access key to be used.
+
+    profile
+        (various)
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+    _new = {'domain_name'         : domain_name,
+            'domain_name_servers' : domain_name_servers,
+            'ntp_servers'         : ntp_servers,
+            'netbios_name_servers': netbios_name_servers,
+            'netbios_node_type'   : netbios_node_type
+           }
+
+    # boto provides no "update_dhcp_options()" functionality, and you can't delete it if
+    # it's attached, and you can't detach it if it's the only one, so just check if it's
+    # there or not, and make no effort to validate it's actual settings... :(
+    r = __salt__['boto_vpc.dhcp_options_exists'](dhcp_options_id=dhcp_options_id,
+                                                 dhcp_options_name=name,
+                                                 region=region, key=key, keyid=keyid,
+                                                 profile=profile)
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to validate DHCP options: {0}.'.format(r['error']['message'])
+        return ret
+
+    if r.get('exists'):
+        ret['comment'] = 'DHCP options already present.'
+        return ret
+    else:
+        if __opts__['test']:
+            ret['comment'] = 'DHCP options {0} are set to be created.'.format(name)
+            ret['result'] = None
+            return ret
+
+        r = __salt__['boto_vpc.create_dhcp_options'](domain_name=domain_name,
+                                                     domain_name_servers=domain_name_servers,
+                                                     ntp_servers=ntp_servers,
+                                                     netbios_name_servers=netbios_name_servers,
+                                                     netbios_node_type=netbios_node_type,
+                                                     dhcp_options_name=name, tags=tags,
+                                                     vpc_id=vpc_id, vpc_name=vpc_name,
+                                                     region=region, key=key, keyid=keyid,
+                                                     profile=profile)
+        if not r.get('created'):
+            ret['result'] = False
+            ret['comment'] = 'Failed to create DHCP options: {1}'.format(r['error']['message'])
+            return ret
+
+        ret['changes']['old'] = {'dhcp_options': None}
+        ret['changes']['new'] = {'dhcp_options': _new}
+        ret['comment'] = 'DHCP options {0} created.'.format(name)
+        return ret
+
+
+def dhcp_options_absent(name=None, dhcp_options_id=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure a set of DHCP options with the given settings exist.
+
+    name
+        (string)
+        Name of the DHCP options set.
+
+    dhcp_options_id
+        (string)
+        Id of the DHCP options set.
+
+    region
+        (string)
+        Region to connect to.
+
+    key
+        (string)
+        Secret key to be used.
+
+    keyid
+        (string)
+        Access key to be used.
+
+    profile
+        (various)
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    r = __salt__['boto_vpc.get_resource_id']('dhcp_options', name=name,
+                                             region=region, key=key,
+                                             keyid=keyid, profile=profile)
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete DHCP options: {0}.'.format(r['error']['message'])
+        return ret
+
+    _id = r.get('id')
+
+    if not _id:
+        ret['comment'] = 'DHCP options {0} do not exist.'.format(name)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'DHCP options {0} are set to be deleted.'.format(name)
+        ret['result'] = None
+        return ret
+
+    r = __salt__['boto_vpc.delete_dhcp_options'](dhcp_options_id=r['id'], region=region,
+                                                 key=key, keyid=keyid, profile=profile)
+    if not r.get('deleted'):
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete DHCP options: {0}'.format(r['error']['message'])
+        return ret
+
+    ret['changes']['old'] = {'dhcp_options': _id}
+    ret['changes']['new'] = {'dhcp_options': None}
+    ret['comment'] = 'DHCP options {0} deleted.'.format(name)
+    return ret
+
+
 def subnet_present(name, cidr_block, vpc_name=None, vpc_id=None,
                    availability_zone=None, tags=None, region=None,
                    key=None, keyid=None, profile=None):
