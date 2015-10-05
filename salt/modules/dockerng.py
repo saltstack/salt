@@ -247,6 +247,7 @@ import time
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 from salt.utils.decorators \
     import identical_signature_wrapper as _mimic_signature
 import salt.utils
@@ -490,6 +491,7 @@ def __virtual__():
             docker_py_versioninfo = _get_docker_py_versioninfo()
         except CommandExecutionError:
             docker_py_versioninfo = None
+
         # Don't let a failure to interpret the version keep this module from
         # loading. Log a warning (log happens in _get_docker_py_versioninfo()).
         if docker_py_versioninfo is None \
@@ -498,17 +500,22 @@ def __virtual__():
                 docker_versioninfo = version().get('VersionInfo')
             except CommandExecutionError:
                 docker_versioninfo = None
+
             if docker_versioninfo is None or docker_versioninfo >= MIN_DOCKER:
                 return __virtualname__
             else:
-                log.warning(
+                return (False,
                     'Insufficient Docker version for dockerng (required: '
                     '{0}, installed: {1})'.format(
-                        '.'.join(docker_versioninfo),
-                        '.'.join(MIN_DOCKER)
-                    )
-                )
-    return False
+                        '.'.join(map(str, MIN_DOCKER)),
+                        '.'.join(map(str, docker_versioninfo))))
+        else:
+            return (False,
+                'Insufficient docker-py version for dockerng (required: '
+                '{0}, installed: {1})'.format(
+                    '.'.join(map(str, MIN_DOCKER_PY)),
+                    '.'.join(map(str, docker_py_versioninfo))))
+    return (False, 'Docker module could not get imported')
 
 
 def _get_docker_py_versioninfo():
