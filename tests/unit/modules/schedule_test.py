@@ -78,10 +78,10 @@ class ScheduleTestCase(TestCase):
         '''
         Test if it build a schedule job.
         '''
-        comment = ('Unable to use "seconds", "minutes", "hours",'
-                   ' or "days" with "when" or "cron" options.')
-        comment1 = ('Unable to use "when" and "cron"'
-                    ' options together.  Ignoring.')
+        comment = 'Unable to use "seconds", "minutes", "hours", ' \
+                  'or "days" with "when" or "cron" options.'
+        comment1 = 'Unable to use "when" and "cron" ' \
+                   'options together.  Ignoring.'
         with patch.dict(schedule.__opts__, {'job1': {}}):
             self.assertDictEqual(schedule.build_schedule_item(''),
                                  {'comment': 'Job name is required.',
@@ -90,7 +90,8 @@ class ScheduleTestCase(TestCase):
             self.assertDictEqual(schedule.build_schedule_item
                                  ('job1', function='test.ping'),
                                  {'function': 'test.ping', 'maxrunning': 1,
-                                  'name': 'job1', 'jid_include': True})
+                                  'name': 'job1', 'jid_include': True,
+                                  'enabled': True})
 
             self.assertDictEqual(schedule.build_schedule_item
                                  ('job1', function='test.ping', seconds=3600,
@@ -109,8 +110,8 @@ class ScheduleTestCase(TestCase):
         Test if it add a job to the schedule.
         '''
         comm1 = 'Job job1 already exists in schedule.'
-        comm2 = ('Error: Unable to use "seconds", "minutes", "hours",'
-                 ' or "days" with "when" or "cron" options.')
+        comm2 = 'Error: Unable to use "seconds", "minutes", "hours", ' \
+                'or "days" with "when" or "cron" options.'
         comm3 = 'Unable to use "when" and "cron" options together.  Ignoring.'
         comm4 = 'Job: job2 would be added to schedule.'
         with patch.dict(schedule.__opts__, {'schedule': {'job1': 'salt'}, 'sock_dir': SOCK_DIR}):
@@ -144,8 +145,8 @@ class ScheduleTestCase(TestCase):
         '''
         Test if it modify an existing job in the schedule.
         '''
-        comm1 = ('Error: Unable to use "seconds", "minutes", "hours",'
-                 ' or "days" with "when" option.')
+        comm1 = 'Error: Unable to use "seconds", "minutes", "hours", ' \
+                'or "days" with "when" option.'
         comm2 = 'Unable to use "when" and "cron" options together.  Ignoring.'
         comm3 = 'Job job2 does not exist in schedule.'
         comm4 = 'Job: job3 would be modified in schedule.'
@@ -174,8 +175,8 @@ class ScheduleTestCase(TestCase):
 
                     if sys.version_info[1] >= 7:
                         self.assertDictEqual(schedule.modify('job1', function='test.ping'),
-                                             {'changes': {'diff': '--- \n+++ \n@@ -1,4 +1,3 @@\n-enabled:True\n function:test.ping\n jid_include:True\n maxrunning:1\n'},
-                                              'comment': 'Modified job: job1 in schedule.',
+                                             {'changes': {},
+                                              'comment': 'Job job1 in correct state',
                                               'result': True})
                     elif sys.version_info[1] >= 6:
                         self.assertDictEqual(schedule.modify('job1', function='test.ping'),
