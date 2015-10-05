@@ -535,7 +535,10 @@ def set_tags(tags,
     profile
         amazon profile
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
+
         salt myminion boto_secgroup.set_tags "{'TAG1': 'Value1', 'TAG2': 'Value2'}" security_group_name vpc_id=vpc-13435 profile=my_aws_profile
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -595,7 +598,9 @@ def delete_tags(tags,
     profile
         amazon profile
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_secgroup.delete_tags ['TAG_TO_DELETE1','TAG_TO_DELETE2'] security_group_name vpc_id=vpc-13435 profile=my_aws_profile
     '''
