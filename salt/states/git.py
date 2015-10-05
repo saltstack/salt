@@ -438,8 +438,10 @@ def latest(name,
             if 'salt://' in ident_path:
                 try:
                     ident_path = __salt__['cp.cache_file'](ident_path)
-                except IOError as e:
-                    log.debug(e)
+                except IOError as exc:
+                    log.error(
+                        'Failed to cache {0}: {1}'.format(ident_path, exc)
+                    )
                     return _fail(
                         ret,
                         'identity \'{0}\' does not exist.'.format(
