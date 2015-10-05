@@ -711,7 +711,7 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                                      instance_profile_name=instance_profile_name, ebs_optimized=ebs_optimized,
                                      network_interfaces=network_interfaces)
     if not reservation:
-        log.warning('instances could not be reserved')
+        log.warning('Instance could not be reserved')
         return False
 
     instance = reservation.instances[0]
@@ -725,9 +725,9 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
             instance.add_tag('Name', name)
         if tags:
             instance.add_tags(tags)
-        return True
+        return { 'instance_id': instance.id }
     else:
-        log.warning('instance could not be started -- '
+        log.warning('Instance could not be started -- '
                     'status is "{0}"'.format(status))
 
 
