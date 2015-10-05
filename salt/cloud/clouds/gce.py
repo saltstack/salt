@@ -301,21 +301,34 @@ def avail_sizes(conn=None):
 def avail_images(conn=None):
     '''
     Return a dict of all available VM images on the cloud provider with
-    relevant data
+    relevant data.
 
     Note that for GCE, there are custom images within the project, but the
     generic images are in other projects.  This returns a dict of images in
-    the project plus images in 'debian-cloud' and 'centos-cloud' (If there is
-    overlap in names, the one in the current project is used.)
+    the project plus images in well-known public projects that provide supported
+    images, as listed on this page:
+    https://cloud.google.com/compute/docs/operating-systems/
+
+    If image names overlap, the image in the current project is used.
     '''
     if not conn:
         conn = get_conn()
 
-    project_images = conn.list_images()
-    debian_images = conn.list_images('debian-cloud')
-    centos_images = conn.list_images('centos-cloud')
+    all_images = []
+    # The list of public image projects can be found via:
+    #   % gcloud compute images list
+    # and looking at the "PROJECT" column in the output.
+    public_image_projects = (
+        'centos-cloud', 'coreos-cloud', 'debian-cloud', 'google-containers',
+        'opensuse-cloud', 'rhel-cloud', 'suse-cloud', 'ubuntu-os-cloud',
+        'windows-cloud'
+    )
+    for project in public_image_projects:
+        all_images.extend(conn.list_images(project))
 
-    all_images = debian_images + centos_images + project_images
+    # Finally, add the images in this current project last so that it overrides
+    # any image that also exists in any public project.
+    all_images.extend(conn.list_images())
 
     ret = {}
     for img in all_images:
