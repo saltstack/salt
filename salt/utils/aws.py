@@ -45,6 +45,7 @@ AWS_RETRY_CODES = [
     'InsufficientAddressCapacity',
     'InsufficientReservedInstanceCapacity',
 ]
+AWS_METADATA_TIMEOUT = 3.05
 
 IROLE_CODE = 'use-instance-role-credentials'
 __AccessKeyId__ = ''
@@ -77,17 +78,17 @@ def creds(provider):
         # We don't have any cached credentials, or they are expired, get them
         # TODO: Wrap this with a try and handle exceptions gracefully
 
-        # Connections to instance meta-data must never be proxied
+        # Connections to instance meta-data must fail fast and never be proxied
         result = requests.get(
             "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
-            proxies={'http': ''},
+            proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
         )
         result.raise_for_status()
         role = result.text
         # TODO: Wrap this with a try and handle exceptions gracefully
         result = requests.get(
             "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role),
-            proxies={'http': ''},
+            proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
         )
         result.raise_for_status()
         data = result.json()
@@ -465,10 +466,10 @@ def get_region_from_metadata():
         return __Location__
 
     try:
-        # Connections to instance meta-data must never be proxied
+        # Connections to instance meta-data must fail fast and never be proxied
         result = requests.get(
             "http://169.254.169.254/latest/dynamic/instance-identity/document",
-            proxies={'http': ''},
+            proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
         )
     except requests.exceptions.RequestException:
         LOG.warning('Failed to get AWS region from instance metadata.', exc_info=True)
