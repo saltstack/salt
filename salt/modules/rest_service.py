@@ -40,8 +40,21 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    proxy_fn = 'rest_sample'+ '.service_list'
-    return __opts__['proxymodule'][proxy_fn]()
+    proxy_fn = 'rest_sample.service_list'
+    return __proxy__[proxy_fn]()
+
+
+def list_():
+    '''
+    Return a list of all available services
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.list
+    '''
+    return get_all()
 
 
 def list_():
@@ -72,8 +85,8 @@ def start(name, sig=None):
         salt '*' service.start <service name>
     '''
 
-    proxy_fn = 'rest_sample'+ '.service_start'
-    return __opts__['proxymodule'][proxy_fn](name)
+    proxy_fn = 'rest_sample.service_start'
+    return __proxy__[proxy_fn](name)
 
 
 def stop(name, sig=None):
@@ -88,8 +101,8 @@ def stop(name, sig=None):
 
         salt '*' service.stop <service name>
     '''
-    proxy_fn = 'rest_sample'+ '.service_stop'
-    return __opts__['proxymodule'][proxy_fn](name)
+    proxy_fn = 'rest_sample.service_stop'
+    return __proxy__[proxy_fn](name)
 
 
 def restart(name, sig=None):
@@ -105,8 +118,8 @@ def restart(name, sig=None):
         salt '*' service.restart <service name>
     '''
 
-    proxy_fn = 'rest_sample'+ '.service_restart'
-    return __opts__['proxymodule'][proxy_fn](name)
+    proxy_fn = 'rest_sample.service_restart'
+    return __proxy__[proxy_fn](name)
 
 
 def status(name, sig=None):
@@ -123,8 +136,8 @@ def status(name, sig=None):
         salt '*' service.status <service name>
     '''
 
-    proxy_fn = 'rest_sample' + '.service_status'
-    resp = __opts__['proxymodule'][proxy_fn](name)
+    proxy_fn = 'rest_sample.service_status'
+    resp = __proxy__[proxy_fn](name)
     if resp['comment'] == 'stopped':
         return False
     if resp['comment'] == 'running':

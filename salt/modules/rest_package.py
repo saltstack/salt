@@ -19,22 +19,22 @@ def __virtual__():
     '''
     Only work on proxy
     '''
-    if 'proxymodule' in __opts__:
+    if 'proxy' in __opts__:
         return __virtualname__
     return False
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
-    return __opts__['proxymodule']['rest_sample.package_list']()
+    return __proxy__['rest_sample.package_list']()
 
 
 def install(name=None, refresh=False, fromrepo=None,
             pkgs=None, sources=None, **kwargs):
-    return __opts__['proxymodule']['rest_sample.package_install'](name, **kwargs)
+    return __proxy__['rest_sample.package_install'](name, **kwargs)
 
 
 def remove(name=None, pkgs=None, **kwargs):
-    return __opts__['proxymodule']['rest_sample.package_remove'](name)
+    return __proxy__['rest_sample.package_remove'](name)
 
 
 def version(*names, **kwargs):
@@ -51,7 +51,7 @@ def version(*names, **kwargs):
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
     if len(names) == 1:
-        return str(__opts__['proxymodule']['rest_sample.package_status'](names))
+        return str(__proxy__['rest_sample.package_status'](names))
 
 
 def installed(
@@ -64,7 +64,7 @@ def installed(
         sources=None,
         **kwargs):
 
-    p = __opts__['proxymodule']['rest_sample.package_status'](name)
+    p = __proxy__['rest_sample.package_status'](name)
     if version is None:
         if 'ret' in p:
             return str(p['ret'])

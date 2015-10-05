@@ -1539,7 +1539,8 @@ class State(object):
             initial_ret={'full': state_func_name},
             expected_extra_kws=STATE_INTERNAL_KEYWORDS
         )
-
+        import pydevd
+        pydevd.settrace('172.16.207.1', port=65500, stdoutToServer=True, stderrToServer=True)
         inject_globals = {
             # Pass a copy of the running dictionary, the low state chunks and
             # the current state dictionaries.

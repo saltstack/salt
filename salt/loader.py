@@ -133,6 +133,7 @@ def minion_mods(
         opts,
         context=None,
         utils=None,
+        proxy=None,
         whitelist=None,
         include_errors=False,
         initial_load=False,
@@ -178,12 +179,15 @@ def minion_mods(
         context = {}
     if utils is None:
         utils = {}
+    if proxy is None:
+        proxy = {}
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
     ret = LazyLoader(_module_dirs(opts, 'modules', 'module'),
                      opts,
                      tag='module',
-                     pack={'__context__': context, '__utils__': utils},
+                     pack={'__context__': context, '__utils__': utils,
+                           '__proxy__': proxy},
                      whitelist=whitelist,
                      loaded_base_name=loaded_base_name)
 
@@ -252,16 +256,20 @@ def engines(opts, functions, runners):
                       pack=pack)
 
 
-def proxy(opts, functions, whitelist=None, loaded_base_name=None):
+def proxy(opts, functions=None, returners=None, whitelist=None):
     '''
     Returns the proxy module for this salt-proxy-minion
     '''
-    return LazyLoader(_module_dirs(opts, 'proxy', 'proxy'),
-                      opts,
-                      tag='proxy',
-                      whitelist=whitelist,
-                      pack={'__proxy__': functions},
-                      loaded_base_name=loaded_base_name)
+    # This is where we should set directories so proxy modules can be loaded from /srv/<something>
+    ret = LazyLoader(_module_dirs(opts, 'proxy', 'proxy'),
+                     opts,
+                     tag='proxy',
+                     pack={'__salt__': functions,
+                           '__ret__': returners})
+
+    ret.pack['__proxy__'] = ret
+
+    return ret
 
 
 def returners(opts, functions, whitelist=None, context=None):

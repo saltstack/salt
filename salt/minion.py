@@ -531,10 +531,10 @@ class SMinion(MinionBase):
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
                                                  include_errors=True)
-        self.proxy = salt.loader.proxy(self.opts, None)
+        self.returners = salt.loader.returners(self.opts, self.functions)
+        self.proxy = salt.loader.proxy(self.opts, self.functions, self.returners, None)
         # TODO: remove
         self.function_errors = {}  # Keep the funcs clean
-        self.returners = salt.loader.returners(self.opts, self.functions)
         self.states = salt.loader.states(self.opts, self.functions, self.utils)
         self.rend = salt.loader.render(self.opts, self.functions)
         self.matcher = Matcher(self.opts, self.functions)
@@ -853,7 +853,7 @@ class Minion(MinionBase):
                 )
                 self.event_publisher.handle_publish([event])
 
-    def _load_modules(self, force_refresh=False, notify=False):
+    def _load_modules(self, force_refresh=False, notify=False, proxy=None):
         '''
         Return the functions and the returners loaded up from the loader
         module
@@ -879,7 +879,7 @@ class Minion(MinionBase):
         self.utils = salt.loader.utils(self.opts)
         if self.opts.get('multimaster', False):
             s_opts = copy.deepcopy(self.opts)
-            functions = salt.loader.minion_mods(s_opts, utils=self.utils,
+            functions = salt.loader.minion_mods(s_opts, utils=self.utils, proxy=proxy,
                                                 loaded_base_name=self.loaded_base_name, notify=notify)
         else:
             functions = salt.loader.minion_mods(self.opts, utils=self.utils, notify=notify)
@@ -2513,19 +2513,22 @@ class ProxyMinion(Minion):
         # We need to do this again, because we are going to throw out a lot of grains.
         self.opts['grains'] = salt.loader.grains(self.opts)
 
-        self.opts['proxymodule'] = salt.loader.proxy(self.opts, None, loaded_base_name=fq_proxyname)
-        self.functions, self.returners, self.function_errors = self._load_modules()
+        self.proxy = salt.loader.proxy(self.opts)
+        self.functions, self.returners, self.function_errors = self._load_modules(proxy=self.proxy)
+        self.functions.pack['__proxy__'] = self.proxy
+        self.proxy.pack['__salt__'] = self.functions
+        self.proxy.pack['__ret__'] = self.returners
 
-        if ('{0}.init'.format(fq_proxyname) not in self.opts['proxymodule']
-            or '{0}.shutdown'.format(fq_proxyname) not in self.opts['proxymodule']):
+        if ('{0}.init'.format(fq_proxyname) not in self.proxy
+            or '{0}.shutdown'.format(fq_proxyname) not in self.proxy):
             log.error('Proxymodule {0} is missing an init() or a shutdown() or both.'.format(fq_proxyname))
             log.error('Check your proxymodule.  Salt-proxy aborted.')
             self._running = False
             raise SaltSystemExit(code=-1)
 
-        proxy_fn = self.opts['proxymodule'].loaded_base_name + '.init'
 
-        self.opts['proxymodule'][proxy_fn](self.opts)
+        proxy_init_fn = self.proxy[fq_proxyname+'.init']
+        proxy_init_fn(self.opts)
         # reload ?!?
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
