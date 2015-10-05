@@ -3,16 +3,24 @@
 Beacon to monitor disk usage.
 
 .. versionadded:: 2015.5.0
+
+:depends: python-psutil
 '''
 
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import psutil
 import re
 
 # Import Salt libs
 import salt.utils
+
+# Import Third Party Libs
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    HAS_PSUTIL = False
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +29,8 @@ __virtualname__ = 'diskusage'
 
 def __virtual__():
     if salt.utils.is_windows():
+        return False
+    elif HAS_PSUTIL is False:
         return False
     else:
         return __virtualname__
