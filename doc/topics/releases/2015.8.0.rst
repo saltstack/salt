@@ -71,6 +71,12 @@ Proxy Minion Enhancements
 
 Proxy Minions have undergone a significant overhaul in 2015.8, see :ref:`Proxy Minion Enhancements <proxy-2015.8.0>`.
 
+Engines
+=======
+
+Salt engines are long-running, external processes that leverage Salt. See :ref:`Salt Engines <engines>`.
+
+
 Core Changes
 ============
 
