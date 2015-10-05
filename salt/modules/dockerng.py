@@ -525,18 +525,7 @@ def _get_docker_py_versioninfo():
     '''
     Returns a version_info tuple for docker-py
     '''
-    contextkey = 'docker.docker_py_version'
-    if contextkey in __context__:
-        return __context__[contextkey]
-    match = re.match(VERSION_RE, str(docker.__version__))
-    if match:
-        __context__[contextkey] = tuple(
-            [int(x) for x in match.group(1).split('.')]
-        )
-    else:
-        log.warning('Unable to determine docker-py version')
-        __context__[contextkey] = None
-    return __context__[contextkey]
+    return docker.version_info
 
 
 # Decorators
