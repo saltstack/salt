@@ -247,7 +247,7 @@ import time
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six.moves import map
+from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 from salt.utils.decorators \
     import identical_signature_wrapper as _mimic_signature
 import salt.utils
