@@ -8,7 +8,7 @@ Salt Engines
 
 Salt Engines are long-running, external system processes that leverage Salt.
 
-- Engines have access to Salt configuration, execution modules, and runners (``__ops__``, ``__salt__``, and ``__runners__``).
+- Engines have access to Salt configuration, execution modules, and runners (``__opts__``, ``__salt__``, and ``__runners__``).
 - Engines are executed in a separate process that is monitored by Salt. If a Salt engine stops, it is restarted automatically.
 - Engines can run on the Salt master and on Salt minions.
 
