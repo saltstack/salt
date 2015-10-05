@@ -567,9 +567,17 @@ def exists(instance_id=None, name=None, tags=None, region=None, key=None,
         return False
 
 
-def run(image_id, name=None, tags=None, instance_type='m1.small', key_name=None,
-        security_groups=None, subnet_id=None, subnet_name=None, user_data=None,
-        placement=None, region=None, key=None, keyid=None, profile=None):
+def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
+        user_data=None, instance_type='m1.small', placement=None,
+        kernel_id=None, ramdisk_id=None, monitoring_enabled=None,
+        subnet_id=None, subnet_name=None, private_ip_address=None,
+        block_device_map=None, disable_api_termination=None,
+        instance_initiated_shutdown_behavior=None, placement_group=None,
+        client_token=None, security_group_ids=None, security_group_names=None,
+        additional_info=None, tenancy=None, instance_profile_arn=None,
+        instance_profile_name=None, ebs_optimized=None, network_interfaces=None,
+        region=None, key=None, keyid=None, profile=None):
+    #TODO: support multi-instance reservations
     '''
     Create and start an EC2 instance.
 
@@ -581,9 +589,85 @@ def run(image_id, name=None, tags=None, instance_type='m1.small', key_name=None,
 
         salt myminion boto_ec2.run ami-b80c2b87 name=myinstance
 
-    '''
-    #TODO: support multi-instance reservations
+    image_id
+        (string) – The ID of the image to run.
+    name
+        (string) - The name of the instance.
+    tags
+        (dict of key: value pairs) - tags to apply to the instance.
+    key_name
+        (string) – The name of the key pair with which to launch instances.
+    security_groups
+        (list of strings) – The names of the EC2 classic security groups with
+        which to associate instances
+    user_data
+        (string) – The Base64-encoded MIME user data to be made available to the
+        instance(s) in this reservation.
+    instance_type
+        (string) – The type of instance to run.  Note that some image types
+        (e.g. hvm) only run on some instance types.
+    placement
+        (string) – The Availability Zone to launch the instance into.
+    kernel_id
+        (string) – The ID of the kernel with which to launch the instances.
+    ramdisk_id
+        (string) – The ID of the RAM disk with which to launch the instances.
+    monitoring_enabled
+        (bool) – Enable detailed CloudWatch monitoring on the instance.
+    subnet_id
+        (string) – The subnet ID within which to launch the instances for VPC.
+    subnet_name
+        (string) – The name of a subnet within which to launch the instances for VPC.
+    private_ip_address
+        (string) – If you’re using VPC, you can optionally use this parameter to
+        assign the instance a specific available IP address from the subnet
+        (e.g. 10.0.0.25).
+    block_device_map
+        (boto.ec2.blockdevicemapping.BlockDeviceMapping) – A BlockDeviceMapping
+        data structure describing the EBS volumes associated with the Image.
+    disable_api_termination
+        (bool) – If True, the instances will be locked and will not be able to
+        be terminated via the API.
+    instance_initiated_shutdown_behavior
+        (string) – Specifies whether the instance stops or terminates on
+        instance-initiated shutdown. Valid values are: stop, terminate
+    placement_group
+        (string) – If specified, this is the name of the placement group in
+        which the instance(s) will be launched.
+    client_token
+        (string) – Unique, case-sensitive identifier you provide to ensure
+        idempotency of the request. Maximum 64 ASCII characters.
+    security_group_ids
+        (list of strings) – The ID(s) of the VPC security groups with which to
+        associate instances.
+    security_group_names
+        (list of strings) – The name(s) of the VPC security groups with which to
+        associate instances.
+    additional_info
+        (string) – Specifies additional information to make available to the
+        instance(s).
+    tenancy
+        (string) – The tenancy of the instance you want to launch. An instance
+        with a tenancy of ‘dedicated’ runs on single-tenant hardware and can
+        only be launched into a VPC. Valid values are:”default” or “dedicated”.
+        NOTE: To use dedicated tenancy you MUST specify a VPC subnet-ID as well.
+    instance_profile_arn
+        (string) – The Amazon resource name (ARN) of the IAM Instance Profile
+        (IIP) to associate with the instances.
+    instance_profile_name
+        (string) – The name of the IAM Instance Profile (IIP) to associate with
+        the instances.
+    ebs_optimized
+        (bool) – Whether the instance is optimized for EBS I/O. This
+        optimization provides dedicated throughput to Amazon EBS and an
+        optimized configuration stack to provide optimal EBS I/O performance.
+        This optimization isn’t available with all instance types.
+    network_interfaces
+        (boto.ec2.networkinterface.NetworkInterfaceCollection) – A
+        NetworkInterfaceCollection data structure containing the ENI
+        specifications for the instance.
 
+    '''
     if all((subnet_id, subnet_name)):
         raise SaltInvocationError('Only one of subnet_name or subnet_id may be '
                                   'provided.')
@@ -592,18 +676,40 @@ def run(image_id, name=None, tags=None, instance_type='m1.small', key_name=None,
                                                  region=region, key=key,
                                                  keyid=keyid, profile=profile)
         if 'id' not in r:
-            log.warning('couldn\'t resolve subnet name {0}.').format(subnet_name)
+            log.warning('Couldn\'t resolve subnet name {0}.').format(subnet_name)
             return False
         subnet_id = r['id']
 
+    if all((security_group_ids, security_group_names)):
+        raise SaltInvocationError('Only one of security_group_ids or '
+                                  'security_group_names may be provided.')
+    if security_group_names:
+        security_group_ids = []
+        for sgn in security_group_names:
+            r = __salt__['boto_vpc.get_resource_id']('security_group',
+                                                     sgn, region=region,
+                                                     key=key, keyid=keyid,
+                                                     profile=profile)
+            if 'id' not in r:
+                log.warning('Couldn\'t resolve security group name '
+                            '{0}.').format(sgn)
+                return False
+            security_group_ids += [r['id']]
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    reservation = conn.run_instances(image_id, instance_type=instance_type,
-                                     key_name=key_name,
-                                     security_groups=security_groups,
-                                     subnet_id=subnet_id,
-                                     user_data=user_data,
-                                     placement=placement)
+    reservation = conn.run_instances(image_id, key_name=key_name, security_groups=security_groups,
+                                     user_data=user_data, instance_type=instance_type,
+                                     placement=placement, kernel_id=kernel_id, ramdisk_id=ramdisk_id,
+                                     monitoring_enabled=monitoring_enabled, subnet_id=subnet_id,
+                                     private_ip_address=private_ip_address, block_device_map=block_device_map,
+                                     disable_api_termination=disable_api_termination,
+                                     instance_initiated_shutdown_behavior=instance_initiated_shutdown_behavior,
+                                     placement_group=placement_group, client_token=client_token,
+                                     security_group_ids=security_group_ids, additional_info=additional_info,
+                                     tenancy=tenancy, instance_profile_arn=instance_profile_arn,
+                                     instance_profile_name=instance_profile_name, ebs_optimized=ebs_optimized,
+                                     network_interfaces=network_interfaces)
     if not reservation:
         log.warning('instances could not be reserved')
         return False
