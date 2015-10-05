@@ -97,12 +97,15 @@ def _get_all_eip_addresses(addresses=None, allocation_ids=None, region=None,
     '''
     Get all EIP's associated with the current credentials.
 
-    addresses     : Optional [list] of addresses.  If this list is present, only the
-                    Addresses associated with these addresses will be returned.
-    allocation_ids: Optional [list] of allocation IDs.  If this list is present, only
-                    the Addresses associated with the given allocation IDs will be returned.
+    addresses
+        (list) - Optional list of addresses.  If provided, only those those in the
+        list will be returned.
+    allocation_ids
+        (list) - Optional list of allocation IDs.  If provided, only the
+        addresses associated with the given allocation IDs will be returned.
 
-    returns       : The requested Addresses as a [list] of :class:`boto.ec2.address.Address`
+    returns
+        (list) - The requested Addresses as a list of :class:`boto.ec2.address.Address`
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -118,18 +121,23 @@ def get_all_eip_addresses(addresses=None, allocation_ids=None, region=None,
     '''
     Get public addresses of some, or all EIPs associated with the current account.
 
-    addresses     : Optional [list] of addresses.  If this list is present, only the
-                    Addresses associated with these addresses will be returned.
-    allocation_ids: Optional [list] of allocation IDs.  If this list is present, only
-                    the Addresses associated with the given allocation IDs will be returned.
+    addresses
+        (list) - Optional list of addresses.  If provided, only the addresses
+        associated with those in the list will be returned.
+    allocation_ids
+        (list) - Optional list of allocation IDs.  If provided, only the
+        addresses associated with the given allocation IDs will be returned.
 
-    returns       : A [list] of the requested EIP addresses
+    returns
+        (list) - A list of the requested EIP addresses
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-call boto_ec2.get_all_eip_addresses
+
+    .. versionadded:: Boron
     '''
     return [x.public_ip for x in _get_all_eip_addresses(addresses, allocation_ids, region,
                 key, keyid, profile)]
@@ -140,18 +148,23 @@ def get_eip_address_info(addresses=None, allocation_ids=None, region=None, key=N
     '''
     Get 'interesting' info about some, or all EIPs associated with the current account.
 
-    addresses     : Optional [list] of addresses.  If this list is present, only the
-                    Addresses associated with these addresses will be returned.
-    allocation_ids: Optional [list] of allocation IDs.  If this list is present, only
-                    the Addresses associated with the given allocation IDs will be returned.
+    addresses
+        (list) - Optional list of addresses.  If provided, only the addresses
+        associated with those in the list will be returned.
+    allocation_ids
+        (list) - Optional list of allocation IDs.  If provided, only the
+        addresses associated with the given allocation IDs will be returned.
 
-    returns       : A [list] of {dicts}, each containing the info for one of the requested EIPs.
+    returns
+        (list of dicts) - A list of dicts, each containing the info for one of the requested EIPs.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-call boto_ec2.get_eip_address_info addresses=52.4.2.15
+
+    .. versionadded:: Boron
     '''
     if type(addresses) == (type('string')):
         addresses = [addresses]
@@ -172,19 +185,23 @@ def allocate_eip_address(domain=None, region=None, key=None, keyid=None, profile
     '''
     Allocate a new Elastic IP address and associate it with your account.
 
-    domain  : Optional param - if set to exactly 'vpc', the address will be
-              allocated to the VPC.  The default simply maps the EIP to your
-              account container.
+    domain
+        (string) Optional param - if set to exactly 'vpc', the address will be
+        allocated to the VPC.  The default simply maps the EIP to your
+        account container.
 
-    returns : dict of interesting information about the newly allocated EIP, with
-              probably the most interesting keys being 'public_ip', and
-              'allocation_id' iff 'domain=vpc' was passed.
+    returns
+        (dict) dict of 'interesting' information about the newly allocated EIP,
+        with probably the most interesting keys being 'public_ip'; and
+        'allocation_id' iff 'domain=vpc' was passed.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt-call boto_ec2.allocate_eip_address domain=vpc
+
+    .. versionadded:: Boron
     '''
     if domain and domain != 'vpc':
         raise SaltInvocationError('The only permitted value for the \'domain\' param is \'vpc\'.')
@@ -210,16 +227,21 @@ def release_eip_address(public_ip=None, allocation_id=None, region=None, key=Non
     Free an Elastic IP address.  Pass either a public IP address to release a 'standard'
     EC2 Elastic IP address, or an AllocationId to release a VPC Elastic IP address.
 
-    public_ip     : The public IP address - for EC2 elastic IPs.
-    allocation_id : The Allocation ID - for VPC elastic IPs.
+    public_ip
+        (string) - The public IP address - for EC2 elastic IPs.
+    allocation_id
+        (string) - The Allocation ID - for VPC elastic IPs.
 
-    returns       : True on success, False on failure
+    returns
+        (bool) - True on success, False on failure
 
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_ec2.release_eip_address allocation_id=eipalloc-ef382c8a
+
+    .. versionadded:: Boron
     '''
     if not _exactly_one((public_ip, allocation_id)):
         raise SaltInvocationError('Exactly one (but not both) of \'public_ip\' '
@@ -242,20 +264,29 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
     requires exactly one of either 'public_ip' or 'allocation_id', depending
     on whether you’re associating a VPC address or a plain EC2 address.
 
-    instance_id         : (string) – ID of the instance to associate with (exclusive with 'instance_name')
-    instance_name       : (string) – Name tag of the instance to associate with (exclusive with 'instance_id')
-    public_ip           : (string) – Public IP address, for standard EC2 based allocations.
-    allocation_id       : (string) – Allocation ID for a VPC-based EIP.
-    private_ip_address  : (string) – The primary or secondary private IP address to associate with the Elastic IP address.
-    allow_reassociation : (bool)   – Allow a currently associated EIP to be re-associated with the new instance or interface.
+    instance_id
+        (string) – ID of the instance to associate with (exclusive with 'instance_name')
+    instance_name
+        (string) – Name tag of the instance to associate with (exclusive with 'instance_id')
+    public_ip
+        (string) – Public IP address, for standard EC2 based allocations.
+    allocation_id
+        (string) – Allocation ID for a VPC-based EIP.
+    private_ip_address
+        (string) – The primary or secondary private IP address to associate with the Elastic IP address.
+    allow_reassociation
+        (bool)   – Allow a currently associated EIP to be re-associated with the new instance or interface.
 
-    returns             : (bool)   - True on success, False otherwise
+    returns
+        (bool)   - True on success, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_ec2.associate_eip_address instance_name=bubba.ho.tep allocation_id=eipalloc-ef382c8a
+
+    .. versionadded:: Boron
     '''
     if not _exactly_one((instance_id, instance_name)):
         raise SaltInvocationError('Exactly one (but not both) of \'instance_id\' '
@@ -290,16 +321,21 @@ def disassociate_eip_address(public_ip=None, association_id=None, region=None,
     requires exactly one of either 'association_id' or 'public_ip', depending
     on whether you’re associating a VPC address or a plain EC2 address.
 
-    public_ip     : (string) – Public IP address, for standard EC2 based allocations.
-    association_id: (string) – Association ID for a VPC-based EIP.
+    public_ip
+        (string) – Public IP address, for standard EC2 based allocations.
+    association_id
+        (string) – Association ID for a VPC-based EIP.
 
-    returns       :   (bool)   - True on success, False otherwise
+    returns
+        (bool)   - True on success, False otherwise
 
     CLI Example:
 
     .. code-block:: bash
 
         salt myminion boto_ec2.disassociate_eip_address association_id=eipassoc-e3ba2d16
+
+    .. versionadded:: Boron
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
