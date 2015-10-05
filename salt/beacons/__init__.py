@@ -73,6 +73,8 @@ class Beacon(object):
                     if 'id' not in data:
                         data['id'] = self.opts['id']
                     ret.append({'tag': tag, 'data': data})
+            else:
+                log.debug('Unable to process beacon {0}'.format(mod))
         return ret
 
     def _process_interval(self, mod, interval):
