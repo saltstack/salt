@@ -567,9 +567,9 @@ def exists(instance_id=None, name=None, tags=None, region=None, key=None,
         return False
 
 
-def run(image_id, name=None, tags=None, instance_type='m1.small',
-        key_name=None, security_groups=None, user_data=None, placement=None,
-        region=None, key=None, keyid=None, profile=None):
+def run(image_id, name=None, tags=None, instance_type='m1.small', key_name=None,
+        security_groups=None, subnet_id=None, subnet_name=None, user_data=None,
+        placement=None, region=None, key=None, keyid=None, profile=None):
     '''
     Create and start an EC2 instance.
 
@@ -584,11 +584,24 @@ def run(image_id, name=None, tags=None, instance_type='m1.small',
     '''
     #TODO: support multi-instance reservations
 
+    if all((subnet_id, subnet_name)):
+        raise SaltInvocationError('Only one of subnet_name or subnet_id may be '
+                                  'provided.')
+    if subnet_name:
+        r = __salt__['boto_vpc.get_resource_id']('subnet', subnet_name,
+                                                 region=region, key=key,
+                                                 keyid=keyid, profile=profile)
+        if 'id' not in r:
+            log.warning('couldn\'t resolve subnet name {0}.').format(subnet_name)
+            return False
+        subnet_id = r['id']
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     reservation = conn.run_instances(image_id, instance_type=instance_type,
                                      key_name=key_name,
                                      security_groups=security_groups,
+                                     subnet_id=subnet_id,
                                      user_data=user_data,
                                      placement=placement)
     if not reservation:
