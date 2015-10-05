@@ -508,7 +508,7 @@ def absent(
 
         .. versionadded:: Boron
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     sg = __salt__['boto_secgroup.get_config'](name, True, region, key, keyid,
                                               profile, vpc_id, vpc_name)
