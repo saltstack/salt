@@ -21,6 +21,7 @@ Salt Table of Contents
     topics/sdb/index
     topics/event/index
     topics/beacons/index
+    topics/engines/index
     topics/ext_processes/index
     topics/highavailability/index
     topics/topology/index
