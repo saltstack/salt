@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Watch for pkgs that have upgrades then fire an event
+Watch for pkgs that have upgrades, then fire an event.
+
+.. versionadded:: Boron
 '''
 
 # Import python libs
