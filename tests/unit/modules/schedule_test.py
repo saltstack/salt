@@ -176,7 +176,7 @@ class ScheduleTestCase(TestCase):
                     if sys.version_info[1] >= 7:
                         self.assertDictEqual(schedule.modify('job1', function='test.ping'),
                                              {'changes': {},
-                                              'comment': 'Modified job: job1 in schedule.',
+                                              'comment': 'Job job1 in correct state',
                                               'result': True})
                     elif sys.version_info[1] >= 6:
                         self.assertDictEqual(schedule.modify('job1', function='test.ping'),
