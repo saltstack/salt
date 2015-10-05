@@ -154,7 +154,7 @@ creates a consistent understanding throughout our Salt environment. Users can
 expect that pillar variables found in an Apache state will live inside of an
 Apache pillar:
 
-``/srv/salt/pillar/apache.sls``:
+``/srv/pillar/apache.sls``:
 
 .. code-block:: yaml
 
