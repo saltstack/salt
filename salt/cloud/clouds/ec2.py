@@ -1182,7 +1182,7 @@ def _create_eni_if_necessary(interface):
                         break
             else:
                 for subnet in subnet_query_result['item']:
-                    if subnet['subnetId'] == interface['SubnetId']:
+                    if 'subnetId' in subnet and subnet['subnetId'] == interface['SubnetId']:
                         found = True
                         break
 
