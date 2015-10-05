@@ -118,7 +118,7 @@ parameters are discussed in more detail below.
       keyname: my_test_key
 
       # This one should NOT be specified if VPC was not configured in AWS to be
-      # the default. It might cause an error message which sais that network
+      # the default. It might cause an error message which says that network
       # interfaces and an instance-level security groups may not be specified
       # on the same request.
       #
