@@ -296,6 +296,10 @@ def latest(name,
     identity
         A path on the minion server to a private key to use over SSH
 
+        Key can be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
+
     https_user
         HTTP Basic Auth username for HTTPS (only) clones
 
@@ -340,6 +344,18 @@ def latest(name,
             - require:
               - pkg: git
               - ssh_known_hosts: gitlab.example.com
+
+        git-website-staging:
+          git.latest:
+            - name: ssh://git@gitlab.example.com:user/website.git
+            - rev: gh-pages
+            - target: /usr/share/nginx/staging
+            - identity: salt://website/id_rsa
+            - require:
+              - pkg: git
+              - ssh_known_hosts: gitlab.example.com
+
+            .. versionadded:: Boron
 
         git-website-prod:
           git.latest:
@@ -419,6 +435,17 @@ def latest(name,
         elif not isinstance(identity, list):
             return _fail(ret, 'identity must be either a list or a string')
         for ident_path in identity:
+            if 'salt://' in ident_path:
+                try:
+                    ident_path = __salt__['cp.cache_file'](ident_path)
+                except IOError as e:
+                    log.debug(e)
+                    return _fail(
+                        ret,
+                        'identity \'{0}\' does not exist.'.format(
+                            ident_path
+                        )
+                    )
             if not os.path.isabs(ident_path):
                 return _fail(
                     ret,
