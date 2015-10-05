@@ -12,7 +12,8 @@ Example beacon to use with salt-proxy
 # Import Python libs
 from __future__ import absolute_import
 
-# Important: Required for the beacon to load!!!
+# Important: If used with salt-proxy
+# this is required for the beacon to load!!!
 __proxyenabled__ = ['*']
 
 __virtualname__ = 'proxy_example'
@@ -53,6 +54,5 @@ def beacon(config):
     # TBD
     # Call rest.py and return the result
     ret = [{'foo': config['foo']}]
-    log.info('Called the beacon function for proxy_test beacon')
 
     return ret
