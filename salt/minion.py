@@ -2541,9 +2541,9 @@ class ProxyMinion(Minion):
         proxy_init_fn(self.opts)
         self.opts['grains'] = salt.loader.grains(self.opts)
 
-        # # Check config 'add_proxymodule_to_opts'  Remove this in Boron.
-        # if self.opts['add_proxymodule_to_opts']:
-        #     self.opts['proxymodule'] = self.proxy
+        # Check config 'add_proxymodule_to_opts'  Remove this in Boron.
+        if self.opts['add_proxymodule_to_opts']:
+            self.opts['proxymodule'] = self.proxy
 
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()

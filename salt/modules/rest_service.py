@@ -46,6 +46,19 @@ def get_all():
 
 def list_():
     '''
+    Return a list of all available services
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.list
+    '''
+    return get_all()
+
+
+def list_():
+    '''
     Return a list of all available services.
 
     .. versionadded: 2015.8.1

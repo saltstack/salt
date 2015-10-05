@@ -181,7 +181,6 @@ def minion_mods(
         utils = {}
     if proxy is None:
         proxy = {}
-
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
     ret = LazyLoader(_module_dirs(opts, 'modules', 'module'),
@@ -261,6 +260,7 @@ def proxy(opts, functions=None, returners=None, whitelist=None):
     '''
     Returns the proxy module for this salt-proxy-minion
     '''
+    # This is where we should set directories so proxy modules can be loaded from /srv/<something>
     ret = LazyLoader(_module_dirs(opts, 'proxy', 'proxy'),
                      opts,
                      tag='proxy',
