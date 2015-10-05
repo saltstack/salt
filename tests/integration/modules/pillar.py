@@ -98,7 +98,6 @@ class PillarModuleTest(integration.ModuleCase):
     def no_test_issue_10408_ext_pillar_gitfs_url_update(self):
         import os
         from salt.pillar import git_pillar
-        import git
         original_url = 'git+ssh://original@example.com/home/git/test'
         changed_url = 'git+ssh://changed@example.com/home/git/test'
         rp_location = os.path.join(self.master_opts['cachedir'], 'pillar_gitfs/0/.git')
@@ -114,10 +113,11 @@ class PillarModuleTest(integration.ModuleCase):
 
         self.assertEqual(grepo.rp_location, repo.remotes.origin.url)
 
+    @skipIf(HAS_GIT_PYTHON is False,
+            'GitPython must be installed and >= version {0}'.format(GIT_PYTHON))
     def test_ext_pillar_env_mapping(self):
         import os
         from salt.pillar import git_pillar
-        import git
 
         repo_url = 'https://github.com/saltstack/pillar1.git'
         pillar = self.run_function('pillar.data')

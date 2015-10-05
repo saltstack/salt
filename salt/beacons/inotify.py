@@ -12,6 +12,8 @@ Watch files and translate the changes into salt events
 # Import Python libs
 from __future__ import absolute_import
 import collections
+import fnmatch
+import os
 
 # Import salt libs
 import salt.ext.six
@@ -150,6 +152,9 @@ def beacon(config):
                 - close_write
               recurse: True
               auto_add: True
+              exclude:
+                - /path/to/file/or/dir/exclude1
+                - /path/to/file/or/dir/exclude2
 
     The mask list can contain the following events (the default mask is create,
     delete, and modify):
@@ -178,6 +183,8 @@ def beacon(config):
       Recursively watch files in the directory
     auto_add:
       Automatically start watching files that are created in the watched directory
+    exclude:
+      Exclude directories or files from triggering events in the watched directory
     '''
     ret = []
     notifier = _get_notifier()
@@ -190,10 +197,32 @@ def beacon(config):
         queue = __context__['inotify.queue']
         while queue:
             event = queue.popleft()
-            sub = {'tag': event.path,
-                   'path': event.pathname,
-                   'change': event.maskname}
-            ret.append(sub)
+
+            _append = True
+            # Find the matching path in config
+            path = event.path
+            while path != '/':
+                if path in config:
+                    break
+                path = os.path.dirname(path)
+
+            excludes = config[path].get('exclude', '')
+            if excludes and isinstance(excludes, list):
+                for exclude in excludes:
+                    if '*' in exclude:
+                        if fnmatch.fnmatch(event.pathname, exclude):
+                            _append = False
+                    else:
+                        if event.pathname.startswith(exclude):
+                            _append = False
+
+            if _append:
+                sub = {'tag': event.path,
+                       'path': event.pathname,
+                       'change': event.maskname}
+                ret.append(sub)
+            else:
+                log.info('Excluding {0} from event for {1}'.format(event.pathname, path))
 
     # Get paths currently being watched
     current = set()

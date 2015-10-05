@@ -70,7 +70,7 @@ You can use ssh-copy-id, (the OpenSSH key deployment tool) to deploy keys to you
 
 .. code-block:: bash
 
-   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa user@server.demo.com
+   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa.pub user@server.demo.com
 
 One could also create e a simple shell script, named salt-ssh-copy-id.sh as follows:
 
@@ -81,7 +81,7 @@ One could also create e a simple shell script, named salt-ssh-copy-id.sh as foll
       echo $0 user@host.com
       exit 0
    fi
-   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa $1
+   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa.pub $1
 
 
 .. note::
