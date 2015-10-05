@@ -396,7 +396,7 @@ class DownloadWindowsDlls(Command):
                         from contextlib import closing
                         with closing(requests.get(furl, stream=True)) as req:
                             if req.status_code == 200:
-                                with open(fdest, 'w') as wfh:
+                                with open(fdest, 'wb') as wfh:
                                     for chunk in req.iter_content(chunk_size=4096):
                                         if chunk:  # filter out keep-alive new chunks
                                             wfh.write(chunk)
@@ -411,7 +411,7 @@ class DownloadWindowsDlls(Command):
                         req = urlopen(furl)
 
                         if req.getcode() == 200:
-                            with open(fdest, 'w') as wfh:
+                            with open(fdest, 'wb') as wfh:
                                 while True:
                                     for chunk in req.read(4096):
                                         if not chunk:
