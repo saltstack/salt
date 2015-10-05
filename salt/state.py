@@ -1585,10 +1585,10 @@ class State(object):
                 inject_globals['__env__'] = 'base'
 
             if 'result' not in ret or ret['result'] is False:
-                with context.func_globals_inject(self.states[cdata['full']],
-                                                 **inject_globals):
-                    ret = self.states[cdata['full']](*cdata['args'],
-                                                     **cdata['kwargs'])
+                self.states.inject_globals = inject_globals
+                ret = self.states[cdata['full']](*cdata['args'],
+                                                 **cdata['kwargs'])
+                self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
             self.verify_ret(ret)
