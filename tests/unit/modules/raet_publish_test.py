@@ -73,7 +73,7 @@ class RaetPublishTestCase(TestCase):
             with patch.object(salt.transport.Channel, 'factory',
                               MagicMock(return_value=MockFactory())):
                 self.assertEqual(raet_publish.runner(1),
-                                 '1 runner publish timed out')
+                                 '\'1\' runner publish timed out')
 
 
 if __name__ == '__main__':
