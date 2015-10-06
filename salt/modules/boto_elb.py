@@ -95,7 +95,9 @@ def exists(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if an ELB exists.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.exists myelb region=us-east-1
     '''
@@ -118,7 +120,9 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if an ELB exists.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.exists myelb region=us-east-1
     '''
@@ -185,7 +189,9 @@ def create(name, availability_zones, listeners=None, subnets=None,
     '''
     Create an ELB
 
-    CLI example to create an ELB::
+    CLI example to create an ELB:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.create myelb '["us-east-1a", "us-east-1e"]' listeners='{"elb_port": 443, "elb_protocol": "HTTPS", ...}' region=us-east-1
     '''
@@ -221,7 +227,9 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete an ELB.
 
-    CLI example to delete an ELB::
+    CLI example to delete an ELB:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.delete myelb region=us-east-1
     '''
@@ -246,7 +254,9 @@ def create_listeners(name, listeners=None, region=None, key=None, keyid=None,
     '''
     Create listeners on an ELB.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.create_listeners myelb listeners='[["HTTPS", "HTTP", 443, 80, "arn:aws:iam::11  11111:server-certificate/mycert"]]'
     '''
@@ -274,7 +284,9 @@ def delete_listeners(name, ports, region=None, key=None, keyid=None,
     '''
     Delete listeners on an ELB.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.delete_listeners myelb '[80,443]'
     '''
@@ -299,7 +311,9 @@ def apply_security_groups(name, security_groups, region=None, key=None,
     '''
     Apply security groups to ELB.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.apply_security_groups myelb '["mysecgroup1"]'
     '''
@@ -325,7 +339,9 @@ def enable_availability_zones(name, availability_zones, region=None, key=None,
     '''
     Enable availability zones for ELB.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.enable_availability_zones myelb '["us-east-1a"]'
     '''
@@ -350,7 +366,9 @@ def disable_availability_zones(name, availability_zones, region=None, key=None,
     '''
     Disable availability zones for ELB.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.disable_availability_zones myelb '["us-east-1a"]'
     '''
@@ -375,7 +393,9 @@ def attach_subnets(name, subnets, region=None, key=None, keyid=None,
     '''
     Attach ELB to subnets.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.attach_subnets myelb '["mysubnet"]'
     '''
@@ -400,7 +420,9 @@ def detach_subnets(name, subnets, region=None, key=None, keyid=None,
     '''
     Detach ELB from subnets.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.detach_subnets myelb '["mysubnet"]'
     '''
@@ -424,7 +446,9 @@ def get_attributes(name, region=None, key=None, keyid=None, profile=None):
     '''
     Check to see if attributes are set on an ELB.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.get_attributes myelb
     '''
@@ -461,7 +485,9 @@ def set_attributes(name, attributes, region=None, key=None, keyid=None,
     '''
     Set attributes on an ELB.
 
-    CLI example to set attributes on an ELB::
+    CLI example to set attributes on an ELB:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.set_attributes myelb '{"access_log": {"enabled": "true", "s3_bucket_name": "mybucket", "s3_bucket_prefix": "mylogs/", "emit_interval": "5"}}' region=us-east-1
     '''
@@ -530,7 +556,9 @@ def get_health_check(name, region=None, key=None, keyid=None, profile=None):
     '''
     Get the health check configured for this ELB.
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.get_health_check myelb
     '''
@@ -558,7 +586,9 @@ def set_health_check(name, health_check, region=None, key=None, keyid=None,
     '''
     Set attributes on an ELB.
 
-    CLI example to set attributes on an ELB::
+    CLI example to set attributes on an ELB:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.set_health_check myelb '{"target": "HTTP:80/"}'
     '''
@@ -586,7 +616,9 @@ def register_instances(name, instances, region=None, key=None, keyid=None,
     - ``True``: instance(s) registered successfully
     - ``False``: instance(s) failed to be registered
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.register_instances myelb instance_id
         salt myminion boto_elb.register_instances myelb "[instance_id,instance_id]"
@@ -628,7 +660,9 @@ def deregister_instances(name, instances, region=None, key=None, keyid=None,
     - ``False``: instance(s) failed to be deregistered
     - ``None``: instance(s) not valid or not registered, no action taken
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.deregister_instances myelb instance_id
         salt myminion boto_elb.deregister_instances myelb "[instance_id, instance_id]"
@@ -672,7 +706,9 @@ def get_instance_health(name, region=None, key=None, keyid=None, profile=None, i
     '''
     Get a list of instances and their health state
 
-    CLI example::
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.get_instance_health myelb
         salt myminion boto_elb.get_instance_health myelb region=us-east-1 instances="[instance_id,instance_id]"
@@ -699,7 +735,11 @@ def create_policy(name, policy_name, policy_type, policy, region=None,
     '''
     Create an ELB policy.
 
-    CLI example::
+    .. versionadded:: Boron
+
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.create_policy myelb mypolicy LBCookieStickinessPolicyType '{"CookieExpirationPeriod": 3600}'
     '''
@@ -728,7 +768,11 @@ def delete_policy(name, policy_name, region=None, key=None, keyid=None,
     '''
     Delete an ELB policy.
 
-    CLI example::
+    .. versionadded:: Boron
+
+    CLI example:
+
+    .. code-block:: bash
 
         salt myminion boto_elb.delete_policy myelb mypolicy
     '''
@@ -752,7 +796,11 @@ def set_listener_policy(name, port, policies=None, region=None, key=None,
     '''
     Set the policies of an ELB listener.
 
-    CLI example::
+    .. versionadded:: Boron
+
+    CLI example:
+
+    .. code-block:: Boron
 
         salt myminion boto_elb.set_listener_policy myelb 443 "[policy1,policy2]"
     '''
