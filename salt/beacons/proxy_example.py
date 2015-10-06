@@ -6,11 +6,15 @@ Example beacon to use with salt-proxy
 
     beacons:
       proxy_example:
-        foo: bar
+        endpoint: beacon
 '''
 
 # Import Python libs
 from __future__ import absolute_import
+import logging
+
+# Import salt libs
+import salt.utils.http
 
 # Important: If used with salt-proxy
 # this is required for the beacon to load!!!
@@ -18,7 +22,6 @@ __proxyenabled__ = ['*']
 
 __virtualname__ = 'proxy_example'
 
-import logging
 log = logging.getLogger(__name__)
 
 
@@ -49,10 +52,17 @@ def beacon(config):
 
         beacons:
           proxy_example:
-            foo: bar
+            endpoint: beacon
     '''
-    # TBD
-    # Call rest.py and return the result
-    ret = [{'foo': config['foo']}]
-
-    return ret
+    # Important!!!
+    # Although this toy example makes an HTTP call
+    # to get beacon information
+    # please be advised that doing CPU or IO intensive
+    # operations in this method will cause the beacon loop
+    # to block.
+    beacon_url = '{}{}'.format(__opts__['proxy']['url'],
+                               config['endpoint'])
+    r = salt.utils.http.query(beacon_url,
+                              decode_type='json',
+                              decode=True)
+    return [r['dict']]
