@@ -168,6 +168,15 @@ import salt.utils
 # Import 3rd-party libs
 import salt.ext.six as six
 
+def __virtual__():
+    '''
+    only load this module if the corresponding execution module is loaded
+    '''
+    if 'x509.get_pem_entry' in __salt__:
+        return 'x509'
+    else:
+        return (False, 'Could not load x509 state: m2crypto unavailable')
+
 
 def _revoked_to_list(revs):
     '''

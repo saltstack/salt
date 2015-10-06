@@ -63,10 +63,13 @@ CERT_DEFAULTS = {'days_valid': 365, 'version': 3, 'serial_bits': 64, 'algorithm'
 
 
 def __virtual__():
+    '''
+    only load this module if m2crypto is available
+    '''
     if HAS_M2:
         return __virtualname__
     else:
-        return False
+        return (False, 'Could not load x509 module, m2crypto unavailable')
 
 
 class _Ctx(ctypes.Structure):
