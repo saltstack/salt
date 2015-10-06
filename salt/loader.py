@@ -180,7 +180,10 @@ def minion_mods(
     if utils is None:
         utils = {}
     if proxy is None:
+        log.debug('minion_mods called with proxy empty')
         proxy = {}
+    else:
+        log.debug('minion_mods called with proxy NOT empty')
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
     ret = LazyLoader(_module_dirs(opts, 'modules', 'module'),
