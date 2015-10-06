@@ -882,7 +882,7 @@ class Minion(MinionBase):
             functions = salt.loader.minion_mods(s_opts, utils=self.utils, proxy=proxy,
                                                 loaded_base_name=self.loaded_base_name, notify=notify)
         else:
-            functions = salt.loader.minion_mods(self.opts, utils=self.utils, notify=notify)
+            functions = salt.loader.minion_mods(self.opts, utils=self.utils, notify=notify, proxy=proxy)
         returners = salt.loader.returners(self.opts, functions)
         errors = {}
         if '_errors' in functions:

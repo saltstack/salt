@@ -681,7 +681,10 @@ def sls(mods,
             '{0}.cache.p'.format(kwargs.get('cache_name', 'highstate'))
             )
 
-    st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
+    try:
+        st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'), proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
 
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
