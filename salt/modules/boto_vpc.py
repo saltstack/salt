@@ -783,10 +783,10 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
     except BotoServerError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
-    return _create_resource('subnet', name=subnet_name, tags=tags,
-                            vpc_id=vpc_id, cidr_block=cidr_block,
-                            region=region, key=key, keyid=keyid,
-                            profile=profile)
+    return _create_resource('subnet', name=subnet_name, tags=tags, vpc_id=vpc_id,
+                            availability_zone=availability_zone,
+                            cidr_block=cidr_block, region=region, key=key,
+                            keyid=keyid, profile=profile)
 
 
 def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,

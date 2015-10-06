@@ -362,7 +362,8 @@ def get_zones(region=None, key=None, keyid=None, profile=None):
 
 
 def find_instances(instance_id=None, name=None, tags=None, region=None,
-                   key=None, keyid=None, profile=None, return_objs=False):
+                   key=None, keyid=None, profile=None, return_objs=False,
+                   in_states=[]):
 
     '''
     Given instance properties, find and return matching instance ids
@@ -378,6 +379,8 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
+    if not any((instance_id, name, tags)):
+        return []
     try:
         filter_parameters = {'filters': {}}
 
@@ -396,6 +399,10 @@ def find_instances(instance_id=None, name=None, tags=None, region=None,
         log.debug('The filters criteria {0} matched the following '
                   'instances:{1}'.format(filter_parameters, instances))
 
+        if in_states:
+            instances = [i for i in instances if i.state in in_states]
+            log.debug('Limiting instance matches to those in the requested '
+                      'states: {0}'.format(instances))
         if instances:
             if return_objs:
                 return instances
@@ -506,19 +513,19 @@ def terminate(instance_id=None, name=None, region=None,
     instances = find_instances(instance_id=instance_id, name=name,
                                region=region, key=key, keyid=keyid,
                                profile=profile, return_objs=True)
-    if instances in (False, None):
+    if instances in (False, None, []):
         return instances
 
     if len(instances) == 1:
         instances[0].terminate()
         return True
     else:
-        log.warning('refusing to terminate multiple instances at once')
+        log.warning('Refusing to terminate multiple instances at once')
         return False
 
 
 def get_id(name=None, tags=None, region=None, key=None,
-           keyid=None, profile=None):
+           keyid=None, profile=None, in_states=[]):
 
     '''
     Given instace properties, return the instance id if it exist.
@@ -531,7 +538,7 @@ def get_id(name=None, tags=None, region=None, key=None,
 
     '''
     instance_ids = find_instances(name=name, tags=tags, region=region, key=key,
-                                  keyid=keyid, profile=profile)
+                                  keyid=keyid, profile=profile, in_states=in_states)
     if instance_ids:
         log.info("Instance ids: {0}".format(" ".join(instance_ids)))
         if len(instance_ids) == 1:
@@ -545,7 +552,7 @@ def get_id(name=None, tags=None, region=None, key=None,
 
 
 def exists(instance_id=None, name=None, tags=None, region=None, key=None,
-           keyid=None, profile=None):
+           keyid=None, profile=None, in_states=[]):
     '''
     Given a instance id, check to see if the given instance id exists.
 
@@ -558,19 +565,20 @@ def exists(instance_id=None, name=None, tags=None, region=None, key=None,
 
         salt myminion boto_ec2.exists myinstance
     '''
-    instances = find_instances(instance_id=instance_id, name=name, tags=tags)
+    instances = find_instances(instance_id=instance_id, name=name, tags=tags,
+                               in_states=in_states)
     if instances:
-        log.info('instance exists.')
+        log.info('Instance exists.')
         return True
     else:
-        log.warning('instance does not exist.')
+        log.warning('Instance does not exist.')
         return False
 
 
 def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         user_data=None, instance_type='m1.small', placement=None,
-        kernel_id=None, ramdisk_id=None, monitoring_enabled=None,
-        subnet_id=None, subnet_name=None, private_ip_address=None,
+        kernel_id=None, ramdisk_id=None, monitoring_enabled=None, vpc_id=None,
+        vpc_name=None, subnet_id=None, subnet_name=None, private_ip_address=None,
         block_device_map=None, disable_api_termination=None,
         instance_initiated_shutdown_behavior=None, placement_group=None,
         client_token=None, security_group_ids=None, security_group_names=None,
@@ -614,6 +622,10 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         (string) – The ID of the RAM disk with which to launch the instances.
     monitoring_enabled
         (bool) – Enable detailed CloudWatch monitoring on the instance.
+    vpc_id
+        (string) - ID of a VPC to bind the instance to.  Exclusive with vpc_name.
+    vpc_name
+        (string) - Name of a VPC to bind the instance to.  Exclusive with vpc_id.
     subnet_id
         (string) – The subnet ID within which to launch the instances for VPC.
     subnet_name
@@ -686,15 +698,13 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
     if security_group_names:
         security_group_ids = []
         for sgn in security_group_names:
-            r = __salt__['boto_vpc.get_resource_id']('security_group',
-                                                     sgn, region=region,
-                                                     key=key, keyid=keyid,
-                                                     profile=profile)
-            if 'id' not in r:
-                log.warning('Couldn\'t resolve security group name '
-                            '{0}.').format(sgn)
+            r = __salt__['boto_secgroup.get_group_id'](sgn, vpc_name=vpc_name,
+                                                       region=region, key=key,
+                                                       keyid=keyid, profile=profile)
+            if not r:
+                log.warning('Couldn\'t resolve security group name ' + str(sgn))
                 return False
-            security_group_ids += [r['id']]
+            security_group_ids += [r]
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -725,7 +735,7 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
             instance.add_tag('Name', name)
         if tags:
             instance.add_tags(tags)
-        return { 'instance_id': instance.id }
+        return {'instance_id': instance.id}
     else:
         log.warning('Instance could not be started -- '
                     'status is "{0}"'.format(status))
@@ -860,7 +870,8 @@ def get_keys(keynames=None, filters=None, region=None, key=None,
         return False
 
 
-def get_attribute(attribute, instance_name=None, instance_id=None, region=None, key=None, keyid=None, profile=None):
+def get_attribute(attribute, instance_name=None, instance_id=None, region=None, key=None,
+                  keyid=None, profile=None):
     '''
     Get an EC2 instance attribute.
 
@@ -891,7 +902,8 @@ def get_attribute(attribute, instance_name=None, instance_id=None, region=None, 
                       'instanceInitiatedShutdownBehavior', 'rootDeviceName', 'blockDeviceMapping', 'productCodes',
                       'sourceDestCheck', 'groupSet', 'ebsOptimized', 'sriovNetSupport']
     if not any((instance_name, instance_id)):
-        raise SaltInvocationError('At least one of the following must be specified: instance_name or instance_id.')
+        raise SaltInvocationError('At least one of the following must be specified: '
+                                  'instance_name or instance_id.')
     if instance_name and instance_id:
         raise SaltInvocationError('Both instance_name and instance_id can not be specified in the same command.')
     if attribute not in attribute_list:

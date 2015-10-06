@@ -58,7 +58,7 @@ from time import time, sleep
 
 # Import salt libs
 import salt.utils.dictupdate as dictupdate
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -451,4 +451,152 @@ def snapshot_created(name, ami_name, instance_name, wait_until_available=True, w
             return ret
         sleep(5)
 
+    return ret
+
+
+def instance_present(name, instance_name=None, instance_id=None, image_id=None,
+                     image_name=None, tags=None, key_name=None,
+                     security_groups=None, user_data=None, instance_type=None,
+                     placement=None, kernel_id=None, ramdisk_id=None,
+                     vpc_id=None, vpc_name=None, monitoring_enabled=None,
+                     subnet_id=None, subnet_name=None, private_ip_address=None,
+                     block_device_map=None, disable_api_termination=None,
+                     instance_initiated_shutdown_behavior=None,
+                     placement_group=None, client_token=None,
+                     security_group_ids=None, security_group_names=None,
+                     additional_info=None, tenancy=None,
+                     instance_profile_arn=None, instance_profile_name=None,
+                     ebs_optimized=None, network_interfaces=None,
+                     attributes=None, target_state=None, region=None, key=None,
+                     keyid=None, profile=None):
+    ### TODO - implement 'target_state'...
+    '''
+    Ensure an EC2 instance is running with the given attributes and state.
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+          }
+    _create = False
+    running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+
+    if not instance_id:
+        try:
+            instance_id = __salt__['boto_ec2.get_id'](name=instance_name if instance_name else name,
+                                                      tags=tags, region=region, key=key, keyid=keyid,
+                                                      profile=profile, in_states=running_states)
+        except CommandExecutionError as e:
+            ret['result'] = None
+            ret['comment'] = 'Couldn\'t determine current status of instance {0}.'.format(instance_name)
+            return ret
+
+    exists = __salt__['boto_ec2.exists'](instance_id=instance_id, region=region,
+                                         key=key, keyid=keyid, profile=profile)
+    if not exists:
+        _create = True
+    else:
+        instances = __salt__['boto_ec2.find_instances'](instance_id=instance_id, region=region,
+                                                        key=key, keyid=keyid, profile=profile,
+                                                        return_objs=True, in_states=running_states)
+        if not len(instances):
+            _create = True
+
+    if _create:
+        r = __salt__['boto_ec2.run'](image_id, instance_name if instance_name else name,
+                                     tags=tags, key_name=key_name,
+                                     security_groups=security_groups, user_data=user_data,
+                                     instance_type=instance_type, placement=placement,
+                                     kernel_id=kernel_id, ramdisk_id=ramdisk_id, vpc_id=vpc_id,
+                                     vpc_name=vpc_name, monitoring_enabled=monitoring_enabled,
+                                     subnet_id=subnet_id, subnet_name=subnet_name,
+                                     private_ip_address=private_ip_address,
+                                     block_device_map=block_device_map,
+                                     disable_api_termination=disable_api_termination,
+                                     instance_initiated_shutdown_behavior=instance_initiated_shutdown_behavior,
+                                     placement_group=placement_group, client_token=client_token,
+                                     security_group_ids=security_group_ids,
+                                     security_group_names=security_group_names,
+                                     additional_info=additional_info, tenancy=tenancy,
+                                     instance_profile_arn=instance_profile_arn,
+                                     instance_profile_name=instance_profile_name,
+                                     ebs_optimized=ebs_optimized, network_interfaces=network_interfaces,
+                                     region=region, key=key, keyid=keyid, profile=profile)
+        if not r or 'instance_id' not in r:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create instance {0}.'.format(instance_name if instance_name else name)
+            return ret
+
+        instance_id = r['instance_id']
+        ret['changes'] = {'old': {}, 'new': {}}
+        ret['changes']['old']['instance_id'] = None
+        ret['changes']['new']['instance_id'] = instance_id
+
+    for k, v in attributes.iteritems():
+        curr = __salt__['boto_ec2.get_attribute'](k, instance_id=instance_id, region=region, key=key,
+                                                  keyid=keyid, profile=profile)
+        if curr and curr.get(k) == v:
+            continue
+        else:
+            try:
+                r = __salt__['boto_ec2.set_attribute'](attribute=k, attribute_value=v,
+                                                       instance_id=instance_id, region=region,
+                                                       key=key, keyid=keyid, profile=profile)
+            except SaltInvocationError as e:
+                ret['result'] = False
+                ret['comment'] = 'Failed to set attribute {0} to {1} on instance {2}.'.format(k, v, instance_name)
+                return ret
+            ret['changes'] = ret['changes'] if ret['changes'] else {'old': {}, 'new': {}}
+            ret['changes']['old'][k] = curr.get(k)
+            ret['changes']['new'][k] = v
+
+    return ret
+
+
+def instance_absent(name, instance_name=None, instance_id=None,
+                     region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure an EC2 instance does not exist (is stopped and removed).
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+          }
+    running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+
+    if not instance_id:
+        try:
+            instance_id = __salt__['boto_ec2.get_id'](name=instance_name if instance_name else name,
+                                                      region=region, key=key, keyid=keyid,
+                                                      profile=profile, in_states=running_states)
+        except CommandExecutionError as e:
+            ret['result'] = None
+            ret['comment'] = 'Couldn\'t determine current status of instance {0}.'.format(instance_name)
+            return ret
+
+    exists = __salt__['boto_ec2.exists'](instance_id=instance_id, region=region,
+                                         key=key, keyid=keyid, profile=profile)
+    if not exists:
+        ret['result'] = True
+        ret['comment'] = 'Instance {0} is already gone.'.format(instance_id)
+        return ret
+
+    ### Honor 'disableApiTermination' - if you want to override it, first use set_attribute() to turn it off
+    no_can_do = __salt__['boto_ec2.get_attribute']('disableApiTermination', instance_id=instance_id,
+                                                   region=region, key=key, keyid=keyid, profile=profile)
+    if no_can_do.get('disableApiTermination') == True:
+        ret['result'] = False
+        ret['comment'] = 'Termination of instance {0} via the API is disabled.'.format(instance_id)
+        return ret
+
+    r = __salt__['boto_ec2.terminate'](instance_id=instance_id, name=instance_name, region=region,
+                                       key=key, keyid=keyid, profile=profile)
+    if not r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to terminate instance {0}.'.format(instance_id)
+        return ret
+
+    ret['changes']['old'] = {'instance_id': instance_id}
+    ret['changes']['new'] = None
     return ret
