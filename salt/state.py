@@ -33,7 +33,7 @@ import salt.fileclient
 import salt.utils.event
 import salt.utils.url
 import salt.syspaths as syspaths
-from salt.utils import context, immutabletypes
+from salt.utils import immutabletypes
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltRenderError, SaltReqTimeoutError, SaltException
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
