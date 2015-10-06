@@ -417,6 +417,9 @@ VALID_CREATE_OPTS = {
     'cpuset': {
         'path': 'Config:Cpuset',
     },
+    'labels': {
+      'path': 'Config:Labels',
+    },
 }
 
 VALID_RUNTIME_OPTS = {
@@ -1110,6 +1113,13 @@ def _validate_input(action,
                             for x in kwargs[key]]):
             raise SaltInvocationError(key + ' must be a list of strings')
 
+    def _valid_dictlist(key):  # pylint: disable=unused-variable
+        '''
+        Ensure the passed value is a list of dictionaries.
+        '''
+        if not salt.utils.is_dictlist(kwargs[key]):
+            raise SaltInvocationError(key + ' must be a list of dictionaries.')
+
     # Custom validation functions for container creation options
     def _valid_command():  # pylint: disable=unused-variable
         '''
@@ -1643,6 +1653,32 @@ def _validate_input(action,
             raise SaltInvocationError(
                 'pid_mode can only be \'host\', if set'
             )
+
+    def _valid_labels():  # pylint: disable=unused-variable
+        '''
+        Must be a dict or a list of strings
+        '''
+        if kwargs.get('labels') is None:
+            return
+        try:
+            _valid_stringlist('labels')
+        except SaltInvocationError:
+            try:
+                _valid_dictlist('labels')
+            except SaltInvocationError:
+                try:
+                    _valid_dict('labels')
+                except SaltInvocationError:
+                    raise SaltInvocationError(
+                        'labels can only be a list of strings/dict'
+                        ' or a dict containing strings')
+                else:
+                    new_labels = {}
+                    for k, v in six.iteritems(kwargs['labels']):
+                        new_labels[str(k)] = str(v)
+                    kwargs['labels'] = new_labels
+            else:
+                kwargs['labels'] = salt.utils.repack_dictlist(kwargs['labels'])
 
     # And now, the actual logic to perform the validation
     if action == 'create':
@@ -2640,6 +2676,12 @@ def create(image,
 
             This is only used if Salt needs to pull the requested image.
 
+    labels
+        Add Metadata to the container. Can be a list of strings/dictionaries
+        or a dictionary of strings (keys and values).
+
+        Example: ``labels=LABEL1,LABEL2``,
+        ``labels="{'LABEL1': 'value1', 'LABEL2': 'value2'}"``
 
     **RETURN DATA**
 
