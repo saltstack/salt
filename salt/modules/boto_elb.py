@@ -77,6 +77,7 @@ except ImportError:
 
 # Import Salt libs
 from salt.ext.six import string_types
+from salt.utils.boto_elb_tag import TagDescriptions as TagDescriptions
 import salt.utils.odict as odict
 
 
@@ -144,6 +145,7 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
         ret['security_groups'] = lb.security_groups
         ret['scheme'] = lb.scheme
         ret['dns_name'] = lb.dns_name
+        ret['tags'] = _get_all_tags(conn, name)
         lb_policy_lists = [
             lb.policies.app_cookie_stickiness_policies,
             lb.policies.lb_cookie_stickiness_policies,
@@ -743,3 +745,130 @@ def set_listener_policy(name, port, policies=None, region=None, key=None,
         log.info('Failed to set policy {0} on ELB {1} listener {2}: {3}'.format(policies, name, port, e.message))
         return False
     return True
+
+
+def set_tags(name, tags, region=None, key=None, keyid=None, profile=None):
+    '''
+    Add the tags on an ELB
+
+    .. versionadded:: Boron
+
+    name
+        name of the ELB
+
+    tags
+        dict of name/value pair tags
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_elb.set_tags my-elb-name "{'Tag1': 'Value', 'Tag2': 'Another Value'}"
+    '''
+
+    if exists(name, region, key, keyid, profile):
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        ret = _add_tags(conn, name, tags)
+        return ret
+    else:
+        return False
+
+
+def delete_tags(name, tags, region=None, key=None, keyid=None, profile=None):
+    '''
+    Add the tags on an ELB
+
+    name
+        name of the ELB
+
+    tags
+        list of tags to remove
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_elb.delete_tags my-elb-name ['TagToRemove1', 'TagToRemove2']
+    '''
+    if exists(name, region, key, keyid, profile):
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        ret = _remove_tags(conn, name, tags)
+        return ret
+    else:
+        return False
+
+
+def _build_tag_param_list(params, tags):
+    '''
+    helper function to build a tag parameter list to send
+    '''
+    keys = sorted(tags.keys())
+    i = 1
+    for key in keys:
+        value = tags[key]
+        params['Tags.member.{0}.Key'.format(i)] = key
+        if value is not None:
+            params['Tags.member.{0}.Value'.format(i)] = value
+        i += 1
+
+
+def _get_all_tags(conn, load_balancer_names=None):
+    '''
+    Retrieve all the metadata tags associated with your ELB(s).
+
+    :type load_balancer_names: list
+    :param load_balancer_names: An optional list of load balancer names.
+
+    :rtype: list
+    :return: A list of :class:`boto.ec2.elb.tag.Tag` objects
+    '''
+    params = {}
+    if load_balancer_names:
+        conn.build_list_params(params, load_balancer_names,
+                               'LoadBalancerNames.member.%d')
+
+    tags = conn.get_object('DescribeTags', params, TagDescriptions,
+                           verb='POST')
+    if tags[load_balancer_names]:
+        return tags[load_balancer_names]
+    else:
+        return None
+
+
+def _add_tags(conn, load_balancer_names, tags):
+    '''
+    Create new metadata tags for the specified resource ids.
+
+    :type load_balancer_names: list
+    :param load_balancer_names: A list of load balancer names.
+
+    :type tags: dict
+    :param tags: A dictionary containing the name/value pairs.
+                 If you want to create only a tag name, the
+                 value for that tag should be the empty string
+                 (e.g. '').
+    '''
+    params = {}
+    conn.build_list_params(params, load_balancer_names,
+                           'LoadBalancerNames.member.%d')
+    _build_tag_param_list(params, tags)
+    return conn.get_status('AddTags', params, verb='POST')
+
+
+def _remove_tags(conn, load_balancer_names, tags):
+    '''
+    Delete metadata tags for the specified resource ids.
+
+    :type load_balancer_names: list
+    :param load_balancer_names: A list of load balancer names.
+
+    :type tags: list
+    :param tags: A list containing just tag names for the tags to be
+                 deleted.
+    '''
+    params = {}
+    conn.build_list_params(params, load_balancer_names,
+                           'LoadBalancerNames.member.%d')
+    conn.build_list_params(params, tags,
+                           'Tags.member.%d.Key')
+    return conn.get_status('RemoveTags', params, verb='POST')
