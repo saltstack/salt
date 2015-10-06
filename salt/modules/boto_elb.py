@@ -200,8 +200,12 @@ def create(name, availability_zones, listeners=None, subnets=None,
         return True
     if isinstance(availability_zones, string_types):
         availability_zones = json.loads(availability_zones)
-    if isinstance(listeners, string_types):
+
+    if listeners is None:
+        listeners = []
+    elif isinstance(listeners, string_types):
         listeners = json.loads(listeners)
+
     _complex_listeners = []
     for listener in listeners:
         _complex_listeners.append(_listener_dict_to_tuple(listener))
@@ -262,8 +266,11 @@ def create_listeners(name, listeners=None, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if isinstance(listeners, string_types):
+    if listeners is None:
+        listeners = []
+    elif isinstance(listeners, string_types):
         listeners = json.loads(listeners)
+
     _complex_listeners = []
     for listener in listeners:
         _complex_listeners.append(_listener_dict_to_tuple(listener))
