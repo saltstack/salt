@@ -62,6 +62,15 @@ Masterless Quickstart:
 A list of all tutorials can be found here:
     :doc:`All Salt tutorials <topics/tutorials/index>`
 
+Demo Environments
+=================
+
+You can download one of the following `Vagrant <http://vagrantup.com>`_
+projects to quickly set up a Salt demo environment:
+
+- https://github.com/UtahDave/salt-vagrant-demo
+- https://github.com/UtahDave/salt-vagrant-lxc
+
 Salt in depth
 =============
 
