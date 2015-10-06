@@ -626,11 +626,11 @@ def _listeners_present(
 
     expected_listeners_by_tuple = {}
     for l in listeners:
-        key = __salt__['boto_elb.listener_dict_to_tuple'](l)
+        key = __salt__['boto_elb._listener_dict_to_tuple'](l)
         expected_listeners_by_tuple[key] = l
     actual_listeners_by_tuple = {}
     for l in lb['listeners']:
-        key = __salt__['boto_elb.listener_dict_to_tuple'](l)
+        key = __salt__['boto_elb._listener_dict_to_tuple'](l)
         actual_listeners_by_tuple[key] = l
 
     to_delete = []
@@ -648,11 +648,11 @@ def _listeners_present(
         if to_create or to_delete:
             msg.append('ELB {0} set to have listeners modified:'.format(name))
             for listener in to_create:
-                msg.append('Listener {} added.'.format(
-                        __salt__['boto_elb.listener_dict_to_tuple'](listener)))
+                msg.append('Listener {0} added.'.format(
+                        __salt__['boto_elb._listener_dict_to_tuple'](listener)))
             for listener in to_delete:
-                msg.append('Listener {} deleted.'.format(
-                        __salt__['boto_elb.listener_dict_to_tuple'](listener)))
+                msg.append('Listener {0} deleted.'.format(
+                        __salt__['boto_elb._listener_dict_to_tuple'](listener)))
         else:
             msg.append('Listeners already set on ELB {0}.'.format(name))
         ret['comment'] = ' '.join(msg)
@@ -1044,22 +1044,22 @@ def _policies_present(
                                       'listeners.')
         # check for unique policy names
         if p['policy_name'] in policy_names:
-            raise SaltInvocationError('Policy names must be unique: policy {}'
-                                      ' is declared twice.'.format(p['policy_name']))
+            raise SaltInvocationError('Policy names must be unique: policy {0}'
+                    ' is declared twice.'.format(p['policy_name']))
         policy_names.add(p['policy_name'])
 
     # check that listeners refer to valid policy names
     for l in listeners:
         for p in l.get('policies', []):
             if p not in policy_names:
-                raise SaltInvocationError('Listener {} on ELB {} refers to '
-                                          'undefined policy {}.'.format(l['elb_port'], name, p))
+                raise SaltInvocationError('Listener {0} on ELB {1} refers to '
+                        'undefined policy {2}.'.format(l['elb_port'], name, p))
 
     ret = {'result': True, 'comment': '', 'changes': {}}
 
     lb = __salt__['boto_elb.get_elb_config'](name, region, key, keyid, profile)
     if not lb:
-        msg = '{} ELB configuration could not be retrieved.'.format(name)
+        msg = '{0} ELB configuration could not be retrieved.'.format(name)
         ret['comment'] = msg
         ret['result'] = False
         return ret
@@ -1069,8 +1069,12 @@ def _policies_present(
     # - a canonical name ('cname') that contains the policy type and hash
     #   (e.g. SSLNegotiationPolicy-testpolicy-14b32f668639cc8ea1391e062af98524)
 
-    policies_by_cname = {_policy_cname(p): p for p in policies}
-    cnames_by_name = {p['policy_name']: _policy_cname(p) for p in policies}
+    policies_by_cname = {}
+    cnames_by_name = {}
+    for p in policies:
+        cname = _policy_cname(p)
+        policies_by_cname[cname] = p
+        cnames_by_name[p['policy_name']] = cname
 
     expected_policy_names = policies_by_cname.keys()
     actual_policy_names = lb['policies']
@@ -1124,11 +1128,11 @@ def _policies_present(
         if to_create or to_delete:
             msg.append('ELB {0} set to have policies modified:'.format(name))
             for policy in to_create:
-                msg.append('Policy {} added.'.format(policy))
+                msg.append('Policy {0} added.'.format(policy))
             for policy in to_delete:
-                msg.append('Policy {} deleted.'.format(policy))
+                msg.append('Policy {0} deleted.'.format(policy))
             for listener in listeners_to_update:
-                msg.append('Listener {} policies updated.'.format(listener))
+                msg.append('Listener {0} policies updated.'.format(listener))
         else:
             msg.append('Policies already set on ELB {0}.'.format(name))
         ret['comment'] = ' '.join(msg)
@@ -1148,7 +1152,7 @@ def _policies_present(
                 profile=profile)
             if created:
                 ret['changes'].setdefault(policy_name, {})['new'] = policy_name
-                comment = "Policy {} was created on ELB {}".format(
+                comment = "Policy {0} was created on ELB {1}".format(
                         policy_name, name)
                 ret['comment'] = ' '.join([ret['comment'], comment])
                 ret['result'] = True
@@ -1166,12 +1170,12 @@ def _policies_present(
                 keyid=keyid,
                 profile=profile)
         if policy_set:
-            policy_key = 'listener_{}_policy'.format(port)
+            policy_key = 'listener_{0}_policy'.format(port)
             ret['changes'][policy_key] = {
                     'old': list(actual_policies_by_listener.get(port, [])),
                     'new': list(expected_policies_by_listener.get(port, [])),
                     }
-            comment = "Policy {} was created on ELB {} listener {}".format(
+            comment = "Policy {0} was created on ELB {1} listener {2}".format(
                     expected_policies_by_listener[port], name, port)
             ret['comment'] = ' '.join([ret['comment'], comment])
             ret['result'] = True
@@ -1190,7 +1194,7 @@ def _policies_present(
                 profile=profile)
             if deleted:
                 ret['changes'].setdefault(policy_name, {})['old'] = policy_name
-                comment = "Policy {} was deleted from ELB {}".format(
+                comment = "Policy {0} was deleted from ELB {1}".format(
                         policy_name, name)
                 ret['comment'] = ' '.join([ret['comment'], comment])
                 ret['result'] = True
@@ -1208,7 +1212,7 @@ def _policy_cname(policy_dict):
     policy_hash = hashlib.md5(str(canonical_policy_repr)).hexdigest()
     if policy_type.endswith('Type'):
         policy_type = policy_type[:-4]
-    return "{}-{}-{}".format(policy_type, policy_name, policy_hash)
+    return "{0}-{1}-{2}".format(policy_type, policy_name, policy_hash)
 
 
 def absent(

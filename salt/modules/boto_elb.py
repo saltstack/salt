@@ -161,7 +161,11 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
         return []
 
 
-def listener_dict_to_tuple(listener):
+def _listener_dict_to_tuple(listener):
+    '''
+    Convert an ELB listener dict into a listener tuple used by certain parts of
+    the AWS ELB API.
+    '''
     # We define all listeners as complex listeners.
     if 'instance_protocol' not in listener:
         instance_protocol = listener['elb_protocol'].upper()
@@ -194,7 +198,7 @@ def create(name, availability_zones, listeners=None, subnets=None,
         listeners = json.loads(listeners)
     _complex_listeners = []
     for listener in listeners:
-        _complex_listeners.append(listener_dict_to_tuple(listener))
+        _complex_listeners.append(_listener_dict_to_tuple(listener))
     try:
         lb = conn.create_load_balancer(name, availability_zones, [],
                                        subnets, security_groups, scheme,
@@ -252,7 +256,7 @@ def create_listeners(name, listeners=None, region=None, key=None, keyid=None,
         listeners = json.loads(listeners)
     _complex_listeners = []
     for listener in listeners:
-        _complex_listeners.append(listener_dict_to_tuple(listener))
+        _complex_listeners.append(_listener_dict_to_tuple(listener))
     try:
         conn.create_load_balancer_listeners(name, [], _complex_listeners)
         msg = 'Created ELB listeners on {0}'.format(name)
@@ -692,6 +696,13 @@ def get_instance_health(name, region=None, key=None, keyid=None, profile=None, i
 
 def create_policy(name, policy_name, policy_type, policy, region=None,
                   key=None, keyid=None, profile=None):
+    '''
+    Create an ELB policy.
+
+    CLI example::
+
+        salt myminion boto_elb.create_policy myelb mypolicy LBCookieStickinessPolicyType '{"CookieExpirationPeriod": 3600}'
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not exists(name, region, key, keyid, profile):
@@ -714,6 +725,13 @@ def create_policy(name, policy_name, policy_type, policy, region=None,
 
 def delete_policy(name, policy_name, region=None, key=None, keyid=None,
                   profile=None):
+    '''
+    Delete an ELB policy.
+
+    CLI example::
+
+        salt myminion boto_elb.delete_policy myelb mypolicy
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not exists(name, region, key, keyid, profile):
@@ -731,6 +749,13 @@ def delete_policy(name, policy_name, region=None, key=None, keyid=None,
 
 def set_listener_policy(name, port, policies=None, region=None, key=None,
                         keyid=None, profile=None):
+    '''
+    Set the policies of an ELB listener.
+
+    CLI example::
+
+        salt myminion boto_elb.set_listener_policy myelb 443 "[policy1,policy2]"
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not exists(name, region, key, keyid, profile):
