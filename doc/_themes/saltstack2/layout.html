@@ -21,12 +21,12 @@
 
 {% set script_files = [
     '_static/js/core.min.js',
-    '_static/js/webhelp.min_v1.4.2.js',
+    '_static/js/webhelp.min_v1.4.3.js',
 ] %}
 
 {% set css_files = [
     '_static/css/core.min.css',
-    '_static/css/webhelp.min_v1.4.3.css',
+    '_static/css/webhelp.min_v1.4.4.css',
 ] %}
 
 {%- macro relbar() %}
@@ -212,7 +212,7 @@
 
                             <div class="col-sm-6">
 
-                                 <a href="http://saltstack.com/events/" target="_blank"><img class="nolightbox nav-banner center" src="{{ pathto('_static/images/saltStack_events_300x300.jpg', 1) }}"/></a>
+                                 <a href="http://saltstack.com/events/" target="_blank"><img class="nolightbox footer-banner center" src="{{ pathto('_static/images/webinars-banner.png', 1) }}"/></a>
 
 
                             </div>
@@ -227,9 +227,12 @@
             <div id="sidebar-wrapper">
             <div id="sidebar-static">
 
-                <a class="ss-logo" href="http://saltstack.com"><img width="250" height="63" class="nolightbox center" src="{{ pathto('_static/images/saltstack_logo.svg', 1) }}"></a>
+                <a class="ss-logo" href="http://saltstack.com"><img width="250" height="63" class="nolightbox sidebar-logo" src="{{ pathto('_static/images/saltstack_logo.svg', 1) }}"></a>
 
                 {% if on_saltstack %}
+
+                <a href="http://saltconf.com" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/sc16-banner.png', 1) }}"/></a>
+
                 <div class="releaselinks versions {{ build_type }}">
 
                 <a class="btn btn-secondary{% if build_type == "previous" or build_type == "inactive" %} active{% endif %}" id="previous"{% if build_type == "previous" or build_type == "inactive" %} title="View release notes"{% else %} title="Switch to docs for the previous stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ previous_release_dir }}/">{{ previous_release }}{% if build_type == "previous" or build_type == "inactive" %} <i class="glyphicon glyphicon-ok"></i>{%- endif %}</a>
@@ -238,7 +241,6 @@
 
                 <a  class="btn btn-secondary{% if build_type == "develop" %} active{% endif %}" id="develop"{% if build_type == "develop" %} title="View all release notes"{% endif %} title="Switch to docs built recently from the develop branch" data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/develop/">Develop{% if build_type == "develop" %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
 
-                <p><a id="notifications" title="View the latest announcements from SaltStack" data-container="body" data-toggle="tooltip" data-placement="bottom" href="#">Announcements</a></p>
                 </div>
 
                 {% else %}
