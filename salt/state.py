@@ -737,7 +737,7 @@ class State(object):
         '''
         log.info('Loading fresh modules for state activity')
         self.utils = salt.loader.utils(self.opts)
-        self.functions = salt.loader.minion_mods(self.opts, self.state_con, utils=self.utils)
+        self.functions = salt.loader.minion_mods(self.opts, self.state_con, utils=self.utils, proxy=self.proxy)
         if isinstance(data, dict):
             if data.get('provider', False):
                 if isinstance(data['provider'], str):
@@ -1539,8 +1539,6 @@ class State(object):
             initial_ret={'full': state_func_name},
             expected_extra_kws=STATE_INTERNAL_KEYWORDS
         )
-        import pydevd
-        pydevd.settrace('172.16.207.1', port=65500, stdoutToServer=True, stderrToServer=True)
         inject_globals = {
             # Pass a copy of the running dictionary, the low state chunks and
             # the current state dictionaries.

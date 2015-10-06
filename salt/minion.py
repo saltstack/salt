@@ -2510,8 +2510,6 @@ class ProxyMinion(Minion):
         fq_proxyname = self.opts['pillar']['proxy']['proxytype']
         self.opts['proxy'] = self.opts['pillar']['proxy']
 
-        # We need to do this again, because we are going to throw out a lot of grains.
-        self.opts['grains'] = salt.loader.grains(self.opts)
 
         self.proxy = salt.loader.proxy(self.opts)
         self.functions, self.returners, self.function_errors = self._load_modules(proxy=self.proxy)
@@ -2529,6 +2527,7 @@ class ProxyMinion(Minion):
 
         proxy_init_fn = self.proxy[fq_proxyname+'.init']
         proxy_init_fn(self.opts)
+        self.opts['grains'] = salt.loader.grains(self.opts)
         # reload ?!?
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
