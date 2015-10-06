@@ -182,7 +182,7 @@ def _listener_dict_to_tuple(listener):
     return tuple(listener_tuple)
 
 
-def create(name, availability_zones, listeners=None, subnets=None,
+def create(name, availability_zones, listeners, subnets=None,
            security_groups=None, scheme='internet-facing',
            region=None, key=None, keyid=None,
            profile=None):
@@ -193,7 +193,7 @@ def create(name, availability_zones, listeners=None, subnets=None,
 
     .. code-block:: bash
 
-        salt myminion boto_elb.create myelb '["us-east-1a", "us-east-1e"]' listeners='{"elb_port": 443, "elb_protocol": "HTTPS", ...}' region=us-east-1
+        salt myminion boto_elb.create myelb '["us-east-1a", "us-east-1e"]' '{"elb_port": 443, "elb_protocol": "HTTPS", ...}' region=us-east-1
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if exists(name, region, key, keyid, profile):
@@ -201,9 +201,7 @@ def create(name, availability_zones, listeners=None, subnets=None,
     if isinstance(availability_zones, string_types):
         availability_zones = json.loads(availability_zones)
 
-    if listeners is None:
-        listeners = []
-    elif isinstance(listeners, string_types):
+    if isinstance(listeners, string_types):
         listeners = json.loads(listeners)
 
     _complex_listeners = []
@@ -253,7 +251,7 @@ def delete(name, region=None, key=None, keyid=None, profile=None):
         return False
 
 
-def create_listeners(name, listeners=None, region=None, key=None, keyid=None,
+def create_listeners(name, listeners, region=None, key=None, keyid=None,
                      profile=None):
     '''
     Create listeners on an ELB.
@@ -262,13 +260,11 @@ def create_listeners(name, listeners=None, region=None, key=None, keyid=None,
 
     .. code-block:: bash
 
-        salt myminion boto_elb.create_listeners myelb listeners='[["HTTPS", "HTTP", 443, 80, "arn:aws:iam::11  11111:server-certificate/mycert"]]'
+        salt myminion boto_elb.create_listeners myelb '[["HTTPS", "HTTP", 443, 80, "arn:aws:iam::11  11111:server-certificate/mycert"]]'
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if listeners is None:
-        listeners = []
-    elif isinstance(listeners, string_types):
+    if isinstance(listeners, string_types):
         listeners = json.loads(listeners)
 
     _complex_listeners = []
