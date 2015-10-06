@@ -585,7 +585,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
     ### Honor 'disableApiTermination' - if you want to override it, first use set_attribute() to turn it off
     no_can_do = __salt__['boto_ec2.get_attribute']('disableApiTermination', instance_id=instance_id,
                                                    region=region, key=key, keyid=keyid, profile=profile)
-    if no_can_do.get('disableApiTermination') == True:
+    if no_can_do.get('disableApiTermination') is True:
         ret['result'] = False
         ret['comment'] = 'Termination of instance {0} via the API is disabled.'.format(instance_id)
         return ret

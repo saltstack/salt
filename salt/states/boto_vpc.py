@@ -299,11 +299,11 @@ def dhcp_options_present(name, dhcp_options_id=None, vpc_name=None, vpc_id=None,
            'comment': '',
            'changes': {}
            }
-    _new = {'domain_name'         : domain_name,
-            'domain_name_servers' : domain_name_servers,
-            'ntp_servers'         : ntp_servers,
+    _new = {'domain_name': domain_name,
+            'domain_name_servers': domain_name_servers,
+            'ntp_servers': ntp_servers,
             'netbios_name_servers': netbios_name_servers,
-            'netbios_node_type'   : netbios_node_type
+            'netbios_node_type': netbios_node_type
            }
 
     # boto provides no "update_dhcp_options()" functionality, and you can't delete it if

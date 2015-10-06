@@ -363,7 +363,7 @@ def get_zones(region=None, key=None, keyid=None, profile=None):
 
 def find_instances(instance_id=None, name=None, tags=None, region=None,
                    key=None, keyid=None, profile=None, return_objs=False,
-                   in_states=[]):
+                   in_states=None):
 
     '''
     Given instance properties, find and return matching instance ids
@@ -525,7 +525,7 @@ def terminate(instance_id=None, name=None, region=None,
 
 
 def get_id(name=None, tags=None, region=None, key=None,
-           keyid=None, profile=None, in_states=[]):
+           keyid=None, profile=None, in_states=None):
 
     '''
     Given instace properties, return the instance id if it exist.
@@ -552,7 +552,7 @@ def get_id(name=None, tags=None, region=None, key=None,
 
 
 def exists(instance_id=None, name=None, tags=None, region=None, key=None,
-           keyid=None, profile=None, in_states=[]):
+           keyid=None, profile=None, in_states=None):
     '''
     Given a instance id, check to see if the given instance id exists.
 
