@@ -141,32 +141,33 @@ This will ensure that the text outputter is used.
 Virtual Modules
 ===============
 
-Sometimes an execution module should be presented in a generic way. A good example of this
-can be found in the package manager modules. The package manager changes from
-one operating system to another, but the Salt execution module that interfaces with the
-package manager can be presented in a generic way.
+Virtual modules let you override the name of a module in order to use the same
+name to refer to one of several similar modules. The specific module that is
+loaded for a virtual name is selected based on the current platform or
+environment.
 
-The Salt modules for package managers all contain a ``__virtual__`` function
-which is called to define what systems the module should be loaded on.
+For example, packages are managed across platforms using the ``pkg`` module.
+``pkg`` is a virtual module name that is
+an alias for the specific package manager module that is loaded on a specific
+system (for example, :mod:`yumpkg <salt.modules.yumpkg>` on RHEL/CentOS systems
+, and :mod:`aptpkg <salt.modules.aptpkg>` on Ubuntu).
 
-The ``__virtual__`` function is used to return either a
-:ref:`string <python2:typesseq>` or :py:data:`False`. If
-False is returned then the module is not loaded, if a string is returned then
-the module is loaded with the name of the string.
+Virtual module names are set using the ``__virtual__`` function and the
+:ref:`virtual name <modules-virtual-name>`.
 
-This means that the package manager modules can be presented as the ``pkg`` module
-regardless of what the actual module is named.
+``__virtual__`` Function
+========================
+
+The ``__virtual__`` function
+returns either a :ref:`string <python2:typesseq>`, :py:data:`True`, or
+:py:data:`False`. If a string is returned then the module is loaded using the
+name of the string as the virtual name. If ``True`` is returned the module is
+loaded using the current module name. If ``False`` is returned the module is not loaded.
+``False`` lets the module perform system checks and prevent loading if dependencies
+are not met.
 
 Since ``__virtual__`` is called before the module is loaded, ``__salt__`` will be
 unavailable as it will not have been packed into the module at this point in time.
-
-The package manager modules are among the best example of using the ``__virtual__``
-function. Some examples:
-
-- :blob:`pacman.py <salt/modules/pacman.py>`
-- :blob:`yumpkg.py <salt/modules/yumpkg.py>`
-- :blob:`aptpkg.py <salt/modules/aptpkg.py>`
-- :blob:`at.py <salt/modules/at.py>`
 
 .. note::
     Modules which return a string from ``__virtual__`` that is already used by a module that
@@ -181,6 +182,46 @@ __virtual__ function could do as follows:
 
  return False, ['My Module must be installed before this module can be
  used.']
+
+Examples
+--------
+
+The package manager modules are among the best examples of using the ``__virtual__``
+function. Some examples:
+
+- :blob:`pacman.py <salt/modules/pacman.py>`
+- :blob:`yumpkg.py <salt/modules/yumpkg.py>`
+- :blob:`aptpkg.py <salt/modules/aptpkg.py>`
+- :blob:`at.py <salt/modules/at.py>`
+
+.. _modules-virtual-name:
+
+``__virtualname__``
+===================
+
+``__virtualname__`` is a variable that is used by the documentation build
+system to know the virtual name of a module without calling the ``__virtual__``
+function. Modules that return a string from the ``__virtual__`` function
+must also set the ``__virtualname__`` variable.
+
+To avoid setting the virtual name string twice, you can implement
+``__virtual__`` to return the value set for ``__virtualname__`` using a pattern
+similar to the following:
+
+.. code-block:: python
+
+   # Define the module's virtual name
+   __virtualname__ = 'pkg'
+
+
+   def __virtual__():
+       '''
+       Confine this module to Mac OS with Homebrew.
+       '''
+
+       if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
+           return __virtualname__
+       return False
 
 
 Documentation
