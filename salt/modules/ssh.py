@@ -671,6 +671,28 @@ def recv_known_host(hostname,
     '''
     Retrieve information about host public key from remote server
 
+    hostname
+        The name of the remote host (e.g. "github.com")
+
+    enc
+        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
+        or ssh-dss
+
+    port
+        optional parameter, denoting the port of the remote host, which will be
+        used in case, if the public key will be requested from it. By default
+        the port 22 is used.
+
+    hash_hostname : True
+        Hash all hostnames and addresses in the known hosts file.
+
+        .. deprecated:: Carbon
+
+            Please use hash_known_hosts instead.
+
+    hash_known_hosts : True
+        Hash all hostnames and addresses in the known hosts file.
+
     CLI Example:
 
     .. code-block:: bash
