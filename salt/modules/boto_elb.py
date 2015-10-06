@@ -160,6 +160,10 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
 
 
 def _listener_dict_to_tuple(listener):
+    '''
+    Convert an ELB listener dict into a listener tuple used by certain parts of
+    the AWS ELB API.
+    '''
     # We define all listeners as complex listeners.
     if 'instance_protocol' not in listener:
         instance_protocol = listener['elb_protocol'].upper()
