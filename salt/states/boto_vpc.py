@@ -854,8 +854,10 @@ def _routes_present(route_table_name, routes, tags=None, region=None, key=None, 
                     return ret
                 _r['gateway_id'] = r['id']
             if i.get('instance_name'):
+                running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
                 r = __salt__['boto_ec2.get_id'](name=i['instance_name'], region=region,
-                                                key=key, keyid=keyid, profile=profile)
+                                                key=key, keyid=keyid, profile=profile,
+                                                in_states=running_states)
                 if r is None:
                     msg = 'Instance {0} does not exist.'.format(i['instance_name'])
                     ret['comment'] = msg
