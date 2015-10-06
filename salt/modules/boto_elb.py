@@ -690,6 +690,13 @@ def get_instance_health(name, region=None, key=None, keyid=None, profile=None, i
 
 def create_policy(name, policy_name, policy_type, policy, region=None,
                   key=None, keyid=None, profile=None):
+    '''
+    Create an ELB policy.
+
+    CLI example::
+
+        salt myminion boto_elb.create_policy myelb mypolicy LBCookieStickinessPolicyType '{"CookieExpirationPeriod": 3600}'
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not exists(name, region, key, keyid, profile):
@@ -712,6 +719,13 @@ def create_policy(name, policy_name, policy_type, policy, region=None,
 
 def delete_policy(name, policy_name, region=None, key=None, keyid=None,
                   profile=None):
+    '''
+    Delete an ELB policy.
+
+    CLI example::
+
+        salt myminion boto_elb.delete_policy myelb mypolicy
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not exists(name, region, key, keyid, profile):
@@ -729,6 +743,13 @@ def delete_policy(name, policy_name, region=None, key=None, keyid=None,
 
 def set_listener_policy(name, port, policies=None, region=None, key=None,
                         keyid=None, profile=None):
+    '''
+    Set the policies of an ELB listener.
+
+    CLI example::
+
+        salt myminion boto_elb.set_listener_policy myelb 443 "[policy1,policy2]"
+    '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not exists(name, region, key, keyid, profile):
