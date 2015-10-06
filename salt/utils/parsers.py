@@ -137,12 +137,11 @@ class OptionParser(optparse.OptionParser, object):
         if self.epilog:
             kwargs.setdefault('epilog', self.epilog)
 
+        kwargs.setdefault('option_class', CustomOption)
         optparse.OptionParser.__init__(self, *args, **kwargs)
 
         if self.epilog and '%prog' in self.epilog:
             self.epilog = self.epilog.replace('%prog', self.get_prog_name())
-
-    option_class = CustomOption
 
     def add_option_group(self, *args, **kwargs):
         option_group = optparse.OptionParser.add_option_group(self, *args, **kwargs)

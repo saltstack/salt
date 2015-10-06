@@ -125,6 +125,8 @@ def present(
                 continue
             if isinstance(v, int) and v == int(v2):
                 continue
+            if isinstance(v, list) and sorted(v) == sorted(v2):
+                continue
             difference.append("{0}='{1}' was: '{2}'".format(k, v, v2))
     else:
         difference.append("new alarm")

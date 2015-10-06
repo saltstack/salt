@@ -66,6 +66,7 @@ except ImportError:
     HAS_BOTO = False
 
 import salt.utils.odict as odict
+from salt.exceptions import SaltInvocationError
 
 
 def __virtual__():
@@ -285,7 +286,7 @@ def get_config(name=None, group_id=None, region=None, key=None, keyid=None,
         ret['group_id'] = sg.id
         ret['owner_id'] = sg.owner_id
         ret['description'] = sg.description
-        # TODO: add support for tags
+        ret['tags'] = sg.tags
         _rules = _parse_rules(sg, sg.rules)
         _rules_egress = _parse_rules(sg, sg.rules_egress)
         ret['rules'] = _split_rules(_rules)
@@ -491,3 +492,131 @@ def _find_vpcs(vpc_id=None, vpc_name=None, cidr=None, tags=None,
         return [vpc.id for vpc in vpcs]
     else:
         return []
+
+
+def set_tags(tags,
+             name=None,
+             group_id=None,
+             vpc_name=None,
+             vpc_id=None,
+             region=None,
+             key=None,
+             keyid=None,
+             profile=None):
+    '''
+    sets tags on a security group
+
+    .. versionadded:: Boron
+
+    tags
+        a dict of key:value pair of tags to set on the security group
+
+    name
+        the name of the security gruop
+
+    group_id
+        the group id of the security group (in lie of a name/vpc combo)
+
+    vpc_name
+        the name of the vpc to search the named group for
+
+    vpc_id
+        the id of the vpc, in lieu of the vpc_name
+
+    region
+        the amazon region
+
+    key
+        amazon key
+
+    keyid
+        amazon keyid
+
+    profile
+        amazon profile
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt myminion boto_secgroup.set_tags "{'TAG1': 'Value1', 'TAG2': 'Value2'}" security_group_name vpc_id=vpc-13435 profile=my_aws_profile
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    secgrp = _get_group(conn, name=name, vpc_id=vpc_id, group_id=group_id, region=region, vpc_name=vpc_name,
+                        key=key, keyid=keyid, profile=profile)
+
+    if secgrp:
+        if isinstance(tags, dict):
+            secgrp.add_tags(tags)
+        else:
+            msg = 'Tags must be a dict of tagname:tagvalue'
+            raise SaltInvocationError(msg)
+    else:
+        msg = 'The security group could not be found'
+        raise SaltInvocationError(msg)
+    return True
+
+
+def delete_tags(tags,
+                name=None,
+                group_id=None,
+                vpc_name=None,
+                vpc_id=None,
+                region=None,
+                key=None,
+                keyid=None,
+                profile=None):
+    '''
+    deletes tags from a security group
+
+    .. versionadded:: Boron
+
+    tags
+        a list of tags to remove
+
+    name
+        the name of the security group
+
+    group_id
+        the group id of the security group (in lie of a name/vpc combo)
+
+    vpc_name
+        the name of the vpc to search the named group for
+
+    vpc_id
+        the id of the vpc, in lieu of the vpc_name
+
+    region
+        the amazon region
+
+    key
+        amazon key
+
+    keyid
+        amazon keyid
+
+    profile
+        amazon profile
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt myminion boto_secgroup.delete_tags ['TAG_TO_DELETE1','TAG_TO_DELETE2'] security_group_name vpc_id=vpc-13435 profile=my_aws_profile
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    secgrp = _get_group(conn, name=name, vpc_id=vpc_id, group_id=group_id, region=region, vpc_name=vpc_name,
+                        key=key, keyid=keyid, profile=profile)
+    if secgrp:
+        if isinstance(tags, list):
+            tags_to_remove = {}
+            for tag in tags:
+                tags_to_remove[tag] = None
+            secgrp.remove_tags(tags_to_remove)
+        else:
+            msg = 'Tags must be a list of tagnames to remove from the security group'
+            raise SaltInvocationError(msg)
+    else:
+        msg = 'The security group could not be found'
+        raise SaltInvocationError(msg)
+    return True
