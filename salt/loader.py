@@ -180,6 +180,7 @@ def minion_mods(
     if utils is None:
         utils = {}
     if proxy is None:
+        log.debug('minion_mods called with proxy empty')
         proxy = {}
 
     if not whitelist:
