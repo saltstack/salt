@@ -72,6 +72,7 @@ button#prev-button{float:left;margin:15px 0 0}
     #page-content-wrapper{padding:20px 0 0}
     #wrapper.toggled #page-content-wrapper{position:relative;margin-right:0}
     #menu-toggle{display:none!important}
+    .footer-banner{width:90%}
 }
 @media(min-width:1200px) {
     #wrapper{padding-right:350px}
@@ -84,6 +85,7 @@ button#prev-button{float:left;margin:15px 0 0}
     #wrapper.toggled #page-content-wrapper{position:relative;margin-right:0}
     #menu-toggle{display:none!important}
     .alert.alert-warning.dev-notification-text{width:68%}
+    .footer-banner{width:75%}
 }
 @media(min-width:1400px) {
     #sidebar-wrapper{margin-right:-175px}
@@ -92,6 +94,9 @@ button#prev-button{float:left;margin:15px 0 0}
 }
 @media(max-width:768px) {
     #sidebar-wrapper{border:1px solid #424242}
+}
+@media(max-height:750px) {
+    .sidebar-banner{display: none !important}
 }
 #header-nav{float:right;text-align:right}
 #header-nav li{padding:0 0 15px 15px;font-weight:300}
@@ -138,7 +143,7 @@ ul.nav.collapsed{margin-left:80px;font-size:14pt}
 #expanded-nav{font-size:12pt;font-weight:300}
 #expanded-nav li{padding:0 15px 0 0}
 ul.nav.collapsed li{padding:0 0 15px 10px;margin:0}
-#social-links{text-align:center;padding:10px 0}
+#social-links{text-align:center;padding:15px 0}
 .navbar-default{background-color:#fff;border-color:#fff}
 .navbar-header{width:100%}
 .open>.dropdown-menu{width:100%}
@@ -167,6 +172,8 @@ div.logo{background-color:#000}
 div.versions .btn{padding: 3px 6px}
 div.versions p{margin: 3px 0 0}
 div.versions a,div.versions a:hover,div.versions a:active{color: #428bca}
+.sidebar-banner{padding: 0 0 10px 0}
+.sidebar-logo{display:block;margin: 10px auto 10px auto}
 
 /*pygments*/
 
