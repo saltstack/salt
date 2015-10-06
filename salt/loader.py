@@ -16,6 +16,7 @@ import time
 import logging
 import inspect
 import tempfile
+import functools
 from collections import MutableMapping
 from zipimport import zipimporter
 
@@ -23,6 +24,7 @@ from zipimport import zipimporter
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
+from salt.utils import context
 import salt.utils.lazy
 import salt.utils.odict
 import salt.utils.event
@@ -846,6 +848,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  virtual_enable=True,
                  ):  # pylint: disable=W0231
 
+        self.inject_globals = {}
         self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
@@ -878,6 +881,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         _generate_module('{0}.int.{1}'.format(self.loaded_base_name, tag))
         _generate_module('{0}.ext'.format(self.loaded_base_name))
         _generate_module('{0}.ext.{1}'.format(self.loaded_base_name, tag))
+
+    def __getitem__(self, item):
+        '''
+        Override the __getitem__ in order to decorate the returned function if we need
+        to last-minute inject globals
+        '''
+        func = super(LazyLoader, self).__getitem__(item)
+        if self.inject_globals:
+            return global_injector_decorator(self.inject_globals)(func)
+        else:
+            return func
 
     def __getattr__(self, mod_name):
         '''
@@ -1452,3 +1466,20 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             return (False, module_name, error_reason)
 
         return (True, module_name, None)
+
+
+def global_injector_decorator(inject_globals):
+    '''
+    Decorator used by the LazyLoader to inject globals into a function at
+    execute time.
+
+    globals
+        Dictionary with global variables to inject
+    '''
+    def inner_decorator(f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            with context.func_globals_inject(f, **inject_globals):
+                return f(*args, **kwargs)
+        return wrapper
+    return inner_decorator
