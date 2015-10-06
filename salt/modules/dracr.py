@@ -6,13 +6,15 @@ Manage Dell DRAC
 # Import python libs
 from __future__ import absolute_import
 import logging
+import re
 
 # Import Salt libs
 import salt.utils
 
 # Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
+from salt.ext.six.moves import \
+    range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -45,48 +47,68 @@ def __parse_drac(output):
     return drac
 
 
-def __execute_cmd(command, host=None, admin_username=None, admin_password=None):
+def __execute_cmd(command, host=None,
+                  admin_username=None, admin_password=None,
+                  module=None):
     '''
     Execute rac commands
     '''
+    if module:
+        modswitch = '-m {0}'.format(module)
+    else:
+        modswitch = ''
     if not host:
         # This is a local call
-        cmd = __salt__['cmd.run_all']('racadm {0}'.format(command))
+        cmd = __salt__['cmd.run_all']('racadm {0} {1}'.format(modswitch,
+                                                              command))
     else:
         cmd = __salt__['cmd.run_all'](
-                  'racadm -r {0} -u {1} -p {2} {3}'.format(host, 
-                                                           admin_username,
-                                                           admin_password,
-                                                           command))
+            'racadm -r {0} {1] -u {2} -p {3} {4}'.format(host,
+                                                         modswitch,
+                                                         admin_username,
+                                                         admin_password,
+                                                         command))
 
     if cmd['retcode'] != 0:
-        log.warning('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
+        log.warning('racadm return an exit code \'{0}\'.'
+                    .format(cmd['retcode']))
         return False
 
     return True
 
-def __execute_ret(command, host=None, admin_username=None, admin_password=None):
+
+def __execute_ret(command, host=None,
+                  admin_username=None, admin_password=None,
+                  module=None):
     '''
     Execute rac commands
     '''
+    if module:
+        modswitch = '-m {0}'.format(module)
+    else:
+        modswitch = ''
     if not host:
         # This is a local call
-        cmd = __salt__['cmd.run_all']('racadm {0}'.format(command))
+        cmd = __salt__['cmd.run_all']('racadm {0} {1}'.format(modswitch,
+                                                              command))
     else:
         cmd = __salt__['cmd.run_all'](
-            'racadm -r {0} -u {1} -p {2} {3}'.format(host, 
-                                                     admin_username, 
-                                                     admin_password,
-                                                     command))
-
+            'racadm -r {0} {1} -u {2} -p {3} {4}'.format(host,
+                                                         modswitch,
+                                                         admin_username,
+                                                         admin_password,
+                                                         command))
 
     if cmd['retcode'] != 0:
-        log.warning('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
+        log.warning('racadm return an exit code \'{0}\'.'
+                    .format(cmd['retcode']))
 
     return cmd
 
 
-def system_info(host=None, admin_username=None, admin_password=None):
+def system_info(host=None,
+                admin_username=None, admin_password=None,
+                module=None):
     '''
     Return System information
 
@@ -96,16 +118,60 @@ def system_info(host=None, admin_username=None, admin_password=None):
 
         salt dell drac.system_info
     '''
-    cmd = __execute_ret('getsysinfo', host=host, 
-                        admin_username=admin_username, admin_password=admin_password)
+    cmd = __execute_ret('getsysinfo', host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password,
+                        module=module)
 
     if cmd['retcode'] != 0:
-        log.warning('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
+        log.warning('racadm return an exit code \'{0}\'.'
+                    .format(cmd['retcode']))
 
     return __parse_drac(cmd['stdout'])
 
 
-def network_info(host=None, admin_username=None, admin_password=None):
+def set_niccfg(ip, subnet, gateway, dhcp=False, vlan=None,
+               host=None,
+               admin_username=None,
+               admin_password=None,
+               module=None):
+
+    cmdstr = 'setniccfg '
+
+    if dhcp:
+        cmdstr += '-d '
+    else:
+        cmdstr += ip + ' ' + subnet + ' ' + gateway
+
+    ret = __execute_cmd(cmdstr, host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password,
+                        module=module)
+
+
+def set_nicvlan(vlan=None,
+                host=host,
+                admin_username=None,
+                admin_password=None,
+                module=None):
+
+    cmdstr = 'setniccfg -v '
+
+    if vlan:
+        cmdstr += vlan
+
+    ret = __execute_cmd(cmdstr, host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password,
+                        module=module)
+
+    return ret
+
+
+def network_info(host=None,
+                 admin_username=None,
+                 admin_password=None,
+                 module=None):
     '''
     Return Network Configuration
 
@@ -116,16 +182,21 @@ def network_info(host=None, admin_username=None, admin_password=None):
         salt dell drac.network_info
     '''
 
-    cmd = __execute_ret('getniccfg', host=host, admin_username=admin_username,
-                        admin_password=admin_password)
+    cmd = __execute_ret('getniccfg', host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password,
+                        module=None)
 
     if cmd['retcode'] != 0:
-        log.warning('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
+        log.warning('racadm return an exit code \'{0}\'.'
+                    .format(cmd['retcode']))
 
     return __parse_drac(cmd['stdout'])
 
 
-def nameservers(ns, host=None, admin_username=None, admin_password=None):
+def nameservers(ns, host=None,
+                admin_username=None, admin_password=None,
+                module=None):
     '''
     Configure the nameservers on the DRAC
 
@@ -141,14 +212,20 @@ def nameservers(ns, host=None, admin_username=None, admin_password=None):
         return False
 
     for i in range(1, len(ns) + 1):
-        if not __execute_cmd('config -g cfgLanNetworking -o \
-                cfgDNSServer{0} {1}'.format(i, ns[i - 1])):
+        if not __execute_cmd('config -g cfgLanNetworking -o '
+                             'cfgDNSServer{0} {1}'.format(i, ns[i - 1]),
+                             host=host,
+                             admin_username=admin_username,
+                             admin_password=admin_password,
+                             module=None):
             return False
 
     return True
 
 
-def syslog(server, enable=True, host=None, admin_username=None, admin_password=None):
+def syslog(server, enable=True, host=None,
+           admin_username=None, admin_password=None,
+           module=None):
     '''
     Configure syslog remote logging, by default syslog will automatically be
     enabled if a server is specified. However, if you want to disable syslog
@@ -161,10 +238,10 @@ def syslog(server, enable=True, host=None, admin_username=None, admin_password=N
         salt dell drac.syslog [SYSLOG IP] [ENABLE/DISABLE]
         salt dell drac.syslog 0.0.0.0 False
     '''
-    if enable and __execute_cmd('config -g cfgRemoteHosts -o \
-                cfgRhostsSyslogEnable 1'):
-        return __execute_cmd('config -g cfgRemoteHosts -o \
-                cfgRhostsSyslogServer1 {0}'.format(server))
+    if enable and __execute_cmd('config -g cfgRemoteHosts -o '
+                                'cfgRhostsSyslogEnable 1'):
+        return __execute_cmd('config -g cfgRemoteHosts -o '
+                             'cfgRhostsSyslogServer1 {0}'.format(server))
 
     return __execute_cmd('config -g cfgRemoteHosts -o cfgRhostsSyslogEnable 0',
                          host=host,
@@ -172,7 +249,10 @@ def syslog(server, enable=True, host=None, admin_username=None, admin_password=N
                          admin_password=admin_password)
 
 
-def email_alerts(action, host=None, admin_username=None, admin_password=None):
+def email_alerts(action, host=None,
+                 admin_username=None,
+                 admin_password=None,
+                 module=None):
     '''
     Enable/Disable email alerts
 
@@ -185,16 +265,19 @@ def email_alerts(action, host=None, admin_username=None, admin_password=None):
     '''
 
     if action:
-        return __execute_cmd('config -g cfgEmailAlert -o \
-                cfgEmailAlertEnable -i 1 1', host=host,
-                            admin_username=admin_username,
-                            admin_password=admin_password)
+        return __execute_cmd('config -g cfgEmailAlert -o '
+                             'cfgEmailAlertEnable -i 1 1', host=host,
+                             admin_username=admin_username,
+                             admin_password=admin_password)
     else:
-        return __execute_cmd('config -g cfgEmailAlert -o \
-                cfgEmailAlertEnable -i 1 0')
+        return __execute_cmd('config -g cfgEmailAlert -o '
+                             'cfgEmailAlertEnable -i 1 0')
 
 
-def list_users(host=None, admin_username=None, admin_password=None):
+def list_users(host=None,
+               admin_username=None,
+               admin_password=None,
+               module=None):
     '''
     List all DRAC users
 
@@ -208,13 +291,14 @@ def list_users(host=None, admin_username=None, admin_password=None):
     _username = ''
 
     for idx in range(1, 17):
-        cmd = __execute_ret('getconfig -g \
-                cfgUserAdmin -i {0}'.format(idx),
-                           host=host, admin_username=admin_username,
-                           admin_password=admin_password)
+        cmd = __execute_ret('getconfig -g '
+                            'cfgUserAdmin -i {0}'.format(idx),
+                            host=host, admin_username=admin_username,
+                            admin_password=admin_password)
 
         if cmd['retcode'] != 0:
-            log.warning('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
+            log.warning('racadm return an exit code \'{0}\'.'
+                        .format(cmd['retcode']))
 
         for user in cmd['stdout'].splitlines():
             if not user.startswith('cfg'):
@@ -230,13 +314,17 @@ def list_users(host=None, admin_username=None, admin_password=None):
                 else:
                     break
             else:
-                users[_username].update({key: val})
+                if len(_username) > 0:
+                    users[_username].update({key: val})
 
     return users
 
 
-def delete_user(username, uid=None, 
-                host=None, admin_username=None, admin_password=None):
+def delete_user(username, uid=None,
+                host=None,
+                admin_username=None,
+                admin_password=None,
+                module=None):
     '''
     Delete a user
 
@@ -252,48 +340,57 @@ def delete_user(username, uid=None,
         uid = user[username]['index']
 
     if uid:
-        return __execute_cmd('config -g cfgUserAdmin -o \
-                              cfgUserAdminUserName -i {0} ""'.format(uid),
-                            host=host, admin_username=admin_username,
-                            admin_password=admin_password)
+        return __execute_cmd('config -g cfgUserAdmin -o '
+                             'cfgUserAdminUserName -i {0} ""'.format(uid),
+                             host=host, admin_username=admin_username,
+                             admin_password=admin_password)
 
     else:
         log.warning('\'{0}\' does not exist'.format(username))
         return False
 
-    return True
 
-
-def change_password(username, password, uid=None, host=None, 
-                    admin_username=None, admin_password=None):
+def change_password(username, password, uid=None, host=None,
+                    admin_username=None, admin_password=None,
+                    module=None):
     '''
-    Change users password
+    Change user's password
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt dell drac.change_password [USERNAME] [PASSWORD] [UID - optional]
+        salt dell drac.change_password [USERNAME] [PASSWORD] uid=[OPTIONAL]
+            host=<remote DRAC> admin_username=<DRAC user>
+            admin_password=<DRAC PW>
         salt dell drac.change_password diana secret
+
+    Note that if only a username is specified then this module will look up
+    details for all 16 possible DRAC users.  This is time consuming, but might
+    be necessary if one is not sure which user slot contains the one you want.
+    Many late-model Dell chassis have 'root' as UID 1, so if you can depend
+    on that then setting the password is much quicker.
     '''
     if uid is None:
-        user = list_users()
+        user = list_users(host=host, admin_username=admin_username,
+                          admin_password=admin_password)
         uid = user[username]['index']
 
     if uid:
-        return __execute_cmd('config -g cfgUserAdmin -o \
-                cfgUserAdminPassword -i {0} {1}'.format(uid, password),
-                            host=host, admin_username=admin_username,
-                            admin_password=admin_password)
+        return __execute_cmd('config -g cfgUserAdmin -o '
+                             'cfgUserAdminPassword -i {0} {1}'
+                             .format(uid, password),
+                             host=host, admin_username=admin_username,
+                             admin_password=admin_password)
     else:
         log.warning('\'{0}\' does not exist'.format(username))
         return False
 
-    return True
 
-
-def create_user(username, password, permissions, 
-                users=None, host=None, admin_username=None, admin_password=None):
+def create_user(username, password, permissions,
+                users=None, host=None,
+                admin_username=None, admin_password=None,
+                module=None):
     '''
     Create user accounts
 
@@ -329,11 +426,12 @@ def create_user(username, password, permissions,
 
     uid = sorted(list(set(range(2, 12)) - _uids), reverse=True).pop()
 
-    # Create user accountvfirst
-    if not __execute_cmd('config -g cfgUserAdmin -o \
-                 cfgUserAdminUserName -i {0} {1}'.format(uid, username),
-                            host=host, admin_username=admin_username,
-                            admin_password=admin_password):
+    # Create user account first
+    if not __execute_cmd('config -g cfgUserAdmin -o '
+                         'cfgUserAdminUserName -i {0} {1}'
+                                 .format(uid, username),
+                         host=host, admin_username=admin_username,
+                         admin_password=admin_password):
         delete_user(username, uid)
         return False
 
@@ -350,17 +448,18 @@ def create_user(username, password, permissions,
         return False
 
     # Enable users admin
-    if not __execute_cmd('config -g cfgUserAdmin -o \
-                          cfgUserAdminEnable -i {0} 1'.format(uid)):
+    if not __execute_cmd('config -g cfgUserAdmin -o '
+                         'cfgUserAdminEnable -i {0} 1'.format(uid)):
         delete_user(username, uid)
         return False
 
     return True
 
 
-def set_permissions(username, permissions, 
-                    uid=None, host=None, 
-                    admin_username=None, admin_password=None):
+def set_permissions(username, permissions,
+                    uid=None, host=None,
+                    admin_username=None, admin_password=None,
+                    module=None):
     '''
     Configure users permissions
 
@@ -368,7 +467,8 @@ def set_permissions(username, permissions,
 
     .. code-block:: bash
 
-        salt dell drac.set_permissions [USERNAME] [PRIVELEGES] [USER INDEX - optional]
+        salt dell drac.set_permissions [USERNAME] [PRIVELEGES]
+             [USER INDEX - optional]
         salt dell drac.set_permissions diana login,test_alerts,clear_logs 4
 
     DRAC Privileges
@@ -406,13 +506,16 @@ def set_permissions(username, permissions,
         if perm in privileges:
             permission += int(privileges[perm], 16)
 
-    return __execute_cmd('config -g cfgUserAdmin -o \
-            cfgUserAdminPrivilege -i {0} 0x{1:08X}'.format(uid, permission),
-                            host=host, admin_username=admin_username,
-                            admin_password=admin_password)
+    return __execute_cmd('config -g cfgUserAdmin -o '
+                         'cfgUserAdminPrivilege -i {0} 0x{1:08X}'
+                         .format(uid, permission),
+                         host=host, admin_username=admin_username,
+                         admin_password=admin_password)
 
 
-def set_snmp(community, host=None, admin_username=None, admin_password=None):
+def set_snmp(community, host=None,
+             admin_username=None, admin_password=None,
+             module=None):
     '''
     Configure SNMP community string
 
@@ -423,14 +526,15 @@ def set_snmp(community, host=None, admin_username=None, admin_password=None):
         salt dell drac.set_snmp [COMMUNITY]
         salt dell drac.set_snmp public
     '''
-    return __execute_cmd('config -g cfgOobSnmp -o \
-            cfgOobSnmpAgentCommunity {0}'.format(community),
-                            host=host, admin_username=admin_username,
-                            admin_password=admin_password)
+    return __execute_cmd('config -g cfgOobSnmp -o '
+                         'cfgOobSnmpAgentCommunity {0}'.format(community),
+                         host=host, admin_username=admin_username,
+                         admin_password=admin_password)
 
 
-def set_network(ip, netmask, gateway, host=None, 
-                admin_username=None, admin_password=None):
+def set_network(ip, netmask, gateway, host=None,
+                admin_username=None, admin_password=None,
+                module=None):
     '''
     Configure Network
 
@@ -447,7 +551,9 @@ def set_network(ip, netmask, gateway, host=None,
     ))
 
 
-def server_reboot(host=None, admin_username=None, admin_password=None):
+def server_reboot(host=None,
+                  admin_username=None, admin_password=None,
+                  module=None):
     '''
     Issues a power-cycle operation on the managed server. This action is
     similar to pressing the power button on the system's front panel to
@@ -464,7 +570,9 @@ def server_reboot(host=None, admin_username=None, admin_password=None):
                          admin_password=admin_password)
 
 
-def server_poweroff(host=None, admin_username=None, admin_password=None):
+def server_poweroff(host=None,
+                    admin_username=None, admin_password=None,
+                    module=None):
     '''
     Powers down the managed server.
 
@@ -479,7 +587,9 @@ def server_poweroff(host=None, admin_username=None, admin_password=None):
                          admin_password=admin_password)
 
 
-def server_poweron(host=None, admin_username=None, admin_password=None):
+def server_poweron(host=None,
+                   admin_username=None, admin_password=None,
+                   module=None):
     '''
     Powers up the managed server.
 
@@ -494,7 +604,9 @@ def server_poweron(host=None, admin_username=None, admin_password=None):
                          admin_password=admin_password)
 
 
-def server_hardreset(host=None, admin_username=None, admin_password=None):
+def server_hardreset(host=None,
+                     admin_username=None, admin_password=None,
+                     module=None):
     '''
     Performs a reset (reboot) operation on the managed server.
 
@@ -509,7 +621,9 @@ def server_hardreset(host=None, admin_username=None, admin_password=None):
                          admin_password=admin_password)
 
 
-def server_pxe(host=None, admin_username=None, admin_password=None):
+def server_pxe(host=None,
+               admin_username=None, admin_password=None,
+               module=None):
     '''
     Configure server to PXE perform a one off PXE boot
 
@@ -532,3 +646,147 @@ def server_pxe(host=None, admin_username=None, admin_password=None):
 
     log.warning('failed to to configure PXE boot')
     return False
+
+
+def get_slotname(host=None,
+                 admin_username=None, admin_password=None):
+    slotraw = __execute_ret('getslotname',
+                            host=host, admin_username=admin_username,
+                            admin_password=admin_password)
+
+    if slotraw['retcode'] != 0:
+        return slotraw
+    slots = {}
+    stripheader = True
+    for l in slotraw['stdout'].splitlines():
+        if l.startswith('<'):
+            stripheader = False
+            continue
+        if stripheader:
+            continue
+        fields = l.split()
+        slots[fields[0]] = {}
+        slots[fields[0]]['slot'] = fields[0]
+        if len(fields) > 1:
+            slots[fields[0]]['slotname'] = fields[1]
+        else:
+            slots[fields[0]]['slotname'] = ''
+        if len(fields) > 2:
+            slots[fields[0]]['hostname'] = fields[2]
+        else:
+            slots[fields[0]]['hostname'] = ''
+
+    return slots
+
+
+def set_slotname(slot, name, host=None,
+                 admin_username=None, admin_password=None):
+    return __execute_cmd('setslotname -i {0} {1}'.format(
+        slot, name[0:14], admin_username=admin_username,
+        admin_password=admin_password))
+
+
+def set_name(name, host=None,
+             admin_username=None, admin_password=None):
+    return __execute_cmd('setsysinfo -c chassisname {0}'.format(name),
+                         host=host, admin_username=admin_username,
+                         admin_password=admin_password)
+
+
+def inventory(host=None, admin_username=None, admin_password=None):
+    def mapit(x, y):
+        return {x: y}
+
+    fields = {}
+    fields['server'] = ['name', 'idrac_version', 'blade_type', 'gen',
+                        'updateable']
+    fields['switch'] = ['name', 'model_name', 'hw_version', 'fw_version']
+    fields['cmc'] = ['name', 'cmc_version', 'updateable']
+    fields['chassis'] = ['name', 'fw_version', 'fqdd']
+
+    rawinv = __execute_ret('getversion', host=host,
+                           admin_username=admin_username,
+                           admin_password=admin_password)
+
+    if rawinv['retcode'] != 0:
+        return rawinv
+
+    in_server = False
+    in_switch = False
+    in_cmc = False
+    in_chassis = False
+    ret = {}
+    ret['server'] = {}
+    ret['switch'] = {}
+    ret['cmc'] = {}
+    ret['chassis'] = {}
+    for l in rawinv['stdout'].splitlines():
+        if l.startswith('<Server>'):
+            in_server = True
+            in_switch = False
+            in_cmc = False
+            in_chassis = False
+            continue
+
+        if l.startswith('<Switch>'):
+            in_server = False
+            in_switch = True
+            in_cmc = False
+            in_chassis = False
+            continue
+
+        if l.startswith('<CMC>'):
+            in_server = False
+            in_switch = False
+            in_cmc = True
+            in_chassis = False
+            continue
+
+        if l.startswith('<Chassis Infrastructure>'):
+            in_server = False
+            in_switch = False
+            in_cmc = False
+            in_chassis = True
+            continue
+
+        if len(l) < 1:
+            continue
+
+        line = re.split('  +', l.strip())
+
+        if in_server:
+            ret['server'][line[0]] = dict(
+                (k, v) for d in map(mapit, fields['server'], line) for (k, v)
+                in d.items())
+        if in_switch:
+            ret['switch'][line[0]] = dict(
+                (k, v) for d in map(mapit, fields['switch'], line) for (k, v)
+                in d.items())
+        if in_cmc:
+            ret['cmc'][line[0]] = dict(
+                (k, v) for d in map(mapit, fields['cmc'], line) for (k, v) in
+                d.items())
+        if in_chassis:
+            ret['chassis'][line[0]] = dict(
+                (k, v) for d in map(mapit, fields['chassis'], line) for k, v in
+                d.items())
+
+    return ret
+
+
+def set_location(location, host=None,
+                 admin_username=None, admin_password=None,
+                 module=None):
+    return __execute_cmd('setsysinfo -c chassislocation {0}'.format(location),
+                         host=host, admin_username=admin_username,
+                         admin_password=admin_password)
+
+
+def set_general(cfgsec, cfgvar, val, host=None,
+                admin_username=None, admin_password=None,
+                module=None):
+    return __execute_cmd('config -g {0} -o {1} {2}'
+                         .format(cfgsec, cfgvar, val),
+                         host=host,
+                         admin_username=admin_username,
+                         admin_password=admin_password)
