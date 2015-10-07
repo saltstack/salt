@@ -2296,7 +2296,7 @@ def port(name, private_port=None):
     return dict((x, mappings[x]) for x in fnmatch.filter(mappings, pattern))
 
 
-def ps_(**kwargs):
+def ps_(filters=None, **kwargs):
     '''
     Returns information about the Docker containers on the Minion. Equivalent
     to running the ``docker ps`` Docker CLI command.
@@ -2311,6 +2311,13 @@ def ps_(**kwargs):
         If ``True``, a ``docker inspect`` will be run on each container
         returned.
 
+    filters: None
+        A dictionary of filters to be processed on the container list.
+        Available filters:
+
+          - exited (int): Only containers with specified exit code
+          - status (str): One of restarting, running, paused, exited
+          - label (str): format either "key" or "key=value"
 
     **RETURN DATA**
 
@@ -2324,9 +2331,10 @@ def ps_(**kwargs):
 
         salt myminion dockerng.ps
         salt myminion dockerng.ps all=True
+        salt myminion dockerng.ps filters="{'label': 'role=web'}"
     '''
     if 'docker.ps' not in __context__:
-        response = _client_wrapper('containers', all=True)
+        response = _client_wrapper('containers', all=True, filters=filters)
         key_map = {
             'Created': 'Time_Created_Epoch',
         }
