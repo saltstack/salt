@@ -302,15 +302,15 @@ def get_site_packages(venv):
     return ret['stdout']
 
 
-def get_resource_path(venv, package_or_requirement, resource_name):
+def get_resource_path(venv, package, resource):
     '''
     Returns the path to a resource of a package or a distribution inside a virtualenv
 
     venv
         Path to the virtualenv.
-    package_or_requirement
+    package
         Name of the package where the resource resides in.
-    resource_name
+    resource
         Name of the resource of which the path is to be returned.
 
     CLI Example:
@@ -319,16 +319,16 @@ def get_resource_path(venv, package_or_requirement, resource_name):
 
         salt '*' virtualenv.get_resource_path /path/to/my/venv my_package my/resource.xml
     '''
-    if not salt.utils.verify.safe_py_code(package_or_requirement):
+    if not salt.utils.verify.safe_py_code(package):
         raise salt.exceptions.CommandExecutionError
-    if not salt.utils.verify.safe_py_code(resource_name):
+    if not salt.utils.verify.safe_py_code(resource):
         raise salt.exceptions.CommandExecutionError
     bin_path = os.path.join(venv, 'bin/python')
 
     if not os.path.exists(bin_path):
         raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
 
-    ret = __salt__['cmd.exec_code_all'](bin_path, "import pkg_resources; print pkg_resources.resource_filename('{0}', '{1}')".format(package_or_requirement, resource_name))
+    ret = __salt__['cmd.exec_code_all'](bin_path, "import pkg_resources; print pkg_resources.resource_filename('{0}', '{1}')".format(package, resource))
 
     if ret['retcode'] != 0:
         raise salt.exceptions.CommandExecutionError('{stdout}\n{stderr}'.format(**ret))
@@ -336,15 +336,15 @@ def get_resource_path(venv, package_or_requirement, resource_name):
     return ret['stdout']
 
 
-def get_resource_content(venv, package_or_requirement, resource_name):
+def get_resource_content(venv, package, resource):
     '''
     Returns the content of a resource of a package or a distribution inside a virtualenv
 
     venv
         Path to the virtualenv.
-    package_or_requirement
+    package
         Name of the package where the resource resides in.
-    resource_name
+    resource
         Name of the resource of which the content is to be returned.
 
 
@@ -354,16 +354,16 @@ def get_resource_content(venv, package_or_requirement, resource_name):
 
         salt '*' virtualenv.get_resource_content /path/to/my/venv my_package my/resource.xml
     '''
-    if not salt.utils.verify.safe_py_code(package_or_requirement):
+    if not salt.utils.verify.safe_py_code(package):
         raise salt.exceptions.CommandExecutionError
-    if not salt.utils.verify.safe_py_code(resource_name):
+    if not salt.utils.verify.safe_py_code(resource):
         raise salt.exceptions.CommandExecutionError
     bin_path = os.path.join(venv, 'bin/python')
 
     if not os.path.exists(bin_path):
         raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
 
-    ret = __salt__['cmd.exec_code_all'](bin_path, "import pkg_resources; print pkg_resources.resource_string('{0}', '{1}')".format(package_or_requirement, resource_name))
+    ret = __salt__['cmd.exec_code_all'](bin_path, "import pkg_resources; print pkg_resources.resource_string('{0}', '{1}')".format(package, resource))
 
     if ret['retcode'] != 0:
         raise salt.exceptions.CommandExecutionError('{stdout}\n{stderr}'.format(**ret))
