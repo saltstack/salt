@@ -128,6 +128,7 @@ def _module_dirs(
 
     return cli_module_dirs + ext_type_types + [ext_types, sys_types]
 
+CALLS = {}
 
 def minion_mods(
         opts,
@@ -181,6 +182,7 @@ def minion_mods(
         utils = {}
     if proxy is None:
         proxy = {}
+
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
     ret = LazyLoader(_module_dirs(opts, 'modules', 'module'),

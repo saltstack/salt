@@ -597,6 +597,7 @@ class State(object):
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
+        self.proxy = proxy
         self._pillar_override = pillar
         self.opts['pillar'] = self._gather_pillar()
         self.state_con = {}
@@ -774,7 +775,7 @@ class State(object):
                 reload(site)
             except RuntimeError:
                 log.error('Error encountered during module reload. Modules were not reloaded.')
-        self.load_modules()
+        self.load_modules(proxy=self.proxy)
         if not self.opts.get('local', False) and self.opts.get('multiprocessing', True):
             self.functions['saltutil.refresh_modules']()
 

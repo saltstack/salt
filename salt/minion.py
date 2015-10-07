@@ -704,7 +704,7 @@ class Minion(MinionBase):
                 )
         # Late setup the of the opts grains, so we can log from the grains
         # module
-        if 'proxyid' not in self.opts:
+        if salt.utils.is_proxy():
             self.opts['grains'] = salt.loader.grains(opts)
 
     # TODO: remove?
@@ -1330,7 +1330,11 @@ class Minion(MinionBase):
         Refresh the functions and returners.
         '''
         log.debug('Refreshing modules. Notify={0}'.format(notify))
-        self.functions, self.returners, _ = self._load_modules(force_refresh, notify=notify)
+        try:
+            self.functions, self.returners, _ = self._load_modules(force_refresh, notify=notify, proxy=self.proxy)
+        except NameError:
+            self.functions, self.returners, _ = self._load_modules(force_refresh, notify=notify)
+
         self.schedule.functions = self.functions
         self.schedule.returners = self.returners
 
@@ -2511,7 +2515,7 @@ class ProxyMinion(Minion):
         fq_proxyname = self.opts['pillar']['proxy']['proxytype']
         self.opts['proxy'] = self.opts['pillar']['proxy']
 
-        # Need to load the modules so they get all the dunder variables
+        # # Need to load the modules so they get all the dunder variables
         self.functions, self.returners, self.function_errors = self._load_modules()
 
         # we can then sync any proxymodules down from the master
