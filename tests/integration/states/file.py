@@ -529,6 +529,44 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         self.assertFalse(os.path.exists(wrong_file))
 
 
+    def test_directory_clean_require_with_name(self):
+        '''
+        file.directory test with clean=True and require with a file state
+        relatively to the state's name, not its ID.
+        '''
+        state_name = 'file-FileTest-test_directory_clean_require_in_with_id'
+        state_filename = state_name + '.sls'
+        state_file = os.path.join(STATE_DIR, state_filename)
+
+        directory = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(directory))
+
+        wrong_file = os.path.join(directory, "wrong")
+        with open(wrong_file, "w") as fp:
+            fp.write("foo")
+        good_file = os.path.join(directory, "bar")
+
+        with salt.utils.fopen(state_file, 'w') as fp:
+            self.addCleanup(lambda: os.remove(state_file))
+            fp.write(textwrap.dedent('''\
+                some_dir:
+                  file.directory:
+                    - name: {directory}
+                    - clean: true
+                    - require:
+                      # This requirement refers to the name of the following
+                      # state, not its ID.
+                      - file: {good_file}
+
+                some_file:
+                  file.managed:
+                    - name: {good_file}
+                '''.format(directory=directory, good_file=good_file)))
+
+        ret = self.run_function('state.sls', [state_name])
+        self.assertTrue(os.path.exists(good_file))
+        self.assertFalse(os.path.exists(wrong_file))
+
     def test_recurse(self):
         '''
         file.recurse
