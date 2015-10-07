@@ -482,7 +482,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
           }
     _create = False
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
-    change_attrs = {}
+    changed_attrs = {}
 
     if not instance_id:
         try:
