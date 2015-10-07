@@ -469,9 +469,11 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
                      ebs_optimized=None, network_interfaces=None,
                      attributes=None, target_state=None, region=None, key=None,
                      keyid=None, profile=None):
-    ### TODO - implement 'target_state'...
+    ### TODO - implement 'target_state={running, stopped}'
+    ### TODO - Describe all the above params :-(
     '''
     Ensure an EC2 instance is running with the given attributes and state.
+    .. versionadded:: Boron
     '''
     ret = {'name': name,
            'result': True,
@@ -480,6 +482,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
           }
     _create = False
     running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+    change_attrs = {}
 
     if not instance_id:
         try:
@@ -503,6 +506,10 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
             _create = True
 
     if _create:
+        if __opts__['test']:
+            ret['comment'] = 'The instance {0} is set to be created.'.format(name)
+            ret['result'] = None
+            return ret
         r = __salt__['boto_ec2.run'](image_id, instance_name if instance_name else name,
                                      tags=tags, key_name=key_name,
                                      security_groups=security_groups, user_data=user_data,
@@ -535,9 +542,15 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     for k, v in attributes.iteritems():
         curr = __salt__['boto_ec2.get_attribute'](k, instance_id=instance_id, region=region, key=key,
                                                   keyid=keyid, profile=profile)
+        if type(curr) not type({}):
+            curr = {}
         if curr and curr.get(k) == v:
             continue
         else:
+            if __opts__['test']:
+                changed_attrs[k] = 'The instance attribute {0} is set to be changed from \'{1}\' to \'{2}\'.'.format(
+                                   k, curr.get(k), v)
+                continue
             try:
                 r = __salt__['boto_ec2.set_attribute'](attribute=k, attribute_value=v,
                                                        instance_id=instance_id, region=region,
@@ -550,6 +563,11 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
             ret['changes']['old'][k] = curr.get(k)
             ret['changes']['new'][k] = v
 
+    if __opts__['test']:
+        if changed_attrs:
+            ret['changes']['new'] = changed_attrs
+        ret['result'] = None
+
     return ret
 
 
@@ -557,6 +575,8 @@ def instance_absent(name, instance_name=None, instance_id=None,
                      region=None, key=None, keyid=None, profile=None):
     '''
     Ensure an EC2 instance does not exist (is stopped and removed).
+
+    .. versionadded:: Boron
     '''
     ret = {'name': name,
            'result': True,
@@ -588,6 +608,11 @@ def instance_absent(name, instance_name=None, instance_id=None,
     if no_can_do.get('disableApiTermination') is True:
         ret['result'] = False
         ret['comment'] = 'Termination of instance {0} via the API is disabled.'.format(instance_id)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'The instance {0} is set to be deleted.'.format(name)
+        ret['result'] = None
         return ret
 
     r = __salt__['boto_ec2.terminate'](instance_id=instance_id, name=instance_name, region=region,

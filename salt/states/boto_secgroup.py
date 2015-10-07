@@ -157,8 +157,9 @@ def present(
         .. versionadded:: Boron
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    _ret = _security_group_present(name, description, vpc_id, vpc_name, region, key,
-                                   keyid, profile)
+    _ret = _security_group_present(name, description, vpc_id=vpc_id,
+                                   vpc_name=vpc_name, region=region,
+                                   key=key, keyid=keyid, profile=profile)
     ret['changes'] = _ret['changes']
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -169,20 +170,14 @@ def present(
         rules = []
     if not rules_egress:
         rules_egress = []
-    _ret = _rules_present(name, rules, rules_egress, vpc_id, vpc_name, region, key,
-                          keyid, profile)
+    _ret = _rules_present(name, rules, rules_egress, vpc_id=vpc_id, vpc_name=vpc_name,
+                          region=region, key=key, keyid=keyid, profile=profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
         ret['result'] = _ret['result']
-    _ret = _tags_present(name=name,
-                         tags=tags,
-                         vpc_id=vpc_id,
-                         region=region,
-                         key=key,
-                         keyid=keyid,
-                         profile=profile,
-                         vpc_name=vpc_name)
+    _ret = _tags_present(name=name, tags=tags, vpc_id=vpc_id, vpc_name=vpc_name,
+                         region=region, key=key, keyid=keyid, profile=profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -190,15 +185,8 @@ def present(
     return ret
 
 
-def _security_group_present(
-        name,
-        description,
-        vpc_id=None,
-        vpc_name=None,
-        region=None,
-        key=None,
-        keyid=None,
-        profile=None):
+def _security_group_present(name, description, vpc_id=None, vpc_name=None,
+                            region=None, key=None, keyid=None, profile=None):
     '''
     given a group name or a group name and vpc id (or vpc name):
     1. determine if the group exists
@@ -214,9 +202,10 @@ def _security_group_present(
             ret['comment'] = msg
             ret['result'] = None
             return ret
-        created = __salt__['boto_secgroup.create'](name, description, vpc_id,
-                                                   vpc_name, region, key, keyid,
-                                                   profile)
+        created = __salt__['boto_secgroup.create'](name=name, description=description,
+                                                   vpc_id=vpc_id, vpc_name=vpc_name,
+                                                   region=region, key=key, keyid=keyid,
+                                                   profile=profile)
         if created:
             ret['changes']['old'] = {'secgroup': None}
             sg = __salt__['boto_secgroup.get_config'](name, None, region, key,
@@ -366,16 +355,8 @@ def _get_rule_changes(rules, _rules):
     return (to_delete, to_create)
 
 
-def _rules_present(
-        name,
-        rules,
-        rules_egress,
-        vpc_id=None,
-        vpc_name=None,
-        region=None,
-        key=None,
-        keyid=None,
-        profile=None):
+def _rules_present(name, rules, rules_egress, vpc_id=None, vpc_name=None,
+                   region=None, key=None, keyid=None, profile=None):
     '''
     given a group name or group name and vpc_id (or vpc name):
     1. get lists of desired rule changes (using _get_rule_changes)
@@ -399,7 +380,8 @@ def _rules_present(
             _source_group_name = rule.get('source_group_name', None)
             if _source_group_name:
                 _group_id = __salt__['boto_secgroup.get_group_id'](
-                    _source_group_name, vpc_id, vpc_name, region, key, keyid, profile
+                    _source_group_name, vpc_id=vpc_id, vpc_name=vpc_name,
+                    region=region, key=key, keyid=keyid, profile=profile
                 )
                 if not _group_id:
                     msg = ('source_group_name {0} does not map to a valid'
@@ -549,27 +531,15 @@ def absent(
     return ret
 
 
-def _tags_present(name,
-                  tags,
-                  vpc_id=None,
-                  region=None,
-                  key=None,
-                  keyid=None,
-                  profile=None,
-                  vpc_name=None):
+def _tags_present(name, tags, vpc_id=None, vpc_name=None, region=None,
+                  key=None, keyid=None, profile=None):
     '''
     helper function to validate tags are correct
     '''
     ret = {'result': True, 'comment': '', 'changes': {}}
     if tags:
-        sg = __salt__['boto_secgroup.get_config'](name=name,
-                                                  group_id=None,
-                                                  region=region,
-                                                  key=key,
-                                                  keyid=keyid,
-                                                  profile=profile,
-                                                  vpc_id=vpc_id,
-                                                  vpc_name=vpc_name)
+        sg = __salt__['boto_secgroup.get_config'](name, None, region, key,
+                                                  keyid, profile, vpc_id, vpc_name)
         #existing_tags = sg.get('tags')
         tags_to_add = tags
         tags_to_update = {}

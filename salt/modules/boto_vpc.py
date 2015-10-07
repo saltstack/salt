@@ -131,8 +131,8 @@ def __init__(opts):
         __utils__['boto.assign_funcs'](__name__, 'vpc')
 
 
-def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None, keyid=None,
-              profile=None):
+def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None,
+              keyid=None, profile=None):
     '''
     Check whether a VPC with the given name or id exists.
     Returns the vpc_id or None. Raises SaltInvocationError if
