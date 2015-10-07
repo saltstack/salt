@@ -41,6 +41,7 @@ def get_all():
         salt '*' service.get_all
     '''
     proxy_fn = 'rest_sample.service_list'
+    log.debug(__salt__['test.arg'](1,2,3))
     return __proxy__[proxy_fn]()
 
 
