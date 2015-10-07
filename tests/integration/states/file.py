@@ -456,6 +456,79 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
+
+    def test_directory_clean_require_in(self):
+        '''
+        file.directory test with clean=True and require_in file
+        '''
+        state_name = 'file-FileTest-test_directory_clean_require_in'
+        state_filename = state_name + '.sls'
+        state_file = os.path.join(STATE_DIR, state_filename)
+
+        directory = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(directory))
+
+        wrong_file = os.path.join(directory, "wrong")
+        with open(wrong_file, "w") as fp:
+            fp.write("foo")
+        good_file = os.path.join(directory, "bar")
+
+        with salt.utils.fopen(state_file, 'w') as fp:
+            self.addCleanup(lambda: os.remove(state_file))
+            fp.write(textwrap.dedent('''\
+                some_dir:
+                  file.directory:
+                    - name: {directory}
+                    - clean: true
+
+                {good_file}:
+                  file.managed:
+                    - require_in:
+                      - file: some_dir
+                '''.format(directory=directory, good_file=good_file)))
+
+        ret = self.run_function('state.sls', [state_name])
+        self.assertTrue(os.path.exists(good_file))
+        self.assertFalse(os.path.exists(wrong_file))
+
+
+    def test_directory_clean_require_in_with_id(self):
+        '''
+        file.directory test with clean=True and require_in file with an ID
+        different from the file name
+        '''
+        state_name = 'file-FileTest-test_directory_clean_require_in_with_id'
+        state_filename = state_name + '.sls'
+        state_file = os.path.join(STATE_DIR, state_filename)
+
+        directory = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(directory))
+
+        wrong_file = os.path.join(directory, "wrong")
+        with open(wrong_file, "w") as fp:
+            fp.write("foo")
+        good_file = os.path.join(directory, "bar")
+
+        with salt.utils.fopen(state_file, 'w') as fp:
+            self.addCleanup(lambda: os.remove(state_file))
+            fp.write(textwrap.dedent('''\
+                some_dir:
+                  file.directory:
+                    - name: {directory}
+                    - clean: true
+
+                some_file:
+                  file.managed:
+                    - name: {good_file}
+                    - require_in:
+                      - file: some_dir
+                '''.format(directory=directory, good_file=good_file)))
+
+        ret = self.run_function('state.sls', [state_name])
+        self.assertTrue(os.path.exists(good_file))
+        self.assertFalse(os.path.exists(wrong_file))
+
+
     def test_recurse(self):
         '''
         file.recurse
