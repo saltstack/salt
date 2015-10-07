@@ -221,7 +221,7 @@ def enabled(name, **kwargs):
     - an executable ./run file exist
     - a file named "down" does not exist
 
-    .. versionadded:: 2015.5.6
+    .. versionadded:: 2015.5.7
 
     name
         Service name
