@@ -158,13 +158,13 @@ Virtual module names are set using the ``__virtual__`` function and the
 ``__virtual__`` Function
 ========================
 
-The ``__virtual__`` function
-returns either a :ref:`string <python2:typesseq>`, :py:data:`True`, or
-:py:data:`False`. If a string is returned then the module is loaded using the
-name of the string as the virtual name. If ``True`` is returned the module is
-loaded using the current module name. If ``False`` is returned the module is not loaded.
-``False`` lets the module perform system checks and prevent loading if dependencies
-are not met.
+The ``__virtual__`` function returns either a :ref:`string <python2:typesseq>`,
+:py:data:`True`, :py:data:`False`, or :py:data:`False` with an :ref:`error
+string <modules-error-info>`. If a string is returned then the module is loaded
+using the name of the string as the virtual name. If ``True`` is returned the
+module is loaded using the current module name. If ``False`` is returned the
+module is not loaded. ``False`` lets the module perform system checks and
+prevent loading if dependencies are not met.
 
 Since ``__virtual__`` is called before the module is loaded, ``__salt__`` will be
 unavailable as it will not have been packed into the module at this point in time.
@@ -172,6 +172,8 @@ unavailable as it will not have been packed into the module at this point in tim
 .. note::
     Modules which return a string from ``__virtual__`` that is already used by a module that
     ships with Salt will _override_ the stock module.
+
+.. _modules-error-info:
 
 Returning Error Information from ``__virtual__``
 ------------------------------------------------
