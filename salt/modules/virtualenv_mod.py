@@ -327,7 +327,6 @@ def get_distribution_path(venv, distribution):
     ret = __salt__['cmd.exec_code_all'](bin_path, "import pkg_resources; print(pkg_resources.get_distribution('{0}').location)".format(distribution))
 
     if ret['retcode'] != 0:
-        import sys
         raise salt.exceptions.CommandExecutionError('{stdout}\n{stderr}'.format(bin_path=bin_path, **ret))
 
     return ret['stdout']
