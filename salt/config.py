@@ -434,6 +434,10 @@ VALID_OPTS = {
     # A master-only copy of the file_roots dictionary, used by the state compiler
     'master_roots': dict,
 
+    # Add the proxymodule LazyLoader object to opts.  This breaks many things
+    # but this was the default pre 2015.8.2.  This should default to
+    # False in Boron
+    'add_proxymodule_to_opts': bool,
     'git_pillar_base': str,
     'git_pillar_branch': str,
     'git_pillar_env': str,
@@ -1184,6 +1188,7 @@ DEFAULT_MASTER_OPTS = {
 DEFAULT_PROXY_MINION_OPTS = {
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'proxy'),
     'log_file': os.path.join(salt.syspaths.LOGS_DIR, 'proxy'),
+    'add_proxymodule_to_opts': True
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
