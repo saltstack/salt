@@ -380,7 +380,7 @@ def _rules_present(name, rules, rules_egress, vpc_id=None, vpc_name=None,
             _source_group_name = rule.get('source_group_name', None)
             if _source_group_name:
                 _group_id = __salt__['boto_secgroup.get_group_id'](
-                    _source_group_name, vpc_id=vpc_id, vpc_name=vpc_name,
+                    name=_source_group_name, vpc_id=vpc_id, vpc_name=vpc_name,
                     region=region, key=key, keyid=keyid, profile=profile
                 )
                 if not _group_id:
