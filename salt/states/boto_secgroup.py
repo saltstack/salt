@@ -114,7 +114,6 @@ def present(
         key=None,
         keyid=None,
         profile=None,
-        vpc_name=None,
         tags=None):
     '''
     Ensure the security group exists with the specified rules.
@@ -501,8 +500,7 @@ def absent(
         region=None,
         key=None,
         keyid=None,
-        profile=None,
-        vpc_name=None):
+        profile=None):
     '''
     Ensure a security group with the specified name does not exist.
 
