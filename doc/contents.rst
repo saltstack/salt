@@ -37,6 +37,7 @@ Salt Table of Contents
     topics/ssh/*
     ref/index
     topics/best_practices
+    topics/hardening
     topics/troubleshooting/index
     topics/development/index
     topics/releases/index

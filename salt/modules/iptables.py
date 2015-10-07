@@ -80,8 +80,13 @@ def _conf(family='ipv4'):
             return '/var/lib/ip6tables/rules-save'
         else:
             return '/var/lib/iptables/rules-save'
+    elif __grains__['os_family'] == 'Suse':
+        # SuSE does not seem to use separate files for IPv4 and IPv6
+        return '/etc/sysconfig/scripts/SuSEfirewall2-custom'
     else:
-        return False
+        raise SaltException('Saving iptables to file is not' +
+                            ' supported on {0}.'.format(__grains__['os']) +
+                            ' Please file an issue with SaltStack')
 
 
 def version(family='ipv4'):
