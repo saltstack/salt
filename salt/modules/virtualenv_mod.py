@@ -303,6 +303,14 @@ def get_distribution_path(venv, distribution):
     '''
     Returns the path to a distribution inside a virtualenv
 
+    .. versionadded:: Boron
+
+    venv
+        Path to the virtualenv.
+    distribution
+        Name of the distribution. Note, all non-alphanumeric characters
+        will be converted to dashes.
+
     CLI Example:
 
     .. code-block:: bash
