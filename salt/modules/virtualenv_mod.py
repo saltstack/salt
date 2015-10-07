@@ -299,6 +299,32 @@ def get_site_packages(venv):
     return ret['stdout']
 
 
+def get_distribution_path(venv, distribution):
+    '''
+    Returns the path to a distribution inside a virtualenv
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virtualenv.get_distribution_path /path/to/my/venv my_distribution
+    '''
+    if not salt.utils.verify.safe_py_code(distribution):
+        raise salt.exceptions.CommandExecutionError
+    bin_path = os.path.join(venv, 'bin/python')
+
+    if not os.path.exists(bin_path):
+        raise salt.exceptions.CommandExecutionError("Path does not appear to be a virtualenv: '{0}'".format(bin_path))
+
+    ret = __salt__['cmd.exec_code_all'](bin_path, "import pkg_resources; print(pkg_resources.get_distribution('{0}').location)".format(distribution))
+
+    if ret['retcode'] != 0:
+        import sys
+        raise salt.exceptions.CommandExecutionError('{stdout}\n{stderr}'.format(bin_path=bin_path, **ret))
+
+    return ret['stdout']
+
+
 def get_resource_path(venv, package_or_requirement, resource_name):
     '''
     Returns the path to a resource of a package or a distribution inside a virtualenv
