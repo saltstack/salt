@@ -1237,6 +1237,8 @@ def get_dhcp_options(dhcp_options_name=None, dhcp_options_id=None,
     .. code-block:: bash
 
         salt myminion boto_vpc.get_dhcp_options 'myfunnydhcpoptionsname'
+
+    .. versionadded:: Boron
     '''
     if not any((dhcp_options_name, dhcp_options_id)):
         raise SaltInvocationError('At least one of the following must be specified: '
