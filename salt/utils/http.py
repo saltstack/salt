@@ -808,11 +808,31 @@ def sanitize_url(url, hide_fields):
         if len(url_comps) > 1:
             log_url += '?'
         for pair in url_comps[1:]:
+            url_tmp = None
             for field in hide_fields:
-                if pair.startswith('{0}='.format(field)):
-                    log_url += '{0}=XXXXXXXXXX&'.format(field)
+                comps_list = pair.split('&')
+                if url_tmp:
+                    url_tmp = url_tmp.split('&')
+                    url_tmp = _sanitize_url_components(url_tmp, field)
                 else:
-                    log_url += '{0}&'.format(pair)
+                    url_tmp = _sanitize_url_components(comps_list, field)
+            log_url += url_tmp
         return log_url.rstrip('&')
     else:
         return str(url)
+
+
+def _sanitize_url_components(comp_list, field):
+    '''
+    Recursive function to sanitize each component of the url.
+    '''
+    if len(comp_list) == 0:
+        return ''
+    elif comp_list[0].startswith('{0}='.format(field)):
+        ret = '{0}=XXXXXXXXXX&'.format(field)
+        comp_list.remove(comp_list[0])
+        return ret + _sanitize_url_components(comp_list, field)
+    else:
+        ret = '{0}&'.format(comp_list[0])
+        comp_list.remove(comp_list[0])
+        return ret + _sanitize_url_components(comp_list, field)

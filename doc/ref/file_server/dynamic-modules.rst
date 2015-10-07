@@ -1,23 +1,30 @@
 .. _module-sync:
 
 ===========================
+.. _dynamic-module-distribution:
+
 Dynamic Module Distribution
 ===========================
 
 .. versionadded:: 0.9.5
 
-Salt Python modules can be distributed automatically via the Salt file server.
+Custom Salt execution, state, and other modules can be distributed to Salt
+minions using the Salt file server.
+
 Under the root of any environment defined via the :conf_master:`file_roots`
 option on the master server directories corresponding to the type of module can
 be used.
 
 The directories are prepended with an underscore:
 
-  1. :file:`_modules`
-  2. :file:`_grains`
-  3. :file:`_renderers`
-  4. :file:`_returners`
-  5. :file:`_states`
+- :file:`_beacons`
+- :file:`_modules`
+- :file:`_grains`
+- :file:`_renderers`
+- :file:`_returners`
+- :file:`_states`
+- :file:`_output`
+- :file:`_utils`
 
 The contents of these directories need to be synced over to the minions after
 Python modules have been created in them. There are a number of ways to sync
@@ -27,9 +34,9 @@ Sync Via States
 ===============
 
 The minion configuration contains an option ``autoload_dynamic_modules``
-which defaults to True. This option makes the state system refresh all
+which defaults to ``True``. This option makes the state system refresh all
 dynamic modules when states are run. To disable this behavior set
-``autoload_dynamic_modules`` to False in the minion config.
+:conf_minion:`autoload_dynamic_modules` to ``False`` in the minion config.
 
 When dynamic modules are autoloaded via states, modules only pertinent to
 the environments matched in the master's top file are downloaded.

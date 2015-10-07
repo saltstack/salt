@@ -490,7 +490,7 @@ VALID_OPTS = {
 
     'pillar_safe_render_error': bool,
 
-    # When creating a pillar, there are several stratigies to choose from when
+    # When creating a pillar, there are several strategies to choose from when
     # encountering duplicate values
     'pillar_source_merging_strategy': str,
 

@@ -247,6 +247,7 @@ import time
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 from salt.utils.decorators \
     import identical_signature_wrapper as _mimic_signature
 import salt.utils
@@ -416,6 +417,9 @@ VALID_CREATE_OPTS = {
     'cpuset': {
         'path': 'Config:Cpuset',
     },
+    'labels': {
+      'path': 'Config:Labels',
+    },
 }
 
 VALID_RUNTIME_OPTS = {
@@ -490,6 +494,7 @@ def __virtual__():
             docker_py_versioninfo = _get_docker_py_versioninfo()
         except CommandExecutionError:
             docker_py_versioninfo = None
+
         # Don't let a failure to interpret the version keep this module from
         # loading. Log a warning (log happens in _get_docker_py_versioninfo()).
         if docker_py_versioninfo is None \
@@ -498,17 +503,22 @@ def __virtual__():
                 docker_versioninfo = version().get('VersionInfo')
             except CommandExecutionError:
                 docker_versioninfo = None
+
             if docker_versioninfo is None or docker_versioninfo >= MIN_DOCKER:
                 return __virtualname__
             else:
-                log.warning(
+                return (False,
                     'Insufficient Docker version for dockerng (required: '
                     '{0}, installed: {1})'.format(
-                        '.'.join(docker_versioninfo),
-                        '.'.join(MIN_DOCKER)
-                    )
-                )
-    return False
+                        '.'.join(map(str, MIN_DOCKER)),
+                        '.'.join(map(str, docker_versioninfo))))
+        else:
+            return (False,
+                'Insufficient docker-py version for dockerng (required: '
+                '{0}, installed: {1})'.format(
+                    '.'.join(map(str, MIN_DOCKER_PY)),
+                    '.'.join(map(str, docker_py_versioninfo))))
+    return (False, 'Docker module could not get imported')
 
 
 def _get_docker_py_versioninfo():
@@ -589,7 +599,7 @@ def _ensure_exists(wrapped):
 
 def _refresh_mine_cache(wrapped):
     '''
-    Decorator to trig a refresh of salt mine data.
+    Decorator to trigger a refresh of salt mine data.
     '''
     @functools.wraps(wrapped)
     def wrapper(*args, **kwargs):
@@ -658,7 +668,7 @@ def _get_client(timeout=None):
     Set those keys in your configuration tree somehow:
 
         - docker.url: URL to the docker service
-        - docker.version: API version to use
+        - docker.version: API version to use (default: "auto")
     '''
     if 'docker.client' not in __context__:
         client_kwargs = {}
@@ -1104,6 +1114,13 @@ def _validate_input(action,
                 or not all([isinstance(x, six.string_types)
                             for x in kwargs[key]]):
             raise SaltInvocationError(key + ' must be a list of strings')
+
+    def _valid_dictlist(key):  # pylint: disable=unused-variable
+        '''
+        Ensure the passed value is a list of dictionaries.
+        '''
+        if not salt.utils.is_dictlist(kwargs[key]):
+            raise SaltInvocationError(key + ' must be a list of dictionaries.')
 
     # Custom validation functions for container creation options
     def _valid_command():  # pylint: disable=unused-variable
@@ -1639,6 +1656,32 @@ def _validate_input(action,
                 'pid_mode can only be \'host\', if set'
             )
 
+    def _valid_labels():  # pylint: disable=unused-variable
+        '''
+        Must be a dict or a list of strings
+        '''
+        if kwargs.get('labels') is None:
+            return
+        try:
+            _valid_stringlist('labels')
+        except SaltInvocationError:
+            try:
+                _valid_dictlist('labels')
+            except SaltInvocationError:
+                try:
+                    _valid_dict('labels')
+                except SaltInvocationError:
+                    raise SaltInvocationError(
+                        'labels can only be a list of strings/dict'
+                        ' or a dict containing strings')
+                else:
+                    new_labels = {}
+                    for k, v in six.iteritems(kwargs['labels']):
+                        new_labels[str(k)] = str(v)
+                    kwargs['labels'] = new_labels
+            else:
+                kwargs['labels'] = salt.utils.repack_dictlist(kwargs['labels'])
+
     # And now, the actual logic to perform the validation
     if action == 'create':
         valid_opts = VALID_CREATE_OPTS
@@ -2138,7 +2181,7 @@ def list_containers(**kwargs):
         names = item.get('Names')
         if not names:
             continue
-        for c_name in [x.lstrip('/') for x in names]:
+        for c_name in [x.lstrip('/') for x in names or []]:
             ret.add(c_name)
     return sorted(ret)
 
@@ -2475,7 +2518,7 @@ def top(name):
 
 def version():
     '''
-    Returns a dictionary of Docker version information. Equivlent to running
+    Returns a dictionary of Docker version information. Equivalent to running
     the ``docker version`` Docker CLI command.
 
     CLI Example:
@@ -2638,6 +2681,12 @@ def create(image,
 
             This is only used if Salt needs to pull the requested image.
 
+    labels
+        Add Metadata to the container. Can be a list of strings/dictionaries
+        or a dictionary of strings (keys and values).
+
+        Example: ``labels=LABEL1,LABEL2``,
+        ``labels="{'LABEL1': 'value1', 'LABEL2': 'value2'}"``
 
     **RETURN DATA**
 

@@ -136,7 +136,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
             [salt.utils.url.create('_grains')],
             [salt.utils.url.create('_renderers')],
             [salt.utils.url.create('_returners')],
-            [salt.utils.url.create('_outputters')],
+            [salt.utils.url.create('_output')],
             [salt.utils.url.create('_utils')],
             ]
     with salt.utils.fopen(lowfn, 'w+') as fp_:

@@ -396,7 +396,18 @@ def installed(name,
     env_vars
         Add or modify environment variables. Useful for tweaking build steps,
         such as specifying INCLUDE or LIBRARY paths in Makefiles, build scripts or
-        compiler calls.
+        compiler calls.  This must be in the form of a dictionary or a mapping.
+
+        Example:
+
+        .. code-block:: yaml
+
+            django:
+              pip.installed:
+                - name: django_app
+                - env_vars:
+                    CUSTOM_PATH: /opt/django_app
+                    VERBOSE: True
 
     use_vt
         Use VT terminal emulation (see ouptut while installing)
