@@ -2767,8 +2767,13 @@ def set_tags(name=None,
                 # We were not setting this tag
                 continue
 
+            if tag.get('value') is None and tags.get(tag['key']) == '':
+                # This is a correctly set tag with no value
+                continue
+
             if str(tags.get(tag['key'])) != str(tag['value']):
                 # Not set to the proper value!?
+                log.debug('Setting the tag {0} returned {1} instead of {2}'.format(tag['key'], tags.get(tag['key']), tag['value']))
                 failed_to_set_tags = True
                 break
 
