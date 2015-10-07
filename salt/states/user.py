@@ -260,7 +260,8 @@ def present(name,
 
     password
         A password hash to set for the user. This field is only supported on
-        Linux, FreeBSD, NetBSD, OpenBSD, and Solaris.
+        Linux, FreeBSD, NetBSD, OpenBSD, and Solaris. If the ``empty_password``
+        argument is set to ``True`` then ``password`` is ignored.
         For Windows this is the plain text password.
 
     .. versionchanged:: 0.16.0
