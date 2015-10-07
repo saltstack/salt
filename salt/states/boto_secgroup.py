@@ -107,6 +107,7 @@ def present(
         name,
         description,
         vpc_id=None,
+        vpc_name=None,
         rules=None,
         rules_egress=None,
         region=None,
@@ -125,7 +126,10 @@ def present(
         A description of this security group.
 
     vpc_id
-        The ID of the VPC to create the security group in, if any.
+        The ID of the VPC to create the security group in, if any. Exclusive with vpc_name.
+
+    vpc_name
+        The name of the VPC wherein to create the security group, if any. Exclusive with vpc_id.
 
     vpc_name
         The name of the VPC to create the security group in, if any.
@@ -159,8 +163,8 @@ def present(
         .. versionadded:: Boron
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
-    _ret = _security_group_present(name, description, vpc_id, region, key,
-                                   keyid, profile, vpc_name)
+    _ret = _security_group_present(name, description, vpc_id, vpc_name, region, key,
+                                   keyid, profile)
     ret['changes'] = _ret['changes']
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -171,8 +175,8 @@ def present(
         rules = []
     if not rules_egress:
         rules_egress = []
-    _ret = _rules_present(name, rules, rules_egress, vpc_id, region, key,
-                          keyid, profile, vpc_name)
+    _ret = _rules_present(name, rules, rules_egress, vpc_id, vpc_name, region, key,
+                          keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -196,11 +200,11 @@ def _security_group_present(
         name,
         description,
         vpc_id=None,
+        vpc_name=None,
         region=None,
         key=None,
         keyid=None,
-        profile=None,
-        vpc_name=None):
+        profile=None):
     '''
     given a group name or a group name and vpc id (or vpc name):
     1. determine if the group exists
@@ -218,8 +222,8 @@ def _security_group_present(
             ret['result'] = None
             return ret
         created = __salt__['boto_secgroup.create'](name, description, vpc_id,
-                                                   region, key, keyid, profile,
-                                                   vpc_name)
+                                                   vpc_name, region, key, keyid,
+                                                   profile)
         if created:
             ret['changes']['old'] = {'secgroup': None}
             sg = __salt__['boto_secgroup.get_config'](name, None, region, key,
@@ -374,11 +378,11 @@ def _rules_present(
         rules,
         rules_egress,
         vpc_id=None,
+        vpc_name=None,
         region=None,
         key=None,
         keyid=None,
-        profile=None,
-        vpc_name=None):
+        profile=None):
     '''
     given a group name or group name and vpc_id (or vpc name):
     1. get lists of desired rule changes (using _get_rule_changes)
@@ -402,8 +406,7 @@ def _rules_present(
             _source_group_name = rule.get('source_group_name', None)
             if _source_group_name:
                 _group_id = __salt__['boto_secgroup.get_group_id'](
-                    _source_group_name, vpc_id, region, key, keyid, profile,
-                    vpc_name
+                    _source_group_name, vpc_id, vpc_name, region, key, keyid, profile
                 )
                 if not _group_id:
                     msg = ('source_group_name {0} does not map to a valid'
@@ -425,8 +428,8 @@ def _rules_present(
             deleted = True
             for rule in to_delete:
                 _deleted = __salt__['boto_secgroup.revoke'](
-                    name, vpc_id=vpc_id, region=region, key=key, keyid=keyid,
-                    profile=profile, vpc_name=vpc_name, **rule)
+                    name, vpc_id=vpc_id, vpc_name=vpc_name, region=region, key=key,
+                    keyid=keyid, profile=profile, **rule)
                 if not _deleted:
                     deleted = False
             if deleted:
@@ -440,8 +443,8 @@ def _rules_present(
             created = True
             for rule in to_create:
                 _created = __salt__['boto_secgroup.authorize'](
-                    name, vpc_id=vpc_id, region=region, key=key, keyid=keyid,
-                    profile=profile, vpc_name=vpc_name, **rule)
+                    name, vpc_id=vpc_id, vpc_name=vpc_name, region=region, key=key,
+                    keyid=keyid, profile=profile, **rule)
                 if not _created:
                     created = False
             if created:
@@ -456,8 +459,8 @@ def _rules_present(
             deleted = True
             for rule in to_delete_egress:
                 _deleted = __salt__['boto_secgroup.revoke'](
-                    name, vpc_id=vpc_id, region=region, key=key, keyid=keyid,
-                    profile=profile, egress=True, vpc_name=vpc_name, **rule)
+                    name, vpc_id=vpc_id, vpc_name=vpc_name, region=region, key=key,
+                    keyid=keyid, profile=profile, egress=True, **rule)
                 if not _deleted:
                     deleted = False
             if deleted:
@@ -472,8 +475,8 @@ def _rules_present(
             created = True
             for rule in to_create_egress:
                 _created = __salt__['boto_secgroup.authorize'](
-                    name, vpc_id=vpc_id, region=region, key=key, keyid=keyid,
-                    profile=profile, egress=True, vpc_name=vpc_name, **rule)
+                    name, vpc_id=vpc_id, vpc_name=vpc_name, region=region, key=key,
+                    keyid=keyid, profile=profile, egress=True, **rule)
                 if not _created:
                     created = False
             if created:
@@ -486,8 +489,7 @@ def _rules_present(
 
         ret['changes']['old'] = {'rules': sg['rules'], 'rules_egress': sg['rules_egress']}
         sg = __salt__['boto_secgroup.get_config'](name, None, region, key,
-                                                  keyid, profile, vpc_id,
-                                                  vpc_name)
+                                                  keyid, profile, vpc_id, vpc_name)
         ret['changes']['new'] = {'rules': sg['rules'], 'rules_egress': sg['rules_egress']}
     return ret
 
@@ -495,6 +497,7 @@ def _rules_present(
 def absent(
         name,
         vpc_id=None,
+        vpc_name=None,
         region=None,
         key=None,
         keyid=None,
@@ -507,7 +510,10 @@ def absent(
         Name of the security group.
 
     vpc_id
-        The ID of the VPC to create the security group in, if any.
+        The ID of the VPC to remove the security group from, if any. Exclusive with vpc_name.
+
+    vpc_name
+        The name of the VPC wherefrom to delete the security group, if any. Exclusive with vpc_id.
 
     vpc_name
         The name of the VPC to create the security group in, if any.
@@ -540,8 +546,7 @@ def absent(
             ret['result'] = None
             return ret
         deleted = __salt__['boto_secgroup.delete'](name, None, region, key,
-                                                   keyid, profile, vpc_id,
-                                                   vpc_name)
+                                                   keyid, profile, vpc_id, vpc_name)
         if deleted:
             ret['changes']['old'] = {'secgroup': sg}
             ret['changes']['new'] = {'secgroup': None}
