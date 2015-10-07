@@ -443,12 +443,12 @@ def create(vm_):
 
     # Define which ssh_interface to use
     ssh_interface = _get_ssh_interface(vm_)
-    if ssh_interface == 'private_ips':
-        # If ssh_interface is set to use private_ips, but assign_private_ip
-        # wasn't set to True, let's help out and create a private ip.
-        if private_ip_assignment is False:
-            create_private_ip(node_id)
-            private_ip_assignment = True
+
+    # If ssh_interface is set to use private_ips, but assign_private_ip
+    # wasn't set to True, let's help out and create a private ip.
+    if ssh_interface == 'private_ips' and private_ip_assignment is False:
+        create_private_ip(node_id)
+        private_ip_assignment = True
 
     # Create a ConfigID using disk ids
     config_id = create_config(kwargs={'name': name,
