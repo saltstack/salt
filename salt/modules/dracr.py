@@ -54,20 +54,26 @@ def __execute_cmd(command, host=None,
     Execute rac commands
     '''
     if module:
-        modswitch = '-m {0}'.format(module)
+        # -a takes 'server' or 'switch' to represent all servers
+        # or all switches in a chassis.  Allow
+        # user to say 'module=ALL_SERVER' or 'module=ALL_SWITCH'
+        if module.startswith('ALL_'):
+            modswitch = '-a '+module[module.index('_')+1:len(module)].lower()
+        else:
+            modswitch = '-m {0}'.format(module)
     else:
         modswitch = ''
     if not host:
         # This is a local call
-        cmd = __salt__['cmd.run_all']('racadm {0} {1}'.format(modswitch,
-                                                              command))
+        cmd = __salt__['cmd.run_all']('racadm {0} {1}'.format(command,
+                                                              modswitch))
     else:
         cmd = __salt__['cmd.run_all'](
-            'racadm -r {0} {1] -u {2} -p {3} {4}'.format(host,
-                                                         modswitch,
+            'racadm -r {0} -u {1} -p {2} {3} {4}'.format(host,
                                                          admin_username,
                                                          admin_password,
-                                                         command))
+                                                         command,
+                                                         modswitch))
 
     if cmd['retcode'] != 0:
         log.warning('racadm return an exit code \'{0}\'.'
@@ -84,20 +90,23 @@ def __execute_ret(command, host=None,
     Execute rac commands
     '''
     if module:
-        modswitch = '-m {0}'.format(module)
+        if module == 'ALL':
+            modswitch = '-a '
+        else:
+            modswitch = '-m {0}'.format(module)
     else:
         modswitch = ''
     if not host:
         # This is a local call
-        cmd = __salt__['cmd.run_all']('racadm {0} {1}'.format(modswitch,
-                                                              command))
+        cmd = __salt__['cmd.run_all']('racadm {0} {1}'.format(command,
+                                                              modswitch))
     else:
         cmd = __salt__['cmd.run_all'](
-            'racadm -r {0} {1} -u {2} -p {3} {4}'.format(host,
-                                                         modswitch,
+            'racadm -r {0} -u {1} -p {2} {3} {4}'.format(host,
                                                          admin_username,
                                                          admin_password,
-                                                         command))
+                                                         command,
+                                                         modswitch))
 
     if cmd['retcode'] != 0:
         log.warning('racadm return an exit code \'{0}\'.'
@@ -126,11 +135,12 @@ def system_info(host=None,
     if cmd['retcode'] != 0:
         log.warning('racadm return an exit code \'{0}\'.'
                     .format(cmd['retcode']))
+        return cmd
 
     return __parse_drac(cmd['stdout'])
 
 
-def set_niccfg(ip, subnet, gateway, dhcp=False, vlan=None,
+def set_niccfg(ip, subnet, gateway, dhcp=False,
                host=None,
                admin_username=None,
                admin_password=None,
@@ -141,7 +151,7 @@ def set_niccfg(ip, subnet, gateway, dhcp=False, vlan=None,
     if dhcp:
         cmdstr += '-d '
     else:
-        cmdstr += ip + ' ' + subnet + ' ' + gateway
+        cmdstr += '-s ' + ip + ' ' + subnet + ' ' + gateway
 
     ret = __execute_cmd(cmdstr, host=host,
                         admin_username=admin_username,
@@ -150,7 +160,7 @@ def set_niccfg(ip, subnet, gateway, dhcp=False, vlan=None,
 
 
 def set_nicvlan(vlan=None,
-                host=host,
+                host=None,
                 admin_username=None,
                 admin_password=None,
                 module=None):
@@ -387,6 +397,20 @@ def change_password(username, password, uid=None, host=None,
         return False
 
 
+def deploy_password(username, password, host=None, admin_username=None,
+                    admin_password=None, module=None):
+    return __execute_cmd('deploy -u {0} -p {1}'.format(
+        username, password), host=host, admin_username=admin_username,
+        admin_password=admin_password, module=module
+    )
+
+
+def deploy_snmp(snmp, host=None, admin_username=None,
+                admin_password=None, module=None):
+    return __execute_cmd('deploy -v SNMPv2 {0} ro'.format(snmp),
+        host=host, admin_username=admin_username,
+        admin_password=admin_password, module=module
+    )
 def create_user(username, password, permissions,
                 users=None, host=None,
                 admin_username=None, admin_password=None,

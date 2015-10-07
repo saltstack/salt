@@ -8,9 +8,6 @@ from __future__ import absolute_import
 import logging
 import salt.utils
 import salt.utils.http
-import salt.modules.dracr
-
-HAS_REST_EXAMPLE = True
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ['fx2']
@@ -52,7 +49,7 @@ def grains():
     Get the grains from the proxied device
     '''
     if not GRAINS_CACHE:
-        r = salt.utils.dracr.system_info(host=DETAILS['host'],
+        r = __salt__['dracr.system_info'](host=DETAILS['host'],
                                          admin_username=DETAILS['admin_username'],
                                          admin_password=DETAILS['admin_password'])
         GRAINS_CACHE = r
@@ -71,9 +68,13 @@ def ping():
     '''
     Is the REST server up?
     '''
-    r = salt.modules.dracr(host=DETAILS['host'],
-                           admin_username=DETAILS['admin_username'],
-                           admin_password=DETAILS['admin_password'])
+    r = __salt__['dracr.system_info'](host=DETAILS['host'],
+                                      admin_username=DETAILS['admin_username'],
+                                      admin_password=DETAILS['admin_password'])
+    if r.get('retcode', 0) == 1:
+        return False
+    else:
+        return True
     try:
         return r['dict'].get('ret', False)
     except Exception:
