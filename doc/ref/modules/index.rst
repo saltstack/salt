@@ -279,13 +279,13 @@ the case when the dependency is unavailable.
 
 
     def __virtual__():
-    '''
-    only load cheese if enzymes are available
-    '''
-    if HAS_ENZYMES:
-        return 'cheese'
-    else:
-        return (False, 'The cheese execution module cannot be loaded: enzymes unavailable.')
+        '''
+        only load cheese if enzymes are available
+        '''
+        if HAS_ENZYMES:
+            return 'cheese'
+        else:
+            return (False, 'The cheese execution module cannot be loaded: enzymes unavailable.')
 
 .. code-block:: python
 
@@ -294,13 +294,14 @@ the case when the dependency is unavailable.
     '''
 
     def __virtual__():
-    '''
-    only load cheese if enzymes are available
-    '''
-    if 'cheese.slice' in __salt__:
-        return 'cheese'
-    else:
-        return (False, 'The cheese state module cannot be loaded: enzymes unavailable.')
+        '''
+        only load cheese if enzymes are available
+        '''
+        # predicate loading of the cheese state on the corresponding execution module
+        if 'cheese.slice' in __salt__:
+            return 'cheese'
+        else:
+            return (False, 'The cheese state module cannot be loaded: enzymes unavailable.')
 
 
 Documentation
