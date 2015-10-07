@@ -417,17 +417,12 @@ def __get_host(node, vm_):
     '''
     Return public IP, private IP, or hostname for the libcloud 'node' object
     '''
-    if __get_ssh_interface(vm_) == 'private_ips':
+    if __get_ssh_interface(vm_) == 'private_ips' or vm_['external_ip'] is None:
         ip_address = node.private_ips[0]
         log.info('Salt node data. Private_ip: {0}'.format(ip_address))
     else:
         ip_address = node.public_ips[0]
         log.info('Salt node data. Public_ip: {0}'.format(ip_address))
-
-#    if len(node.public_ips) > 0:
-#        return node.public_ips[0]
-#    if len(node.private_ips) > 0:
-#        return node.private_ips[0]
 
     if len(ip_address) > 0:
         return ip_address
@@ -2036,10 +2031,20 @@ def request_instance(vm_):
         'ex_network': __get_network(conn, vm_),
         'ex_tags': __get_tags(vm_),
         'ex_metadata': __get_metadata(vm_),
-        'external_ip': config.get_cloud_config_value(
-                'external_ip', vm_, __opts__, default='ephemeral'
-            )
     }
+    external_ip = config.get_cloud_config_value(
+        'external_ip', vm_, __opts__, default='ephemeral'
+    )
+
+    if external_ip.lower() == 'ephemeral':
+        external_ip = 'ephemeral'
+    elif external_ip == 'None':
+        external_ip = None
+    else:
+        region = '-'.join(kwargs['location'].name.split('-')[:2])
+        kwargs['external_ip'] = __create_orget_address(conn, kwargs['external_ip'], region)
+    kwargs['external_ip'] = external_ip
+    vm_['external_ip'] = external_ip
 
     if LIBCLOUD_VERSION_INFO > (0, 15, 1):
 
@@ -2061,14 +2066,6 @@ def request_instance(vm_):
                 'The value of \'ex_disk_type\' needs to be one of: '
                 '\'pd-standard\', \'pd-ssd\''
             )
-
-    if 'external_ip' in kwargs and kwargs['external_ip'] == "None":
-        kwargs['external_ip'] = None
-    elif kwargs['external_ip'] != 'ephemeral':
-        region = '-'.join(kwargs['location'].name.split('-')[:2])
-        kwargs['external_ip'] = __create_orget_address(conn,
-                                                       kwargs['external_ip'],
-                                                       region)
 
     log.info('Creating GCE instance {0} in {1}'.format(vm_['name'],
         kwargs['location'].name)

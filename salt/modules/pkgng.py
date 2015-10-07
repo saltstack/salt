@@ -82,6 +82,13 @@ def _pkg(jail=None, chroot=None):
     return ret
 
 
+def _get_pkgng_version(jail=None, chroot=None):
+    '''
+    return the version of 'pkg'
+    '''
+    return __salt__['cmd.run']([_pkg(jail, chroot), '--version']).strip()
+
+
 def _get_version(name, results):
     '''
     ``pkg search`` will return all packages for which the pattern is a match.
@@ -253,6 +260,7 @@ def latest_version(*names, **kwargs):
     if len(names) == 0:
         return ''
     ret = {}
+
     # Initialize the dict with empty strings
     for name in names:
         ret[name] = ''
@@ -260,8 +268,17 @@ def latest_version(*names, **kwargs):
     chroot = kwargs.get('chroot')
     pkgs = list_pkgs(versions_as_list=True, jail=jail, chroot=chroot)
 
+    if salt.utils.compare_versions(_get_pkgng_version(jail, chroot), '>=', '1.6.0'):
+        quiet = True
+    else:
+        quiet = False
+
     for name in names:
-        cmd = '{0} search {1}'.format(_pkg(jail, chroot), name)
+        cmd = [_pkg(jail, chroot), 'search']
+        if quiet:
+            cmd.append('-q')
+        cmd.append(name)
+
         pkgver = _get_version(
             name,
             __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')

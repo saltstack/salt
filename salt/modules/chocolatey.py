@@ -102,7 +102,7 @@ def chocolatey_version():
     '''
     if 'chocolatey._version' in __context__:
         return __context__['chocolatey._version']
-    cmd = [_find_chocolatey(__context__, __salt__), 'help']
+    cmd = [_find_chocolatey(__context__, __salt__)]
     out = __salt__['cmd.run'](cmd, python_shell=False)
     for line in out.splitlines():
         line = line.lower()
