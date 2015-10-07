@@ -259,12 +259,49 @@ function. Some examples:
 Returning Error Information from ``__virtual__``
 ------------------------------------------------
 
-Optionally, modules may additionally return a list of reasons that a module could
-not be loaded. For example, if a dependency for 'my_mod' was not met, a
-__virtual__ function could do as follows:
+Optionally, Salt plugin modules, such as execution, state, returner, beacon,
+etc. modules may additionally return a string containing the reason that a
+module could not be loaded.  For example, an execution module called ``cheese``
+and a corresponding state module also called ``cheese``, both depending on a
+utility called ``enzymes`` should have ``__virtual__`` functions that handle
+the case when the dependency is unavailable.
 
- return False, ['My Module must be installed before this module can be
- used.']
+.. code-block:: python
+
+    '''
+    Cheese execution (or returner/beacon/etc.) module
+    '''
+    try:
+        import enzymes
+        HAS_ENZYMES = True
+    except ImportError:
+        HAS_ENZYMES = False
+
+
+    def __virtual__():
+        '''
+        only load cheese if enzymes are available
+        '''
+        if HAS_ENZYMES:
+            return 'cheese'
+        else:
+            return (False, 'The cheese execution module cannot be loaded: enzymes unavailable.')
+
+.. code-block:: python
+
+    '''
+    Cheese state module
+    '''
+
+    def __virtual__():
+        '''
+        only load cheese if enzymes are available
+        '''
+        # predicate loading of the cheese state on the corresponding execution module
+        if 'cheese.slice' in __salt__:
+            return 'cheese'
+        else:
+            return (False, 'The cheese state module cannot be loaded: enzymes unavailable.')
 
 
 Documentation

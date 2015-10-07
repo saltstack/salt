@@ -1356,8 +1356,12 @@ def managed(name,
 
     if contents_pillar:
         contents = __salt__['pillar.get'](contents_pillar)
+        if not contents:
+            return _error(ret, 'contents_pillar {0} results in empty contents'.format(contents_pillar))
     if contents_grains:
         contents = __salt__['grains.get'](contents_grains)
+        if not contents:
+            return _error(ret, 'contents_grain {0} results in empty contents'.format(contents_grains))
 
     # ensure contents is a string
     if contents:
@@ -2509,7 +2513,9 @@ def replace(name,
         The replacement text.
 
     count
-        Maximum number of pattern occurrences to be replaced.
+        Maximum number of pattern occurrences to be replaced.  Defaults to 0.
+        If count is a positive integer n, no more than n occurrences will be
+        replaced, otherwise all occurrences will be replaced.
 
     flags
         A list of flags defined in the :ref:`re module documentation <contents-of-module-re>`.

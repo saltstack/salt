@@ -363,7 +363,9 @@ def user_present(name, policies=None, policies_from_pillars=None, password=None,
         The password for the new user. Must comply with account policy.
 
     path (string)
-        The path of the user. Default is '/'
+        The path of the user. Default is '/'.
+
+        .. versionadded:: 2015.8.2
 
     region (string)
         Region to connect to.

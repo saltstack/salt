@@ -1,102 +1,216 @@
 .. _windows-package-manager:
+
 ===========================
 Windows Software Repository
 ===========================
 
 .. note::
-    Git repository management for the Windows Software Repository has changed
-    in version 2015.8.0, and several master/minion config parameters have been
-    renamed to make their naming more consistent with each other. Please see
-    :ref:`below <2015-8-0-winrepo-changes>` for important details if upgrading
-    from an earlier Salt release.
+   In 2015.8.0 and later, the Windows Software Repository cache is compiled on
+   the Salt Minion, which enables pillar, grains and other things to be
+   available during compilation time. To support this new functionality,
+   a next-generation (ng) package repository was created. See See the
+   :ref:`Changes in Version 2015.8.0 <2015-8-0-winrepo-changes>` for details.
 
-The Salt Windows Software Repository provides a package manager and software
-repository similar to what is provided by yum and apt on Linux.
+The SaltStack Windows Software Repository provides a package manager and software
+repository similar to what is provided by yum and apt on Linux. This repository
+enables the installation of software using the installers on remote Windows
+systems.
 
-It permits the installation of software using the installers on remote
-windows machines. In many senses, the operation is similar to that of
+In many senses, the operation is similar to that of
 the other package managers salt is aware of:
 
 - the ``pkg.installed`` and similar states work on Windows.
 - the ``pkg.install`` and similar module functions work on Windows.
-- each windows machine needs to have ``pkg.refresh_db`` executed
-  against it to pick up the latest version of the package database.
 
 High level differences to yum and apt are:
 
-- The repository metadata (sls files) is hosted through either salt or
+- The repository metadata (SLS files) is hosted through either salt or
   git.
 - Packages can be downloaded from within the salt repository, a git
   repository or from http(s) or ftp urls.
 - No dependencies are managed. Dependencies between packages needs to
   be managed manually.
 
+Requirements:
 
-Operation
-=========
-
-The install state/module function of the windows package manager works
-roughly as follows:
-
-1. Execute ``pkg.list_pkgs`` and store the result
-2. Check if any action needs to be taken. (i.e. compare required package
-   and version against ``pkg.list_pkgs`` results)
-3. If so, run the installer command.
-4. Execute ``pkg.list_pkgs`` and compare to the result stored from
-   before installation.
-5. Success/Failure/Changes will be reported based on the differences
-   between the original and final ``pkg.list_pkgs`` results.
-
-If there are any problems in using the package manager it is likely to
-be due to the data in your sls files not matching the difference
-between the pre and post ``pkg.list_pkgs`` results.
+- GitPython 0.3 or later, or pygit2 0.20.3 with libgit 0.20.0 or later installed
+  on your Salt master. The Windows package definitions are downloaded
+  and updated using Git.
 
 
+Configuration
+=============
 
-Usage
-=====
+Populate the Repository
+-----------------------
 
-By default, the Windows software repository is found at ``/srv/salt/win/repo``
-(``C:\salt\srv\salt\win\repo`` on standalone minions). This can be changed in
-the master config file by setting the :conf_master:`winrepo_dir` option
-(**NOTE:** this option was called ``win_repo`` in Salt versions prior to
-2015.8.0). However, this path must reside somewhere inside the master's
-:conf_master:`file_roots`. Each piece of software should have its own directory
-which contains the installers and a package definition file. This package
-definition file is a YAML file named ``init.sls``.
+The SLS files used to install Windows packages are not distributed by default with
+Salt. Run the following command to initialize the repository on your Salt
+master:
+
+.. code-block:: bash
+
+    salt-run winrepo.update_git_repos
+
+Sync Repo to Windows Minions
+----------------------------
+
+Run ``pkg.refresh_db`` on each of your Windows minions to synchronize
+the package repository.
+
+.. code-block:: bash
+
+    salt -G 'os:windows' pkg.refresh_db
+
+Install Windows Software
+========================
+
+After completing the configuration steps, you are ready to manage software on your
+Windows minions.
+
+Show Installed Packages
+-----------------------
+
+.. code-block:: bash
+
+    salt -G 'os:windows' pkg.list_pkgs
+
+Install a Package
+-----------------
+
+You can query the available version of a package using the Salt pkg module.
+
+.. code-block:: bash
+
+    salt winminion pkg.available_version firefox
+
+    {'firefox': {'15.0.1': 'Mozilla Firefox 15.0.1 (x86 en-US)',
+                 '16.0.2': 'Mozilla Firefox 16.0.2 (x86 en-US)',
+                 '17.0.1': 'Mozilla Firefox 17.0.1 (x86 en-US)'}}
+
+As you can see, there are three versions of Firefox available for installation.
+You can refer a software package by its ``name`` or its ``full_name`` surround
+by single quotes.
+
+.. code-block:: bash
+
+    salt winminion pkg.install 'firefox'
+
+The above line will install the latest version of Firefox.
+
+.. code-block:: bash
+
+    salt winminion pkg.install 'firefox' version=16.0.2
+
+The above line will install version 16.0.2 of Firefox.
+
+If a different version of the package is already installed it will be replaced
+with the version in the winrepo (only if the package itself supports live
+updating).
+
+You can also specify the full name:
+
+.. code-block:: bash
+
+    salt winminion pkg.install 'Mozilla Firefox 17.0.1 (x86 en-US)'
+
+
+Uninstall Windows Software
+==========================
+
+Uninstall software using the pkg module:
+
+.. code-block:: bash
+
+    salt winminion pkg.remove firefox
+    salt winminion pkg.purge firefox
+
+.. note::
+   ``pkg.purge`` just executes ``pkg.remove`` on Windows. At some point in the
+   future ``pkg.purge`` may direct the installer to remove all configs and
+   settings for software packages that support that option.
+
+
+Repository Location
+===================
+
+Salt maintains a repository of SLS files to install a large number of Windows
+packages:
+
+- 2015.8.0 and later minions: https://github.com/saltstack/salt-winrepo-ng
+- Earlier releases: https://github.com/saltstack/salt-winrepo
+
+By default, these repositories are mirrored to ``/srv/salt/win/repo_ng``
+and ``/srv/salt/win/repo``.
+
+This location can be changed in the master config file by setting the
+:conf_master:`winrepo_dir_ng` and :conf_master:`winrepo_dir` options.
+
+
+Maintaining Windows Repo Definitions in Git Repositories
+========================================================
+
+Windows software package definitions can be hosted in one or more Git
+repositories. The default repository configured is hosted on GitHub by
+SaltStack. It includes package definitions for various open source
+software projects.
+
+This repo points to the HTTP or ftp locations of the installer files. Anyone is
+welcome to send a pull request to this repo to add new package definitions.
+Browse the repo here: https://github.com/saltstack/salt-winrepo-ng.git
+
+Configure which git repositories the master can search for package definitions
+by modifying or extending the :conf_master:`winrepo_remotes` option (**NOTE:**
+this option was called ``win_gitrepos`` in Salt versions earlier than 2015.8.0).
+
+Use the :mod:`winrepo.update_git_repos
+<salt.runners.winrepo.update_git_repos>` runner to clone/update the configured
+repos, then use :mod:`winrepo.genrepo <salt.runners.winrepo.genrepo>`
+runner to compile the repository cache. Finally, use :py:func:`pkg.refresh_db
+<salt.modules.win_pkg.refresh_db>` on each minion to have them update their
+copy of the repository cache. Command examples are as follows:
+
+.. code-block:: bash
+
+    salt-run winrepo.update_git_repos
+    salt-run winrepo.genrepo
+    salt winminion pkg.refresh_db
+
+
+Creating a Package Definition SLS File
+======================================
 
 The package definition file should look similar to this example for Firefox:
-``/srv/salt/win/repo/firefox/init.sls``
 
 .. code-block:: yaml
 
     firefox:
-      17.0.1:
+      '17.0.1':
         installer: 'salt://win/repo/firefox/English/Firefox Setup 17.0.1.exe'
         full_name: Mozilla Firefox 17.0.1 (x86 en-US)
         locale: en_US
         reboot: False
-        install_flags: ' -ms'
+        install_flags: '-ms'
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
-        uninstall_flags: ' /S'
-      16.0.2:
+        uninstall_flags: '/S'
+      '16.0.2':
         installer: 'salt://win/repo/firefox/English/Firefox Setup 16.0.2.exe'
         full_name: Mozilla Firefox 16.0.2 (x86 en-US)
         locale: en_US
         reboot: False
-        install_flags: ' -ms'
+        install_flags: '-ms'
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
-        uninstall_flags: ' /S'
-      15.0.1:
+        uninstall_flags: '/S'
+      '15.0.1':
         installer: 'salt://win/repo/firefox/English/Firefox Setup 15.0.1.exe'
         full_name: Mozilla Firefox 15.0.1 (x86 en-US)
         locale: en_US
         reboot: False
-        install_flags: ' -ms'
+        install_flags: '-ms'
         uninstaller: '%ProgramFiles(x86)%/Mozilla Firefox/uninstall/helper.exe'
-        uninstall_flags: ' /S'
+        uninstall_flags: '/S'
 
-More examples can be found here: https://github.com/saltstack/salt-winrepo
+More examples can be found at https://github.com/saltstack/salt-winrepo-ng
 
 The version number and ``full_name`` need to match the output from ``pkg.list_pkgs``
 so that the status can be verified when running highstate.
@@ -203,94 +317,16 @@ Only applies to salt: installer URLs.
         install_flags: '/ACTION=install /IACCEPTSQLSERVERLICENSETERMS /Q'
         cache_dir: True
 
-Generate Repo Cache File
-========================
-
-Once the sls file has been created, generate the repository cache file with the
-winrepo runner:
-
-.. code-block:: bash
-
-    salt-run winrepo.genrepo
-
-Beginning with the 2015.8.0 Salt release the repository cache is compiled on
-the Salt Minion. This allows for easy templating on the minion which allows for
-pillar, grains and other things to be available during compilation time. From
-2015.8.0 forward the above `salt-run winrepo.genrepo` is only required for
-older minions. New minions should execute `salt \* pkg.refresh_db` to update
-from the latest from the master's repo.
-
-Then update the repository cache file on your minions, exactly how it's done
-for the Linux package managers:
-
-.. code-block:: bash
-
-    salt winminion pkg.refresh_db
-
-
-Install Windows Software
-========================
-
-Now you can query the available version of Firefox using the Salt pkg module.
-
-.. code-block:: bash
-
-    salt winminion pkg.available_version firefox
-
-    {'firefox': {'15.0.1': 'Mozilla Firefox 15.0.1 (x86 en-US)',
-                 '16.0.2': 'Mozilla Firefox 16.0.2 (x86 en-US)',
-                 '17.0.1': 'Mozilla Firefox 17.0.1 (x86 en-US)'}}
-
-As you can see, there are three versions of Firefox available for installation.
-You can refer a software package by its ``name`` or its ``full_name`` surround
-by single quotes.
-
-.. code-block:: bash
-
-    salt winminion pkg.install 'firefox'
-
-The above line will install the latest version of Firefox.
-
-.. code-block:: bash
-
-    salt winminion pkg.install 'firefox' version=16.0.2
-
-The above line will install version 16.0.2 of Firefox.
-
-If a different version of the package is already installed it will be replaced
-with the version in the winrepo (only if the package itself supports live
-updating).
-
-You can also specify the full name:
-
-.. code-block:: bash
-
-    salt winminion pkg.install 'Mozilla Firefox 17.0.1 (x86 en-US)'
-
-
-Uninstall Windows Software
-==========================
-
-Uninstall software using the pkg module:
-
-.. code-block:: bash
-
-    salt winminion pkg.remove firefox
-    salt winminion pkg.purge firefox
-
-``pkg.purge`` just executes ``pkg.remove`` on Windows. At some point in the
-future ``pkg.purge`` may direct the installer to remove all configs and
-settings for software packages that support that option.
 
 .. _standalone-winrepo:
 
 Managing Windows Software on a Standalone Windows Minion
 ========================================================
 
-The examples above for managing the winrepo using the :mod:`winrepo runner
-<salt.runners.winrepo>` apply to the master, but some use cases call for
-running a standalone (a.k.a. masterless) minion on a Windows server. For these
-cases, the runner functions are not available, so an :mod:`execution module
+The Windows Package Repository functions similar in a standalone environment,
+with a few differences in the configuration.
+
+To replace the winrepo runner that is used on the Salt master, an :mod:`execution module
 <salt.modules.win_repo>` exists to provide the same functionality to standalone
 minions. The functions are named the same as the ones in the runner, and are
 used in the same way; the only difference is that ``salt-call`` is used instead
@@ -298,122 +334,103 @@ of ``salt-run``:
 
 .. code-block:: bash
 
-    salt-call winrepo.genrepo
+    salt-call win_repo.update_git_repos
+    salt-call win_repo.genrepo
     salt-call pkg.refresh_db
 
-Package definition SLS files need to be in the correct location for
-:py:func:`winrepo.genrepo <salt.modules.win_repo.genrepo>` to find them. This
-location is governed by minion config parameters. With much of Salt's Windows
-Repo code having been rewritten for version 2015.8.0, the parameter names will
-differ depending on which version the minion is running. The following two
-sections include information on additional configuration required when running
-a standalone minion.
+After executing the previous commands the repository on the standalone system
+is ready to use.
 
-Minion Config Options for Releases Older Than 2015.8.0
-======================================================
+Custom Location for Repository SLS Files
+----------------------------------------
 
-If connected to a master, the minion will by default look for the winrepo
-cachefile (the file generated by the :py:func`winrepo.genrepo runner
-<salt.runners.winrepo.genrepo>`) at ``salt://win/repo/winrepo.p``. If the
-cachefile is in a different path on the salt fileserver, then
-:conf_minion:`win_repo_cachefile` will need to be updated to reflect the proper
-location.
+If :conf_minion:`file_roots` has not been modified in the minion
+configuration, then no additional configuration needs to be added to the
+minion configuration. The :py:func:`winrepo.genrepo
+<salt.modules.win_repo.genrepo>` function from the :mod:`winrepo
+<salt.modules.win_repo>` execution module will by default look for the
+filename specified by :conf_minion:`winrepo_cachefile` within
+``C:\salt\srv\salt\win\repo``.
 
-.. note:: Additional Info for Standalone Minions
+If the :conf_minion:`file_roots` parameter has been modified, then
+:conf_minion:`winrepo_dir` must be modified to fall within that path, at the
+proper relative path. For example, if the ``base`` environment in
+:conf_minion:`file_roots` points to ``D:\foo``, and
+:conf_minion:`winrepo_source_dir` is ``salt://win/repo``, then
+:conf_minion:`winrepo_dir` must be set to ``D:\foo\win\repo`` to ensure that
+:py:func:`winrepo.genrepo <salt.modules.win_repo.genrepo>` puts the cachefile
+into right location.
 
-    Additional configuration needs to be added to the minion config:
 
-    .. code-block:: yaml
-
-        win_repo: 'C:\path\to\win\repo'
-
-    This path still needs to be within the minion's :conf_minion:`file_roots`,
-    just as when managing the Windows Repo on the master.
-
-Minion Config Options for Releases 2015.8.0 and Newer
-=====================================================
+Config Options for Minions 2015.8.0 and Later
+=============================================
 
 The :conf_minion:`winrepo_source_dir` config parameter (default:
-``salt://win/repo``) controls where :py:func:`pkg.refresh_db
+``salt://win/repo``) controls where :mod:`pkg.refresh_db
 <salt.modules.win_pkg.refresh_db>` looks for the cachefile (default:
 ``winrepo.p``). This means that the default location for the winrepo cachefile
 would be ``salt://win/repo/winrepo.p``. Both :conf_minion:`winrepo_source_dir`
 and :conf_minion:`winrepo_cachefile` can be adjusted to match the actual
 location of this file on the Salt fileserver.
 
-.. note:: Additional Info for Standalone Minions
 
-    The above still holds true regarding :conf_minion:`winrepo_source_dir`, the
-    differences are that the minion's :conf_minion:`file_roots` is where that
-    ``salt://`` URL will resolve, and the :mod:`winrepo
-    <salt.modules.win_repo>` execution module must be used to generate this
-    cachefile.
+Config Options for Minions Before 2015.8.0
+==========================================
 
-    If :conf_minion:`file_roots` has not been modified in the minion
-    configuration, then no additional configuration needs to be added to the
-    minion configuration. The :py:func:`winrepo.genrepo
-    <salt.modules.win_repo.genrepo>` function from the :mod:`winrepo
-    <salt.modules.win_repo>` execution module will by default look for the
-    filename specified by :conf_minion:`winrepo_cachefile` within
-    ``C:\salt\srv\salt\win\repo``. If the :conf_minion:`file_roots` parameter
-    has been modified, then :conf_minion:`winrepo_dir` must be modified to fall
-    within that path, at the proper relative path. For example, if the
-    ``base`` environment in :conf_minion:`file_roots` points to ``D:\foo``, and
-    :conf_minion:`winrepo_source_dir` is ``salt://win/repo``, then
-    :conf_minion:`winrepo_dir` must be set to ``D:\foo\win\repo`` to ensure
-    that :py:func:`winrepo.genrepo <salt.modules.win_repo.genrepo>` puts the
-    cachefile into right location.
+If connected to a master, the minion will by default look for the winrepo
+cachefile (the file generated by the :mod:`winrepo.genrepo runner
+<salt.runners.winrepo.genrepo>`) at ``salt://win/repo/winrepo.p``. If the
+cachefile is in a different path on the salt fileserver, then
+:conf_minion:`win_repo_cachefile` will need to be updated to reflect the proper
+location.
 
-Maintaining Windows Repo Definitions in Git Repositories
-========================================================
-
-Windows software package definitions can also be hosted in one or more git
-repositories. The default repository configured is hosted on GitHub.com by
-SaltStack, Inc. It includes package definitions for various open source
-software projects.
-
-This repo points to the HTTP or ftp locations of the installer files. Anyone is
-welcome to send a pull request to this repo to add new package definitions.
-Browse the repo here: `https://github.com/saltstack/salt-winrepo.git
-<https://github.com/saltstack/salt-winrepo.git>`_ .
-
-Configure which git repositories the master can search for package definitions
-by modifying or extending the :conf_master:`winrepo_remotes` option (**NOTE:**
-this option was called ``win_gitrepos`` in Salt versions prior to 2015.8.0).
-
-Use the :py:func:`winrepo.update_git_repos
-<salt.runners.winrepo.update_git_repos>` runner to clone/update the configured
-repos, then use :py:func:`winrepo.genrepo <salt.runners.winrepo.genrepo>`
-runner to compile the repository cache. Finally, use :py:func:`pkg.refresh_db
-<salt.modules.win_pkg.refresh_db>` on each minion to have them update their
-copy of the repository cache. Command examples are as follows:
-
-.. code-block:: bash
-
-    salt-run winrepo.update_git_repos
-    salt-run winrepo.genrepo
-    salt winminion pkg.refresh_db
-
-For standalone minions, the usage would be slightly different:
-
-.. code-block:: bash
-
-    salt-call winrepo.update_git_repos
-    salt-call winrepo.genrepo
-    salt-call pkg.refresh_db
 
 .. _2015-8-0-winrepo-changes:
 
 Changes in Version 2015.8.0
 ===========================
 
+Git repository management for the Windows Software Repository has changed
+in version 2015.8.0, and several master/minion config parameters have been
+renamed to make their naming more consistent with each other.
+
+For a list of the winrepo config options, see :ref:`here
+<winrepo-master-config-opts>` for master config options, and :ref:`here
+<winrepo-minion-config-opts>` for configuration options for masterless Windows
+minions.
+
+On the master, the :mod:`winrepo.update_git_repos
+<salt.runners.winrepo.update_git_repos>` runner has been updated to use either
+pygit2_ or GitPython_ to checkout the git repositories containing repo data. If
+pygit2_ or GitPython_ is installed, existing winrepo git checkouts should be
+removed after upgrading to 2015.8.0, to allow them to be checked out again by
+running :py:func:`winrepo.update_git_repos
+<salt.runners.winrepo.update_git_repos>`.
+
+If neither GitPython_ nor pygit2_ are installed, then Salt will fall back to
+the pre-existing behavior for :mod:`winrepo.update_git_repos
+<salt.runners.winrepo.update_git_repos>`, and a warning will be logged in the
+master log.
+
+.. note::
+    Standalone Windows minions do not support the new GitPython_/pygit2_
+    functionality, and will instead use the :py:func:`git.latest
+    <salt.states.git.latest>` state to keep repositories up-to-date. More
+    information on how to use the Windows Software Repo on a standalone minion
+    can be found :ref:`here <standalone-winrepo>`.
+
+.. _pygit2: https://github.com/libgit2/pygit2
+.. _GitPython: https://github.com/gitpython-developers/GitPython
+
+
 Config Parameters Renamed
 -------------------------
 
-Many of the winrepo configuration parameters have changed in version 2015.8.0
+Many of the legacy winrepo configuration parameters have changed in version 2015.8.0
 to make the naming more consistent. The old parameter names will still work,
-but a warning will be logged indicating that the old name is deprecated. Below
-are the parameters which have changed for version 2015.8.0:
+but a warning will be logged indicating that the old name is deprecated.
+
+Below are the parameters which have changed for version 2015.8.0:
 
 Master Config
 *************
@@ -425,6 +442,11 @@ win_repo                 :conf_master:`winrepo_dir`
 win_repo_mastercachefile :conf_master:`winrepo_cachefile`
 win_gitrepos             :conf_master:`winrepo_remotes`
 ======================== ================================
+
+.. note::
+   ``winrepo_cachefile`` is no longer used by 2015.8.0 and later minions, and
+   the ``winrepo_dir`` setting is replaced by ``winrepo_dir_ng`` for 2015.8.0
+   and later minions.
 
 See :ref:`here <winrepo-master-config-opts>` for detailed information on all
 master config options for the Windows Repo.
@@ -581,6 +603,26 @@ updated the repository cache on the relevant minions:
 Packages management under Windows 2003
 ----------------------------------------
 
-On windows server 2003, you need to install optional windows component
+On Windows server 2003, you need to install optional Windows component
 "wmi windows installer provider" to have full list of installed packages.
 If you don't have this, salt-minion can't report some installed software.
+
+
+How Success and Failure are Reported
+------------------------------------
+
+The install state/module function of the Windows package manager works
+roughly as follows:
+
+1. Execute ``pkg.list_pkgs`` and store the result
+2. Check if any action needs to be taken. (i.e. compare required package
+   and version against ``pkg.list_pkgs`` results)
+3. If so, run the installer command.
+4. Execute ``pkg.list_pkgs`` and compare to the result stored from
+   before installation.
+5. Success/Failure/Changes will be reported based on the differences
+   between the original and final ``pkg.list_pkgs`` results.
+
+If there are any problems in using the package manager it is likely to
+be due to the data in your sls files not matching the difference
+between the pre and post ``pkg.list_pkgs`` results.

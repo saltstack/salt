@@ -1399,7 +1399,7 @@ def _query(action=None,
         decode_type='json',
         text=True,
         status=True,
-        hide_fields=['api_key'],
+        hide_fields=['api_key', 'rootPass'],
         opts=__opts__,
     )
     log.debug(

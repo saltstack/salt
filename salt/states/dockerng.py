@@ -1349,6 +1349,37 @@ def running(name,
 
             This option requires Docker 1.5.0 or newer.
 
+    labels
+        Add Metadata to the container. Can be a list of strings/dictionaries
+        or a dictionary of strings (keys and values).
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - labels:
+                    - LABEL1
+                    - LABEL2
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - labels:
+                    KEY1: VALUE1
+                    KEY2: VALUE2
+
+        .. code-block:: yaml
+
+            foo:
+              dockerng.running:
+                - image: bar/baz:latest
+                - labels:
+                  - KEY1: VALUE1
+                  - KEY2: VALUE2
+
     start : True
         Set to ``False`` to suppress starting of the container if it exists,
         matches the desired configuration, but is not running. This is useful
