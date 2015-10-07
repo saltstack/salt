@@ -41,7 +41,7 @@ def returner(ret):
     '''
     Return data to the local syslog
     '''
-    syslog.syslog(syslog.LOG_INFO, 'salt-minion: {0}'.format(json.dumps(ret)))
+    syslog.syslog(syslog.LOG_INFO, '{0}'.format(json.dumps(ret)))
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
