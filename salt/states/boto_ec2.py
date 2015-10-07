@@ -542,7 +542,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
     for k, v in attributes.iteritems():
         curr = __salt__['boto_ec2.get_attribute'](k, instance_id=instance_id, region=region, key=key,
                                                   keyid=keyid, profile=profile)
-        if type(curr) != type({}):
+        if isinstance(curr, dict):
             curr = {}
         if curr and curr.get(k) == v:
             continue
