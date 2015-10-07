@@ -2491,6 +2491,7 @@ class ProxyMinion(Minion):
         to know which master they connected to)
         '''
         log.debug("subclassed _post_master_init")
+
         self.opts['master'] = master
 
         self.opts['pillar'] = yield salt.pillar.get_async_pillar(
@@ -2510,7 +2511,16 @@ class ProxyMinion(Minion):
         fq_proxyname = self.opts['pillar']['proxy']['proxytype']
         self.opts['proxy'] = self.opts['pillar']['proxy']
 
+        # Need to load the modules so they get all the dunder variables
+        self.functions, self.returners, self.function_errors = self._load_modules()
+
+        # we can then sync any proxymodules down from the master
+        self.functions['saltutil.sync_proxymodules'](saltenv='base')
+
+        # Then load the proxy module
         self.proxy = salt.loader.proxy(self.opts)
+
+        # And re-load the modules so the __proxy__ variable gets injected
         self.functions, self.returners, self.function_errors = self._load_modules(proxy=self.proxy)
         self.functions.pack['__proxy__'] = self.proxy
         self.proxy.pack['__salt__'] = self.functions

@@ -390,6 +390,25 @@ def sync_returners(saltenv=None, refresh=True):
     return ret
 
 
+def sync_proxymodules(saltenv=None, refresh=False):
+    '''
+    Sync the proxy modules from the _proxy directory on the salt master file
+    server. This function is environment aware, pass the desired environment
+    to grab the contents of the _returners directory, base is the default
+    environment.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_proxymodules
+    '''
+    ret = _sync('proxy', saltenv)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def sync_output(saltenv=None, refresh=True):
     '''
     Sync the output modules from the _output directory on the salt master file
