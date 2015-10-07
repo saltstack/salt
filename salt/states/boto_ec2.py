@@ -58,7 +58,7 @@ from time import time, sleep
 
 # Import salt libs
 import salt.utils.dictupdate as dictupdate
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -451,4 +451,319 @@ def snapshot_created(name, ami_name, instance_name, wait_until_available=True, w
             return ret
         sleep(5)
 
+    return ret
+
+
+def instance_present(name, instance_name=None, instance_id=None, image_id=None,
+                     image_name=None, tags=None, key_name=None,
+                     security_groups=None, user_data=None, instance_type=None,
+                     placement=None, kernel_id=None, ramdisk_id=None,
+                     vpc_id=None, vpc_name=None, monitoring_enabled=None,
+                     subnet_id=None, subnet_name=None, private_ip_address=None,
+                     block_device_map=None, disable_api_termination=None,
+                     instance_initiated_shutdown_behavior=None,
+                     placement_group=None, client_token=None,
+                     security_group_ids=None, security_group_names=None,
+                     additional_info=None, tenancy=None,
+                     instance_profile_arn=None, instance_profile_name=None,
+                     ebs_optimized=None, network_interfaces=None,
+                     attributes=None, target_state=None, region=None, key=None,
+                     keyid=None, profile=None):
+    ### TODO - implement 'target_state={running, stopped}'
+    ### TODO - implement image_name->image_id lookups
+    '''
+    Ensure an EC2 instance is running with the given attributes and state.
+
+    name
+        (string) - The name of the state definition.  Recommended that this
+        match the instance_name attribute (generally the FQDN of the instance).
+    instance_name
+        (string) - The name of the instance, generally its FQDN.  Exclusive with
+        'instance_id'.
+    instance_id
+        (string) - The ID of the instance (if known).  Exclusive with
+        'instance_name'.
+    image_id
+        (string) – The ID of the AMI image to run.
+    image_name
+        (string) – The name of the AMI image to run.  NOT IMPLEMENTED.
+    tags
+        (dict) - Tags to apply to the instance.
+    key_name
+        (string) – The name of the key pair with which to launch instances.
+    security_groups
+        (list of strings) – The names of the EC2 classic security groups with
+        which to associate instances
+    user_data
+        (string) – The Base64-encoded MIME user data to be made available to the
+        instance(s) in this reservation.
+    instance_type
+        (string) – The EC2 instance size/type.  Note that only certain types are
+        compatible with HVM based AMIs.
+    placement
+        (string) – The Availability Zone to launch the instance into.
+    kernel_id
+        (string) – The ID of the kernel with which to launch the instances.
+    ramdisk_id
+        (string) – The ID of the RAM disk with which to launch the instances.
+    vpc_id
+        (string) - The ID of a VPC to attach the instance to.
+    vpc_name
+        (string) - The name of a VPC to attach the instance to.
+    monitoring_enabled
+        (bool) – Enable detailed CloudWatch monitoring on the instance.
+    subnet_id
+        (string) – The ID of the subnet within which to launch the instances for
+        VPC.
+    subnet_name
+        (string) – The name of the subnet within which to launch the instances
+        for VPC.
+    private_ip_address
+        (string) – If you’re using VPC, you can optionally use this parameter to
+        assign the instance a specific available IP address from the subnet
+        (e.g., 10.0.0.25).
+    block_device_map
+        (boto.ec2.blockdevicemapping.BlockDeviceMapping) – A BlockDeviceMapping
+        data structure describing the EBS volumes associated with the Image.
+    disable_api_termination
+        (bool) – If True, the instances will be locked and will not be able to
+        be terminated via the API.
+    instance_initiated_shutdown_behavior
+        (string) – Specifies whether the instance stops or terminates on
+        instance-initiated shutdown. Valid values are:
+            'stop'
+            'terminate'
+    placement_group
+        (string) – If specified, this is the name of the placement group in
+        which the instance(s) will be launched.
+    client_token
+        (string) – Unique, case-sensitive identifier you provide to ensure
+        idempotency of the request. Maximum 64 ASCII characters.
+    security_group_ids
+        (list of strings) – The IDs of the VPC security groups with which to
+        associate instances.
+    security_group_names
+        (list of strings) – The names of the VPC security groups with which to
+        associate instances.
+    additional_info
+        (string) – Specifies additional information to make available to the
+        instance(s).
+    tenancy
+        (string) – The tenancy of the instance you want to launch. An instance
+        with a tenancy of ‘dedicated’ runs on single-tenant hardware and can
+        only be launched into a VPC. Valid values are:”default” or “dedicated”.
+        NOTE: To use dedicated tenancy you MUST specify a VPC subnet-ID as well.
+    instance_profile_arn
+        (string) – The Amazon resource name (ARN) of the IAM Instance Profile
+        (IIP) to associate with the instances.
+    instance_profile_name
+        (string) – The name of the IAM Instance Profile (IIP) to associate with
+        the instances.
+    ebs_optimized
+        (bool) – Whether the instance is optimized for EBS I/O. This
+        optimization provides dedicated throughput to Amazon EBS and a tuned
+        configuration stack to provide optimal EBS I/O performance. This
+        optimization isn’t available with all instance types.
+    network_interfaces
+        (boto.ec2.networkinterface.NetworkInterfaceCollection) – A
+        NetworkInterfaceCollection data structure containing the ENI
+        specifications for the instance.
+    attributes
+        (dict) - Instance attributes and value to be applied to the instance.
+        Available options are:
+            instanceType - A valid instance type (m1.small)
+            kernel - Kernel ID (None)
+            ramdisk - Ramdisk ID (None)
+            userData - Base64 encoded String (None)
+            disableApiTermination - Boolean (true)
+            instanceInitiatedShutdownBehavior - stop|terminate
+            blockDeviceMapping - List of strings - ie: [‘/dev/sda=false’]
+            sourceDestCheck - Boolean (true)
+            groupSet - Set of Security Groups or IDs
+            ebsOptimized - Boolean (false)
+            sriovNetSupport - String - ie: ‘simple’
+    target_state
+        (string) - The desired target state of the instance.  Available options
+        are:
+            running
+            stopped
+    region
+        (string) - Region to connect to.
+    key
+        (string) - Secret key to be used.
+    keyid
+        (string) - Access key to be used.
+    profile
+        (variable) - A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+
+    .. versionadded:: Boron
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+          }
+    _create = False
+    running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+    changed_attrs = {}
+
+    if not instance_id:
+        try:
+            instance_id = __salt__['boto_ec2.get_id'](name=instance_name if instance_name else name,
+                                                      tags=tags, region=region, key=key, keyid=keyid,
+                                                      profile=profile, in_states=running_states)
+        except CommandExecutionError as e:
+            ret['result'] = None
+            ret['comment'] = 'Couldn\'t determine current status of instance {0}.'.format(instance_name)
+            return ret
+
+    exists = __salt__['boto_ec2.exists'](instance_id=instance_id, region=region,
+                                         key=key, keyid=keyid, profile=profile)
+    if not exists:
+        _create = True
+    else:
+        instances = __salt__['boto_ec2.find_instances'](instance_id=instance_id, region=region,
+                                                        key=key, keyid=keyid, profile=profile,
+                                                        return_objs=True, in_states=running_states)
+        if not len(instances):
+            _create = True
+
+    if _create:
+        if __opts__['test']:
+            ret['comment'] = 'The instance {0} is set to be created.'.format(name)
+            ret['result'] = None
+            return ret
+        r = __salt__['boto_ec2.run'](image_id, instance_name if instance_name else name,
+                                     tags=tags, key_name=key_name,
+                                     security_groups=security_groups, user_data=user_data,
+                                     instance_type=instance_type, placement=placement,
+                                     kernel_id=kernel_id, ramdisk_id=ramdisk_id, vpc_id=vpc_id,
+                                     vpc_name=vpc_name, monitoring_enabled=monitoring_enabled,
+                                     subnet_id=subnet_id, subnet_name=subnet_name,
+                                     private_ip_address=private_ip_address,
+                                     block_device_map=block_device_map,
+                                     disable_api_termination=disable_api_termination,
+                                     instance_initiated_shutdown_behavior=instance_initiated_shutdown_behavior,
+                                     placement_group=placement_group, client_token=client_token,
+                                     security_group_ids=security_group_ids,
+                                     security_group_names=security_group_names,
+                                     additional_info=additional_info, tenancy=tenancy,
+                                     instance_profile_arn=instance_profile_arn,
+                                     instance_profile_name=instance_profile_name,
+                                     ebs_optimized=ebs_optimized, network_interfaces=network_interfaces,
+                                     region=region, key=key, keyid=keyid, profile=profile)
+        if not r or 'instance_id' not in r:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create instance {0}.'.format(instance_name if instance_name else name)
+            return ret
+
+        instance_id = r['instance_id']
+        ret['changes'] = {'old': {}, 'new': {}}
+        ret['changes']['old']['instance_id'] = None
+        ret['changes']['new']['instance_id'] = instance_id
+
+    for k, v in attributes.iteritems():
+        curr = __salt__['boto_ec2.get_attribute'](k, instance_id=instance_id, region=region, key=key,
+                                                  keyid=keyid, profile=profile)
+        if isinstance(curr, dict):
+            curr = {}
+        if curr and curr.get(k) == v:
+            continue
+        else:
+            if __opts__['test']:
+                changed_attrs[k] = 'The instance attribute {0} is set to be changed from \'{1}\' to \'{2}\'.'.format(
+                                   k, curr.get(k), v)
+                continue
+            try:
+                r = __salt__['boto_ec2.set_attribute'](attribute=k, attribute_value=v,
+                                                       instance_id=instance_id, region=region,
+                                                       key=key, keyid=keyid, profile=profile)
+            except SaltInvocationError as e:
+                ret['result'] = False
+                ret['comment'] = 'Failed to set attribute {0} to {1} on instance {2}.'.format(k, v, instance_name)
+                return ret
+            ret['changes'] = ret['changes'] if ret['changes'] else {'old': {}, 'new': {}}
+            ret['changes']['old'][k] = curr.get(k)
+            ret['changes']['new'][k] = v
+
+    if __opts__['test']:
+        if changed_attrs:
+            ret['changes']['new'] = changed_attrs
+        ret['result'] = None
+
+    return ret
+
+
+def instance_absent(name, instance_name=None, instance_id=None,
+                     region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure an EC2 instance does not exist (is stopped and removed).
+
+    name
+        (string) - The name of the state definition.
+    instance_name
+        (string) - The name of the instance.
+    instance_id
+        (string) - The ID of the instance.
+    region
+        (string) - Region to connect to.
+    key
+        (string) - Secret key to be used.
+    keyid
+        (string) - Access key to be used.
+    profile
+        (variable) - A dict with region, key and keyid, or a pillar key (string)
+        that contains a dict with region, key and keyid.
+
+    .. versionadded:: Boron
+    '''
+    ### TODO - Implement 'force' option??  Would automagically turn off
+    ###        'disableApiTermination',  as needed before trying to delete.
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+          }
+    running_states = ('pending', 'rebooting', 'running', 'stopping', 'stopped')
+
+    if not instance_id:
+        try:
+            instance_id = __salt__['boto_ec2.get_id'](name=instance_name if instance_name else name,
+                                                      region=region, key=key, keyid=keyid,
+                                                      profile=profile, in_states=running_states)
+        except CommandExecutionError as e:
+            ret['result'] = None
+            ret['comment'] = 'Couldn\'t determine current status of instance {0}.'.format(instance_name)
+            return ret
+
+    exists = __salt__['boto_ec2.exists'](instance_id=instance_id, region=region,
+                                         key=key, keyid=keyid, profile=profile)
+    if not exists:
+        ret['result'] = True
+        ret['comment'] = 'Instance {0} is already gone.'.format(instance_id)
+        return ret
+
+    ### Honor 'disableApiTermination' - if you want to override it, first use set_attribute() to turn it off
+    no_can_do = __salt__['boto_ec2.get_attribute']('disableApiTermination', instance_id=instance_id,
+                                                   region=region, key=key, keyid=keyid, profile=profile)
+    if no_can_do.get('disableApiTermination') is True:
+        ret['result'] = False
+        ret['comment'] = 'Termination of instance {0} via the API is disabled.'.format(instance_id)
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'The instance {0} is set to be deleted.'.format(name)
+        ret['result'] = None
+        return ret
+
+    r = __salt__['boto_ec2.terminate'](instance_id=instance_id, name=instance_name, region=region,
+                                       key=key, keyid=keyid, profile=profile)
+    if not r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to terminate instance {0}.'.format(instance_id)
+        return ret
+
+    ret['changes']['old'] = {'instance_id': instance_id}
+    ret['changes']['new'] = None
     return ret
