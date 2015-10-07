@@ -128,7 +128,6 @@ def _module_dirs(
 
     return cli_module_dirs + ext_type_types + [ext_types, sys_types]
 
-CALLS = {}
 
 def minion_mods(
         opts,
