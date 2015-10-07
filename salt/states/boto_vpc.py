@@ -236,6 +236,9 @@ def dhcp_options_present(name, dhcp_options_id=None, vpc_name=None, vpc_id=None,
                          tags=None, region=None, key=None, keyid=None, profile=None):
     '''
     Ensure a set of DHCP options with the given settings exist.
+    Note that the current implementation only SETS values during option set
+    creation.  It is unable to update option sets in place, and thus merely
+    verifies the set exists via the given name and/or dhcp_options_id param.
 
     name
         (string)
@@ -309,6 +312,8 @@ def dhcp_options_present(name, dhcp_options_id=None, vpc_name=None, vpc_id=None,
     # boto provides no "update_dhcp_options()" functionality, and you can't delete it if
     # it's attached, and you can't detach it if it's the only one, so just check if it's
     # there or not, and make no effort to validate it's actual settings... :(
+    ### TODO - add support for multiple sets of DHCP options, and then for "swapping out"
+    ###        sets by creating new, mapping, then deleting the old.
     r = __salt__['boto_vpc.dhcp_options_exists'](dhcp_options_id=dhcp_options_id,
                                                  dhcp_options_name=name,
                                                  region=region, key=key, keyid=keyid,
@@ -760,16 +765,17 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
-    _ret = _routes_present(route_table_name=name, routes=routes, tags=tags, region=region, key=key,
-                           keyid=keyid, profile=profile)
+    _ret = _routes_present(route_table_name=name, routes=routes, tags=tags,
+                           region=region, key=key, keyid=keyid, profile=profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
-    _ret = _subnets_present(route_table_name=name, subnet_ids=subnet_ids, subnet_names=subnet_names, tags=tags, region=region, key=key,
-                            keyid=keyid, profile=profile)
+    _ret = _subnets_present(route_table_name=name, subnet_ids=subnet_ids,
+                            subnet_names=subnet_names, tags=tags, region=region,
+                            key=key, keyid=keyid, profile=profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -779,14 +785,16 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
     return ret
 
 
-def _route_table_present(name, vpc_name=None, vpc_id=None, tags=None, region=None, key=None, keyid=None, profile=None):
+def _route_table_present(name, vpc_name=None, vpc_id=None, tags=None, region=None,
+                         key=None, keyid=None, profile=None):
     ret = {'name': name,
            'result': True,
            'comment': '',
            'changes': {}
            }
 
-    r = __salt__['boto_vpc.get_resource_id'](resource='route_table', name=name, region=region, key=key, keyid=keyid,
+    r = __salt__['boto_vpc.get_resource_id'](resource='route_table', name=name,
+                                             region=region, key=key, keyid=keyid,
                                              profile=profile)
     if 'error' in r:
         ret['result'] = False
@@ -802,8 +810,11 @@ def _route_table_present(name, vpc_name=None, vpc_id=None, tags=None, region=Non
             ret['result'] = None
             return ret
 
-        r = __salt__['boto_vpc.create_route_table'](route_table_name=name, vpc_name=vpc_name, vpc_id=vpc_id, tags=tags,
-                                                    region=region, key=key, keyid=keyid, profile=profile)
+        r = __salt__['boto_vpc.create_route_table'](route_table_name=name,
+                                                    vpc_name=vpc_name,
+                                                    vpc_id=vpc_id, tags=tags,
+                                                    region=region, key=key,
+                                                    keyid=keyid, profile=profile)
         if not r.get('created'):
             ret['result'] = False
             ret['comment'] = 'Failed to create route table: {0}.'.format(r['error']['message'])
