@@ -60,9 +60,9 @@ def beacon(config):
     # please be advised that doing CPU or IO intensive
     # operations in this method will cause the beacon loop
     # to block.
-    beacon_url = '{}{}'.format(__opts__['proxy']['url'],
-                               config['endpoint'])
-    r = salt.utils.http.query(beacon_url,
-                              decode_type='json',
-                              decode=True)
-    return [r['dict']]
+    beacon_url = '{0}{1}'.format(__opts__['proxy']['url'],
+                                 config['endpoint'])
+    ret = salt.utils.http.query(beacon_url,
+                                decode_type='json',
+                                decode=True)
+    return [ret['dict']]
