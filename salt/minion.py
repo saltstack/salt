@@ -2536,7 +2536,11 @@ class ProxyMinion(Minion):
         proxy_init_fn = self.proxy[fq_proxyname+'.init']
         proxy_init_fn(self.opts)
         self.opts['grains'] = salt.loader.grains(self.opts)
-        # reload ?!?
+
+        # Check config 'add_proxymodule_to_opts'  Remove this in Boron.
+        if config['add_proxymodule_to_opts']:
+            self.opts['proxymodule'] = self.proxy
+
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
