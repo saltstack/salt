@@ -3202,7 +3202,7 @@ class MasterState(State):
     def __init__(self, opts, minion):
         State.__init__(self, opts)
 
-    def load_modules(self, data=None):
+    def load_modules(self, data=None, proxy=None):
         '''
         Load the modules into the state
         '''

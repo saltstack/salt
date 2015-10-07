@@ -2510,7 +2510,6 @@ class ProxyMinion(Minion):
         fq_proxyname = self.opts['pillar']['proxy']['proxytype']
         self.opts['proxy'] = self.opts['pillar']['proxy']
 
-
         self.proxy = salt.loader.proxy(self.opts)
         self.functions, self.returners, self.function_errors = self._load_modules(proxy=self.proxy)
         self.functions.pack['__proxy__'] = self.proxy
@@ -2523,7 +2522,6 @@ class ProxyMinion(Minion):
             log.error('Check your proxymodule.  Salt-proxy aborted.')
             self._running = False
             raise SaltSystemExit(code=-1)
-
 
         proxy_init_fn = self.proxy[fq_proxyname+'.init']
         proxy_init_fn(self.opts)
