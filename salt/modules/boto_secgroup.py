@@ -277,7 +277,7 @@ def convert_to_group_ids(groups, vpc_id, vpc_name=None, region=None, key=None,
         else:
             log.debug('calling boto_secgroup.get_group_id for'
                       ' group name {0}'.format(group))
-            group_id = get_group_id(group=group, vpc_id=vpc_id,
+            group_id = get_group_id(name=group, vpc_id=vpc_id,
                                     vpc_name=vpc_name, region=region,
                                     key=key, keyid=keyid, profile=profile)
             log.debug('group name {0} has group id {1}'.format(
