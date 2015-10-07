@@ -61,7 +61,7 @@ def nop(name, **kwargs):
     requisite, or in templates which could otherwise be empty due to jinja
     rendering
 
-    .. versionadded:: 2015.5.6
+    .. versionadded:: 2015.8.1
     '''
     return succeed_without_changes(name)
 

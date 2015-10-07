@@ -23,14 +23,14 @@ How Rosters Work
 ================
 
 The roster system compiles a data structure internally referred to as
-`targets`. The `targets` is a list of target systems and attributes about how
+``targets``. The ``targets`` is a list of target systems and attributes about how
 to connect to said systems. The only requirement for a roster module in Salt
-is to return the `targets` data structure.
+is to return the ``targets`` data structure.
 
 Targets Data
 ------------
 
-The information which can be stored in a roster `target` is the following:
+The information which can be stored in a roster ``target`` is the following:
 
 .. code-block:: yaml
 

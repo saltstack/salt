@@ -2750,16 +2750,34 @@ used.
 ---------------
 
 .. versionchanged:: 2015.8.0
-    Renamed from ``win_repo`` to ``winrepo_dir``
+    Renamed from ``win_repo`` to ``winrepo_dir``.
 
 Default: ``/srv/salt/win/repo``
 
-Location on the master where the :conf_master:`winrepo_remotes` are checked
-out.
+Location on the master where the :conf_master:`winrepo_remotes` are checked out
+for pre-2015.8.0 minions. 2015.8.0 and later minions use
+:conf_master:`winrepo_remotes_ng <winrepo_remotes_ng>` instead.
 
 .. code-block:: yaml
 
     winrepo_dir: /srv/salt/win/repo
+
+.. conf_master:: winrepo_dir_ng
+
+``winrepo_dir_ng``
+---------------
+
+.. versionadded:: 2015.8.0
+    A new :ref:`ng <windows-package-manager>` repo was added.
+
+Default: ``/srv/salt/win/repo-ng``
+
+Location on the master where the :conf_master:`winrepo_remotes_ng` are checked
+out for 2015.8.0 and later minions.
+
+.. code-block:: yaml
+
+    winrepo_dir: /srv/salt/win/repo-ng
 
 .. conf_master:: winrepo_cachefile
 .. conf_master:: win_repo_mastercachefile
@@ -2769,6 +2787,10 @@ out.
 
 .. versionchanged:: 2015.8.0
     Renamed from ``win_repo_mastercachefile`` to ``winrepo_cachefile``
+
+.. note::
+    2015.8.0 and later minions do not use this setting since the cachefile
+    is now located on the minion.
 
 Default: ``winrepo.p``
 
@@ -2786,11 +2808,13 @@ created.
 -------------------
 
 .. versionchanged:: 2015.8.0
-    Renamed from ``win_gitrepos`` to ``winrepo_remotes``
+    Renamed from ``win_gitrepos`` to ``winrepo_remotes``.
 
 Default: ``['https://github.com/saltstack/salt-winrepo.git']``
 
-List of git repositories to checkout and include in the winrepo
+List of git repositories to checkout and include in the winrepo for
+pre-2015.8.0 minions. 2015.8.0 and later minions use
+:conf_master:`winrepo_remotes_ng <winrepo_remotes_ng>` instead.
 
 .. code-block:: yaml
 
@@ -2798,12 +2822,42 @@ List of git repositories to checkout and include in the winrepo
       - https://github.com/saltstack/salt-winrepo.git
 
 To specify a specific revision of the repository, prepend a commit ID to the
-URL of the the repository:
+URL of the repository:
 
 .. code-block:: yaml
 
     winrepo_remotes:
       - '<commit_id> https://github.com/saltstack/salt-winrepo.git'
+
+Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
+ID is useful in that it allows one to revert back to a previous version in the
+event that an error is introduced in the latest revision of the repo.
+
+.. conf_master:: winrepo_remotes_ng
+
+``winrepo_remotes_ng``
+-------------------
+
+.. versionadded:: 2015.8.0
+    A new :ref:`ng <windows-package-manager>` repo was added.
+
+Default: ``['https://github.com/saltstack/salt-winrepo-ng.git']``
+
+List of git repositories to checkout and include in the winrepo for
+2015.8.0 and later minions.
+
+.. code-block:: yaml
+
+    winrepo_remotes_ng:
+      - https://github.com/saltstack/salt-winrepo-ng.git
+
+To specify a specific revision of the repository, prepend a commit ID to the
+URL of the repository:
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - '<commit_id> https://github.com/saltstack/salt-winrepo-ng.git'
 
 Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
 ID is useful in that it allows one to revert back to a previous version in the

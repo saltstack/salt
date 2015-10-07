@@ -74,76 +74,78 @@ Notes:
 A. Create the Unprivileged User that the Salt Minion will Run As
 ----------------------------------------------------------------
 
-1. Click "Start", "Control Panel", "User Accounts"
+1. Click ``Start`` > ``Control Panel`` > ``User Accounts``.
 
-2. Click "Add or remove user accounts"
+2. Click ``Add or remove user accounts``.
 
-3. Click "Create new account"
+3. Click ``Create new account``.
 
-4. Enter "salt-user" (or a name of your preference) in the "New account name" field
+4. Enter ``salt-user`` (or a name of your preference) in the ``New account name`` field.
 
-5. Select the "Standard user" radio button
+5. Select the ``Standard user`` radio button.
 
-6. Click the "Create Account" button
+6. Click the ``Create Account`` button.
 
-7. Click on the newly created user account
+7. Click on the newly created user account.
 
-8. Click the "Create a password" link
+8. Click the ``Create a password`` link.
 
-9. In the "New password" and "Confirm new password" fields, provide a password (e.g "SuperSecretMinionPassword4Me!")
+9. In the ``New password`` and ``Confirm new password`` fields, provide
+   a password (e.g "SuperSecretMinionPassword4Me!").
 
-10. In the "Type a password hint" field, provide appropriate text (e.g. "My Salt Password")
+10. In the ``Type a password hint`` field, provide appropriate text (e.g. "My Salt Password").
 
-11. Click the "Create password" button
+11. Click the ``Create password`` button.
 
-12. Close the "Change an Account" window
+12. Close the ``Change an Account`` window.
 
 
 B. Add the New User to the Access Control List for the Salt Folder
 ------------------------------------------------------------------
 
-1. In a File Explorer window, browse to the path where Salt is installed (the default path is C:\Salt)
+1. In a File Explorer window, browse to the path where Salt is installed (the default path is ``C:\Salt``).
 
-2. Right-click on the "Salt" folder and select "Properties"
+2. Right-click on the ``Salt`` folder and select ``Properties``.
 
-3. Click on the "Security" tab
+3. Click on the ``Security`` tab.
 
-4. Click the "Edit" button
+4. Click the ``Edit`` button.
 
-5. Click the "Add" button
+5. Click the ``Add`` button.
 
-6. Type the name of your designated Salt user and click the "OK" button
+6. Type the name of your designated Salt user and click the ``OK`` button.
 
-7. Check the box to "Allow" the "Modify" permission
+7. Check the box to ``Allow`` the ``Modify`` permission.
 
-8. Click the "OK" button
+8. Click the ``OK`` button.
 
-9. Click the "OK" button to close the "Salt Properties" window
+9. Click the ``OK`` button to close the ``Salt Properties`` window.
 
 
-C. Update the Windows Service User for the "salt-minion" Service
-----------------------------------------------------------------
+C. Update the Windows Service User for the ``salt-minion`` Service
+------------------------------------------------------------------
 
-1. Click "Start", "Administrative Tools", "Services"
+1. Click ``Start`` > ``Administrative Tools`` > ``Services``.
 
-2. In the list of Services, Right-Click on "salt-minion" and select "Properties"
+2. In the Services list, right-click on ``salt-minion`` and select ``Properties``.
 
-3. Click the "Log On" tab
+3. Click the ``Log On`` tab.
 
-4. Click the "This account" radio button
+4. Click the ``This account`` radio button.
 
-5. Provide the account credentials created in section A
+5. Provide the account credentials created in section A.
 
-6. Click the "OK" button
+6. Click the ``OK`` button.
 
-7. Click the "OK" button to the prompt confirming that the user "has been granted the Log On As A Service right"
+7. Click the ``OK`` button to the prompt confirming that the user ``has been
+   granted the Log On As A Service right``.
 
-8. Click the "OK" button to the prompt confirming that "The new logon name will not take effect until you stop and restart the service"
+8. Click the ``OK`` button to the prompt confirming that ``The new logon name
+   will not take effect until you stop and restart the service``.
 
-9. Right-Click on "salt-minion" and select "Stop"
+9. Right-Click on ``salt-minion`` and select ``Stop``.
 
-10. Right-Click on "salt-minion" and select "Start"
-
+10. Right-Click on ``salt-minion`` and select ``Start``.
 
 Setting up a Windows build environment
 ======================================
