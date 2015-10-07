@@ -2515,7 +2515,7 @@ class ProxyMinion(Minion):
         fq_proxyname = self.opts['pillar']['proxy']['proxytype']
         self.opts['proxy'] = self.opts['pillar']['proxy']
 
-        # Need to load the modules so they get all the dunder variables
+        # # Need to load the modules so they get all the dunder variables
         self.functions, self.returners, self.function_errors = self._load_modules()
 
         # we can then sync any proxymodules down from the master
