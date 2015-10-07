@@ -456,7 +456,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         finally:
             shutil.rmtree(name, ignore_errors=True)
 
-
     def test_directory_clean_require_in(self):
         '''
         file.directory test with clean=True and require_in file
@@ -490,7 +489,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_function('state.sls', [state_name])
         self.assertTrue(os.path.exists(good_file))
         self.assertFalse(os.path.exists(wrong_file))
-
 
     def test_directory_clean_require_in_with_id(self):
         '''
@@ -527,7 +525,6 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_function('state.sls', [state_name])
         self.assertTrue(os.path.exists(good_file))
         self.assertFalse(os.path.exists(wrong_file))
-
 
     def test_directory_clean_require_with_name(self):
         '''
