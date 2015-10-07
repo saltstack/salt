@@ -131,8 +131,8 @@ def __init__(opts):
         __utils__['boto.assign_funcs'](__name__, 'vpc')
 
 
-def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None, keyid=None,
-              profile=None):
+def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None,
+              keyid=None, profile=None):
     '''
     Check whether a VPC with the given name or id exists.
     Returns the vpc_id or None. Raises SaltInvocationError if
@@ -783,10 +783,10 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
     except BotoServerError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
-    return _create_resource('subnet', name=subnet_name, tags=tags,
-                            vpc_id=vpc_id, cidr_block=cidr_block,
-                            region=region, key=key, keyid=keyid,
-                            profile=profile)
+    return _create_resource('subnet', name=subnet_name, tags=tags, vpc_id=vpc_id,
+                            availability_zone=availability_zone,
+                            cidr_block=cidr_block, region=region, key=key,
+                            keyid=keyid, profile=profile)
 
 
 def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,
@@ -1225,6 +1225,45 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
         return r
     except BotoServerError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def get_dhcp_options(dhcp_options_name=None, dhcp_options_id=None,
+                     region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a dict with the current values of the requested DHCP options set
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.get_dhcp_options 'myfunnydhcpoptionsname'
+
+    .. versionadded:: Boron
+    '''
+    if not any((dhcp_options_name, dhcp_options_id)):
+        raise SaltInvocationError('At least one of the following must be specified: '
+                                  'dhcp_options_name, dhcp_options_id.')
+
+    if not dhcp_options_id and dhcp_options_name:
+        dhcp_options_id = _get_resource_id('dhcp_options', dhcp_options_name,
+                                            region=region, key=key,
+                                            keyid=keyid, profile=profile)
+    if not dhcp_options_id:
+        return {'dhcp_options': {}}
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        r = conn.get_all_dhcp_options(dhcp_options_ids=[dhcp_options_id])
+    except BotoServerError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+    if not r:
+        return {'dhcp_options': None}
+
+    keys = ('domain_name', 'domain_name_servers', 'ntp_servers',
+            'netbios_name_servers', 'netbios_node_type')
+
+    return {'dhcp_options': dict((k, r[0].options.get(k)) for k in keys)}
 
 
 def delete_dhcp_options(dhcp_options_id=None, dhcp_options_name=None,
