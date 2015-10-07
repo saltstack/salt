@@ -2937,9 +2937,10 @@ def _salt_cloud_force_ascii(exc):
     if not isinstance(exc, (UnicodeEncodeError, UnicodeTranslateError)):
         raise TypeError('Can\'t handle {0}'.format(exc))
 
-    # Convert non-breaking space to space and convert en dash to dash
     unicode_trans = {
+        # Convert non-breaking space to space
         u'\xa0': u' ',
+        # Convert en dash to dash
         u'\u2013': u'-',
     }
 
