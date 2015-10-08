@@ -2,7 +2,7 @@
 '''
 Generate baseline proxy minion grains
 '''
-import salt
+from __future__ import absolute_import
 import salt.utils
 
 __proxyenabled__ = ['rest_sample']
