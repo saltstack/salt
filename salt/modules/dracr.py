@@ -717,7 +717,8 @@ def get_slotname(host=None,
 def set_slotname(slot, name, host=None,
                  admin_username=None, admin_password=None):
     return __execute_cmd('setslotname -i {0} {1}'.format(
-        slot, name[0:14], admin_username=admin_username,
+        slot, name[0:14], host=host,
+        admin_username=admin_username,
         admin_password=admin_password))
 
 
