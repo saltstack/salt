@@ -710,11 +710,60 @@ def set_slotname(slot, name, host=None,
         admin_password=admin_password))
 
 
-def set_name(name, host=None,
-             admin_username=None, admin_password=None):
+def set_chassis_name(name,
+                     host=None,
+                     admin_username=None,
+                     admin_password=None):
+    '''
+    Set the name of the chassis.
+
+    name
+        The name to be set on the chassis.
+
+    host
+        The location of the chassis.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dracr.set_chassis_name my-chassis host=111.222.333.444 admin_username=root admin_password=secret
+
+    '''
     return __execute_cmd('setsysinfo -c chassisname {0}'.format(name),
                          host=host, admin_username=admin_username,
                          admin_password=admin_password)
+
+
+def get_chassis_name(host=None, admin_username=None, admin_password=None):
+    '''
+    Get the name of a chassis.
+
+    host
+        The location of the chassis.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dracr.get_chassis_name host=111.222.333.444 admin_username=root admin_password=secret
+
+    '''
+    return system_info(host=host,
+                       admin_username=admin_username,
+                       admin_password=admin_password)['Chassis Information']['Chassis Name']
 
 
 def inventory(host=None, admin_username=None, admin_password=None):
