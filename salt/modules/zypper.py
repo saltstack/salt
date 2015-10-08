@@ -894,7 +894,7 @@ def clean_locks():
     return out
 
 
-def remove_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
+def remove_lock(packages, **kwargs):  # pylint: disable=unused-argument
     '''
     Remove specified package lock.
 
@@ -908,9 +908,8 @@ def remove_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argum
     '''
 
     locks = list_locks()
-    packages = []
     try:
-        packages = list(__salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys())
+        packages = list(__salt__['pkg_resource.parse_targets'](packages)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
