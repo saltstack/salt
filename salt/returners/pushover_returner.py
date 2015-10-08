@@ -48,7 +48,7 @@ PushOver settings may also be configured as::
         retry: 2
 
     pushover_profile:
-        token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        pushover.token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     pushover:
         user: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
