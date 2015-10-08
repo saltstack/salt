@@ -162,6 +162,8 @@ def info_available(*names, **kwargs):
         if nfo.get("name"):
             name = nfo.pop("name")
             ret[name] = nfo
+        if nfo.get("status"):
+            nfo['status'] = nfo.get("status").split(" ")[0]
 
     return ret
 
