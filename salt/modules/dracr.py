@@ -721,7 +721,7 @@ def set_chassis_name(name,
         The name to be set on the chassis.
 
     host
-        The location of the chassis.
+        The chassis host.
 
     admin_username
         The username used to access the chassis.
@@ -746,7 +746,7 @@ def get_chassis_name(host=None, admin_username=None, admin_password=None):
     Get the name of a chassis.
 
     host
-        The location of the chassis.
+        The chassis host.
 
     admin_username
         The username used to access the chassis.
@@ -847,17 +847,66 @@ def inventory(host=None, admin_username=None, admin_password=None):
     return ret
 
 
-def set_location(location, host=None,
-                 admin_username=None, admin_password=None,
-                 module=None):
+def set_chassis_location(location,
+                         host=None,
+                         admin_username=None,
+                         admin_password=None):
+    '''
+    Set the location of the chassis.
+
+    location
+        The name of the location to be set on the chassis.
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dracr.set_chassis_location location-name host=111.222.333.444 admin_username=root admin_password=secret
+
+    '''
     return __execute_cmd('setsysinfo -c chassislocation {0}'.format(location),
                          host=host, admin_username=admin_username,
                          admin_password=admin_password)
 
 
+def get_chassis_location(host=None,
+                         admin_username=None,
+                         admin_password=None):
+    '''
+    Get the location of the chassis.
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dracr.set_chassis_location host=111.222.333.444 admin_username=root admin_password=secret
+
+    '''
+    return system_info(host=host,
+                       admin_username=admin_username,
+                       admin_password=admin_password)['Chassis Information']['Chassis Location']
+
+
 def set_general(cfgsec, cfgvar, val, host=None,
-                admin_username=None, admin_password=None,
-                module=None):
+                admin_username=None, admin_password=None):
     return __execute_cmd('config -g {0} -o {1} {2}'
                          .format(cfgsec, cfgvar, val),
                          host=host,
