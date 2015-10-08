@@ -210,12 +210,9 @@ def latest_version(*names, **kwargs):
     names = sorted(list(set(names)))
     package_info = info_available(*names)
     for name in names:
-        pkg_info = package_info.get(name)
-        status = pkg_info.get('status', '').lower()
-        if pkg_info is not None and status.startswith('not installed') or status.startswith('out-of-date'):
-            ret[name] = pkg_info.get('version')
-        else:
-            ret[name] = ''
+        pkg_info = package_info.get(name, {})
+        if pkg_info.get('status', '').lower() in ['not installed', 'out-of-date']:
+            ret[name] = pkg_info
 
     return ret
 
