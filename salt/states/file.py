@@ -1348,7 +1348,7 @@ def managed(name,
 
     # If no source is specified, set replace to False, as there is nothing
     # to replace the file with.
-    src_defined = source or contents or contents_pillar or contents_grains
+    src_defined = source or contents is not None or contents_pillar or contents_grains
     if not src_defined and replace:
         replace = False
         log.warning(
