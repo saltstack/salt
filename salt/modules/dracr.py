@@ -111,6 +111,17 @@ def __execute_ret(command, host=None,
     if cmd['retcode'] != 0:
         log.warning('racadm return an exit code \'{0}\'.'
                     .format(cmd['retcode']))
+    else:
+        fmtlines = []
+        for l in cmd['stdout'].splitlines():
+            if l.startswith('Security Alert'):
+                continue
+            if l.startswith('Continuing execution'):
+                continue
+            if len(l.strip()) == 0:
+                continue
+            fmtlines.append(l)
+        cmd['stdout'] = '\n'.join(fmtlines)
 
     return cmd
 
@@ -912,3 +923,18 @@ def set_general(cfgsec, cfgvar, val, host=None,
                          host=host,
                          admin_username=admin_username,
                          admin_password=admin_password)
+
+
+def get_general(cfgsec, cfgvar, host=None,
+                admin_username=None, admin_password=None,
+                module=None):
+    r = __execute_ret('getconfig -g {0} -o {1}'
+                         .format(cfgsec, cfgvar),
+                         host=host,
+                         admin_username=admin_username,
+                         admin_password=admin_password)
+
+    if r['retcode'] == 0:
+        return r['stdout']
+    else:
+        return r
