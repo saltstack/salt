@@ -244,6 +244,13 @@ def clear_git_lock(role, remote=None):
     Remove the update locks for Salt components (gitfs, git_pillar, winrepo)
     which use gitfs backend code from salt.utils.gitfs.
 
+    .. note::
+        Running :py:func:`cache.clear_all <salt.runners.cache.clear_all>` will
+        not include this function as it does for pillar, grains, and mine.
+
+        Additionally, executing this function with a ``role`` of ``gitfs`` is
+        equivalent to running ``salt-run fileserver.clear_lock backend=git``.
+
     role
         Which type of lock to remove (``gitfs``, ``git_pillar``, or
         ``winrepo``)
@@ -252,6 +259,12 @@ def clear_git_lock(role, remote=None):
         If specified, then any remotes which contain the passed string will
         have their lock cleared. For example, a ``remote`` value of **github**
         will remove the lock from all github.com remotes.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.clear_git_lock git_pillar
     '''
     if role == 'gitfs':
         git_objects = [salt.utils.gitfs.GitFS(__opts__)]
