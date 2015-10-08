@@ -170,7 +170,7 @@ class SPMClient(object):
                 'Package {0} already installed, not installing again'.format(formula_def['name'])
             )
 
-        if 'dependencies' in formula_def:
+        if 'dependencies' in formula_def or 'optional' in formula_def or 'recommended' in formula_def:
             self.repo_metadata = self._get_repo_metadata()
             self.avail_pkgs = {}
             for repo in self.repo_metadata:
@@ -179,13 +179,31 @@ class SPMClient(object):
                 for pkg in self.repo_metadata[repo]['packages']:
                     self.avail_pkgs[pkg] = repo
 
-            needs, unavail = self._resolve_deps(formula_def)
+            needs, unavail, optional, recommended = self._resolve_deps(formula_def)
 
             if len(unavail) > 0:
                 raise SPMPackageError(
                     'Cannot install {0}, the following dependencies are needed:\n\n{1}'.format(
                         formula_def['name'], '\n'.join(unavail))
                 )
+
+            if optional:
+                self.ui.status('The following dependencies are optional:')
+                for dep_pkg in optional:
+                    pkg_info = self._pkgdb_fun('info', formula_def['name'])
+                    if isinstance(pkg_info, dict):
+                        self.ui.status('{0} [Installed]').format(dep_pkg)
+                    else:
+                        self.ui.status(dep_pkg)
+
+            if recommended:
+                self.ui.status('The following dependencies are recommended:')
+                for dep_pkg in recommended:
+                    pkg_info = self._pkgdb_fun('info', formula_def['name'])
+                    if isinstance(pkg_info, dict):
+                        self.ui.status('{0} [Installed]').format(dep_pkg)
+                    else:
+                        self.ui.status(dep_pkg)
 
         if pkg_name is None:
             msg = 'Installing package from file {0}'.format(pkg_file)
@@ -270,6 +288,9 @@ class SPMClient(object):
             else:
                 cant_has.append(dep)
 
+        optional = formula_def.get('optional', '').split(',')
+        recommended = formula_def.get('recommended', '').split(',')
+
         inspected = []
         to_inspect = can_has.copy()
         while len(to_inspect) > 0:
@@ -285,11 +306,13 @@ class SPMClient(object):
             repo_packages = repo_contents.get('packages', {})
             dep_formula = repo_packages.get(dep, {}).get('info', {})
 
-            also_can, also_cant = self._resolve_deps(dep_formula)
+            also_can, also_cant, opt_dep, rec_dep = self._resolve_deps(dep_formula)
             can_has.update(also_can)
             cant_has = sorted(set(cant_has + also_cant))
+            optional = sorted(set(optional + opt_dep))
+            recommended = sorted(set(recommended + rec_dep))
 
-        return can_has, cant_has
+        return can_has, cant_has, optional, recommended
 
     def _traverse_repos(self, callback, repo_name=None):
         '''
