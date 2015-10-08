@@ -928,7 +928,7 @@ def remove_lock(packages, **kwargs):  # pylint: disable=unused-argument
     return {'removed': len(removed), 'not_found': missing}
 
 
-def add_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
+def add_lock(packages, **kwargs):  # pylint: disable=unused-argument
     '''
     Add a package lock. Specify packages to lock by exact name.
 
@@ -941,10 +941,9 @@ def add_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         salt '*' pkg.add_lock pkgs='["foo", "bar"]'
     '''
     locks = list_locks()
-    packages = []
     added = []
     try:
-        packages = list(__salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys())
+        packages = list(__salt__['pkg_resource.parse_targets'](packages)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
