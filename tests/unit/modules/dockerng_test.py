@@ -51,6 +51,18 @@ class DockerngTestCase(TestCase):
                 self.assertEqual(ret,
                                  {'host': {'interfaces': {'mocked': None}}})
 
+    def test_ps_with_filters(self):
+        '''
+        Check that dockerng.ps accept filters parameter.
+        '''
+        client = MagicMock()
+        with patch.dict(dockerng_mod.__context__,
+                        {'docker.client': client}):
+            dockerng_mod.ps_(filters={'label': 'KEY'})
+            client.containers.assert_called_once_with(
+                all=True,
+                filters={'label': 'KEY'})
+
     @patch.object(dockerng_mod, '_get_exec_driver')
     def test_check_mine_cache_is_refreshed_on_container_change_event(self, _):
         '''
