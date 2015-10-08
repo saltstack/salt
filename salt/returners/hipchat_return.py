@@ -205,6 +205,7 @@ def _query(function,
                 data['notify'] = 0
             data = _urlencode(data)
     elif api_version == 'v2':
+        headers['Content-Type'] = 'application/json'
         headers['Authorization'] = 'Bearer {0}'.format(api_key)
         if data:
             data = json.dumps(data)
