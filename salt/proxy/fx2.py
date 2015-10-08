@@ -50,8 +50,8 @@ def grains():
     '''
     if not GRAINS_CACHE:
         r = __salt__['dracr.system_info'](host=DETAILS['host'],
-                                         admin_username=DETAILS['admin_username'],
-                                         admin_password=DETAILS['admin_password'])
+                                          admin_username=DETAILS['admin_username'],
+                                          admin_password=DETAILS['admin_password'])
         GRAINS_CACHE = r
     return GRAINS_CACHE
 
