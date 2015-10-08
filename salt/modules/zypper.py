@@ -879,13 +879,19 @@ def clean_locks():
 
         salt '*' pkg.clean_locks
     '''
-    if not os.path.exists(LOCKS):
-        return False
+    LCK = "removed"
+    out = {LCK: 0}
+    if not os.path.exists("/etc/zypp/locks"):
+        return out
 
-    cmd = ('zypper --non-interactive cl')
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    doc = dom.parseString(__salt__['cmd.run']('zypper --non-interactive -x cl', output_loglevel='trace'))
+    for node in doc.getElementsByTagName("message"):
+        text = node.childNodes[0].nodeValue.lower()
+        if text.startswith(LCK):
+            out[LCK] = text.split(" ")[1]
+            break
 
-    return True
+    return out
 
 
 def remove_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
