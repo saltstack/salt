@@ -202,7 +202,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    ret = {}
+    ret = dict()
 
     if not names:
         return ret
