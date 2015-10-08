@@ -58,7 +58,7 @@ def __execute_cmd(command, host=None,
         # or all switches in a chassis.  Allow
         # user to say 'module=ALL_SERVER' or 'module=ALL_SWITCH'
         if module.startswith('ALL_'):
-            modswitch = '-a '+module[module.index('_')+1:len(module)].lower()
+            modswitch = '-a ' + module[module.index('_') + 1:len(module)].lower()
         else:
             modswitch = '-m {0}'.format(module)
     else:
@@ -164,10 +164,10 @@ def set_niccfg(ip, subnet, gateway, dhcp=False,
     else:
         cmdstr += '-s ' + ip + ' ' + subnet + ' ' + gateway
 
-    ret = __execute_cmd(cmdstr, host=host,
-                        admin_username=admin_username,
-                        admin_password=admin_password,
-                        module=module)
+    return __execute_cmd(cmdstr, host=host,
+                         admin_username=admin_username,
+                         admin_password=admin_password,
+                         module=module)
 
 
 def set_nicvlan(vlan=None,
@@ -191,8 +191,7 @@ def set_nicvlan(vlan=None,
 
 def network_info(host=None,
                  admin_username=None,
-                 admin_password=None,
-                 module=None):
+                 admin_password=None):
     '''
     Return Network Configuration
 
@@ -215,9 +214,10 @@ def network_info(host=None,
     return __parse_drac(cmd['stdout'])
 
 
-def nameservers(ns, host=None,
-                admin_username=None, admin_password=None,
-                module=None):
+def nameservers(ns,
+                host=None,
+                admin_username=None,
+                admin_password=None):
     '''
     Configure the nameservers on the DRAC
 
@@ -245,8 +245,7 @@ def nameservers(ns, host=None,
 
 
 def syslog(server, enable=True, host=None,
-           admin_username=None, admin_password=None,
-           module=None):
+           admin_username=None, admin_password=None):
     '''
     Configure syslog remote logging, by default syslog will automatically be
     enabled if a server is specified. However, if you want to disable syslog
@@ -270,10 +269,10 @@ def syslog(server, enable=True, host=None,
                          admin_password=admin_password)
 
 
-def email_alerts(action, host=None,
+def email_alerts(action,
+                 host=None,
                  admin_username=None,
-                 admin_password=None,
-                 module=None):
+                 admin_password=None):
     '''
     Enable/Disable email alerts
 
@@ -297,8 +296,7 @@ def email_alerts(action, host=None,
 
 def list_users(host=None,
                admin_username=None,
-               admin_password=None,
-               module=None):
+               admin_password=None):
     '''
     List all DRAC users
 
@@ -341,11 +339,11 @@ def list_users(host=None,
     return users
 
 
-def delete_user(username, uid=None,
+def delete_user(username,
+                uid=None,
                 host=None,
                 admin_username=None,
-                admin_password=None,
-                module=None):
+                admin_password=None):
     '''
     Delete a user
 
@@ -372,8 +370,7 @@ def delete_user(username, uid=None,
 
 
 def change_password(username, password, uid=None, host=None,
-                    admin_username=None, admin_password=None,
-                    module=None):
+                    admin_username=None, admin_password=None):
     '''
     Change user's password
 
@@ -419,13 +416,15 @@ def deploy_password(username, password, host=None, admin_username=None,
 def deploy_snmp(snmp, host=None, admin_username=None,
                 admin_password=None, module=None):
     return __execute_cmd('deploy -v SNMPv2 {0} ro'.format(snmp),
-        host=host, admin_username=admin_username,
-        admin_password=admin_password, module=module
-    )
+                         host=host,
+                         admin_username=admin_username,
+                         admin_password=admin_password,
+                         module=module)
+
+
 def create_user(username, password, permissions,
                 users=None, host=None,
-                admin_username=None, admin_password=None,
-                module=None):
+                admin_username=None, admin_password=None):
     '''
     Create user accounts
 
@@ -493,8 +492,7 @@ def create_user(username, password, permissions,
 
 def set_permissions(username, permissions,
                     uid=None, host=None,
-                    admin_username=None, admin_password=None,
-                    module=None):
+                    admin_username=None, admin_password=None):
     '''
     Configure users permissions
 
@@ -549,8 +547,7 @@ def set_permissions(username, permissions,
 
 
 def set_snmp(community, host=None,
-             admin_username=None, admin_password=None,
-             module=None):
+             admin_username=None, admin_password=None):
     '''
     Configure SNMP community string
 
@@ -568,8 +565,7 @@ def set_snmp(community, host=None,
 
 
 def set_network(ip, netmask, gateway, host=None,
-                admin_username=None, admin_password=None,
-                module=None):
+                admin_username=None, admin_password=None):
     '''
     Configure Network
 
@@ -587,8 +583,8 @@ def set_network(ip, netmask, gateway, host=None,
 
 
 def server_reboot(host=None,
-                  admin_username=None, admin_password=None,
-                  module=None):
+                  admin_username=None,
+                  admin_password=None):
     '''
     Issues a power-cycle operation on the managed server. This action is
     similar to pressing the power button on the system's front panel to
@@ -606,8 +602,8 @@ def server_reboot(host=None,
 
 
 def server_poweroff(host=None,
-                    admin_username=None, admin_password=None,
-                    module=None):
+                    admin_username=None,
+                    admin_password=None):
     '''
     Powers down the managed server.
 
@@ -623,8 +619,8 @@ def server_poweroff(host=None,
 
 
 def server_poweron(host=None,
-                   admin_username=None, admin_password=None,
-                   module=None):
+                   admin_username=None,
+                   admin_password=None):
     '''
     Powers up the managed server.
 
@@ -640,8 +636,8 @@ def server_poweron(host=None,
 
 
 def server_hardreset(host=None,
-                     admin_username=None, admin_password=None,
-                     module=None):
+                     admin_username=None,
+                     admin_password=None):
     '''
     Performs a reset (reboot) operation on the managed server.
 
@@ -657,8 +653,8 @@ def server_hardreset(host=None,
 
 
 def server_pxe(host=None,
-               admin_username=None, admin_password=None,
-               module=None):
+               admin_username=None,
+               admin_password=None):
     '''
     Configure server to PXE perform a one off PXE boot
 
@@ -684,7 +680,8 @@ def server_pxe(host=None,
 
 
 def get_slotname(host=None,
-                 admin_username=None, admin_password=None):
+                 admin_username=None,
+                 admin_password=None):
     slotraw = __execute_ret('getslotname',
                             host=host, admin_username=admin_username,
                             admin_password=admin_password)
