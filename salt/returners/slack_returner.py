@@ -40,8 +40,8 @@ Slack settings may also be configured as::
         from_name: user@email.com
 
     slack_profile:
-        api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        from_name: user@email.com
+        slack.api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        slack.from_name: user@email.com
 
     slack:
         profile: slack_profile

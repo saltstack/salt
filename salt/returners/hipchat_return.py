@@ -40,9 +40,9 @@ Hipchat settings may also be configured as:
       from_name: user@email.com
 
     hipchat_profile:
-      api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-      api_version: v1
-      from_name: user@email.com
+      hipchat.api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      hipchat.api_version: v1
+      hipchat.from_name: user@email.com
 
     hipchat:
       profile: hipchat_profile
