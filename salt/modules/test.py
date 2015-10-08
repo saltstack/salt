@@ -110,13 +110,8 @@ def ping():
 
         salt '*' test.ping
     '''
-    ping_cmd = __opts__['proxy']['proxytype'] + '.ping'
-    if salt.utils.is_proxy():
-        if __opts__.get('add_proxymodule_to_opts', False):
-            return __opts__['proxymodule'][ping_cmd]()
-        else:
-            return __proxy__[ping_cmd]()
-    else:
+
+    if not salt.utils.is_proxy():
         return True
     else:
         ping_cmd = __opts__['proxy']['proxytype'] + '.ping'
