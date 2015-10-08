@@ -64,6 +64,17 @@ def grains_refresh():
     return grains()
 
 
+def chconfig(cmd, *args, **kwargs):
+    # Strip the __pub_ keys...is there a better way to do this?
+    for k in kwargs.keys():
+        if k.startswith('__pub_'):
+            kwargs.pop(k)
+    if 'dracr.'+cmd not in __salt__:
+        return {'retcode': -1, 'message': 'dracr.' + cmd + ' is not available'}
+    else:
+        return __salt__['dracr.'+cmd](*args, **kwargs)
+
+
 def ping():
     '''
     Is the REST server up?
