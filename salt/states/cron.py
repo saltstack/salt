@@ -528,10 +528,11 @@ def file(name,
         ret['changes'] = {'diff': ret['changes']['diff']}
         ret['comment'] = 'Crontab for user {0} was updated'.format(user)
     elif ret['result']:
+        cron_ret = None
         ret['comment'] = 'Crontab for user {0} is in the correct ' \
                          'state'.format(user)
 
-    if cron_ret['retcode']:
+    if cron_ret and cron_ret['retcode']:
         ret['comment'] = 'Unable to update user {0} crontab {1}.' \
                          ' Error: {2}'.format(user, cron_path, cron_ret['stderr'])
         ret['result'] = False

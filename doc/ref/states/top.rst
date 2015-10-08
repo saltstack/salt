@@ -163,8 +163,8 @@ all minions which have an ID beginning with the string ``webserver`` will have t
 webserver state from the requested environment assigned to it.
 
 In this manner, a proposed change to a state could first be made in a state
-file in ``/srv/salt/dev`` and the applied to development webservers before moving
-the state into QA by copying the state file into ``/srv/salt/qa``.
+file in ``/srv/salt/dev`` and then be applied to development webservers before
+moving the state into QA by copying the state file into ``/srv/salt/qa``.
 
 
 Choosing an Environment to Target
