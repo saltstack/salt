@@ -164,6 +164,8 @@ def info_available(*names, **kwargs):
             ret[name] = nfo
         if nfo.get("status"):
             nfo['status'] = nfo.get("status").split(" ")[0]
+        if nfo.get("installed"):
+            nfo['installed'] = nfo.get("installed").lower() == "yes" and True or False
 
     return ret
 
