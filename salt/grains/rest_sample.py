@@ -2,13 +2,14 @@
 '''
 Generate baseline proxy minion grains
 '''
+import salt.utils
 __proxyenabled__ = ['rest_sample']
 
 __virtualname__ = 'rest_sample'
 
 
 def __virtual__():
-    if 'proxy' not in __opts__:
+    if not salt.utils.is_proxy():
         return False
     else:
         return __virtualname__
