@@ -31,8 +31,8 @@ XMPP settings may also be configured as::
         recipient: someone@xmpp.example.com
 
     xmpp_profile:
-        jid: user@xmpp.domain.com/resource
-        password: password
+        xmpp.jid: user@xmpp.domain.com/resource
+        xmpp.password: password
 
     xmpp:
         profile: xmpp_profile
