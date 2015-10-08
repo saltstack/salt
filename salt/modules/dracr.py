@@ -914,25 +914,22 @@ def get_chassis_location(host=None,
                        admin_password=admin_password)['Chassis Information']['Chassis Location']
 
 
-def set_general(cfgsec, cfgvar, val, host=None,
+def set_general(cfg_sec, cfg_var, val, host=None,
                 admin_username=None, admin_password=None):
-    return __execute_cmd('config -g {0} -o {1} {2}'
-                         .format(cfgsec, cfgvar, val),
+    return __execute_cmd('config -g {0} -o {1} {2}'.format(cfg_sec, cfg_var, val),
                          host=host,
                          admin_username=admin_username,
                          admin_password=admin_password)
 
 
-def get_general(cfgsec, cfgvar, host=None,
-                admin_username=None, admin_password=None,
-                module=None):
-    r = __execute_ret('getconfig -g {0} -o {1}'
-                         .format(cfgsec, cfgvar),
-                         host=host,
-                         admin_username=admin_username,
-                         admin_password=admin_password)
+def get_general(cfg_sec, cfg_var, host=None,
+                admin_username=None, admin_password=None):
+    ret = __execute_ret('getconfig -g {0} -o {1}'.format(cfg_sec, cfg_var),
+                        host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
 
-    if r['retcode'] == 0:
-        return r['stdout']
+    if ret['retcode'] == 0:
+        return ret['stdout']
     else:
-        return r
+        return ret
