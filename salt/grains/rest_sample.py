@@ -2,7 +2,9 @@
 '''
 Generate baseline proxy minion grains
 '''
+import salt
 import salt.utils
+
 __proxyenabled__ = ['rest_sample']
 
 __virtualname__ = 'rest_sample'
