@@ -176,6 +176,7 @@ import os
 
 # Import salt libs
 import salt.utils.gitfs
+import salt.utils.dictupdate
 from salt.exceptions import FileserverConfigError
 from salt.pillar import Pillar
 
@@ -245,10 +246,18 @@ def ext_pillar(minion_id, repo, pillar_dirs):
         pillar.init_remotes(repo, PER_REMOTE_OVERRIDES)
         pillar.checkout()
         ret = {}
+        merge_strategy = __opts__.get(
+            'pillar_source_merging_strategy',
+            'smart'
+        )
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
             opts['pillar_roots'] = {env: [pillar_dir]}
             local_pillar = Pillar(opts, __grains__, minion_id, env)
-            ret.update(local_pillar.compile_pillar(ext=False))
+            ret = salt.utils.dictupdate.merge(
+                ret,
+                local_pillar.compile_pillar(ext=False),
+                strategy=merge_strategy
+            )
         return ret
 
 
