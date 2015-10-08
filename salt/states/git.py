@@ -592,6 +592,7 @@ def latest(name,
                         base_rev = __salt__['git.rev_parse'](
                             target,
                             branch + '^{commit}',
+                            user=user,
                             ignore_retcode=True)
                     except CommandExecutionError as exc:
                         return _fail(
@@ -640,6 +641,7 @@ def latest(name,
                                     local_copy = __salt__['git.rev_parse'](
                                         target,
                                         desired_upstream,
+                                        user=user,
                                         ignore_retcode=True)
                                 except CommandExecutionError:
                                     pass
@@ -658,6 +660,7 @@ def latest(name,
                                     local_tag_sha1 = __salt__['git.rev_parse'](
                                         target,
                                         rev + '^{commit}',
+                                        user=user,
                                         ignore_retcode=True)
                                 except CommandExecutionError:
                                     # Shouldn't happen if the tag exists
