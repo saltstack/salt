@@ -529,7 +529,11 @@ def highstate(test=None,
     if 'pillarenv' in kwargs:
         opts['pillarenv'] = kwargs['pillarenv']
 
-    st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'), proxy=__proxy__)
+    try:
+        st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'), proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
+
     st_.push_active()
     try:
         ret = st_.call_highstate(
