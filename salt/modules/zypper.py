@@ -215,9 +215,6 @@ def latest_version(*names, **kwargs):
         else:
             ret[name] = ''
 
-    # Return a string if only one package name passed
-    if len(names) == 1 and len(ret):
-        return ret[names[0]]
     return ret
 
 
