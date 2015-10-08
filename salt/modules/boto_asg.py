@@ -583,8 +583,8 @@ def get_scaling_policy_arn(as_group, scaling_policy_name, region=None,
 
 
 def get_instances(name, lifecycle_state="InService", health_status="Healthy",
-                  attribute="private_ip_address", region=None, key=None,
-                  keyid=None, profile=None):
+                  attribute="private_ip_address", attributes=None, region=None,
+                  key=None, keyid=None, profile=None):
     '''
     return attribute of all instances in the named autoscale group.
 
@@ -614,5 +614,9 @@ def get_instances(name, lifecycle_state="InService", health_status="Healthy",
         instance_ids.append(i.instance_id)
     # get full instance info, so that we can return the attribute
     instances = ec2_conn.get_only_instances(instance_ids=instance_ids)
-    attributes = [getattr(instance, attribute) for instance in instances]
-    return [attribute.encode("ascii") if attribute is not None else None for attribute in attributes]
+    if attributes:
+        return [[getattr(instance, attr).encode("ascii") for attr in attributes] for instance in instances]
+    else:
+        # properly handle case when not all instances have the requested attribute
+        return [getattr(instance, attribute).encode("ascii") for instance in instances if getattr(instance, attribute)]
+    return [getattr(instance, attribute).encode("ascii") for instance in instances]
