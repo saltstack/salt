@@ -574,7 +574,8 @@ def find_job(jid):
 
 def find_cached_job(jid):
     '''
-    Return the data for a specific cached job id
+    Return the data for a specific cached job id. Note this only works if
+    cache_jobs has previously been set to True on the minion.
 
     CLI Example:
 
