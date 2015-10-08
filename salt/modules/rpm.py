@@ -434,7 +434,7 @@ def info(*packages):
     if call['retcode'] != 0:
         comment = ''
         if 'stderr' in call:
-            comment += call['stderr']
+            comment += (call['stderr'] or call['stdout'])
         raise CommandExecutionError('{0}'.format(comment))
     else:
         out = call['stdout']
