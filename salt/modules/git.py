@@ -2486,7 +2486,7 @@ def remote_refs(url,
     except ValueError as exc:
         raise SaltInvocationError(exc.__str__())
     output = _git_run(command,
-                      user=user,
+                      runas=user,
                       identity=identity,
                       ignore_retcode=ignore_retcode)['stdout']
     ret = {}
