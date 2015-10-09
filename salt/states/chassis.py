@@ -265,7 +265,7 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
     if snmp:
         snmp_ret = __salt__['chassis.cmd']('deploy_snmp', password, module=name)
 
-    if any([password, snmp, net, dhcp]) is False:
+    if any([password_ret, snmp_ret, net_ret, dhcp_ret]) is False:
         ret['result'] = False
         ret['comment'] = 'There was an error setting the switch {0}.'.format(name)
 
