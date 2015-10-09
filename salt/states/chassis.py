@@ -207,8 +207,6 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
            'changes': {},
            'comment': ''}
 
-
-
     current_nic = __salt__['chassis.cmd']('get_niccfg', name)
 
     if ip or netmask or gateway:
@@ -220,22 +218,22 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
             ip = current_nic['Network']['Gateway']
 
     if current_nic['Network']['DHCP Enabled'] == 0 and dhcp:
-        ret['changes'].update({'DHCP': { 'Old': { 'DHCP Enabled': current_nic['Network']['DHCP Enabled'] },
-                                         'New': { 'DHCP Enabled': dhcp }}})
+        ret['changes'].update({'DHCP': {'Old': {'DHCP Enabled': current_nic['Network']['DHCP Enabled']},
+                                        'New': {'DHCP Enabled': dhcp}}})
 
     if ((ip or netmask or gateway) and not dhcp and (ip != current_nic['Network']['IP Address'] or
                                                              netmask != current_nic['Network']['Subnet Mask'] or
                                                              gateway != current_nic['Network']['Gateway'])):
-        ret['changes'].update({'IP': { 'Old': current_nic['Network'],
-                                       'New': { 'IP Address': ip,
-                                                'Subnet Mask': netmask,
-                                                'Gateway': gateway }}})
+        ret['changes'].update({'IP': {'Old': current_nic['Network'],
+                                      'New': {'IP Address': ip,
+                                              'Subnet Mask': netmask,
+                                              'Gateway': gateway}}})
 
     if password:
-        ret['changes'].update({ 'New': {'Password': '*****'}})
+        ret['changes'].update({'New': {'Password': '*****'}})
 
     if snmp:
-        ret['changes'].update({ 'New': {'SNMP': '*****'}})
+        ret['changes'].update({'New': {'SNMP': '*****'}})
 
     if ret['changes'] == {}:
         ret['comment'] = 'Switch ' + name + ' is already in desired state'
@@ -249,6 +247,7 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
     # Finally, set the necessary configurations on the chassis.
     if dhcp:
         dhcp = __salt__['chassis.cmd']('set_niccfg module={0} dhcp={1}'.format(name, dhcp))
+    net = None
     if ip or netmask or gateway:
         net = __salt__['chassis.cmd']('set_niccfg module={0} ip={1} subnet={2} gateway={3}'.format(name,
                                                                                                    ip,
