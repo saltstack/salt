@@ -548,7 +548,8 @@ def _elb_present(
             msg = 'Subnets {0} do not map to a valid vpc id.'.format(subnets)
             raise SaltInvocationError(msg)
         security_groups = __salt__['boto_secgroup.convert_to_group_ids'](
-            security_groups, vpc_id, region, key, keyid, profile
+            security_groups, vpc_id=vpc_id, region=region, key=key,
+            keyid=keyid, profile=profile
         )
         if not security_groups:
             msg = 'Security groups {0} do not map to valid security group ids.'
@@ -628,11 +629,11 @@ def _listeners_present(
 
     expected_listeners_by_tuple = {}
     for l in listeners:
-        key = __salt__['boto_elb._listener_dict_to_tuple'](l)
+        key = __salt__['boto_elb.listener_dict_to_tuple'](l)
         expected_listeners_by_tuple[key] = l
     actual_listeners_by_tuple = {}
     for l in lb['listeners']:
-        key = __salt__['boto_elb._listener_dict_to_tuple'](l)
+        key = __salt__['boto_elb.listener_dict_to_tuple'](l)
         actual_listeners_by_tuple[key] = l
 
     to_delete = []
@@ -651,10 +652,10 @@ def _listeners_present(
             msg.append('ELB {0} set to have listeners modified:'.format(name))
             for listener in to_create:
                 msg.append('Listener {0} added.'.format(
-                        __salt__['boto_elb._listener_dict_to_tuple'](listener)))
+                        __salt__['boto_elb.listener_dict_to_tuple'](listener)))
             for listener in to_delete:
                 msg.append('Listener {0} deleted.'.format(
-                        __salt__['boto_elb._listener_dict_to_tuple'](listener)))
+                        __salt__['boto_elb.listener_dict_to_tuple'](listener)))
         else:
             msg.append('Listeners already set on ELB {0}.'.format(name))
         ret['comment'] = ' '.join(msg)
