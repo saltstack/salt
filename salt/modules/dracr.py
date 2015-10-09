@@ -138,7 +138,7 @@ def system_info(host=None,
 
     .. code-block:: bash
 
-        salt dell drac.system_info
+        salt dell dracr.system_info
     '''
     cmd = __execute_ret('getsysinfo', host=host,
                         admin_username=admin_username,
@@ -202,7 +202,7 @@ def network_info(host=None,
 
     .. code-block:: bash
 
-        salt dell drac.network_info
+        salt dell dracr.network_info
     '''
 
     inv = inventory(host=host, admin_username=admin_username, admin_password=admin_password)
@@ -221,7 +221,7 @@ def network_info(host=None,
         log.warning('racadm return an exit code \'{0}\'.'
                     .format(cmd['retcode']))
 
-    cmd['stdout'] = 'Network:\n' + 'Device = ' + module + '\n' +\
+    cmd['stdout'] = 'Network:\n' + 'Device = ' + module + '\n' + \
                     cmd['stdout']
     return __parse_drac(cmd['stdout'])
 
@@ -237,8 +237,8 @@ def nameservers(ns,
 
     .. code-block:: bash
 
-        salt dell drac.nameservers [NAMESERVERS]
-        salt dell drac.nameservers ns1.example.com ns2.example.com
+        salt dell dracr.nameservers [NAMESERVERS]
+        salt dell dracr.nameservers ns1.example.com ns2.example.com
     '''
     if len(ns) > 2:
         log.warning('racadm only supports two nameservers')
@@ -267,8 +267,8 @@ def syslog(server, enable=True, host=None,
 
     .. code-block:: bash
 
-        salt dell drac.syslog [SYSLOG IP] [ENABLE/DISABLE]
-        salt dell drac.syslog 0.0.0.0 False
+        salt dell dracr.syslog [SYSLOG IP] [ENABLE/DISABLE]
+        salt dell dracr.syslog 0.0.0.0 False
     '''
     if enable and __execute_cmd('config -g cfgRemoteHosts -o '
                                 'cfgRhostsSyslogEnable 1'):
@@ -292,8 +292,8 @@ def email_alerts(action,
 
     .. code-block:: bash
 
-        salt dell drac.email_alerts True
-        salt dell drac.email_alerts False
+        salt dell dracr.email_alerts True
+        salt dell dracr.email_alerts False
     '''
 
     if action:
@@ -316,7 +316,7 @@ def list_users(host=None,
 
     .. code-block:: bash
 
-        salt dell drac.list_users
+        salt dell dracr.list_users
     '''
     users = {}
     _username = ''
@@ -363,8 +363,8 @@ def delete_user(username,
 
     .. code-block:: bash
 
-        salt dell drac.delete_user [USERNAME] [UID - optional]
-        salt dell drac.delete_user diana 4
+        salt dell dracr.delete_user [USERNAME] [UID - optional]
+        salt dell dracr.delete_user diana 4
     '''
     if uid is None:
         user = list_users()
@@ -390,10 +390,10 @@ def change_password(username, password, uid=None, host=None,
 
     .. code-block:: bash
 
-        salt dell drac.change_password [USERNAME] [PASSWORD] uid=[OPTIONAL]
+        salt dell dracr.change_password [USERNAME] [PASSWORD] uid=[OPTIONAL]
             host=<remote DRAC> admin_username=<DRAC user>
             admin_password=<DRAC PW>
-        salt dell drac.change_password diana secret
+        salt dell dracr.change_password diana secret
 
     Note that if only a username is specified then this module will look up
     details for all 16 possible DRAC users.  This is time consuming, but might
@@ -444,8 +444,8 @@ def create_user(username, password, permissions,
 
     .. code-block:: bash
 
-        salt dell drac.create_user [USERNAME] [PASSWORD] [PRIVELEGES]
-        salt dell drac.create_user diana secret login,test_alerts,clear_logs
+        salt dell dracr.create_user [USERNAME] [PASSWORD] [PRIVELEGES]
+        salt dell dracr.create_user diana secret login,test_alerts,clear_logs
 
     DRAC Privileges
       * login                   : Login to iDRAC
@@ -512,9 +512,9 @@ def set_permissions(username, permissions,
 
     .. code-block:: bash
 
-        salt dell drac.set_permissions [USERNAME] [PRIVELEGES]
+        salt dell dracr.set_permissions [USERNAME] [PRIVELEGES]
              [USER INDEX - optional]
-        salt dell drac.set_permissions diana login,test_alerts,clear_logs 4
+        salt dell dracr.set_permissions diana login,test_alerts,clear_logs 4
 
     DRAC Privileges
       * login                   : Login to iDRAC
@@ -567,8 +567,8 @@ def set_snmp(community, host=None,
 
     .. code-block:: bash
 
-        salt dell drac.set_snmp [COMMUNITY]
-        salt dell drac.set_snmp public
+        salt dell dracr.set_snmp [COMMUNITY]
+        salt dell dracr.set_snmp public
     '''
     return __execute_cmd('config -g cfgOobSnmp -o '
                          'cfgOobSnmpAgentCommunity {0}'.format(community),
@@ -585,8 +585,8 @@ def set_network(ip, netmask, gateway, host=None,
 
     .. code-block:: bash
 
-        salt dell drac.set_network [DRAC IP] [NETMASK] [GATEWAY]
-        salt dell drac.set_network 192.168.0.2 255.255.255.0 192.168.0.1
+        salt dell dracr.set_network [DRAC IP] [NETMASK] [GATEWAY]
+        salt dell dracr.set_network 192.168.0.2 255.255.255.0 192.168.0.1
     '''
     return __execute_cmd('setniccfg -s {0} {1} {2}'.format(
         ip, netmask, gateway, host=host, admin_username=admin_username,
@@ -596,72 +596,135 @@ def set_network(ip, netmask, gateway, host=None,
 
 def server_reboot(host=None,
                   admin_username=None,
-                  admin_password=None):
+                  admin_password=None,
+                  module=None):
     '''
     Issues a power-cycle operation on the managed server. This action is
     similar to pressing the power button on the system's front panel to
     power down and then power up the system.
 
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    module
+        The element to reboot on the chassis such as a blade. If not provided,
+        the chassis will be rebooted.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt dell drac.server_reboot
+        salt dell dracr.server_reboot
+        salt dell dracr.server_reboot module=server-1
+
     '''
     return __execute_cmd('serveraction powercycle',
                          host=host, admin_username=admin_username,
-                         admin_password=admin_password)
+                         admin_password=admin_password, module=module)
 
 
 def server_poweroff(host=None,
                     admin_username=None,
-                    admin_password=None):
+                    admin_password=None,
+                    module=None):
     '''
     Powers down the managed server.
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    module
+        The element to power off on the chassis such as a blade. If not provided,
+        the chassis will be powered off.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt dell drac.server_poweroff
+        salt dell dracr.server_poweroff
+        salt dell dracr.server_poweroff module=server-1
     '''
     return __execute_cmd('serveraction powerdown',
                          host=host, admin_username=admin_username,
-                         admin_password=admin_password)
+                         admin_password=admin_password, module=module)
 
 
 def server_poweron(host=None,
                    admin_username=None,
-                   admin_password=None):
+                   admin_password=None,
+                   module=None):
     '''
     Powers up the managed server.
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    module
+        The element to power on located on the chassis such as a blade. If
+        not provided, the chassis will be powered on.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt dell drac.server_poweron
+        salt dell dracr.server_poweron
+        salt dell dracr.server_poweron module=server-1
     '''
     return __execute_cmd('serveraction powerup',
                          host=host, admin_username=admin_username,
-                         admin_password=admin_password)
+                         admin_password=admin_password, module=module)
 
 
 def server_hardreset(host=None,
                      admin_username=None,
-                     admin_password=None):
+                     admin_password=None,
+                     module=None):
     '''
     Performs a reset (reboot) operation on the managed server.
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    module
+        The element to hard reset on the chassis such as a blade. If
+        not provided, the chassis will be reset.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt dell drac.server_hardreset
+        salt dell dracr.server_hardreset
+        salt dell dracr.server_hardreset module=server-1
     '''
     return __execute_cmd('serveraction hardreset',
-                         host=host, admin_username=admin_username,
-                         admin_password=admin_password)
+                         host=host,
+                         admin_username=admin_username,
+                         admin_password=admin_password,
+                         module=module)
 
 
 def server_powerstatus(host=None,
@@ -705,7 +768,7 @@ def server_pxe(host=None,
 
     .. code-block:: bash
 
-        salt dell drac.server_pxe
+        salt dell dracr.server_pxe
     '''
     if __execute_cmd('config -g cfgServerInfo -o cfgServerFirstBootDevice PXE',
                      host=host, admin_username=admin_username,

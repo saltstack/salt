@@ -17,6 +17,10 @@ Example managing a Dell chassis:
         - slot_names:
           - 1: my-slot-name
           - 2: my-other-slot-name
+        - blade_power:
+          - server-1: on
+          - server-2: off
+          - server-3: powercycle
 
 '''
 
