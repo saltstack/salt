@@ -239,10 +239,14 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
                                               'Gateway': gateway}}})
 
     if password:
-        ret['changes'].update({'New': {'Password': '*****'}})
+        if 'New' not in ret['changes']:
+            ret['changes']['New'] = {}
+        ret['changes']['New'].update({'Password': '*****'})
 
     if snmp:
-        ret['changes'].update({'New': {'SNMP': '*****'}})
+        if 'New' not in ret['changes']:
+            ret['changes']['New'] = {}
+        ret['changes']['New'].update({'SNMP': '*****'})
 
     if ret['changes'] == {}:
         ret['comment'] = 'Switch ' + name + ' is already in desired state'
@@ -258,7 +262,7 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
     if dhcp:
         dhcp_ret = __salt__['chassis.cmd']('set_niccfg', module=name, dhcp=dhcp)
     if ip or netmask or gateway:
-        net_ret = __salt__['chassis.cmd']('set_niccfg', module=name, ip=ip, netmask=netmask, gateway=gateway)
+        net_ret = __salt__['chassis.cmd']('set_niccfg', ip, netmask, gateway, module=name)
     if password:
         password_ret = __salt__['chassis.cmd']('deploy_password', 'root', password, module=name)
 
