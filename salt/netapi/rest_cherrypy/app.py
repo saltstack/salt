@@ -699,7 +699,7 @@ cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
         salt_auth_tool, priority=60)
 cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
         hypermedia_in)
-cherrypy.tools.cors_tool = cherrypy.Tool('before_handler',
+cherrypy.tools.cors_tool = cherrypy.Tool('before_request_body',
         cors_tool, priority=30)
 cherrypy.tools.lowdata_fmt = cherrypy.Tool('before_handler',
         lowdata_fmt, priority=40)
