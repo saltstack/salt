@@ -29,7 +29,7 @@ def __virtual__():
     return 'chassis.cmd' in __salt__
 
 
-def dell(name, location=None, mode=None, idrac_launch=None):
+def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None):
     '''
     Manaage a Dell Chassis.
 
@@ -52,6 +52,9 @@ def dell(name, location=None, mode=None, idrac_launch=None):
         - 0: Disabled (launch iDRAC using IP address)
         - 1: Enabled (launch iDRAC using DNS name)
 
+    slot_names
+        The names of the slots, provided as a list.
+
     Example:
 
     .. code-block:: yaml
@@ -62,18 +65,23 @@ def dell(name, location=None, mode=None, idrac_launch=None):
             - location: my-location
             - mode: 2
             - idrac_launch: 1
+            - slot_names:
+              - 1: my-slot-name
+              - 2: my-other-slot-name
     '''
     ret = {'name': name,
            'result': True,
            'changes': {},
            'comment': ''}
 
-    current_name = __salt__['chassis.cmd']('get_chassis_name')
-    current_location = __salt__['chassis.cmd']('get_chassis_location')
+    chassis_cmd = 'chassis.cmd'
+    current_name = __salt__[chassis_cmd]('get_chassis_name')
+    current_location = __salt__[chassis_cmd]('get_chassis_location')
     mode_cmd = 'cfgRacTuning cfgRacTuneChassisMgmtAtServer'
-    current_mode = __salt__['chassis.cmd']('get_general {0}'.format(mode_cmd))
+    current_mode = __salt__[chassis_cmd]('get_general {0}'.format(mode_cmd))
     launch_cmd = 'cfgRacTuning cfgRacTuneIdracDNSLaunchEnable'
-    current_launch_method = __salt__['chassis.cmd']('get_general {0}'.format(launch_cmd))
+    current_launch_method = __salt__[chassis_cmd]('get_general {0}'.format(launch_cmd))
+    current_slot_names = __salt__[chassis_cmd]('list_slotnames')
 
     if name != current_name:
         ret['changes'].update({'Name':
@@ -94,6 +102,15 @@ def dell(name, location=None, mode=None, idrac_launch=None):
         ret['changes'].update({'iDrac Launch Method':
                               {'Old': current_launch_method,
                                'New': idrac_launch}})
+#    if slot_names is None:
+#        slot_names = []
+#    for item in slot_names:
+#        slot_name = slot_names.get(item)
+#       current_slot_name = current_slot_names.get(item).get('slotname')
+#       if current_slot_name != slot_name:
+#            ret['changes'].update({'Slot Names':
+#                                  {'Old': {item: current_slot_name},
+#                                   'New': {item: slot_name}}})
 
     if ret['changes'] == {}:
         ret['comment'] = 'Dell chassis is already in the desired state.'
@@ -105,13 +122,13 @@ def dell(name, location=None, mode=None, idrac_launch=None):
         return ret
 
     # Finally, set the necessary configurations on the chassis.
-    name = __salt__['chassis.cmd']('set_chassis_name {0}'.format(name))
+    name = __salt__[chassis_cmd]('set_chassis_name {0}'.format(name))
     if location:
-        location = __salt__['chassis.cmd']('set_chassis_location {0}'.format(location))
+        location = __salt__[chassis_cmd]('set_chassis_location {0}'.format(location))
     if mode:
-        mode = __salt__['chassis.cmd']('set_general {0} {1}'.format(mode_cmd, mode))
+        mode = __salt__[chassis_cmd]('set_general {0} {1}'.format(mode_cmd, mode))
     if idrac_launch:
-        idrac_launch = __salt__['chassis.cmd']('set_general {0} {1}'.format(launch_cmd, idrac_launch))
+        idrac_launch = __salt__[chassis_cmd]('set_general {0} {1}'.format(launch_cmd, idrac_launch))
 
     if any([name, location, mode, idrac_launch]) is False:
         ret['result'] = False
@@ -119,3 +136,18 @@ def dell(name, location=None, mode=None, idrac_launch=None):
 
     ret['comment'] = 'Dell chassis was updated.'
     return ret
+
+
+def blade(name, idrac_dns, power):
+    '''
+    Manage Dell Blades via iDRAC.
+
+    name
+        The name of the blade.
+
+    idrac_dns
+
+
+    power
+
+    '''

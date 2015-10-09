@@ -681,9 +681,28 @@ def server_pxe(host=None,
     return False
 
 
-def get_slotname(host=None,
-                 admin_username=None,
-                 admin_password=None):
+def list_slotnames(host=None,
+                   admin_username=None,
+                   admin_password=None):
+    '''
+    List the names of all slots in the chassis.
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call --local dracr.list_slotnames host=111.222.333.444 admin_username=root admin_password=secret
+
+    '''
     slotraw = __execute_ret('getslotname',
                             host=host, admin_username=admin_username,
                             admin_password=admin_password)
@@ -713,8 +732,60 @@ def get_slotname(host=None,
     return slots
 
 
+def get_slotname(slot, host=None, admin_username=None, admin_password=None):
+    '''
+    Get the name of a slot number in the chassis.
+
+    slot
+        The number of the slot for which to obtain the name.
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call --local dracr.get_slotname 0 host=111.222.333.444 admin_username=root admin_password=secret
+
+    '''
+    slots = list_slotnames(host=host, admin_username=admin_username, admin_password=admin_password)
+    return slots[slot]
+
+
 def set_slotname(slot, name, host=None,
                  admin_username=None, admin_password=None):
+    '''
+    Set the name of a slot in a chassis.
+
+    slot
+        The slot number to change.
+
+    name
+        The name to set. Can only be 15 characters long.
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dracr.set_slotname 2 my-slotname host=111.222.333.444 admin_username=root admin_password=secret
+
+    '''
     return __execute_cmd('setslotname -i {0} {1}'.format(
         slot, name[0:14], host=host,
         admin_username=admin_username,
