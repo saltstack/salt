@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Manage Dell DRAC
+Manage Dell DRAC.
+
+.. versionadded:: 2015.8.2
 '''
 
 # Import python libs

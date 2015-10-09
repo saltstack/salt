@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 '''
-Manage Chassis via Salt Proxy.
+Manage chassis via Salt Proxies.
 
-Example using iDRAC:
+.. versionadded:: 2015.8.2
+
+Example managing a Dell chassis:
 
 .. code-block:: yaml
 
-    my-chassis:
-      chassis.named:
-        - name: my-chassis
-      chassis.located:
-        - name: my-location
-      chassis.mode_managed:
-        - name: 2
-      chassis.idrac_launched:
-        - name: 0
+        my-dell-chassis:
+          chassis.dell:
+            - name: my-dell-chassis
+            - location: my-location
+            - mode: 2
+            - idrac_launch: 1
 '''
 
 # Import python libs
@@ -30,144 +29,25 @@ def __virtual__():
     return 'chassis.cmd' in __salt__
 
 
-def named(name):
+def dell(name, location=None, mode=None, idrac_launch=None):
     '''
-    Ensure the chassis's name.
+    Manaage a Dell Chassis.
 
     name
-        The name the chassis should have.
+        The name of the chassis.
 
-    Example:
+    location
+        The location of the chassis.
 
-    .. code-block:: yaml
-
-        my-chassis:
-          chassis.named:
-            - name: my-chassis
-    '''
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': ''}
-
-    current_name = __salt__['chassis.cmd']('get_chassis_name')
-    if name == current_name:
-        ret['comment'] = 'Chassis name is up to date.'
-        return ret
-    elif __opts__['test']:
-        ret['result'] = None
-        ret['changes'] = {
-            'old': current_name,
-            'new': name
-        }
-        ret['comment'] = 'Chassis name will change.'
-        return ret
-
-    if __salt__['chassis.cmd']('set_chassis_name') is False:
-        ret['result'] = False
-        ret['comment'] = 'There was an error setting the name.'
-        return ret
-
-    ret['comment'] = 'Chassis name was set to {0}'.format(name)
-    return ret
-
-
-def located(name):
-    '''
-    Ensure the chassis's location.
-
-    name
-        The name of location the chassis should have.
-
-    Example:
-
-    .. code-block:: yaml
-
-        my-chassis-location:
-          chassis.located:
-            - name: my-chassis-location
-    '''
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': ''}
-
-    current_location = __salt__['chassis.cmd']('get_chassis_location')
-    if name == current_location:
-        ret['comment'] = 'Chassis location is up to date.'
-        return ret
-    elif __opts__['test']:
-        ret['result'] = None
-        ret['changes'] = {
-            'old': current_location,
-            'new': name
-        }
-        ret['comment'] = 'Chassis location will change.'
-        return ret
-
-    if __salt__['chassis.cmd']('set_chassis_name') is False:
-        ret['result'] = False
-        ret['comment'] = 'There was an error setting the location.'
-        return ret
-
-    ret['comment'] = 'Chassis location was set to {0}'.format(name)
-    return ret
-
-
-def mode_managed(name):
-    '''
-    Ensure the chassis management mode is configured appropriately.
-
-    name
-        The value the management mode should have. Viable options are:
+    mode
+        The management mode of the chassis. Viable options are:
 
         - 0: None
         - 1: Monitor
         - 2: Manage and Monitor
 
-    Example:
-
-    .. code-block:: yaml
-
-        my-chassis-management-mode:
-          chassis.mode_managed:
-            - name: 1
-
-    '''
-    ret = {'name': name,
-           'result': True,
-           'changes': {},
-           'comment': ''}
-
-    cmd = 'cfgRacTuning cfgRacTuneChassisMgmtAtServer'
-    current_mode = __salt__['chassis.cmd']('get_general {0}'.format(cmd))
-    if name == current_mode:
-        ret['comment'] = 'Chassis management mode is up to date.'
-        return ret
-    elif __opts__['test']:
-        ret['result'] = None
-        ret['changes'] = {
-            'old': current_mode,
-            'new': name
-        }
-        ret['comment'] = 'Chassis management mode will change.'
-        return ret
-
-    if __salt__['chassis.cmd']('set_general {0} {1}'.format(cmd, name)) is False:
-        ret['result'] = False
-        ret['comment'] = 'There was an error setting the management mode.'
-        return ret
-
-    ret['comment'] = 'Chassis management mode was set to {0}'.format(name)
-    return ret
-
-
-def idrac_launched(name):
-    '''
-    Ensure the iDRAC launch method is configured appropriately.
-
-    name
-        The value the launch method should have. Viable options are:
+    idrac_launch
+        The iDRAC launch method of the chassis. Viable options are:
 
         - 0: Disabled (launch iDRAC using IP address)
         - 1: Enabled (launch iDRAC using DNS name)
@@ -176,34 +56,66 @@ def idrac_launched(name):
 
     .. code-block:: yaml
 
-        my-iDRAC-launch-method:
-          chassis.idrac_launched:
-            - name: 1
-
+        my-dell-chassis:
+          chassis.dell:
+            - name: my-dell-chassis
+            - location: my-location
+            - mode: 2
+            - idrac_launch: 1
     '''
     ret = {'name': name,
            'result': True,
            'changes': {},
            'comment': ''}
 
-    cmd = 'cfgRacTuning cfgRacTuneIdracDNSLaunchEnable'
-    current_launch_method = __salt__['chassis.cmd']('get_general {0}'.format(cmd))
-    if name == current_launch_method:
-        ret['comment'] = 'Chassis iDRAC method is up to date.'
+    current_name = __salt__['chassis.cmd']('get_chassis_name')
+    current_location = __salt__['chassis.cmd']('get_chassis_location')
+    mode_cmd = 'cfgRacTuning cfgRacTuneChassisMgmtAtServer'
+    current_mode = __salt__['chassis.cmd']('get_general {0}'.format(mode_cmd))
+    launch_cmd = 'cfgRacTuning cfgRacTuneIdracDNSLaunchEnable'
+    current_launch_method = __salt__['chassis.cmd']('get_general {0}'.format(launch_cmd))
+
+    if name != current_name:
+        ret['changes'].update({'Name':
+                              {'Old': current_name,
+                               'New': name}})
+
+    if location != current_location:
+        ret['changes'].update({'Location':
+                              {'Old': current_location,
+                               'New': location}})
+
+    if mode != current_mode:
+        ret['changes'].update({'Management Mode':
+                              {'Old': current_mode,
+                               'New': mode}})
+
+    if idrac_launch != current_launch_method:
+        ret['changes'].update({'iDrac Launch Method':
+                              {'Old': current_launch_method,
+                               'New': idrac_launch}})
+
+    if ret['changes'] == {}:
+        ret['comment'] = 'Dell chassis is already in the desired state.'
         return ret
-    elif __opts__['test']:
+
+    if __opts__['test']:
         ret['result'] = None
-        ret['changes'] = {
-            'old': current_launch_method,
-            'new': name
-        }
-        ret['comment'] = 'The iDRAC launch method will change.'
+        ret['comment'] = 'Dell chassis configuration will change.'
         return ret
 
-    if __salt__['chassis.cmd']('set_general {0} {1}'.format(cmd, name)) is False:
+    # Finally, set the necessary configurations on the chassis.
+    name = __salt__['chassis.cmd']('set_chassis_name {0}'.format(name))
+    if location:
+        location = __salt__['chassis.cmd']('set_chassis_location {0}'.format(location))
+    if mode:
+        mode = __salt__['chassis.cmd']('set_general {0} {1}'.format(mode_cmd, mode))
+    if idrac_launch:
+        idrac_launch = __salt__['chassis.cmd']('set_general {0} {1}'.format(launch_cmd, idrac_launch))
+
+    if any([name, location, mode, idrac_launch]) is False:
         ret['result'] = False
-        ret['comment'] = 'There was an error setting the iDRAC launch method.'
-        return ret
+        ret['comment'] = 'There was an error setting the Dell chassis.'
 
-    ret['comment'] = 'The iDRAC launch method was set to {0}'.format(name)
+    ret['comment'] = 'Dell chassis was updated.'
     return ret
