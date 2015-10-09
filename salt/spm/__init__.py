@@ -569,7 +569,10 @@ class SPMClient(object):
         self.formula_conf = formula_conf
 
         formula_tar = tarfile.open(out_path, 'w:bz2')
-        formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
+        try:
+            formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
+        except TypeError:
+            formula_tar.add(self.abspath, formula_conf['name'], exclude=self._exclude)
         formula_tar.close()
 
         self.ui.status('Built package {0}'.format(out_path))
@@ -578,6 +581,9 @@ class SPMClient(object):
         '''
         Exclude based on opts
         '''
+        if isinstance(member, string_types):
+            return None
+
         for item in self.opts['spm_build_exclude']:
             if member.name.startswith('{0}/{1}'.format(self.formula_conf['name'], item)):
                 return None
