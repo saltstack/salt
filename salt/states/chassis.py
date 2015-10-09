@@ -136,18 +136,3 @@ def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None):
 
     ret['comment'] = 'Dell chassis was updated.'
     return ret
-
-
-def blade(name, idrac_dns, power):
-    '''
-    Manage Dell Blades via iDRAC.
-
-    name
-        The name of the blade.
-
-    idrac_dns
-
-
-    power
-
-    '''
