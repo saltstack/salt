@@ -168,6 +168,12 @@ def listener_dict_to_tuple(listener):
     '''
     Convert an ELB listener dict into a listener tuple used by certain parts of
     the AWS ELB API.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt myminion boto_elb.listener_dict_to_tuple '{"elb_port":80,"instance_port":80,"elb_protocol":"HTTP"}'
     '''
     # We define all listeners as complex listeners.
     if 'instance_protocol' not in listener:
