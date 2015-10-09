@@ -14,6 +14,10 @@ Example managing a Dell chassis:
         - location: my-location
         - mode: 2
         - idrac_launch: 1
+        - slot_names:
+          - 1: my-slot-name
+          - 2: my-other-slot-name
+
 '''
 
 # Import python libs
@@ -31,7 +35,7 @@ def __virtual__():
 
 def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None):
     '''
-    Manaage a Dell Chassis.
+    Manage a Dell Chassis.
 
     name
         The name of the chassis.
@@ -75,42 +79,50 @@ def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None):
            'comment': ''}
 
     chassis_cmd = 'chassis.cmd'
-    current_name = __salt__[chassis_cmd]('get_chassis_name')
-    current_location = __salt__[chassis_cmd]('get_chassis_location')
-    mode_cmd = 'cfgRacTuning cfgRacTuneChassisMgmtAtServer'
-    current_mode = __salt__[chassis_cmd]('get_general {0}'.format(mode_cmd))
-    launch_cmd = 'cfgRacTuning cfgRacTuneIdracDNSLaunchEnable'
-    current_launch_method = __salt__[chassis_cmd]('get_general {0}'.format(launch_cmd))
-    current_slot_names = __salt__[chassis_cmd]('list_slotnames')
+    cfg_tuning = 'cfgRacTuning'
+    mode_cmd = 'cfgRacTuneChassisMgmtAtServer'
+    launch_cmd = 'cfgRacTuneIdracDNSLaunchEnable'
 
+    current_name = __salt__[chassis_cmd]('get_chassis_name')
     if name != current_name:
         ret['changes'].update({'Name':
                               {'Old': current_name,
                                'New': name}})
 
-    if location != current_location:
-        ret['changes'].update({'Location':
-                              {'Old': current_location,
-                               'New': location}})
+    if location:
+        current_location = __salt__[chassis_cmd]('get_chassis_location')
+        if location != current_location:
+            ret['changes'].update({'Location':
+                                  {'Old': current_location,
+                                   'New': location}})
+    if mode:
+        current_mode = __salt__[chassis_cmd]('get_general', cfg_tuning, mode_cmd)
+        if mode != current_mode:
+            ret['changes'].update({'Management Mode':
+                                  {'Old': current_mode,
+                                   'New': mode}})
 
-    if mode != current_mode:
-        ret['changes'].update({'Management Mode':
-                              {'Old': current_mode,
-                               'New': mode}})
+    if idrac_launch:
+        current_launch_method = __salt__[chassis_cmd]('get_general', cfg_tuning, launch_cmd)
+        if idrac_launch != current_launch_method:
+            ret['changes'].update({'iDrac Launch Method':
+                                  {'Old': current_launch_method,
+                                   'New': idrac_launch}})
 
-    if idrac_launch != current_launch_method:
-        ret['changes'].update({'iDrac Launch Method':
-                              {'Old': current_launch_method,
-                               'New': idrac_launch}})
-#    if slot_names is None:
-#        slot_names = []
-#    for item in slot_names:
-#        slot_name = slot_names.get(item)
-#       current_slot_name = current_slot_names.get(item).get('slotname')
-#       if current_slot_name != slot_name:
-#            ret['changes'].update({'Slot Names':
-#                                  {'Old': {item: current_slot_name},
-#                                   'New': {item: slot_name}}})
+    if slot_names:
+        current_slot_names = __salt__[chassis_cmd]('list_slotnames')
+        for item in slot_names:
+            slot_name = slot_names.get(item)
+            current_slot_name = current_slot_names.get(item).get('slotname')
+            if current_slot_name != slot_name:
+                old = {item: current_slot_name}
+                new = {item: slot_name}
+                if ret['changes'].get('Slot Names') is None:
+                    ret['changes'].update({'Slot Names':
+                                          {'Old': {item: current_slot_name},
+                                           'New': {item: slot_name}}})
+                ret['changes']['Slot Names']['Old'].update(old)
+                ret['changes']['Slot Names']['New'].update(new)
 
     if ret['changes'] == {}:
         ret['comment'] = 'Dell chassis is already in the desired state.'
@@ -122,15 +134,24 @@ def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None):
         return ret
 
     # Finally, set the necessary configurations on the chassis.
-    name = __salt__[chassis_cmd]('set_chassis_name {0}'.format(name))
+    name = __salt__[chassis_cmd]('set_chassis_name', name)
     if location:
-        location = __salt__[chassis_cmd]('set_chassis_location {0}'.format(location))
+        location = __salt__[chassis_cmd]('set_chassis_location', location)
     if mode:
-        mode = __salt__[chassis_cmd]('set_general {0} {1}'.format(mode_cmd, mode))
+        mode = __salt__[chassis_cmd]('set_general', cfg_tuning, mode_cmd, mode)
     if idrac_launch:
-        idrac_launch = __salt__[chassis_cmd]('set_general {0} {1}'.format(launch_cmd, idrac_launch))
+        idrac_launch = __salt__[chassis_cmd]('set_general', cfg_tuning, launch_cmd, idrac_launch)
+    if slot_names:
+        slot_rets = []
+        for key, val in slot_names.iteritems():
+            slot_name = val.get('slotname')
+            slot_rets.append(__salt__[chassis_cmd]('set_slotname', key, slot_name))
+        if any(slot_rets) is False:
+            slot_names = False
+        else:
+            slot_names = True
 
-    if any([name, location, mode, idrac_launch]) is False:
+    if any([name, location, mode, idrac_launch, slot_names]) is False:
         ret['result'] = False
         ret['comment'] = 'There was an error setting the Dell chassis.'
 
@@ -138,18 +159,20 @@ def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None):
     return ret
 
 
-def dellswitch(name, ip=None, netmask=None, gateway=None, dhcp=None,
-               password=None, snmp=None):
+def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
+                password=None, snmp=None):
     '''
-    Manaage switches in a Dell Chassis.
+    Manage switches in a Dell Chassis.
 
     name
         The switch designation (e.g. switch-1, switch-2)
 
     ip
         The Static IP Address of the switch
+
     netmask
         The netmask for the static IP
+
     gateway
         The gateway for the static IP
 
@@ -169,7 +192,7 @@ def dellswitch(name, ip=None, netmask=None, gateway=None, dhcp=None,
     .. code-block:: yaml
 
         my-dell-chassis:
-          chassis.dellswitch:
+          chassis.dell_switch:
             - switch: switch-1
             - ip: 192.168.1.1
             - netmask: 255.255.255.0
@@ -225,19 +248,19 @@ def dellswitch(name, ip=None, netmask=None, gateway=None, dhcp=None,
 
     # Finally, set the necessary configurations on the chassis.
     if dhcp:
-        dhcp_ret = __salt__['chassis.cmd']('set_niccfg module={0} dhcp={1}'.format(name, dhcp))
+        dhcp = __salt__['chassis.cmd']('set_niccfg module={0} dhcp={1}'.format(name, dhcp))
     if ip or netmask or gateway:
-        net_ret = __salt__['chassis.cmd']('set_niccfg module={0} ip={1} subnet={2} gateway={3}'.format(name,
-                                                                                                       ip,
-                                                                                                       netmask,
-                                                                                                       gateway))
+        net = __salt__['chassis.cmd']('set_niccfg module={0} ip={1} subnet={2} gateway={3}'.format(name,
+                                                                                                   ip,
+                                                                                                   netmask,
+                                                                                                   gateway))
     if password:
-        password_ret = __salt__['chassis.cmd']('deploy_password root {0} module={1}'.format(password, name))
+        password = __salt__['chassis.cmd']('deploy_password root {0} module={1}'.format(password, name))
 
     if snmp:
-        snmp_ret = __salt__['chassis.cmd']('deploy_snmp {0} module={1}'.format(password, name))
+        snmp = __salt__['chassis.cmd']('deploy_snmp {0} module={1}'.format(password, name))
 
-    if any([password_ret, snmp_ret, net_ret, dhcp_ret]) is False:
+    if any([password, snmp, net, dhcp]) is False:
         ret['result'] = False
         ret['comment'] = 'There was an error setting the switch {0}.'.format(name)
 
