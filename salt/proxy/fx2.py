@@ -69,6 +69,7 @@ def chconfig(cmd, *args, **kwargs):
     for k in kwargs.keys():
         if k.startswith('__pub_'):
             kwargs.pop(k)
+            continue
     if 'dracr.'+cmd not in __salt__:
         return {'retcode': -1, 'message': 'dracr.' + cmd + ' is not available'}
     else:
