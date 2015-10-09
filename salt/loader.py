@@ -24,7 +24,7 @@ from zipimport import zipimporter
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
-from salt.utils import context
+import salt.utils.context
 import salt.utils.lazy
 import salt.utils.event
 import salt.utils.odict
@@ -191,13 +191,6 @@ def minion_mods(
         __salt__['test.ping']()
     '''
     # TODO Publish documentation for module whitelisting
-    if context is None:
-        context = {}
-    if utils is None:
-        utils = {}
-    if proxy is None:
-        proxy = {}
-
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
     ret = LazyLoader(_module_dirs(opts, 'modules', 'module'),
@@ -293,8 +286,6 @@ def returners(opts, functions, whitelist=None, context=None):
     '''
     Returns the returner modules
     '''
-    if context is None:
-        context = {}
     return LazyLoader(_module_dirs(opts, 'returners', 'returner'),
                       opts,
                       tag='returner',
@@ -307,8 +298,6 @@ def utils(opts, whitelist=None, context=None):
     '''
     Returns the utility modules
     '''
-    if context is None:
-        context = {}
     return LazyLoader(_module_dirs(opts, 'utils', 'utils', ext_type_dirs='utils_dirs'),
                       opts,
                       tag='utils',
@@ -320,8 +309,6 @@ def pillars(opts, functions, context=None):
     '''
     Returns the pillars modules
     '''
-    if context is None:
-        context = {}
     ret = LazyLoader(_module_dirs(opts, 'pillar', 'pillar'),
                      opts,
                      tag='pillar',
@@ -449,8 +436,6 @@ def beacons(opts, functions, context=None):
     :param dict functions: A dictionary of minion modules, with module names as
                             keys and funcs as values.
     '''
-    if context is None:
-        context = {}
     return LazyLoader(_module_dirs(opts, 'beacons', 'beacons'),
                       opts,
                       tag='beacons',
@@ -496,10 +481,6 @@ def ssh_wrapper(opts, functions=None, context=None):
     '''
     Returns the custom logging handler modules
     '''
-    if context is None:
-        context = {}
-    if functions is None:
-        functions = {}
     return LazyLoader(_module_dirs(opts,
                                    'wrapper',
                                    'wrapper',
@@ -888,20 +869,30 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                  virtual_enable=True,
                  static_modules=None
                  ):  # pylint: disable=W0231
+        '''
+        In pack, if any of the values are None they will be replaced with an
+        empty context-specific dict
+        '''
 
         self.inject_globals = {}
+        self.pack = {} if pack is None else pack
+        if opts is None:
+            opts = {}
+        self.context_dict = salt.utils.context.ContextDict()
         self.opts = self.__prep_mod_opts(opts)
 
         self.module_dirs = module_dirs
-        if opts is None:
-            opts = {}
         self.tag = tag
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
 
-        self.pack = {} if pack is None else pack
         if '__context__' not in self.pack:
-            self.pack['__context__'] = {}
+            self.pack['__context__'] = None
+
+        for k, v in self.pack.iteritems():
+            if v is None:  # if the value of a pack is None, lets make an empty dict
+                self.context_dict.setdefault(k, {})
+                self.pack[k] = salt.utils.context.NamespacedDictWrapper(self.context_dict, k)
 
         self.whitelist = whitelist
         self.virtual_enable = virtual_enable
@@ -1079,14 +1070,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         Strip out of the opts any logger instance
         '''
-        if 'grains' in opts:
-            self._grains = opts['grains']
-        else:
-            self._grains = {}
-        if 'pillar' in opts:
-            self._pillar = opts['pillar']
-        else:
-            self._pillar = {}
+        if '__grains__' not in self.pack:
+            self.context_dict['grains'] = opts.get('grains', {})
+            self.pack['__grains__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'grains')
+
+        if '__pillar__' not in self.pack:
+            self.context_dict['pillar'] = opts.get('pillar', {})
+            self.pack['__pillar__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'pillar')
 
         mod_opts = {}
         for key, val in list(opts.items()):
@@ -1203,9 +1193,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             mod.__opts__.update(self.opts)
         else:
             mod.__opts__ = self.opts
-
-        mod.__grains__ = self._grains
-        mod.__pillar__ = self._pillar
 
         # pack whatever other globals we were asked to
         for p_name, p_value in six.iteritems(self.pack):
@@ -1528,7 +1515,7 @@ def global_injector_decorator(inject_globals):
     def inner_decorator(f):
         @functools.wraps(f)
         def wrapper(*args, **kwargs):
-            with context.func_globals_inject(f, **inject_globals):
+            with salt.utils.context.func_globals_inject(f, **inject_globals):
                 return f(*args, **kwargs)
         return wrapper
     return inner_decorator
