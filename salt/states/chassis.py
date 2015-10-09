@@ -202,12 +202,12 @@ def dellswitch(name, ip=None, netmask=None, gateway=None, dhcp=None,
 
     if ((ip or netmask or gateway) and not dhcp and (ip != current_nic['Network']['IP Address'] or
                                                              netmask != current_nic['Network']['Subnet Mask'] or
-                                                             gateway != current_nic['Network']['Gateway'])) {
-    ret['changes'].update({'IP': { 'Old': current_nic['Network'],
-                                   'New': { 'IP Address': ip,
-                                            'Subnet Mask': netmask,
-                                            'Gateway': gateway }})
-    })
+                                                             gateway != current_nic['Network']['Gateway'])):
+        ret['changes'].update({'IP': { 'Old': current_nic['Network'],
+                                       'New': { 'IP Address': ip,
+                                                'Subnet Mask': netmask,
+                                                'Gateway': gateway }}})
+
     if password:
         ret['changes'].update({ 'New': {'Password': '*****'}})
 
