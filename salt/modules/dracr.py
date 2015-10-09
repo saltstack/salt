@@ -153,7 +153,7 @@ def system_info(host=None,
     return __parse_drac(cmd['stdout'])
 
 
-def set_niccfg(ip, subnet, gateway, dhcp=False,
+def set_niccfg(ip=None, subnet=None, gateway=None, dhcp=False,
                host=None,
                admin_username=None,
                admin_password=None,
@@ -193,7 +193,8 @@ def set_nicvlan(vlan=None,
 
 def network_info(host=None,
                  admin_username=None,
-                 admin_password=None):
+                 admin_password=None,
+                 module=None):
     '''
     Return Network Configuration
 
@@ -207,12 +208,14 @@ def network_info(host=None,
     cmd = __execute_ret('getniccfg', host=host,
                         admin_username=admin_username,
                         admin_password=admin_password,
-                        module=None)
+                        module=module)
 
     if cmd['retcode'] != 0:
         log.warning('racadm return an exit code \'{0}\'.'
                     .format(cmd['retcode']))
 
+    cmd['stdout'] = 'Network:\n' + 'Device = ' + module + '\n' +\
+                    cmd['stdout']
     return __parse_drac(cmd['stdout'])
 
 

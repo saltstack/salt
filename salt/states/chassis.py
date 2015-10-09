@@ -136,3 +136,111 @@ def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None):
 
     ret['comment'] = 'Dell chassis was updated.'
     return ret
+
+
+def dellswitch(name, ip=None, netmask=None, gateway=None, dhcp=None,
+               password=None, snmp=None):
+    '''
+    Manaage switches in a Dell Chassis.
+
+    name
+        The switch designation (e.g. switch-1, switch-2)
+
+    ip
+        The Static IP Address of the switch
+    netmask
+        The netmask for the static IP
+    gateway
+        The gateway for the static IP
+
+    dhcp
+        True: Enable DHCP
+        False: Do not change DHCP setup
+        (disabling DHCP is automatic when a static IP is set)
+
+    password
+        The access (root) password for the switch
+
+    snmp
+        The SNMP community string for the switch
+
+    Example:
+
+    .. code-block:: yaml
+
+        my-dell-chassis:
+          chassis.dellswitch:
+            - switch: switch-1
+            - ip: 192.168.1.1
+            - netmask: 255.255.255.0
+            - gateway: 192.168.1.254
+            - dhcp: True
+            - password: secret
+            - snmp: public
+
+    '''
+    ret = {'name': name,
+           'result': True,
+           'changes': {},
+           'comment': ''}
+
+
+
+    current_nic = __salt__['chassis.cmd']('get_niccfg', name)
+
+    if ip or netmask or gateway:
+        if not ip:
+            ip = current_nic['Network']['IP Address']
+        if not netmask:
+            ip = current_nic['Network']['Subnet Mask']
+        if not gateway:
+            ip = current_nic['Network']['Gateway']
+
+    if current_nic['Network']['DHCP Enabled'] == 0 and dhcp:
+        ret['changes'].update({'DHCP': { 'Old': { 'DHCP Enabled': current_nic['Network']['DHCP Enabled'] },
+                                         'New': { 'DHCP Enabled': dhcp }}})
+
+    if ((ip or netmask or gateway) and not dhcp and (ip != current_nic['Network']['IP Address'] or
+                                                             netmask != current_nic['Network']['Subnet Mask'] or
+                                                             gateway != current_nic['Network']['Gateway'])) {
+    ret['changes'].update({'IP': { 'Old': current_nic['Network'],
+                                   'New': { 'IP Address': ip,
+                                            'Subnet Mask': netmask,
+                                            'Gateway': gateway }})
+    })
+    if password:
+        ret['changes'].update({ 'New': {'Password': '*****'}})
+
+    if snmp:
+        ret['changes'].update({ 'New': {'SNMP': '*****'}})
+
+    if ret['changes'] == {}:
+        ret['comment'] = 'Switch ' + name + ' is already in desired state'
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Switch ' + name + ' configuration will change'
+        return ret
+
+    # Finally, set the necessary configurations on the chassis.
+    if dhcp:
+        dhcp_ret = __salt__['chassis.cmd']('set_niccfg module={0} dhcp={1}'.format(name, dhcp))
+    if ip or netmask or gateway:
+        net_ret = __salt__['chassis.cmd']('set_niccfg module={0} ip={1} subnet={2} gateway={3}'.format(name,
+                                                                                                       ip,
+                                                                                                       netmask,
+                                                                                                       gateway))
+    if password:
+        password_ret = __salt__['chassis.cmd']('deploy_password root {0} module={1}'.format(password, name))
+
+    if snmp:
+        snmp_ret = __salt__['chassis.cmd']('deploy_snmp {0} module={1}'.format(password, name))
+
+    if any([password_ret, snmp_ret, net_ret, dhcp_ret]) is False:
+        ret['result'] = False
+        ret['comment'] = 'There was an error setting the switch {0}.'.format(name)
+
+    ret['comment'] = 'Dell chassis switch {0} was updated.'.format(name)
+    return ret
+
