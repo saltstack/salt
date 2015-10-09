@@ -40,9 +40,9 @@ Hipchat settings may also be configured as:
       from_name: user@email.com
 
     hipchat_profile:
-      api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-      api_version: v1
-      from_name: user@email.com
+      hipchat.api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      hipchat.api_version: v1
+      hipchat.from_name: user@email.com
 
     hipchat:
       profile: hipchat_profile
@@ -205,6 +205,7 @@ def _query(function,
                 data['notify'] = 0
             data = _urlencode(data)
     elif api_version == 'v2':
+        headers['Content-Type'] = 'application/json'
         headers['Authorization'] = 'Bearer {0}'.format(api_key)
         if data:
             data = json.dumps(data)
