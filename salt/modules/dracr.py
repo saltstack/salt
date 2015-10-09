@@ -205,6 +205,13 @@ def network_info(host=None,
         salt dell drac.network_info
     '''
 
+    inv = inventory(host=host, admin_username=admin_username, admin_password=admin_password)
+    if module not in inv.get('switch'):
+        cmd = {}
+        cmd['retcode'] = -1
+        cmd['stdout'] = 'No switch {0} found.'.format(module)
+        return cmd
+
     cmd = __execute_ret('getniccfg', host=host,
                         admin_username=admin_username,
                         admin_password=admin_password,
@@ -656,6 +663,37 @@ def server_hardreset(host=None,
                          host=host, admin_username=admin_username,
                          admin_password=admin_password)
 
+
+def server_powerstatus(host=None,
+                       admin_username=None,
+                       admin_password=None,
+                       module=None):
+    '''
+    return the power status for the passed module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell drac.server_powerstatus
+    '''
+    ret =  __execute_ret('serveraction powerstatus',
+                         host=host, admin_username=admin_username,
+                         admin_password=admin_password,
+                         module=module)
+
+    result = { 'retcode': 0 }
+    if ret['stdout'] == 'ON':
+        result['status'] = True
+        result['comment'] = 'Power is on'
+    if ret['stdout']  == 'OFF':
+        result['status'] = False
+        result['comment'] = 'Power is on'
+    if ret['stdout'].startswith('ERROR'):
+        result['status'] = False
+        result['comment'] = ret['stdout']
+
+    return result
 
 def server_pxe(host=None,
                admin_username=None,

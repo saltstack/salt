@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 '''
 Manage chassis via Salt Proxies.
 
@@ -207,7 +207,12 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
            'changes': {},
            'comment': ''}
 
-    current_nic = __salt__['chassis.cmd']('get_niccfg', name)
+
+    current_nic = __salt__['chassis.cmd']('network_info', module=name)
+    if current_nic.get('retcode', 0) != 0:
+        ret['result'] = False
+        ret['comment'] = current_nic['stdout']
+        return ret
 
     if ip or netmask or gateway:
         if not ip:
@@ -217,9 +222,9 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
         if not gateway:
             ip = current_nic['Network']['Gateway']
 
-    if current_nic['Network']['DHCP Enabled'] == 0 and dhcp:
-        ret['changes'].update({'DHCP': {'Old': {'DHCP Enabled': current_nic['Network']['DHCP Enabled']},
-                                        'New': {'DHCP Enabled': dhcp}}})
+    if current_nic['Network']['DHCP Enabled'] == '0' and dhcp:
+        ret['changes'].update({'DHCP': { 'Old': { 'DHCP Enabled': current_nic['Network']['DHCP Enabled'] },
+                                         'New': { 'DHCP Enabled': dhcp }}})
 
     if ((ip or netmask or gateway) and not dhcp and (ip != current_nic['Network']['IP Address'] or
                                                              netmask != current_nic['Network']['Subnet Mask'] or
@@ -245,19 +250,16 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
         return ret
 
     # Finally, set the necessary configurations on the chassis.
+    dhcp_ret = net_ret = password_ret = snmp_ret = True
     if dhcp:
-        dhcp = __salt__['chassis.cmd']('set_niccfg module={0} dhcp={1}'.format(name, dhcp))
-    net = None
+        dhcp_ret = __salt__['chassis.cmd']('set_niccfg', module=name, dhcp=dhcp)
     if ip or netmask or gateway:
-        net = __salt__['chassis.cmd']('set_niccfg module={0} ip={1} subnet={2} gateway={3}'.format(name,
-                                                                                                   ip,
-                                                                                                   netmask,
-                                                                                                   gateway))
+        net_ret = __salt__['chassis.cmd']('set_niccfg', module=name, ip=ip, netmask=netmask, gateway=gateway)
     if password:
-        password = __salt__['chassis.cmd']('deploy_password root {0} module={1}'.format(password, name))
+        password_ret = __salt__['chassis.cmd']('deploy_password', 'root', password, module=name)
 
     if snmp:
-        snmp = __salt__['chassis.cmd']('deploy_snmp {0} module={1}'.format(password, name))
+        snmp_ret = __salt__['chassis.cmd']('deploy_snmp', password, module=name)
 
     if any([password, snmp, net, dhcp]) is False:
         ret['result'] = False
