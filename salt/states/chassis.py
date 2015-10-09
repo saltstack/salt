@@ -8,12 +8,12 @@ Example managing a Dell chassis:
 
 .. code-block:: yaml
 
-        my-dell-chassis:
-          chassis.dell:
-            - name: my-dell-chassis
-            - location: my-location
-            - mode: 2
-            - idrac_launch: 1
+    my-dell-chassis:
+      chassis.dell:
+        - name: my-dell-chassis
+        - location: my-location
+        - mode: 2
+        - idrac_launch: 1
 '''
 
 # Import python libs
