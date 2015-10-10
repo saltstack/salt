@@ -15,6 +15,7 @@ else:
     import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
+
 # Fix included in py2-ipaddress for 32bit architectures
 # Except that xrange only supports machine integers, not longs, so...
 def long_range(start, end):
