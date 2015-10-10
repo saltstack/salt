@@ -13,7 +13,6 @@ if six.PY3:
     import ipaddress
 else:
     import salt.ext.ipaddress as ipaddress
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 # Fix included in py2-ipaddress for 32bit architectures
