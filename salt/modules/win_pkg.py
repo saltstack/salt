@@ -726,6 +726,9 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         cached_pkg = cached_pkg.replace('/', '\\')
         cache_path, _ = os.path.split(cached_pkg)
 
+        # Get settings for wusa
+        wusa = pkginfo[version_num].get('wusa')
+
         # Get settings for msiexec and allusers
         msiexec = pkginfo[version_num].get('msiexec')
         all_users = pkginfo[version_num].get('allusers')
@@ -742,6 +745,8 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
 
         # Build the install command
         cmd = []
+        if wusa:
+            cmd.extend(['wusa'])
         if msiexec:
             cmd.extend(['msiexec', '/i'])
         cmd.append(cached_pkg)
@@ -934,6 +939,8 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
 
         # Build the install command
         cmd = []
+        if pkginfo[version_num].get('wusa'):
+            cmd.extend(['wusa', '/uninstall'])
         if pkginfo[version_num].get('msiexec'):
             cmd.extend(['msiexec', '/x'])
         cmd.append(expanded_cached_pkg)
