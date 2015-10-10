@@ -183,7 +183,10 @@ def low(data, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.State(__opts__)
+    try:
+        st_ = salt.state.State(__opts__, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.State(__opts__)
     err = st_.verify_data(data)
     if err:
         __context__['retcode'] = 1
@@ -224,7 +227,11 @@ def high(data, test=False, queue=False, **kwargs):
         raise SaltInvocationError(
             'Pillar data must be formatted as a dictionary'
         )
-    st_ = salt.state.State(__opts__, pillar)
+    try:
+        st_ = salt.state.State(__opts__, pillar, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.State(__opts__, pillar)
+
     ret = st_.call_high(data)
     _set_retcode(ret)
     return ret
@@ -283,7 +290,10 @@ def template_str(tem, queue=False, **kwargs):
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
         return conflict
-    st_ = salt.state.State(__opts__)
+    try:
+        st_ = salt.state.State(__opts__, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.State(__opts__)
     ret = st_.call_template_str(tem)
     _set_retcode(ret)
     return ret
@@ -1111,7 +1121,10 @@ def single(fun, name, test=None, queue=False, **kwargs):
             'Pillar data must be formatted as a dictionary'
         )
 
-    st_ = salt.state.State(opts, pillar)
+    try:
+        st_ = salt.state.State(opts, pillar, proxy=__proxy__)
+    except NameError:
+        st_ = salt.state.State(opts, pillar)
     err = st_.verify_data(kwargs)
     if err:
         __context__['retcode'] = 1
