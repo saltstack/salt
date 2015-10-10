@@ -434,8 +434,8 @@ def present(
             if sg_index:
                 log.debug('security group associations found in launch config')
                 _group_ids = __salt__['boto_secgroup.convert_to_group_ids'](
-                    launch_config[sg_index]['security_groups'], vpc_id, region,
-                    key, keyid, profile
+                    launch_config[sg_index]['security_groups'], vpc_id=vpc_id,
+                    region=region, key=key, keyid=keyid, profile=profile
                 )
                 launch_config[sg_index]['security_groups'] = _group_ids
 
