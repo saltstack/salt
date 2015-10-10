@@ -77,7 +77,6 @@ except ImportError:
 
 # Import Salt libs
 from salt.ext.six import string_types
-from salt.utils.boto_elb_tag import TagDescriptions as TagDescriptions
 import salt.utils.odict as odict
 
 
@@ -165,10 +164,16 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
         return []
 
 
-def _listener_dict_to_tuple(listener):
+def listener_dict_to_tuple(listener):
     '''
     Convert an ELB listener dict into a listener tuple used by certain parts of
     the AWS ELB API.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt myminion boto_elb.listener_dict_to_tuple '{"elb_port":80,"instance_port":80,"elb_protocol":"HTTP"}'
     '''
     # We define all listeners as complex listeners.
     if 'instance_protocol' not in listener:
@@ -206,7 +211,7 @@ def create(name, availability_zones, listeners, subnets=None,
 
     _complex_listeners = []
     for listener in listeners:
-        _complex_listeners.append(_listener_dict_to_tuple(listener))
+        _complex_listeners.append(listener_dict_to_tuple(listener))
     try:
         lb = conn.create_load_balancer(name, availability_zones, [],
                                        subnets, security_groups, scheme,
@@ -269,7 +274,7 @@ def create_listeners(name, listeners, region=None, key=None, keyid=None,
 
     _complex_listeners = []
     for listener in listeners:
-        _complex_listeners.append(_listener_dict_to_tuple(listener))
+        _complex_listeners.append(listener_dict_to_tuple(listener))
     try:
         conn.create_load_balancer_listeners(name, [], _complex_listeners)
         msg = 'Created ELB listeners on {0}'.format(name)
@@ -903,8 +908,12 @@ def _get_all_tags(conn, load_balancer_names=None):
         conn.build_list_params(params, load_balancer_names,
                                'LoadBalancerNames.member.%d')
 
-    tags = conn.get_object('DescribeTags', params, TagDescriptions,
-                           verb='POST')
+    tags = conn.get_object(
+        'DescribeTags',
+        params,
+        __utils__['boto_elb_tag.get_tag_descriptions'](),
+        verb='POST'
+    )
     if tags[load_balancer_names]:
         return tags[load_balancer_names]
     else:
