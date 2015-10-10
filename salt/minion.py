@@ -703,8 +703,9 @@ class Minion(MinionBase):
                     'upgrade your ZMQ!'
                 )
         # Late setup the of the opts grains, so we can log from the grains
-        # module
-        if salt.utils.is_proxy():
+        # module.  If this is a proxy, however, we need to init the proxymodule
+        # before we can get the grains.
+        if not salt.utils.is_proxy():
             self.opts['grains'] = salt.loader.grains(opts)
 
     # TODO: remove?
