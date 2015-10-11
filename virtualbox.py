@@ -198,6 +198,22 @@ def vb_get_manager():
     return vbox
 
 
+def vb_create_machine(name=None):
+    vbox = vb_get_manager()
+    log.info("Create virtualbox machine %s " % (name,))
+    groups = None
+    osTypeId = "Other"
+    new_machine = vbox.createMachine(
+        None,  # Settings file
+        name,
+        groups,
+        osTypeId,
+        None  # flags
+    )
+    vbox.registerMachine(new_machine)
+    log.info("Finished creating %s" % name)
+
+
 def vb_clone_vm(
         name=None,
         clone_from=None,
