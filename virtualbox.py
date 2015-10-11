@@ -208,7 +208,7 @@ def vb_clone_vm(
     @return dict of resulting VM
     """
     vbox = vb_get_manager()
-    log.info("Create virtualbox machine %s from %s" % (name, clone_from))
+    log.info("Clone virtualbox machine %s from %s" % (name, clone_from))
 
     source_machine = vbox.findMachine(clone_from)
 
@@ -229,7 +229,7 @@ def vb_clone_vm(
     )
 
     progress.waitForCompletion(timeout)
-    log.info("Finished clone of %s" % source_machine)
+    log.info("Finished cloning %s from %s" % (name, clone_from))
 
     vbox.registerMachine(new_machine)
 
