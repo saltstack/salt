@@ -229,7 +229,7 @@ def vb_clone_vm(
     )
 
     progress.waitForCompletion(timeout)
-    info("Finished clone of %s" % source_machine)
+    log.info("Finished clone of %s" % source_machine)
 
     vbox.registerMachine(new_machine)
 
@@ -248,9 +248,10 @@ def vb_destroy_machine(name=None, timeout=10000):
 
     @param timeout int timeout in milliseconds
     """
-    info("Destroying machine %s" % name)
+    vbox = vb_get_manager()
+    log.info("Destroying machine %s" % name)
     machine = vbox.findMachine(name)
     files = machine.unregister(2)
     progress = machine.deleteConfig(files)
     progress.waitForCompletion(timeout)
-    info("Finished destroying machine %s" % name)
+    log.info("Finished destroying machine %s" % name)
