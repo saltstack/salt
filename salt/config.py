@@ -2546,8 +2546,8 @@ def is_profile_configured(opts, provider, profile_name):
     non_image_drivers = ['vmware']
 
     # Most drivers need a size, but some do not.
-    non_size_drivers = ['opennebula', 'parallels', 'scaleway', 'softlayer',
-                        'softlayer_hw', 'vmware', 'vsphere']
+    non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
+                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere']
 
     if driver not in non_image_drivers:
         required_keys.append('image')
