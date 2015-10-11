@@ -74,3 +74,6 @@ tests/integration/files/conf/grains
 
 # Ignore file cache created by jinja tests
 tests/unit/templates/roots
+
+# Pycharm
+.idea
