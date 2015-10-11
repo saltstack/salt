@@ -15,15 +15,10 @@ Dicts provided by salt:
 """
 
 # Import python libs
-import copy
 import logging
-import pprint
-import time
-import yaml
 
 # Import salt libs
 import salt.config as config
-from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
 
 log = logging.getLogger(__name__)
@@ -38,6 +33,7 @@ try:
     HAS_LIBS = True
 
 except ImportError:
+    VirtualBoxManager = None
     log.error("Couldn't import VirtualBox API")
 
 __virtualname__ = 'virtualbox'
@@ -71,9 +67,9 @@ def __virtual__():
 
 
 def get_configured_provider():
-    '''
+    """
     Return the first configured instance.
-    '''
+    """
     configured = config.is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
@@ -101,16 +97,17 @@ def create(vm_info):
                 provider: <provider>
                 clone_from: <vm_name>
             }
-    @return dict of resulting vm. !!!Passwords cand and should be included!!!
+    @return dict of resulting vm. !!!Passwords can and should be included!!!
     """
     log.debug("Creating virtualbox with %s" % vm_info)
     try:
         # Check for required profile parameters before sending any API calls.
+        # TODO should this be a call to config.is_provider_configured ?
         if vm_info['profile'] and config.is_profile_configured(
-                    __opts__,
-                    __active_provider_name__ or 'virtualbox',
-                    vm_info['profile']
-                ) is False:
+                __opts__,
+                        __active_provider_name__ or 'virtualbox',
+                vm_info['profile']
+        ) is False:
             return False
     except AttributeError:
         pass
@@ -136,7 +133,7 @@ def create(vm_info):
     # to create the virtual machine.
     request_kwargs = {
         'name': vm_info['name'],
-        'profile': vm_info['profile']
+        'clone_from': vm_info['clone_from']
     }
 
     salt.utils.cloud.fire_event(
@@ -163,14 +160,14 @@ def create(vm_info):
         transport=__opts__['transport']
     )
 
-    deploy_kwargs = deploy_kwargs.update({
+    deploy_kwargs.update({
         # TODO Add private data
     })
 
     # TODO wait for target machine to become available
     # TODO deploy!
     # Do we have to call this?
-    salt.utils.cloud.deploy_script(**deploy_kwargs)
+    salt.utils.cloud.deploy_script(None, **deploy_kwargs)
 
     salt.utils.cloud.fire_event(
         'event',
@@ -202,12 +199,12 @@ def vb_create_machine(name=None):
     vbox = vb_get_manager()
     log.info("Create virtualbox machine %s " % (name,))
     groups = None
-    osTypeId = "Other"
+    os_type_id = "Other"
     new_machine = vbox.createMachine(
         None,  # Settings file
         name,
         groups,
-        osTypeId,
+        os_type_id,
         None  # flags
     )
     vbox.registerMachine(new_machine)
@@ -248,6 +245,8 @@ def vb_clone_vm(
     log.info("Finished cloning %s from %s" % (name, clone_from))
 
     vbox.registerMachine(new_machine)
+
+    # TODO return a struct/class that describes a virtual machine
 
 
 def vb_start_vm(**kwargs):
