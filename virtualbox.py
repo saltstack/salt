@@ -241,6 +241,7 @@ def vb_start_vm(**kwargs):
 
     @return dict of started VM, contains IP addresses and what not
     """
+    pass
 
 
 def vb_destroy_machine(name=None, timeout=10000):
