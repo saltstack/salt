@@ -1750,6 +1750,12 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                   'systems, databases or applications.')
         )
         self.add_option(
+            '--return_kwargs',
+            default={},
+            metavar='RETURNER_KWARGS',
+            help=('Set any returner options at the command line.')
+        )
+        self.add_option(
             '--module-executors',
             dest='module_executors',
             default=None,

@@ -71,6 +71,8 @@ Management of the Salt scheduler
             - Friday 5:00pm
         - returner: xmpp
         - return_config: xmpp_state_run
+        - return_kwargs:
+            recipient: user@domain.com
 
     This will schedule the command: state.sls httpd test=True at 5pm on Monday,
     Wednesday and Friday, and 3pm on Tuesday and Thursday.  Using the xmpp returner
@@ -165,6 +167,10 @@ def present(name,
 
     return_config
         The alternative configuration to use for returner configuration options.
+
+    return_kwargs
+        Any individual returner configuration items to override.  Should be passed
+        as a dictionary.
 
     persist
         Whether the job should persist between minion restarts, defaults to True.

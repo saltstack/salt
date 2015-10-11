@@ -67,6 +67,15 @@ PushOver settings may also be configured as::
   To use the alternative configuration, append '--return_config alternative' to the salt command. ex:
 
     salt '*' test.ping --return pushover --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: Boron
+
+.. code-block:: bash
+
+    salt '*' test.ping --return pushover --return_kwargs '{"title": "Salt is awesome!"}'
+
 '''
 from __future__ import absolute_import
 
