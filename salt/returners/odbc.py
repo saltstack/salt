@@ -113,6 +113,15 @@ correctly.  Replace with equivalent SQL for other ODBC-compliant servers
   .. code-block:: bash
 
     salt '*' test.ping --return odbc --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: Boron
+
+.. code-block:: bash
+
+    salt '*' test.ping --return odbc --return_kwargs '{"dsn": "dsn-name"}'
+
 '''
 from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution

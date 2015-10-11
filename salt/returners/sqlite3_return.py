@@ -71,6 +71,14 @@ To use the alternative configuration, append '--return_config alternative' to th
 
     salt '*' test.ping --return sqlite3 --return_config alternative
 
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: Boron
+
+.. code-block:: bash
+
+    salt '*' test.ping --return sqlite3 --return_kwargs '{"db": "/var/lib/salt/another-salt.db"}'
+
 '''
 from __future__ import absolute_import
 
