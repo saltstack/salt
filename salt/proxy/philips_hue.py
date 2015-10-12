@@ -14,6 +14,14 @@ GRAINS_CACHE = {}
 log = logging.getLogger(__file__)
 
 
+class Const:
+    '''
+    Constants for the lamp operations.
+    '''
+    LAMP_ON = {"on": True, "transitiontime": 0}
+    LAMP_OFF = {"on": False, "transitiontime": 0}
+
+
 def __virtual__():
     '''
     Validate the module.
