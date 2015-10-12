@@ -163,7 +163,7 @@ def call_switch(*args, **kwargs):
     '''
     out = dict()
     devices = call_lights()
-    for dev_id in ('id' not in kwargs and devices.keys() or _get_devices(kwargs)):
+    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
         if 'on' in kwargs:
             state = kwargs['on'] and Const.LAMP_ON or Const.LAMP_OFF
         else:
