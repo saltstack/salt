@@ -999,16 +999,15 @@ def get_network_interface_id(name, region=None, key=None, keyid=None,
     enis = None
     try:
         enis = conn.get_all_network_interfaces(filters={'tag:Name': name})
+        if not enis:
+            r['error'] = {'message': 'No ENIs found.'}
+        elif len(enis) > 1:
+            r['error'] = {'message': 'Name specified is tagged on multiple ENIs.'}
+        else:
+            eni = enis[0]
+            r['result'] = eni.id
     except boto.exception.EC2ResponseError as e:
         r['error'] = __utils__['boto.get_error'](e)
-    if not enis:
-        r['error'] = {'message': 'No ENIs found.'}
-    elif len(enis) > 1:
-        r['error'] = {'message': 'Name specified is tagged on multiple ENIs.'}
-    if 'error' in r:
-        return r
-    eni = enis[0]
-    r['result'] = eni.id
     return r
 
 
@@ -1050,16 +1049,16 @@ def _get_network_interface(conn, name=None, network_interface_id=None):
             enis = conn.get_all_network_interfaces([network_interface_id])
         else:
             enis = conn.get_all_network_interfaces(filters={'tag:Name': name})
+
+        if not enis:
+            r['error'] = {'message': 'No ENIs found.'}
+        elif len(enis) > 1:
+            r['error'] = {'message': 'Name specified is tagged on multiple ENIs.'}
+        else:
+            eni = enis[0]
+            r['result'] = eni
     except boto.exception.EC2ResponseError as e:
         r['error'] = __utils__['boto.get_error'](e)
-    if not enis:
-        r['error'] = {'message': 'No ENIs found.'}
-    elif len(enis) > 1:
-        r['error'] = {'message': 'Name specified is tagged on multiple ENIs.'}
-    if 'error' in r:
-        return r
-    eni = enis[0]
-    r['result'] = eni
     return r
 
 
