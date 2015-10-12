@@ -60,6 +60,19 @@ def shutdown(opts, *args, **kw):
     return True
 
 
+def _get_devices(params):
+    '''
+    Parse device(s) ID(s) from the common params.
+
+    :param params:
+    :return:
+    '''
+    if 'id' not in params:
+        raise CommandExecutionError("Parameter ID is required.")
+
+    return [int(dev) for dev in params['id'].split(",")]
+
+
 # Callers
 def call_ping(*args, **kwargs):
     '''
@@ -79,7 +92,7 @@ def call_status(*args, **kwargs):
         }
 
 
-def call_alert(*args, **kwargs):
+def call_alert(*args, **kw):
     '''
     Blink the alert.
     '''
