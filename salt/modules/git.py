@@ -1956,6 +1956,10 @@ def merge_base(cwd,
         .. note::
             This option requires two commits to be passed.
 
+        .. versionchanged:: 2015.8.2
+            Works properly in git versions older than 1.8.0, where the
+            ``--is-ancestor`` CLI option is not present.
+
     independent : False
         If ``True``, this function will return the IDs of the refs/commits
         passed which cannot be reached by another commit.
@@ -2042,6 +2046,24 @@ def merge_base(cwd,
             refs = ['HEAD']
         if not isinstance(fork_point, six.string_types):
             fork_point = str(fork_point)
+
+    if is_ancestor:
+        if _LooseVersion(version(versioninfo=False)) < _LooseVersion('1.8.0'):
+            # Pre 1.8.0 git doesn't have --is-ancestor, so the logic here is a
+            # little different. First we need to resolve the first ref to a
+            # full SHA1, and then if running git merge-base on both commits
+            # returns an identical commit to the resolved first ref, we know
+            # that the first ref is an ancestor of the second ref.
+            first_commit = rev_parse(cwd,
+                                     refs[0],
+                                     opts=['--verify'],
+                                     user=user,
+                                     ignore_retcode=ignore_retcode)
+            return merge_base(cwd,
+                              refs=refs,
+                              is_ancestor=False,
+                              user=user,
+                              ignore_retcode=ignore_retcode) == first_commit
 
     command = ['git', 'merge-base']
     command.extend(_format_opts(opts))
