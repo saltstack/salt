@@ -291,7 +291,7 @@ def clear_lock(clear_func, lock_type, remote=None):
         that a subset of remotes can be targeted.
 
 
-    Returns a tuple containing two lists: One with messages
+    Returns the return data from ``clear_func``.
     '''
     msg = 'Clearing update lock for {0} remotes'.format(lock_type)
     if remote:
