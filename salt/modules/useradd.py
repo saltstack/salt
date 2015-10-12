@@ -4,9 +4,6 @@ Manage users with the useradd command
 '''
 from __future__ import absolute_import
 
-# Import python libs
-import re
-
 try:
     import pwd
     HAS_PWD = True
@@ -21,10 +18,6 @@ from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
-
-RETCODE_12_ERROR_REGEX = re.compile(
-    r'userdel(.*)warning(.*)/var/mail(.*)No such file or directory'
-)
 
 # Define the module's virtual name
 __virtualname__ = 'user'
@@ -242,7 +235,7 @@ def delete(name, remove=False, force=False):
         if __grains__['os_family'] not in ('Debian',):
             return False
 
-        if RETCODE_12_ERROR_REGEX.match(ret['stderr']) is not None:
+        if 'var/mail' in ret['stderr'] or 'var/spool/mail' in ret['stderr']:
             # We've hit the bug, let's log it and not fail
             log.debug(
                 'While the userdel exited with code 12, this is a known bug on '
