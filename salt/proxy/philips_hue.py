@@ -178,7 +178,7 @@ def call_ping(*args, **kwargs):
     '''
     Ping the lamps
     '''
-    ping(*args, **kw)
+    call_blink(*args, **kwargs)
 
 
 def call_status(*args, **kwargs):
