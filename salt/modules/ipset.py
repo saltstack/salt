@@ -13,7 +13,14 @@ if six.PY3:
     import ipaddress
 else:
     import salt.ext.ipaddress as ipaddress
-from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
+
+# Fix included in py2-ipaddress for 32bit architectures
+# Except that xrange only supports machine integers, not longs, so...
+def long_range(start, end):
+    while start < end:
+        yield start
+        start += 1
 
 # Import salt libs
 import salt.utils
@@ -427,7 +434,7 @@ def check(set=None, entry=None, family='ipv4'):
             start, end = entry.split('-')
 
             if settype == 'hash:ip':
-                entries = [str(ipaddress.ip_address(ip)) for ip in range(
+                entries = [str(ipaddress.ip_address(ip)) for ip in long_range(
                     ipaddress.ip_address(start),
                     ipaddress.ip_address(end) + 1
                 )]

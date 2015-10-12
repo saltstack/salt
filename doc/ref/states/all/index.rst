@@ -87,6 +87,7 @@ Full list of builtin state modules
     keystone
     kmod
     layman
+    ldap
     libvirt
     linux_acl
     locale

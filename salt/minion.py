@@ -1149,6 +1149,8 @@ class Minion(MinionBase):
         if data['ret']:
             if 'ret_config' in data:
                 ret['ret_config'] = data['ret_config']
+            if 'ret_kwargs' in data:
+                ret['ret_kwargs'] = data['ret_kwargs']
             ret['id'] = opts['id']
             for returner in set(data['ret'].split(',')):
                 try:
@@ -1209,6 +1211,8 @@ class Minion(MinionBase):
         if data['ret']:
             if 'ret_config' in data:
                 ret['ret_config'] = data['ret_config']
+            if 'ret_kwargs' in data:
+                ret['ret_kwargs'] = data['ret_kwargs']
             for returner in set(data['ret'].split(',')):
                 ret['id'] = opts['id']
                 try:
