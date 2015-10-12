@@ -35,6 +35,7 @@ import salt.modules.cmdmod
 
 # Import 3rd-party libs
 import salt.ext.six as six
+from salt.utils.dictthread import DictThread
 
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet
@@ -1178,8 +1179,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         else:
             mod.__opts__ = self.opts
 
-        mod.__grains__ = self._grains
-        mod.__pillar__ = self._pillar
+        if hasattr(mod, '__grains__'):
+            mod.__grains__.assign_current(self._grains)
+        else:
+            mod.__grains__ = DictThread(self._grains)
+        if hasattr(mod, '__pillar__'):
+            mod.__pillar__.assign_current(self._pillar)
+        else:
+            mod.__pillar__ = DictThread(self._pillar)
 
         # pack whatever other globals we were asked to
         for p_name, p_value in six.iteritems(self.pack):
