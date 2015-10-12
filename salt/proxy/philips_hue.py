@@ -103,6 +103,13 @@ def _get_devices(params):
 
 
 # Callers
+def call_lights(*args, **kwargs):
+    '''
+    Get info about available lamps.
+    '''
+    return json.loads(requests.get(CONFIG['url'] + "/lights").content)
+
+
 def call_ping(*args, **kwargs):
     '''
     Ping the lamps
