@@ -133,12 +133,12 @@ def minion_mods(
         opts,
         context=None,
         utils=None,
-        proxy=None,
         whitelist=None,
         include_errors=False,
         initial_load=False,
         loaded_base_name=None,
-        notify=False):
+        notify=False,
+        proxy=None):
     '''
     Load execution modules
 
