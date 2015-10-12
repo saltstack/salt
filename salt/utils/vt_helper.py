@@ -34,7 +34,7 @@ class SSHConnection(object):
                  password='password',
                  host='localhost',
                  key_accept=False,
-                 prompt='\(Cmd\)',
+                 prompt=r'(Cmd)',
                  passwd_retries=3,
                  linesep=os.linesep):
         '''
@@ -115,7 +115,7 @@ class SSHConnection(object):
         # saw_prompt = False
         ret_stdout = []
         ret_stderr = []
-        while(self.conn.has_unread_data):
+        while self.conn.has_unread_data:
             stdout, stderr = self.conn.recv()
 
             if stdout:
