@@ -129,7 +129,8 @@ def _get_devices(params):
     if 'id' not in params:
         raise CommandExecutionError("Parameter ID is required.")
 
-    return [int(dev) for dev in params['id'].split(",")]
+    return type(params['id']) == int and [params['id']] \
+           or [int(dev) for dev in params['id'].split(",")]
 
 
 # Callers
