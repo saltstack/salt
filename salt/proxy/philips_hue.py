@@ -165,7 +165,7 @@ def call_status(*args, **kwargs):
         }
 
 
-def call_alert(*args, **kw):
+def call_alert(*args, **kwargs):
     '''
     Blink the alert.
     '''
