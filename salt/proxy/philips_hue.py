@@ -23,6 +23,7 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import requests
+import time
 import json
 from salt.exceptions import (CommandExecutionError, MinionError)
 
@@ -172,6 +173,32 @@ def call_switch(*args, **kwargs):
         out[dev_id] = _set(dev_id, state)
 
     return out
+
+
+def call_blink(*args, **kwargs):
+    '''
+    Blink a lamp. If lamp is ON, then blink ON-OFF-ON, otherwise OFF-ON-OFF.
+
+    Options:
+
+    * **id**: Specifies a device ID. Can be a comma-separated values. All, if omitted.
+    * **pause**: Time in seconds. Can be less than 1, i.e. 0.7, 0.5 sec.
+
+    CLE Example:
+
+    .. code-block:: bash
+
+        salt '*' hue.blink id=1
+        salt '*' hue.blink id=1,2,3
+    '''
+    devices = call_lights()
+    pause = kwargs.get('pause', 0)
+    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+        state = devices[str(dev_id)]['state']['on']
+        _set(dev_id, state and Const.LAMP_OFF or Const.LAMP_ON)
+        if pause:
+            time.sleep(pause)
+        _set(dev_id, not state and Const.LAMP_OFF or Const.LAMP_ON)
 
 
 def call_ping(*args, **kwargs):
