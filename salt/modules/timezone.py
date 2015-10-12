@@ -103,7 +103,7 @@ def get_zone():
         ret = __salt__['cmd.run_all'](['timedatectl'], python_shell=False)
 
         if ret['retcode'] > 0:
-            msg = 'timedatectl failed: {}'.format(ret['stderr'])
+            msg = 'timedatectl failed: {0}'.format(ret['stderr'])
             raise CommandExecutionError(msg)
 
         for line in (x.strip() for x in ret['stdout'].splitlines()):
