@@ -69,6 +69,14 @@ To use the alternative configuration, append '--return_config alternative' to th
 
     salt '*' test.ping --return smtp --return_config alternative
 
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: Boron
+
+.. code-block:: bash
+
+    salt '*' test.ping --return smtp --return_kwargs '{"to": "user@domain.com"}'
+
 '''
 from __future__ import absolute_import
 

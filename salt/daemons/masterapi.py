@@ -1611,6 +1611,9 @@ class LocalFuncs(object):
             if 'metadata' in load['kwargs']:
                 pub_load['metadata'] = load['kwargs'].get('metadata')
 
+            if 'ret_kwargs' in load['kwargs']:
+                pub_load['ret_kwargs'] = load['kwargs'].get('ret_kwargs')
+
         if 'user' in load:
             log.info(
                 'User {user} Published command {fun} with jid {jid}'.format(
