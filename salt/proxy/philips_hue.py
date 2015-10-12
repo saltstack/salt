@@ -99,7 +99,7 @@ def shutdown(opts, *args, **kw):
     return True
 
 
-def _set(lamp_id, state):
+def _set(lamp_id, state, method="state"):
     '''
     Set state to the device by ID.
 
@@ -107,8 +107,8 @@ def _set(lamp_id, state):
     :param state:
     :return:
     '''
-    res = json.loads(requests.put(CONFIG['url']+"/lights/"
-                                   + str(lamp_id) + "/state", json=state).content)
+    url = "{0}/lights/{1}".format(CONFIG['url'], lamp_id) + (method and "/{0}".format(method) or '')
+    res = json.loads(requests.put(url, json=state).content)
     res = len(res) > 1 and res[-1] or res[0]
     if res.get('success'):
         res = {'result': True}
