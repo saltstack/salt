@@ -118,6 +118,7 @@ def _set(lamp_id, state):
 
     return res
 
+
 def _get_devices(params):
     '''
     Parse device(s) ID(s) from the common params.
