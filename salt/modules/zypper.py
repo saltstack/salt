@@ -162,6 +162,10 @@ def info_available(*names, **kwargs):
         if nfo.get("name"):
             name = nfo.pop("name")
             ret[name] = nfo
+        if nfo.get("status"):
+            nfo['status'] = nfo.get("status").split(" ")[0]
+        if nfo.get("installed"):
+            nfo['installed'] = nfo.get("installed").lower() == "yes" and True or False
 
     return ret
 
@@ -200,7 +204,7 @@ def latest_version(*names, **kwargs):
         salt '*' pkg.latest_version <package name>
         salt '*' pkg.latest_version <package1> <package2> <package3> ...
     '''
-    ret = {}
+    ret = dict()
 
     if not names:
         return ret
@@ -208,16 +212,10 @@ def latest_version(*names, **kwargs):
     names = sorted(list(set(names)))
     package_info = info_available(*names)
     for name in names:
-        pkg_info = package_info.get(name)
-        status = pkg_info.get('status', '').lower()
-        if pkg_info is not None and status.startswith('not installed') or status.startswith('out-of-date'):
-            ret[name] = pkg_info.get('version')
-        else:
-            ret[name] = ''
+        pkg_info = package_info.get(name, {})
+        if pkg_info.get('status', '').lower() in ['not installed', 'out-of-date']:
+            ret[name] = pkg_info
 
-    # Return a string if only one package name passed
-    if len(names) == 1 and len(ret):
-        return ret[names[0]]
     return ret
 
 
@@ -881,16 +879,22 @@ def clean_locks():
 
         salt '*' pkg.clean_locks
     '''
-    if not os.path.exists(LOCKS):
-        return False
+    LCK = "removed"
+    out = {LCK: 0}
+    if not os.path.exists("/etc/zypp/locks"):
+        return out
 
-    cmd = ('zypper --non-interactive cl')
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    doc = dom.parseString(__salt__['cmd.run']('zypper --non-interactive -x cl', output_loglevel='trace'))
+    for node in doc.getElementsByTagName("message"):
+        text = node.childNodes[0].nodeValue.lower()
+        if text.startswith(LCK):
+            out[LCK] = text.split(" ")[1]
+            break
 
-    return True
+    return out
 
 
-def remove_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
+def remove_lock(packages, **kwargs):  # pylint: disable=unused-argument
     '''
     Remove specified package lock.
 
@@ -904,9 +908,8 @@ def remove_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argum
     '''
 
     locks = list_locks()
-    packages = []
     try:
-        packages = list(__salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys())
+        packages = list(__salt__['pkg_resource.parse_targets'](packages)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
@@ -925,7 +928,7 @@ def remove_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argum
     return {'removed': len(removed), 'not_found': missing}
 
 
-def add_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
+def add_lock(packages, **kwargs):  # pylint: disable=unused-argument
     '''
     Add a package lock. Specify packages to lock by exact name.
 
@@ -938,10 +941,9 @@ def add_lock(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         salt '*' pkg.add_lock pkgs='["foo", "bar"]'
     '''
     locks = list_locks()
-    packages = []
     added = []
     try:
-        packages = list(__salt__['pkg_resource.parse_targets'](name, pkgs)[0].keys())
+        packages = list(__salt__['pkg_resource.parse_targets'](packages)[0].keys())
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
