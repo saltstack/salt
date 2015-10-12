@@ -333,7 +333,7 @@ def get_distribution_path(venv, distribution):
     return ret['stdout']
 
 
-def get_resource_path(venv, package=None, resource=None, package_or_requirement=None, resource_name=None):
+def get_resource_path(venv, package_or_requirement=None, resource_name=None, package=None, resource=None):
     '''
     Returns the path to a resource of a package or a distribution inside a virtualenv
 
@@ -384,7 +384,7 @@ def get_resource_path(venv, package=None, resource=None, package_or_requirement=
     return ret['stdout']
 
 
-def get_resource_content(venv, package=None, resource=None, package_or_requirement=None, resource_name=None):
+def get_resource_content(venv, package_or_requirement=None, resource_name=None, package=None, resource=None):
     '''
     Returns the content of a resource of a package or a distribution inside a virtualenv
 
