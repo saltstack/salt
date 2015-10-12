@@ -193,20 +193,27 @@ def call_blink(*args, **kwargs):
     '''
     devices = call_lights()
     pause = kwargs.get('pause', 0)
+    res = dict()
     for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
         state = devices[str(dev_id)]['state']['on']
         _set(dev_id, state and Const.LAMP_OFF or Const.LAMP_ON)
         if pause:
             time.sleep(pause)
-        _set(dev_id, not state and Const.LAMP_OFF or Const.LAMP_ON)
+        res[dev_id] = _set(dev_id, not state and Const.LAMP_OFF or Const.LAMP_ON)
+
+    return res
 
 
 def call_ping(*args, **kwargs):
     '''
     Ping the lamps
     '''
-    call_blink(*args, **kwargs)
+    errors = dict()
+    for dev_id, dev_status in call_blink().items():
+        if not dev_status['result']:
+            errors[dev_id] = False
 
+    return errors or True
 
 def call_status(*args, **kwargs):
     '''
