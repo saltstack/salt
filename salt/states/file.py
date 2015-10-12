@@ -371,10 +371,12 @@ def _gen_keep_files(name, require, walk_d=None):
         required_files = [comp for comp in require if 'file' in comp]
         for comp in required_files:
             for low in __lowstate__:
-                if low['name'] == comp['file']:
+                # A requirement should match either the ID and the name of
+                # another state.
+                if low['name'] == comp['file'] or low['__id__'] == comp['file']:
                     fn = low['name']
-                    if os.path.isdir(comp['file']):
-                        if _is_child(comp['file'], name):
+                    if os.path.isdir(fn):
+                        if _is_child(fn, name):
                             if walk_d:
                                 walk_ret = set()
                                 _process_by_walk_d(fn, walk_ret)
