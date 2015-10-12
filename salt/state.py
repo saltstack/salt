@@ -738,7 +738,7 @@ class State(object):
         '''
         log.info('Loading fresh modules for state activity')
         self.utils = salt.loader.utils(self.opts)
-        self.functions = salt.loader.minion_mods(self.opts, self.state_con, 
+        self.functions = salt.loader.minion_mods(self.opts, self.state_con,
                                                  utils=self.utils,
                                                  proxy=proxy)
         if isinstance(data, dict):
