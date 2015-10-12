@@ -228,9 +228,14 @@ def create_win_salt_restart_task():
 
         salt '*' service.create_win_salt_restart_task()
     '''
-    cmd = 'schtasks /RU "System" /Create /TN restart-salt-minion /TR "cmd /C ping -n 3 127.0.0.1>nul && net stop salt-minion && net start salt-minion" /sc ONCE /sd 01/01/1975 /st 01:00 /F /V1 /Z'
-
-    return __salt__['cmd.shell'](cmd)
+    cmd = 'cmd /c ping -n 3 127.0.0.1 && net stop salt-minion && net start salt-minion'
+    return __salt__['task.create_task'](name='restart-salt-minion',
+                                        user_name='System',
+                                        action_type='Execute',
+                                        cmd=cmd,
+                                        trigger_type='Once',
+                                        start_date='1975-01-01',
+                                        start_time='01:00')
 
 
 def execute_salt_restart_task():
@@ -243,8 +248,7 @@ def execute_salt_restart_task():
 
         salt '*' service.execute_salt_restart_task()
     '''
-    cmd = 'schtasks /Run /TN restart-salt-minion'
-    return __salt__['cmd.shell'](cmd)
+    return __salt__['task.run'](name='restart-salt-minion')
 
 
 def status(name, sig=None):
