@@ -230,6 +230,31 @@ def call_status(*args, **kwargs):
     return res
 
 
+def call_rename(*args, **kwargs):
+    '''
+    Rename a device.
+
+    Options:
+
+    * **id**: Specifies a device ID. Only one device at a time.
+    * **title**: Title of the device.
+
+    CLE Example:
+
+    .. code-block:: bash
+
+        salt '*' hue.rename id=1 title='WC for cats'
+    '''
+    dev_id = _get_devices(kwargs)
+    if len(dev_id) > 1:
+        raise CommandExecutionError("Only one device can be renamed at a time")
+
+    if 'title' not in kwargs:
+        raise CommandExecutionError("Title is missing")
+
+    return _set(dev_id[0], {"name": kwargs['title']}, method="")
+
+
 def call_alert(*args, **kwargs):
     '''
     Blink the alert.
