@@ -151,21 +151,26 @@ def call_switch(*args, **kwargs):
     Options:
 
     * **id**: Specifies a device ID. Can be a comma-separated values. All, if omitted.
-    * **on**: True or False
+    * **on**: True or False. Inverted current, if omitted
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' hue.switch id=1 on=True
+        salt '*' hue.switch
+        salt '*' hue.switch id=1
         salt '*' hue.switch id=1,2,3 on=True
     '''
-    if 'on' not in kwargs:
-        raise CommandExecutionError("Parameter 'on' is missing and should be True or False")
-
     out = dict()
-    for dev_id in ('id' not in kwargs and call_lights().keys() or _get_devices(kwargs)):
-        out[dev_id] = _set(dev_id, kwargs['on'] and Const.LAMP_ON or Const.LAMP_OFF)
+    devices = call_lights()
+    print devices
+    for dev_id in ('id' not in kwargs and devices.keys() or _get_devices(kwargs)):
+        if 'on' in kwargs:
+            state = kwargs['on'] and Const.LAMP_ON or Const.LAMP_OFF
+        else:
+            # Invert the current state
+            state = devices[str(dev_id)]['state']['on'] and Const.LAMP_OFF or Const.LAMP_ON
+        out[dev_id] = _set(dev_id, state)
 
     return out
 
