@@ -199,9 +199,8 @@ def _save_task_definition(name,
         return 'Failed to modify task: {0}'.format(failure_code)
 
 
-
 def list_tasks(location='\\'):
-    u'''
+    r'''
     List all tasks located in a specific location in the task scheduler.
 
     :param str location: A string value representing the folder from which you
@@ -226,8 +225,9 @@ def list_tasks(location='\\'):
 
     return ret
 
+
 def list_folders(location='\\'):
-    '''
+    r'''
     List all folders located in a specific location in the task scheduler.
 
     :param str location: A string value representing the folder from which you
@@ -254,7 +254,7 @@ def list_folders(location='\\'):
 
 
 def list_triggers(name, location='\\'):
-    '''
+    r'''
     List all triggers that pertain to a task in the specified location.
 
     :param str name: The name of the task for which list triggers.
@@ -284,7 +284,7 @@ def list_triggers(name, location='\\'):
 
 
 def list_actions(name, location='\\'):
-    '''
+    r'''
     List all actions that pertain to a task in the specified location.
 
     :param str name: The name of the task for which list actions.
@@ -318,7 +318,7 @@ def create_task(name,
                 user_name='System',
                 password=None,
                 **kwargs):
-    '''
+    r'''
     Create a new task in the designated location. This function has many keyword
     arguments that are not listed here. For additional arguments see:
 
@@ -391,7 +391,7 @@ def create_task_from_xml(name,
                          xml_path=None,
                          user_name='System',
                          password=None):
-    '''
+    r'''
     Create a task based on XML. Source can be a file or a string of XML.
 
     :param str name: The name of the task. This will be displayed in the task
@@ -481,7 +481,7 @@ def create_task_from_xml(name,
 
 
 def create_folder(name, location='\\'):
-    '''
+    r'''
     Create a folder in which to create tasks.
 
     :param str name: The name of the folder. This will be displayed in the task
@@ -545,7 +545,7 @@ def edit_task(name=None,
               delete_after=None,
               multiple_instances=None,
               **kwargs):
-    '''
+    r'''
     Edit the parameters of a task. Triggers and Actions cannot be edited yet.
 
     :param str name: The name of the task. This will be displayed in the task
@@ -851,7 +851,7 @@ def edit_task(name=None,
 
 
 def delete_task(name, location='\\'):
-    '''
+    r'''
     Delete a task from the task scheduler.
 
     :param str name: The name of the task to delete.
@@ -885,7 +885,7 @@ def delete_task(name, location='\\'):
 
 
 def delete_folder(name, location='\\'):
-    '''
+    r'''
     Delete a folder from the task scheduler.
 
     :param str name: The name of the folder to delete.
@@ -920,7 +920,8 @@ def delete_folder(name, location='\\'):
 
 
 def run(name, location='\\'):
-    '''
+    r'''
+    Run a scheduled task manually.
 
     :param str name: The name of the task to run.
 
@@ -955,7 +956,7 @@ def add_action(name=None,
                location='\\',
                action_type='Execute',
                **kwargs):
-    '''
+    r'''
     Add an action to a task.
 
     :param str name: The name of the task to which to add the action.
@@ -1109,7 +1110,7 @@ def add_action(name=None,
 
 
 def _clear_actions(name, location='\\'):
-    '''
+    r'''
     Remove all actions from the task.
 
     :param str name: The name of the task from which to clear all actions.
@@ -1166,7 +1167,7 @@ def add_trigger(name=None,
                 repeat_stop_at_duration_end=False,
                 execution_time_limit=None,
                 **kwargs):
-    '''
+    r'''
 
     :param str name: The name of the task to which to add the trigger.
 
@@ -1556,7 +1557,7 @@ def add_trigger(name=None,
         trigger.DaysInterval = kwargs.get('days_interval', 1)
 
     # Weekly Trigger Parameters
-    elif trigger_types[trigger_type] ==  TASK_TRIGGER_WEEKLY:
+    elif trigger_types[trigger_type] == TASK_TRIGGER_WEEKLY:
         trigger.Id = 'Weekly_ID1'
         trigger.WeeksInterval = kwargs.get('weeks_interval', 1)
         if kwargs.get('days_of_week', False):
@@ -1593,7 +1594,7 @@ def add_trigger(name=None,
     elif trigger_types[trigger_type] == TASK_TRIGGER_MONTHLYDOW:
         trigger.Id = 'Monthy_DOW_ID1'
         if kwargs.get('months_of_year', False):
-            bits_months= 0
+            bits_months = 0
             for month in kwargs.get('months_of_year'):
                 bits_months |= months[month]
             trigger.MonthsOfYear = bits_months
@@ -1657,7 +1658,7 @@ def add_trigger(name=None,
 
 
 def clear_triggers(name, location='\\'):
-    '''
+    r'''
     Remove all triggers from the task.
 
     :param str name: The name of the task from which to clear all triggers.
