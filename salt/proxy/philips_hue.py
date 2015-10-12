@@ -7,10 +7,15 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+import requests
+import json
+from salt.exceptions import CommandExecutionError
+
 
 __proxyenabled__ = ['philips_hue']
 
 GRAINS_CACHE = {}
+CONFIG = {}
 log = logging.getLogger(__file__)
 
 
@@ -108,6 +113,38 @@ def call_lights(*args, **kwargs):
     Get info about available lamps.
     '''
     return json.loads(requests.get(CONFIG['url'] + "/lights").content)
+
+
+def call_switch(*args, **kwargs):
+    '''
+    Switch lamp ON/OFF.
+
+    If no particular state is passed,
+    then lamp will be switched to the opposite state.
+
+    Required parameters:
+
+    * **id**: Specifies a device ID. Can be a comma-separated values.
+
+    Options:
+
+    * **on**: True or False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hue.switch id=1 on=True
+        salt '*' hue.switch id=1,2,3 on=True
+    '''
+    if 'on' not in kwargs:
+        raise CommandExecutionError("Parameter 'on' is missing and should be True or False")
+
+    out = dict()
+    for dev_id in _get_devices(kwargs):
+        out[dev_id] = _set(dev_id, kwargs['on'] and Const.LAMP_ON or Const.LAMP_OFF)
+
+    return out
 
 
 def call_ping(*args, **kwargs):
