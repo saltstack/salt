@@ -44,6 +44,7 @@ def grains_refresh():
         
     return GRAINS_CACHE
 
+
 def ping(*args, **kw):
     '''
     Ping the lamps.
@@ -59,6 +60,26 @@ def shutdown(opts, *args, **kw):
     # This is no-op method, which is required but makes nothing at this point.
     return True
 
+
+def _set(lamp_id, state):
+    '''
+    Set state to the device by ID.
+
+    :param lamp_id:
+    :param state:
+    :return:
+    '''
+    res = json.loads(requests.put(CONFIG['url']+"/lights/"
+                                   + str(lamp_id) + "/state", json=state).content)
+    res = len(res) > 1 and res[-1] or res[0]
+    if res.get('success'):
+        res = {'result': True}
+    elif res.get('error'):
+        res = {'result': False,
+               'description': res['error']['description'],
+               'type': res['error']['type']}
+
+    return res
 
 def _get_devices(params):
     '''
