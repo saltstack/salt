@@ -174,7 +174,6 @@ def minion_mods(
         __salt__['test.ping']()
     '''
     # TODO Publish documentation for module whitelisting
-
     if context is None:
         context = {}
     if utils is None:
