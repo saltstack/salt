@@ -7,12 +7,10 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import salt.utils.http
 
 __proxyenabled__ = ['philips_hue']
 
 GRAINS_CACHE = {}
-DETAILS = {}
 log = logging.getLogger(__file__)
 
 
@@ -63,14 +61,14 @@ def shutdown(opts, *args, **kw):
 
 
 # Callers
-def call_ping(*args, **kw):
+def call_ping(*args, **kwargs):
     '''
     Ping the lamps
     '''
     ping(*args, **kw)
 
 
-def call_status(*args, **kw):
+def call_status(*args, **kwargs):
     '''
     Return lamps status.
     '''
@@ -81,7 +79,7 @@ def call_status(*args, **kw):
         }
 
 
-def call_alert(*args, **kw):
+def call_alert(*args, **kwargs):
     '''
     Blink the alert.
     '''
