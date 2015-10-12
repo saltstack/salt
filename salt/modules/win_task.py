@@ -19,6 +19,7 @@ import logging
 # Import 3rd Party Libraries
 import pythoncom
 import win32com.client
+import salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
