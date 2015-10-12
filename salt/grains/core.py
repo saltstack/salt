@@ -1138,7 +1138,7 @@ def os_data():
                             ] = match.groups()[1].rstrip()
             if 'lsb_distrib_id' not in grains:
                 if os.path.isfile('/etc/os-release'):
-                    # Arch ARM Linux
+                    # Arch ARM Linux - SUSE 12+ - openSUSE 13+
                     with salt.utils.fopen('/etc/os-release') as ifile:
                         # Imitate lsb-release
                         for line in ifile:
@@ -1159,6 +1159,10 @@ def os_data():
                                 name, value = match.groups()
                                 if name.lower() == 'name':
                                     grains['lsb_distrib_id'] = value.strip()
+                                elif name.lower() == 'version_id':
+                                    grains['lsb_distrib_release'] = value
+                                elif name.lower() == 'pretty_name':
+                                    grains['lsb_distrib_codename'] = value
                 elif os.path.isfile('/etc/SuSE-release'):
                     grains['lsb_distrib_id'] = 'SUSE'
                     with salt.utils.fopen('/etc/SuSE-release') as fhr:
