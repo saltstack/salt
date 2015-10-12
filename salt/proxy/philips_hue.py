@@ -134,12 +134,28 @@ def _get_devices(params):
            or [int(dev) for dev in params['id'].split(",")]
 
 
+def _get_lights():
+    '''
+    Get all available lighting devices.
+
+    :return:
+    '''
+    return json.loads(requests.get(CONFIG['url'] + "/lights").content)
+
+
 # Callers
 def call_lights(*args, **kwargs):
     '''
     Get info about available lamps.
     '''
-    return json.loads(requests.get(CONFIG['url'] + "/lights").content)
+    res = dict()
+    lights = _get_lights()
+    if 'id' in kwargs:
+        for dev_id in _get_devices(kwargs):
+            if lights.get(str(dev_id)):
+                res[dev_id] = lights[str(dev_id)]
+
+    return res or False
 
 
 def call_switch(*args, **kwargs):
@@ -163,7 +179,7 @@ def call_switch(*args, **kwargs):
         salt '*' hue.switch id=1,2,3 on=True
     '''
     out = dict()
-    devices = call_lights()
+    devices = _get_lights()
     for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
         if 'on' in kwargs:
             state = kwargs['on'] and Const.LAMP_ON or Const.LAMP_OFF
@@ -191,7 +207,7 @@ def call_blink(*args, **kwargs):
         salt '*' hue.blink id=1
         salt '*' hue.blink id=1,2,3
     '''
-    devices = call_lights()
+    devices = _get_lights()
     pause = kwargs.get('pause', 0)
     res = dict()
     for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
@@ -215,12 +231,13 @@ def call_ping(*args, **kwargs):
 
     return errors or True
 
+
 def call_status(*args, **kwargs):
     '''
     Return the status of the lamps.
     '''
     res = dict()
-    devices = call_lights()
+    devices = _get_devices()
     for dev_id in devices:
         res[dev_id] = {
             'on': devices[dev_id]['state']['on'],
