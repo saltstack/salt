@@ -148,12 +148,9 @@ def call_switch(*args, **kwargs):
     If no particular state is passed,
     then lamp will be switched to the opposite state.
 
-    Required parameters:
-
-    * **id**: Specifies a device ID. Can be a comma-separated values.
-
     Options:
 
+    * **id**: Specifies a device ID. Can be a comma-separated values. All, if omitted.
     * **on**: True or False
 
     CLI Example:
@@ -167,7 +164,7 @@ def call_switch(*args, **kwargs):
         raise CommandExecutionError("Parameter 'on' is missing and should be True or False")
 
     out = dict()
-    for dev_id in _get_devices(kwargs):
+    for dev_id in ('id' not in kwargs and call_lights().keys() or _get_devices(kwargs)):
         out[dev_id] = _set(dev_id, kwargs['on'] and Const.LAMP_ON or Const.LAMP_OFF)
 
     return out
