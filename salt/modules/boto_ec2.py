@@ -996,7 +996,6 @@ def get_network_interface_id(name, region=None, key=None, keyid=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = {}
-    enis = None
     try:
         enis = conn.get_all_network_interfaces(filters={'tag:Name': name})
         if not enis:
@@ -1039,7 +1038,6 @@ def get_network_interface(name=None, network_interface_id=None, region=None,
 
 def _get_network_interface(conn, name=None, network_interface_id=None):
     r = {}
-    enis = None
     if not (name or network_interface_id):
         raise SaltInvocationError(
             'Either name or network_interface_id must be provided.'
