@@ -1331,9 +1331,9 @@ class Minion(MinionBase):
         Refresh the functions and returners.
         '''
         log.debug('Refreshing modules. Notify={0}'.format(notify))
-        try:
+        if hasattr(self, 'proxy'):
             self.functions, self.returners, _ = self._load_modules(force_refresh, notify=notify, proxy=self.proxy)
-        except NameError:
+        else:
             self.functions, self.returners, _ = self._load_modules(force_refresh, notify=notify)
 
         self.schedule.functions = self.functions
