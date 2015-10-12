@@ -1370,7 +1370,7 @@ def locale_info():
     grains = {}
     grains['locale_info'] = {}
 
-    if 'proxyminion' in __opts__:
+    if salt.utils.is_proxy():
         return grains
 
     try:
@@ -1399,7 +1399,7 @@ def hostname():
     #   domain
     grains = {}
 
-    if 'proxyminion' in __opts__:
+    if salt.utils.is_proxy():
         return grains
 
     grains['localhost'] = socket.gethostname()
@@ -1415,7 +1415,7 @@ def append_domain():
 
     grain = {}
 
-    if 'proxyminion' in __opts__:
+    if salt.utils.is_proxy():
         return grain
 
     if 'append_domain' in __opts__:
@@ -1428,7 +1428,7 @@ def ip4():
     Return a list of ipv4 addrs
     '''
 
-    if 'proxyminion' in __opts__:
+    if salt.utils.is_proxy():
         return {}
 
     return {'ipv4': salt.utils.network.ip_addrs(include_loopback=True)}
@@ -1439,7 +1439,7 @@ def fqdn_ip4():
     Return a list of ipv4 addrs of fqdn
     '''
 
-    if 'proxyminion' in __opts__:
+    if salt.utils.is_proxy():
         return {}
 
     try:
@@ -1455,7 +1455,7 @@ def ip6():
     Return a list of ipv6 addrs
     '''
 
-    if 'proxyminion' in __opts__:
+    if salt.utils.is_proxy():
         return {}
 
     return {'ipv6': salt.utils.network.ip_addrs6(include_loopback=True)}
@@ -1466,7 +1466,7 @@ def fqdn_ip6():
     Return a list of ipv6 addrs of fqdn
     '''
 
-    if 'proxyminion' in __opts__:
+    if salt.utils.is_proxy():
         return {}
 
     try:
@@ -1484,7 +1484,7 @@ def ip_interfaces():
     # Provides:
     #   ip_interfaces
 
-    if 'proxyminion' in __opts__:
+    if salt.utils.is_proxy():
         return {}
 
     ret = {}
@@ -1511,7 +1511,7 @@ def ip4_interfaces():
     # Provides:
     #   ip_interfaces
 
-    if 'proxyminion' in __opts__:
+    if salt.utils.is_proxy():
         return {}
 
     ret = {}
@@ -1535,7 +1535,7 @@ def ip6_interfaces():
     # Provides:
     #   ip_interfaces
 
-    if 'proxyminion' in __opts__:
+    if salt.utils.is_proxy():
         return {}
 
     ret = {}
@@ -1678,7 +1678,7 @@ def _hw_data(osdata):
     .. versionadded:: 0.9.5
     '''
 
-    if 'proxyminion' in __opts__:
+    if salt.utils.is_proxy():
         return {}
 
     grains = {}
@@ -1767,7 +1767,7 @@ def _smartos_zone_data():
     #   hypervisor_uuid
     #   datacenter
 
-    if 'proxyminion' in __opts__:
+    if salt.utils.is_proxy():
         return {}
 
     grains = {}
@@ -1819,7 +1819,7 @@ def get_server_id():
     # Provides:
     #   server_id
 
-    if 'proxyminion' in __opts__:
+    if salt.utils.is_proxy():
         return {}
     return {'server_id': abs(hash(__opts__.get('id', '')) % (2 ** 31))}
 
