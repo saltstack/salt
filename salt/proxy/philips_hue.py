@@ -181,13 +181,17 @@ def call_ping(*args, **kwargs):
 
 def call_status(*args, **kwargs):
     '''
-    Return lamps status.
+    Return the status of the lamps.
     '''
-    return {
-        1: True,
-        2: True,
-        3: False,
+    res = dict()
+    devices = call_lights()
+    for dev_id in devices:
+        res[dev_id] = {
+            'on': devices[dev_id]['state']['on'],
+            'reachable': devices[dev_id]['state']['reachable']
         }
+
+    return res
 
 
 def call_alert(*args, **kwargs):
