@@ -2333,31 +2333,29 @@ def ps_(filters=None, **kwargs):
         salt myminion dockerng.ps all=True
         salt myminion dockerng.ps filters="{'label': 'role=web'}"
     '''
-    if 'docker.ps' not in __context__:
-        response = _client_wrapper('containers', all=True, filters=filters)
-        key_map = {
-            'Created': 'Time_Created_Epoch',
-        }
-        for container in response:
-            c_id = container.pop('Id', None)
-            if c_id is None:
-                continue
-            for item in container:
-                c_state = 'running' \
-                    if container['Status'].lower().startswith('up ') \
-                    else 'stopped'
-                bucket = __context__.setdefault('docker.ps', {}).setdefault(
-                    c_state, {})
-                c_key = key_map.get(item, item)
-                bucket.setdefault(c_id, {})[c_key] = container[item]
-            if 'Time_Created_Epoch' in bucket.get(c_id, {}):
-                bucket[c_id]['Time_Created_Local'] = \
-                    time.strftime(
-                        '%Y-%m-%d %H:%M:%S %Z',
-                        time.localtime(bucket[c_id]['Time_Created_Epoch'])
-                    )
+    response = _client_wrapper('containers', all=True, filters=filters)
+    key_map = {
+        'Created': 'Time_Created_Epoch',
+    }
+    context_data = {}
+    for container in response:
+        c_id = container.pop('Id', None)
+        if c_id is None:
+            continue
+        for item in container:
+            c_state = 'running' \
+                if container['Status'].lower().startswith('up ') \
+                else 'stopped'
+            bucket = context_data.setdefault(c_state, {})
+            c_key = key_map.get(item, item)
+            bucket.setdefault(c_id, {})[c_key] = container[item]
+        if 'Time_Created_Epoch' in bucket.get(c_id, {}):
+            bucket[c_id]['Time_Created_Local'] = \
+                time.strftime(
+                    '%Y-%m-%d %H:%M:%S %Z',
+                    time.localtime(bucket[c_id]['Time_Created_Epoch'])
+                )
 
-    context_data = __context__.get('docker.ps', {})
     ret = copy.deepcopy(context_data.get('running', {}))
     if kwargs.get('all', False):
         ret.update(copy.deepcopy(context_data.get('stopped', {})))
