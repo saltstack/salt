@@ -899,7 +899,8 @@ _OS_NAME_MAP = {
     'cloudserve': 'CloudLinux',
     'pidora': 'Fedora',
     'scientific': 'ScientificLinux',
-    'synology': 'Synology'
+    'synology': 'Synology',
+    'manjaro': 'Manjaro',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -943,7 +944,8 @@ _OS_FAMILY_MAP = {
     'Linaro': 'Debian',
     'elementary OS': 'Debian',
     'ScientificLinux': 'RedHat',
-    'Raspbian': 'Debian'
+    'Raspbian': 'Debian',
+    'Manjaro': 'Arch',
 }
 
 
