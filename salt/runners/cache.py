@@ -12,6 +12,7 @@ import salt.utils
 import salt.utils.master
 import salt.payload
 from salt.ext.six import string_types
+from salt.exceptions import SaltInvocationError
 from salt.fileserver import clear_lock as _clear_lock
 from salt.fileserver.gitfs import PER_REMOTE_OVERRIDES as __GITFS_OVERRIDES
 from salt.pillar.git_pillar \
@@ -268,7 +269,8 @@ def clear_git_lock(role, remote=None):
     '''
     if role == 'gitfs':
         git_objects = [salt.utils.gitfs.GitFS(__opts__)]
-        git_objects[0].init_remotes(__opts__['gitfs_remotes'], __GITFS_OVERRIDES)
+        git_objects[0].init_remotes(__opts__['gitfs_remotes'],
+                                    __GITFS_OVERRIDES)
     elif role == 'git_pillar':
         git_objects = []
         for ext_pillar in __opts__['ext_pillar']:
@@ -280,8 +282,34 @@ def clear_git_lock(role, remote=None):
                 obj.init_remotes(ext_pillar['git'], __GIT_PILLAR_OVERRIDES)
                 git_objects.append(obj)
     elif role == 'winrepo':
-        git_objects = [salt.utils.gitfs.WinRepo(__opts__)]
-        git_objects[0].init_remotes(__opts__['winrepo_remotes'], __WINREPO_OVERRIDES)
+        if 'win_repo' in __opts__:
+            salt.utils.warn_until(
+                'Nitrogen',
+                'The \'win_repo\' config option is deprecated, please use '
+                '\'winrepo_dir\' instead.'
+            )
+            winrepo_dir = __opts__['win_repo']
+        else:
+            winrepo_dir = __opts__['winrepo_dir']
+
+        if 'win_gitrepos' in __opts__:
+            salt.utils.warn_until(
+                'Nitrogen',
+                'The \'win_gitrepos\' config option is deprecated, please use '
+                '\'winrepo_remotes\' instead.'
+            )
+            winrepo_remotes = __opts__['win_gitrepos']
+        else:
+            winrepo_remotes = __opts__['winrepo_remotes']
+
+        git_objects = []
+        for remotes, base_dir in (
+            (winrepo_remotes, winrepo_dir),
+            (__opts__['winrepo_remotes_ng'], __opts__['winrepo_dir_ng'])
+        ):
+            obj = salt.utils.gitfs.WinRepo(__opts__, base_dir)
+            obj.init_remotes(remotes, __WINREPO_OVERRIDES)
+            git_objects.append(obj)
     else:
         raise SaltInvocationError('Invalid role \'{0}\''.format(role))
 
