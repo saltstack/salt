@@ -9,7 +9,7 @@ from __future__ import absolute_import
 import logging
 import requests
 import json
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import (CommandExecutionError, MinionError)
 
 
 __proxyenabled__ = ['philips_hue']
@@ -34,10 +34,19 @@ def __virtual__():
     return True
 
 
-def init(opts):
+def init(cnf):
     '''
     Initialize the module.
     '''
+    host = cnf.get('proxy', {}).get('host')
+    if not host:
+        raise MinionError(message="Cannot find 'host' parameter in the proxy configuration")
+
+    user = cnf.get('proxy', {}).get('user')
+    if not user:
+        raise MinionError(message="Cannot find 'user' parameter in the proxy configuration")
+
+    CONFIG['url'] = "http://{0}/api/{1}".format(host, user)
 
 
 def grains():
