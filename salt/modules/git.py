@@ -2011,7 +2011,8 @@ def merge_base(cwd,
 
     if all_ and (independent or is_ancestor or fork_point):
         raise SaltInvocationError(
-
+            'The \'all\' argument is not compatible with \'independent\', '
+            '\'is_ancestor\', or \'fork_point\''
         )
 
     if refs is None:
@@ -2026,25 +2027,12 @@ def merge_base(cwd,
             'Only one of \'octopus\', \'independent\', \'is_ancestor\', and '
             '\'fork_point\' is permitted'
         )
-    elif independent:
-        if all_:
-            raise SaltInvocationError(
-                '\'all\' is not compatible with \'independent\''
-            )
     elif is_ancestor:
-        if all_:
-            raise SaltInvocationError(
-                '\'all\' is not compatible with \'is_ancestor\''
-            )
         if len(refs) != 2:
             raise SaltInvocationError(
                 'Two refs/commits are required if \'is_ancestor\' is True'
             )
     elif fork_point:
-        if all_:
-            raise SaltInvocationError(
-                '\'all\' is not compatible with \'fork_point\''
-            )
         if len(refs) > 1:
             raise SaltInvocationError(
                 'At most one ref/commit can be passed if \'fork_point\' is '
