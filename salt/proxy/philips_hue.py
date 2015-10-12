@@ -274,10 +274,25 @@ def call_rename(*args, **kwargs):
 
 def call_alert(*args, **kwargs):
     '''
-    Blink the alert.
+    Lamp alert
+
+    Options:
+
+    * **id**: Specifies a device ID. Can be comma-separated ids or all, if omitted.
+    * **on**: Turns on or off an alert. Default is True.
+
+    CLE Example:
+
+    .. code-block:: bash
+
+        salt '*' hue.alert
+        salt '*' hue.alert id=1
+        salt '*' hue.alert id=1,2,3 on=false
     '''
-    return {
-        1: 'Alerted',
-        2: 'Alerted',
-        3: 'Skipped',
-    }
+    res = dict()
+
+    devices = _get_lights()
+    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+        res[dev_id] = _set(dev_id, {"alert": kwargs.get("on", True) and "lselect" or "none"})
+
+    return res
