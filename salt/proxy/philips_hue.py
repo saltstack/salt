@@ -42,6 +42,13 @@ class Const:
     LAMP_ON = {"on": True, "transitiontime": 0}
     LAMP_OFF = {"on": False, "transitiontime": 0}
 
+    COLOR_WHITE = {"sat": 0}
+    COLOR_RED = {"hue": 0, "sat": 254}
+    COLOR_GREEN = {"hue": 25500, "sat": 254}
+    COLOR_ORANGE = {"hue": 12000, "sat": 254}
+    COLOR_PINK = {"hue": 12000, "sat": 254}
+    COLOR_BLUE = {"hue": 46920, "sat": 254}
+
 
 def __virtual__():
     '''
@@ -320,5 +327,43 @@ def call_effect(*args, **kwargs):
     devices = _get_lights()
     for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
         res[dev_id] = _set(dev_id, {"effect": kwargs.get("type", "none")})
+
+    return res
+
+
+def call_color(*args, **kwargs):
+    '''
+    Set a color to the lamp.
+
+    Options:
+
+    * **id**: Specifies a device ID. Can be comma-separated ids or all, if omitted.
+    * **color**: Fixed color. Values are: red, green, blue, orange, pink, white. Default white.
+    * **transition**: Transition 0~200.
+
+    CLE Example:
+
+    .. code-block:: bash
+
+        salt '*' hue.color
+        salt '*' hue.color id=1
+        salt '*' hue.color id=1,2,3 oolor=red transition=30
+    '''
+    res = dict()
+
+    colormap = {
+        'red': Const.COLOR_RED,
+        'green': Const.COLOR_GREEN,
+        'blue': Const.COLOR_BLUE,
+        'orange': Const.COLOR_ORANGE,
+        'pink': Const.COLOR_PINK,
+        'white': Const.COLOR_WHITE,
+    }
+
+    devices = _get_lights()
+    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+        color = colormap.get(kwargs.get("color", 'white'), Const.COLOR_WHITE)
+        color.update({"transitiontime": max(min(kwargs.get("transition", 0), 200), 0)})
+        res[dev_id] = _set(dev_id, color)
 
     return res
