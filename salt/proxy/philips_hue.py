@@ -402,3 +402,46 @@ def call_color(*args, **kwargs):
         res[dev_id] = _set(dev_id, color)
 
     return res
+
+
+def call_brightness(*args, **kwargs):
+    '''
+    Set an effect to the lamp.
+
+    Arguments:
+
+    * **value**: 0~255 brightness of the lamp.
+
+    Options:
+
+    * **id**: Specifies a device ID. Can be comma-separated ids or all, if omitted.
+    * **transition**: Transition 0~200. Default 0.
+
+    CLE Example:
+
+    .. code-block:: bash
+
+        salt '*' hue.brightness value=100
+        salt '*' hue.brightness id=1 value=150
+        salt '*' hue.brightness id=1,2,3 value=255
+    '''
+    res = dict()
+
+    if 'value' not in kwargs:
+        raise CommandExecutionError("Parameter 'value' is missing")
+
+    try:
+        brightness = max(min(int(kwargs['value']), 244), 1)
+    except Exception, err:
+        raise CommandExecutionError("Parameter 'value' does not contains an integer")
+
+    try:
+        transition = max(min(int(kwargs['transition']), 200), 0)
+    except Exception, err:
+        transition = 0
+
+    devices = _get_lights()
+    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+        res[dev_id] = _set(dev_id, {"bri": brightness, "transitiontime": transition})
+
+    return res
