@@ -298,7 +298,7 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
         is given. Defaults to False.
 
     :param delimiter: The key can be a nested dict key. Use this parameter to
-        specify the delimiter you use.
+        specify the delimiter you use, instead of the default ``:``.
         You can now append values to a list in nested dictionnary grains. If the
         list doesn't exist at this level, it will be created.
         .. versionadded:: 2014.7.6
@@ -339,7 +339,7 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     Remove a value from a list in the grains config file
 
     :param delimiter: The key can be a nested dict key. Use this parameter to
-        specify the delimiter you use.
+        specify the delimiter you use, instead of the default ``:``.
         You can now append values to a list in nested dictionnary grains. If the
         list doesn't exist at this level, it will be created.
         .. versionadded:: Boron
@@ -555,7 +555,7 @@ def get_or_set_hash(name,
     .. warning::
 
         This function could return strings which may contain characters which are reserved
-        as directives by the YAML parser, such as strings beginning with `%`. To avoid
+        as directives by the YAML parser, such as strings beginning with ``%``. To avoid
         issues when using the output of this function in an SLS file containing YAML+Jinja,
         surround the call with single quotes.
     '''
@@ -586,7 +586,7 @@ def set(key,
     with nested keys.
 
     This function is conservative. It will only overwrite an entry if
-    its value and the given one are not a list or a dict. The `force`
+    its value and the given one are not a list or a dict. The ``force``
     parameter is used to allow overwriting in all cases.
 
     .. versionadded:: 2015.8.0
@@ -596,7 +596,8 @@ def set(key,
     :param destructive: If an operation results in a key being removed,
                   delete the key, too. Defaults to False.
     :param delimiter:
-        Specify an alternate delimiter to use when traversing a nested dict
+        Specify an alternate delimiter to use when traversing a nested dict,
+        the default being ``:``
 
     CLI Example:
 
