@@ -229,7 +229,8 @@ def network_info(host=None,
 def nameservers(ns,
                 host=None,
                 admin_username=None,
-                admin_password=None):
+                admin_password=None,
+                module=None):
     '''
     Configure the nameservers on the DRAC
 
@@ -239,6 +240,8 @@ def nameservers(ns,
 
         salt dell dracr.nameservers [NAMESERVERS]
         salt dell dracr.nameservers ns1.example.com ns2.example.com
+            admin_username=root admin_password=calvin module=server-1
+            host=192.168.1.1
     '''
     if len(ns) > 2:
         log.warning('racadm only supports two nameservers')
@@ -250,14 +253,14 @@ def nameservers(ns,
                              host=host,
                              admin_username=admin_username,
                              admin_password=admin_password,
-                             module=None):
+                             module=module)
             return False
 
     return True
 
 
 def syslog(server, enable=True, host=None,
-           admin_username=None, admin_password=None):
+           admin_username=None, admin_password=None, module=None):
     '''
     Configure syslog remote logging, by default syslog will automatically be
     enabled if a server is specified. However, if you want to disable syslog
@@ -271,14 +274,23 @@ def syslog(server, enable=True, host=None,
         salt dell dracr.syslog 0.0.0.0 False
     '''
     if enable and __execute_cmd('config -g cfgRemoteHosts -o '
-                                'cfgRhostsSyslogEnable 1'):
+                                'cfgRhostsSyslogEnable 1',
+                                host=host,
+                                admin_username=admin_username,
+                                admin_password=admin_password,
+                                module=None):
         return __execute_cmd('config -g cfgRemoteHosts -o '
-                             'cfgRhostsSyslogServer1 {0}'.format(server))
+                             'cfgRhostsSyslogServer1 {0}'.format(server),
+                             host=host,
+                             admin_username=admin_username,
+                             admin_password=admin_password,
+                             module=module)
 
     return __execute_cmd('config -g cfgRemoteHosts -o cfgRhostsSyslogEnable 0',
                          host=host,
                          admin_username=admin_username,
-                         admin_password=admin_password)
+                         admin_password=admin_password,
+                         module=module)
 
 
 def email_alerts(action,
@@ -382,7 +394,8 @@ def delete_user(username,
 
 
 def change_password(username, password, uid=None, host=None,
-                    admin_username=None, admin_password=None):
+                    admin_username=None, admin_password=None,
+                    module=None):
     '''
     Change user's password
 
@@ -403,7 +416,7 @@ def change_password(username, password, uid=None, host=None,
     '''
     if uid is None:
         user = list_users(host=host, admin_username=admin_username,
-                          admin_password=admin_password)
+                          admin_password=admin_password, module=module)
         uid = user[username]['index']
 
     if uid:
@@ -411,7 +424,7 @@ def change_password(username, password, uid=None, host=None,
                              'cfgUserAdminPassword -i {0} {1}'
                              .format(uid, password),
                              host=host, admin_username=admin_username,
-                             admin_password=admin_password)
+                             admin_password=admin_password, module=module)
     else:
         log.warning('\'{0}\' does not exist'.format(username))
         return False
@@ -419,6 +432,24 @@ def change_password(username, password, uid=None, host=None,
 
 def deploy_password(username, password, host=None, admin_username=None,
                     admin_password=None, module=None):
+    '''
+    Change the QuickDeploy password, used for switches as well
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell dracr.deploy_password [USERNAME] [PASSWORD]
+            host=<remote DRAC> admin_username=<DRAC user>
+            admin_password=<DRAC PW>
+        salt dell dracr.change_password diana secret
+
+    Note that if only a username is specified then this module will look up
+    details for all 16 possible DRAC users.  This is time consuming, but might
+    be necessary if one is not sure which user slot contains the one you want.
+    Many late-model Dell chassis have 'root' as UID 1, so if you can depend
+    on that then setting the password is much quicker.
+    '''
     return __execute_cmd('deploy -u {0} -p {1}'.format(
         username, password), host=host, admin_username=admin_username,
         admin_password=admin_password, module=module
@@ -427,6 +458,19 @@ def deploy_password(username, password, host=None, admin_username=None,
 
 def deploy_snmp(snmp, host=None, admin_username=None,
                 admin_password=None, module=None):
+    '''
+    Change the QuickDeploy SNMP community string, used for switches as well
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell dracr.deploy_snmp SNMP_STRING
+            host=<remote DRAC or CMC> admin_username=<DRAC user>
+            admin_password=<DRAC PW>
+        salt dell dracr.deploy_password diana secret
+
+    '''
     return __execute_cmd('deploy -v SNMPv2 {0} ro'.format(snmp),
                          host=host,
                          admin_username=admin_username,
@@ -561,7 +605,8 @@ def set_permissions(username, permissions,
 def set_snmp(community, host=None,
              admin_username=None, admin_password=None):
     '''
-    Configure SNMP community string
+    Configure CMC or individual iDRAC SNMP community string
+    Use `deploy_snmp` for configuring chassis switch SNMP
 
     CLI Example:
 
@@ -579,7 +624,8 @@ def set_snmp(community, host=None,
 def set_network(ip, netmask, gateway, host=None,
                 admin_username=None, admin_password=None):
     '''
-    Configure Network
+    Configure Network on the CMC or individual iDRAC.
+    Use `set_niccfg` for blade and switch addresses.
 
     CLI Example:
 
@@ -587,6 +633,7 @@ def set_network(ip, netmask, gateway, host=None,
 
         salt dell dracr.set_network [DRAC IP] [NETMASK] [GATEWAY]
         salt dell dracr.set_network 192.168.0.2 255.255.255.0 192.168.0.1
+            admin_username=root admin_password=calvin host=192.168.1.1
     '''
     return __execute_cmd('setniccfg -s {0} {1} {2}'.format(
         ip, netmask, gateway, host=host, admin_username=admin_username,
