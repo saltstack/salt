@@ -2,6 +2,8 @@
 '''
 Manage Grafana v2.0 Dashboards
 
+.. versionadded:: Boron
+
 .. code-block:: yaml
 
     grafana:
