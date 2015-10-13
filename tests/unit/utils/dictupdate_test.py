@@ -29,14 +29,14 @@ class UtilDictupdateTestCase(TestCase):
         # level 1 value changes (list replacement)
         mdict = copy.deepcopy(self.dict1)
         mdict['A'] = [1, 2]
-        res = dictupdate.update(copy.deepcopy(mdict), {'A': [2,3]})
+        res = dictupdate.update(copy.deepcopy(mdict), {'A': [2, 3]})
         mdict['A'] = [2, 3]
         self.assertEqual(res, mdict)
 
         # level 1 value changes (list merge)
         mdict = copy.deepcopy(self.dict1)
         mdict['A'] = [1, 2]
-        res = dictupdate.update(copy.deepcopy(mdict), {'A': [3,4]},
+        res = dictupdate.update(copy.deepcopy(mdict), {'A': [3, 4]},
                                 merge_lists=True)
         mdict['A'] = [1, 2, 3, 4]
         self.assertEqual(res, mdict)
