@@ -1685,7 +1685,7 @@ class GitBase(object):
                     'Update lockfile is present for {0} remote \'{1}\', '
                     'skipping. If this warning persists, it is possible that '
                     'the update process was interrupted. Removing {2} or '
-                    'running \'salt-run fileserver.clear_lock {0}\' will '
+                    'running \'salt-run cache.clear_git_lock {0}\' will '
                     'allow updates to continue for this remote.'
                     .format(self.role, repo.id, repo.lockfile)
                 )
