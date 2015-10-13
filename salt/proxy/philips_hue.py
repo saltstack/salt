@@ -296,3 +296,29 @@ def call_alert(*args, **kwargs):
         res[dev_id] = _set(dev_id, {"alert": kwargs.get("on", True) and "lselect" or "none"})
 
     return res
+
+
+def call_effect(*args, **kwargs):
+    '''
+    Set an effect to the lamp.
+
+    Options:
+
+    * **id**: Specifies a device ID. Can be comma-separated ids or all, if omitted.
+    * **type**: Type of the effect. Possible values are "none" or "colorloop". Default "none".
+
+    CLE Example:
+
+    .. code-block:: bash
+
+        salt '*' hue.alert
+        salt '*' hue.alert id=1
+        salt '*' hue.alert id=1,2,3 on=false
+    '''
+    res = dict()
+
+    devices = _get_lights()
+    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+        res[dev_id] = _set(dev_id, {"effect": kwargs.get("type", "none")})
+
+    return res
