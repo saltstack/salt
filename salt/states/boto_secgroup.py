@@ -130,7 +130,9 @@ def present(
         A list of ingress rule dicts.
 
     rules_egress
-        A list of egress rule dicts.
+        A list of egress rule dicts. If not specified, ``rules_egress=None``, the default egress
+        rule will be applied to the security group, which is to allow all egress traffic. If set
+        to an empty list, ``[]``, then all egress rules will be removed.
 
     region
         Region to connect to.
@@ -156,8 +158,6 @@ def present(
             return ret
     if not rules:
         rules = []
-    if not rules_egress:
-        rules_egress = []
     _ret = _rules_present(name, rules, rules_egress, vpc_id, vpc_name, region, key,
                           keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
@@ -370,7 +370,10 @@ def _rules_present(
         ret['result'] = False
         return ret
     rules = _split_rules(rules)
-    rules_egress = _split_rules(rules_egress)
+    if rules_egress:
+        rules_egress = _split_rules(rules_egress)
+    else:
+        rules_egress = ''
     if vpc_id or vpc_name:
         for rule in itertools.chain(rules, rules_egress):
             _source_group_name = rule.get('source_group_name', None)
@@ -387,7 +390,12 @@ def _rules_present(
     # rules = rules that exist in salt state
     # sg['rules'] = that exist in present group
     to_delete, to_create = _get_rule_changes(rules, sg['rules'])
-    to_delete_egress, to_create_egress = _get_rule_changes(rules_egress, sg['rules_egress'])
+
+    to_delete_egress = None
+    to_create_egress = None
+    if rules_egress != '':
+        to_delete_egress, to_create_egress = _get_rule_changes(rules_egress, sg['rules_egress'])
+
     if to_create or to_delete or to_create_egress or to_delete_egress:
         if __opts__['test']:
             msg = 'Security group {0} set to have rules modified.'.format(name)
