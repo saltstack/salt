@@ -304,7 +304,7 @@ def create(path,
 
 def get_site_packages(venv):
     '''
-    Returns the path to the site-packages directory inside a virtualenv
+    Return the path to the site-packages directory of a virtualenv
 
     venv
         Path to the virtualenv.
@@ -333,7 +333,7 @@ def get_site_packages(venv):
 
 def get_distribution_path(venv, distribution):
     '''
-    Returns the path to a distribution inside a virtualenv
+    Return the path to a distribution installed inside a virtualenv
 
     .. versionadded:: Boron
 
@@ -375,8 +375,7 @@ def get_resource_path(venv,
                       package=None,
                       resource=None):
     '''
-    Returns the path to a resource of a package or a distribution inside a
-    virtualenv
+    Return the path to a package resource installed inside a virtualenv
 
     venv
         Path to the virtualenv
@@ -461,8 +460,7 @@ def get_resource_content(venv,
                          package=None,
                          resource=None):
     '''
-    Returns the content of a resource of a package or a distribution inside a
-    virtualenv
+    Return the content of a package resource installed inside a virtualenv
 
     venv
         Path to the virtualenv
