@@ -61,7 +61,15 @@ def init_git_pillar(opts):
                 import git
             except ImportError:
                 return pillargitfs
-            parts = opts_dict['git'].strip().split()
+            try:
+                parts = opts_dict['git'].strip().split()
+            except AttributeError:
+                log.error(
+                    'Invalid git ext_pillar configuration found, please check '
+                    'the master config file. Each git ext_pillar specified '
+                    'must be a string.'
+                )
+                continue
             try:
                 br = parts[0]
                 loc = parts[1]
