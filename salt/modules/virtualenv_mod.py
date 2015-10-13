@@ -39,20 +39,6 @@ def __virtual__():
     return __virtualname__
 
 
-def _not_a_virtualenv(path):
-    raise CommandExecutionError(
-        'Path \'{0}\' does not appear to be a virtualenv'.format(path)
-    )
-
-
-def _verify_safe_py_code(*args):
-    for arg in args:
-        if not salt.utils.verify.safe_py_code(arg):
-            raise SaltInvocationError(
-                'Unsafe python code detected in \'{0}\''.format(arg)
-            )
-
-
 def create(path,
            venv_bin=None,
            system_site_packages=False,
@@ -562,3 +548,17 @@ def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
         )
     finally:
         os.remove(tmppath)
+
+
+def _not_a_virtualenv(path):
+    raise CommandExecutionError(
+        'Path \'{0}\' does not appear to be a virtualenv'.format(path)
+    )
+
+
+def _verify_safe_py_code(*args):
+    for arg in args:
+        if not salt.utils.verify.safe_py_code(arg):
+            raise SaltInvocationError(
+                'Unsafe python code detected in \'{0}\''.format(arg)
+            )
