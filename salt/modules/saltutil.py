@@ -95,14 +95,14 @@ def _sync(form, saltenv=None):
     source = salt.utils.url.create('_' + form)
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     if not os.path.isdir(mod_dir):
-        log.info('Creating module dir {0!r}'.format(mod_dir))
+        log.info('Creating module dir \'{0}\''.format(mod_dir))
         try:
             os.makedirs(mod_dir)
         except (IOError, OSError):
             msg = 'Cannot create cache module directory {0}. Check permissions.'
             log.error(msg.format(mod_dir))
     for sub_env in saltenv:
-        log.info('Syncing {0} for environment {1!r}'.format(form, sub_env))
+        log.info('Syncing {0} for environment \'{1}\''.format(form, sub_env))
         cache = []
         log.info('Loading cache from {0}, for {1})'.format(source, sub_env))
         # Grab only the desired files (.py, .pyx, .so)
@@ -117,13 +117,13 @@ def _sync(form, saltenv=None):
                 sub_env,
                 '_{0}'.format(form)
                 )
-        log.debug('Local cache dir: {0!r}'.format(local_cache_dir))
+        log.debug('Local cache dir: \'{0}\''.format(local_cache_dir))
         for fn_ in cache:
             relpath = os.path.relpath(fn_, local_cache_dir)
             relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
             remote.add(relpath)
             dest = os.path.join(mod_dir, relpath)
-            log.info('Copying {0!r} to {1!r}'.format(fn_, dest))
+            log.info('Copying \'{0}\' to \'{1}\''.format(fn_, dest))
             if os.path.isfile(dest):
                 # The file is present, if the sum differs replace it
                 hash_type = __opts__.get('hash_type', 'md5')

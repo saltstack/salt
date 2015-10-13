@@ -139,7 +139,9 @@ def _match(names):
 
     # Look for full matches
     full_pkg_strings = []
-    out = __salt__['cmd.run_stdout']('pkg_info', output_loglevel='trace')
+    out = __salt__['cmd.run_stdout'](['pkg_info'],
+                                     output_loglevel='trace',
+                                     python_shell=False)
     for line in out.splitlines():
         try:
             full_pkg_strings.append(line.split()[0])
@@ -158,7 +160,7 @@ def _match(names):
             else:
                 ambiguous.append(name)
                 errors.append(
-                    'Ambiguous package {0!r}. Full name/version required. '
+                    'Ambiguous package \'{0}\'. Full name/version required. '
                     'Possible matches: {1}'.format(
                         name,
                         ', '.join(['{0}-{1}'.format(name, x) for x in cver])
@@ -169,7 +171,7 @@ def _match(names):
     not_matched = \
         set(names) - set(matches) - set(full_matches) - set(ambiguous)
     for name in not_matched:
-        errors.append('Package {0!r} not found'.format(name))
+        errors.append('Package \'{0}\' not found'.format(name))
 
     return matches + full_matches, errors
 
@@ -279,7 +281,9 @@ def list_pkgs(versions_as_list=False, with_origin=False, **kwargs):
 
     ret = {}
     origins = {}
-    out = __salt__['cmd.run_stdout']('pkg_info -ao', output_loglevel='trace')
+    out = __salt__['cmd.run_stdout'](['pkg_info', '-ao'],
+                                     output_loglevel='trace',
+                                     python_shell=False)
     pkgs_re = re.compile(r'Information for ([^:]+):\s*Origin:\n([^\n]+)')
     for pkg, origin in pkgs_re.findall(out):
         if not pkg:
@@ -386,9 +390,10 @@ def install(name=None,
 
     old = list_pkgs()
     __salt__['cmd.run'](
-        'pkg_add {0}'.format(' '.join(args)),
+        ['pkg_add'] + args,
         env=env,
-        output_loglevel='trace'
+        output_loglevel='trace',
+        python_shell=False
     )
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -448,8 +453,11 @@ def remove(name=None, pkgs=None, **kwargs):
         log.error(error)
     if not targets:
         return {}
-    cmd = 'pkg_delete {0}'.format(' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    __salt__['cmd.run'](
+        ['pkg_delete'] + targets,
+        output_loglevel='trace',
+        python_shell=False
+    )
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -467,7 +475,9 @@ def _rehash():
     '''
     shell = __salt__['environ.get']('SHELL', output_loglevel='trace')
     if shell.split('/')[-1] in ('csh', 'tcsh'):
-        __salt__['cmd.run']('rehash', output_loglevel='trace')
+        __salt__['cmd.run'](['rehash'],
+                            output_loglevel='trace',
+                            python_shell=False)
 
 
 def file_list(*packages):
@@ -511,13 +521,13 @@ def file_dict(*packages):
 
     if packages:
         match_pattern = '\'{0}-[0-9]*\''
-        matches = [match_pattern.format(p) for p in packages]
-
-        cmd = 'pkg_info -QL {0}'.format(' '.join(matches))
+        cmd = ['pkg_info', '-QL'] + [match_pattern.format(p) for p in packages]
     else:
-        cmd = 'pkg_info -QLa'
+        cmd = ['pkg_info', '-QLa']
 
-    ret = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    ret = __salt__['cmd.run_all'](cmd,
+                                  output_loglevel='trace',
+                                  python_shell=False)
 
     for line in ret['stderr'].splitlines():
         errors.append(line)

@@ -59,8 +59,8 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
-_INDENT = ""
-_INDENT_STEP = "    "
+_INDENT = ''
+_INDENT_STEP = '    '
 
 # These are needed during building of the configuration tree
 _current_statement = None
@@ -89,14 +89,14 @@ def _indent(value):
     '''
     Returns the indented parameter.
     '''
-    return "{0}{1}".format(_INDENT, value)
+    return '{0}{1}'.format(_INDENT, value)
 
 
 def _indentln(string):
     '''
     Return the indented parameter with newline.
     '''
-    return _indent(string + "\n")
+    return _indent(string + '\n')
 
 
 class Buildable(object):
@@ -132,7 +132,7 @@ class Buildable(object):
         _increase_indent()
         body_array = [x.build() for x in self.iterable]
 
-        nl = "\n" if self.append_extra_newline else ''
+        nl = '\n' if self.append_extra_newline else ''
 
         if len(self.iterable) >= 1:
             body = self.join_body_on.join(body_array) + nl
@@ -162,7 +162,9 @@ class Statement(Buildable):
     '''
 
     def __init__(self, type, id='', options=None, has_name=True):
-        super(Statement, self).__init__(options, join_body_on='', append_extra_newline=False)
+        super(Statement, self).__init__(options,
+                                        join_body_on='',
+                                        append_extra_newline=False)
         self.type = type
         self.id = id
         self.options = options if options else []
@@ -171,12 +173,12 @@ class Statement(Buildable):
 
     def build_header(self):
         if self.has_name:
-            return _indentln("{0} {1} {{".format(self.type, self.id))
+            return _indentln('{0} {1} {{'.format(self.type, self.id))
         else:
-            return _indentln("{0} {{".format(self.type))
+            return _indentln('{0} {{'.format(self.type))
 
     def build_tail(self):
-        return _indentln("};")
+        return _indentln('};')
 
     def add_child(self, option):
         self.options.append(option)
@@ -201,7 +203,10 @@ class UnnamedStatement(Statement):
     '''
 
     def __init__(self, type, options=None):
-        super(UnnamedStatement, self).__init__(type, id='', options=options, has_name=False)
+        super(UnnamedStatement, self).__init__(type,
+                                               id='',
+                                               options=options,
+                                               has_name=False)
 
 
 class GivenStatement(Buildable):
@@ -219,7 +224,7 @@ class GivenStatement(Buildable):
 
     def build(self):
         if self.add_newline:
-            return self.value + "\n"
+            return self.value + '\n'
         else:
             return self.value
 
@@ -234,14 +239,14 @@ class Option(Buildable):
     '''
 
     def __init__(self, type='', params=None):
-        super(Option, self).__init__(params, ",\n")
+        super(Option, self).__init__(params, ',\n')
         self.type = type
         self.params = params if params else []
         self.iterable = self.params
 
     def build(self):
-        header = _indentln("{0}(".format(self.type))
-        tail = _indentln(");")
+        header = _indentln('{0}('.format(self.type))
+        tail = _indentln(');')
         body = self.build_body()
 
         return header + body + tail
@@ -263,7 +268,8 @@ class Parameter(Buildable):
 
 class SimpleParameter(Parameter):
     '''
-    A Parameter is a SimpleParameter, if it's just a simple type, like a string.
+    A Parameter is a SimpleParameter, if it's just a simple type, like a
+    string.
 
     For example:
 
@@ -271,7 +277,7 @@ class SimpleParameter(Parameter):
 
         destination d_file {
             file(
-                "/var/log/messages"
+                '/var/log/messages'
             );
         };
 
@@ -306,14 +312,14 @@ class TypedParameter(Parameter):
     '''
 
     def __init__(self, type='', values=None):
-        super(TypedParameter, self).__init__(values, ",\n")
+        super(TypedParameter, self).__init__(values, ',\n')
         self.type = type
         self.values = values if values else []
         self.iterable = self.values
 
     def build(self):
-        header = _indentln("{0}(".format(self.type))
-        tail = _indent(")")
+        header = _indentln('{0}('.format(self.type))
+        tail = _indent(')')
         body = self.build_body()
 
         return header + body + tail
@@ -364,8 +370,8 @@ class TypedParameterValue(ParameterValue):
                 ip(0.0.0.0)
                 port(1999)
                 tls(
-                    key_file("/opt/syslog-ng/etc/syslog-ng/key.d/syslog-ng.key")
-                    cert_file("/opt/syslog-ng/etc/syslog-ng/cert.d/syslog-ng.cert")
+                    key_file('/opt/syslog-ng/etc/syslog-ng/key.d/syslog-ng.key')
+                    cert_file('/opt/syslog-ng/etc/syslog-ng/cert.d/syslog-ng.cert')
                 )
             );
         };
@@ -374,14 +380,14 @@ class TypedParameterValue(ParameterValue):
     '''
 
     def __init__(self, type='', arguments=None):
-        super(TypedParameterValue, self).__init__(arguments, "\n")
+        super(TypedParameterValue, self).__init__(arguments, '\n')
         self.type = type
         self.arguments = arguments if arguments else []
         self.iterable = self.arguments
 
     def build(self):
-        header = _indentln("{0}(".format(self.type))
-        tail = _indent(")")
+        header = _indentln('{0}('.format(self.type))
+        tail = _indent(')')
         body = self.build_body()
 
         return header + body + tail
@@ -650,7 +656,7 @@ def config(name,
 
     .. code-block:: bash
 
-        salt '*' syslog_ng.config name="s_local" config="[{'tcp':[{'ip':'127.0.0.1'},{'port':1233}]}]"
+        salt '*' syslog_ng.config name='s_local' config="[{'tcp':[{'ip':'127.0.0.1'},{'port':1233}]}]"
 
     '''
 
@@ -658,14 +664,18 @@ def config(name,
     configs = _render_configuration()
 
     if __opts__.get('test', False):
-        comment = "State syslog_ng will write '{0}' into {1}".format(configs, __SYSLOG_NG_CONFIG_FILE)
+        comment = 'State syslog_ng will write \'{0}\' into {1}'.format(
+            configs,
+            __SYSLOG_NG_CONFIG_FILE
+        )
         return _format_state_result(name, result=None, comment=comment)
 
     succ = write
     if write:
         succ = _write_config(config=configs)
 
-    return _format_state_result(name, result=succ, changes={'new': configs, 'old': ''})
+    return _format_state_result(name, result=succ,
+                                changes={'new': configs, 'old': ''})
 
 
 def set_binary_path(name):
@@ -680,7 +690,7 @@ def set_binary_path(name):
 
     .. code-block:: bash
 
-        salt '*' syslog_ng.set_binary_path name="/usr/sbin"
+        salt '*' syslog_ng.set_binary_path name=/usr/sbin
 
     '''
     global __SYSLOG_NG_BINARY_PATH
@@ -692,13 +702,14 @@ def set_binary_path(name):
 
 def set_config_file(name):
     '''
-    Sets the configuration's name. This function is intended to be used from states.
+    Sets the configuration's name. This function is intended to be used from
+    states.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' syslog_ng.set_config_file name="/etc/syslog-ng"
+        salt '*' syslog_ng.set_config_file name=/etc/syslog-ng
 
     '''
     global __SYSLOG_NG_CONFIG_FILE
@@ -724,19 +735,12 @@ def get_config_file():
 
 def _run_command(cmd, options=()):
     '''
-    Runs the command cmd with options as its CLI parameters and returns the result
-    as a dictionary.
+    Runs the command cmd with options as its CLI parameters and returns the
+    result as a dictionary.
     '''
-    cmd_with_params = [cmd]
-    cmd_with_params.extend(options)
-
-    cmd_to_run = " ".join(cmd_with_params)
-
-    try:
-        return __salt__['cmd.run_all'](cmd_to_run)
-    except Exception as err:
-        log.error(str(err))
-        raise CommandExecutionError("Unable to run command: " + str(type(err)))
+    params = [cmd]
+    params.extend(options)
+    return __salt__['cmd.run_all'](params, python_shell=False)
 
 
 def _determine_config_version(syslog_ng_sbin_dir):
@@ -764,8 +768,8 @@ def set_parameters(version=None,
 
     .. code-block:: bash
 
-        salt '*' syslog_ng.set_parameters version="3.6"
-        salt '*' syslog_ng.set_parameters  binary_path="/home/user/install/syslog-ng/sbin" config_file="/home/user/install/syslog-ng/etc/syslog-ng.conf"
+        salt '*' syslog_ng.set_parameters version='3.6'
+        salt '*' syslog_ng.set_parameters  binary_path=/home/user/install/syslog-ng/sbin config_file=/home/user/install/syslog-ng/etc/syslog-ng.conf
 
     '''
     if binary_path:
@@ -787,10 +791,11 @@ def _add_to_path_envvar(directory):
     orig_path = os.environ.get('PATH', '')
     if directory:
         if not os.path.isdir(directory):
-            log.error("The given parameter is not a directory")
+            log.error('The given parameter is not a directory')
 
-        os.environ["PATH"] = "{0}{1}{2}".format(orig_path, os.pathsep, directory)
-
+        os.environ['PATH'] = '{0}{1}{2}'.format(orig_path,
+                                                os.pathsep,
+                                                directory)
     return orig_path
 
 
@@ -799,7 +804,7 @@ def _restore_path_envvar(original):
     Sets the PATH environment variable to the parameter.
     '''
     if original:
-        os.environ["PATH"] = original
+        os.environ['PATH'] = original
 
 
 def _run_command_in_extended_path(syslog_ng_sbin_dir, command, params):
@@ -810,7 +815,10 @@ def _run_command_in_extended_path(syslog_ng_sbin_dir, command, params):
     orig_path = _add_to_path_envvar(syslog_ng_sbin_dir)
 
     if not salt.utils.which(command):
-        error_message = "Unable to execute the command '{0}'. It is not in the PATH.".format(command)
+        error_message = (
+            'Unable to execute the command \'{0}\'. It is not in the PATH.'
+            .format(command)
+        )
         log.error(error_message)
         _restore_path_envvar(orig_path)
         raise CommandExecutionError(error_message)
@@ -825,11 +833,11 @@ def _format_return_data(retcode, stdout=None, stderr=None):
     Creates a dictionary from the parameters, which can be used to return data
     to Salt.
     '''
-    ret = {"retcode": retcode}
+    ret = {'retcode': retcode}
     if stdout is not None:
-        ret["stdout"] = stdout
+        ret['stdout'] = stdout
     if stderr is not None:
-        ret["stderr"] = stderr
+        ret['stderr'] = stderr
     return ret
 
 
@@ -846,25 +854,28 @@ def config_test(syslog_ng_sbin_dir=None, cfgfile=None):
         salt '*' syslog_ng.config_test /home/user/install/syslog-ng/sbin
         salt '*' syslog_ng.config_test /home/user/install/syslog-ng/sbin /etc/syslog-ng/syslog-ng.conf
     '''
-    params = ["--syntax-only", ]
+    params = ['--syntax-only']
     if cfgfile:
-        params.append("--cfgfile={0}".format(cfgfile))
+        params.append('--cfgfile={0}'.format(cfgfile))
 
     try:
-        ret = _run_command_in_extended_path(syslog_ng_sbin_dir, "syslog-ng", params)
+        ret = _run_command_in_extended_path(syslog_ng_sbin_dir,
+                                            'syslog-ng',
+                                            params)
     except CommandExecutionError as err:
         return _format_return_data(retcode=-1, stderr=str(err))
 
-    retcode = ret.get("retcode", -1)
-    stderr = ret.get("stderr", None)
-    stdout = ret.get("stdout", None)
+    retcode = ret.get('retcode', -1)
+    stderr = ret.get('stderr', None)
+    stdout = ret.get('stdout', None)
     return _format_return_data(retcode, stdout, stderr)
 
 
 def version(syslog_ng_sbin_dir=None):
     '''
-    Returns the version of the installed syslog-ng. If syslog_ng_sbin_dir is specified, it
-    is added to the PATH during the execution of the command syslog-ng.
+    Returns the version of the installed syslog-ng. If syslog_ng_sbin_dir is
+    specified, it is added to the PATH during the execution of the command
+    syslog-ng.
 
     CLI Example:
 
@@ -874,14 +885,18 @@ def version(syslog_ng_sbin_dir=None):
         salt '*' syslog_ng.version /home/user/install/syslog-ng/sbin
     '''
     try:
-        ret = _run_command_in_extended_path(syslog_ng_sbin_dir, "syslog-ng", ("-V",))
+        ret = _run_command_in_extended_path(syslog_ng_sbin_dir,
+                                            'syslog-ng',
+                                            ('-V',))
     except CommandExecutionError as err:
         return _format_return_data(retcode=-1, stderr=str(err))
 
-    if ret["retcode"] != 0:
-        return _format_return_data(ret["retcode"], stderr=ret["stderr"], stdout=ret["stdout"])
+    if ret['retcode'] != 0:
+        return _format_return_data(ret['retcode'],
+                                   stderr=ret['stderr'],
+                                   stdout=ret['stdout'])
 
-    lines = ret["stdout"].split("\n")
+    lines = ret['stdout'].split('\n')
     # The format of the first line in the output is:
     # syslog-ng 3.6.0alpha0
     version_line_index = 0
@@ -903,25 +918,31 @@ def modules(syslog_ng_sbin_dir=None):
         salt '*' syslog_ng.modules /home/user/install/syslog-ng/sbin
     '''
     try:
-        ret = _run_command_in_extended_path(syslog_ng_sbin_dir, "syslog-ng", ("-V",))
+        ret = _run_command_in_extended_path(syslog_ng_sbin_dir,
+                                            'syslog-ng',
+                                            ('-V',))
     except CommandExecutionError as err:
         return _format_return_data(retcode=-1, stderr=str(err))
 
-    if ret["retcode"] != 0:
-        return _format_return_data(ret["retcode"], ret.get("stdout", None), ret.get("stderr", None))
+    if ret['retcode'] != 0:
+        return _format_return_data(ret['retcode'],
+                                   ret.get('stdout'),
+                                   ret.get('stderr'))
 
-    lines = ret["stdout"].split("\n")
+    lines = ret['stdout'].split('\n')
     for line in lines:
-        if line.startswith("Available-Modules"):
+        if line.startswith('Available-Modules'):
             label, installed_modules = line.split()
-            return _format_return_data(ret["retcode"], stdout=installed_modules)
-    return _format_return_data(-1, stderr="Unable to find the modules.")
+            return _format_return_data(ret['retcode'],
+                                       stdout=installed_modules)
+    return _format_return_data(-1, stderr='Unable to find the modules.')
 
 
 def stats(syslog_ng_sbin_dir=None):
     '''
-    Returns statistics from the running syslog-ng instance. If syslog_ng_sbin_dir is specified, it
-    is added to the PATH during the execution of the command syslog-ng-ctl.
+    Returns statistics from the running syslog-ng instance. If
+    syslog_ng_sbin_dir is specified, it is added to the PATH during the
+    execution of the command syslog-ng-ctl.
 
     CLI Example:
 
@@ -931,11 +952,15 @@ def stats(syslog_ng_sbin_dir=None):
         salt '*' syslog_ng.stats /home/user/install/syslog-ng/sbin
     '''
     try:
-        ret = _run_command_in_extended_path(syslog_ng_sbin_dir, "syslog-ng-ctl", ("stats",))
+        ret = _run_command_in_extended_path(syslog_ng_sbin_dir,
+                                            'syslog-ng-ctl',
+                                            ('stats',))
     except CommandExecutionError as err:
         return _format_return_data(retcode=-1, stderr=str(err))
 
-    return _format_return_data(ret["retcode"], ret.get("stdout", None), ret.get("stderr", None))
+    return _format_return_data(ret['retcode'],
+                               ret.get('stdout'),
+                               ret.get('stderr'))
 
 
 def _format_changes(old='', new=''):
@@ -948,7 +973,8 @@ def _format_state_result(name, result, changes=None, comment=''):
     '''
     if changes is None:
         changes = {'old': '', 'new': ''}
-    return {'name': name, 'result': result, 'changes': changes, 'comment': comment}
+    return {'name': name, 'result': result,
+            'changes': changes, 'comment': comment}
 
 
 def _add_cli_param(params, key, value):
@@ -972,8 +998,9 @@ def stop(name=None):
     Kills syslog-ng. This function is intended to be used from the state module.
 
     Users shouldn't use this function, if the service module is available on
-    their system.  If :mod:`syslog_ng.set_config_file <salt.modules.syslog_ng.set_binary_path>`
-    is called before, this function will use the set binary path.
+    their system.  If :mod:`syslog_ng.set_config_file
+    <salt.modules.syslog_ng.set_binary_path>` is called before, this function
+    will use the set binary path.
 
     CLI Example:
 
@@ -990,7 +1017,7 @@ def stop(name=None):
                                     comment='Syslog-ng is not running')
 
     if __opts__.get('test', False):
-        comment = "Syslog_ng state module will kill {0} pids"
+        comment = 'Syslog_ng state module will kill {0} pids'
         return _format_state_result(name, result=None, comment=comment)
 
     res = __salt__['ps.pkill']('syslog-ng')
@@ -1024,8 +1051,9 @@ def start(name=None,
     is intended to be used from the state module.
 
     Users shouldn't use this function, if the service module is available on
-    their system.  If :mod:`syslog_ng.set_config_file <salt.modules.syslog_ng.set_binary_path>`,
-    is called before, this function will use the set binary path.
+    their system. If :mod:`syslog_ng.set_config_file
+    <salt.modules.syslog_ng.set_binary_path>`, is called before, this function
+    will use the set binary path.
 
     CLI Example:
 
@@ -1051,24 +1079,23 @@ def start(name=None,
     _add_boolean_cli_param(params, 'persist-file', persist_file)
     _add_cli_param(params, 'control', control)
     _add_cli_param(params, 'worker-threads', worker_threads)
-    cli_params = ' '.join(params)
     if __SYSLOG_NG_BINARY_PATH:
         syslog_ng_binary = os.path.join(__SYSLOG_NG_BINARY_PATH, 'syslog-ng')
-        command = syslog_ng_binary + ' ' + cli_params
+        command = [syslog_ng_binary] + params
 
         if __opts__.get('test', False):
-            comment = "Syslog_ng state module will start {0}".format(command)
+            comment = 'Syslog_ng state module will start {0}'.format(command)
             return _format_state_result(name, result=None, comment=comment)
 
-        result = __salt__['cmd.run_all'](command)
+        result = __salt__['cmd.run_all'](command, python_shell=False)
     else:
-        command = 'syslog-ng ' + cli_params
+        command = ['syslog-ng'] + params
 
         if __opts__.get('test', False):
-            comment = "Syslog_ng state module will start {0}".format(command)
+            comment = 'Syslog_ng state module will start {0}'.format(command)
             return _format_state_result(name, result=None, comment=comment)
 
-        result = __salt__['cmd.run_all'](command)
+        result = __salt__['cmd.run_all'](command, python_shell=False)
 
     if result['pid'] > 0:
         succ = True
@@ -1076,7 +1103,7 @@ def start(name=None,
         succ = False
 
     return _format_state_result(
-        name, result=succ, changes={'new': command, 'old': ''}
+        name, result=succ, changes={'new': ' '.join(command), 'old': ''}
     )
 
 
@@ -1084,8 +1111,9 @@ def reload_(name):
     '''
     Reloads syslog-ng. This function is intended to be used from states.
 
-    If :mod:`syslog_ng.set_config_file <salt.modules.syslog_ng.set_binary_path>`,
-    is called before, this function will use the set binary path.
+    If :mod:`syslog_ng.set_config_file
+    <salt.modules.syslog_ng.set_binary_path>`, is called before, this function
+    will use the set binary path.
 
     CLI Example:
 
@@ -1095,12 +1123,13 @@ def reload_(name):
 
     '''
     if __SYSLOG_NG_BINARY_PATH:
-        syslog_ng_ctl_binary = os.path.join(__SYSLOG_NG_BINARY_PATH, 'syslog-ng-ctl')
-        command = syslog_ng_ctl_binary + ' reload'
-        result = __salt__['cmd.run_all'](command)
+        syslog_ng_ctl_binary = os.path.join(__SYSLOG_NG_BINARY_PATH,
+                                            'syslog-ng-ctl')
+        command = [syslog_ng_ctl_binary, 'reload']
+        result = __salt__['cmd.run_all'](command, python_shell=False)
     else:
-        command = 'syslog-ng-ctl reload'
-        result = __salt__['cmd.run_all'](command)
+        command = ['syslog-ng-ctl', 'reload']
+        result = __salt__['cmd.run_all'](command, python_shell=False)
 
     succ = True if result['retcode'] == 0 else False
     return _format_state_result(name, result=succ, comment=result['stdout'])
@@ -1119,14 +1148,15 @@ def write_config(config, newlines=2):
     Writes the given parameter config into the config file. This function is
     intended to be used from states.
 
-    If :mod:`syslog_ng.set_config_file <salt.modules.syslog_ng.set_config_file>`,
-    is called before, this function will use the set config file.
+    If :mod:`syslog_ng.set_config_file
+    <salt.modules.syslog_ng.set_config_file>`, is called before, this function
+    will use the set config file.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' syslog_ng.write_config config="# comment"
+        salt '*' syslog_ng.write_config config='# comment'
 
     '''
     succ = _write_config(config, newlines)
@@ -1157,11 +1187,12 @@ def _write_config(config, newlines=2):
 
 def write_version(name):
     '''
-    Removes the previous configuration file, then creates a new one and writes the name line.
-    This function is intended to be used from states.
+    Removes the previous configuration file, then creates a new one and writes
+    the name line. This function is intended to be used from states.
 
-    If :mod:`syslog_ng.set_config_file <salt.modules.syslog_ng.set_config_file>`,
-    is called before, this function will use the set config file.
+    If :mod:`syslog_ng.set_config_file
+    <salt.modules.syslog_ng.set_config_file>`, is called before, this function
+    will use the set config file.
 
     CLI Example:
 
@@ -1174,7 +1205,9 @@ def write_version(name):
     try:
         if os.path.exists(__SYSLOG_NG_CONFIG_FILE):
             log.debug(
-                'Removing previous configuration file: {0}'.format(__SYSLOG_NG_CONFIG_FILE)
+                'Removing previous configuration file: {0}'.format(
+                    __SYSLOG_NG_CONFIG_FILE
+                )
             )
             os.remove(__SYSLOG_NG_CONFIG_FILE)
             log.debug('Configuration file successfully removed')
@@ -1184,9 +1217,9 @@ def write_version(name):
         _write_config(config=line, newlines=2)
 
         return _format_state_result(name, result=True)
-    except os.error as err:
+    except OSError as err:
         log.error(
-            'Failed to remove previous configuration file {0!r} because: {1}'
+            'Failed to remove previous configuration file \'{0}\': {1}'
             .format(__SYSLOG_NG_CONFIG_FILE, str(err))
         )
         return _format_state_result(name, result=False)
