@@ -123,10 +123,9 @@ def _authenticate():
         'password', get_configured_provider(), __opts__, search_global=False
     )
     verify_ssl = config.get_cloud_config_value(
-        'verify_ssl', get_configured_provider(), __opts__, search_global=False
+        'verify_ssl', get_configured_provider(), __opts__,
+        default=True, search_global=False
     )
-    if verify_ssl is None:
-        verify_ssl = True
 
     connect_data = {'username': username, 'password': passwd}
     full_url = 'https://{0}:8006/api2/json/access/ticket'.format(url)
