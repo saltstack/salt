@@ -130,9 +130,9 @@ def present(
         A list of ingress rule dicts.
 
     rules_egress
-        A list of egress rule dicts. If not specified (``rules_egress=None``), the default egress
-        rule will be applied to the security group, which is to allow all egress traffic). If set
-        to ``[]``, then all egress rules will be removed.
+        A list of egress rule dicts. If not specified, ``rules_egress=None``, the default egress
+        rule will be applied to the security group, which is to allow all egress traffic. If set
+        to an empty list, ``[]``, then all egress rules will be removed.
 
     region
         Region to connect to.
