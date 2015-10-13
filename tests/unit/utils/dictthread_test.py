@@ -61,6 +61,16 @@ class UtilDictthreadTestCase(TestCase):
             self.assertEqual(len(d), 1)
             self.assertTrue('val' in d)
 
+    def test_assign(self):
+        tdict1 = dictthread.DictThread()
+        tdict1.assign_current(self.dict1)
+        self.assertEqual(tdict1, self.dict1)
+
+        tdict2 = dictthread.DictThread({'key': 'value'})
+        tdict1.assign_current(tdict2)
+        self.assertEqual(tdict1, {'key': 'value'})
+        self.assertEqual(tdict1, tdict2)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(UtilDictthreadTestCase, needs_daemon=False)

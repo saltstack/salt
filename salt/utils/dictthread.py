@@ -81,4 +81,4 @@ class DictThread(MutableMapping):
         '''
         Get dictionary for current thread
         '''
-        return self._tmap.get(self.__tkey__(), default=default)
+        return self._tmap.get(self.__tkey__(), default)
