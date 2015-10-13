@@ -4,6 +4,16 @@ from collections import MutableMapping
 from threading import currentThread, RLock
 
 
+def wrap(obj):
+    '''
+    Wraps dict with DictThread object.
+    '''
+    if isinstance(obj, DictThread):
+        return obj
+    else:
+        return DictThread(obj)
+
+
 class DictThread(MutableMapping):
     '''
     Transparent dictionary providing different copies of data depending on the

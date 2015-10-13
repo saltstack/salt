@@ -25,6 +25,7 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 from salt.utils import context
+from salt.utils import dictthread
 import salt.utils.lazy
 import salt.utils.event
 import salt.utils.odict
@@ -35,7 +36,6 @@ import salt.modules.cmdmod
 
 # Import 3rd-party libs
 import salt.ext.six as six
-from salt.utils.dictthread import DictThread
 
 __salt__ = {
     'cmd.run': salt.modules.cmdmod._run_quiet
@@ -1054,14 +1054,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         Strip out of the opts any logger instance
         '''
-        if 'grains' in opts:
-            self._grains = opts['grains']
-        else:
-            self._grains = {}
-        if 'pillar' in opts:
-            self._pillar = opts['pillar']
-        else:
-            self._pillar = {}
+        self._grains = dictthread.wrap(opts.get('grains', {}))
+        self._pillar = dictthread.wrap(opts.get('pillar', {}))
 
         mod_opts = {}
         for key, val in list(opts.items()):
@@ -1179,14 +1173,14 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         else:
             mod.__opts__ = self.opts
 
-        if hasattr(mod, '__grains__'):
+        if hasattr(mod, '__grains__') and isinstance(mod.__grains__, dictthread.DictThread):
             mod.__grains__.assign_current(self._grains)
         else:
-            mod.__grains__ = DictThread(self._grains)
-        if hasattr(mod, '__pillar__'):
+            mod.__grains__ = self._grains
+        if hasattr(mod, '__pillar__') and isinstance(mod.__pillar__, dictthread.DictThread):
             mod.__pillar__.assign_current(self._pillar)
         else:
-            mod.__pillar__ = DictThread(self._pillar)
+            mod.__pillar__ = self._pillar
 
         # pack whatever other globals we were asked to
         for p_name, p_value in six.iteritems(self.pack):
