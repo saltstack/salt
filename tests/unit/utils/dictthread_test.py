@@ -9,6 +9,7 @@ from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 from salt.utils.dictthread import DictThread
 from salt.utils import dictthread
+from salt.ext.six.moves import range
 
 ensure_in_syspath('../../')
 TCOUNT = 10
