@@ -448,6 +448,7 @@ class DockerngTestCase(TestCase):
         dockerng_create.assert_called_with(
             'image:latest',
             validate_input=False,
+            validate_ip_addrs=False,
             name='cont',
             labels=['LABEL1', 'LABEL2'],
             client_timeout=60)
