@@ -13,6 +13,7 @@ import string
 
 # Import salt libs
 import salt.utils
+import salt.utils.itertools
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -101,7 +102,7 @@ def get_zone():
     cmd = ''
     if salt.utils.which('timedatectl'):
         out = __salt__['cmd.run'](['timedatectl'], python_shell=False)
-        for line in (x.strip() for x in out.splitlines()):
+        for line in (x.strip() for x in salt.utils.itertools.split(out, '\n')):
             try:
                 return re.match(r'Time ?zone:\s+(\S+)', line).group(1)
             except AttributeError:
@@ -237,7 +238,7 @@ def zone_compare(timezone):
     try:
         usrzone = salt.utils.get_hash(zonepath, hash_type)
     except IOError as exc:
-        raise SaltInvocationError('Invalid timezone {0!r}'.format(timezone))
+        raise SaltInvocationError('Invalid timezone \'{0}\''.format(timezone))
 
     try:
         etczone = salt.utils.get_hash(tzfile, hash_type)

@@ -33,14 +33,14 @@ import hashlib
 import os
 import tempfile
 try:
-    import pipes
     import csv
-    HAS_ALL_IMPORTS = True
+    HAS_CSV = True
 except ImportError:
-    HAS_ALL_IMPORTS = False
+    HAS_CSV = False
 
 # Import salt libs
 import salt.utils
+import salt.utils.itertools
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -68,7 +68,7 @@ def __virtual__():
     '''
     Only load this module if the psql bin exists
     '''
-    if all((salt.utils.which('psql'), HAS_ALL_IMPORTS)):
+    if all((salt.utils.which('psql'), HAS_CSV)):
         return True
     return False
 
@@ -146,7 +146,8 @@ def version(user=None, host=None, port=None, maintenance_db=None,
     ret = _run_psql(
         cmd, runas=runas, password=password, host=host, port=port, user=user)
 
-    for line in ret['stdout'].splitlines():
+    for line in salt.utils.itertools.split(ret['stdout'], '\n'):
+        # Just return the first line
         return line
 
 
@@ -212,7 +213,7 @@ def _psql_cmd(*args, **kwargs):
     cmd = [salt.utils.which('psql'),
            '--no-align',
            '--no-readline',
-           '--no-password']         # It is never acceptable to issue a password prompt.
+           '--no-password']  # It is never acceptable to issue a password prompt.
     if user:
         cmd += ['--username', user]
     if host:
@@ -221,10 +222,9 @@ def _psql_cmd(*args, **kwargs):
         cmd += ['--port', str(port)]
     if not maintenance_db:
         maintenance_db = 'postgres'
-    cmd += ['--dbname', maintenance_db]
-    cmd += args
-    cmdstr = ' '.join([pipes.quote(c) for c in cmd])
-    return cmdstr
+    cmd.extend(['--dbname', maintenance_db])
+    cmd.extend(args)
+    return cmd
 
 
 def _psql_prepare_and_run(cmd,
@@ -377,9 +377,9 @@ def db_create(name,
         # doesn't get thrown by dashes in the name
         'OWNER': owner and '"{0}"'.format(owner),
         'TEMPLATE': template,
-        'ENCODING': encoding and '{0!r}'.format(encoding),
-        'LC_COLLATE': lc_collate and '{0!r}'.format(lc_collate),
-        'LC_CTYPE': lc_ctype and '{0!r}'.format(lc_ctype),
+        'ENCODING': encoding and '\'{0}\''.format(encoding),
+        'LC_COLLATE': lc_collate and '\'{0}\''.format(lc_collate),
+        'LC_CTYPE': lc_ctype and '\'{0}\''.format(lc_ctype),
         'TABLESPACE': tablespace,
     })
     with_chunks = []
@@ -878,7 +878,7 @@ def _role_cmd_args(name,
     ):
         skip_passwd = True
     if isinstance(rolepassword, six.string_types) and bool(rolepassword):
-        escaped_password = '{0!r}'.format(
+        escaped_password = '\'{0}\''.format(
             _maybe_encrypt_password(name,
                                     rolepassword.replace('\'', '\'\''),
                                     encrypted=encrypted))
@@ -943,7 +943,7 @@ def _role_create(name,
     # check if role exists
     if user_exists(name, user, host, port, maintenance_db,
                    password=password, runas=runas):
-        log.info('{0} {1!r} already exists'.format(typ_.capitalize(), name))
+        log.info('{0} \'{1}\' already exists'.format(typ_.capitalize(), name))
         return False
 
     sub_cmd = 'CREATE ROLE "{0}" WITH'.format(name)
@@ -1053,7 +1053,9 @@ def _role_update(name,
 
     # check if user exists
     if not bool(role):
-        log.info('{0} {1!r} could not be found'.format(typ_.capitalize(), name))
+        log.info(
+            '{0} \'{1}\' could not be found'.format(typ_.capitalize(), name)
+        )
         return False
 
     sub_cmd = 'ALTER ROLE "{0}" WITH'.format(name)
@@ -1139,7 +1141,7 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
     # check if user exists
     if not user_exists(name, user, host, port, maintenance_db,
                        password=password, runas=runas):
-        log.info('User {0!r} does not exist'.format(name))
+        log.info('User \'{0}\' does not exist'.format(name))
         return False
 
     # user exists, proceed
@@ -1153,7 +1155,7 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
                        password=password, runas=runas):
         return True
     else:
-        log.info('Failed to delete user {0!r}.'.format(name))
+        log.info('Failed to delete user \'{0}\'.'.format(name))
         return False
 
 
@@ -1779,7 +1781,7 @@ def schema_create(dbname, name, owner=None,
     if schema_exists(dbname, name,
                      db_user=db_user, db_password=db_password,
                      db_host=db_host, db_port=db_port):
-        log.info('{0!r} already exists in {1!r}'.format(name, dbname))
+        log.info('\'{0}\' already exists in \'{1}\''.format(name, dbname))
         return False
 
     sub_cmd = 'CREATE SCHEMA {0}'.format(name)
@@ -1834,7 +1836,7 @@ def schema_remove(dbname, name,
     if not schema_exists(dbname, name,
                          db_user=db_user, db_password=db_password,
                          db_host=db_host, db_port=db_port):
-        log.info('Schema {0!r} does not exist in {1!r}'.format(name, dbname))
+        log.info('Schema \'{0}\' does not exist in \'{1}\''.format(name, dbname))
         return False
 
     # schema exists, proceed
@@ -1850,7 +1852,7 @@ def schema_remove(dbname, name,
                          db_host=db_host, db_port=db_port):
         return True
     else:
-        log.info('Failed to delete schema {0!r}.'.format(name))
+        log.info('Failed to delete schema \'{0}\'.'.format(name))
         return False
 
 

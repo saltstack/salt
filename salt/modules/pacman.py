@@ -12,6 +12,7 @@ import re
 
 # Import salt libs
 import salt.utils
+import salt.utils.itertools
 from salt.exceptions import CommandExecutionError, MinionError
 
 # Import 3rd-party libs
@@ -68,10 +69,12 @@ def latest_version(*names, **kwargs):
     # Initialize the dict with empty strings
     for name in names:
         ret[name] = ''
-    cmd = 'pacman -Sp --needed --print-format "%n %v" ' \
-          '{0}'.format(' '.join(names))
-    out = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')
-    for line in out.splitlines():
+    cmd = ['pacman', '-Sp', '--needed', '--print-format', '%n %v']
+    cmd.extend(names)
+    out = __salt__['cmd.run_stdout'](cmd,
+                                     output_loglevel='trace',
+                                     python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         try:
             name, version_num = line.split()
             # Only add to return dict if package is in the list of packages
@@ -123,14 +126,14 @@ def list_upgrades(refresh=False):
         salt '*' pkg.list_upgrades
     '''
     upgrades = {}
-    options = ['-S', '-p', '-u', '--print-format "%n %v"']
+    cmd = ['pacman', '-S', '-p', '-u', '--print-format', '%n %v']
 
     if refresh:
-        options.append('-y')
+        cmd.append('-y')
 
-    cmd = ('pacman {0}').format(' '.join(options))
-
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=False)
 
     if call['retcode'] != 0:
         comment = ''
@@ -138,13 +141,13 @@ def list_upgrades(refresh=False):
             comment += call['stderr']
         if 'stdout' in call:
             comment += call['stdout']
-        raise CommandExecutionError(
-            '{0}'.format(comment)
-        )
+        if comment:
+            comment = ': ' + comment
+        raise CommandExecutionError('Error listing upgrades' + comment)
     else:
         out = call['stdout']
 
-    for line in iter(out.splitlines()):
+    for line in salt.utils.itertools.split(out, '\n'):
         comps = line.split(' ')
         if len(comps) != 2:
             continue
@@ -194,17 +197,17 @@ def list_pkgs(versions_as_list=False, **kwargs):
             __salt__['pkg_resource.stringify'](ret)
             return ret
 
-    cmd = 'pacman -Q'
+    cmd = ['pacman', '-Q']
     ret = {}
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
-    for line in out.splitlines():
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         if not line:
             continue
         try:
             name, version_num = line.split()[0:2]
         except ValueError:
             log.error('Problem parsing pacman -Q: Unexpected formatting in '
-                      'line: "{0}"'.format(line))
+                      'line: \'{0}\''.format(line))
         else:
             __salt__['pkg_resource.add_pkg'](ret, name, version_num)
 
@@ -227,22 +230,23 @@ def refresh_db():
 
         salt '*' pkg.refresh_db
     '''
-    cmd = 'LANG=C pacman -Sy'
+    cmd = ['pacman', '-Sy']
     ret = {}
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace',
-            python_shell=True)
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   env={'LANG': 'C'},
+                                   python_shell=False)
     if call['retcode'] != 0:
         comment = ''
         if 'stderr' in call:
-            comment += call['stderr']
-
+            comment += ': ' + call['stderr']
         raise CommandExecutionError(
-            '{0}'.format(comment)
+            'Error refreshing package database' + comment
         )
     else:
         out = call['stdout']
 
-    for line in out.splitlines():
+    for line in salt.utils.itertools.split(out, '\n'):
         if line.strip().startswith('::'):
             continue
         if not line:
@@ -335,16 +339,14 @@ def install(name=None,
     version_num = kwargs.get('version')
     if version_num:
         if pkgs is None and sources is None:
-            # Allow "version" to work for single package target
+            # Allow 'version' to work for single package target
             pkg_params = {name: version_num}
         else:
-            log.warning('"version" parameter will be ignored for multiple '
+            log.warning('\'version\' parameter will be ignored for multiple '
                         'package targets')
 
     if pkg_type == 'file':
-        cmd = 'pacman -U --noprogressbar --noconfirm ' \
-              '{0}'.format(' '.join(pkg_params))
-        targets = pkg_params
+        cmd = ['pacman', '-U', '--noprogressbar', '--noconfirm'] + pkg_params
     elif pkg_type == 'repository':
         targets = []
         problems = []
@@ -362,8 +364,8 @@ def install(name=None,
                     prefix = prefix or '='
                     targets.append('{0}{1}{2}'.format(param, prefix, verstr))
                 else:
-                    msg = 'Invalid version string "{0}" for package ' \
-                          '"{1}"'.format(version_num, name)
+                    msg = 'Invalid version string \'{0}\' for package ' \
+                          '\'{1}\''.format(version_num, name)
                     problems.append(msg)
         if problems:
             for problem in problems:
@@ -375,10 +377,10 @@ def install(name=None,
         if salt.utils.is_true(sysupgrade):
             options.append('-u')
 
-        cmd = 'pacman -S "{0}"'.format('" "'.join(options+targets))
+        cmd = ['pacman', '-S'] + options + targets
 
     old = list_pkgs()
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -404,14 +406,15 @@ def upgrade(refresh=False):
     '''
     ret = {'changes': {},
            'result': True,
-           'comment': '',
-           }
+           'comment': ''}
 
     old = list_pkgs()
-    cmd = 'pacman -Su --noprogressbar --noconfirm'
+    cmd = ['pacman', '-Su', '--noprogressbar', '--noconfirm']
     if salt.utils.is_true(refresh):
-        cmd += ' -y'
-    call = __salt__['cmd.run_all'](cmd, output_loglevel='trace')
+        cmd.append('-y')
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=False)
     if call['retcode'] != 0:
         ret['result'] = False
         if 'stderr' in call:
@@ -439,13 +442,11 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    remove_arg = '-Rsc' if action == 'purge' else '-R'
-    cmd = (
-        'pacman {0} '
-        '--noprogressbar '
-        '--noconfirm {1}'
-    ).format(remove_arg, ' '.join(targets))
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
+    cmd = ['pacman',
+           '-Rsc' if action == 'purge' else '-R',
+           '--noprogressbar',
+           '--noconfirm'] + targets
+    __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     return salt.utils.compare_dicts(old, new)
@@ -528,9 +529,10 @@ def file_list(*packages):
     '''
     errors = []
     ret = []
-    cmd = 'pacman -Ql {0}'.format(' '.join(packages))
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
-    for line in out.splitlines():
+    cmd = ['pacman', '-Ql']
+    cmd.extend(packages)
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         if line.startswith('error'):
             errors.append(line)
         else:
@@ -555,9 +557,10 @@ def file_dict(*packages):
     '''
     errors = []
     ret = {}
-    cmd = 'pacman -Ql {0}'.format(' '.join(packages))
-    out = __salt__['cmd.run'](cmd, output_loglevel='trace')
-    for line in out.splitlines():
+    cmd = ['pacman', '-Ql']
+    cmd.extend(packages)
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         if line.startswith('error'):
             errors.append(line)
         else:
@@ -588,9 +591,10 @@ def owner(*paths):
     if not paths:
         return ''
     ret = {}
-    cmd = 'pacman -Qqo {0!r}'
+    cmd_prefix = ['pacman', '-Qqo']
     for path in paths:
-        ret[path] = __salt__['cmd.run_stdout'](cmd.format(path))
+        ret[path] = __salt__['cmd.run_stdout'](cmd_prefix + [path],
+                                               python_shell=False)
     if len(ret) == 1:
         return next(six.itervalues(ret))
     return ret

@@ -17,7 +17,7 @@ from salt.serializers.yamlex import merge_recursive as _yamlex_merge_recursive
 log = logging.getLogger(__name__)
 
 
-def update(dest, upd, recursive_update=True):
+def update(dest, upd, recursive_update=True, merge_lists=False):
     '''
     Recursive version of the default dict.update
 
@@ -25,6 +25,10 @@ def update(dest, upd, recursive_update=True):
 
     If recursive_update=False, will use the classic dict.update, or fall back
     on a manual merge (helpful for non-dict types like FunctionWrapper)
+
+    If merge_lists=True, will aggregate list object types instead of replace.
+    This behavior is only activated when recursive_update=True. By default
+    merge_lists=False.
     '''
     if (not isinstance(dest, collections.Mapping)) \
             or (not isinstance(upd, collections.Mapping)):
@@ -41,11 +45,14 @@ def update(dest, upd, recursive_update=True):
                 dest_subkey = None
             if isinstance(dest_subkey, collections.Mapping) \
                     and isinstance(val, collections.Mapping):
-                ret = update(dest_subkey, val)
+                ret = update(dest_subkey, val, merge_lists=merge_lists)
                 dest[key] = ret
             elif isinstance(dest_subkey, list) \
                      and isinstance(val, list):
-                dest[key] = dest.get(key, []) + val
+                if merge_lists:
+                    dest[key] = dest.get(key, []) + val
+                else:
+                    dest[key] = upd[key]
             else:
                 dest[key] = upd[key]
         return dest
@@ -69,9 +76,9 @@ def merge_list(obj_a, obj_b):
     return ret
 
 
-def merge_recurse(obj_a, obj_b):
+def merge_recurse(obj_a, obj_b, merge_lists=False):
     copied = copy.deepcopy(obj_a)
-    return update(copied, obj_b)
+    return update(copied, obj_b, merge_lists=merge_lists)
 
 
 def merge_aggregate(obj_a, obj_b):
@@ -96,6 +103,8 @@ def merge(obj_a, obj_b, strategy='smart', renderer='yaml'):
         merged = merge_list(obj_a, obj_b)
     elif strategy == 'recurse':
         merged = merge_recurse(obj_a, obj_b)
+    elif strategy == 'recurse_list':
+        merged = merge_recurse(obj_a, obj_b, merge_lists=True)
     elif strategy == 'aggregate':
         #: level = 1 merge at least root data
         merged = merge_aggregate(obj_a, obj_b)
