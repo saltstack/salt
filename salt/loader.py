@@ -133,6 +133,7 @@ def minion_mods(
         opts,
         context=None,
         utils=None,
+        proxy=None,
         whitelist=None,
         include_errors=False,
         initial_load=False,
