@@ -1956,6 +1956,10 @@ def merge_base(cwd,
         .. note::
             This option requires two commits to be passed.
 
+        .. versionchanged:: 2015.8.2
+            Works properly in git versions older than 1.8.0, where the
+            ``--is-ancestor`` CLI option is not present.
+
     independent : False
         If ``True``, this function will return the IDs of the refs/commits
         passed which cannot be reached by another commit.
@@ -2011,7 +2015,8 @@ def merge_base(cwd,
 
     if all_ and (independent or is_ancestor or fork_point):
         raise SaltInvocationError(
-
+            'The \'all\' argument is not compatible with \'independent\', '
+            '\'is_ancestor\', or \'fork_point\''
         )
 
     if refs is None:
@@ -2026,25 +2031,12 @@ def merge_base(cwd,
             'Only one of \'octopus\', \'independent\', \'is_ancestor\', and '
             '\'fork_point\' is permitted'
         )
-    elif independent:
-        if all_:
-            raise SaltInvocationError(
-                '\'all\' is not compatible with \'independent\''
-            )
     elif is_ancestor:
-        if all_:
-            raise SaltInvocationError(
-                '\'all\' is not compatible with \'is_ancestor\''
-            )
         if len(refs) != 2:
             raise SaltInvocationError(
                 'Two refs/commits are required if \'is_ancestor\' is True'
             )
     elif fork_point:
-        if all_:
-            raise SaltInvocationError(
-                '\'all\' is not compatible with \'fork_point\''
-            )
         if len(refs) > 1:
             raise SaltInvocationError(
                 'At most one ref/commit can be passed if \'fork_point\' is '
@@ -2054,6 +2046,24 @@ def merge_base(cwd,
             refs = ['HEAD']
         if not isinstance(fork_point, six.string_types):
             fork_point = str(fork_point)
+
+    if is_ancestor:
+        if _LooseVersion(version(versioninfo=False)) < _LooseVersion('1.8.0'):
+            # Pre 1.8.0 git doesn't have --is-ancestor, so the logic here is a
+            # little different. First we need to resolve the first ref to a
+            # full SHA1, and then if running git merge-base on both commits
+            # returns an identical commit to the resolved first ref, we know
+            # that the first ref is an ancestor of the second ref.
+            first_commit = rev_parse(cwd,
+                                     refs[0],
+                                     opts=['--verify'],
+                                     user=user,
+                                     ignore_retcode=ignore_retcode)
+            return merge_base(cwd,
+                              refs=refs,
+                              is_ancestor=False,
+                              user=user,
+                              ignore_retcode=ignore_retcode) == first_commit
 
     command = ['git', 'merge-base']
     command.extend(_format_opts(opts))
