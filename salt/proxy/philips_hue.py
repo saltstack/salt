@@ -330,9 +330,9 @@ def call_effect(*args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' hue.alert
-        salt '*' hue.alert id=1
-        salt '*' hue.alert id=1,2,3 on=false
+        salt '*' hue.effect
+        salt '*' hue.effect id=1
+        salt '*' hue.effect id=1,2,3 type=colorloop
     '''
     res = dict()
 
