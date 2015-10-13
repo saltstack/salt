@@ -169,10 +169,9 @@ def call_lights(*args, **kwargs):
     '''
     res = dict()
     lights = _get_lights()
-    if 'id' in kwargs:
-        for dev_id in _get_devices(kwargs):
-            if lights.get(str(dev_id)):
-                res[dev_id] = lights[str(dev_id)]
+    for dev_id in ('id' in kwargs and _get_devices(kwargs) or sorted(lights.keys())):
+        if lights.get(str(dev_id)):
+            res[dev_id] = lights[str(dev_id)]
 
     return res or False
 
