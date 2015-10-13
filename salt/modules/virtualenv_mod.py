@@ -301,9 +301,7 @@ def get_site_packages(venv):
 
         salt '*' virtualenv.get_site_packages /path/to/my/venv
     '''
-    bin_path = os.path.join(venv, 'bin/python')
-    if not os.path.exists(bin_path):
-        _not_a_virtualenv(venv)
+    bin_path = _verify_virtualenv(venv)
 
     ret = __salt__['cmd.exec_code_all'](
         bin_path,
@@ -336,10 +334,7 @@ def get_distribution_path(venv, distribution):
         salt '*' virtualenv.get_distribution_path /path/to/my/venv my_distribution
     '''
     _verify_safe_py_code(distribution)
-
-    bin_path = os.path.join(venv, 'bin/python')
-    if not os.path.exists(bin_path):
-        _not_a_virtualenv(venv)
+    bin_path = _verify_virtualenv(venv)
 
     ret = __salt__['cmd.exec_code_all'](
         bin_path,
@@ -420,10 +415,7 @@ def get_resource_path(venv,
         resource = resource_name
 
     _verify_safe_py_code(package, resource)
-
-    bin_path = os.path.join(venv, 'bin/python')
-    if not os.path.exists(bin_path):
-        _not_a_virtualenv(venv)
+    bin_path = _verify_virtualenv(venv)
 
     ret = __salt__['cmd.exec_code_all'](
         bin_path,
@@ -506,10 +498,7 @@ def get_resource_content(venv,
         resource = resource_name
 
     _verify_safe_py_code(package, resource)
-
-    bin_path = os.path.join(venv, 'bin/python')
-    if not os.path.exists(bin_path):
-        _not_a_virtualenv(venv)
+    bin_path = _verify_virtualenv(venv)
 
     ret = __salt__['cmd.exec_code_all'](
         bin_path,
@@ -550,15 +539,18 @@ def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
         os.remove(tmppath)
 
 
-def _not_a_virtualenv(path):
-    raise CommandExecutionError(
-        'Path \'{0}\' does not appear to be a virtualenv'.format(path)
-    )
-
-
 def _verify_safe_py_code(*args):
     for arg in args:
         if not salt.utils.verify.safe_py_code(arg):
             raise SaltInvocationError(
                 'Unsafe python code detected in \'{0}\''.format(arg)
             )
+
+
+def _verify_virtualenv(venv_path):
+    bin_path = os.path.join(venv_path, 'bin/python')
+    if not os.path.exists(bin_path):
+        raise CommandExecutionError(
+            'Path \'{0}\' does not appear to be a virtualenv: bin/python not found.'.format(venv_path)
+        )
+    return bin_path
