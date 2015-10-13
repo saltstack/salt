@@ -445,3 +445,39 @@ def call_brightness(*args, **kwargs):
         res[dev_id] = _set(dev_id, {"bri": brightness, "transitiontime": transition})
 
     return res
+
+
+def call_temperature(*args, **kwargs):
+    '''
+    Set the mired color temperature. More: http://en.wikipedia.org/wiki/Mired
+
+    Arguments:
+
+    * **value**: 150~500.
+
+    Options:
+
+    * **id**: Specifies a device ID. Can be comma-separated ids or all, if omitted.
+
+    CLE Example:
+
+    .. code-block:: bash
+
+        salt '*' hue.temperature value=150
+        salt '*' hue.temperature value=150 id=1
+        salt '*' hue.temperature value=150 id=1,2,3
+    '''
+    res = dict()
+
+    if 'value' not in kwargs:
+        raise CommandExecutionError("Parameter 'value' (150~500) is missing")
+    try:
+        value = max(min(int(kwargs['value']), 500), 150)
+    except Exception, err:
+        raise CommandExecutionError("Parameter 'value' does not contains an integer")
+
+    devices = _get_lights()
+    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+        res[dev_id] = _set(dev_id, {"ct": value})
+
+    return res
