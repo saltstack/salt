@@ -25,7 +25,7 @@ from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
 from salt.utils import context
-from salt.utils import dictthread
+from salt.utils.dictthread import DictThread
 import salt.utils.lazy
 import salt.utils.event
 import salt.utils.odict
@@ -1054,8 +1054,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         Strip out of the opts any logger instance
         '''
-        self._grains = dictthread.wrap(opts.get('grains', {}))
-        self._pillar = dictthread.wrap(opts.get('pillar', {}))
+        self._grains = DictThread.wrap(opts.get('grains', {}), 'grains')
+        self._pillar = DictThread.wrap(opts.get('pillar', {}), 'pillar')
 
         mod_opts = {}
         for key, val in list(opts.items()):
@@ -1173,14 +1173,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         else:
             mod.__opts__ = self.opts
 
-        if hasattr(mod, '__grains__') and isinstance(mod.__grains__, dictthread.DictThread):
-            mod.__grains__.assign_current(self._grains)
-        else:
-            mod.__grains__ = self._grains
-        if hasattr(mod, '__pillar__') and isinstance(mod.__pillar__, dictthread.DictThread):
-            mod.__pillar__.assign_current(self._pillar)
-        else:
-            mod.__pillar__ = self._pillar
+        mod.__grains__ = self._grains
+        mod.__pillar__ = self._pillar
 
         # pack whatever other globals we were asked to
         for p_name, p_value in six.iteritems(self.pack):

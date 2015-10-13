@@ -8,7 +8,6 @@ from threading import Thread, RLock, Event
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 from salt.utils.dictthread import DictThread
-from salt.utils import dictthread
 from salt.ext.six.moves import range
 
 ensure_in_syspath('../../')
@@ -21,14 +20,14 @@ class UtilDictthreadTestCase(TestCase):
 
     def test_basic(self):
         # Create threaded dict from dict
-        tdict = dictthread.DictThread(self.dict1)
+        tdict = DictThread(self.dict1, 'pillar')
         self.assertEqual(tdict, self.dict1)
 
         # Create threaded dict from threaded dict
-        tdict2 = dictthread.DictThread(tdict)
+        tdict2 = DictThread(tdict, 'grains')
         self.assertEqual(tdict2, self.dict1)
 
-        tdict = DictThread(val=999)
+        tdict = DictThread({'val': 999}, 'opts')
         self.assertEqual(tdict, {'val': 999})
         l = RLock()
         event = Event()
@@ -55,21 +54,6 @@ class UtilDictthreadTestCase(TestCase):
             t.start()
         for t in tlist:
             t.join()
-        self.assertEqual(len(tdict._tmap), TCOUNT + 1)  # One is for 'mainThread'
-        for k in tdict._tmap:
-            d = tdict._tmap[k]
-            self.assertEqual(len(d), 1)
-            self.assertTrue('val' in d)
-
-    def test_assign(self):
-        tdict1 = dictthread.DictThread()
-        tdict1.assign_current(self.dict1)
-        self.assertEqual(tdict1, self.dict1)
-
-        tdict2 = dictthread.DictThread({'key': 'value'})
-        tdict1.assign_current(tdict2)
-        self.assertEqual(tdict1, {'key': 'value'})
-        self.assertEqual(tdict1, tdict2)
 
 if __name__ == '__main__':
     from integration import run_tests

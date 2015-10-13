@@ -1,17 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 from collections import MutableMapping
-from threading import currentThread, RLock
-
-
-def wrap(obj):
-    '''
-    Wraps dict with DictThread object.
-    '''
-    if isinstance(obj, DictThread):
-        return obj
-    else:
-        return DictThread(obj)
+import threading
 
 
 class DictThread(MutableMapping):
@@ -19,76 +9,54 @@ class DictThread(MutableMapping):
     Transparent dictionary providing different copies of data depending on the
     current thread name.
     '''
-    def __init__(self, *args, **kwargs):
+    local = threading.local()
+
+    @classmethod
+    def wrap(cls, obj, name):
+        '''
+        Wraps dict with DictThread object.
+        '''
+        if isinstance(obj, cls):
+            return obj
+        else:
+            return cls(obj, name)
+
+    def __init__(self, data, name):
         '''
         Constructor
         '''
-        self.__lock = RLock()
-        with self.__lock:
-            if len(args) == 1 and isinstance(args[0], DictThread):
-                self._tmap = args[0]._tmap
-                self.update(dict(**kwargs))
-            elif len(args) == 1 and isinstance(args[0], bool):
-                self._tmap = dict()
-            else:
-                self._tmap = dict()
-                self.update(dict(*args, **kwargs))
-            self.__init_current__()
+        self.name = name
+        self.update(data)
 
-    def __init_current__(self):
-        '''
-        Add new empty dict for current thread
-        '''
-        tkey = self.__tkey__()
-        if tkey not in self._tmap:
-            # There is no mapping for current thread yet
-            with self.__lock:
-                # Don't need to re-check here because each thread manage it's
-                # own key only
-                self._tmap[tkey] = dict()
-
-    def __tkey__(self):
+    def _dict(self):
         '''
         Return current thread unique ID for mapping
         '''
-        return currentThread().name
+        local = DictThread.local
+        if not hasattr(local, 'data'):
+            local.data = {}
+        data = local.data
+        if self.name not in data:
+            data[self.name] = {}
+        return data[self.name]
 
     def __getitem__(self, key):
-        return self._tmap[self.__tkey__()][key]
+        return self._dict()[key]
 
     def __setitem__(self, key, value):
-        self.__init_current__()
-        self._tmap[self.__tkey__()][key] = value
+        self._dict()[key] = value
 
     def __delitem__(self, key):
-        del self._tmap[self.__tkey__()][key]
+        del self._dict()[key]
 
     def __iter__(self):
-        return iter(self._tmap[self.__tkey__()])
+        return iter(self._dict())
 
     def __len__(self):
-        return len(self._tmap[self.__tkey__()])
+        return len(self._dict())
 
     def __nonzero__(self):
-        tkey = self.__tkey__()
-        return tkey in self._tmap and bool(self._tmap[self.__tkey__()])
+        return self._dict().__nonzero__()
 
     def __str__(self):
-        return str(self._tmap)
-
-    def assign_current(self, dictionary):
-        '''
-        Assign dictionary for current thread
-        '''
-        with self.__lock:
-            tkey = self.__tkey__()
-            if isinstance(dictionary, DictThread):
-                self._tmap[tkey] = dictionary.get_current(tkey) or dict()
-            else:
-                self._tmap[tkey] = dictionary
-
-    def get_current(self, default=None):
-        '''
-        Get dictionary for current thread
-        '''
-        return self._tmap.get(self.__tkey__(), default)
+        return str(self._dict())
