@@ -30,7 +30,6 @@ from salt.exceptions import (CommandExecutionError, MinionError)
 
 __proxyenabled__ = ['philips_hue']
 
-GRAINS_CACHE = {}
 CONFIG = {}
 log = logging.getLogger(__file__)
 
@@ -74,24 +73,6 @@ def init(cnf):
         raise MinionError(message="Cannot find 'user' parameter in the proxy configuration")
 
     CONFIG['url'] = "http://{0}/api/{1}".format(host, user)
-
-
-def grains():
-    '''
-    Get the grains from the proxied device
-    '''
-    return grains_refresh()
-
-
-def grains_refresh():
-    '''
-    Refresh the grains from the proxied device
-    '''
-    if not GRAINS_CACHE:
-        GRAINS_CACHE['vendor'] = 'Philips'
-        GRAINS_CACHE['product'] = 'Hue Lamps'
-        
-    return GRAINS_CACHE
 
 
 def ping(*args, **kw):
