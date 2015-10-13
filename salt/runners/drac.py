@@ -33,12 +33,15 @@ def __virtual__():
     return False
 
 
-def __connect(hostname, timeout=20):
+def __connect(hostname, timeout=20, username=None, password=None):
     '''
     Connect to the DRAC
     '''
-    username = __opts__['drac'].get('username', None)
-    password = __opts__['drac'].get('password', None)
+
+    if not username:
+        username = __opts__['drac'].get('username', None)
+    if not password:
+        password = __opts__['drac'].get('password', None)
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -73,7 +76,7 @@ def __version(client):
     return None
 
 
-def pxe(hostname, timeout=20):
+def pxe(hostname, timeout=20, username=None, password=None):
     '''
     Connect to the Dell DRAC and have the boot order set to PXE
     and power cycle the system to PXE boot
@@ -90,7 +93,7 @@ def pxe(hostname, timeout=20):
         'racadm serveraction powercycle',
     ]
 
-    client = __connect(hostname, timeout)
+    client = __connect(hostname, timeout, username, password)
 
     if isinstance(client, paramiko.SSHClient):
         for i, cmd in enumerate(_cmds, 1):
@@ -107,7 +110,7 @@ def pxe(hostname, timeout=20):
     return True
 
 
-def reboot(hostname, timeout=20):
+def reboot(hostname, timeout=20, username=None, password=None):
     '''
     Reboot a server using the Dell DRAC
 
@@ -117,7 +120,7 @@ def reboot(hostname, timeout=20):
 
         salt-run drac.reboot example.com
     '''
-    client = __connect(hostname, timeout)
+    client = __connect(hostname, timeout, username, password)
 
     if isinstance(client, paramiko.SSHClient):
         (stdin, stdout, stderr) = client.exec_command('racadm serveraction powercycle')
@@ -134,7 +137,7 @@ def reboot(hostname, timeout=20):
     return True
 
 
-def poweroff(hostname, timeout=20):
+def poweroff(hostname, timeout=20, username=None, password=None):
     '''
     Power server off
 
@@ -144,7 +147,7 @@ def poweroff(hostname, timeout=20):
 
         salt-run drac.poweroff example.com
     '''
-    client = __connect(hostname, timeout)
+    client = __connect(hostname, timeout, username, password)
 
     if isinstance(client, paramiko.SSHClient):
         (stdin, stdout, stderr) = client.exec_command('racadm serveraction powerdown')
@@ -161,7 +164,7 @@ def poweroff(hostname, timeout=20):
     return True
 
 
-def poweron(hostname, timeout=20):
+def poweron(hostname, timeout=20, username=None, password=None):
     '''
     Power server on
 
@@ -171,7 +174,7 @@ def poweron(hostname, timeout=20):
 
         salt-run drac.poweron example.com
     '''
-    client = __connect(hostname, timeout)
+    client = __connect(hostname, timeout, username, password)
 
     if isinstance(client, paramiko.SSHClient):
         (stdin, stdout, stderr) = client.exec_command('racadm serveraction powerup')
@@ -188,7 +191,7 @@ def poweron(hostname, timeout=20):
     return True
 
 
-def version(hostname, timeout=20):
+def version(hostname, timeout=20, username=None, password=None):
     '''
     Display the version of DRAC
 
@@ -198,4 +201,4 @@ def version(hostname, timeout=20):
 
         salt-run drac.version example.com
     '''
-    return __version(__connect(hostname, timeout))
+    return __version(__connect(hostname, timeout, username, password))
