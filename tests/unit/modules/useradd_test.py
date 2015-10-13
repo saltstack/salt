@@ -61,33 +61,6 @@ class UserAddTestCase(TestCase):
                 with patch.dict(useradd.__salt__, {'cmd.run_all': mock}):
                     self.assertFalse(useradd.add('Salt'))
 
-    # 'delete' function tests: 1
-
-    @patch('salt.modules.useradd.RETCODE_12_ERROR_REGEX',
-           MagicMock(return_value=''))
-    def test_delete(self):
-        '''
-        Test for deleting a user
-        '''
-        with patch.dict(useradd.__grains__, {'kernel': 'OpenBSD'}):
-            mock = MagicMock(return_value={'retcode': 0})
-            with patch.dict(useradd.__salt__, {'cmd.run_all': mock}):
-                self.assertTrue(useradd.delete('Salt'))
-
-        with patch.dict(useradd.__grains__, {'os_family': 'Debian'}):
-            mock = MagicMock(return_value={'retcode': 12, 'stderr': ''})
-            with patch.dict(useradd.__salt__, {'cmd.run_all': mock}):
-                self.assertTrue(useradd.delete('Salt'))
-
-        with patch.dict(useradd.__grains__, {'os_family': 'RedHat'}):
-            mock = MagicMock(return_value={'retcode': 12, 'stderr': ''})
-            with patch.dict(useradd.__salt__, {'cmd.run_all': mock}):
-                self.assertFalse(useradd.delete('Salt'))
-
-        mock = MagicMock(return_value={'retcode': 1})
-        with patch.dict(useradd.__salt__, {'cmd.run_all': mock}):
-            self.assertFalse(useradd.delete('Salt'))
-
     # 'getent' function tests: 2
 
     @patch('salt.modules.useradd.__context__', MagicMock(return_value='Salt'))

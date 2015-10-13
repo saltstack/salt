@@ -49,39 +49,41 @@ def managed(name,
             proxy=None,
             use_vt=False,
             env_vars=None,
-            no_use_wheel=False):
+            no_use_wheel=False,
+            pip_upgrade=False):
     '''
     Create a virtualenv and optionally manage it with pip
 
     name
-        Path to the virtualenv
+        Path to the virtualenv.
     requirements
         Path to a pip requirements file. If the path begins with ``salt://``
         the file will be transferred from the master file server.
     cwd
-        Path to the working directory where "pip install" is executed.
+        Path to the working directory where `pip install` is executed.
     user
-        The user under which to run virtualenv and pip
+        The user under which to run virtualenv and pip.
     no_chown: False
-        When user is given, do not attempt to copy and chown
-        a requirements file (needed if the requirements file refers to other
-        files via relative paths, as the copy-and-chown procedure does not
-        account for such files)
+        When user is given, do not attempt to copy and chown a requirements file
+        (needed if the requirements file refers to other files via relative
+        paths, as the copy-and-chown procedure does not account for such files)
     use_wheel : False
-        Prefer wheel archives (requires pip>=1.4)
+        Prefer wheel archives (requires pip >= 1.4).
     no_use_wheel : False
         Force to not use wheel archives (requires pip>=1.4)
     no_deps: False
-        Pass `--no-deps` to `pip`.
+        Pass `--no-deps` to `pip install`.
     pip_exists_action: None
         Default action of pip when a path already exists: (s)witch, (i)gnore,
         (w)ipe, (b)ackup
     proxy: None
-        Proxy address which is passed to "pip install"
+        Proxy address which is passed to `pip install`.
     env_vars
         Set environment variables that some builds will depend on. For example,
         a Python C-module may have a Makefile that needs INCLUDE_PATH set to
         pick up a header file while compiling.
+    pip_upgrade: False
+        Pass `--upgrade` to `pip install`.
 
 
     Also accepts any kwargs that the virtualenv module will.
@@ -224,6 +226,7 @@ def managed(name,
             pre_releases=pre_releases,
             exists_action=pip_exists_action,
             ignore_installed=pip_ignore_installed,
+            upgrade=pip_upgrade,
             no_deps=no_deps,
             proxy=proxy,
             use_vt=use_vt,

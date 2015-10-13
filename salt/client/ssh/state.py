@@ -31,7 +31,7 @@ class SSHState(salt.state.State):
         self.wrapper = wrapper
         super(SSHState, self).__init__(opts, pillar)
 
-    def load_modules(self, data=None):
+    def load_modules(self, data=None, proxy=None):
         '''
         Load up the modules for remote compilation via ssh
         '''

@@ -137,7 +137,8 @@ def minion_mods(
         initial_load=False,
         loaded_base_name=None,
         notify=False,
-        static_modules=None):
+        static_modules=None,
+        proxy=None):
     '''
     Load execution modules
 
@@ -173,17 +174,20 @@ def minion_mods(
         __salt__['test.ping']()
     '''
     # TODO Publish documentation for module whitelisting
-
     if context is None:
         context = {}
     if utils is None:
         utils = {}
+    if proxy is None:
+        proxy = {}
+
     if not whitelist:
         whitelist = opts.get('whitelist_modules', None)
     ret = LazyLoader(_module_dirs(opts, 'modules', 'module'),
                      opts,
                      tag='module',
-                     pack={'__context__': context, '__utils__': utils},
+                     pack={'__context__': context, '__utils__': utils,
+                           '__proxy__': proxy},
                      whitelist=whitelist,
                      loaded_base_name=loaded_base_name,
                      static_modules=static_modules)
@@ -253,16 +257,19 @@ def engines(opts, functions, runners):
                       pack=pack)
 
 
-def proxy(opts, functions, whitelist=None, loaded_base_name=None):
+def proxy(opts, functions=None, returners=None, whitelist=None):
     '''
     Returns the proxy module for this salt-proxy-minion
     '''
-    return LazyLoader(_module_dirs(opts, 'proxy', 'proxy'),
-                      opts,
-                      tag='proxy',
-                      whitelist=whitelist,
-                      pack={'__proxy__': functions},
-                      loaded_base_name=loaded_base_name)
+    ret = LazyLoader(_module_dirs(opts, 'proxy', 'proxy'),
+                     opts,
+                     tag='proxy',
+                     pack={'__salt__': functions,
+                           '__ret__': returners})
+
+    ret.pack['__proxy__'] = ret
+
+    return ret
 
 
 def returners(opts, functions, whitelist=None, context=None):
