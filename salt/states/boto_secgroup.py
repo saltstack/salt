@@ -127,10 +127,14 @@ def present(
         The name of the VPC wherein to create the security group, if any. Exclusive with vpc_id.
 
     rules
-        A list of ingress rule dicts.
+        A list of ingress rule dicts. If not specified, ``rules=None``,
+        the ingress rules will be unmanaged. If set to an empty list, ``[]``,
+        then all ingress rules will be removed.
 
     rules_egress
-        A list of egress rule dicts.
+        A list of egress rule dicts. If not specified, ``rules_egress=None``,
+        the egress rules will be unmanaged. If set to an empty list, ``[]``,
+        then all egress rules will be removed.
 
     region
         Region to connect to.
