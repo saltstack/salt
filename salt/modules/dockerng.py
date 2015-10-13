@@ -1696,7 +1696,7 @@ def _validate_input(kwargs,
                         'The \'{0}\' parameter requires at least Docker {1} '
                         '(detected version {2})'.format(
                             kwarg,
-                            '.'.join(min_docker),
+                            '.'.join(map(str, min_docker)),
                             '.'.join(__context__['docker.docker_version'])
                         )
                     )
@@ -1709,8 +1709,8 @@ def _validate_input(kwargs,
                         'The \'{0}\' parameter requires at least docker-py '
                         '{1} (detected version {2})'.format(
                             kwarg,
-                            '.'.join(min_docker_py),
-                            '.'.join(cur_docker_py)
+                            '.'.join(map(str, min_docker_py)),
+                            '.'.join(map(str, cur_docker_py))
                         )
                     )
         if compat_errors:
