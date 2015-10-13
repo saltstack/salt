@@ -42,12 +42,16 @@ class Const:
     LAMP_ON = {"on": True, "transitiontime": 0}
     LAMP_OFF = {"on": False, "transitiontime": 0}
 
-    COLOR_WHITE = {"sat": 0}
+    COLOR_WHITE = {"xy": [0.3227, 0.329]}
+    COLOR_DAYLIGHT = {"xy": [0.3806, 0.3576]}
     COLOR_RED = {"hue": 0, "sat": 254}
     COLOR_GREEN = {"hue": 25500, "sat": 254}
     COLOR_ORANGE = {"hue": 12000, "sat": 254}
-    COLOR_PINK = {"hue": 12000, "sat": 254}
+    COLOR_PINK = {"xy": [0.3688,0.2095]}
     COLOR_BLUE = {"hue": 46920, "sat": 254}
+    COLOR_YELLOW = {"xy": [0.4432, 0.5154]}
+    COLOR_PURPLE = {"xy": [0.3787,0.1724]}
+
 
 
 def __virtual__():
@@ -348,6 +352,7 @@ def call_color(*args, **kwargs):
         salt '*' hue.color
         salt '*' hue.color id=1
         salt '*' hue.color id=1,2,3 oolor=red transition=30
+        salt '*' hue.color id=1 gamut=0.3,0.5
     '''
     res = dict()
 
@@ -358,12 +363,28 @@ def call_color(*args, **kwargs):
         'orange': Const.COLOR_ORANGE,
         'pink': Const.COLOR_PINK,
         'white': Const.COLOR_WHITE,
+        'yellow': Const.COLOR_YELLOW,
+        'daylight': Const.COLOR_DAYLIGHT,
+        'purple': Const.COLOR_PURPLE,
     }
 
     devices = _get_lights()
-    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+    color = kwargs.get("gamut")
+    if color:
+        color = color.split(",")
+        if len(color) == 2:
+            try:
+                color = {"xy": [float(color[0]), float(color[1])]}
+            except Exception, ex:
+                color = None
+        else:
+            color = None
+
+    if not color:
         color = colormap.get(kwargs.get("color", 'white'), Const.COLOR_WHITE)
-        color.update({"transitiontime": max(min(kwargs.get("transition", 0), 200), 0)})
+    color.update({"transitiontime": max(min(kwargs.get("transition", 0), 200), 0)})
+
+    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
         res[dev_id] = _set(dev_id, color)
 
     return res
