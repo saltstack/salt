@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Support for htpasswd module
+Support for htpasswd module. Requires apache2-utils package.
 
 .. versionadded:: 2014.7.0
 
