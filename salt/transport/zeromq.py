@@ -320,6 +320,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             self._stream.socket.close(0)
         if hasattr(self, 'context'):
             self.context.term()
+        self.message_client.destory()
 
     def __del__(self):
         self.destroy()
@@ -735,8 +736,8 @@ class AsyncReqMessageClient(object):
             self.socket.close()
         self.context.term()
 
-    def __del__(self):
-        self.destroy()
+#    def __del__(self):
+#        self.destroy()
 
     def _init_socket(self):
         if hasattr(self, 'stream'):
@@ -808,6 +809,7 @@ class AsyncReqMessageClient(object):
                 self._init_socket()  # re-init the zmq socket (no other way in zmq)
                 continue
             self.remove_message_timeout(message)
+            self.send_future_map.pop(message)
 
     def remove_message_timeout(self, message):
         if message not in self.send_timeout_map:
