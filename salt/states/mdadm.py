@@ -63,7 +63,7 @@ def present(name,
 
     devices
         A list of devices used to build the array.
-    
+
     kwargs
         Optional arguments to be passed to mdadm.
 
