@@ -342,8 +342,14 @@ def call_color(*args, **kwargs):
     Options:
 
     * **id**: Specifies a device ID. Can be comma-separated ids or all, if omitted.
-    * **color**: Fixed color. Values are: red, green, blue, orange, pink, white. Default white.
+    * **color**: Fixed color. Values are: red, green, blue, orange, pink, white,
+                 yellow, daylight, purple. Default white.
     * **transition**: Transition 0~200.
+
+    Advanced:
+
+    * **gamut**: XY coordinates. Use gamut according to the Philips HUE devices documentation.
+                 More: http://www.developers.meethue.com/documentation/hue-xy-values
 
     CLE Example:
 
