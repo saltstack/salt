@@ -49,9 +49,10 @@ def _detect_os():
     Apache commands and paths differ depending on packaging
     '''
     # TODO: Add pillar support for the apachectl location
-    if __grains__['os_family'] == 'RedHat':
+    os_family = __grains__['os_family']
+    if os_family == 'RedHat':
         return 'apachectl'
-    elif __grains__['os_family'] == 'Debian':
+    elif os_family == 'Debian' or os_family == 'Suse':
         return 'apache2ctl'
     else:
         return 'apachectl'
