@@ -40,11 +40,21 @@ class TimezoneTestCase(TestCase):
         '''
         Test to get current timezone (i.e. America/Denver)
         '''
-        mock = MagicMock(side_effect=['Time zone: A', 'A'])
-        with patch.object(salt.utils, 'which', return_value=True):
-            with patch.dict(timezone.__salt__, {'cmd.run': mock}):
-                self.assertEqual(timezone.get_zone(), 'A')
+        zone = 'MST'
 
+        with patch.object(salt.utils, 'which', return_value=True):
+            mock_cmd = MagicMock(return_value={'stderr': 'error', 'retcode': 1})
+            with patch.dict(timezone.__salt__, {'cmd.run_all': mock_cmd}):
+                self.assertRaises(CommandExecutionError, timezone.get_zone)
+
+            mock_cmd = MagicMock(return_value={'stdout': 'Timezone: {0}'.format(zone),
+                                               'retcode': 0})
+            with patch.dict(timezone.__salt__, {'cmd.run_all': mock_cmd}):
+                self.assertEqual(timezone.get_zone(), zone)
+
+            mock_cmd = MagicMock(return_value={'stdout': 'ZoneCTL: {0}'.format(zone),
+                                               'retcode': 0})
+            with patch.dict(timezone.__salt__, {'cmd.run_all': mock_cmd}):
                 self.assertRaises(CommandExecutionError, timezone.get_zone)
 
         with patch.object(salt.utils, 'which', return_value=False):

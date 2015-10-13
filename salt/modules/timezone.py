@@ -100,8 +100,13 @@ def get_zone():
     '''
     cmd = ''
     if salt.utils.which('timedatectl'):
-        out = __salt__['cmd.run'](['timedatectl'], python_shell=False)
-        for line in (x.strip() for x in out.splitlines()):
+        ret = __salt__['cmd.run_all'](['timedatectl'], python_shell=False)
+
+        if ret['retcode'] > 0:
+            msg = 'timedatectl failed: {0}'.format(ret['stderr'])
+            raise CommandExecutionError(msg)
+
+        for line in (x.strip() for x in ret['stdout'].splitlines()):
             try:
                 return re.match(r'Time ?zone:\s+(\S+)', line).group(1)
             except AttributeError:
