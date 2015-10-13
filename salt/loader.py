@@ -1055,7 +1055,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Strip out of the opts any logger instance
         '''
         self._grains = DictThread.wrap(opts.get('grains', {}), 'grains')
-        self._pillar = DictThread.wrap(opts.get('pillar', {}), 'pillar')
+        # TODO: temporary workaround, see #27901
+        pillar = opts.get('pillar', {})
+        if isinstance(pillar, bool):
+            pillar = {}
+        self._pillar = DictThread.wrap(pillar, 'pillar')
 
         mod_opts = {}
         for key, val in list(opts.items()):
