@@ -119,7 +119,12 @@ def _set(lamp_id, state, method="state"):
     :return:
     '''
     url = "{0}/lights/{1}".format(CONFIG['url'], lamp_id) + (method and "/{0}".format(method) or '')
-    res = json.loads(requests.put(url, json=state).content)
+    res = None
+    try:
+        res = json.loads(requests.put(url, json=state).content)
+    except Exception, err:
+        raise CommandExecutionError(err)
+
     res = len(res) > 1 and res[-1] or res[0]
     if res.get('success'):
         res = {'result': True}
@@ -151,7 +156,10 @@ def _get_lights():
 
     :return:
     '''
-    return json.loads(requests.get(CONFIG['url'] + "/lights").content)
+    try:
+        return json.loads(requests.get(CONFIG['url'] + "/lights").content)
+    except Exception, exc:
+        raise CommandExecutionError(exc)
 
 
 # Callers
