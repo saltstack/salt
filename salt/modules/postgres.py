@@ -911,6 +911,8 @@ def _role_cmd_args(name,
     if sub_cmd.endswith('WITH'):
         sub_cmd = sub_cmd.replace(' WITH', '')
     if groups:
+        if isinstance(groups, list):
+            groups = ','.join(groups)
         for group in groups.split(','):
             sub_cmd = '{0}; GRANT "{1}" TO "{2}"'.format(sub_cmd, group, name)
     return sub_cmd
