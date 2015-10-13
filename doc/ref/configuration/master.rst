@@ -2252,6 +2252,34 @@ strategy between different sources. It accepts 4 values:
           element2: True
       baz: quux
 
+* recurse_list:
+
+  it will merge recursively mapping of data similar to ``recurse`` but merge
+  lists by aggregating them instead of replacing them.
+
+  .. code-block:: yaml
+
+      foo: 43
+      bar:
+         - 1
+         - 2
+
+  .. code-block:: yaml
+
+      bar:
+         - 3
+      baz: quux
+
+  will be merged as:
+
+  .. code-block:: yaml
+
+      foo: 42
+      bar:
+         - 1
+         - 2
+         - 3
+      baz: quux
 
 * aggregate:
 
