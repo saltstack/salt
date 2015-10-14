@@ -360,7 +360,7 @@ class LocalClient(object):
             >>> SLC.cmd_subset('*', 'test.ping', sub=1)
             {'jerry': True}
         '''
-        group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form)
+        group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form, **kwargs)
         f_tgt = []
         for minion, ret in six.iteritems(group):
             if len(f_tgt) >= sub:
