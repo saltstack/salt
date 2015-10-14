@@ -736,9 +736,6 @@ class AsyncReqMessageClient(object):
             self.socket.close()
         self.context.term()
 
-#    def __del__(self):
-#        self.destroy()
-
     def _init_socket(self):
         if hasattr(self, 'stream'):
             self.stream.close()  # pylint: disable=E0203
