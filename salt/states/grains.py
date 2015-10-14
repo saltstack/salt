@@ -29,9 +29,11 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
 
     :param force: If force is True, the existing grain will be overwritten
         regardless of its existing or provided value type. Defaults to False
+
         .. versionadded:: Boron
 
     :param delimiter: A delimiter different from the default can be provided.
+
         .. versionadded:: Boron
 
     It is now capable to set a grain to a complex value (ie. lists and dicts)
@@ -58,6 +60,11 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
           - value:
             - command: check_https
             - params:  -H localhost -p 443 -S
+
+      with,a,custom,delimiter:
+        grains.present:
+          - value:     yay
+          - delimiter: ,
     '''
     name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {'name': name,
@@ -97,7 +104,8 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
     value
         The value is present in the list type grain.
 
-    :param delimiter: A delimiter different from the default can be provided.
+    :param delimiter: A delimiter different from the default ``:`` can be provided.
+
         .. versionadded:: Boron
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
@@ -179,7 +187,8 @@ def list_absent(name, value, delimiter=DEFAULT_TARGET_DELIM):
     value
        The value to delete from the grain list.
 
-    :param delimiter: A delimiter different from the default can be provided.
+    :param delimiter: A delimiter different from the default ``:`` can be provided.
+
         .. versionadded:: Boron
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
@@ -249,9 +258,11 @@ def absent(name,
 
     :param force: If force is True, the existing grain will be overwritten
         regardless of its existing or provided value type. Defaults to False
+
         .. versionadded:: Boron
 
     :param delimiter: A delimiter different from the default can be provided.
+
         .. versionadded:: Boron
 
     .. versionchanged:: Boron
@@ -262,7 +273,7 @@ def absent(name,
     .. code-block:: yaml
 
       grain_name:
-        grains.absent
+        grains.absent: []
     '''
 
     _non_existent = object()
@@ -340,6 +351,7 @@ def append(name, value, convert=False,
         is given. Defaults to False.
 
     :param delimiter: A delimiter different from the default can be provided.
+
         .. versionadded:: Boron
 
     .. code-block:: yaml
