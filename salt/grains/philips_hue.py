@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Generate baseline proxy minion grains
+Static grains for the Philips HUE lamps
 '''
+
 __proxyenabled__ = ['philips_hue']
 
 __virtualname__ = 'hue'
