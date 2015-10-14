@@ -390,6 +390,25 @@ def sync_returners(saltenv=None, refresh=True):
     return ret
 
 
+def sync_proxymodules(saltenv=None, refresh=False):
+    '''
+    Sync the proxy modules from the _proxy directory on the salt master file
+    server. This function is environment aware, pass the desired environment
+    to grab the contents of the _returners directory, base is the default
+    environment.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_proxymodules
+    '''
+    ret = _sync('proxy', saltenv)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def sync_output(saltenv=None, refresh=True):
     '''
     Sync the output modules from the _output directory on the salt master file
@@ -657,7 +676,11 @@ def find_cached_job(jid):
     proc_dir = os.path.join(__opts__['cachedir'], 'minion_jobs')
     job_dir = os.path.join(proc_dir, str(jid))
     if not os.path.isdir(job_dir):
-        return
+        if not __opts__.get('cache_jobs'):
+            return ('Local jobs cache directory not found; you may need to'
+                    ' enable cache_jobs on this minion')
+        else:
+            return 'Local jobs cache directory {0} not found'.format(job_dir)
     path = os.path.join(job_dir, 'return.p')
     with salt.utils.fopen(path, 'rb') as fp_:
         buf = fp_.read()

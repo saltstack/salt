@@ -606,10 +606,11 @@ class State(object):
     '''
     Class used to execute salt states
     '''
-    def __init__(self, opts, pillar=None, jid=None, pillar_enc=None):
+    def __init__(self, opts, pillar=None, jid=None, pillar_enc=None, proxy=None):
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
+        self.proxy = proxy
         self._pillar_override = pillar
         if pillar_enc is not None:
             try:
@@ -624,7 +625,7 @@ class State(object):
         self._pillar_enc = pillar_enc
         self.opts['pillar'] = self._gather_pillar()
         self.state_con = {}
-        self.load_modules()
+        self.load_modules(proxy=proxy)
         self.active = set()
         self.mod_init = set()
         self.pre = {}
@@ -792,13 +793,15 @@ class State(object):
         '''
         self.__run_num = 0
 
-    def load_modules(self, data=None):
+    def load_modules(self, data=None, proxy=None):
         '''
         Load the modules into the state
         '''
         log.info('Loading fresh modules for state activity')
         self.utils = salt.loader.utils(self.opts)
-        self.functions = salt.loader.minion_mods(self.opts, self.state_con, utils=self.utils)
+        self.functions = salt.loader.minion_mods(self.opts, self.state_con,
+                                                 utils=self.utils,
+                                                 proxy=proxy)
         if isinstance(data, dict):
             if data.get('provider', False):
                 if isinstance(data['provider'], str):
@@ -835,7 +838,7 @@ class State(object):
                 reload(site)
             except RuntimeError:
                 log.error('Error encountered during module reload. Modules were not reloaded.')
-        self.load_modules()
+        self.load_modules(proxy=self.proxy)
         if not self.opts.get('local', False) and self.opts.get('multiprocessing', True):
             self.functions['saltutil.refresh_modules']()
 
@@ -1600,7 +1603,6 @@ class State(object):
             initial_ret={'full': state_func_name},
             expected_extra_kws=STATE_INTERNAL_KEYWORDS
         )
-
         inject_globals = {
             # Pass a copy of the running dictionary, the low state chunks and
             # the current state dictionaries.
@@ -3228,11 +3230,11 @@ class HighState(BaseHighState):
     # a stack of active HighState objects during a state.highstate run
     stack = []
 
-    def __init__(self, opts, pillar=None, jid=None, pillar_enc=None):
+    def __init__(self, opts, pillar=None, jid=None, pillar_enc=None, proxy=None):
         self.opts = opts
         self.client = salt.fileclient.get_file_client(self.opts)
         BaseHighState.__init__(self, opts)
-        self.state = State(self.opts, pillar, jid, pillar_enc)
+        self.state = State(self.opts, pillar, jid, pillar_enc, proxy=proxy)
         self.matcher = salt.minion.Matcher(self.opts)
 
         # tracks all pydsl state declarations globally across sls files
@@ -3272,7 +3274,7 @@ class MasterState(State):
     def __init__(self, opts, minion):
         State.__init__(self, opts)
 
-    def load_modules(self, data=None):
+    def load_modules(self, data=None, proxy=None):
         '''
         Load the modules into the state
         '''

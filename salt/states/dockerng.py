@@ -1089,7 +1089,7 @@ def running(name,
                 - port_bindings:
                   - 5000:5000
                   - 2123:2123/udp
-                  - 8080
+                  - "8080"
 
         .. note::
 

@@ -136,7 +136,7 @@ class WinServiceTestCase(TestCase):
             scheduler to enable restarting the salt-minion
         '''
         mock_true = MagicMock(return_value=True)
-        with patch.dict(win_service.__salt__, {'cmd.shell': mock_true}):
+        with patch.dict(win_service.__salt__, {'task.create_task': mock_true}):
             self.assertTrue(win_service.create_win_salt_restart_task())
 
     def test_execute_salt_restart_task(self):
@@ -144,7 +144,7 @@ class WinServiceTestCase(TestCase):
             Test to run the Windows Salt restart task
         '''
         mock_true = MagicMock(return_value=True)
-        with patch.dict(win_service.__salt__, {'cmd.shell': mock_true}):
+        with patch.dict(win_service.__salt__, {'task.run': mock_true}):
             self.assertTrue(win_service.execute_salt_restart_task())
 
     def test_status(self):

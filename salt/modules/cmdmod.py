@@ -659,7 +659,7 @@ def run(cmd,
         Shell to execute under. Defaults to the system default shell.
 
     python_shell
-        If True, let python handle the positional arguments. Set to False
+        If False, let python handle the positional arguments. Set to True
         to use shell features, such as pipes or redirection
 
     env
@@ -1070,7 +1070,7 @@ def run_stdout(cmd,
         Shell to execute under. Defaults to the system default shell.
 
     python_shell
-        If True, let python handle the positional arguments. Set to False
+        If False, let python handle the positional arguments. Set to True
         to use shell features, such as pipes or redirection
 
     env
@@ -1255,7 +1255,7 @@ def run_stderr(cmd,
         Shell to execute under. Defaults to the system default shell.
 
     python_shell
-        If True, let python handle the positional arguments. Set to False
+        If False, let python handle the positional arguments. Set to True
         to use shell features, such as pipes or redirection
 
     env
@@ -1439,7 +1439,7 @@ def run_all(cmd,
         Shell to execute under. Defaults to the system default shell.
 
     python_shell
-        If True, let python handle the positional arguments. Set to False
+        If False, let python handle the positional arguments. Set to True
         to use shell features, such as pipes or redirection
 
     env
@@ -1622,7 +1622,7 @@ def retcode(cmd,
         Shell to execute under. Defaults to the system default shell.
 
     python_shell
-        If True, let python handle the positional arguments. Set to False
+        If False, let python handle the positional arguments. Set to True
         to use shell features, such as pipes or redirection
 
     env
@@ -1858,7 +1858,7 @@ def script(source,
         Shell to execute under. Defaults to the system default shell.
 
     python_shell
-        If True, let python handle the positional arguments. Set to False
+        If False, let python handle the positional arguments. Set to True
         to use shell features, such as pipes or redirection
 
     env
@@ -2075,7 +2075,7 @@ def script_retcode(source,
         Shell to execute under. Defaults to the system default shell.
 
     python_shell
-        If True, let python handle the positional arguments. Set to False
+        If False, let python handle the positional arguments. Set to True
         to use shell features, such as pipes or redirection
 
     env
@@ -2338,7 +2338,7 @@ def run_chroot(root,
         Shell to execute under. Defaults to the system default shell.
 
     python_shell
-        If True, let python handle the positional arguments. Set to False
+        If False, let python handle the positional arguments. Set to True
         to use shell features, such as pipes or redirection
 
     env

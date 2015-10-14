@@ -383,6 +383,13 @@ def get_resource_path(venv,
         .. deprecated:: Boron
 
 
+    venv
+        Path to the virtualenv.
+    package_or_requirement
+        Name of the package where the resource resides in.
+    resource_name
+        Name of the resource of which the path is to be returned.
+
     CLI Example:
 
     .. code-block:: bash
@@ -463,6 +470,14 @@ def get_resource_content(venv,
         Name of the resource of which the content is to be returned
 
         .. deprecated:: Boron
+
+
+    venv
+        Path to the virtualenv.
+    package_or_requirement
+        Name of the package where the resource resides in.
+    resource_name
+        Name of the resource of which the content is to be returned.
 
 
     CLI Example:
