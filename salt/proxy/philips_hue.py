@@ -34,7 +34,7 @@ CONFIG = {}
 log = logging.getLogger(__file__)
 
 
-class Const:
+class Const(object):
     '''
     Constants for the lamp operations.
     '''
@@ -46,11 +46,10 @@ class Const:
     COLOR_RED = {"hue": 0, "sat": 254}
     COLOR_GREEN = {"hue": 25500, "sat": 254}
     COLOR_ORANGE = {"hue": 12000, "sat": 254}
-    COLOR_PINK = {"xy": [0.3688,0.2095]}
+    COLOR_PINK = {"xy": [0.3688, 0.2095]}
     COLOR_BLUE = {"hue": 46920, "sat": 254}
     COLOR_YELLOW = {"xy": [0.4432, 0.5154]}
-    COLOR_PURPLE = {"xy": [0.3787,0.1724]}
-
+    COLOR_PURPLE = {"xy": [0.3787, 0.1724]}
 
 
 def __virtual__():
@@ -103,7 +102,7 @@ def _set(lamp_id, state, method="state"):
     res = None
     try:
         res = json.loads(requests.put(url, json=state).content)
-    except Exception, err:
+    except Exception as err:
         raise CommandExecutionError(err)
 
     res = len(res) > 1 and res[-1] or res[0]
@@ -139,7 +138,7 @@ def _get_lights():
     '''
     try:
         return json.loads(requests.get(CONFIG['url'] + "/lights").content)
-    except Exception, exc:
+    except Exception as exc:
         raise CommandExecutionError(exc)
 
 
@@ -150,7 +149,7 @@ def call_lights(*args, **kwargs):
     '''
     res = dict()
     lights = _get_lights()
-    for dev_id in ('id' in kwargs and _get_devices(kwargs) or sorted(lights.keys())):
+    for dev_id in 'id' in kwargs and _get_devices(kwargs) or sorted(lights.keys()):
         if lights.get(str(dev_id)):
             res[dev_id] = lights[str(dev_id)]
 
@@ -179,7 +178,7 @@ def call_switch(*args, **kwargs):
     '''
     out = dict()
     devices = _get_lights()
-    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
         if 'on' in kwargs:
             state = kwargs['on'] and Const.LAMP_ON or Const.LAMP_OFF
         else:
@@ -209,7 +208,7 @@ def call_blink(*args, **kwargs):
     devices = _get_lights()
     pause = kwargs.get('pause', 0)
     res = dict()
-    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
         state = devices[str(dev_id)]['state']['on']
         _set(dev_id, state and Const.LAMP_OFF or Const.LAMP_ON)
         if pause:
@@ -291,7 +290,7 @@ def call_alert(*args, **kwargs):
     res = dict()
 
     devices = _get_lights()
-    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
         res[dev_id] = _set(dev_id, {"alert": kwargs.get("on", True) and "lselect" or "none"})
 
     return res
@@ -317,7 +316,7 @@ def call_effect(*args, **kwargs):
     res = dict()
 
     devices = _get_lights()
-    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
         res[dev_id] = _set(dev_id, {"effect": kwargs.get("type", "none")})
 
     return res
@@ -369,7 +368,7 @@ def call_color(*args, **kwargs):
         if len(color) == 2:
             try:
                 color = {"xy": [float(color[0]), float(color[1])]}
-            except Exception, ex:
+            except Exception as ex:
                 color = None
         else:
             color = None
@@ -378,7 +377,7 @@ def call_color(*args, **kwargs):
         color = colormap.get(kwargs.get("color", 'white'), Const.COLOR_WHITE)
     color.update({"transitiontime": max(min(kwargs.get("transition", 0), 200), 0)})
 
-    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
         res[dev_id] = _set(dev_id, color)
 
     return res
@@ -412,16 +411,16 @@ def call_brightness(*args, **kwargs):
 
     try:
         brightness = max(min(int(kwargs['value']), 244), 1)
-    except Exception, err:
+    except Exception as err:
         raise CommandExecutionError("Parameter 'value' does not contains an integer")
 
     try:
         transition = max(min(int(kwargs['transition']), 200), 0)
-    except Exception, err:
+    except Exception as err:
         transition = 0
 
     devices = _get_lights()
-    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
         res[dev_id] = _set(dev_id, {"bri": brightness, "transitiontime": transition})
 
     return res
@@ -453,11 +452,11 @@ def call_temperature(*args, **kwargs):
         raise CommandExecutionError("Parameter 'value' (150~500) is missing")
     try:
         value = max(min(int(kwargs['value']), 500), 150)
-    except Exception, err:
+    except Exception as err:
         raise CommandExecutionError("Parameter 'value' does not contains an integer")
 
     devices = _get_lights()
-    for dev_id in ('id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs)):
+    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
         res[dev_id] = _set(dev_id, {"ct": value})
 
     return res
