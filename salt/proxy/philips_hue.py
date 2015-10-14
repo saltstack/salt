@@ -22,7 +22,14 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import requests
+
+# INFO: This is going to be removed anytime soon in favor of salt.utils.http
+#       But it needs a separate PR!
+try:
+    import requests
+except ImportError as err:
+    requests = None
+
 import time
 import json
 from salt.exceptions import (CommandExecutionError, MinionError)
@@ -56,7 +63,7 @@ def __virtual__():
     '''
     Validate the module.
     '''
-    return True
+    return requests is not None
 
 
 def init(cnf):
