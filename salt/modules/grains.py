@@ -87,7 +87,7 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM):
         pkg:apache
 
 
-    delimiter
+    :param delimiter:
         Specify an alternate delimiter to use when traversing a nested dict
 
         .. versionadded:: 2014.7.0
@@ -301,6 +301,7 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
         specify the delimiter you use, instead of the default ``:``.
         You can now append values to a list in nested dictionnary grains. If the
         list doesn't exist at this level, it will be created.
+
         .. versionadded:: 2014.7.6
 
     CLI Example:
@@ -342,6 +343,7 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
         specify the delimiter you use, instead of the default ``:``.
         You can now append values to a list in nested dictionnary grains. If the
         list doesn't exist at this level, it will be created.
+
         .. versionadded:: Boron
 
     CLI Example:
