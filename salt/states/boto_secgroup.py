@@ -127,10 +127,14 @@ def present(
         The name of the VPC wherein to create the security group, if any. Exclusive with vpc_id.
 
     rules
-        A list of ingress rule dicts.
+        A list of ingress rule dicts. If not specified, ``rules=None``,
+        the ingress rules will be unmanaged. If set to an empty list, ``[]``,
+        then all ingress rules will be removed.
 
     rules_egress
-        A list of egress rule dicts.
+        A list of egress rule dicts. If not specified, ``rules_egress=None``,
+        the egress rules will be unmanaged. If set to an empty list, ``[]``,
+        then all egress rules will be removed.
 
     region
         Region to connect to.
@@ -154,12 +158,22 @@ def present(
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
-    if not rules:
-        rules = []
-    if not rules_egress:
-        rules_egress = []
-    _ret = _rules_present(name, rules, rules_egress, vpc_id, vpc_name, region, key,
-                          keyid, profile)
+    if rules is not None:
+        _ret = _rules_present(name, rules, vpc_id=vpc_id, vpc_name=vpc_name,
+                              region=region, key=key, keyid=keyid,
+                              profile=profile)
+        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+        if not _ret['result']:
+            ret['result'] = _ret['result']
+    if rules_egress is not None:
+        _ret = _rules_egress_present(name, rules_egress, vpc_id=vpc_id,
+                                     vpc_name=vpc_name, region=region, key=key,
+                                     keyid=keyid, profile=profile)
+        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+        ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+        if not _ret['result']:
+            ret['result'] = _ret['result']
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -343,24 +357,14 @@ def _get_rule_changes(rules, _rules):
     return (to_delete, to_create)
 
 
-def _rules_present(
-        name,
-        rules,
-        rules_egress,
-        vpc_id,
-        vpc_name,
-        region,
-        key,
-        keyid,
-        profile):
+def _rules_present(name, rules, vpc_id=None, vpc_name=None,
+                   region=None, key=None, keyid=None, profile=None):
     '''
-    given a group name or group name and vpc_id/vpc_name:
+    given a group name or group name and vpc_id (or vpc name):
     1. get lists of desired rule changes (using _get_rule_changes)
     2. delete/revoke or authorize/create rules
     3. return 'old' and 'new' group rules
     '''
-    import itertools
-
     ret = {'result': True, 'comment': '', 'changes': {}}
     sg = __salt__['boto_secgroup.get_config'](name, None, region, key, keyid,
                                               profile, vpc_id, vpc_name)
@@ -370,13 +374,13 @@ def _rules_present(
         ret['result'] = False
         return ret
     rules = _split_rules(rules)
-    rules_egress = _split_rules(rules_egress)
     if vpc_id or vpc_name:
-        for rule in itertools.chain(rules, rules_egress):
+        for rule in rules:
             _source_group_name = rule.get('source_group_name', None)
             if _source_group_name:
                 _group_id = __salt__['boto_secgroup.get_group_id'](
-                    _source_group_name, vpc_id, vpc_name, region, key, keyid, profile
+                    name=_source_group_name, vpc_id=vpc_id, vpc_name=vpc_name,
+                    region=region, key=key, keyid=keyid, profile=profile
                 )
                 if not _group_id:
                     msg = ('source_group_name {0} does not map to a valid'
@@ -387,8 +391,7 @@ def _rules_present(
     # rules = rules that exist in salt state
     # sg['rules'] = that exist in present group
     to_delete, to_create = _get_rule_changes(rules, sg['rules'])
-    to_delete_egress, to_create_egress = _get_rule_changes(rules_egress, sg['rules_egress'])
-    if to_create or to_delete or to_create_egress or to_delete_egress:
+    if to_create or to_delete:
         if __opts__['test']:
             msg = 'Security group {0} set to have rules modified.'.format(name)
             ret['comment'] = msg
@@ -398,8 +401,8 @@ def _rules_present(
             deleted = True
             for rule in to_delete:
                 _deleted = __salt__['boto_secgroup.revoke'](
-                    name, vpc_id=vpc_id, vpc_name=vpc_name, region=region, key=key,
-                    keyid=keyid, profile=profile, **rule)
+                    name, vpc_id=vpc_id, vpc_name=vpc_name, region=region,
+                    key=key, keyid=keyid, profile=profile, **rule)
                 if not _deleted:
                     deleted = False
             if deleted:
@@ -413,8 +416,8 @@ def _rules_present(
             created = True
             for rule in to_create:
                 _created = __salt__['boto_secgroup.authorize'](
-                    name, vpc_id=vpc_id, vpc_name=vpc_name, region=region, key=key,
-                    keyid=keyid, profile=profile, **rule)
+                    name, vpc_id=vpc_id, vpc_name=vpc_name, region=region,
+                    key=key, keyid=keyid, profile=profile, **rule)
                 if not _created:
                     created = False
             if created:
@@ -424,29 +427,77 @@ def _rules_present(
                 msg = 'Failed to create rules on {0} security group.'
                 ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
                 ret['result'] = False
+        ret['changes']['old'] = {'rules': sg['rules']}
+        sg = __salt__['boto_secgroup.get_config'](
+            name, None, region, key, keyid, profile, vpc_id, vpc_name
+        )
+        ret['changes']['new'] = {'rules': sg['rules']}
+    return ret
 
+
+def _rules_egress_present(name, rules_egress, vpc_id=None, vpc_name=None,
+                          region=None, key=None, keyid=None, profile=None):
+    '''
+    given a group name or group name and vpc_id (or vpc name):
+    1. get lists of desired rule changes (using _get_rule_changes)
+    2. delete/revoke or authorize/create rules
+    3. return 'old' and 'new' group rules
+    '''
+    ret = {'result': True, 'comment': '', 'changes': {}}
+    sg = __salt__['boto_secgroup.get_config'](name, None, region, key, keyid,
+                                              profile, vpc_id, vpc_name)
+    if not sg:
+        msg = '{0} security group configuration could not be retrieved.'
+        ret['comment'] = msg.format(name)
+        ret['result'] = False
+        return ret
+    rules_egress = _split_rules(rules_egress)
+    if vpc_id or vpc_name:
+        for rule in rules_egress:
+            _source_group_name = rule.get('source_group_name', None)
+            if _source_group_name:
+                _group_id = __salt__['boto_secgroup.get_group_id'](
+                    name=_source_group_name, vpc_id=vpc_id, vpc_name=vpc_name,
+                    region=region, key=key, keyid=keyid, profile=profile
+                )
+                if not _group_id:
+                    msg = ('source_group_name {0} does not map to a valid'
+                           ' source group id.')
+                    raise SaltInvocationError(msg.format(_source_group_name))
+                rule['source_group_name'] = None
+                rule['source_group_group_id'] = _group_id
+    # rules_egress = rules that exist in salt state
+    # sg['rules_egress'] = that exist in present group
+    to_delete_egress, to_create_egress = _get_rule_changes(
+        rules_egress, sg['rules_egress']
+    )
+    if to_create_egress or to_delete_egress:
+        if __opts__['test']:
+            msg = 'Security group {0} set to have rules modified.'.format(name)
+            ret['comment'] = msg
+            ret['result'] = None
+            return ret
         if to_delete_egress:
             deleted = True
             for rule in to_delete_egress:
                 _deleted = __salt__['boto_secgroup.revoke'](
-                    name, vpc_id=vpc_id, vpc_name=vpc_name, region=region, key=key,
-                    keyid=keyid, profile=profile, egress=True, **rule)
+                    name, vpc_id=vpc_id, vpc_name=vpc_name, region=region,
+                    key=key, keyid=keyid, profile=profile, egress=True, **rule)
                 if not _deleted:
                     deleted = False
             if deleted:
-                msg = 'Removed egress rules on {0} security group.'.format(name)
+                msg = 'Removed egress rule on {0} security group.'.format(name)
                 ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
             else:
-                msg = 'Failed to remove egress rules on {0} security group.'
+                msg = 'Failed to remove egress rule on {0} security group.'
                 ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
                 ret['result'] = False
-
         if to_create_egress:
             created = True
             for rule in to_create_egress:
                 _created = __salt__['boto_secgroup.authorize'](
-                    name, vpc_id=vpc_id, vpc_name=vpc_name, region=region, key=key,
-                    keyid=keyid, profile=profile, egress=True, **rule)
+                    name, vpc_id=vpc_id, vpc_name=vpc_name, region=region,
+                    key=key, keyid=keyid, profile=profile, egress=True, **rule)
                 if not _created:
                     created = False
             if created:
@@ -457,10 +508,11 @@ def _rules_present(
                 ret['comment'] = ' '.join([ret['comment'], msg.format(name)])
                 ret['result'] = False
 
-        ret['changes']['old'] = {'rules': sg['rules'], 'rules_egress': sg['rules_egress']}
-        sg = __salt__['boto_secgroup.get_config'](name, None, region, key,
-                                                  keyid, profile, vpc_id, vpc_name)
-        ret['changes']['new'] = {'rules': sg['rules'], 'rules_egress': sg['rules_egress']}
+        ret['changes']['old'] = {'rules_egress': sg['rules_egress']}
+        sg = __salt__['boto_secgroup.get_config'](
+            name, None, region, key, keyid, profile, vpc_id, vpc_name
+        )
+        ret['changes']['new'] = {'rules_egress': sg['rules_egress']}
     return ret
 
 
