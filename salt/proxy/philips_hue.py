@@ -22,7 +22,10 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
-import httplib
+try:
+    import httplib
+except ImportError as err:
+    from http import client as httplib
 
 import time
 import json
