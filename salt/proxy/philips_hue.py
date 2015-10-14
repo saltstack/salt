@@ -145,7 +145,19 @@ def _get_lights():
 # Callers
 def call_lights(*args, **kwargs):
     '''
-    Get info about available lamps.
+    Get info about all available lamps.
+
+    Options:
+
+    * **id**: Specifies a device ID. Can be a comma-separated values. All, if omitted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hue.lights
+        salt '*' hue.lights id=1
+        salt '*' hue.lights id=1,2,3
     '''
     res = dict()
     lights = _get_lights()
@@ -198,7 +210,7 @@ def call_blink(*args, **kwargs):
     * **id**: Specifies a device ID. Can be a comma-separated values. All, if omitted.
     * **pause**: Time in seconds. Can be less than 1, i.e. 0.7, 0.5 sec.
 
-    CLE Example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -220,7 +232,13 @@ def call_blink(*args, **kwargs):
 
 def call_ping(*args, **kwargs):
     '''
-    Ping the lamps
+    Ping the lamps by issuing a short inversion blink to all available devices.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hue.ping
     '''
     errors = dict()
     for dev_id, dev_status in call_blink().items():
@@ -233,6 +251,18 @@ def call_ping(*args, **kwargs):
 def call_status(*args, **kwargs):
     '''
     Return the status of the lamps.
+
+    Options:
+
+    * **id**: Specifies a device ID. Can be a comma-separated values. All, if omitted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hue.status
+        salt '*' hue.status id=1
+        salt '*' hue.status id=1,2,3
     '''
     res = dict()
     devices = _get_lights()
@@ -254,7 +284,7 @@ def call_rename(*args, **kwargs):
     * **id**: Specifies a device ID. Only one device at a time.
     * **title**: Title of the device.
 
-    CLE Example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -276,10 +306,10 @@ def call_alert(*args, **kwargs):
 
     Options:
 
-    * **id**: Specifies a device ID. Can be comma-separated ids or all, if omitted.
+    * **id**: Specifies a device ID. Can be a comma-separated values. All, if omitted.
     * **on**: Turns on or off an alert. Default is True.
 
-    CLE Example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -302,10 +332,10 @@ def call_effect(*args, **kwargs):
 
     Options:
 
-    * **id**: Specifies a device ID. Can be comma-separated ids or all, if omitted.
+    * **id**: Specifies a device ID. Can be a comma-separated values. All, if omitted.
     * **type**: Type of the effect. Possible values are "none" or "colorloop". Default "none".
 
-    CLE Example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -328,7 +358,7 @@ def call_color(*args, **kwargs):
 
     Options:
 
-    * **id**: Specifies a device ID. Can be comma-separated ids or all, if omitted.
+    * **id**: Specifies a device ID. Can be a comma-separated values. All, if omitted.
     * **color**: Fixed color. Values are: red, green, blue, orange, pink, white,
                  yellow, daylight, purple. Default white.
     * **transition**: Transition 0~200.
@@ -338,7 +368,7 @@ def call_color(*args, **kwargs):
     * **gamut**: XY coordinates. Use gamut according to the Philips HUE devices documentation.
                  More: http://www.developers.meethue.com/documentation/hue-xy-values
 
-    CLE Example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -393,10 +423,10 @@ def call_brightness(*args, **kwargs):
 
     Options:
 
-    * **id**: Specifies a device ID. Can be comma-separated ids or all, if omitted.
+    * **id**: Specifies a device ID. Can be a comma-separated values. All, if omitted.
     * **transition**: Transition 0~200. Default 0.
 
-    CLE Example:
+    CLI Example:
 
     .. code-block:: bash
 
@@ -436,9 +466,9 @@ def call_temperature(*args, **kwargs):
 
     Options:
 
-    * **id**: Specifies a device ID. Can be comma-separated ids or all, if omitted.
+    * **id**: Specifies a device ID. Can be a comma-separated values. All, if omitted.
 
-    CLE Example:
+    CLI Example:
 
     .. code-block:: bash
 
