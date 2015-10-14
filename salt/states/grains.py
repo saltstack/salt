@@ -64,13 +64,14 @@ def present(name, value, delimiter=DEFAULT_TARGET_DELIM, force=False):
            'changes': {},
            'result': True,
            'comment': ''}
-    existing = __salt__['grains.get'](name, 'nonexistingzniQSDpWy3ywmgFn66lL4PLG9oBrDi')
+    _non_existent = object()
+    existing = __salt__['grains.get'](name, _non_existent)
     if existing == value:
         ret['comment'] = 'Grain is already set'
         return ret
     if __opts__['test']:
         ret['result'] = None
-        if existing == 'nonexistingzniQSDpWy3ywmgFn66lL4PLG9oBrDi':
+        if existing is _non_existent:
             ret['comment'] = 'Grain {0} is set to be added'.format(name)
             ret['changes'] = {'new': name}
         else:
@@ -264,14 +265,14 @@ def absent(name,
         grains.absent
     '''
 
-    _non_existent_key = 'NonExistentValueMagicNumberSpK3hnufdHfeBUXCfqVK'
+    _non_existent = object()
 
     name = re.sub(delimiter, DEFAULT_TARGET_DELIM, name)
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
-    grain = __salt__['grains.get'](name, _non_existent_key)
+    grain = __salt__['grains.get'](name, _non_existent)
     if grain is None:
         if __opts__['test']:
             ret['result'] = None
@@ -290,7 +291,7 @@ def absent(name,
                     .format(name)
                 ret['changes'] = {'deleted': name}
         ret['name'] = name
-    elif grain != _non_existent_key:
+    elif grain is not _non_existent:
         if __opts__['test']:
             ret['result'] = None
             if destructive is True:

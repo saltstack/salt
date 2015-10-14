@@ -618,11 +618,12 @@ def set(key,
     elif isinstance(val, list):
         _new_value_type = 'complex'
 
-    _existing_value = get(key, _non_existent_key, delimiter)
+    _non_existent = object()
+    _existing_value = get(key, _non_existent, delimiter)
     _value = _existing_value
 
     _existing_value_type = 'simple'
-    if _existing_value == _non_existent_key:
+    if _existing_value is _non_existent:
         _existing_value_type = None
     elif isinstance(_existing_value, dict):
         _existing_value_type = 'complex'
