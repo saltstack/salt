@@ -980,6 +980,8 @@ class EventReturn(multiprocessing.Process):
         self.event.fire_event({}, 'salt/event_listen/start')
         try:
             for event in events:
+                if event['tag'] == 'salt/event/exit':
+                    self.stop = True
                 if self._filter(event):
                     self.event_queue.append(event)
                 if len(self.event_queue) >= self.event_return_queue:
