@@ -39,20 +39,6 @@ def __virtual__():
     return __virtualname__
 
 
-def _not_a_virtualenv(path):
-    raise CommandExecutionError(
-        'Path \'{0}\' does not appear to be a virtualenv'.format(path)
-    )
-
-
-def _verify_safe_py_code(*args):
-    for arg in args:
-        if not salt.utils.verify.safe_py_code(arg):
-            raise SaltInvocationError(
-                'Unsafe python code detected in \'{0}\''.format(arg)
-            )
-
-
 def create(path,
            venv_bin=None,
            system_site_packages=False,
@@ -304,7 +290,7 @@ def create(path,
 
 def get_site_packages(venv):
     '''
-    Returns the path to the site-packages directory inside a virtualenv
+    Return the path to the site-packages directory of a virtualenv
 
     venv
         Path to the virtualenv.
@@ -315,9 +301,7 @@ def get_site_packages(venv):
 
         salt '*' virtualenv.get_site_packages /path/to/my/venv
     '''
-    bin_path = os.path.join(venv, 'bin/python')
-    if not os.path.exists(bin_path):
-        _not_a_virtualenv(venv)
+    bin_path = _verify_virtualenv(venv)
 
     ret = __salt__['cmd.exec_code_all'](
         bin_path,
@@ -333,7 +317,7 @@ def get_site_packages(venv):
 
 def get_distribution_path(venv, distribution):
     '''
-    Returns the path to a distribution inside a virtualenv
+    Return the path to a distribution installed inside a virtualenv
 
     .. versionadded:: Boron
 
@@ -350,10 +334,7 @@ def get_distribution_path(venv, distribution):
         salt '*' virtualenv.get_distribution_path /path/to/my/venv my_distribution
     '''
     _verify_safe_py_code(distribution)
-
-    bin_path = os.path.join(venv, 'bin/python')
-    if not os.path.exists(bin_path):
-        _not_a_virtualenv(venv)
+    bin_path = _verify_virtualenv(venv)
 
     ret = __salt__['cmd.exec_code_all'](
         bin_path,
@@ -375,8 +356,7 @@ def get_resource_path(venv,
                       package=None,
                       resource=None):
     '''
-    Returns the path to a resource of a package or a distribution inside a
-    virtualenv
+    Return the path to a package resource installed inside a virtualenv
 
     venv
         Path to the virtualenv
@@ -435,10 +415,7 @@ def get_resource_path(venv,
         resource = resource_name
 
     _verify_safe_py_code(package, resource)
-
-    bin_path = os.path.join(venv, 'bin/python')
-    if not os.path.exists(bin_path):
-        _not_a_virtualenv(venv)
+    bin_path = _verify_virtualenv(venv)
 
     ret = __salt__['cmd.exec_code_all'](
         bin_path,
@@ -461,8 +438,7 @@ def get_resource_content(venv,
                          package=None,
                          resource=None):
     '''
-    Returns the content of a resource of a package or a distribution inside a
-    virtualenv
+    Return the content of a package resource installed inside a virtualenv
 
     venv
         Path to the virtualenv
@@ -522,10 +498,7 @@ def get_resource_content(venv,
         resource = resource_name
 
     _verify_safe_py_code(package, resource)
-
-    bin_path = os.path.join(venv, 'bin/python')
-    if not os.path.exists(bin_path):
-        _not_a_virtualenv(venv)
+    bin_path = _verify_virtualenv(venv)
 
     ret = __salt__['cmd.exec_code_all'](
         bin_path,
@@ -564,3 +537,20 @@ def _install_script(source, cwd, python, user, saltenv='base', use_vt=False):
         )
     finally:
         os.remove(tmppath)
+
+
+def _verify_safe_py_code(*args):
+    for arg in args:
+        if not salt.utils.verify.safe_py_code(arg):
+            raise SaltInvocationError(
+                'Unsafe python code detected in \'{0}\''.format(arg)
+            )
+
+
+def _verify_virtualenv(venv_path):
+    bin_path = os.path.join(venv_path, 'bin/python')
+    if not os.path.exists(bin_path):
+        raise CommandExecutionError(
+            'Path \'{0}\' does not appear to be a virtualenv: bin/python not found.'.format(venv_path)
+        )
+    return bin_path
