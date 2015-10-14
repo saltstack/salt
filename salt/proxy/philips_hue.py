@@ -235,8 +235,8 @@ def call_status(*args, **kwargs):
     Return the status of the lamps.
     '''
     res = dict()
-    devices = _get_devices()
-    for dev_id in devices:
+    devices = _get_lights()
+    for dev_id in 'id' not in kwargs and sorted(devices.keys()) or _get_devices(kwargs):
         res[dev_id] = {
             'on': devices[dev_id]['state']['on'],
             'reachable': devices[dev_id]['state']['reachable']
