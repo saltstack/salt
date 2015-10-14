@@ -997,7 +997,6 @@ _OS_FAMILY_MAP = {
     'Devuan': 'Debian',
     'antiX': 'Debian',
     'NILinuxRT': 'NILinuxRT',
-    'Manjaro': 'Arch',
 }
 
 
