@@ -1386,11 +1386,10 @@ class Minion(MinionBase):
                       'One or more masters may be down!')
         self.module_refresh(force_refresh)
 
-    def manage_schedule(self, package):
+    def manage_schedule(self, tag, data):
         '''
         Refresh the functions and returners.
         '''
-        tag, data = salt.utils.event.MinionEvent.unpack(package)
         func = data.get('func', None)
         name = data.get('name', None)
         schedule = data.get('schedule', None)
@@ -1420,11 +1419,10 @@ class Minion(MinionBase):
         elif func == 'save_schedule':
             self.schedule.save_schedule()
 
-    def manage_beacons(self, package):
+    def manage_beacons(self, tag, data):
         '''
         Manage Beacons
         '''
-        tag, data = salt.utils.event.MinionEvent.unpack(package)
         func = data.get('func', None)
         name = data.get('name', None)
         beacon_data = data.get('beacon_data', None)
@@ -1446,12 +1444,11 @@ class Minion(MinionBase):
         elif func == 'list':
             self.beacons.list_beacons()
 
-    def environ_setenv(self, package):
+    def environ_setenv(self, tag, data):
         '''
         Set the salt-minion main process environment according to
         the data contained in the minion event data
         '''
-        tag, data = salt.utils.event.MinionEvent.unpack(package)
         environ = data.get('environ', None)
         if environ is None:
             return False
@@ -1506,15 +1503,14 @@ class Minion(MinionBase):
                 exc_info=err
             )
 
-    def _mine_send(self, package):
+    def _mine_send(self, tag, data):
         '''
         Send mine data to the master
         '''
         channel = salt.transport.Channel.factory(self.opts)
-        load = salt.utils.event.SaltEvent.unpack(package)[1]
-        load['tok'] = self.tok
+        #load['tok'] = self.tok
         try:
-            ret = channel.send(load)
+            ret = channel.send(data)
             return ret
         except SaltReqTimeoutError:
             log.warning('Unable to send mine data to master.')
@@ -1525,30 +1521,29 @@ class Minion(MinionBase):
         '''
         Handle an event from the epull_sock (all local minion events)
         '''
-        log.debug('Handling event \'{0}\''.format(package))
+        tag, data = salt.utils.event.SaltEvent.unpack(package)
+        log.debug('Handling event tag \'{0}\''.format(tag))
         if package.startswith('module_refresh'):
-            tag, data = salt.utils.event.MinionEvent.unpack(package)
             self.module_refresh(notify=data.get('notify', False))
         elif package.startswith('pillar_refresh'):
             yield self.pillar_refresh()
         elif package.startswith('manage_schedule'):
-            self.manage_schedule(package)
+            self.manage_schedule(tag, data)
         elif package.startswith('manage_beacons'):
-            self.manage_beacons(package)
+            self.manage_beacons(tag, data)
         elif package.startswith('grains_refresh'):
             if self.grains_cache != self.opts['grains']:
                 self.pillar_refresh(force_refresh=True)
                 self.grains_cache = self.opts['grains']
         elif package.startswith('environ_setenv'):
-            self.environ_setenv(package)
+            self.environ_setenv(tag, data)
         elif package.startswith('_minion_mine'):
-            self._mine_send(package)
+            self._mine_send(tag, data)
         elif package.startswith('fire_master'):
-            tag, data = salt.utils.event.MinionEvent.unpack(package)
             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
         elif package.startswith('__master_disconnected'):
-            tag, data = salt.utils.event.MinionEvent.unpack(package)
+            tag, data = salt.utils.event.MinionEvent.unpack(tag, data)
             # if the master disconnect event is for a different master, raise an exception
             if data['master'] != self.opts['master']:
                 raise Exception()
@@ -1618,7 +1613,6 @@ class Minion(MinionBase):
                 self.schedule.modify_job(name='__master_alive',
                                          schedule=schedule)
         elif package.startswith('_salt_error'):
-            tag, data = salt.utils.event.MinionEvent.unpack(package)
             log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
             self._fire_master(data, tag)
 
