@@ -1394,7 +1394,7 @@ def fetch(cwd,
     command.extend(
         [x for x in _format_opts(opts) if x not in ('-f', '--force')]
     )
-    if not isinstance(remote, six.string_types):
+    if remote and not isinstance(remote, six.string_types):
         remote = str(remote)
     if remote:
         command.append(remote)
