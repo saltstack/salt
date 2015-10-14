@@ -15,6 +15,7 @@ from __future__ import absolute_import
 import salt.utils
 from datetime import datetime
 import logging
+import time
 
 # Import 3rd Party Libraries
 import pythoncom
@@ -67,7 +68,14 @@ TASK_LOGON_INTERACTIVE_TOKEN_OR_PASSWORD = 6
 TASK_RUNLEVEL_LUA = 0
 TASK_RUNLEVEL_HIGHEST = 1
 
-# TASK_TRIGGER_TYPE2
+# TASK_STATE_TYPE
+TASK_STATE_UNKNOWN = 0
+TASK_STATE_DISABLED = 1
+TASK_STATE_QUEUED = 2
+TASK_STATE_READY = 3
+TASK_STATE_RUNNING = 4
+
+# TASK_TRIGGER_TYPE
 TASK_TRIGGER_EVENT = 0
 TASK_TRIGGER_TIME = 1
 TASK_TRIGGER_DAILY = 2
@@ -105,11 +113,11 @@ action_types = {'Execute': TASK_ACTION_EXEC,
                 'Email': TASK_ACTION_SEND_EMAIL,
                 'Message': TASK_ACTION_SHOW_MESSAGE}
 
-states = {0: 'Unknown',
-          1: 'Disabled',
-          2: 'Queued',
-          3: 'Ready',
-          4: 'Running'}
+states = {TASK_STATE_UNKNOWN: 'Unknown',
+          TASK_STATE_DISABLED: 'Disabled',
+          TASK_STATE_QUEUED: 'Queued',
+          TASK_STATE_READY: 'Ready',
+          TASK_STATE_RUNNING: 'Running'}
 
 instances = {'Parallel': TASK_INSTANCES_PARALLEL,
              'Queue': TASK_INSTANCES_QUEUE,
@@ -1003,6 +1011,56 @@ def run(name, location='\\'):
         return True
     except pythoncom.com_error as error:
         return False
+
+
+def run_wait(name, location='\\'):
+    r'''
+    Run a scheduled task and return when the task finishes
+
+    :param str name: The name of the task to run.
+
+    :param str location: A string value representing the location of the task.
+    Default is '\\' which is the root for the task scheduler
+    (C:\Windows\System32\tasks).
+
+    :return: True if successful, False if unsuccessful
+    :rtype: bool
+    '''
+    # Check for existing folder
+    if name not in list_tasks(location):
+        return '{0} not found in {1}'.format(name, location)
+
+    # connect to the task scheduler
+    pythoncom.CoInitialize()
+    task_service = win32com.client.Dispatch("Schedule.Service")
+    task_service.Connect()
+
+    # get the folder to delete the folder from
+    task_folder = task_service.GetFolder(location)
+    task = task_folder.GetTask(name)
+
+    # Is the task already running
+    if task.State == TASK_STATE_RUNNING:
+        return 'Task already running'
+
+    try:
+        task.Run('')
+        time.sleep(1)
+        running = True
+    except pythoncom.com_error:
+        return False
+
+    while running:
+        running = False
+        running_tasks = task_service.GetRunningTasks(0)
+        if running_tasks.Count:
+            for item in running_tasks:
+                if item.Name == name:
+                    running = True
+        else:
+            running = False
+
+    return True
 
 
 def stop(name, location='\\'):
