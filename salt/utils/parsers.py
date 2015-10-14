@@ -997,6 +997,7 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
         group.add_option(
             '-I', '--pillar',
             default=False,
+            dest='pillar_target',
             action='store_true',
             help=('Instead of using shell globs to evaluate the target '
                   'use a pillar value to identify targets, the syntax '
@@ -1020,6 +1021,10 @@ class ExtendedTargetOptionsMixIn(TargetOptionsMixIn):
         )
 
         self._create_process_functions()
+
+    def process_pillar_target(self):
+        if self.options.pillar_target:
+            self.selected_target_option = 'pillar'
 
 
 class TimeoutMixIn(six.with_metaclass(MixInMeta, object)):
