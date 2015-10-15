@@ -2,7 +2,7 @@
 '''
 Beacon to monitor memory usage.
 
-.. versionadded::
+.. versionadded:: Boron
 
 :depends: python-psutil
 '''
