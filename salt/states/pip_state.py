@@ -677,7 +677,7 @@ def installed(name,
     # already present. Pip1 returns a retcode of 1 (instead of 0 for pip2) if you run
     # "pip install" without any arguments. See issue #21845.
     if pip_install_call and \
-            (pip_install_call.get('retcode', 1) == 0 or pip_install_call.get('stdout').startswith(
+            (pip_install_call.get('retcode', 1) == 0 or pip_install_call.get('stdout', '').startswith(
                 'You must give at least one requirement to install')):
         ret['result'] = True
 
