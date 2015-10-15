@@ -248,6 +248,13 @@ Deprecations
 - The use of ``delim`` was removed from the following functions in the ``match``
   execution module: ``pillar_pcre``, ``pillar``, ``grain_pcre``,
 
+Security Fixes
+==============
+
+CVE-2015-6918 - Git modules leaking HTTPS auth credentials to debug log
+
+Updated the Git state and execution modules to no longer display HTTPS basic authentication credentials in loglevel debug output on the Salt master. These credentials are now replaced with ``REDACTED`` in the debug output. Thanks to Andreas Stieger <asteiger@suse.com> for bringing this to our attention.
+
 Major Bug Fixes
 ===============
 
