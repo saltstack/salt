@@ -292,23 +292,21 @@ class GrainsModuleTestCase(TestCase):
         grainsmod.__grains__ = {'a': 12, 'c': 8}
         res = grainsmod.set('a', 12)
         self.assertTrue(res['result'])
-        self.assertEqual(res['comment'], 'The value \'12\' was already set for key \'a\'')
+        self.assertEqual(res['comment'], 'Grain is already set')
         self.assertEqual(grainsmod.__grains__, {'a': 12, 'c': 8})
 
         # Set a grain to the same complex value
         grainsmod.__grains__ = {'a': ['item', 12], 'c': 8}
         res = grainsmod.set('a', ['item', 12])
         self.assertTrue(res['result'])
-        self.assertEqual(res['comment'], 'The value \'[\'item\', 12]\' was already set '
-                            + 'for key \'a\'')
+        self.assertEqual(res['comment'], 'Grain is already set')
         self.assertEqual(grainsmod.__grains__, {'a': ['item', 12], 'c': 8})
 
         # Set a key to the same simple value in a nested grain
         grainsmod.__grains__ = {'a': 'aval', 'b': {'nested': 'val'}, 'c': 8}
         res = grainsmod.set('b,nested', 'val', delimiter=',')
         self.assertTrue(res['result'])
-        self.assertEqual(res['comment'], 'The value \'val\' was already set for key '
-                            + '\'b,nested\'')
+        self.assertEqual(res['comment'], 'Grain is already set')
         self.assertEqual(grainsmod.__grains__, {'a': 'aval',
                                                 'b': {'nested': 'val'},
                                                 'c': 8})
