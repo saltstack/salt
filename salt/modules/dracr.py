@@ -60,7 +60,8 @@ def __execute_cmd(command, host=None,
         # or all switches in a chassis.  Allow
         # user to say 'module=ALL_SERVER' or 'module=ALL_SWITCH'
         if module.startswith('ALL_'):
-            modswitch = '-a ' + module[module.index('_') + 1:len(module)].lower()
+            modswitch = '-a '\
+                        + module[module.index('_') + 1:len(module)].lower()
         else:
             modswitch = '-m {0}'.format(module)
     else:
@@ -205,7 +206,8 @@ def network_info(host=None,
         salt dell dracr.network_info
     '''
 
-    inv = inventory(host=host, admin_username=admin_username, admin_password=admin_password)
+    inv = inventory(host=host, admin_username=admin_username,
+                    admin_password=admin_password)
     if module not in inv.get('switch'):
         cmd = {}
         cmd['retcode'] = -1
@@ -253,7 +255,7 @@ def nameservers(ns,
                              host=host,
                              admin_username=admin_username,
                              admin_password=admin_password,
-                             module=module)
+                             module=module):
             return False
 
     return True
@@ -320,7 +322,8 @@ def email_alerts(action,
 
 def list_users(host=None,
                admin_username=None,
-               admin_password=None):
+               admin_password=None,
+               module=None):
     '''
     List all DRAC users
 
@@ -693,8 +696,8 @@ def server_poweroff(host=None,
         The password used to access the chassis.
 
     module
-        The element to power off on the chassis such as a blade. If not provided,
-        the chassis will be powered off.
+        The element to power off on the chassis such as a blade.
+        If not provided, the chassis will be powered off.
 
     CLI Example:
 
@@ -787,16 +790,16 @@ def server_powerstatus(host=None,
 
         salt dell drac.server_powerstatus
     '''
-    ret =  __execute_ret('serveraction powerstatus',
-                         host=host, admin_username=admin_username,
-                         admin_password=admin_password,
-                         module=module)
+    ret = __execute_ret('serveraction powerstatus',
+                        host=host, admin_username=admin_username,
+                        admin_password=admin_password,
+                        module=module)
 
-    result = { 'retcode': 0 }
+    result = {'retcode': 0}
     if ret['stdout'] == 'ON':
         result['status'] = True
         result['comment'] = 'Power is on'
-    if ret['stdout']  == 'OFF':
+    if ret['stdout'] == 'OFF':
         result['status'] = False
         result['comment'] = 'Power is on'
     if ret['stdout'].startswith('ERROR'):
@@ -804,6 +807,7 @@ def server_powerstatus(host=None,
         result['comment'] = ret['stdout']
 
     return result
+
 
 def server_pxe(host=None,
                admin_username=None,
@@ -851,7 +855,8 @@ def list_slotnames(host=None,
 
     .. code-block:: bash
 
-        salt-call --local dracr.list_slotnames host=111.222.333.444 admin_username=root admin_password=secret
+        salt-call --local dracr.list_slotnames host=111.222.333.444
+            admin_username=root admin_password=secret
 
     '''
     slotraw = __execute_ret('getslotname',
@@ -903,10 +908,12 @@ def get_slotname(slot, host=None, admin_username=None, admin_password=None):
 
     .. code-block:: bash
 
-        salt-call --local dracr.get_slotname 0 host=111.222.333.444 admin_username=root admin_password=secret
+        salt-call --local dracr.get_slotname 0 host=111.222.333.444
+           admin_username=root admin_password=secret
 
     '''
-    slots = list_slotnames(host=host, admin_username=admin_username, admin_password=admin_password)
+    slots = list_slotnames(host=host, admin_username=admin_username,
+                           admin_password=admin_password)
     return slots[slot]
 
 
@@ -934,7 +941,8 @@ def set_slotname(slot, name, host=None,
 
     .. code-block:: bash
 
-        salt '*' dracr.set_slotname 2 my-slotname host=111.222.333.444 admin_username=root admin_password=secret
+        salt '*' dracr.set_slotname 2 my-slotname host=111.222.333.444
+            admin_username=root admin_password=secret
 
     '''
     return __execute_cmd('setslotname -i {0} {1}'.format(
@@ -966,7 +974,8 @@ def set_chassis_name(name,
 
     .. code-block:: bash
 
-        salt '*' dracr.set_chassis_name my-chassis host=111.222.333.444 admin_username=root admin_password=secret
+        salt '*' dracr.set_chassis_name my-chassis host=111.222.333.444
+            admin_username=root admin_password=secret
 
     '''
     return __execute_cmd('setsysinfo -c chassisname {0}'.format(name),
@@ -991,12 +1000,14 @@ def get_chassis_name(host=None, admin_username=None, admin_password=None):
 
     .. code-block:: bash
 
-        salt '*' dracr.get_chassis_name host=111.222.333.444 admin_username=root admin_password=secret
+        salt '*' dracr.get_chassis_name host=111.222.333.444
+            admin_username=root admin_password=secret
 
     '''
     return system_info(host=host,
                        admin_username=admin_username,
-                       admin_password=admin_password)['Chassis Information']['Chassis Name']
+                       admin_password=admin_password)['Chassis Information']\
+                           ['Chassis Name']
 
 
 def inventory(host=None, admin_username=None, admin_password=None):
@@ -1103,7 +1114,8 @@ def set_chassis_location(location,
 
     .. code-block:: bash
 
-        salt '*' dracr.set_chassis_location location-name host=111.222.333.444 admin_username=root admin_password=secret
+        salt '*' dracr.set_chassis_location location-name host=111.222.333.444
+            admin_username=root admin_password=secret
 
     '''
     return __execute_cmd('setsysinfo -c chassislocation {0}'.format(location),
@@ -1130,17 +1142,20 @@ def get_chassis_location(host=None,
 
     .. code-block:: bash
 
-        salt '*' dracr.set_chassis_location host=111.222.333.444 admin_username=root admin_password=secret
+        salt '*' dracr.set_chassis_location host=111.222.333.444
+           admin_username=root admin_password=secret
 
     '''
     return system_info(host=host,
                        admin_username=admin_username,
-                       admin_password=admin_password)['Chassis Information']['Chassis Location']
+                       admin_password=admin_password)['Chassis Information']\
+                                                     ['Chassis Location']
 
 
 def set_general(cfg_sec, cfg_var, val, host=None,
                 admin_username=None, admin_password=None):
-    return __execute_cmd('config -g {0} -o {1} {2}'.format(cfg_sec, cfg_var, val),
+    return __execute_cmd('config -g {0} -o {1} {2}'.format(cfg_sec,
+                                                           cfg_var, val),
                          host=host,
                          admin_username=admin_username,
                          admin_password=admin_password)
