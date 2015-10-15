@@ -19,14 +19,10 @@ Philips HUE lamps module for proxy.
 '''
 
 from __future__ import absolute_import
+import salt.ext.six.moves.http_client as http_client
 
 # Import python libs
 import logging
-try:
-    import httplib
-except ImportError as err:
-    from http import client as httplib
-
 import time
 import json
 from salt.exceptions import (CommandExecutionError, MinionError)
@@ -106,14 +102,14 @@ def _query(lamp_id, state, action='', method='GET'):
     url = "{0}/lights{1}".format(CONFIG['uri'],
                                  lamp_id and '/{0}'.format(lamp_id) or '') \
           + (action and "/{0}".format(action) or '')
-    conn = httplib.HTTPConnection(CONFIG['host'])
+    conn = http_client.HTTPConnection(CONFIG['host'])
     if method == 'PUT':
         conn.request(method, url, json.dumps(state))
     else:
         conn.request(method, url)
     resp = conn.getresponse()
 
-    if resp.status == httplib.OK:
+    if resp.status == http_client.OK:
         res = json.loads(resp.read())
     else:
         err = "HTTP error: {0}, {1}".format(resp.status, resp.reason)
