@@ -659,7 +659,7 @@ def info(name):
         ret['logonscript'] = items['script_path']
         ret['profile'] = items['profile']
         if not ret['profile']:
-            ret['profile'] = _get_userprofile_from_registry(name, ret['uid'])
+            ret['profile'] = _get_userprofile_from_registry(name, ret['uid'])['vdata']
         ret['home'] = items['home_dir']
         ret['homedrive'] = items['home_dir_drive']
         if not ret['home']:
@@ -675,8 +675,9 @@ def _get_userprofile_from_registry(user, sid):
     In case net user doesn't return the userprofile
     we can get it from the registry
     '''
-    profile_dir = __salt__['reg.read_key'](
-        'HKEY_LOCAL_MACHINE', u'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
+    profile_dir = __salt__['reg.read_value'](
+        'HKEY_LOCAL_MACHINE',
+        u'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
         'ProfileImagePath'
     )
     log.debug(u'user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
