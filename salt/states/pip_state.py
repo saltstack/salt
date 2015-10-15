@@ -104,7 +104,7 @@ def _check_pkg_version_format(pkg):
     if not HAS_PIP:
         ret['comment'] = (
             'An importable pip module is required but could not be found on '
-            'your system. This usually means that the system''s pip package '
+            'your system. This usually means that the system\'s pip package '
             'is not installed properly.'
         )
 
@@ -179,7 +179,7 @@ def _check_if_installed(prefix, state_pkg_name, version_spec,
                                         user=user, cwd=cwd)
         prefix_realname = _find_key(prefix, pip_list)
     except (CommandNotFoundError, CommandExecutionError) as err:
-        ret['result'] = None
+        ret['result'] = False
         ret['comment'] = 'Error installing {0!r}: {1}'.format(state_pkg_name,
                                                               err)
         return ret
