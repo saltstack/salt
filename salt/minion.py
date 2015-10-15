@@ -1508,7 +1508,7 @@ class Minion(MinionBase):
         Send mine data to the master
         '''
         channel = salt.transport.Channel.factory(self.opts)
-        #load['tok'] = self.tok
+        data['tok'] = self.tok
         try:
             ret = channel.send(data)
             return ret
