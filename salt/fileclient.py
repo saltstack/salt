@@ -228,6 +228,7 @@ class Client(object):
         # go through the list of all files finding ones that are in
         # the target directory and caching them
         for fn_ in self.file_list(saltenv):
+            fn_ = salt.utils.locales.sdecode(fn_)
             if fn_.strip() and fn_.startswith(path):
                 if salt.utils.check_include_exclude(
                         fn_, include_pat, exclude_pat):
