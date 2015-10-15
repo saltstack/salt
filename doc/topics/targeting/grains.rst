@@ -22,6 +22,10 @@ to a custom grain, grain data is refreshed.
     Grains resolve to lowercase letters. For example, ``FOO``, and ``foo``
     target the same grain.
 
+.. important::
+  See :ref:`Is Targeting using Grain Data Secure? <faq-grain-security>` for
+  important security information.
+
 Match all CentOS minions:
 
 .. code-block:: bash
