@@ -384,6 +384,7 @@ def create_task(name,
                 location='\\',
                 user_name='System',
                 password=None,
+                force=False,
                 **kwargs):
     r'''
     Create a new task in the designated location. This function has many keyword
@@ -407,11 +408,13 @@ def create_task(name,
     the task to run whether the user is logged in or not, but is currently not
     working.
 
+    :param bool force: If the task exists, overwrite the existing task.
+
     :return: True if successful, False if unsuccessful
     :rtype: bool
     '''
     # Check for existing task
-    if name in list_tasks(location):
+    if name in list_tasks(location) and not force:
         # Connect to an existing task definition
         return '{0} already exists'.format(name)
 
@@ -1052,12 +1055,13 @@ def run_wait(name, location='\\'):
 
     while running:
         running = False
-        running_tasks = task_service.GetRunningTasks(0)
-        if running_tasks.Count:
-            for item in running_tasks:
-                if item.Name == name:
-                    running = True
-        else:
+        try:
+            running_tasks = task_service.GetRunningTasks(0)
+            if running_tasks.Count:
+                for item in running_tasks:
+                    if item.Name == name:
+                        running = True
+        except pythoncom.com_error:
             running = False
 
     return True
@@ -1245,13 +1249,21 @@ def add_action(name=None,
     *Execute*
     Execute a command or an executable.
 
-    :param str cmd: (required) The command/executable to run along with any
-    required arguments. For launching a script the first command will need to be
-    the interpreter for the script. For example, to run a vbscript you would
-    first call `cscript.exe` and pass the script as an argument as follows:
-    - ``cscript.exe c:\scripts\myscript.vbs``
+    :param str cmd: (required) The command / executable to run.
 
-    :param str start_in: The current working directory for the command.
+    :param str arguments: (optional) Arguments to be passed to the command /
+    executable. To launch a script the first command will need to be the
+    interpreter for the script. For example, to run a vbscript you would
+    pass `cscript.exe` in the `cmd` parameter and pass the script in the
+    `arguments` parameter as follows:
+
+    - ``cmd='cscript.exe' arguments='c:\scripts\myscript.vbs'``
+
+    Batch files do not need an interpreter and may be passed to the cmd
+    parameter directly.
+
+    :param str start_in: (optional) The current working directory for the
+    command.
 
     *Email*
     Send and email. Requires ``server``, ``from``, and ``to`` or ``cc``.
@@ -1310,11 +1322,10 @@ def add_action(name=None,
     if action_types[action_type] == TASK_ACTION_EXEC:
         task_action.Id = 'Execute_ID1'
         if kwargs.get('cmd', False):
-            cmd = kwargs.get('cmd').split()
-            task_action.Path = cmd[0]
-            task_action.Arguments = u' '.join(cmd[1:])
+            task_action.Path = kwargs.get('cmd')
         else:
             return 'Required parameter "cmd" not found'
+        task_action.Arguments = kwargs.get('arguments', '')
         task_action.WorkingDirectory = kwargs.get('start_in', '')
 
     elif action_types[action_type] == TASK_ACTION_SEND_EMAIL:
