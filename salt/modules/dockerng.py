@@ -2110,6 +2110,11 @@ def inspect_image(name):
     Retrieves image information. Equivalent to running the ``docker inspect``
     Docker CLI command, but will only look for image information.
 
+    .. note::
+        To inspect an image, it must have been pulled from a registry or built
+        locally. Images on a Docker registry which have not been pulled cannot
+        be inspected.
+
     name
         Image name or ID
 
