@@ -618,10 +618,10 @@ def present(
         name, min_size == max_size, alarms, alarms_from_pillar, region, key,
         keyid, profile
     )
-    if _ret['changes'] != {}:
-        ret['result'] = _ret['result']
-        ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+    ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+    if not _ret['result']:
+        ret['result'] = _ret['result']
     return ret
 
 

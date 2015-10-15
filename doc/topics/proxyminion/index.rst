@@ -24,6 +24,32 @@ and discovery, control, status, remote execution, and state management.
 See the :doc:`Proxy Minion Walkthrough </topics/proxyminion/demo>` for an end-to-end
 demonstration of a working proxy minion.
 
+New in 2015.8.2
+---------------
+
+*BREAKING CHANGE*: Adding the `proxymodule` variable  to __opts__ is deprecated.
+The `proxymodule` variable has been moved a new globally-injected variable
+called `__proxy__`.  A related configuration option called
+`add_proxymodule_to_opts` has been added and defaults to `True`.  In the next
+major release, codenamed Boron, this variable will default to False.
+
+In the meantime, proxies that functioned under 2015.8.0 and .1 should continue
+to work under 2015.8.2.  You should rework your proxy code to use `__proxy__` as
+soon as possible.
+
+The `rest_sample` example proxy minion has been updated to use `__proxy__`.
+
+This change was made because proxymodules are a LazyLoader object, but
+LazyLoaders cannot be serialized.  `__opts__` gets serialized, and so things
+like `saltutil.sync_all` and `state.highstate` would throw exceptions.
+
+Also in this release, proxymodules can be stored on the master in
+/srv/salt/_proxy.  A new saltutil function called `sync_proxies` will transfer
+these to remote proxy minions.  Note that you must restart the salt-proxy
+daemon to pick up these changes.
+
+In addition, a salt.utils helper function called `is_proxy()` was added to make
+it easier to tell when the running minion is a proxy minion.
 
 New in 2015.8
 -------------
@@ -483,14 +509,16 @@ Here is an excerpt from a module that was modified to support proxy-minions:
    __proxyenabled__ = ['*']
 
    [...]
+   def ping():
 
-    def ping():
-
-        if 'proxymodule' in __opts__:
-            ping_cmd = __opts__['proxymodule'].loaded_base_name + '.ping'
+    if not salt.utils.is_proxy():
+        return True
+    else:
+        ping_cmd = __opts__['proxy']['proxytype'] + '.ping'
+        if __opts__.get('add_proxymodule_to_opts', False):
             return __opts__['proxymodule'][ping_cmd]()
         else:
-            return True
+            return __proxy__[ping_cmd]()
 
 And then in salt.proxy.rest_sample.py we find
 

@@ -438,7 +438,7 @@ class SaltEvent(object):
 
             log.trace('get_event() received = {0}'.format(ret))
             return ret
-        log.trace('_get_event() waited {0} seconds and received nothing'.format(wait * 1000))
+        log.trace('_get_event() waited {0} seconds and received nothing'.format(wait))
         return None
 
     def get_event(self,
@@ -980,6 +980,8 @@ class EventReturn(multiprocessing.Process):
         self.event.fire_event({}, 'salt/event_listen/start')
         try:
             for event in events:
+                if event['tag'] == 'salt/event/exit':
+                    self.stop = True
                 if self._filter(event):
                     self.event_queue.append(event)
                 if len(self.event_queue) >= self.event_return_queue:

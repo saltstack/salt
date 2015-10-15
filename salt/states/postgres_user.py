@@ -202,8 +202,9 @@ def present(name,
             if isinstance(groups, (six.string_types, six.text_type)):
                 lgroups = lgroups.split(',')
             if isinstance(lgroups, list):
-                if [a for a in lgroups if a not in user_groups]:
-                    update = True
+                missing_groups = [a for a in lgroups if a not in user_groups]
+                if missing_groups:
+                    update['groups'] = missing_groups
 
     if mode == 'create' and password is None:
         password = default_password
