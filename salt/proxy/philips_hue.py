@@ -18,6 +18,7 @@
 Philips HUE lamps module for proxy.
 '''
 
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 from __future__ import absolute_import
 import salt.ext.six.moves.http_client as http_client
 
