@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 '''
 Manage chassis via Salt Proxies.
 
@@ -17,7 +17,7 @@ Example managing a Dell chassis:
         - slot_names:
           - 1: my-slot-name
           - 2: my-other-slot-name
-        - blade_power:
+        - blade_power_states:
           - server-1: on
           - server-2: off
           - server-3: powercycle
@@ -28,8 +28,6 @@ Example managing a Dell chassis:
 from __future__ import absolute_import
 import logging
 
-# Import Salt Libs
-
 log = logging.getLogger(__name__)
 
 
@@ -37,7 +35,8 @@ def __virtual__():
     return 'chassis.cmd' in __salt__
 
 
-def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None):
+def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None,
+         blade_power_states=None):
     '''
     Manage a Dell Chassis.
 
@@ -61,7 +60,16 @@ def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None):
         - 1: Enabled (launch iDRAC using DNS name)
 
     slot_names
-        The names of the slots, provided as a list.
+        The names of the slots, provided as a listidentified by
+        their slot numbers.
+
+    blade_power_states
+        The power states of a blade server, provided as a list and
+        identified by their server numbers. Viable options are:
+
+         - on: Ensure the blade server is powered on.
+         - off: Ensure the blade server is powered off.
+         - powercycle: Power cycle the blade server.
 
     Example:
 
@@ -76,6 +84,10 @@ def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None):
             - slot_names:
               - 1: my-slot-name
               - 2: my-other-slot-name
+            - blade_power_states:
+              - server-1: on
+              - server-2: off
+              - server-3: powercycle
     '''
     ret = {'name': name,
            'result': True,
@@ -115,18 +127,35 @@ def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None):
 
     if slot_names:
         current_slot_names = __salt__[chassis_cmd]('list_slotnames')
-        for item in slot_names:
-            slot_name = slot_names.get(item)
-            current_slot_name = current_slot_names.get(item).get('slotname')
-            if current_slot_name != slot_name:
-                old = {item: current_slot_name}
-                new = {item: slot_name}
+        for key, val in slot_names:
+            current_slot_name = current_slot_names.get(key).get('slotname')
+            if current_slot_name != val:
+                old = {key: current_slot_name}
+                new = {key: val}
                 if ret['changes'].get('Slot Names') is None:
                     ret['changes'].update({'Slot Names':
-                                          {'Old': {item: current_slot_name},
-                                           'New': {item: slot_name}}})
+                                          {'Old': {},
+                                           'New': {}}})
                 ret['changes']['Slot Names']['Old'].update(old)
                 ret['changes']['Slot Names']['New'].update(new)
+
+    # TODO: Refactor this and make DRY - can probable farm this out to a new funciton
+    if blade_power_states:
+        # TODO: Get the power state list working
+        current_power_states = 'get a list of current power states'
+        for key, val in blade_power_states:
+            # TODO: Get the correct state infos
+            current_power_state = current_power_states.get(key).get('state')
+            # TODO: Don't just compare values, check if True should be "on" or "off" etc
+            if current_power_state != val:
+                old = {key: current_power_state}
+                new = {key: val}
+                if ret['changes'].get('Blade Power States') is None:
+                    ret['changes'].update({'Blade Power States':
+                                          {'Old': {},
+                                           'New': {}}})
+                ret['changes']['Blade Power States']['Old'].update(old)
+                ret['changes']['Blade Power States']['New'].update(new)
 
     if ret['changes'] == {}:
         ret['comment'] = 'Dell chassis is already in the desired state.'
@@ -211,7 +240,6 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
            'changes': {},
            'comment': ''}
 
-
     current_nic = __salt__['chassis.cmd']('network_info', module=name)
     if current_nic.get('retcode', 0) != 0:
         ret['result'] = False
@@ -227,8 +255,8 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
             ip = current_nic['Network']['Gateway']
 
     if current_nic['Network']['DHCP Enabled'] == '0' and dhcp:
-        ret['changes'].update({'DHCP': { 'Old': { 'DHCP Enabled': current_nic['Network']['DHCP Enabled'] },
-                                         'New': { 'DHCP Enabled': dhcp }}})
+        ret['changes'].update({'DHCP': {'Old': {'DHCP Enabled': current_nic['Network']['DHCP Enabled']},
+                                        'New': {'DHCP Enabled': dhcp}}})
 
     if ((ip or netmask or gateway) and not dhcp and (ip != current_nic['Network']['IP Address'] or
                                                              netmask != current_nic['Network']['Subnet Mask'] or
@@ -275,4 +303,3 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
 
     ret['comment'] = 'Dell chassis switch {0} was updated.'.format(name)
     return ret
-
