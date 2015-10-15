@@ -35,7 +35,27 @@ def __virtual__():
     return 'chassis.cmd' in __salt__
 
 
-def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None,
+
+def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
+                idrac_ip=None, idrac_netmask=None, idrac_gateway=None,
+                drac_dhcp=None):
+    '''
+    Set parameters for iDRAC in a blade.
+
+    :param name: The name of the blade to address
+    :param idrac_password: Password to establish for the iDRAC interface
+    :param idrac_ipmi: Enable/Disable IPMI over LAN
+    :param idrac_ip: Set IP address for iDRAC
+    :param idrac_netmask: Set netmask for iDRAC
+    :param idrac_gateway: Set gateway for iDRAC
+    :param drac_dhcp: Turn on DHCP for iDRAC (True turns on, False does nothing
+      becaause setting a static IP will disable DHCP).
+    :return: A standard Salt changes dictionary
+    '''
+
+    __execute_cmd('')
+
+def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
          blade_power_states=None):
     '''
     Manage a Dell Chassis.
@@ -60,7 +80,7 @@ def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None,
         - 1: Enabled (launch iDRAC using DNS name)
 
     slot_names
-        The names of the slots, provided as a listidentified by
+        The names of the slots, provided as a list identified by
         their slot numbers.
 
     blade_power_states
@@ -129,7 +149,7 @@ def dell(name, location=None, mode=None, idrac_launch=None, slot_names=None,
         current_slot_names = __salt__[chassis_cmd]('list_slotnames')
         for key, val in slot_names:
             current_slot_name = current_slot_names.get(key).get('slotname')
-            if current_slot_name != val:
+            if current_slot_name != val['name']:
                 old = {key: current_slot_name}
                 new = {key: val}
                 if ret['changes'].get('Slot Names') is None:
