@@ -47,7 +47,6 @@ def validate(config):
     return True
 
 
-
 def beacon(config):
     '''
     Monitor the memory usage of the minion
