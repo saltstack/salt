@@ -9,7 +9,7 @@ sock_dir: minion_sock
 #acceptance_wait_time: = 1
 open_mode: True
 log_file: minion
-loop_interval: 0.05
+#loop_interval: 0.05
 
 # module extension
 test.foo: baz

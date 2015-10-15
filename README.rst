@@ -13,7 +13,7 @@ Documentation
 =============
 
 Installation instructions, getting started guides, and in-depth API
-documention.
+documentation.
 
 http://docs.saltstack.com
 
@@ -45,7 +45,7 @@ Join the conversation!
 
 https://groups.google.com/forum/#!forum/salt-users
 
-You may subscribe the the list without a Google account by emailing
+You may subscribe to the list without a Google account by emailing
 salt-users+subscribe@googlegroups.com and you may post to the list by emailing
 salt-users@googlegroups.com
 
@@ -54,6 +54,15 @@ Developing Salt
 
 The Salt development team is welcoming, positive, and dedicated to helping
 people get new code and fixes into SaltStack projects. Log into GitHub and get
-started with one of the largest developer communities in the world.
+started with one of the largest developer communities in the world. The following
+links should get you started:
 
-https://github.com/saltstack
+* https://github.com/saltstack
+* http://docs.saltstack.com/en/latest/topics/development/index.html
+
+Reporting Issues
+================
+
+To report an issue with Salt, please follow the guidelines for filing bug reports:
+
+* http://docs.saltstack.com/en/develop/topics/development/reporting_bugs.html

@@ -30,7 +30,11 @@ can be either present or absent:
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import sys
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def _changes(name,
@@ -52,7 +56,7 @@ def _changes(name,
             change['gid'] = gid
 
     if members:
-        #-- if new memeber list if different than the current
+        # -- if new member list if different than the current
         if set(lgrp['members']) ^ set(members):
             change['members'] = members
 
@@ -114,7 +118,7 @@ def present(name,
         return ret
 
     if addusers and delusers:
-        #-- if trying to add and delete the same user(s) at the same time.
+        # -- if trying to add and delete the same user(s) at the same time.
         if not set(addusers).isdisjoint(set(delusers)):
             ret['result'] = None
             ret['comment'] = (
@@ -130,14 +134,14 @@ def present(name,
     if changes:
         ret['comment'] = (
             'The following group attributes are set to be changed:\n')
-        for key, val in changes.items():
+        for key, val in six.iteritems(changes):
             ret['comment'] += '{0}: {1}\n'.format(key, val)
 
         if __opts__['test']:
             ret['result'] = None
             return ret
 
-        for key, val in changes.items():
+        for key, val in six.iteritems(changes):
             if key == 'gid':
                 __salt__['group.chgid'](name, gid)
                 continue
@@ -166,7 +170,7 @@ def present(name,
             ret['comment'] += 'Some changes could not be applied'
             ret['changes'] = {'Failed': changes}
         else:
-            ret['changes'] = {'Final': 'All Changed applied successfully'}
+            ret['changes'] = {'Final': 'All changes applied successfully'}
 
     if changes is False:
         # The group is not present, make it!

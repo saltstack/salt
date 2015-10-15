@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import sys
 import re
 
@@ -18,6 +19,7 @@ import salt.utils
 
 # Import third party libs
 import yaml
+import salt.ext.six as six
 
 config.__grains__ = {}
 config.__opts__ = {}
@@ -183,29 +185,29 @@ class VirtTestCase(TestCase):
     def test_default_disk_profile_hypervisor_esxi(self):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):
-            ret = virt._disk_profile('nonexistant', 'esxi')
+            ret = virt._disk_profile('nonexistent', 'esxi')
             self.assertTrue(len(ret) == 1)
             self.assertIn('system', ret[0])
             system = ret[0]['system']
             self.assertEqual(system['format'], 'vmdk')
             self.assertEqual(system['model'], 'scsi')
-            self.assertTrue(system['size'] >= 1)
+            self.assertTrue(int(system['size']) >= 1)
 
     def test_default_disk_profile_hypervisor_kvm(self):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):
-            ret = virt._disk_profile('nonexistant', 'kvm')
+            ret = virt._disk_profile('nonexistent', 'kvm')
             self.assertTrue(len(ret) == 1)
             self.assertIn('system', ret[0])
             system = ret[0]['system']
             self.assertEqual(system['format'], 'qcow2')
             self.assertEqual(system['model'], 'virtio')
-            self.assertTrue(system['size'] >= 1)
+            self.assertTrue(int(system['size']) >= 1)
 
     def test_default_nic_profile_hypervisor_esxi(self):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):
-            ret = virt._nic_profile('nonexistant', 'esxi')
+            ret = virt._nic_profile('nonexistent', 'esxi')
             self.assertTrue(len(ret) == 1)
             eth0 = ret[0]
             self.assertEqual(eth0['name'], 'eth0')
@@ -216,7 +218,7 @@ class VirtTestCase(TestCase):
     def test_default_nic_profile_hypervisor_kvm(self):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):
-            ret = virt._nic_profile('nonexistant', 'kvm')
+            ret = virt._nic_profile('nonexistent', 'kvm')
             self.assertTrue(len(ret) == 1)
             eth0 = ret[0]
             self.assertEqual(eth0['name'], 'eth0')
@@ -485,7 +487,7 @@ class VirtTestCase(TestCase):
         mock_config = yaml.load(yaml_config)
         salt.modules.config.__opts__ = mock_config
 
-        for name in mock_config['virt.nic'].keys():
+        for name in six.iterkeys(mock_config['virt.nic']):
             profile = salt.modules.virt._nic_profile(name, 'kvm')
             self.assertEqual(len(profile), 2)
 
@@ -499,6 +501,43 @@ class VirtTestCase(TestCase):
             self.assertTrue(
                 re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$',
                 interface_attrs['mac'], re.I))
+
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
+    def test_get_graphics(self):
+        virt.get_xml = MagicMock(return_value='''<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <graphics type='vnc' port='5900' autoport='yes' listen='0.0.0.0'>
+                  <listen type='address' address='0.0.0.0'/>
+                </graphics>
+              </devices>
+            </domain>
+        ''')
+        graphics = virt.get_graphics('test-vm')
+        self.assertEqual('vnc', graphics['type'])
+        self.assertEqual('5900', graphics['port'])
+        self.assertEqual('0.0.0.0', graphics['listen'])
+
+    @skipIf(sys.version_info < (2, 7), 'ElementTree version 1.3 required'
+            ' which comes with Python 2.7')
+    def test_get_nics(self):
+        virt.get_xml = MagicMock(return_value='''<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <interface type='bridge'>
+                  <mac address='ac:de:48:b6:8b:59'/>
+                  <source bridge='br0'/>
+                  <model type='virtio'/>
+                  <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+                </interface>
+              </devices>
+            </domain>
+        ''')
+        nics = virt.get_nics('test-vm')
+        nic = nics[list(nics)[0]]
+        self.assertEqual('bridge', nic['type'])
+        self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
 
 
 if __name__ == '__main__':

@@ -4,12 +4,19 @@
 '''
 
 # Import Salt Libs
-import integration
+from __future__ import absolute_import
+import os
+import traceback
 
 # Import Salt Testing Libs
 from salttesting.helpers import ensure_in_syspath
-
+from salttesting.mixins import RUNTIME_VARS
 ensure_in_syspath('../../')
+
+# Import Salt libs
+import integration
+from salt.output import display_output
+import salt.config
 
 
 class OutputReturnTest(integration.ShellCase):
@@ -74,3 +81,27 @@ class OutputReturnTest(integration.ShellCase):
         expected = ['local: true']
         ret = self.run_call('test.ping --out=yaml')
         self.assertEqual(ret, expected)
+
+    def test_output_unicodebad(self):
+        '''
+        Tests outputter reliability with utf8
+        '''
+        opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "minion"))
+        opts['output_file'] = os.path.join(
+            opts['root_dir'], 'outputtest')
+        data = {'foo': {'result': False,
+                        'aaa': 'azerzaeréééé',
+                        'comment': u'ééééàààà'}}
+        try:
+            # this should not raises UnicodeEncodeError
+            display_output(data, opts=self.minion_opts)
+            self.assertTrue(True)
+        except Exception:
+            # display trace in error message for debugging on jenkins
+            trace = traceback.format_exc()
+            self.assertEqual(trace, '')
+
+
+if __name__ == '__main__':
+    from integration import run_tests
+    run_tests(OutputReturnTest)

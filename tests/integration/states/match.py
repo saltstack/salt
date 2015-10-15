@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     tests.integration.states.match
@@ -10,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
@@ -28,14 +27,6 @@ class StateMatchTest(integration.ModuleCase):
     '''
     Validate the file state
     '''
-
-    def test_issue_2167_exsel_no_AttributeError(self):
-        ret = self.run_function('state.top', ['issue-2167-exsel-match.sls'])
-        self.assertNotIn(
-            'AttributeError: \'Matcher\' object has no '
-            'attribute \'functions\'',
-            ret
-        )
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_issue_2167_ipcidr_no_AttributeError(self):

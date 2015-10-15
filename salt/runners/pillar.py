@@ -2,11 +2,11 @@
 '''
 Functions to interact with the pillar compiler on the master
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.pillar
 import salt.utils.minions
-import salt.output
 
 
 def show_top(minion=None, saltenv='base'):
@@ -30,18 +30,17 @@ def show_top(minion=None, saltenv='base'):
     top, errors = pillar.get_top()
 
     if errors:
-        salt.output.display_output(errors, 'nested', __opts__)
+        __jid_event__.fire_event({'data': errors, 'outputter': 'nested'}, 'progress')
         return errors
 
-    salt.output.display_output(top, 'nested', __opts__)
     return top
 
 
 def show_pillar(minion='*', **kwargs):
     '''
     Returns the compiled pillar either of a specific minion
-    or just the global available pillars. I assume that no minion
-    is using the id ``*``.
+    or just the global available pillars. This function assumes
+    that no minion has the id ``*``.
 
     CLI Example:
 
@@ -72,7 +71,7 @@ def show_pillar(minion='*', **kwargs):
         opts = salt.config.master_config('/etc/salt/master')
         runner = salt.runner.RunnerClient(opts)
         pillar = runner.cmd('pillar.show_pillar', [])
-        print pillar¬
+        print(pillar)
     '''
 
     saltenv = 'base'
@@ -93,5 +92,4 @@ def show_pillar(minion='*', **kwargs):
         saltenv)
 
     compiled_pillar = pillar.compile_pillar()
-    salt.output.display_output(compiled_pillar, 'nested', __opts__)
     return compiled_pillar

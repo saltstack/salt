@@ -4,19 +4,24 @@
 Runs minion floscript
 
 '''
+
+from __future__ import print_function
+
+from __future__ import absolute_import
 # pylint: skip-file
 import os
 import stat
 
 from ioflo.base.odicting import odict
+from ioflo.base.consoling import getConsole
+console = getConsole()
 
 import salt.daemons.flo
-
 
 def test():
     """ Execute run.start """
 
-    pkiDirpath = os.path.join('/tmp', 'raet', 'keyo', 'master', 'pki')
+    pkiDirpath = os.path.join('/tmp', 'raet', 'testo', 'master', 'pki')
     if not os.path.exists(pkiDirpath):
         os.makedirs(pkiDirpath)
 
@@ -35,10 +40,10 @@ def test():
     localFilepath = os.path.join(pkiDirpath, 'local.key')
     if os.path.exists(localFilepath):
         mode = os.stat(localFilepath).st_mode
-        print mode
+        print(mode)
         os.chmod(localFilepath, mode | stat.S_IWUSR | stat.S_IRUSR)
         mode = os.stat(localFilepath).st_mode
-        print mode
+        print(mode)
 
     cacheDirpath = os.path.join('/tmp/raet', 'cache', 'master')
     if not os.path.exists(cacheDirpath):
@@ -50,6 +55,8 @@ def test():
 
     filepath = 'master.flo'
     opts = dict(
+            id='master',
+            __role='master',
             ioflo_period=0.1,
             ioflo_realtime=True,
             master_floscript=filepath,
@@ -62,10 +69,12 @@ def test():
             sock_dir=sockDirpath,
             cachedir=cacheDirpath,
             open_mode=True,
-            auto_accept=True,)
+            auto_accept=True,
+            )
 
     master = salt.daemons.flo.IofloMaster(opts=opts)
     master.start(behaviors=['raet.flo.behaving'])
 
 if __name__ == '__main__':
+    console.reinit(verbosity=console.Wordage.concise)
     test()

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-
 '''
 tests for host state
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
@@ -50,11 +50,13 @@ class CompileTest(integration.ModuleCase):
         template = [
             '{0}:'.format(managed_file),
             '  file.managed:',
-            '    - contents: {{ saltenv }}'
+            '    - contents: {{ saltenv }}',
+            '    - contents_newline: False'
         ]
         try:
             ret = self.run_function('state.template_str', ['\n'.join(template)], timeout=120)
-            self.assertEqual('base', open(managed_file).read())
+            with salt.utils.fopen(managed_file) as fhr:
+                self.assertEqual('base', fhr.read())
         finally:
             if os.path.isfile(managed_file):
                 os.unlink(managed_file)
@@ -62,11 +64,14 @@ class CompileTest(integration.ModuleCase):
         template = [
             '{0}:'.format(managed_file),
             '  file.managed:',
-            '    - contents: {{ env }}'
+            '    - contents: {{ env }}',
+            '    - contents_newline: False'
+
         ]
         try:
             ret = self.run_function('state.template_str', ['\n'.join(template)], timeout=120)
-            self.assertEqual('base', open(managed_file).read())
+            with salt.utils.fopen(managed_file) as fhr:
+                self.assertEqual('base', fhr.read())
         finally:
             if os.path.isfile(managed_file):
                 os.unlink(managed_file)

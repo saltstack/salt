@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     tests.unit.modules.virtualenv_test
@@ -10,7 +8,7 @@
 '''
 
 # Import python libraries
-import warnings
+from __future__ import absolute_import
 import sys
 
 # Import Salt Testing libs
@@ -53,8 +51,9 @@ class VirtualenvTestCase(TestCase):
                 '/tmp/foo', system_site_packages=True, distribute=True
             )
             mock.assert_called_once_with(
-                'virtualenv --distribute --system-site-packages /tmp/foo',
-                runas=None
+                ['virtualenv', '--distribute', '--system-site-packages', '/tmp/foo'],
+                runas=None,
+                python_shell=False
             )
 
         with TestsLoggingHandler() as handler:
@@ -69,8 +68,9 @@ class VirtualenvTestCase(TestCase):
                         '/tmp/foo', system_site_packages=True, distribute=True
                     )
                     mock.assert_called_once_with(
-                        'virtualenv --system-site-packages /tmp/foo',
-                        runas=None
+                        ['virtualenv', '--system-site-packages', '/tmp/foo'],
+                        runas=None,
+                        python_shell=False
                     )
 
                 # Are we logging the deprecation information?
@@ -90,8 +90,9 @@ class VirtualenvTestCase(TestCase):
                 '/tmp/foo', never_download=True
             )
             mock.assert_called_once_with(
-                'virtualenv --never-download /tmp/foo',
-                runas=None
+                ['virtualenv', '--never-download', '/tmp/foo'],
+                runas=None,
+                python_shell=False
             )
 
         with TestsLoggingHandler() as handler:
@@ -105,8 +106,9 @@ class VirtualenvTestCase(TestCase):
                     virtualenv_mod.create(
                         '/tmp/foo', never_download=True
                     )
-                    mock.assert_called_once_with('virtualenv /tmp/foo',
-                                                 runas=None)
+                    mock.assert_called_once_with(['virtualenv', '/tmp/foo'],
+                                                 runas=None,
+                                                 python_shell=False)
 
                 # Are we logging the deprecation information?
                 self.assertIn(
@@ -131,12 +133,13 @@ class VirtualenvTestCase(TestCase):
                 '/tmp/foo', extra_search_dir=extra_search_dirs
             )
             mock.assert_called_once_with(
-                'virtualenv '
-                '--extra-search-dir=/tmp/bar-1 '
-                '--extra-search-dir=/tmp/bar-2 '
-                '--extra-search-dir=/tmp/bar-3 '
-                '/tmp/foo',
-                runas=None
+                ['virtualenv',
+                '--extra-search-dir=/tmp/bar-1',
+                '--extra-search-dir=/tmp/bar-2',
+                '--extra-search-dir=/tmp/bar-3',
+                '/tmp/foo'],
+                runas=None,
+                python_shell=False
             )
 
         # Passing extra_search_dirs as comma separated list
@@ -146,44 +149,14 @@ class VirtualenvTestCase(TestCase):
                 '/tmp/foo', extra_search_dir=','.join(extra_search_dirs)
             )
             mock.assert_called_once_with(
-                'virtualenv '
-                '--extra-search-dir=/tmp/bar-1 '
-                '--extra-search-dir=/tmp/bar-2 '
-                '--extra-search-dir=/tmp/bar-3 '
-                '/tmp/foo',
-                runas=None
+                ['virtualenv',
+                '--extra-search-dir=/tmp/bar-1',
+                '--extra-search-dir=/tmp/bar-2',
+                '--extra-search-dir=/tmp/bar-3',
+                '/tmp/foo'],
+                runas=None,
+                python_shell=False
             )
-
-    def test_system_site_packages_and_no_site_packages_mutual_exclusion(self):
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                virtualenv_mod.create,
-                '/tmp/foo',
-                no_site_packages=True,
-                system_site_packages=True
-            )
-
-    def test_no_site_packages_deprecation(self):
-        # We *always* want *all* warnings thrown on this module
-        warnings.resetwarnings()
-        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
-
-        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            with warnings.catch_warnings(record=True) as w:
-                virtualenv_mod.create(
-                    '/tmp/foo', no_site_packages=True
-                )
-                self.assertEqual(
-                    '\'no_site_packages\' has been deprecated. Please '
-                    'start using \'system_site_packages=False\' which '
-                    'means exactly the same as \'no_site_packages=True\'. '
-                    'This warning and respective workaround will be removed '
-                    'in Salt Helium (Unreleased)',
-                    str(w[-1].message)
-                )
 
     def test_unapplicable_options(self):
         # ----- Virtualenv using pyvenv options ----------------------------->
@@ -212,14 +185,6 @@ class VirtualenvTestCase(TestCase):
         virtualenv_mod.__salt__ = {'cmd.which_bin': lambda _: 'pyvenv'}
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                virtualenv_mod.create,
-                '/tmp/foo',
-                venv_bin='pyvenv',
-                no_site_packages=True
-            )
 
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             self.assertRaises(
@@ -295,8 +260,9 @@ class VirtualenvTestCase(TestCase):
                     '/tmp/foo', never_download=True
                 )
                 mock.assert_called_with(
-                    'virtualenv --never-download /tmp/foo',
-                    runas=None
+                    ['virtualenv', '--never-download', '/tmp/foo'],
+                    runas=None,
+                    python_shell=False
                 )
             # <---- virtualenv binary returns 1.9.1 as its version ----------
 
@@ -310,8 +276,9 @@ class VirtualenvTestCase(TestCase):
                     '/tmp/foo', never_download=True
                 )
                 mock.assert_called_with(
-                    'virtualenv /tmp/foo',
-                    runas=None
+                    ['virtualenv', '/tmp/foo'],
+                    runas=None,
+                    python_shell=False
                 )
             # <---- virtualenv binary returns 1.10rc1 as its version --------
 
@@ -323,8 +290,9 @@ class VirtualenvTestCase(TestCase):
                 '/tmp/foo', python=sys.executable,
             )
             mock.assert_called_once_with(
-                'virtualenv --python={0} /tmp/foo'.format(sys.executable),
-                runas=None
+                ['virtualenv', '--python={0}'.format(sys.executable), '/tmp/foo'],
+                runas=None,
+                python_shell=False
             )
 
     def test_prompt_argument(self):
@@ -332,8 +300,9 @@ class VirtualenvTestCase(TestCase):
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             virtualenv_mod.create('/tmp/foo', prompt='PY Prompt')
             mock.assert_called_once_with(
-                'virtualenv --prompt=\'PY Prompt\' /tmp/foo',
-                runas=None
+                ['virtualenv', '--prompt=\'PY Prompt\'', '/tmp/foo'],
+                runas=None,
+                python_shell=False
             )
 
         # Now with some quotes on the mix
@@ -341,16 +310,18 @@ class VirtualenvTestCase(TestCase):
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             virtualenv_mod.create('/tmp/foo', prompt='\'PY\' Prompt')
             mock.assert_called_once_with(
-                'virtualenv --prompt="\'PY\' Prompt" /tmp/foo',
-                runas=None
+                ['virtualenv', "--prompt=''PY' Prompt'", '/tmp/foo'],
+                runas=None,
+                python_shell=False
             )
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             virtualenv_mod.create('/tmp/foo', prompt='"PY" Prompt')
             mock.assert_called_once_with(
-                'virtualenv --prompt=\'"PY" Prompt\' /tmp/foo',
-                runas=None
+                ['virtualenv', '--prompt=\'"PY" Prompt\'', '/tmp/foo'],
+                runas=None,
+                python_shell=False
             )
 
     def test_clear_argument(self):
@@ -358,7 +329,9 @@ class VirtualenvTestCase(TestCase):
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             virtualenv_mod.create('/tmp/foo', clear=True)
             mock.assert_called_once_with(
-                'virtualenv --clear /tmp/foo', runas=None
+                ['virtualenv', '--clear', '/tmp/foo'],
+                runas=None,
+                python_shell=False
             )
 
     def test_upgrade_argument(self):
@@ -368,7 +341,9 @@ class VirtualenvTestCase(TestCase):
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             virtualenv_mod.create('/tmp/foo', venv_bin='pyvenv', upgrade=True)
             mock.assert_called_once_with(
-                'pyvenv --upgrade /tmp/foo', runas=None
+                ['pyvenv', '--upgrade', '/tmp/foo'],
+                runas=None,
+                python_shell=False
             )
 
     def test_symlinks_argument(self):
@@ -378,7 +353,9 @@ class VirtualenvTestCase(TestCase):
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             virtualenv_mod.create('/tmp/foo', venv_bin='pyvenv', symlinks=True)
             mock.assert_called_once_with(
-                'pyvenv --symlinks /tmp/foo', runas=None
+                ['pyvenv', '--symlinks', '/tmp/foo'],
+                runas=None,
+                python_shell=False
             )
 
 

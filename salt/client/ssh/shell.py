@@ -2,18 +2,34 @@
 '''
 Manage transport commands via ssh
 '''
+from __future__ import absolute_import
 
 # Import python libs
+import re
 import os
+import json
 import time
 import logging
 import subprocess
 
 # Import salt libs
+import salt.defaults.exitcodes
 import salt.utils
 import salt.utils.nb_popen
+import salt.utils.vt
 
 log = logging.getLogger(__name__)
+
+SSH_PASSWORD_PROMPT_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
+KEY_VALID_RE = re.compile(r'.*\(yes\/no\).*')
+
+
+class NoPasswdError(Exception):
+    pass
+
+
+class KeyAcceptError(Exception):
+    pass
 
 
 def gen_key(path):
@@ -40,16 +56,20 @@ class Shell(object):
             priv=None,
             timeout=None,
             sudo=False,
-            tty=False):
+            tty=False,
+            mods=None,
+            identities_only=False):
         self.opts = opts
         self.host = host
         self.user = user
         self.port = port
-        self.passwd = passwd
+        self.passwd = str(passwd) if passwd else passwd
         self.priv = priv
         self.timeout = timeout
         self.sudo = sudo
         self.tty = tty
+        self.mods = mods
+        self.identities_only = identities_only
 
     def get_error(self, errstr):
         '''
@@ -71,12 +91,19 @@ class Shell(object):
         '''
         options = [
                    'KbdInteractiveAuthentication=no',
-                   'GSSAPIAuthentication=no',
-                   'PasswordAuthentication=no',
                    ]
+        if self.passwd:
+            options.append('PasswordAuthentication=yes')
+        else:
+            options.append('PasswordAuthentication=no')
+        if self.opts.get('_ssh_version', (0,)) > (4, 9):
+            options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
             options.append('StrictHostKeyChecking=no')
+        if self.opts.get('no_host_keys'):
+            options.extend(['StrictHostKeyChecking=no',
+                            'UserKnownHostsFile=/dev/null'])
         known_hosts = self.opts.get('known_hosts_file')
         if known_hosts and os.path.isfile(known_hosts):
             options.append('UserKnownHostsFile={0}'.format(known_hosts))
@@ -86,6 +113,8 @@ class Shell(object):
             options.append('IdentityFile={0}'.format(self.priv))
         if self.user:
             options.append('User={0}'.format(self.user))
+        if self.identities_only:
+            options.append('IdentitiesOnly=yes')
 
         ret = []
         for option in options:
@@ -94,22 +123,26 @@ class Shell(object):
 
     def _passwd_opts(self):
         '''
-        Return options to pass to sshpass
+        Return options to pass to ssh
         '''
         # TODO ControlMaster does not work without ControlPath
         # user could take advantage of it if they set ControlPath in their
         # ssh config.  Also, ControlPersist not widely available.
         options = ['ControlMaster=auto',
                    'StrictHostKeyChecking=no',
-                   'GSSAPIAuthentication=no',
                    ]
+        if self.opts['_ssh_version'] > (4, 9):
+            options.append('GSSAPIAuthentication=no')
         options.append('ConnectTimeout={0}'.format(self.timeout))
         if self.opts.get('ignore_host_keys'):
             options.append('StrictHostKeyChecking=no')
+        if self.opts.get('no_host_keys'):
+            options.extend(['StrictHostKeyChecking=no',
+                            'UserKnownHostsFile=/dev/null'])
 
         if self.passwd:
             options.extend(['PasswordAuthentication=yes',
-                            'PubkeyAuthentication=no'])
+                            'PubkeyAuthentication=yes'])
         else:
             options.extend(['PasswordAuthentication=no',
                             'PubkeyAuthentication=yes',
@@ -120,6 +153,8 @@ class Shell(object):
             options.append('Port={0}'.format(self.port))
         if self.user:
             options.append('User={0}'.format(self.user))
+        if self.identities_only:
+            options.append('IdentitiesOnly=yes')
 
         ret = []
         for option in options:
@@ -130,11 +165,10 @@ class Shell(object):
         '''
         Return the string to execute ssh-copy-id
         '''
-        if self.passwd and salt.utils.which('sshpass'):
+        if self.passwd:
             # Using single quotes prevents shell expansion and
-            # passwords containig '$'
-            return "sshpass -p '{0}' {1} {2} '{3} -p {4} {5}@{6}'".format(
-                    self.passwd,
+            # passwords containing '$'
+            return "{0} {1} '{2} -p {3} {4}@{5}'".format(
                     'ssh-copy-id',
                     '-i {0}.pub'.format(self.priv),
                     self._passwd_opts(),
@@ -148,11 +182,10 @@ class Shell(object):
         Since newer ssh-copy-id commands ingest option differently we need to
         have two commands
         '''
-        if self.passwd and salt.utils.which('sshpass'):
+        if self.passwd:
             # Using single quotes prevents shell expansion and
-            # passwords containig '$'
-            return "sshpass -p '{0}' {1} {2} {3} -p {4} {5}@{6}".format(
-                    self.passwd,
+            # passwords containing '$'
+            return "{0} {1} {2} -p {3} {4}@{5}".format(
                     'ssh-copy-id',
                     '-i {0}.pub'.format(self.priv),
                     self._passwd_opts(),
@@ -166,7 +199,7 @@ class Shell(object):
         Execute ssh-copy-id to plant the id file on the target
         '''
         stdout, stderr, retcode = self._run_cmd(self._copy_id_str_old())
-        if os.EX_OK != retcode and stderr.startswith('Usage'):
+        if salt.defaults.exitcodes.EX_OK != retcode and stderr.startswith('Usage'):
             stdout, stderr, retcode = self._run_cmd(self._copy_id_str_new())
         return stdout, stderr, retcode
 
@@ -178,28 +211,22 @@ class Shell(object):
         # TODO: if tty, then our SSH_SHIM cannot be supplied from STDIN Will
         # need to deliver the SHIM to the remote host and execute it there
 
-        if self.passwd and salt.utils.which('sshpass'):
+        opts = ''
+        tty = self.tty
+        if ssh != 'ssh':
+            tty = False
+        if self.passwd:
             opts = self._passwd_opts()
-            # Using single quotes prevents shell expansion and
-            # passwords containig '$'
-            return "sshpass -p '{0}' {1} {2} {3} {4} {5}".format(
-                    self.passwd,
-                    ssh,
-                    '' if ssh == 'scp' else self.host,
-                    '-t -t' if self.tty else '',
-                    opts,
-                    cmd)
         if self.priv:
             opts = self._key_opts()
-            return "{0} {1} {2} {3} {4}".format(
-                    ssh,
-                    '' if ssh == 'scp' else self.host,
-                    '-t -t' if self.tty else '',
-                    opts,
-                    cmd)
-        return None
+        return "{0} {1} {2} {3} {4}".format(
+                ssh,
+                '' if ssh == 'scp' else self.host,
+                '-t -t' if tty else '',
+                opts,
+                cmd)
 
-    def _run_cmd(self, cmd):
+    def _old_run_cmd(self, cmd):
         '''
         Cleanly execute the command string
         '''
@@ -251,7 +278,7 @@ class Shell(object):
 
         logmsg = 'Executing non-blocking command: {0}'.format(cmd)
         if self.passwd:
-            logmsg = logmsg.replace(self.passwd, ('*' * len(self.passwd))[:6])
+            logmsg = logmsg.replace(self.passwd, ('*' * 6))
         log.debug(logmsg)
 
         for out, err, rcode in self._run_nb_cmd(cmd):
@@ -270,22 +297,82 @@ class Shell(object):
 
         logmsg = 'Executing command: {0}'.format(cmd)
         if self.passwd:
-            logmsg = logmsg.replace(self.passwd, ('*' * len(self.passwd))[:6])
-        log.debug(logmsg)
+            logmsg = logmsg.replace(self.passwd, ('*' * 6))
+        if 'decode("base64")' in logmsg or 'base64.b64decode(' in logmsg:
+            log.debug('Executed SHIM command. Command logged to TRACE')
+            log.trace(logmsg)
+        else:
+            log.debug(logmsg)
 
         ret = self._run_cmd(cmd)
         return ret
 
-    def send(self, local, remote):
+    def send(self, local, remote, makedirs=False):
         '''
         scp a file or files to a remote system
         '''
+        if makedirs:
+            self.exec_cmd('mkdir -p {0}'.format(os.path.dirname(remote)))
+
         cmd = '{0} {1}:{2}'.format(local, self.host, remote)
         cmd = self._cmd_str(cmd, ssh='scp')
 
         logmsg = 'Executing command: {0}'.format(cmd)
         if self.passwd:
-            logmsg = logmsg.replace(self.passwd, ('*' * len(self.passwd))[:6])
+            logmsg = logmsg.replace(self.passwd, ('*' * 6))
         log.debug(logmsg)
 
         return self._run_cmd(cmd)
+
+    def _run_cmd(self, cmd, key_accept=False, passwd_retries=3):
+        '''
+        Execute a shell command via VT. This is blocking and assumes that ssh
+        is being run
+        '''
+        term = salt.utils.vt.Terminal(
+                cmd,
+                shell=True,
+                log_stdout=True,
+                log_stdout_level='trace',
+                log_stderr=True,
+                log_stderr_level='trace',
+                stream_stdout=False,
+                stream_stderr=False)
+        sent_passwd = 0
+        ret_stdout = ''
+        ret_stderr = ''
+
+        try:
+            while term.has_unread_data:
+                stdout, stderr = term.recv()
+                if stdout:
+                    ret_stdout += stdout
+                if stderr:
+                    ret_stderr += stderr
+                if stdout and SSH_PASSWORD_PROMPT_RE.search(stdout):
+                    if not self.passwd:
+                        return '', 'Permission denied, no authentication information', 254
+                    if sent_passwd < passwd_retries:
+                        term.sendline(self.passwd)
+                        sent_passwd += 1
+                        continue
+                    else:
+                        # asking for a password, and we can't seem to send it
+                        return '', 'Password authentication failed', 254
+                elif stdout and KEY_VALID_RE.search(stdout):
+                    if key_accept:
+                        term.sendline('yes')
+                        continue
+                    else:
+                        term.sendline('no')
+                        ret_stdout = ('The host key needs to be accepted, to '
+                                      'auto accept run salt-ssh with the -i '
+                                      'flag:\n{0}').format(stdout)
+                        return ret_stdout, '', 254
+                elif stdout and stdout.endswith('_||ext_mods||_'):
+                    mods_raw = json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
+                    term.sendline(mods_raw)
+                time.sleep(0.01)
+            return ret_stdout, ret_stderr, term.exitstatus
+        finally:
+            term.close(terminate=True, kill=True)

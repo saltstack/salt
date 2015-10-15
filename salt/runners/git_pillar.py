@@ -2,9 +2,11 @@
 '''
 Directly manage the salt git_pillar plugin
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.pillar.git_pillar
+from salt.exceptions import SaltRunnerError
 
 
 def update(branch, repo):
@@ -17,5 +19,10 @@ def update(branch, repo):
 
         salt-run git_pillar.update branch='branch' repo='location'
     '''
-    fileserver = salt.pillar.git_pillar.GitPillar(branch, repo, __opts__)
-    fileserver.update()
+    for opts_dict in __opts__.get('ext_pillar', []):
+        parts = opts_dict.get('git', '').split()
+        if len(parts) >= 2 and parts[:2] == [branch, repo]:
+            salt.pillar.git_pillar.GitPillar(branch, repo, __opts__).update()
+            break
+    else:
+        raise SaltRunnerError('git repo/branch not found in ext_pillar config')

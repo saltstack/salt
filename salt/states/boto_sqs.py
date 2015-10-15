@@ -1,35 +1,37 @@
 # -*- coding: utf-8 -*-
 '''
 Manage SQS Queues
-=================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Create and destroy SQS queues. Be aware that this interacts with Amazon's
 services, and so may incur charges.
 
-This module uses boto, which can be installed via package, or pip.
+This module uses ``boto``, which can be installed via package, or pip.
 
-This module accepts explicit sqs credentials but can also utilize
-IAM roles assigned to the instance trough Instance Profiles. Dynamic
+This module accepts explicit SQS credentials but can also utilize
+IAM roles assigned to the instance through Instance Profiles. Dynamic
 credentials are then automatically obtained from AWS API and no further
-configuration is necessary. More Information available at::
+configuration is necessary. More information available `here
+<http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_.
 
-   http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+If IAM roles are not used you need to specify them either in a pillar file or
+in the minion's config file:
 
-If IAM roles are not used you need to specify them either in a pillar or
-in the minion's config file::
+.. code-block:: yaml
 
     sqs.keyid: GKTADJGHEIQSXMKKRBJ08H
     sqs.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-It's also possible to specify key, keyid and region via a profile, either
-as a passed in dict, or as a string to pull from pillars or minion config:
+It's also possible to specify ``key``, ``keyid`` and ``region`` via a profile, either
+passed in as a dict, or as a string to pull from pillars or minion config:
+
+.. code-block:: yaml
 
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+        region: us-east-1
 
 .. code-block:: yaml
 
@@ -55,6 +57,8 @@ as a passed in dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
+from __future__ import absolute_import
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -93,7 +97,7 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     is_present = __salt__['boto_sqs.exists'](name, region, key, keyid, profile)
 
@@ -101,11 +105,11 @@ def present(
         if __opts__['test']:
             msg = 'AWS SQS queue {0} is set to be created.'.format(name)
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         created = __salt__['boto_sqs.create'](name, region, key, keyid,
                                               profile)
         if created:
-            ret['result'] = True
             ret['changes']['old'] = None
             ret['changes']['new'] = {'queue': name}
         else:
@@ -118,25 +122,24 @@ def present(
     _attributes = __salt__['boto_sqs.get_attributes'](name, region, key, keyid,
                                                       profile)
     if attributes:
-        for attr, val in attributes.iteritems():
+        for attr, val in six.iteritems(attributes):
             _val = _attributes.get(attr, None)
             if str(_val) != str(val):
                 attrs_to_set[attr] = val
-    attr_names = ','.join(attrs_to_set.keys())
+    attr_names = ','.join(attrs_to_set)
     if attrs_to_set:
         if __opts__['test']:
-            ret['result'] = None
             ret['comment'] = 'Attribute(s) {0} to be set on {1}.'.format(
                 attr_names, name)
+            ret['result'] = None
             return ret
         msg = (' Setting {0} attribute(s).'.format(attr_names))
         ret['comment'] = ret['comment'] + msg
-        ret['result'] = True
         if 'new' in ret['changes']:
             ret['changes']['new']['attributes_set'] = []
         else:
             ret['changes']['new'] = {'attributes_set': []}
-        for attr, val in attrs_to_set.iteritems():
+        for attr, val in six.iteritems(attrs_to_set):
             set_attr = __salt__['boto_sqs.set_attributes'](name, {attr: val},
                                                            region, key, keyid,
                                                            profile)
@@ -174,7 +177,7 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     is_present = __salt__['boto_sqs.exists'](name, region, key, keyid, profile)
 
@@ -182,11 +185,11 @@ def absent(
         if __opts__['test']:
             ret['comment'] = 'AWS SQS queue {0} is set to be removed.'.format(
                 name)
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_sqs.delete'](name, region, key, keyid,
                                               profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = name
             ret['changes']['new'] = None
         else:

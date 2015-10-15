@@ -14,7 +14,6 @@ Basics
 .. toctree::
     :maxdepth: 2
 
-    salt_bootstrap
     standalone_minion
     firewall
     cron
@@ -32,6 +31,7 @@ States
     states_pt3
     states_pt4
     states_pt5
+    syslog_ng-state-usage
 
 Advanced Topics
 ================
@@ -39,26 +39,37 @@ Advanced Topics
     :maxdepth: 2
 
     walkthrough
+    rooted
     minionfs
     esky
     multimaster
+    multimaster_pki
     preseed_key
     salt_bootstrap
     gitfs
     walkthrough_macosx
     writing_tests
+    http
+    lxc
+    stormpath
 
-Salt Cloud
+Salt Virt
 ==========
 .. toctree::
     :maxdepth: 2
 
     cloud_controller
 
-Halite
-======
+LXC
+===
 .. toctree::
     :maxdepth: 2
 
-    halite
+    lxc
 
+Using Salt at scale
+===================
+.. toctree::
+    :maxdepth: 2
+
+    intro_scale

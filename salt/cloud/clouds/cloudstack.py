@@ -6,6 +6,8 @@ CloudStack Cloud Module
 The CloudStack cloud module is used to control access to a CloudStack based
 Public Cloud.
 
+:depends: libcloud
+
 Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
 ``path`` parameters.
 
@@ -16,44 +18,47 @@ Use of this module requires the ``apikey``, ``secretkey``, ``host`` and
       secretkey: <your secret key >
       host: localhost
       path: /client/api
-      provider: cloudstack
+      driver: cloudstack
 
 '''
-# pylint: disable=E0102
+# pylint: disable=invalid-name,function-redefined
 
 # Import python libs
-import copy
+from __future__ import absolute_import
 import pprint
 import logging
 
 # Import salt cloud libs
 import salt.config as config
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.utils import namespaced_function
-from salt.cloud.exceptions import SaltCloudSystemExit
+from salt.exceptions import SaltCloudSystemExit
 
 # CloudStackNetwork will be needed during creation of a new node
+# pylint: disable=import-error
 try:
     from libcloud.compute.drivers.cloudstack import CloudStackNetwork
-    HASLIBS = True
+    HAS_LIBS = True
 except ImportError:
-    HASLIBS = False
+    HAS_LIBS = False
 
 # Get logging started
 log = logging.getLogger(__name__)
 
 # Redirect CloudStack functions to this module namespace
+get_node = namespaced_function(get_node, globals())
 get_size = namespaced_function(get_size, globals())
 get_image = namespaced_function(get_image, globals())
 avail_locations = namespaced_function(avail_locations, globals())
 avail_images = namespaced_function(avail_images, globals())
 avail_sizes = namespaced_function(avail_sizes, globals())
 script = namespaced_function(script, globals())
-destroy = namespaced_function(destroy, globals())
 list_nodes = namespaced_function(list_nodes, globals())
 list_nodes_full = namespaced_function(list_nodes_full, globals())
 list_nodes_select = namespaced_function(list_nodes_select, globals())
 show_instance = namespaced_function(show_instance, globals())
+
+__virtualname__ = 'cloudstack'
 
 
 # Only load in this module if the CLOUDSTACK configurations are in place
@@ -64,7 +69,10 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -73,8 +81,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'cloudstack',
+        __active_provider_name__ or __virtualname__,
         ('apikey', 'secretkey', 'host', 'path')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBS}
     )
 
 
@@ -150,7 +168,7 @@ def get_password(vm_):
 
 def get_key():
     '''
-    Returns the ssk private key for VM access
+    Returns the ssh private key for VM access
     '''
     return config.get_cloud_config_value(
         'private_key', get_configured_provider(), __opts__, search_global=False
@@ -194,10 +212,37 @@ def get_networkid(vm_):
         return False
 
 
+def get_project(conn, vm_):
+    '''
+    Return the project to use.
+    '''
+    projects = conn.ex_list_projects()
+    projid = config.get_cloud_config_value('projectid', vm_, __opts__)
+
+    if not projid:
+        return False
+
+    for project in projects:
+        if str(projid) in (str(project.id), str(project.name)):
+            return project
+
+    log.warning("Couldn't find project {0} in projects".format(projid))
+    return False
+
+
 def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'cloudstack',
+                                                           vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -230,6 +275,9 @@ def create(vm_):
                                                    None, None),
                              )
 
+    if get_project(conn, vm_) is not False:
+        kwargs['project'] = get_project(conn, vm_)
+
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
@@ -240,6 +288,44 @@ def create(vm_):
         transport=__opts__['transport']
     )
 
+    displayname = cloudstack_displayname(vm_)
+    if displayname:
+        kwargs['ex_displayname'] = displayname
+    else:
+        kwargs['ex_displayname'] = kwargs['name']
+
+    volumes = {}
+    ex_blockdevicemappings = block_device_mappings(vm_)
+    if ex_blockdevicemappings:
+        for ex_blockdevicemapping in ex_blockdevicemappings:
+            if 'VirtualName' not in ex_blockdevicemapping:
+                ex_blockdevicemapping['VirtualName'] = '{0}-{1}'.format(vm_['name'], len(volumes))
+            salt.utils.cloud.fire_event(
+              'event',
+              'requesting volume',
+              'salt/cloud/{0}/requesting'.format(ex_blockdevicemapping['VirtualName']),
+              {'kwargs': {'name': ex_blockdevicemapping['VirtualName'],
+                          'device': ex_blockdevicemapping['DeviceName'],
+                          'size': ex_blockdevicemapping['VolumeSize']}},
+            )
+            try:
+                volumes[ex_blockdevicemapping['DeviceName']] = conn.create_volume(
+                        ex_blockdevicemapping['VolumeSize'],
+                        ex_blockdevicemapping['VirtualName']
+                    )
+            except Exception as exc:
+                log.error(
+                    'Error creating volume {0} on CLOUDSTACK\n\n'
+                    'The following exception was thrown by libcloud when trying to '
+                    'requesting a volume: \n{1}'.format(
+                        ex_blockdevicemapping['VirtualName'], exc
+                    ),
+                    # Show the traceback if the debug logging level is enabled
+                    exc_info_on_loglevel=logging.DEBUG
+                )
+                return False
+    else:
+        ex_blockdevicemapping = {}
     try:
         data = conn.create_node(**kwargs)
     except Exception as exc:
@@ -247,130 +333,45 @@ def create(vm_):
             'Error creating {0} on CLOUDSTACK\n\n'
             'The following exception was thrown by libcloud when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc.message
+                vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
+
+    for device_name in six.iterkeys(volumes):
+        try:
+            conn.attach_volume(data, volumes[device_name], device_name)
+        except Exception as exc:
+            log.error(
+                'Error attaching volume {0} on CLOUDSTACK\n\n'
+                'The following exception was thrown by libcloud when trying to '
+                'attach a volume: \n{1}'.format(
+                    ex_blockdevicemapping.get('VirtualName', 'UNKNOWN'), exc
+                ),
+                # Show the traceback if the debug logging level is enabled
+                exc_info=log.isEnabledFor(logging.DEBUG)
+            )
+            return False
 
     ssh_username = config.get_cloud_config_value(
         'ssh_username', vm_, __opts__, default='root'
     )
 
-    ret = {}
-    if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
-        deploy_script = script(vm_)
-        deploy_kwargs = {
-            'opts': __opts__,
-            'host': get_ip(data),
-            'username': ssh_username,
-            'password': data.extra['password'],
-            'key_filename': get_key(),
-            'script': deploy_script.script,
-            'name': vm_['name'],
-            'tmp_dir': config.get_cloud_config_value(
-                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
-            ),
-            'deploy_command': config.get_cloud_config_value(
-                'deploy_command', vm_, __opts__,
-                default='/tmp/.saltcloud/deploy.sh',
-            ),
-            'start_action': __opts__['start_action'],
-            'parallel': __opts__['parallel'],
-            'sock_dir': __opts__['sock_dir'],
-            'conf_file': __opts__['conf_file'],
-            'minion_pem': vm_['priv_key'],
-            'minion_pub': vm_['pub_key'],
-            'keep_tmp': __opts__['keep_tmp'],
-            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'sudo': config.get_cloud_config_value(
-                'sudo', vm_, __opts__, default=(ssh_username != 'root')
-            ),
-            'sudo_password': config.get_cloud_config_value(
-                'sudo_password', vm_, __opts__, default=None
-            ),
-            'tty': config.get_cloud_config_value(
-                'tty', vm_, __opts__, default=False
-            ),
-            'display_ssh_output': config.get_cloud_config_value(
-                'display_ssh_output', vm_, __opts__, default=True
-            ),
-            'script_args': config.get_cloud_config_value(
-                'script_args', vm_, __opts__
-            ),
-            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
-        }
-
-        # Deploy salt-master files, if necessary
-        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
-            deploy_kwargs['make_master'] = True
-            deploy_kwargs['master_pub'] = vm_['master_pub']
-            deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = salt.utils.cloud.master_config(__opts__, vm_)
-            deploy_kwargs['master_conf'] = master_conf
-
-            if master_conf.get('syndic_master', None):
-                deploy_kwargs['make_syndic'] = True
-
-        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
-            'make_minion', vm_, __opts__, default=True
-        )
-
-        # Check for Windows install params
-        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
-        if win_installer:
-            deploy_kwargs['win_installer'] = win_installer
-            minion = salt.utils.cloud.minion_config(__opts__, vm_)
-            deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_cloud_config_value(
-                'win_username', vm_, __opts__, default='Administrator'
-            )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=''
-            )
-
-        # Store what was used to the deploy the VM
-        event_kwargs = copy.deepcopy(deploy_kwargs)
-        del event_kwargs['minion_pem']
-        del event_kwargs['minion_pub']
-        del event_kwargs['sudo_password']
-        if 'password' in event_kwargs:
-            del event_kwargs['password']
-        ret['deploy_kwargs'] = event_kwargs
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'executing deploy script',
-            'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': event_kwargs},
-            transport=__opts__['transport']
-        )
-
-        deployed = False
-        if win_installer:
-            deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
-        else:
-            deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
-
-        if deployed:
-            log.info('Salt installed on {0}'.format(vm_['name']))
-        else:
-            log.error(
-                'Failed to start Salt on Cloud VM {0}'.format(
-                    vm_['name']
-                )
-            )
+    vm_['ssh_host'] = get_ip(data)
+    vm_['password'] = data.extra['password']
+    vm_['key_filename'] = get_key()
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     ret.update(data.__dict__)
 
     if 'password' in data.extra:
         del data.extra['password']
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )
@@ -388,3 +389,116 @@ def create(vm_):
     )
 
     return ret
+
+
+def destroy(name, conn=None, call=None):
+    '''
+    Delete a single VM, and all of its volumes
+    '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'destroying instance',
+        'salt/cloud/{0}/destroying'.format(name),
+        {'name': name},
+    )
+
+    if not conn:
+        conn = get_conn()   # pylint: disable=E0602
+
+    node = get_node(conn, name)
+    if node is None:
+        log.error('Unable to find the VM {0}'.format(name))
+    volumes = conn.list_volumes(node)
+    if volumes is None:
+        log.error('Unable to find volumes of the VM {0}'.format(name))
+    # TODO add an option like 'delete_sshkeys' below
+    for volume in volumes:
+        if volume.extra['volume_type'] != 'DATADISK':
+            log.info('Ignoring volume type {0}: {1}'.format(
+                volume.extra['volume_type'], volume.name)
+            )
+            continue
+        log.info('Detaching volume: {0}'.format(volume.name))
+        salt.utils.cloud.fire_event(
+            'event',
+            'detaching volume',
+            'salt/cloud/{0}/detaching'.format(volume.name),
+            {'name': volume.name},
+        )
+        if not conn.detach_volume(volume):
+            log.error('Failed to Detach volume: {0}'.format(volume.name))
+            return False
+        log.info('Detached volume: {0}'.format(volume.name))
+        salt.utils.cloud.fire_event(
+            'event',
+            'detached volume',
+            'salt/cloud/{0}/detached'.format(volume.name),
+            {'name': volume.name},
+        )
+
+        log.info('Destroying volume: {0}'.format(volume.name))
+        salt.utils.cloud.fire_event(
+            'event',
+            'destroying volume',
+            'salt/cloud/{0}/destroying'.format(volume.name),
+            {'name': volume.name},
+        )
+        if not conn.destroy_volume(volume):
+            log.error('Failed to Destroy volume: {0}'.format(volume.name))
+            return False
+        log.info('Destroyed volume: {0}'.format(volume.name))
+        salt.utils.cloud.fire_event(
+            'event',
+            'destroyed volume',
+            'salt/cloud/{0}/destroyed'.format(volume.name),
+            {'name': volume.name},
+        )
+    log.info('Destroying VM: {0}'.format(name))
+    ret = conn.destroy_node(node)
+    if not ret:
+        log.error('Failed to Destroy VM: {0}'.format(name))
+        return False
+    log.info('Destroyed VM: {0}'.format(name))
+    # Fire destroy action
+    event = salt.utils.event.SaltEvent('master', __opts__['sock_dir'])
+    salt.utils.cloud.fire_event(
+        'event',
+        'destroyed instance',
+        'salt/cloud/{0}/destroyed'.format(name),
+        {'name': name},
+    )
+    if __opts__['delete_sshkeys'] is True:
+        salt.utils.cloud.remove_sshkey(node.public_ips[0])
+    return True
+
+
+def block_device_mappings(vm_):
+    '''
+    Return the block device mapping:
+
+    ::
+
+        [{'DeviceName': '/dev/sdb', 'VirtualName': 'ephemeral0'},
+          {'DeviceName': '/dev/sdc', 'VirtualName': 'ephemeral1'}]
+    '''
+    return config.get_cloud_config_value(
+        'block_device_mappings', vm_, __opts__, search_global=True
+    )
+
+
+def cloudstack_displayname(vm_):
+    '''
+    Return display name of VM:
+
+    ::
+        "minion1"
+    '''
+    return config.get_cloud_config_value(
+        'cloudstack_displayname', vm_, __opts__, search_global=True
+    )

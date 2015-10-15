@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
-
-# -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
+
 
     tests.unit.version_test
     ~~~~~~~~~~~~~~~~~~~~~~~
@@ -13,6 +10,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import re
 
 # Import Salt Testing libs
@@ -29,14 +27,17 @@ class VersionTestCase(TestCase):
     def test_version_parsing(self):
         strip_initial_non_numbers_regex = re.compile(r'(?:[^\d]+)?(?P<vs>.*)')
         expect = (
-            ('v0.12.0-19-g767d4f9', (0, 12, 0, 0, 19, 'g767d4f9'), None),
-            ('v0.12.0-85-g2880105', (0, 12, 0, 0, 85, 'g2880105'), None),
+            ('v0.12.0-19-g767d4f9', (0, 12, 0, 0, 0, 19, 'g767d4f9'), None),
+            ('v0.12.0-85-g2880105', (0, 12, 0, 0, 0, 85, 'g2880105'), None),
             ('debian/0.11.1+ds-1-3-ga0afcbd',
-             (0, 11, 1, 0, 3, 'ga0afcbd'), '0.11.1-3-ga0afcbd'),
-            ('0.12.1', (0, 12, 1, 0, 0, None), None),
-            ('0.12.1', (0, 12, 1, 0, 0, None), None),
-            ('0.17.0rc1', (0, 17, 0, 1, 0, None), None),
-            ('v0.17.0rc1-1-g52ebdfd', (0, 17, 0, 1, 1, 'g52ebdfd'), None),
+             (0, 11, 1, 0, 0, 3, 'ga0afcbd'), '0.11.1-3-ga0afcbd'),
+            ('0.12.1', (0, 12, 1, 0, 0, 0, None), None),
+            ('0.12.1', (0, 12, 1, 0, 0, 0, None), None),
+            ('0.17.0rc1', (0, 17, 0, 0, 1, 0, None), None),
+            ('v0.17.0rc1-1-g52ebdfd', (0, 17, 0, 0, 1, 1, 'g52ebdfd'), None),
+            ('v2014.1.4.1', (2014, 1, 4, 1, 0, 0, None), None),
+            ('v2014.1.4.1rc3-n/a-abcdefgh', (2014, 1, 4, 1, 3, -1, 'abcdefgh'), None),
+            ('v3.4.1.1', (3, 4, 1, 1, 0, 0, None), None)
 
         )
 
@@ -46,9 +47,7 @@ class VersionTestCase(TestCase):
                 saltstack_version.full_info, full_info
             )
             if version is None:
-                version = \
-                    strip_initial_non_numbers_regex.search(vs).group('vs')
-
+                version = strip_initial_non_numbers_regex.search(vs).group('vs')
             self.assertEqual(saltstack_version.string, version)
 
     def test_version_comparison(self):
@@ -59,10 +58,12 @@ class VersionTestCase(TestCase):
             ('v0.17.0', 'v0.17.0rc1'),
             ('Hydrogen', '0.17.0'),
             ('Helium', 'Hydrogen'),
+            ('v2014.1.4.1-n/a-abcdefgh', 'v2014.1.4.1rc3-n/a-abcdefgh'),
+            ('v2014.1.4.1-1-abcdefgh', 'v2014.1.4.1-n/a-abcdefgh')
         )
-        for v1, v2 in examples:
-            self.assertTrue(SaltStackVersion.parse(v1) > v2)
-            self.assertTrue(SaltStackVersion.parse(v2) < v1)
+        for higher_version, lower_version in examples:
+            self.assertTrue(SaltStackVersion.parse(higher_version) > lower_version)
+            self.assertTrue(SaltStackVersion.parse(lower_version) < higher_version)
 
     def test_unparsable_version(self):
         with self.assertRaises(ValueError):

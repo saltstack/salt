@@ -8,6 +8,11 @@ masters and facilitates multiple points of communication out to minions. When
 using a multi-master setup, all masters are running hot, and any active master
 can be used to send commands out to the minions.
 
+.. note::
+    If you need failover capabilities with multiple masters, there is also a
+    MultiMaster-PKI setup available, that uses a different topology
+    `MultiMaster-PKI with Failover Tutorial <http://docs.saltstack.com/en/latest/topics/tutorials/multimaster_pki.html>`_
+
 In 0.16.0, the masters do not share any information, keys need to be accepted
 on both masters, and shared files need to be shared manually or use tools like
 the git fileserver backend to ensure that the :conf_master:`file_roots` are
@@ -26,14 +31,16 @@ Summary of Steps
 Prepping a Redundant Master
 ---------------------------
 
-The first task is to prepare the redundant master. There is only one
-requirement when preparing a redundant master, which is that masters share the
-same private key. When the first master was created, the master's identifying
-key was generated and placed in the master's ``pki_dir``. The default location
-of the key is ``/etc/salt/pki/master/master.pem``. Take this key and copy it to
-the same location on the redundant master. Assuming that no minions have yet
-been connected to the new redundant master, it is safe to delete any existing
-key in this location and replace it.
+The first task is to prepare the redundant master. If the redundant master is
+already running, stop it. There is only one requirement when preparing a
+redundant master, which is that masters share the same private key. When the
+first master was created, the master's identifying key pair was generated and
+placed in the master's ``pki_dir``. The default location of the master's key
+pair is ``/etc/salt/pki/master/``. Take the private key, ``master.pem``, and
+copy it to the same location on the redundant master. Do the same for the
+master's public key, ``master.pub``. Assuming that no minions have yet been
+connected to the new redundant master, it is safe to delete any existing key
+in this location and replace it.
 
 .. note::
     There is no logical limit to the number of redundant masters that can be
@@ -58,6 +65,17 @@ Now the minion can be safely restarted.
 
 Now the minions will check into the original master and also check into the new
 redundant master. Both masters are first-class and have rights to the minions.
+
+.. note::
+
+    Minions can automatically detect failed masters and attempt to reconnect
+    to reconnect to them quickly. To enable this functionality, set
+    `master_alive_interval` in the minion config and specify a number of
+    seconds to poll the masters for connection status.
+
+    If this option is not set, minions will still reconnect to failed masters
+    but the first command sent after a master comes back up may be lost while
+    the minion authenticates.
 
 Sharing Files Between Masters
 -----------------------------

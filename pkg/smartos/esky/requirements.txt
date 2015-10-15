@@ -1,3 +1,2 @@
 GitPython==0.3.2.RC1
-halite
-cherrypy
+-r ../../../requirements/opt.txt

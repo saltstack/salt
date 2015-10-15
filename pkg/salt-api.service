@@ -1,0 +1,11 @@
+[Unit]
+Description=The Salt API
+After=syslog.target network.target
+
+[Service]
+Type=simple
+LimitNOFILE=8192
+ExecStart=/usr/bin/salt-api
+
+[Install]
+WantedBy=multi-user.target

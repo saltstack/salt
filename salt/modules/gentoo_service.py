@@ -4,6 +4,9 @@ Top level package command wrapper, used to translate the os detected by grains
 to the correct service manager
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Define the module's virtual name
 __virtualname__ = 'service'
 
@@ -30,7 +33,7 @@ def get_enabled():
     ret = set()
     lines = __salt__['cmd.run']('rc-update show').splitlines()
     for line in lines:
-        if not '|' in line:
+        if '|' not in line:
             continue
         if 'shutdown' in line:
             continue
@@ -51,7 +54,7 @@ def get_disabled():
     ret = set()
     lines = __salt__['cmd.run']('rc-update -v show').splitlines()
     for line in lines:
-        if not '|' in line:
+        if '|' not in line:
             continue
         elif 'shutdown' in line:
             continue
@@ -87,7 +90,7 @@ def missing(name):
 
         salt '*' service.missing sshd
     '''
-    return not name in get_all()
+    return name not in get_all()
 
 
 def get_all():
@@ -114,7 +117,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = '/etc/init.d/{0} start'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def stop(name):
@@ -128,7 +131,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = '/etc/init.d/{0} stop'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def restart(name):
@@ -142,7 +145,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '/etc/init.d/{0} restart'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def status(name, sig=None):
@@ -171,7 +174,7 @@ def enable(name, **kwargs):
         salt '*' service.enable <service name>
     '''
     cmd = 'rc-update add {0} default'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def disable(name, **kwargs):
@@ -185,10 +188,10 @@ def disable(name, **kwargs):
         salt '*' service.disable <service name>
     '''
     cmd = 'rc-update delete {0} default'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Return True if the named service is enabled, false otherwise
 

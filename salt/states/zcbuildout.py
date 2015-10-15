@@ -35,16 +35,18 @@ Available Functions
           - onlyif: /bin/test_else_installed
 
 '''
+from __future__ import absolute_import
 
 # Import python libs
+import logging
 import sys
 
 # Import salt libs
-import salt.utils
-from salt._compat import string_types
+from salt.ext.six import string_types
 
 # Define the module's virtual name
 __virtualname__ = 'buildout'
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -120,7 +122,6 @@ def installed(name,
               config='buildout.cfg',
               quiet=False,
               parts=None,
-              runas=None,
               user=None,
               env=(),
               buildout_ver=None,
@@ -133,7 +134,10 @@ def installed(name,
               debug=False,
               verbose=False,
               unless=None,
-              onlyif=None):
+              onlyif=None,
+              use_vt=False,
+              loglevel='debug',
+              **kwargs):
     '''
     Install buildout in a specific directory
 
@@ -152,15 +156,10 @@ def installed(name,
     parts
         specific buildout parts to run
 
-    runas
-        user used to run buildout as
-
-        .. deprecated:: 2014.1.4 (Hydrogen)
-
     user
         user used to run buildout as
 
-        .. versionadded:: 2014.1.4 (Hydrogen)
+        .. versionadded:: 2014.1.4
 
     env
         environment variables to set when running
@@ -198,33 +197,20 @@ def installed(name,
     verbose
         run buildout in verbose mode (-vvvvv)
 
+    use_vt
+        Use the new salt VT to stream output [experimental]
+
+    loglevel
+        loglevel for buildout commands
     '''
     ret = {}
 
-    salt.utils.warn_until(
-        'Lithium',
-        'Please remove \'runas\' support at this stage. \'user\' support was '
-        'added in 2014.1.4 (Hydrogen).',
-        _dont_call_warnings=True
-    )
-    if runas:
-        # Warn users about the deprecation
-        ret.setdefault('warnings', []).append(
-            'The \'runas\' argument is being deprecated in favor of \'user\', '
-            'please update your state files.'
-        )
-    if user is not None and runas is not None:
-        # user wins over runas but let warn about the deprecation.
-        ret.setdefault('warnings', []).append(
-            'Passed both the \'runas\' and \'user\' arguments. Please don\'t. '
-            '\'runas\' is being ignored in favor of \'user\'.'
-        )
-        runas = None
-    elif runas is not None:
-        # Support old runas usage
-        user = runas
-        runas = None
-
+    if 'group' in kwargs:
+        log.warn('Passing \'group\' is deprecated, just remove it')
+    output_loglevel = kwargs.get('output_loglevel', None)
+    if output_loglevel and not loglevel:
+        log.warn('Passing \'output_loglevel\' is deprecated,'
+                 ' please use loglevel instead')
     try:
         test_release = int(test_release)
     except ValueError:
@@ -248,6 +234,8 @@ def installed(name,
         verbose=verbose,
         onlyif=onlyif,
         unless=unless,
+        use_vt=use_vt,
+        loglevel=loglevel
     )
     ret.update(_ret_status(func(**kwargs), name, quiet=quiet))
     return ret

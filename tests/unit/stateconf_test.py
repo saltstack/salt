@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
-from cStringIO import StringIO
-
+from __future__ import absolute_import
+import os
+import os.path
+import tempfile
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -13,32 +15,59 @@ ensure_in_syspath('../')
 # Import Salt libs
 import salt.loader
 import salt.config
+import integration
+from salt.exceptions import SaltRenderError
+from salt.ext.six.moves import StringIO
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
-OPTS = salt.config.minion_config(None)
-OPTS['file_client'] = 'local'
-OPTS['file_roots'] = dict(base=['/'])
-FUNCS = {}
-FUNCS['config.get'] = lambda a, b: False
-
-RENDERERS = salt.loader.render(OPTS, FUNCS)
-
-
-def render_sls(content, sls='', saltenv='base', argline='-G yaml . jinja', **kws):
-    return RENDERERS['stateconf'](
-        StringIO(content), saltenv=saltenv, sls=sls,
-        argline=argline,
-        renderers=salt.loader.render(OPTS, {}),
-        **kws
-    )
-
 
 class StateConfigRendererTestCase(TestCase):
 
+    def setUp(self):
+        self.root_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.state_tree_dir = os.path.join(self.root_dir, 'state_tree')
+        self.cache_dir = os.path.join(self.root_dir, 'cachedir')
+        if not os.path.isdir(self.root_dir):
+            os.makedirs(self.root_dir)
+
+        if not os.path.isdir(self.state_tree_dir):
+            os.makedirs(self.state_tree_dir)
+
+        if not os.path.isdir(self.cache_dir):
+            os.makedirs(self.cache_dir)
+        self.config = salt.config.minion_config(None)
+        self.config['root_dir'] = self.root_dir
+        self.config['state_events'] = False
+        self.config['id'] = 'match'
+        self.config['file_client'] = 'local'
+        self.config['file_roots'] = dict(base=[self.state_tree_dir])
+        self.config['cachedir'] = self.cache_dir
+        self.config['test'] = False
+        self._renderers = salt.loader.render(
+            self.config,
+            {'config.get': lambda a, b: False}
+        )
+
+    def _render_sls(self,
+                    content,
+                    sls='',
+                    saltenv='base',
+                    argline='-G yaml . jinja',
+                    **kws):
+        return self._renderers['stateconf'](
+            StringIO(content), saltenv=saltenv, sls=sls,
+            argline=argline,
+            renderers=salt.loader.render(self.config, {}),
+            **kws
+        )
+
     def test_state_config(self):
-        result = render_sls('''
+        result = self._render_sls('''
 .sls_params:
   stateconf.set:
     - name1: value1
@@ -63,7 +92,7 @@ test:
                          'echo name1=value1 name2=value2 value')
 
     def test_sls_dir(self):
-        result = render_sls('''
+        result = self._render_sls('''
 test:
   cmd.run:
     - name: echo sls_dir={{sls_dir}}
@@ -73,7 +102,7 @@ test:
                          'echo sls_dir=path/to')
 
     def test_states_declared_with_shorthand_no_args(self):
-        result = render_sls('''
+        result = self._render_sls('''
 test:
   cmd.run:
     - name: echo testing
@@ -91,7 +120,7 @@ test2:
         self.assertEqual(result['test']['cmd.run'][0]['name'], 'echo testing')
 
     def test_adding_state_name_arg_for_dot_state_id(self):
-        result = render_sls('''
+        result = self._render_sls('''
 .test:
   pkg.installed:
     - cwd: /
@@ -107,7 +136,7 @@ test2:
         )
 
     def test_state_prefix(self):
-        result = render_sls('''
+        result = self._render_sls('''
 .test:
   cmd.run:
     - name: echo renamed
@@ -125,7 +154,7 @@ state_id:
 
     def test_dot_state_id_in_requisites(self):
         for req in REQUISITES:
-            result = render_sls('''
+            result = self._render_sls('''
 .test:
   cmd.run:
     - name: echo renamed
@@ -148,7 +177,7 @@ state_id:
 
     def test_relative_include_with_requisites(self):
         for req in REQUISITES:
-            result = render_sls('''
+            result = self._render_sls('''
 include:
   - some.helper
   - .utils
@@ -167,7 +196,7 @@ state_id:
             )
 
     def test_relative_include_and_extend(self):
-        result = render_sls('''
+        result = self._render_sls('''
 include:
   - some.helper
   - .utils
@@ -179,8 +208,38 @@ extend:
     ''', sls='test.work')
         self.assertTrue('test.utils::some_state' in result['extend'])
 
+    def test_multilevel_relative_include_with_requisites(self):
+        for req in REQUISITES:
+            result = self._render_sls('''
+include:
+  - .shared
+  - ..utils
+  - ...helper
+
+state_id:
+  cmd.run:
+    - name: echo test
+    - cwd: /
+    - {0}:
+      - cmd: ..utils::some_state
+'''.format(req), sls='test.nested.work')
+            self.assertEqual(result['include'][0],
+                             {'base': 'test.nested.shared'})
+            self.assertEqual(result['include'][1], {'base': 'test.utils'})
+            self.assertEqual(result['include'][2], {'base': 'helper'})
+            self.assertEqual(
+                result['state_id']['cmd.run'][2][req][0]['cmd'],
+                'test.utils::some_state'
+            )
+
+    def test_multilevel_relative_include_beyond_top_level(self):
+        self.assertRaises(SaltRenderError, self._render_sls, '''
+include:
+  - ...shared
+''', sls='test.work')
+
     def test_start_state_generation(self):
-        result = render_sls('''
+        result = self._render_sls('''
 A:
   cmd.run:
     - name: echo hello
@@ -197,7 +256,7 @@ B:
         )
 
     def test_goal_state_generation(self):
-        result = render_sls('''
+        result = self._render_sls('''
 {% for sid in "ABCDE": %}
 {{sid}}:
   cmd.run:
@@ -210,11 +269,11 @@ B:
 
         reqs = result['test.goalstate::goal']['stateconf.set'][0]['require']
         self.assertEqual(
-            set([i.itervalues().next() for i in reqs]), set('ABCDE')
+            set([next(six.itervalues(i)) for i in reqs]), set('ABCDE')
         )
 
     def test_implicit_require_with_goal_state(self):
-        result = render_sls('''
+        result = self._render_sls('''
 {% for sid in "ABCDE": %}
 {{sid}}:
   cmd.run:
@@ -264,9 +323,20 @@ G:
         goal_args = result['test::goal']['stateconf.set']
         self.assertEqual(len(goal_args), 1)
         self.assertEqual(
-            [i.itervalues().next() for i in goal_args[0]['require']],
+            [next(six.itervalues(i)) for i in goal_args[0]['require']],
             list('ABCDEFG')
         )
+
+    def test_slsdir(self):
+        result = self._render_sls('''
+formula/woot.sls:
+  cmd.run:
+    - name: echo {{ slspath }}
+    - cwd: /
+''', sls='formula.woot', argline='yaml . jinja')
+
+        r = result['formula/woot.sls']['cmd.run'][0]['name']
+        self.assertEqual(r, 'echo formula/woot')
 
 
 if __name__ == '__main__':

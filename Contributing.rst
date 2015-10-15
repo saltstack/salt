@@ -1,3 +1,12 @@
+Licence Notice
+==============
+
+The Salt project is open and encouraging to code contributions. Please be
+advised that all code contributions will be licenced under the Apache 2.0
+License. We cannot accept contributions that already hold a Licence other
+than Apache 2.0 without explicit exception.
+
+
 Reporting issues
 ================
 
@@ -10,17 +19,17 @@ A bug is a *demonstrable problem* that is caused by the code in the repository.
 
 Please read the following guidelines before you `report an issue`_
 
-1. **Use the GitHub issue search** — check if the issue has
+1. **Use the GitHub issue search** -- check if the issue has
    already been reported. If it has been, please comment on the existing issue.
 
-2. **Check if the issue has been fixed** — the latest `develop`
+2. **Check if the issue has been fixed** -- the latest `develop`
    branch may already contain a fix. Please try to reproduce the bug against
    the latest git head or the latest release.
 
-3. **Isolate the demonstrable problem** — make sure that the
+3. **Isolate the demonstrable problem** -- make sure that the
    code in the project's repository is *definitely* responsible for the issue.
 
-4. **Include a reproducible example** — Provide the steps which
+4. **Include a reproducible example** -- Provide the steps which
    led you to the problem.
 
 Please try to be as detailed as possible in your report too. What is your
@@ -55,19 +64,19 @@ reason to ask first.
 Fixing issues
 =============
 
-If you wish to help us fixing the issue you're reporting, `Salt's documentation`_ already includes 
+If you wish to help us fixing the issue you're reporting, `Salt's documentation`_ already includes
 information to help you setup a development environment, under `Developing Salt`_.
 
-Fix the issue you have in hands, if possible also add a test case to Salt's testing suite, create a 
+Fix the issue you have in hands, if possible also add a test case to Salt's testing suite, create a
 `pull request`_, and **that's it**!
 
-Salt's development team will review your fix and if everything is OK, your fix will be merged into 
+Salt's development team will review your fix and if everything is OK, your fix will be merged into
 salt's code.
 
 
 .. _`report an issue`: https://github.com/saltstack/salt/issues
-.. _`Salt's documentation`: http://docs.saltstack.org/en/latest/index.html
-.. _`Developing Salt`: http://docs.saltstack.com/topics/hacking.html
-.. _`pull request`: http://docs.saltstack.com/topics/hacking.html#sending-a-github-pull-request
+.. _`Salt's documentation`: http://docs.saltstack.com/en/latest/index.html
+.. _`Developing Salt`: http://docs.saltstack.com/en/latest/topics/development/hacking.html
+.. _`pull request`: http://docs.saltstack.com/en/latest/topics/development/contributing.html#sending-a-github-pull-request
 
 .. vim: fenc=utf-8 spell spl=en

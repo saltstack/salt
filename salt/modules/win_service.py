@@ -4,12 +4,22 @@ Windows Service module.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import salt.utils
+import time
+import logging
+from subprocess import list2cmdline
+from salt.ext.six.moves import zip
+from salt.ext.six.moves import range
+
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'service'
 
 BUFFSIZE = 5000
+SERVICE_STOP_DELAY_SECONDS = 15
+SERVICE_STOP_POLL_MAX_ATTEMPTS = 5
 
 
 def __virtual__():
@@ -19,19 +29,6 @@ def __virtual__():
     if salt.utils.is_windows():
         return __virtualname__
     return False
-
-
-def has_powershell():
-    '''
-    Confirm if Powershell is available
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' service.has_powershell
-    '''
-    return 'powershell' in __salt__['cmd.run']('where powershell')
 
 
 def get_enabled():
@@ -44,29 +41,7 @@ def get_enabled():
 
         salt '*' service.get_enabled
     '''
-
-    if has_powershell():
-        cmd = 'Get-WmiObject win32_service | where {$_.startmode -eq "Auto"} | select-object name'
-        lines = __salt__['cmd.run'](cmd, shell='POWERSHELL').splitlines()
-        return sorted([line.strip() for line in lines[3:]])
-    else:
-        ret = set()
-        services = []
-        cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
-        lines = __salt__['cmd.run'](cmd).splitlines()
-        for line in lines:
-            if 'SERVICE_NAME:' in line:
-                comps = line.split(':', 1)
-                if not len(comps) > 1:
-                    continue
-                services.append(comps[1].strip())
-        for service in services:
-            cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
-            lines = __salt__['cmd.run'](cmd2).splitlines()
-            for line in lines:
-                if 'AUTO_START' in line:
-                    ret.add(service)
-        return sorted(ret)
+    return sorted([service for service in get_all() if enabled(service)])
 
 
 def get_disabled():
@@ -79,30 +54,7 @@ def get_disabled():
 
         salt '*' service.get_disabled
     '''
-    if has_powershell():
-        cmd = 'Get-WmiObject win32_service | where {$_.startmode -ne "Auto"} | select-object name'
-        lines = __salt__['cmd.run'](cmd, shell='POWERSHELL').splitlines()
-        return sorted([line.strip() for line in lines[3:]])
-    else:
-        ret = set()
-        services = []
-        cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
-        lines = __salt__['cmd.run'](cmd).splitlines()
-        for line in lines:
-            if 'SERVICE_NAME:' in line:
-                comps = line.split(':', 1)
-                if not len(comps) > 1:
-                    continue
-                services.append(comps[1].strip())
-        for service in services:
-            cmd2 = 'sc qc "{0}" {1}'.format(service, BUFFSIZE)
-            lines = __salt__['cmd.run'](cmd2).splitlines()
-            for line in lines:
-                if 'DEMAND_START' in line:
-                    ret.add(service)
-                elif 'DISABLED' in line:
-                    ret.add(service)
-        return sorted(ret)
+    return sorted([service for service in get_all() if disabled(service)])
 
 
 def available(name):
@@ -131,7 +83,7 @@ def missing(name):
 
         salt '*' service.missing <service name>
     '''
-    return not name in get_all()
+    return name not in get_all()
 
 
 def get_all():
@@ -144,7 +96,16 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    return sorted(get_enabled() + get_disabled())
+    ret = set()
+    cmd = list2cmdline(['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)])
+    lines = __salt__['cmd.run'](cmd).splitlines()
+    for line in lines:
+        if 'SERVICE_NAME:' in line:
+            comps = line.split(':', 1)
+            if not len(comps) > 1:
+                continue
+            ret.add(comps[1].strip())
+    return sorted(ret)
 
 
 def get_service_name(*args):
@@ -170,8 +131,8 @@ def get_service_name(*args):
     ret = {}
     services = []
     display_names = []
-    cmd = 'sc query type= service state= all bufsize= {0}'.format(BUFFSIZE)
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['sc', 'query', 'type=', 'service', 'state=', 'all', 'bufsize=', str(BUFFSIZE)]
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         if 'SERVICE_NAME:' in line:
             comps = line.split(':', 1)
@@ -205,8 +166,8 @@ def start(name):
 
         salt '*' service.start <service name>
     '''
-    cmd = 'net start "{0}"'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = ['net', 'start', name]
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def stop(name):
@@ -219,8 +180,25 @@ def stop(name):
 
         salt '*' service.stop <service name>
     '''
-    cmd = 'net stop "{0}"'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    # net stop issues a stop command and waits briefly (~30s), but will give
+    # up if the service takes too long to stop with a misleading
+    # "service could not be stopped" message and RC 0.
+
+    cmd = ['net', 'stop', name]
+    res = __salt__['cmd.run'](cmd, python_shell=False)
+    if 'service was stopped' in res:
+        return True
+
+    # we requested a stop, but the service is still thinking about it.
+    # poll for the real status
+    for attempt in range(SERVICE_STOP_POLL_MAX_ATTEMPTS):
+        if not status(name):
+            return True
+        log.debug('Waiting for %s to stop', name)
+        time.sleep(SERVICE_STOP_DELAY_SECONDS)
+
+    log.warning('Giving up on waiting for service `%s` to stop', name)
+    return False
 
 
 def restart(name):
@@ -233,8 +211,44 @@ def restart(name):
 
         salt '*' service.restart <service name>
     '''
-    stop(name)
-    return start(name)
+    if 'salt-minion' in name:
+        create_win_salt_restart_task()
+        return execute_salt_restart_task()
+
+    return stop(name) and start(name)
+
+
+def create_win_salt_restart_task():
+    '''
+    Create a task in Windows task scheduler to enable restarting the salt-minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.create_win_salt_restart_task()
+    '''
+    cmd = 'cmd /c ping -n 3 127.0.0.1 && net stop salt-minion && net start salt-minion'
+    return __salt__['task.create_task'](name='restart-salt-minion',
+                                        user_name='System',
+                                        action_type='Execute',
+                                        cmd=cmd,
+                                        trigger_type='Once',
+                                        start_date='1975-01-01',
+                                        start_time='01:00')
+
+
+def execute_salt_restart_task():
+    '''
+    Run the Windows Salt restart task
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.execute_salt_restart_task()
+    '''
+    return __salt__['task.run'](name='restart-salt-minion')
 
 
 def status(name, sig=None):
@@ -249,8 +263,8 @@ def status(name, sig=None):
 
         salt '*' service.status <service name> [service signature]
     '''
-    cmd = 'sc query "{0}" {1}'.format(name, BUFFSIZE)
-    statuses = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['sc', 'query', name]
+    statuses = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in statuses:
         if 'RUNNING' in line:
             return True
@@ -269,14 +283,14 @@ def getsid(name):
 
         salt '*' service.getsid <service name>
     '''
-    cmd = 'sc showsid "{0}"'.format(name)
-    lines = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['sc', 'showsid', name]
+    lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     for line in lines:
         if 'SERVICE SID:' in line:
             comps = line.split(':', 1)
-            if comps[1] > 1:
+            try:
                 return comps[1].strip()
-            else:
+            except (AttributeError, IndexError):
                 return None
 
 
@@ -290,8 +304,8 @@ def enable(name, **kwargs):
 
         salt '*' service.enable <service name>
     '''
-    cmd = 'sc config "{0}" start= auto'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = ['sc', 'config', name, 'start=', 'auto']
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def disable(name, **kwargs):
@@ -304,11 +318,11 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     '''
-    cmd = 'sc config "{0}" start= demand'.format(name)
-    return not __salt__['cmd.retcode'](cmd)
+    cmd = ['sc', 'config', name, 'start=', 'disabled']
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Check to see if the named service is enabled to start on boot
 
@@ -318,7 +332,12 @@ def enabled(name):
 
         salt '*' service.enabled <service name>
     '''
-    return name in get_enabled()
+    cmd = list2cmdline(['sc', 'qc', name])
+    lines = __salt__['cmd.run'](cmd).splitlines()
+    for line in lines:
+        if 'AUTO_START' in line:
+            return True
+    return False
 
 
 def disabled(name):
@@ -331,4 +350,105 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     '''
-    return name in get_disabled()
+    cmd = list2cmdline(['sc', 'qc', name])
+    lines = __salt__['cmd.run'](cmd).splitlines()
+    for line in lines:
+        if 'DEMAND_START' in line:
+            return True
+        elif 'DISABLED' in line:
+            return True
+    return False
+
+
+def create(name,
+           binpath,
+           DisplayName=None,
+           type='own',
+           start='demand',
+           error='normal',
+           group=None,
+           tag='no',
+           depend=None,
+           obj=None,
+           password=None,
+           **kwargs):
+    r'''
+    Create the named service.
+
+    .. versionadded:: 2015.8.0
+
+    Required parameters:
+    name: Specifies the service name returned by the getkeyname operation
+    binpath: Specifies the path to the service binary file, backslashes must be escaped
+        - eg: C:\\path\\to\\binary.exe
+
+    Optional parameters:
+    DisplayName: the name to be displayed in the service manager
+    type: Specifies the service type, default is own
+      - own (default): Service runs in its own process
+      - share: Service runs as a shared process
+      - interact: Service can interact with the desktop
+      - kernel: Service is a driver
+      - filesys: Service is a system driver
+      - rec: Service is a file system-recognized driver that identifies filesystems on the computer
+    start: Specifies the start type for the service
+      - boot: Device driver that is loaded by the boot loader
+      - system: Device driver that is started during kernel initialization
+      - auto: Service that automatically starts
+      - demand (default): Service must be started manually
+      - disabled: Service cannot be started
+      - delayed-auto: Service starts automatically after other auto-services start
+    error: Specifies the severity of the error
+      - normal (default): Error is logged and a message box is displayed
+      - severe: Error is logged and computer attempts a restart with last known good configuration
+      - critical: Error is logged, computer attempts to restart with last known good configuration, system halts on failure
+      - ignore: Error is logged and startup continues, no notification is given to the user
+    group: Specifies the name of the group of which this service is a member
+    tag: Specifies whether or not to obtain a TagID from the CreateService call. For boot-start and system-start drivers
+      - yes/no
+    depend: Specifies the names of services or groups that myust start before this service. The names are seperated by forward slashes.
+    obj: Specifies th ename of an account in which a service will run. Default is LocalSystem
+    password: Specifies a password. Required if other than LocalSystem account is used.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.create <service name> <path to exe> display_name='<display name>'
+    '''
+
+    cmd = [
+           'sc',
+           'create',
+           name,
+           'binpath=', binpath,
+           'type=', type,
+           'start=', start,
+           'error=', error,
+           ]
+    if DisplayName is not None:
+        cmd.extend(['DisplayName=', DisplayName])
+    if group is not None:
+        cmd.extend(['group=', group])
+    if depend is not None:
+        cmd.extend(['depend=', depend])
+    if obj is not None:
+        cmd.extend(['obj=', obj])
+    if password is not None:
+        cmd.extend(['password=', password])
+
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+
+
+def delete(name):
+    '''
+    Delete the named service
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.delete <service name>
+    '''
+    cmd = ['sc', 'delete', name]
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)

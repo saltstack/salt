@@ -2,9 +2,11 @@
 '''
 Support for Linux File Access Control Lists
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 # Define the module's virtual name
 __virtualname__ = 'acl'
@@ -35,7 +37,12 @@ def version():
     return ret[1].strip()
 
 
-def getfacl(*args):
+def _raise_on_no_files(*args):
+    if len(args) == 0:
+        raise CommandExecutionError('You need to specify at least one file or directory to work with!')
+
+
+def getfacl(*args, **kwargs):
     '''
     Return (extremely verbose) map of FACLs on specified file(s)
 
@@ -45,12 +52,19 @@ def getfacl(*args):
 
         salt '*' acl.getfacl /tmp/house/kitchen
         salt '*' acl.getfacl /tmp/house/kitchen /tmp/house/livingroom
+        salt '*' acl.getfacl /tmp/house/kitchen /tmp/house/livingroom recursive=True
     '''
+    recursive = kwargs.pop('recursive', False)
+
+    _raise_on_no_files(*args)
+
     ret = {}
-    cmd = 'getfacl -p'
+    cmd = 'getfacl --absolute-names'
+    if recursive:
+        cmd += ' -R'
     for dentry in args:
         cmd += ' {0}'.format(dentry)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     dentry = ''
     for line in out:
         if not line:
@@ -61,10 +75,10 @@ def getfacl(*args):
             comps = line.replace('# ', '').split(': ')
             if comps[0] == 'file':
                 dentry = comps[1]
-                ret[dentry] = {'comments': {},
-                               'users': [],
-                               'groups': []}
-            ret[dentry]['comments'][comps[0]] = comps[1]
+                ret[dentry] = {'comment': {},
+                               'user': [],
+                               'group': []}
+            ret[dentry]['comment'][comps[0]] = comps[1]
             if comps[0] == 'flags':
                 flags = list(comps[1])
                 if flags[0] == 's':
@@ -75,27 +89,31 @@ def getfacl(*args):
                     ret[dentry]['sticky'] = True
         else:
             vals = _parse_acl(acl=line,
-                              user=ret[dentry]['comments']['owner'],
-                              group=ret[dentry]['comments']['group'])
+                              user=ret[dentry]['comment']['owner'],
+                              group=ret[dentry]['comment']['group'])
             acl_type = vals['type']
             del vals['type']
             for entity in ('user', 'group'):
-                plural = entity + 's'
-                if entity in vals.keys():
+                if entity in vals:
                     usergroup = vals[entity]
                     del vals[entity]
                     if acl_type == 'acl':
-                        ret[dentry][plural].append({usergroup: vals})
+                        ret[dentry][entity].append({usergroup: vals})
                     elif acl_type == 'default':
-                        if 'defaults' not in ret[dentry].keys():
+                        if 'defaults' not in ret[dentry]:
                             ret[dentry]['defaults'] = {}
-                        if plural not in ret[dentry]['defaults'].keys():
-                            ret[dentry]['defaults'][plural] = []
-                        ret[dentry]['defaults'][plural].append({usergroup: vals})
+                        if entity not in ret[dentry]['defaults']:
+                            ret[dentry]['defaults'][entity] = []
+                        ret[dentry]['defaults'][entity].append({usergroup: vals})
             for entity in ('other', 'mask'):
-                if entity in vals.keys():
+                if entity in vals:
                     del vals[entity]
-                    ret[dentry][entity] = vals
+                    if acl_type == 'acl':
+                        ret[dentry][entity] = vals
+                    elif acl_type == 'default':
+                        if 'defaults' not in ret[dentry]:
+                            ret[dentry]['defaults'] = {}
+                        ret[dentry]['defaults'][entity] = vals
     return ret
 
 
@@ -142,7 +160,7 @@ def _parse_acl(acl, user, group):
     return vals
 
 
-def wipefacls(*args):
+def wipefacls(*args, **kwargs):
     '''
     Remove all FACLs from the specified file(s)
 
@@ -152,29 +170,21 @@ def wipefacls(*args):
 
         salt '*' acl.wipefacls /tmp/house/kitchen
         salt '*' acl.wipefacls /tmp/house/kitchen /tmp/house/livingroom
+        salt '*' acl.wipefacls /tmp/house/kitchen /tmp/house/livingroom recursive=True
     '''
+    recursive = kwargs.pop('recursive', False)
+
+    _raise_on_no_files(*args)
     cmd = 'setfacl -b'
+    if recursive:
+        cmd += ' -R'
     for dentry in args:
         cmd += ' {0}'.format(dentry)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     return True
 
 
-def modfacl(acl_type, acl_name, perms, *args):
-    '''
-    Add or modify a FACL for the specified file(s)
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' acl.addfacl user myuser rwx /tmp/house/kitchen
-        salt '*' acl.addfacl default:group mygroup rx /tmp/house/kitchen
-        salt '*' acl.addfacl d:u myuser 7 /tmp/house/kitchen
-        salt '*' acl.addfacl g mygroup 0 /tmp/house/kitchen /tmp/house/livingroom
-    '''
-    cmd = 'setfacl -m'
-
+def _acl_prefix(acl_type):
     prefix = ''
     if acl_type.startswith('d'):
         prefix = 'd:'
@@ -184,15 +194,44 @@ def modfacl(acl_type, acl_name, perms, *args):
         prefix += 'u'
     elif acl_type == 'group' or acl_type == 'g':
         prefix += 'g'
-    cmd = '{0} {1}:{2}:{3}'.format(cmd, prefix, acl_name, perms)
+    elif acl_type == 'mask' or acl_type == 'm':
+        prefix += 'm'
+    return prefix
+
+
+def modfacl(acl_type, acl_name='', perms='', *args, **kwargs):
+    '''
+    Add or modify a FACL for the specified file(s)
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' acl.modfacl user myuser rwx /tmp/house/kitchen
+        salt '*' acl.modfacl default:group mygroup rx /tmp/house/kitchen
+        salt '*' acl.modfacl d:u myuser 7 /tmp/house/kitchen
+        salt '*' acl.modfacl g mygroup 0 /tmp/house/kitchen /tmp/house/livingroom
+        salt '*' acl.modfacl user myuser rwx /tmp/house/kitchen recursive=True
+    '''
+    recursive = kwargs.pop('recursive', False)
+
+    _raise_on_no_files(*args)
+
+    cmd = 'setfacl'
+    if recursive:
+        cmd += ' -R'  # -R must come first as -m needs the acl_* arguments that come later
+
+    cmd += ' -m'
+
+    cmd = '{0} {1}:{2}:{3}'.format(cmd, _acl_prefix(acl_type), acl_name, perms)
 
     for dentry in args:
         cmd += ' {0}'.format(dentry)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     return True
 
 
-def delfacl(acl_type, acl_name, *args):
+def delfacl(acl_type, acl_name='', *args, **kwargs):
     '''
     Remove specific FACL from the specified file(s)
 
@@ -204,21 +243,19 @@ def delfacl(acl_type, acl_name, *args):
         salt '*' acl.delfacl default:group mygroup /tmp/house/kitchen
         salt '*' acl.delfacl d:u myuser /tmp/house/kitchen
         salt '*' acl.delfacl g myuser /tmp/house/kitchen /tmp/house/livingroom
+        salt '*' acl.delfacl user myuser /tmp/house/kitchen recursive=True
     '''
-    cmd = 'setfacl -x'
+    recursive = kwargs.pop('recursive', False)
 
-    prefix = ''
-    if acl_type.startswith('d'):
-        prefix = 'd:'
-        acl_type = acl_type.replace('default:', '')
-        acl_type = acl_type.replace('d:', '')
-    if acl_type == 'user' or acl_type == 'u':
-        prefix += 'u'
-    elif acl_type == 'group' or acl_type == 'g':
-        prefix += 'g'
-    cmd = '{0} {1}:{2}'.format(cmd, prefix, acl_name)
+    _raise_on_no_files(*args)
+
+    cmd = 'setfacl -x'
+    if recursive:
+        cmd += ' -R'
+
+    cmd = '{0} {1}:{2}'.format(cmd, _acl_prefix(acl_type), acl_name)
 
     for dentry in args:
         cmd += ' {0}'.format(dentry)
-    __salt__['cmd.run'](cmd)
+    __salt__['cmd.run'](cmd, python_shell=False)
     return True

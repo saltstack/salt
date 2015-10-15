@@ -12,7 +12,7 @@ A flexible renderer that takes a templating engine and a data format
 # FIXME: I really need to review and simplify this renderer, it's getting out of hand!
 #
 # TODO:
-#   - sls meta/info state: Eg,
+#   - sls meta/info state: E.g.,
 #
 #       sls_info:
 #         stateconf.set:
@@ -20,24 +20,27 @@ A flexible renderer that takes a templating engine and a data format
 #           - description: what the salt file does...
 #           - version: 0.1.0
 #
-#   - version constraint for 'include'. Eg,
+#   - version constraint for 'include'. E.g.,
 #
 #       include:
 #         - apache: >= 0.1.0
 #
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import re
 import getopt
 import copy
 from os import path as ospath
-from cStringIO import StringIO
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltRenderError
-from salt._compat import string_types
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 __all__ = ['render']
 
@@ -46,7 +49,7 @@ log = logging.getLogger(__name__)
 
 __opts__ = {
     'stateconf_end_marker': r'#\s*-+\s*end of state config\s*-+',
-    # eg, something like "# --- end of state config --" works by default.
+    # e.g., something like "# --- end of state config --" works by default.
 
     'stateconf_start_state': '.start',
     # name of the state id for the generated start state.
@@ -163,7 +166,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
                 raise SaltRenderError('\n'.join(errors))
             raise SaltRenderError('sls preprocessing/rendering failed!')
         return data
-    #----------------------
+    # ----------------------
     renderers = kws['renderers']
     opts, args = getopt.getopt(argline.split(), 'Gosp')
     argline = ' '.join(args) if args else 'yaml . jinja'
@@ -186,7 +189,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
         ]
         try:
             name, rd_argline = (args[0] + ' ').split(' ', 1)
-            render_data = renderers[name]  # eg, the yaml renderer
+            render_data = renderers[name]  # e.g., the yaml renderer
             if implicit_require:
                 if name == 'yaml':
                     rd_argline = '-o ' + rd_argline
@@ -196,13 +199,13 @@ def render(input, saltenv='base', sls='', argline='', **kws):
                         'is used!'
                     )
             name, rt_argline = (args[1] + ' ').split(' ', 1)
-            render_template = renderers[name]  # eg, the mako renderer
+            render_template = renderers[name]  # e.g., the mako renderer
         except KeyError as err:
             raise SaltRenderError('Renderer: {0} is not available!'.format(err))
         except IndexError:
             raise INVALID_USAGE_ERROR
 
-        if isinstance(input, string_types):
+        if isinstance(input, six.string_types):
             with salt.utils.fopen(input, 'r') as ifile:
                 sls_templ = ifile.read()
         else:  # assume file-like
@@ -220,7 +223,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             tmplctx = STATE_CONF.copy()
             if tmplctx:
                 prefix = sls + '::'
-                for k in tmplctx.keys():
+                for k in six.iterkeys(tmplctx):  # iterate over a copy of keys
                     if k.startswith(prefix):
                         tmplctx[k[len(prefix):]] = tmplctx[k]
                         del tmplctx[k]
@@ -256,20 +259,14 @@ def rewrite_single_shorthand_state_decl(data):  # pylint: disable=C0103
       state_id_decl:
         state.func: []
     '''
-    for sid, states in data.items():
-        if isinstance(states, string_types):
+    for sid, states in six.iteritems(data):
+        if isinstance(states, six.string_types):
             data[sid] = {states: []}
-
-
-def _parent_sls(sls):
-    i = sls.rfind('.')
-    return sls[:i] + '.' if i != -1 else ''
 
 
 def rewrite_sls_includes_excludes(data, sls, saltenv):
     # if the path of the included/excluded sls starts with a leading dot(.)
     # then it's taken to be relative to the including/excluding sls.
-    sls = _parent_sls(sls)
     for sid in data:
         if sid == 'include':
             includes = data[sid]
@@ -280,15 +277,33 @@ def rewrite_sls_includes_excludes(data, sls, saltenv):
                     slsenv = saltenv
                     incl = each
                 if incl.startswith('.'):
-                    includes[i] = {slsenv: (sls + incl[1:])}
+                    includes[i] = {slsenv: _relative_to_abs_sls(incl, sls)}
         elif sid == 'exclude':
             for sdata in data[sid]:
                 if 'sls' in sdata and sdata['sls'].startswith('.'):
-                    sdata['sls'] = sls + sdata['sls'][1:]
+                    sdata['sls'] = _relative_to_abs_sls(sdata['sls'], sls)
 
 
 def _local_to_abs_sid(sid, sls):  # id must starts with '.'
-    return _parent_sls(sls) + sid[1:] if '::' in sid else sls + '::' + sid[1:]
+    if '::' in sid:
+        return _relative_to_abs_sls(sid, sls)
+    else:
+        abs_sls = _relative_to_abs_sls(sid, sls + '.')
+        return '::'.join(abs_sls.rsplit('.', 1))
+
+
+def _relative_to_abs_sls(relative, sls):
+    '''
+    Convert ``relative`` sls reference into absolute, relative to ``sls``.
+    '''
+    levels, suffix = re.match(r'^(\.+)(.*)$', relative).groups()
+    level_count = len(levels)
+    p_comps = sls.split('.')
+    if level_count > len(p_comps):
+        raise SaltRenderError(
+            'Attempted relative include goes beyond top level package'
+        )
+    return '.'.join(p_comps[:-level_count] + [suffix])
 
 
 def nvlist(thelist, names=None):
@@ -310,7 +325,7 @@ def nvlist(thelist, names=None):
     for nvitem in thelist:
         if isinstance(nvitem, dict):
             # then nvitem is a name-value item(a dict) of the list.
-            name, value = nvitem.iteritems().next()
+            name, value = next(six.iteritems(nvitem))
             if names is None or name in names:
                 yield nvitem, name, value
 
@@ -336,12 +351,12 @@ def nvlist2(thelist, names=None):
 
 
 def statelist(states_dict, sid_excludes=frozenset(['include', 'exclude'])):
-    for sid, states in states_dict.iteritems():
+    for sid, states in six.iteritems(states_dict):
         if sid.startswith('__'):
             continue
         if sid in sid_excludes:
             continue
-        for sname, args in states.iteritems():
+        for sname, args in six.iteritems(states):
             if sname.startswith('__'):
                 continue
             yield sid, states, sname, args
@@ -367,7 +382,7 @@ def rename_state_ids(data, sls, is_extend=False):
             if sid.startswith('.'):
                 req[sname] = _local_to_abs_sid(sid, sls)
 
-    for sid in data.keys():
+    for sid in data:
         if sid.startswith('.'):
             newsid = _local_to_abs_sid(sid, sls)
             if newsid in data:
@@ -376,11 +391,11 @@ def rename_state_ids(data, sls, is_extend=False):
                     'already exists!'.format(sid, newsid)
                 )
             # add a '- name: sid' to those states without '- name'.
-            for sname, args in data[sid].iteritems():
+            for sname, args in six.iteritems(data[sid]):
                 if state_name(sname) == STATE_NAME:
                     continue
                 for arg in args:
-                    if isinstance(arg, dict) and iter(arg).next() == 'name':
+                    if isinstance(arg, dict) and next(iter(arg)) == 'name':
                         break
                 else:
                     # then no '- name: ...' is defined in the state args
@@ -452,8 +467,8 @@ def add_implicit_requires(data):
         # state if there's a state before this one.
         if prev_state[0] is not None:
             try:
-                nvlist(args, ['require']).next()[2].insert(0, dict([prev_state]))
-            except StopIteration:  # ie, there's no require
+                next(nvlist(args, ['require']))[2].insert(0, dict([prev_state]))
+            except StopIteration:  # i.e., there's no require
                 args.append(dict(require=[dict([prev_state])]))
 
         states_before.add(tag)
@@ -474,14 +489,14 @@ def add_start_state(data, sls):
     # no __sls__, or it's the first state whose id declaration has a
     # __sls__ == sls.
     non_sids = set(['include', 'exclude', 'extend'])
-    for sid, states in data.iteritems():
+    for sid, states in six.iteritems(data):
         if sid in non_sids or sid.startswith('__'):
             continue
         if '__sls__' not in states or states['__sls__'] == sls:
             break
     else:
         raise SaltRenderError('Can\'t determine the first state in the sls file!')
-    reqin = {state_name(data[sid].iterkeys().next()): sid}
+    reqin = {state_name(next(six.iterkeys(data[sid]))): sid}
     data[start_sid] = {STATE_FUNC: [{'require_in': [reqin]}]}
 
 
@@ -534,7 +549,7 @@ STATE_CONF_EXT = {}   # stateconf.set under extend: ...
 
 
 def extract_state_confs(data, is_extend=False):
-    for state_id, state_dict in data.iteritems():
+    for state_id, state_dict in six.iteritems(data):
         if state_id == 'extend' and not is_extend:
             extract_state_confs(state_dict, True)
             continue
@@ -551,7 +566,7 @@ def extract_state_confs(data, is_extend=False):
         for sdk in state_dict[key]:
             if not isinstance(sdk, dict):
                 continue
-            key, val = sdk.iteritems().next()
+            key, val = next(six.iteritems(sdk))
             conf[key] = val
 
         if not is_extend and state_id in STATE_CONF_EXT:

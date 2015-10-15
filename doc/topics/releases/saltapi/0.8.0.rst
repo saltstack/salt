@@ -1,0 +1,172 @@
+==============
+salt-api 0.8.0
+==============
+
+We are happy to announce the release of :program:`salt-api` 0.8.0.
+
+This release encompasses bugfixes and new features for the
+:py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` netapi module that
+provides a RESTful interface for a running Salt system.
+
+.. note::
+
+    Requires Salt 0.13
+
+Changes
+=======
+
+In addition to the usual documentation improvements and bug fixes this release
+introduces the following changes and additions.
+
+Please note the backward incompatible change detailed below.
+
+RPM packaging
+-------------
+
+Thanks to Andrew Niemantsvedriet (`@kaptk2`_) :program:`salt-api` is now
+available in Fedora package repositories as well as RHEL compatible systems via
+EPEL.
+
+* http://dl.fedoraproject.org/pub/epel/5/i386/repoview/salt-api.html
+* http://dl.fedoraproject.org/pub/epel/5/x86_64/repoview/salt-api.html
+* http://dl.fedoraproject.org/pub/epel/6/i386/repoview/salt-api.html
+* http://dl.fedoraproject.org/pub/epel/6/x86_64/repoview/salt-api.html
+
+Thanks also to Clint Savage (`@herlo`_) and Thomas Spura (`@tomspur`_) for
+helping with that process.
+
+.. _`@kaptk2`: https://github.com/kaptk2
+.. _`@herlo`: https://github.com/herlo
+.. _`@tomspur`: https://github.com/tomspur
+
+Ubuntu PPA packaging
+--------------------
+
+Thanks to Sean Channel (`@seanchannel`_, pentabular) :program:`salt-api` is
+available as a PPA on the SaltStack LaunchPad team.
+
+https://launchpad.net/~saltstack/+archive/salt
+
+.. _`@seanchannel`: https://github.com/seanchannel
+
+Authentication information on login
+-----------------------------------
+
+.. warning:: Backward incompatible change
+
+    The :py:class:`/login <salt.netapi.rest_cherrypy.app.Login>` URL no
+    longer responds with a 302 redirect for success.
+
+    Although this is behavior is common in the browser world it is not useful
+    from an API so we have changed it to return a 200 response in this release.
+
+    We take backward compatibility very seriously and we apologize for the
+    inconvenience. In this case we felt the previous behavior was limiting.
+    Changes such as this will be rare.
+
+New in this release is displaying information about the current session and the
+current user. For example:
+
+.. code-block:: bash
+
+    % curl -sS localhost:8000/login \
+        -H 'Accept: application/x-yaml'
+        -d username='saltdev'
+        -d password='saltdev'
+        -d eauth='pam'
+
+    return:
+      - eauth: pam
+        expire: 1365508324.359403
+        perms:
+          - '@wheel'
+          - grains.*
+          - state.*
+          - status.*
+          - sys.*
+          - test.*
+        start: 1365465124.359402
+        token: caa7aa2b9dbc4a8adb6d2e19c3e52be68995ef4b
+        user: saltdev
+
+Bypass session handling
+-----------------------
+
+A convenience URL has been added
+(:py:class:`/run <salt.netapi.rest_cherrypy.app.Run>`) to bypass the normal
+session-handling process.
+
+The REST interface uses the concept of "lowstate" data to specify what function
+should be executed in Salt (plus where that function is and any arguments to
+the function). This is a thin wrapper around Salt's various "client"
+interfaces, for example Salt's :ref:`LocalClient() <python-api>` which can
+accept authentication credentials directly.
+
+Authentication with the REST API typically goes through the login URL and a
+session is generated that is tied to a Salt external_auth token. That token is
+then automatically added to the lowstate for subsequent requests that match the
+current session.
+
+It is sometimes useful to handle authentication or token management manually
+from another program or script. For example:
+
+.. code-block:: bash
+
+    curl -sS localhost:8000/run \
+        -d client='local' \
+        -d tgt='*' \
+        -d fun='test.ping' \
+        -d eauth='pam' \
+        -d username='saltdev' \
+        -d password='saltdev'
+
+It is a Bad Idea (TM) to do this unless you have a very good reason and a well
+thought out security model.
+
+Logout
+------
+
+An URL has been added
+(:py:class:`/logout <salt.netapi.rest_cherrypy.app.Logout>`) that will cause
+the client-side to expire the session cookie and the server-side session to be
+invalidated.
+
+Running the REST interface via any WSGI-compliant server
+--------------------------------------------------------
+
+The :py:mod:`rest_cherrypy <salt.netapi.rest_cherrypy.app>` netapi module is
+a regular WSGI application written using the CherryPy framework. It was written
+with the intent of also running from any WSGI-compliant server such as Apache
+and mod_wsgi, Gunicorn, uWSGI, Nginx, and FastCGI, etc.
+
+The WSGI application entry point has been factored out into a stand-alone file
+in this release suitable for calling from an external server.
+:program:`salt-api` does not need to be running in this scenario.
+
+For example, an Apache virtual host configuration:
+
+.. code-block:: text
+
+    <VirtualHost *:80>
+        ServerName example.com
+        ServerAlias *.example.com
+
+        ServerAdmin webmaster@example.com
+
+        LogLevel warn
+        ErrorLog /var/www/example.com/logs/error.log
+        CustomLog /var/www/example.com/logs/access.log combined
+
+        DocumentRoot /var/www/example.com/htdocs
+
+        WSGIScriptAlias / /path/to/salt/netapi/rest_cherrypy/wsgi.py
+    </VirtualHost>
+
+Participation
+=============
+
+Please get involved by `filing issues`__ on GitHub, `discussing on the mailing
+list`__, and chatting in ``#salt-devel`` on Freenode.
+
+.. __: https://github.com/saltstack/salt-api/issues
+.. __: https://groups.google.com/forum/#!forum/salt-users

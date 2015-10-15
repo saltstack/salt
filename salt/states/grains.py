@@ -63,23 +63,33 @@ def present(name, value):
 
 def list_present(name, value):
     '''
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
-    Ensure the value is present in the list type grain
+    Ensure the value is present in the list type grain.
 
     name
-        The grain name
+        The grain name.
 
     value
-        The value is present in the list type grain
+        The value is present in the list type grain.
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
     .. code-block:: yaml
 
-      roles:
-        grains.list_present:
-          - value: web
+        roles:
+          grains.list_present:
+            - value: web
+
+    For multiple grains, the syntax looks like:
+
+    .. code-block:: yaml
+
+        roles:
+          grains.list_present:
+            - value:
+              - web
+              - dev
     '''
     ret = {'name': name,
            'changes': {},
@@ -93,10 +103,14 @@ def list_present(name, value):
             ret['result'] = False
             ret['comment'] = 'Grain {0} is not a valid list'.format(name)
             return ret
-
-        if value in grain:
-            ret['comment'] = 'Value {1} is already in grain {0}'.format(name, value)
-            return ret
+        if isinstance(value, list):
+            if set(value).issubset(set(__grains__.get(name))):
+                ret['comment'] = 'Value {1} is already in grain {0}'.format(name, value)
+                return ret
+        else:
+            if value in grain:
+                ret['comment'] = 'Value {1} is already in grain {0}'.format(name, value)
+                return ret
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Value {1} is set to be appended to grain {0}'.format(name, value)
@@ -108,12 +122,17 @@ def list_present(name, value):
         ret['comment'] = 'Grain {0} is set to be added'.format(name)
         ret['changes'] = {'new': grain}
         return ret
-
     new_grains = __salt__['grains.append'](name, value)
-    if value not in __grains__.get(name):
-        ret['result'] = False
-        ret['comment'] = 'Failed append value {1} to grain {0}'.format(name, value)
-        return ret
+    if isinstance(value, list):
+        if not set(value).issubset(set(__grains__.get(name))):
+            ret['result'] = False
+            ret['comment'] = 'Failed append value {1} to grain {0}'.format(name, value)
+            return ret
+    else:
+        if value not in __grains__.get(name):
+            ret['result'] = False
+            ret['comment'] = 'Failed append value {1} to grain {0}'.format(name, value)
+            return ret
     ret['comment'] = 'Append value {1} to grain {0}'.format(name, value)
     ret['changes'] = {'new': new_grains}
     return ret
@@ -121,21 +140,33 @@ def list_present(name, value):
 
 def list_absent(name, value):
     '''
-    Delete a value from a grain formed as a list
+    Delete a value from a grain formed as a list.
+
+    .. versionadded:: 2014.1.0
 
     name
-        The grain name
+        The grain name.
 
     value
-       The value to delete from the grain list
+       The value to delete from the grain list.
 
     The grain should be `list type <http://docs.python.org/2/tutorial/datastructures.html#data-structures>`_
 
     .. code-block:: yaml
 
-      roles:
-        grains.list_absent:
-          - value: db
+        roles:
+          grains.list_absent:
+            - value: db
+
+    For multiple grains, the syntax looks like:
+
+    .. code-block:: yaml
+
+        roles:
+          grains.list_absent:
+            - value:
+              - web
+              - dev
     '''
     ret = {'name': name,
            'changes': {},
@@ -159,6 +190,7 @@ def list_absent(name, value):
                 .format(name, value)
             ret['changes'] = {'deleted': value}
         else:
+            ret['result'] = False
             ret['comment'] = 'Grain {0} is not a valid list'\
                 .format(name)
     else:
@@ -168,7 +200,7 @@ def list_absent(name, value):
 
 def absent(name, destructive=False):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Delete a grain from the grains config file
 
@@ -188,8 +220,7 @@ def absent(name, destructive=False):
            'changes': {},
            'result': True,
            'comment': ''}
-    grain = __grains__.get(name)
-    if grain:
+    if name in __grains__:
         if __opts__['test']:
             ret['result'] = None
             if destructive is True:
@@ -216,7 +247,7 @@ def absent(name, destructive=False):
 
 def append(name, value, convert=False):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Append a value to a list in the grains config file
 
@@ -273,8 +304,10 @@ def append(name, value, convert=False):
                     .format(name, value)
                 ret['changes'] = {'added': value}
             else:
+                ret['result'] = False
                 ret['comment'] = 'Grain {0} is not a valid list'\
                     .format(name)
     else:
+        ret['result'] = False
         ret['comment'] = 'Grain {0} does not exist'.format(name)
     return ret

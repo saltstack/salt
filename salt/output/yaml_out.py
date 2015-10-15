@@ -17,6 +17,7 @@ Example output::
           - Hello
           - World
 '''
+from __future__ import absolute_import
 
 # Import third party libs
 import yaml

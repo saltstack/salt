@@ -30,7 +30,7 @@ def present(name, persist=False):
         The name of the kernel module to verify is loaded
 
     persist
-        Also add module to /etc/modules
+        Also add module to ``/etc/modules``
     '''
     ret = {'name': name,
            'result': True,
@@ -46,7 +46,7 @@ def present(name, persist=False):
         mods_set = mods
     if name in mods_set:
         ret['comment'] = ('Kernel module {0} is already present'
-                              .format(name))
+                          .format(name))
         return ret
     # Module is not loaded, verify availability
     if __opts__['test']:
@@ -57,13 +57,20 @@ def present(name, persist=False):
         ret['comment'] = 'Kernel module {0} is unavailable'.format(name)
         ret['result'] = False
         return ret
-    for mod in __salt__['kmod.load'](name, persist):
-        ret['changes'][mod] = 'loaded'
-    if not ret['changes']:
+
+    load_result = __salt__['kmod.load'](name, persist)
+    if isinstance(load_result, list):
+        if len(load_result) > 0:
+            for mod in load_result:
+                ret['changes'][mod] = 'loaded'
+            ret['comment'] = 'Loaded kernel module {0}'.format(name)
+            return ret
+        else:
+            ret['result'] = False
+            ret['comment'] = 'Failed to load kernel module {0}'.format(name)
+    else:
         ret['result'] = False
-        ret['comment'] = 'Failed to load kernel module {0}'.format(name)
-        return ret
-    ret['comment'] = 'Loaded kernel module {0}'.format(name)
+        ret['comment'] = load_result
     return ret
 
 
@@ -75,10 +82,10 @@ def absent(name, persist=False, comment=True):
         The name of the kernel module to verify is not loaded
 
     persist
-        Delete module from /etc/modules
+        Delete module from ``/etc/modules``
 
     comment
-        Don't remove module from /etc/modules, only comment it
+        Don't remove module from ``/etc/modules``, only comment it
     '''
     ret = {'name': name,
            'result': True,
@@ -92,8 +99,7 @@ def absent(name, persist=False, comment=True):
         # Found the module, unload it!
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Module {0} is set to be unloaded'
-            ret['comment'] = ret['comment'].format(name)
+            ret['comment'] = 'Module {0} is set to be unloaded'.format(name)
             return ret
         for mod in __salt__['kmod.remove'](name, persist, comment):
             ret['changes'][mod] = 'removed'

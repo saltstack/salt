@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: :email:`Nicole Thomas <nicole@satlstack.com>`
+    :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
 '''
+
+# Import python libs
+from __future__ import absolute_import
 
 # Import Salt Libs
 from salt.modules import aliases

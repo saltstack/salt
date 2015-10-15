@@ -2,21 +2,87 @@
 '''
 Module for running arbitrary tests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import os
 import sys
 import time
 import traceback
-import hashlib
 import random
 
 # Import Salt libs
 import salt
+import salt.utils
 import salt.version
 import salt.loader
+import salt.ext.six as six
+from salt.utils.decorators import depends
 
 __proxyenabled__ = ['*']
+
+# Don't shadow built-in's.
+__func_alias__ = {
+    'true_': 'true',
+    'false_': 'false'
+}
+
+
+@depends('non_existantmodulename')
+def missing_func():
+    return 'foo'
+
+
+def attr_call():
+    '''
+    Call grains.items via the attribute
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt '*' test.attr_call
+    '''
+    return __salt__.grains.items()
+
+
+def module_report():
+    '''
+    Return a dict containing all of the exeution modules with a report on
+    the overall availability via different references
+
+    CLI Example::
+
+    .. code-block:: bash
+
+        salt '*' test.module_report
+    '''
+    ret = {'functions': [],
+           'function_attrs': [],
+           'function_subs': [],
+           'modules': [],
+           'module_attrs': [],
+           'missing_attrs': [],
+           'missing_subs': []}
+    for ref in __salt__:
+        if '.' in ref:
+            ret['functions'].append(ref)
+        else:
+            ret['modules'].append(ref)
+            if hasattr(__salt__, ref):
+                ret['module_attrs'].append(ref)
+            for func in __salt__[ref]:
+                full = '{0}.{1}'.format(ref, func)
+                if hasattr(getattr(__salt__, ref), func):
+                    ret['function_attrs'].append(full)
+                if func in __salt__[ref]:
+                    ret['function_subs'].append(full)
+    for func in ret['functions']:
+        if func not in ret['function_attrs']:
+            ret['missing_attrs'].append(func)
+        if func not in ret['function_subs']:
+            ret['missing_subs'].append(func)
+    return ret
 
 
 def echo(text):
@@ -34,8 +100,9 @@ def echo(text):
 
 def ping():
     '''
-    Just used to make sure the minion is up and responding
-    Return True
+    Used to make sure the minion is up and responding. Not an ICMP ping.
+
+    Returns ``True``.
 
     CLI Example:
 
@@ -44,10 +111,14 @@ def ping():
         salt '*' test.ping
     '''
 
-    if 'proxyobject' in __opts__:
-        return __opts__['proxyobject'].ping()
-    else:
+    if not salt.utils.is_proxy():
         return True
+    else:
+        ping_cmd = __opts__['proxy']['proxytype'] + '.ping'
+        if __opts__.get('add_proxymodule_to_opts', False):
+            return __opts__['proxymodule'][ping_cmd]()
+        else:
+            return __proxy__[ping_cmd]()
 
 
 def sleep(length):
@@ -90,12 +161,12 @@ def version():
 
         salt '*' test.version
     '''
-    return salt.__version__
+    return salt.version.__version__
 
 
 def versions_information():
     '''
-    Returns versions of components used by salt as a dict
+    Report the versions of dependent and system software
 
     CLI Example:
 
@@ -103,7 +174,7 @@ def versions_information():
 
         salt '*' test.versions_information
     '''
-    return dict(salt.version.versions_information())
+    return salt.version.versions_information()
 
 
 def versions_report():
@@ -117,6 +188,9 @@ def versions_report():
         salt '*' test.versions_report
     '''
     return '\n'.join(salt.version.versions_report())
+
+
+versions = versions_report
 
 
 def conf_test():
@@ -211,7 +285,7 @@ def arg_type(*args, **kwargs):
         ret['args'].append(str(type(argument)))
 
     # all the kwargs
-    for key, val in kwargs.iteritems():
+    for key, val in six.iteritems(kwargs):
         ret['kwargs'][key] = str(type(val))
 
     return ret
@@ -235,8 +309,10 @@ def arg_repr(*args, **kwargs):
 
 def fib(num):
     '''
-    Return a Fibonacci sequence up to the passed number, and the
-    timeit took to compute in seconds. Used for performance tests
+    Return the num-th Fibonacci number, and the time it took to compute in
+    seconds. Used for performance tests.
+
+    This function is designed to have terrible performance.
 
     CLI Example:
 
@@ -246,12 +322,18 @@ def fib(num):
     '''
     num = int(num)
     start = time.time()
-    fib_a, fib_b = 0, 1
-    ret = [0]
-    while fib_b < num:
-        ret.append(fib_b)
-        fib_a, fib_b = fib_b, fib_a + fib_b
-    return ret, time.time() - start
+    if num < 2:
+        return num, time.time() - start
+    return _fib(num-1) + _fib(num-2), time.time() - start
+
+
+def _fib(num):
+    '''
+    Helper method for test.fib, doesn't calculate the time.
+    '''
+    if num < 2:
+        return num
+    return _fib(num-1) + _fib(num-2)
 
 
 def collatz(start):
@@ -359,8 +441,7 @@ def not_loaded():
     '''
     prov = providers()
     ret = set()
-    loader = salt.loader._create_loader(__opts__, 'modules', 'module')
-    for mod_dir in loader.module_dirs:
+    for mod_dir in salt.loader._module_dirs(__opts__, 'modules', 'module'):
         if not os.path.isabs(mod_dir):
             continue
         if not os.path.isdir(mod_dir):
@@ -392,41 +473,16 @@ def opts_pkg():
     return ret
 
 
-def tty(device, echo=None):
-    '''
-    Echo a string to a specific tty
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' test.tty tty0 'This is a test'
-        salt '*' test.tty pts3 'This is a test'
-    '''
-    if device.startswith('tty'):
-        teletype = '/dev/{0}'.format(device)
-    elif device.startswith('pts'):
-        teletype = '/dev/{0}'.format(device.replace('pts', 'pts/'))
-    else:
-        return {'Error': 'The specified device is not a valid TTY'}
-
-    cmd = 'echo {0} > {1}'.format(echo, teletype)
-    ret = __salt__['cmd.run_all'](cmd)
-    if ret['retcode'] == 0:
-        return {
-            'Success': 'Message was successfully echoed to {0}'.format(teletype)
-        }
-    else:
-        return {
-            'Error': 'Echoing to {0} returned error code {1}'.format(
-                teletype,
-                ret['retcode'])
-        }
-
-
-def rand_str(size=9999999999):
+def rand_str(size=9999999999, hash_type=None):
     '''
     Return a random string
+
+        size
+            size of the string to generate
+        hash_type
+            hash type to use
+
+            .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -434,8 +490,9 @@ def rand_str(size=9999999999):
 
         salt '*' test.rand_str
     '''
-    hasher = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-    return hasher(str(random.randint(0, size))).hexdigest()
+    if not hash_type:
+        hash_type = __opts__.get('hash_type', 'md5')
+    return salt.utils.rand_str(hash_type=hash_type, size=size)
 
 
 def exception(message='Test Exception'):
@@ -464,3 +521,80 @@ def stack():
         salt '*' test.stack
     '''
     return ''.join(traceback.format_stack())
+
+
+def tty(*args, **kwargs):  # pylint: disable=W0613
+    '''
+    Deprecated! Moved to cmdmod.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.tty tty0 'This is a test'
+        salt '*' test.tty pts3 'This is a test'
+    '''
+    return 'ERROR: This function has been moved to cmd.tty'
+
+
+def try_(module, return_try_exception=False, **kwargs):
+    '''
+    Try to run a module command. On an exception return None.
+    If `return_try_exception` is set True return the exception.
+    This can be helpfull in templates where running a module might fail as expected.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        <pre>
+        {% for i in range(0,230) %}
+            {{ salt['test.try'](module='ipmi.get_users', bmc_host='172.2.2.'+i)|yaml(False) }}
+        {% endfor %}
+        </pre>
+    '''
+    try:
+        return __salt__[module](**kwargs)
+    except Exception as e:
+        if return_try_exception:
+            return e
+    return None
+
+
+def assertion(assertion):
+    '''
+    Assert the given argument
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.assert False
+    '''
+    assert assertion
+
+
+def true_():
+    '''
+    Always return True
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.true
+    '''
+    return True
+
+
+def false_():
+    '''
+    Always return False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.false
+    '''
+    return False

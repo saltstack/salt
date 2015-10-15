@@ -1,14 +1,28 @@
 # -*- coding: utf-8 -*-
 '''
-Manage ruby installations with rbenv.
+Manage ruby installations with rbenv. rbenv is supported on Linux and Mac OS X.
+rbenv doesn't work on Windows (and isn't really necessary on Windows as there is
+no system Ruby on Windows). On Windows, the RubyInstaller and/or Pik are both
+good alternatives to work with multiple versions of Ruby on the same box.
+
+http://misheska.com/blog/2013/06/15/using-rbenv-to-manage-multiple-versions-of-ruby/
 
 .. versionadded:: 0.16.0
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import logging
+import shlex
+
+# Import Salt libs
+import salt.utils
+from salt.exceptions import SaltInvocationError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -23,32 +37,40 @@ __opts__ = {
 }
 
 
-def _rbenv_exec(command, args='', env=None, runas=None, ret=None):
-    if not is_installed(runas):
+def __virtual__():
+    '''
+    Only work on POSIX-like systems
+    '''
+    if salt.utils.is_windows():
         return False
+    return True
 
-    binary = _rbenv_bin(runas)
-    path = _rbenv_path(runas)
 
-    if env:
-        env = ' {0}'.format(env)
-    env = env or ''
-
-    binary = 'env RBENV_ROOT={0}{1} {2}'.format(path, env, binary)
-
-    result = __salt__['cmd.run_all'](
-        '{0} {1} {2}'.format(binary, command, args),
-        runas=runas
-    )
-
-    if isinstance(ret, dict):
-        ret.update(result)
-        return ret
-
-    if result['retcode'] == 0:
-        return result['stdout']
+def _shlex_split(s):
+    # from python:shlex.split: passing None for s will read
+    # the string to split from standard input.
+    if s is None:
+        ret = shlex.split('')
     else:
-        return False
+        ret = shlex.split(s)
+
+    return ret
+
+
+def _parse_env(env):
+    if not env:
+        env = {}
+    if isinstance(env, list):
+        env = salt.utils.repack_dictlist(env)
+    if not isinstance(env, dict):
+        env = {}
+
+    for bad_env_key in (x for x, y in six.iteritems(env) if y is None):
+        log.error('Environment variable \'{0}\' passed without a value. '
+                  'Setting value to an empty string'.format(bad_env_key))
+        env[bad_env_key] = ''
+
+    return env
 
 
 def _rbenv_bin(runas=None):
@@ -61,17 +83,44 @@ def _rbenv_path(runas=None):
     if runas in (None, 'root'):
         path = __salt__['config.option']('rbenv.root') or '/usr/local/rbenv'
     else:
-        path = __salt__['config.option']('rbenv.root') or '~{0}/.rbenv'.format(runas)
+        path = __salt__['config.option']('rbenv.root') \
+            or '~{0}/.rbenv'.format(runas)
 
     return os.path.expanduser(path)
+
+
+def _rbenv_exec(command, env=None, runas=None, ret=None):
+    if not is_installed(runas):
+        return False
+
+    binary = _rbenv_bin(runas)
+    path = _rbenv_path(runas)
+
+    environ = _parse_env(env)
+    environ['RBENV_ROOT'] = path
+
+    result = __salt__['cmd.run_all'](
+        [binary] + command,
+        runas=runas,
+        env=environ
+    )
+
+    if isinstance(ret, dict):
+        ret.update(result)
+        return ret
+
+    if result['retcode'] == 0:
+        return result['stdout']
+    else:
+        return False
 
 
 def _install_rbenv(path, runas=None):
     if os.path.isdir(path):
         return True
 
-    return 0 == __salt__['cmd.retcode'](
-        'git clone https://github.com/sstephenson/rbenv.git {0}'.format(path), runas=runas)
+    cmd = ['git', 'clone', 'https://github.com/sstephenson/rbenv.git', path]
+    return __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False) == 0
 
 
 def _install_ruby_build(path, runas=None):
@@ -79,16 +128,19 @@ def _install_ruby_build(path, runas=None):
     if os.path.isdir(path):
         return True
 
-    return 0 == __salt__['cmd.retcode'](
-        'git clone https://github.com/sstephenson/ruby-build.git {0}'.format(path), runas=runas)
+    cmd = ['git', 'clone',
+           'https://github.com/sstephenson/ruby-build.git', path]
+    return __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False) == 0
 
 
 def _update_rbenv(path, runas=None):
     if not os.path.isdir(path):
         return False
 
-    return 0 == __salt__['cmd.retcode'](
-        'cd {0} && git pull'.format(path), runas=runas)
+    return __salt__['cmd.retcode'](['git', 'pull'],
+                                   runas=runas,
+                                   cwd=path,
+                                   python_shell=False) == 0
 
 
 def _update_ruby_build(path, runas=None):
@@ -96,13 +148,15 @@ def _update_ruby_build(path, runas=None):
     if not os.path.isdir(path):
         return False
 
-    return 0 == __salt__['cmd.retcode'](
-        'cd {0} && git pull'.format(path), runas=runas)
+    return __salt__['cmd.retcode'](['git', 'pull'],
+                                   runas=runas,
+                                   cwd=path,
+                                   python_shell=False) == 0
 
 
 def install(runas=None, path=None):
     '''
-    Install Rbenv systemwide
+    Install rbenv systemwide
 
     CLI Example:
 
@@ -117,7 +171,11 @@ def install(runas=None, path=None):
 
 def update(runas=None, path=None):
     '''
-    Updates the current versions of Rbenv and Ruby-Build
+    Updates the current versions of rbenv and ruby-build
+
+    runas
+        The user under which to run rbenv. If not specified, then rbenv will be
+        run as the user under which Salt is running.
 
     CLI Example:
 
@@ -133,7 +191,7 @@ def update(runas=None, path=None):
 
 def is_installed(runas=None):
     '''
-    Check if Rbenv is installed.
+    Check if rbenv is installed
 
     CLI Example:
 
@@ -150,7 +208,19 @@ def install_ruby(ruby, runas=None):
 
     ruby
         The version of Ruby to install, should match one of the
-        versions listed by rbenv.list
+        versions listed by :py:func:`rbenv.list <salt.modules.rbenv.list>`
+
+    runas
+        The user under which to run rbenv. If not specified, then rbenv will be
+        run as the user under which Salt is running.
+
+    Additional environment variables can be configured in pillar /
+    grains / master:
+
+    .. code-block:: yaml
+
+        rbenv:
+          build_env: 'CONFIGURE_OPTS="--no-tcmalloc" CFLAGS="-fno-tree-dce"'
 
     CLI Example:
 
@@ -166,14 +236,16 @@ def install_ruby(ruby, runas=None):
     if __grains__['os'] in ('FreeBSD', 'NetBSD', 'OpenBSD'):
         env_list.append('MAKE=gmake')
 
-    if __salt__['config.option']('rbenv.build_env'):
+    if __salt__['config.get']('rbenv:build_env'):
+        env_list.append(__salt__['config.get']('rbenv:build_env'))
+    elif __salt__['config.option']('rbenv.build_env'):
         env_list.append(__salt__['config.option']('rbenv.build_env'))
 
     if env_list:
         env = ' '.join(env_list)
 
     ret = {}
-    ret = _rbenv_exec('install', ruby, env=env, runas=runas, ret=ret)
+    ret = _rbenv_exec(['install', ruby], env=env, runas=runas, ret=ret)
     if ret['retcode'] == 0:
         rehash(runas=runas)
         return ret['stderr']
@@ -189,7 +261,11 @@ def uninstall_ruby(ruby, runas=None):
 
     ruby
         The version of ruby to uninstall. Should match one of the versions
-        listed by :mod:`rbenv.versions <salt.modules.rbenv.versions>`
+        listed by :py:func:`rbenv.versions <salt.modules.rbenv.versions>`.
+
+    runas
+        The user under which to run rbenv. If not specified, then rbenv will be
+        run as the user under which Salt is running.
 
     CLI Example:
 
@@ -198,15 +274,13 @@ def uninstall_ruby(ruby, runas=None):
         salt '*' rbenv.uninstall_ruby 2.0.0-p0
     '''
     ruby = re.sub(r'^ruby-', '', ruby)
-
-    args = '--force {0}'.format(ruby)
-    _rbenv_exec('uninstall', args, runas=runas)
+    _rbenv_exec(['uninstall', '--force', ruby], runas=runas)
     return True
 
 
 def versions(runas=None):
     '''
-    List the installed versions of ruby.
+    List the installed versions of ruby
 
     CLI Example:
 
@@ -214,18 +288,18 @@ def versions(runas=None):
 
         salt '*' rbenv.versions
     '''
-    ret = _rbenv_exec('versions', '--bare', runas=runas)
+    ret = _rbenv_exec(['versions', '--bare'], runas=runas)
     return [] if ret is False else ret.splitlines()
 
 
 def default(ruby=None, runas=None):
     '''
-    Returns or sets the currently defined default ruby.
+    Returns or sets the currently defined default ruby
 
-    ruby=None
+    ruby
         The version to set as the default. Should match one of the versions
-        listed by :mod:`rbenv.versions <salt.modules.rbenv.versions>`. Leave
-        blank to return the current default.
+        listed by :py:func:`rbenv.versions <salt.modules.rbenv.versions>`.
+        Leave blank to return the current default.
 
     CLI Example:
 
@@ -235,16 +309,20 @@ def default(ruby=None, runas=None):
         salt '*' rbenv.default 2.0.0-p0
     '''
     if ruby:
-        _rbenv_exec('global', ruby, runas=runas)
+        _rbenv_exec(['global', ruby], runas=runas)
         return True
     else:
-        ret = _rbenv_exec('global', runas=runas)
+        ret = _rbenv_exec(['global'], runas=runas)
         return '' if ret is False else ret.strip()
 
 
 def list_(runas=None):
     '''
-    List the installable versions of ruby.
+    List the installable versions of ruby
+
+    runas
+        The user under which to run rbenv. If not specified, then rbenv will be
+        run as the user under which Salt is running.
 
     CLI Example:
 
@@ -253,7 +331,7 @@ def list_(runas=None):
         salt '*' rbenv.list
     '''
     ret = []
-    output = _rbenv_exec('install', '--list', runas=runas)
+    output = _rbenv_exec(['install', '--list'], runas=runas)
     if output:
         for line in output.splitlines():
             if line == 'Available versions:':
@@ -264,7 +342,11 @@ def list_(runas=None):
 
 def rehash(runas=None):
     '''
-    Run rbenv rehash to update the installed shims.
+    Run ``rbenv rehash`` to update the installed shims
+
+    runas
+        The user under which to run rbenv. If not specified, then rbenv will be
+        run as the user under which Salt is running.
 
     CLI Example:
 
@@ -272,13 +354,13 @@ def rehash(runas=None):
 
         salt '*' rbenv.rehash
     '''
-    _rbenv_exec('rehash', runas=runas)
+    _rbenv_exec(['rehash'], runas=runas)
     return True
 
 
-def do(cmdline=None, runas=None):
+def do(cmdline, runas=None):
     '''
-    Execute a ruby command with rbenv's shims from the user or the system.
+    Execute a ruby command with rbenv's shims from the user or the system
 
     CLI Example:
 
@@ -287,10 +369,25 @@ def do(cmdline=None, runas=None):
         salt '*' rbenv.do 'gem list bundler'
         salt '*' rbenv.do 'gem list bundler' deploy
     '''
+    if not cmdline:
+        # This is a positional argument so this should never happen, but this
+        # will handle cases where someone explicitly passes a false value for
+        # cmdline.
+        raise SaltInvocationError('Command must be specified')
+
     path = _rbenv_path(runas)
+    environ = {'PATH': '{0}/shims:{1}'.format(path, os.environ['PATH'])}
+
+    try:
+        cmdline = shlex.split(cmdline)
+    except AttributeError:
+        cmdline = shlex.split(str(cmdline))
+
     result = __salt__['cmd.run_all'](
-        'env PATH={0}/shims:$PATH {1}'.format(path, cmdline),
-        runas=runas
+        cmdline,
+        runas=runas,
+        env=environ,
+        python_shell=False
     )
 
     if result['retcode'] == 0:
@@ -302,17 +399,28 @@ def do(cmdline=None, runas=None):
 
 def do_with_ruby(ruby, cmdline, runas=None):
     '''
-    Execute a ruby command with rbenv's shims using a specific ruby version.
+    Execute a ruby command with rbenv's shims using a specific ruby version
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' rbenv.do_with_ruby 2.0.0-p0 'gem list bundler'
-        salt '*' rbenv.do_with_ruby 2.0.0-p0 'gem list bundler' deploy
+        salt '*' rbenv.do_with_ruby 2.0.0-p0 'gem list bundler' runas=deploy
     '''
+    if not cmdline:
+        # This is a positional argument so this should never happen, but this
+        # will handle cases where someone explicitly passes a false value for
+        # cmdline.
+        raise SaltInvocationError('Command must be specified')
+
+    try:
+        cmdline = shlex.split(cmdline)
+    except AttributeError:
+        cmdline = shlex.split(str(cmdline))
+
     if ruby:
-        cmd = 'RBENV_VERSION={0} {1}'.format(ruby, cmdline)
+        cmd = ['RBENV_VERSION={0}'.format(ruby)] + cmdline
     else:
         cmd = cmdline
 

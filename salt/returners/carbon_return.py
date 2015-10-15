@@ -2,43 +2,101 @@
 '''
 Take data from salt and "return" it into a carbon receiver
 
-Add the following configuration to the minion configuration files::
+Add the following configuration to the minion configuration file:
+
+.. code-block:: yaml
 
     carbon.host: <server ip address>
     carbon.port: 2003
 
 Errors when trying to convert data to numbers may be ignored by setting
-``carbon.skip_on_error`` to `True`::
+``carbon.skip_on_error`` to `True`:
+
+.. code-block:: yaml
 
     carbon.skip_on_error: True
 
 By default, data will be sent to carbon using the plaintext protocol. To use
-the pickle protocol, set ``carbon.mode`` to ``pickle``::
+the pickle protocol, set ``carbon.mode`` to ``pickle``:
+
+.. code-block:: yaml
 
     carbon.mode: pickle
 
-Carbon settings may also be configured as::
+You can also specify the pattern used for the metric base path (except for virt modules metrics):
+    carbon.metric_base_pattern: carbon.[minion_id].[module].[function]
+
+These tokens can used :
+    [module]: salt module
+    [function]: salt function
+    [minion_id]: minion id
+
+Default is :
+    carbon.metric_base_pattern: [module].[function].[minion_id]
+
+Carbon settings may also be configured as:
+
+.. code-block:: yaml
 
     carbon:
-        host: <server IP or hostname>
-        port: <carbon port>
-        skip_on_error: True
-        mode: (pickle|text)
+      host: <server IP or hostname>
+      port: <carbon port>
+      skip_on_error: True
+      mode: (pickle|text)
+      metric_base_pattern: <pattern> | [module].[function].[minion_id]
 
-  To use the carbon returner, append '--return carbon' to the salt command. ex:
+Alternative configuration values can be used by prefacing the configuration.
+Any values not found in the alternative configuration will be pulled from
+the default location:
+
+.. code-block:: yaml
+
+    alternative.carbon:
+      host: <server IP or hostname>
+      port: <carbon port>
+      skip_on_error: True
+      mode: (pickle|text)
+
+To use the carbon returner, append '--return carbon' to the salt command.
+
+.. code-block:: bash
 
     salt '*' test.ping --return carbon
+
+To use the alternative configuration, append '--return_config alternative' to the salt command.
+
+.. versionadded:: 2015.5.0
+
+.. code-block:: bash
+
+    salt '*' test.ping --return carbon --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: Boron
+
+.. code-block:: bash
+
+    salt '*' test.ping --return carbon --return_kwargs '{"skip_on_error": False}'
+
 '''
 
-
 # Import python libs
-from contextlib import contextmanager
+from __future__ import absolute_import
 import collections
 import logging
-import cPickle as pickle
 import socket
 import struct
 import time
+from contextlib import contextmanager
+
+# Import salt libs
+import salt.utils.jid
+import salt.returners
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import cPickle, map  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +106,23 @@ __virtualname__ = 'carbon'
 
 def __virtual__():
     return __virtualname__
+
+
+def _get_options(ret):
+    '''
+    Returns options used for the carbon returner.
+    '''
+    attrs = {'host': 'host',
+             'port': 'port',
+             'skip': 'skip_on_error',
+             'mode': 'mode'}
+
+    _options = salt.returners.get_returner_options(__virtualname__,
+                                                   ret,
+                                                   attrs,
+                                                   __salt__=__salt__,
+                                                   __opts__=__opts__)
+    return _options
 
 
 @contextmanager
@@ -67,8 +142,8 @@ def _carbon(host, port):
                                     socket.IPPROTO_TCP)
 
         carbon_sock.connect((host, port))
-    except socket.error as e:
-        log.error('Error connecting to {0}:{1}, {2}'.format(host, port, e))
+    except socket.error as err:
+        log.error('Error connecting to {0}:{1}, {2}'.format(host, port, err))
         raise
     else:
         log.debug('Connected to carbon')
@@ -90,7 +165,7 @@ def _send_picklemetrics(metrics):
     metrics = [(metric_name, (timestamp, value))
                for (metric_name, value, timestamp) in metrics]
 
-    data = pickle.dumps(metrics, -1)
+    data = cPickle.dumps(metrics, -1)
     payload = struct.pack('!L', len(data)) + data
 
     return payload
@@ -124,10 +199,14 @@ def _walk(path, value, metrics, timestamp, skip):
         Whether or not to skip metrics when there's an error casting the value
         to a float. Defaults to `False`.
     '''
-
+    log.trace('Carbon return walking path: {0}, value: {1}, metrics: {2}, timestamp: {3}'.format(path, value, metrics, timestamp))
     if isinstance(value, collections.Mapping):
-        for key, val in value.items():
+        for key, val in six.iteritems(value):
             _walk('{0}.{1}'.format(path, key), val, metrics, timestamp, skip)
+    elif isinstance(value, list):
+        for item in value:
+            _walk('{0}.{1}'.format(path, item), item, metrics, timestamp, skip)
+
     else:
         try:
             val = float(value)
@@ -142,23 +221,17 @@ def _walk(path, value, metrics, timestamp, skip):
                 raise
 
 
-def returner(ret):
+def _send(saltdata, metric_base, opts):
     '''
-    Return data to a remote carbon server using the text metric protocol
-
-    Each metric will look like::
-
-        [module].[function].[minion_id].[metric path [...]].[metric name]
-
+    Send the data to carbon
     '''
 
-    cfg = __salt__['config.option']
-    c_cfg = cfg('carbon', {})
-
-    host = c_cfg.get('host', cfg('carbon.host', None))
-    port = c_cfg.get('port', cfg('carbon.port', None))
-    skip = c_cfg.get('skip_on_error', cfg('carbon.skip_on_error', False))
-    mode = c_cfg.get('mode', cfg('carbon.mode', 'text')).lower()
+    host = opts.get('host')
+    port = opts.get('port')
+    skip = opts.get('skip')
+    metric_base_pattern = opts.get('carbon.metric_base_pattern')
+    if 'mode' in opts:
+        mode = opts.get('mode').lower()
 
     log.debug('Carbon minion configured with host: {0}:{1}'.format(host, port))
     log.debug('Using carbon protocol: {0}'.format(mode))
@@ -172,19 +245,12 @@ def returner(ret):
     # {'fun': 'test.version', 'jid': '20130113193949451054', 'return': '0.11.0', 'id': 'salt'}
     timestamp = int(time.time())
 
-    saltdata = ret['return']
-    metric_base = ret['fun']
     handler = _send_picklemetrics if mode == 'pickle' else _send_textmetrics
-
-    # Strip the hostname from the carbon base if we are returning from virt
-    # module since then we will get stable metric bases even if the VM is
-    # migrate from host to host
-    if not metric_base.startswith('virt.'):
-        metric_base += '.' + ret['id'].replace('.', '_')
-
     metrics = []
+    log.trace('Carbon returning walking data: {0}'.format(saltdata))
     _walk(metric_base, saltdata, metrics, timestamp, skip)
     data = handler(metrics)
+    log.trace('Carbon inserting data: {0}'.format(data))
 
     with _carbon(host, port) as sock:
         total_sent_bytes = 0
@@ -196,3 +262,46 @@ def returner(ret):
 
             log.debug('Sent {0} bytes to carbon'.format(sent_bytes))
             total_sent_bytes += sent_bytes
+
+
+def event_return(events):
+    '''
+    Return event data to remote carbon server
+
+    Provide a list of events to be stored in carbon
+    '''
+    opts = _get_options({})  # Pass in empty ret, since this is a list of events
+    opts['skip'] = True
+    for event in events:
+        log.trace('Carbon returner received event: {0}'.format(event))
+        metric_base = event['tag']
+        saltdata = event['data'].get('data')
+        _send(saltdata, metric_base, opts)
+
+
+def returner(ret):
+    '''
+    Return data to a remote carbon server using the text metric protocol
+
+    Each metric will look like::
+
+        [module].[function].[minion_id].[metric path [...]].[metric name]
+
+    '''
+    opts = _get_options(ret)
+    metric_base = ret['fun']
+    # Strip the hostname from the carbon base if we are returning from virt
+    # module since then we will get stable metric bases even if the VM is
+    # migrate from host to host
+    if not metric_base.startswith('virt.'):
+        metric_base += '.' + ret['id'].replace('.', '_')
+
+    saltdata = ret['return']
+    _send(saltdata, metric_base, opts)
+
+
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

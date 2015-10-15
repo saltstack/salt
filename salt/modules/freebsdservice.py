@@ -2,6 +2,7 @@
 '''
 The service module for FreeBSD
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -24,7 +25,7 @@ __virtualname__ = 'service'
 
 def __virtual__():
     '''
-    Only work on systems which default to systemd
+    Only work on FreeBSD
     '''
     # Disable on these platforms, specific service modules exist:
     if __grains__['os'] == 'FreeBSD':
@@ -48,7 +49,7 @@ def _get_rcscript(name):
     Return full path to service rc script
     '''
     cmd = '{0} -r'.format(_cmd())
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
+    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
         if line.endswith('{0}{1}'.format(os.path.sep, name)):
             return line
     return None
@@ -64,8 +65,8 @@ def _get_rcvar(name):
 
     cmd = '{0} {1} rcvar'.format(_cmd(), name)
 
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
-        if not '_enable="' in line:
+    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
+        if '_enable="' not in line:
             continue
         rcvar, _ = line.split('=', 1)
         return rcvar
@@ -161,7 +162,7 @@ def _switch(name,                   # pylint: disable=C0103
                 edited = True
     if not edited:
         # Ensure that the file ends in a \n
-        if nlines[-1][-1] != '\n':
+        if len(nlines) > 1 and nlines[-1][-1] != '\n':
             nlines[-1] = '{0}\n'.format(nlines[-1])
         nlines.append('{0}="{1}"\n'.format(rcvar, val))
 
@@ -209,7 +210,7 @@ def disable(name, **kwargs):
     return _switch(name, False, **kwargs)
 
 
-def enabled(name):
+def enabled(name, **kwargs):
     '''
     Return True if the named service is enabled, false otherwise
 
@@ -228,8 +229,8 @@ def enabled(name):
 
     cmd = '{0} {1} rcvar'.format(_cmd(), name)
 
-    for line in __salt__['cmd.run_stdout'](cmd).splitlines():
-        if not '_enable="' in line:
+    for line in __salt__['cmd.run_stdout'](cmd, python_shell=False).splitlines():
+        if '_enable="' not in line:
             continue
         _, state, _ = line.split('"', 2)
         return state.lower() in ('yes', 'true', 'on', '1')
@@ -276,7 +277,7 @@ def missing(name):
 
         salt '*' service.missing sshd
     '''
-    return not name in get_all()
+    return name not in get_all()
 
 
 def get_all():
@@ -308,7 +309,7 @@ def start(name):
         salt '*' service.start <service name>
     '''
     cmd = '{0} {1} onestart'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def stop(name):
@@ -322,7 +323,7 @@ def stop(name):
         salt '*' service.stop <service name>
     '''
     cmd = '{0} {1} onestop'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def restart(name):
@@ -336,7 +337,7 @@ def restart(name):
         salt '*' service.restart <service name>
     '''
     cmd = '{0} {1} onerestart'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def reload_(name):
@@ -350,7 +351,7 @@ def reload_(name):
         salt '*' service.reload <service name>
     '''
     cmd = '{0} {1} onereload'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
 def status(name, sig=None):
@@ -369,4 +370,4 @@ def status(name, sig=None):
     if sig:
         return bool(__salt__['status.pid'](sig))
     cmd = '{0} {1} onestatus'.format(_cmd(), name)
-    return not __salt__['cmd.retcode'](cmd)
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)

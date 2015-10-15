@@ -15,17 +15,22 @@ TODO: Add a 'ca_dir' option to configure a directory of CA files, a la Apache.
 
 :depends:    - pyOpenSSL module
 '''
+# Import python libs
+from __future__ import absolute_import
+import logging
 
 # Import third party libs
+# pylint: disable=import-error
 try:
-    import Crypto.Util
+    from Crypto.Util import asn1
     import OpenSSL
     HAS_DEPS = True
 except ImportError:
     HAS_DEPS = False
+# pylint: enable=import-error
 
-# Import python libs
-import logging
+# Import salt libs
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -39,28 +44,34 @@ def __virtual__():
     return False
 
 
-def auth(pem, **kwargs):
+def auth(username, password, **kwargs):
     '''
-    Returns True if the given user cert was issued by the CA.
+    Returns True if the given user cert (password is the cert contents)
+    was issued by the CA and if cert's Common Name is equal to username.
+
     Returns False otherwise.
 
-    ``pem``: a pem-encoded user public key (certificate)
+    ``username``: we need it to run the auth function from CLI/API;
+                  it should be in master config auth/acl
+    ``password``: contents of user certificate (pem-encoded user public key);
+                  why "password"? For CLI, it's the only available name
 
     Configure the CA cert in the master config file:
 
-    .. code-block:: bash
+    .. code-block:: yaml
 
         external_auth:
           pki:
             ca_file: /etc/pki/tls/ca_certs/trusted-ca.crt
-
+            your_user:
+              - .*
     '''
     c = OpenSSL.crypto
-
+    pem = password
     cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem)
 
     cacert_file = __salt__['config.get']('external_auth:pki:ca_file')
-    with open(cacert_file) as f:
+    with salt.utils.fopen(cacert_file) as f:
         cacert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, f.read())
 
     log.debug('Attempting to authenticate via pki.')
@@ -74,7 +85,7 @@ def auth(pem, **kwargs):
     cert_asn1 = c.dump_certificate(c.FILETYPE_ASN1, cert)
 
     # Decode the certificate
-    der = Crypto.Util.asn1.DerSequence()
+    der = asn1.DerSequence()
     der.decode(cert_asn1)
 
     # The certificate has three parts:
@@ -88,7 +99,7 @@ def auth(pem, **kwargs):
 
     # The signature is a BIT STRING (Type 3)
     # Decode that as well
-    der_sig_in = Crypto.Util.asn1.DerObject()
+    der_sig_in = asn1.DerObject()
     der_sig_in.decode(der_sig)
 
     # Get the payload
@@ -107,8 +118,9 @@ def auth(pem, **kwargs):
     # And verify the certificate
     try:
         c.verify(cacert, sig, der_cert, algo)
+        assert dict(cert.get_subject().get_components())['CN'] == username, "Certificate's CN should match the username"
         log.info('Successfully authenticated certificate: {0}'.format(pem))
         return True
-    except OpenSSL.crypto.Error:
+    except (OpenSSL.crypto.Error, AssertionError):
         log.info('Failed to authenticate certificate: {0}'.format(pem))
     return False

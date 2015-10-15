@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import hashlib
 
@@ -15,7 +16,7 @@ import salt.utils
 
 class CPModuleTest(integration.ModuleCase):
     '''
-    Validate the test module
+    Validate the cp module
     '''
     def test_get_file(self):
         '''
@@ -295,15 +296,6 @@ class CPModuleTest(integration.ModuleCase):
 
     def test_get_file_from_env_in_url(self):
         tgt = os.path.join(integration.TMP, 'cheese')
-        try:
-            self.run_function('cp.get_file', ['salt://cheese?env=prod', tgt])
-            with salt.utils.fopen(tgt, 'r') as cheese:
-                data = cheese.read()
-                self.assertIn('Gromit', data)
-                self.assertIn('Comte', data)
-        finally:
-            os.unlink(tgt)
-
         try:
             self.run_function('cp.get_file', ['salt://cheese?saltenv=prod', tgt])
             with salt.utils.fopen(tgt, 'r') as cheese:

@@ -4,21 +4,20 @@ Return/control aspects of the grains data
 '''
 
 # Import python libs
+from __future__ import absolute_import
+import collections
 import math
 
 # Import salt libs
 import salt.utils
 import salt.utils.dictupdate
+from salt.exceptions import SaltException
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Seed the grains dict so cython will build
 __grains__ = {}
-
-# Change the default outputter to make it more readable
-__outputter__ = {
-    'items': 'grains',
-    'item': 'grains',
-    'setval': 'grains',
-}
 
 
 def _serial_sanitizer(instr):
@@ -67,7 +66,7 @@ def get(key, default=''):
 
         salt '*' grains.get pkg:apache
     '''
-    return salt.utils.traverse_dict(__grains__, key, default)
+    return salt.utils.traverse_dict_and_list(__grains__, key, default)
 
 
 def items(sanitize=False):
@@ -88,7 +87,7 @@ def items(sanitize=False):
     '''
     if salt.utils.is_true(sanitize):
         out = dict(__grains__)
-        for key, func in _SANITIZERS.items():
+        for key, func in six.iteritems(_SANITIZERS):
             if key in out:
                 out[key] = func(out[key])
         return out
@@ -120,7 +119,7 @@ def item(*args, **kwargs):
         except KeyError:
             pass
     if salt.utils.is_true(kwargs.get('sanitize')):
-        for arg, func in _SANITIZERS.items():
+        for arg, func in six.iteritems(_SANITIZERS):
             if arg in ret:
                 ret[arg] = func(ret[arg])
     return ret
@@ -139,7 +138,7 @@ def ls():  # pylint: disable=C0103
     return sorted(__grains__)
 
 
-def filter_by(lookup_dict, grain='os_family', merge=None):
+def filter_by(lookup_dict, grain='os_family', merge=None, default='default'):
     '''
     .. versionadded:: 0.17.0
 
@@ -155,14 +154,12 @@ def filter_by(lookup_dict, grain='os_family', merge=None):
         {% set apache = salt['grains.filter_by']({
             'Debian': {'pkg': 'apache2', 'srv': 'apache2'},
             'RedHat': {'pkg': 'httpd', 'srv': 'httpd'},
-        }) %}
+        }), default='Debian' %}
 
         myapache:
-          pkg:
-            - installed
+          pkg.installed:
             - name: {{ apache.pkg }}
-          service:
-            - running
+          service.running:
             - name: {{ apache.srv }}
 
     Values in the lookup table may be overridden by values in Pillar. An
@@ -199,16 +196,36 @@ def filter_by(lookup_dict, grain='os_family', merge=None):
         values for non-standard package names such as when using a different
         Python version from the default Python version provided by the OS
         (e.g., ``python26-mysql`` instead of ``python-mysql``).
+    :param default: default lookup_dict's key used if the grain does not exists
+         or if the grain value has no match on lookup_dict.
+
+         .. versionadded:: 2014.1.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' grains.filter_by '{Debian: Debheads rule, RedHat: I love my hat}'
+        # this one will render {D: {E: I, G: H}, J: K}
+        salt '*' grains.filter_by '{A: B, C: {D: {E: F,G: H}}}' 'xxx' '{D: {E: I},J: K}' 'C'
     '''
-    ret = lookup_dict.get(__grains__[grain], None)
+    ret = lookup_dict.get(
+            __grains__.get(
+                grain, default),
+            lookup_dict.get(
+                default, None)
+            )
 
     if merge:
-        salt.utils.dictupdate.update(ret, merge)
+        if not isinstance(merge, collections.Mapping):
+            raise SaltException('filter_by merge argument must be a dictionary.')
+
+        else:
+
+            if ret is None:
+                ret = merge
+
+            else:
+                salt.utils.dictupdate.update(ret, merge)
 
     return ret

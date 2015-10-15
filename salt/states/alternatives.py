@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Configuration of the alternatives system
-========================================
 
 Control the alternatives system
 
@@ -65,6 +64,12 @@ def install(name, link, path, priority):
 
     isinstalled = __salt__['alternatives.check_installed'](name, path)
     if not isinstalled:
+        if __opts__['test']:
+            ret['comment'] = (
+                'Alternative will be set for {0} to {1} with priority {2}'
+            ).format(name, path, priority)
+            ret['result'] = None
+            return ret
         __salt__['alternatives.install'](name, link, path, priority)
         ret['comment'] = (
             'Setting alternative for {0} to {1} with priority {2}'
@@ -100,6 +105,11 @@ def remove(name, path):
 
     isinstalled = __salt__['alternatives.check_installed'](name, path)
     if isinstalled:
+        if __opts__['test']:
+            ret['comment'] = ('Alternative for {0} will be removed'
+                              .format(name))
+            ret['result'] = None
+            return ret
         __salt__['alternatives.remove'](name, path)
         current = __salt__['alternatives.show_current'](name)
         if current:
@@ -148,12 +158,15 @@ def auto(name):
            'changes': {}}
 
     display = __salt__['alternatives.display'](name)
-    isinstalled = False
     line = display.splitlines()[0]
     if line.endswith(' auto mode'):
         ret['comment'] = '{0} already in auto mode'.format(name)
         return ret
 
+    if __opts__['test']:
+        ret['comment'] = '{0} will be put in auto mode'.format(name)
+        ret['result'] = None
+        return ret
     ret['changes']['result'] = __salt__['alternatives.auto'](name)
     return ret
 
@@ -192,6 +205,12 @@ def set_(name, path):
             break
 
     if isinstalled:
+        if __opts__['test']:
+            ret['comment'] = (
+                'Alternative for {0} will be set to path {1}'
+            ).format(name, current)
+            ret['result'] = None
+            return ret
         __salt__['alternatives.set'](name, path)
         current = __salt__['alternatives.show_current'](name)
         if current == path:

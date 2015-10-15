@@ -18,13 +18,15 @@ Implemented using ctypes, so no compilation is necessary.
 
 '''
 
-# Import python libs
+# Import Python Libs
+from __future__ import absolute_import
 from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
 from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
 
 # Import Salt libs
 from salt.utils import get_group_list
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 LIBPAM = CDLL(find_library('pam'))
 LIBC = CDLL(find_library('c'))
@@ -67,7 +69,7 @@ class PamMessage(Structure):
             ]
 
     def __repr__(self):
-        return '<PamMessage {0} {1!r}>'.format(self.msg_style, self.msg)
+        return '<PamMessage {0} \'{1}\'>'.format(self.msg_style, self.msg)
 
 
 class PamResponse(Structure):
@@ -80,7 +82,7 @@ class PamResponse(Structure):
             ]
 
     def __repr__(self):
-        return '<PamResponse {0} {1!r}>'.format(self.resp_retcode, self.resp)
+        return '<PamResponse {0} \'{1}\'>'.format(self.resp_retcode, self.resp)
 
 
 CONV_FUNC = CFUNCTYPE(c_int,
@@ -107,6 +109,10 @@ try:
     PAM_AUTHENTICATE = LIBPAM.pam_authenticate
     PAM_AUTHENTICATE.restype = c_int
     PAM_AUTHENTICATE.argtypes = [PamHandle, c_int]
+
+    PAM_END = LIBPAM.pam_end
+    PAM_END.restype = c_int
+    PAM_END.argtypes = [PamHandle, c_int]
 except Exception:
     HAS_PAM = False
 else:
@@ -155,9 +161,11 @@ def authenticate(username, password, service='login'):
     if retval != 0:
         # TODO: This is not an authentication error, something
         # has gone wrong starting up PAM
+        PAM_END(handle, retval)
         return False
 
     retval = PAM_AUTHENTICATE(handle, 0)
+    PAM_END(handle, 0)
     return retval == 0
 
 
@@ -170,7 +178,7 @@ def auth(username, password, **kwargs):
 
 def groups(username, *args, **kwargs):
     '''
-    Retreive groups for a given user for this auth provider
+    Retrieve groups for a given user for this auth provider
 
     Uses system groups
     '''

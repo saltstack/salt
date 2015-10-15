@@ -2,7 +2,7 @@
 '''
 Apache state
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Allows for inputting a yaml dictionary into a file for apache configuration
 files.
@@ -13,17 +13,17 @@ the above word between angle brackets (<>).
 .. code-block:: yaml
 
     /etc/httpd/conf.d/website.com.conf:
-      apache.config:
+      apache.configfile:
         - config:
           - VirtualHost:
               this: '*:80'
               ServerName:
-                -website.com
+                - website.com
               ServerAlias:
                 - www.website.com
                 - dev.website.com
               ErrorLog: logs/website.com-error_log
-              CustomLog: logs/website.com-access_log combinded
+              CustomLog: logs/website.com-access_log combined
               DocumentRoot: /var/www/vhosts/website.com
               Directory:
                 this: /var/www/vhosts/website.com
@@ -39,40 +39,29 @@ the above word between angle brackets (<>).
 '''
 
 from __future__ import with_statement, print_function
+from __future__ import absolute_import
 
 # Import python libs
 import os.path
 
-# Import salt libs
-import salt.utils.cloud
+# Import Salt libs
+import salt.utils
 
 
 def __virtual__():
     return 'apache.config' in __salt__
 
 
-def _check_name(name):
+def configfile(name, config):
     ret = {'name': name,
            'changes': {},
            'result': None,
            'comment': ''}
-    if salt.utils.cloud.check_name(
-        name, ' a-zA-Z0-9.,_/\[\]\(\)\<\>\'*+:-'  # pylint: disable=W1401
-    ):
-        ret['comment'] = 'Invalid characters in name.'
-        ret['result'] = False
-        return ret
-    else:
-        ret['result'] = True
-        return ret
 
-
-def configfile(name, config):
-    ret = _check_name(str(config))
     configs = __salt__['apache.config'](name, config, edit=False)
     current_configs = ''
     if os.path.exists(name):
-        with open(name) as config_file:
+        with salt.utils.fopen(name) as config_file:
             current_configs = config_file.read()
 
     if configs == current_configs.strip():
@@ -81,11 +70,15 @@ def configfile(name, config):
         return ret
     elif __opts__['test']:
         ret['comment'] = 'Configuration will update.'
+        ret['changes'] = {
+            'old': current_configs,
+            'new': configs
+        }
         ret['result'] = None
         return ret
 
     try:
-        with open(name, 'w') as config_file:
+        with salt.utils.fopen(name, 'w') as config_file:
             print(configs, file=config_file)
         ret['changes'] = {
             'old': current_configs,

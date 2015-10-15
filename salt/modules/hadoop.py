@@ -9,6 +9,7 @@ Support for hadoop
 
 
 '''
+from __future__ import absolute_import
 
 # Import salt libs
 import salt.utils
@@ -54,7 +55,7 @@ def _hadoop_cmd(module, command, *args):
     if module and command:
         if module in __authorized_modules__:
             cmd = 'hadoop {0} -{1} {2}'.format(module, command, ' '.join(args))
-            out = __salt__['cmd.run'](cmd)
+            out = __salt__['cmd.run'](cmd, python_shell=False)
         else:
             return 'Error: Unknown module'
     else:

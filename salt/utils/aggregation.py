@@ -3,12 +3,12 @@
     salt.utils.aggregation
     ~~~~~~~~~~~~~~~~~~~~~~
 
-    This library allows to introspect dataset and aggregate nodes when it is
-    instructed.
+    This library makes it possible to introspect dataset and aggregate nodes
+    when it is instructed.
 
     .. note::
 
-        The following examples with be expressed in YAML for convenience sake:
+        The following examples with be expressed in YAML for convenience's sake:
 
         - !aggr-scalar will refer to Scalar python function
         - !aggr-map will refer to Map python object
@@ -18,7 +18,7 @@
     How to instructs merging
     ------------------------
 
-    This yaml document have duplicate keys:
+    This yaml document has duplicate keys:
 
     .. code-block:: yaml
 
@@ -28,7 +28,7 @@
         bar: !aggr-map {second: bar}
         baz: !aggr-scalar 42
 
-    but tagged values instruct salt that overlaping values they can be merged
+    but tagged values instruct Salt that overlapping values they can be merged
     together:
 
     .. code-block:: yaml
@@ -38,10 +38,10 @@
         baz: !aggr-seq [42]
 
 
-    Default merge strategy is keeped untouched
-    ------------------------------------------
+    Default merge strategy is keep untouched
+    ----------------------------------------
 
-    For example, this yaml document have still duplicate keys, but does not
+    For example, this yaml document still has duplicate keys, but does not
     instruct aggregation:
 
     .. code-block:: yaml
@@ -103,11 +103,16 @@
 
 '''
 
+# Import python libs
 from __future__ import absolute_import
-from copy import copy
 import logging
+from copy import copy
 
+# Import Salt libs
 from salt.utils.odict import OrderedDict
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 __all__ = ['aggregate', 'Aggregate', 'Map', 'Scalar', 'Sequence']
 
@@ -115,24 +120,21 @@ log = logging.getLogger(__name__)
 
 
 class Aggregate(object):
-    """
+    '''
     Aggregation base.
-    """
-    pass
+    '''
 
 
 class Map(OrderedDict, Aggregate):
-    """
+    '''
     Map aggregation.
-    """
-    pass
+    '''
 
 
 class Sequence(list, Aggregate):
-    """
+    '''
     Sequence aggregation.
-    """
-    pass
+    '''
 
 
 def Scalar(obj):
@@ -197,7 +199,7 @@ def mark(obj, map_class=Map, sequence_class=Sequence):
         return sequence_class([obj])
 
 
-def aggregate(obj_a, obj_b, level=False, map_class=Map, sequence_class=Sequence):  # NOQA
+def aggregate(obj_a, obj_b, level=False, map_class=Map, sequence_class=Sequence):
     '''
     Merge obj_b into obj_a.
 
@@ -207,8 +209,8 @@ def aggregate(obj_a, obj_b, level=False, map_class=Map, sequence_class=Sequence)
     deep, subdeep = levelise(level)
 
     if deep:
-        obj_a = mark(obj_a, map_class=Map, sequence_class=Sequence)
-        obj_b = mark(obj_b, map_class=Map, sequence_class=Sequence)
+        obj_a = mark(obj_a, map_class=map_class, sequence_class=sequence_class)
+        obj_b = mark(obj_b, map_class=map_class, sequence_class=sequence_class)
 
     if isinstance(obj_a, dict) and isinstance(obj_b, dict):
         if isinstance(obj_a, Aggregate) and isinstance(obj_b, Aggregate):
@@ -218,23 +220,25 @@ def aggregate(obj_a, obj_b, level=False, map_class=Map, sequence_class=Sequence)
             # introspection on obj_b keys only
             response = copy(obj_b)
 
-        for key, value in obj_b.items():
+        for key, value in six.iteritems(obj_b):
             if key in obj_a:
                 value = aggregate(obj_a[key], value,
                                   subdeep, map_class, sequence_class)
             response[key] = value
         return response
 
-    if isinstance(obj_a, Sequence) and isinstance(obj_a, Sequence):
+    if isinstance(obj_a, Sequence) and isinstance(obj_b, Sequence):
         response = obj_a.__class__(obj_a[:])
         for value in obj_b:
             if value not in obj_a:
                 response.append(value)
         return response
 
-    if isinstance(obj_a, Aggregate) or isinstance(obj_a, Aggregate):
-        log.info('only one value marked as aggregate. keep `obj_a` value')
-        return obj_b
+    response = copy(obj_b)
 
-    log.debug('no value marked as aggregate. keep `obj_a` value')
-    return obj_b
+    if isinstance(obj_a, Aggregate) or isinstance(obj_b, Aggregate):
+        log.info('only one value marked as aggregate. keep `obj_b` value')
+        return response
+
+    log.debug('no value marked as aggregate. keep `obj_b` value')
+    return response

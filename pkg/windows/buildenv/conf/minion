@@ -96,11 +96,6 @@ pki_dir: /conf/pki/minion
 # is not set, the time between reconnection attempts will stay constant.
 #acceptance_wait_time_max: None
 
-# When healing, a dns_check is run. This is to make sure that the originally
-# resolved dns has not changed. If this is something that does not happen in
-# your environment, set this value to False.
-#dns_check: True
-
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
 # process communications. Set ipc_mode to 'tcp' on such systems
 #ipc_mode: ipc
@@ -286,8 +281,7 @@ pki_dir: /conf/pki/minion
 ###########################################
 # Disable multiprocessing support, by default when a minion receives a
 # publication a new process is spawned and the command is executed therein.
-#multiprocessing: True
-multiprocessing: False
+multiprocessing: True
 
 ######         Logging settings       #####
 ###########################################

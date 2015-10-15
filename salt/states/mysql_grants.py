@@ -20,6 +20,10 @@ specification as defined in the MySQL documentation:
 * db_name.tbl_name
 * etc...
 
+This state is not able to set password for the permission from the
+specified host. See :py:mod:`salt.states.mysql_user` for further
+instructions.
+
 .. code-block:: yaml
 
    frank_exampledb:
@@ -41,6 +45,7 @@ specification as defined in the MySQL documentation:
        - database: somedb.sometable
        - user: joe
 '''
+from __future__ import absolute_import
 
 import sys
 
@@ -82,7 +87,7 @@ def present(name,
         The grant priv_type (i.e. select,insert,update OR all privileges)
 
     database
-        The database priv_level (ie. db.tbl OR db.*)
+        The database priv_level (i.e. db.tbl OR db.*)
 
     user
         The user to apply the grant to
@@ -91,10 +96,10 @@ def present(name,
         The network/host that the grant should apply to
 
     grant_option
-        Adds the WITH GRANT OPTION to the defined grant. default: False
+        Adds the WITH GRANT OPTION to the defined grant. Default is ``False``
 
     escape
-        Defines if the database value gets escaped or not. default: True
+        Defines if the database value gets escaped or not. Default is ``True``
 
     revoke_first
         By default, MySQL will not do anything if you issue a command to grant
@@ -111,7 +116,7 @@ def present(name,
         unknown and potentially dangerous state.
         Use with caution!
 
-        default: False
+        Default is ``False``
 
     ssl_option
         Adds the specified ssl options for the connecting user as requirements for
@@ -119,6 +124,8 @@ def present(name,
         list of ssl options to use.
 
         Possible key/value pairings for the dicts in the value:
+
+        .. code-block:: text
 
             - SSL: True
             - X509: True
@@ -130,7 +137,7 @@ def present(name,
         be an appropriate value as specified by the MySQL documentation for these
         options.
 
-        default: False (no ssl options will be used)
+        Default is ``False`` (no ssl options will be used)
     '''
     comment = 'Grant {0} on {1} to {2}@{3} is already present'
     ret = {'name': name,
@@ -238,8 +245,8 @@ def absent(name,
 
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'MySQL grant {0} is set to be revoked'
-            ret['comment'] = ret['comment'].format(name)
+            ret['comment'] = 'MySQL grant {0} is set to be ' \
+                             'revoked'.format(name)
             return ret
         if __salt__['mysql.grant_revoke'](
                 grant,
@@ -248,9 +255,8 @@ def absent(name,
                 host,
                 grant_option,
                 **connection_args):
-            ret['comment'] = 'Grant {0} on {1} for {2}@{3} has been revoked'
-            ret['comment'] = ret['comment'].format(grant, database, user,
-                                                   host)
+            ret['comment'] = 'Grant {0} on {1} for {2}@{3} has been ' \
+                             'revoked'.format(grant, database, user, host)
             ret['changes'][name] = 'Absent'
             return ret
         else:

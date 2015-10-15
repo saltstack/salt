@@ -5,6 +5,8 @@
 Synopsis
 ========
 
+.. code-block:: bash
+
     salt-ssh '*' [ options ] sys.doc
 
     salt-ssh -E '.*' [ options ] sys.doc cmd
@@ -36,7 +38,7 @@ Options
     default roster file is called ``roster`` and is found in the same directory
     as the master config file.
 
-    .. versionadded:: 2014.1.0 (Hydrogen)
+    .. versionadded:: 2014.1.0
 
 .. option:: --refresh, --refresh-cache
 
@@ -50,11 +52,18 @@ Options
     defines how many processes are opened up at a time to manage connections,
     the more running process the faster communication should be, default
     is 25.
-    
+
 .. option:: -i, --ignore-host-keys
 
-    Ignore the ssh host keys which by default are honored and connections
-    would ask for approval.
+    Disables StrictHostKeyChecking to relax acceptance of new and unknown
+    host keys. 
+
+.. option:: --no-host-keys
+
+    Fully ignores ssh host keys which by default are honored and connections
+    would ask for approval. Useful if the host key of a remote server has 
+    changed and would still error with --ignore-host-keys.
+
 
 .. option:: --passwd
 

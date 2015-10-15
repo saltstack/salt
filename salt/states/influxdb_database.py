@@ -5,9 +5,18 @@ Management of InfluxDB databases
 
 (compatible with InfluxDB version 0.5+)
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 '''
+
+
+def __virtual__():
+    '''
+    Only load if the influxdb module is available
+    '''
+    if 'influxdb.db_exists' in __salt__:
+        return 'influxdb_database'
+    return False
 
 
 def present(name, user=None, password=None, host=None, port=None):

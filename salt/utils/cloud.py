@@ -4,10 +4,13 @@ Utility functions for salt.cloud
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
+import stat
 import codecs
 import shutil
+import hashlib
 import socket
 import tempfile
 import time
@@ -15,10 +18,11 @@ import subprocess
 import multiprocessing
 import logging
 import pipes
-import json
+import msgpack
 import traceback
 import copy
 import re
+import uuid
 
 
 # Let's import pwd and catch the ImportError. We'll raise it if this is not
@@ -30,6 +34,21 @@ except ImportError:
         # We can't use salt.utils.is_windows() from the import a little down
         # because that will cause issues under windows at install time.
         raise
+
+try:
+    import salt.utils.smb
+
+    HAS_SMB = True
+except ImportError:
+    HAS_SMB = False
+
+try:
+    import winrm
+    from winrm.exceptions import WinRMTransportError
+
+    HAS_WINRM = True
+except ImportError:
+    HAS_WINRM = False
 
 # Import salt libs
 import salt.crypt
@@ -45,7 +64,7 @@ from salt.utils.validate.path import is_writeable
 
 # Import salt cloud libs
 import salt.cloud
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudConfigError,
     SaltCloudException,
     SaltCloudSystemExit,
@@ -55,11 +74,14 @@ from salt.cloud.exceptions import (
 )
 
 # Import third party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin,W0611
 from jinja2 import Template
 import yaml
 
 try:
     import getpass
+
     HAS_GETPASS = True
 except ImportError:
     HAS_GETPASS = False
@@ -71,7 +93,9 @@ NSTATES = {
     3: 'pending',
 }
 
-SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
+SSH_PASSWORD_PROMP_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:\ *$', re.M)
+SSH_PASSWORD_PROMP_SUDO_RE = \
+    re.compile(r'(?:.*sudo)(?:.*)[Pp]assword(?: for .*)?:', re.M)
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -96,6 +120,9 @@ def os_script(os_, vm_=None, opts=None, minion=''):
     '''
     Return the script as a string for the specific os
     '''
+    if minion:
+        minion = salt_config_to_yaml(minion)
+
     if os.path.isabs(os_):
         # The user provided an absolute path to the deploy script, let's use it
         return __render_script(os_, vm_, opts, minion)
@@ -146,7 +173,7 @@ def accept_key(pki_dir, pub, id_):
     the opts directory, this method places the pub key in the accepted
     keys dir and removes it from the unaccepted keys dir if that is the case.
     '''
-    for key_dir in ('minions', 'minions_pre', 'minions_rejected'):
+    for key_dir in 'minions', 'minions_pre', 'minions_rejected':
         key_path = os.path.join(pki_dir, key_dir)
         if not os.path.exists(key_path):
             os.makedirs(key_path)
@@ -169,7 +196,7 @@ def remove_key(pki_dir, id_):
     key = os.path.join(pki_dir, 'minions', id_)
     if os.path.isfile(key):
         os.remove(key)
-        log.debug('Deleted {0!r}'.format(key))
+        log.debug('Deleted \'{0}\''.format(key))
 
 
 def rename_key(pki_dir, id_, new_id):
@@ -188,7 +215,7 @@ def minion_config(opts, vm_):
     '''
 
     # Let's get a copy of the salt minion default options
-    minion = salt.config.DEFAULT_MINION_OPTS.copy()
+    minion = copy.deepcopy(salt.config.DEFAULT_MINION_OPTS)
     # Some default options are Null, let's set a reasonable default
     minion.update(
         log_level='info',
@@ -233,7 +260,7 @@ def master_config(opts, vm_):
     Return a master's configuration for the provided options and VM
     '''
     # Let's get a copy of the salt master default options
-    master = salt.config.DEFAULT_MASTER_OPTS.copy()
+    master = copy.deepcopy(salt.config.DEFAULT_MASTER_OPTS)
     # Some default options are Null, let's set a reasonable default
     master.update(
         log_level='info',
@@ -268,55 +295,110 @@ def bootstrap(vm_, opts):
     Windows) to install Salt. It will make the decision on its own as to which
     deploy function to call.
     '''
-    if salt.config.get_cloud_config_value('deploy', vm_, opts) is False:
+    deploy_config = salt.config.get_cloud_config_value(
+        'deploy',
+        vm_, opts, default=False)
+    inline_script_config = salt.config.get_cloud_config_value(
+        'inline_script',
+        vm_, opts, default=None)
+    if deploy_config is False and inline_script_config is None:
         return {
             'Error': {
                 'No Deploy': '\'deploy\' is not enabled. Not deploying.'
             }
         }
+
     key_filename = salt.config.get_cloud_config_value(
-        'key_filename', vm_, opts, search_global=False, default=None
+        'key_filename', vm_, opts, search_global=False,
+        default=salt.config.get_cloud_config_value(
+            'ssh_keyfile', vm_, opts, search_global=False, default=None
+        )
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined ssh_keyfile {0!r} does not exist'.format(
+            'The defined ssh_keyfile \'{0}\' does not exist'.format(
                 key_filename
             )
         )
+    has_ssh_agent = False
+    if (opts.get('ssh_agent', False) and
+            'SSH_AUTH_SOCK' in os.environ and
+            stat.S_ISSOCK(os.stat(os.environ['SSH_AUTH_SOCK']).st_mode)):
+        has_ssh_agent = True
 
-    if key_filename is None and salt.utils.which('sshpass') is None:
+    if (key_filename is None and
+            salt.config.get_cloud_config_value(
+                'password', vm_, opts, default=None
+            ) is None and
+            salt.config.get_cloud_config_value(
+                'win_password', vm_, opts, default=None
+            ) is None and
+            has_ssh_agent is False):
         raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
-            'is not set and \'sshpass\' binary is not present on the '
-            'system for the password.'
-        )
-
-    if key_filename is None and ('password' not in vm_ or not vm_['password']):
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'ssh_keyfile\' setting '
-            'is not set and there is no password set for the vm. '
-            'Check your provider for the \'change_password\' option.'
+            'Cannot deploy Salt in a VM if the \'key_filename\' setting '
+            'is not set and there is no password set for the VM. '
+            'Check the provider docs for \'change_password\' option if it '
+            'is supported by your provider.'
         )
 
     ret = {}
 
+    minion_conf = salt.utils.cloud.minion_config(opts, vm_)
     deploy_script_code = os_script(
         salt.config.get_cloud_config_value(
             'os', vm_, opts, default='bootstrap-salt'
         ),
-        vm_, opts
+        vm_, opts, minion_conf
     )
 
     ssh_username = salt.config.get_cloud_config_value(
         'ssh_username', vm_, opts, default='root'
     )
 
+    if 'file_transport' not in opts:
+        opts['file_transport'] = vm_.get('file_transport', 'sftp')
+
+    # If we haven't generated any keys yet, do so now.
+    if 'pub_key' not in vm_ and 'priv_key' not in vm_:
+        log.debug('Generating keys for \'{0[name]}\''.format(vm_))
+
+        vm_['priv_key'], vm_['pub_key'] = gen_keys(
+            salt.config.get_cloud_config_value(
+                'keysize',
+                vm_,
+                opts
+            )
+        )
+
+        key_id = vm_.get('name')
+        if 'append_domain' in vm_:
+            key_id = '.'.join([key_id, vm_['append_domain']])
+
+        accept_key(
+            opts['pki_dir'], vm_['pub_key'], key_id
+        )
+
+    if 'os' not in vm_:
+        vm_['os'] = salt.config.get_cloud_config_value(
+            'script',
+            vm_,
+            opts
+        )
+
+    # NOTE: deploy_kwargs is also used to pass inline_script variable content
+    #       to run_inline_script function
     deploy_kwargs = {
         'opts': opts,
         'host': vm_['ssh_host'],
+        'port': salt.config.get_cloud_config_value(
+            'ssh_port', vm_, opts, default=22
+        ),
+        'salt_host': vm_.get('salt_host', vm_['ssh_host']),
         'username': ssh_username,
         'script': deploy_script_code,
+        'inline_script': inline_script_config,
         'name': vm_['name'],
+        'has_ssh_agent': has_ssh_agent,
         'tmp_dir': salt.config.get_cloud_config_value(
             'tmp_dir', vm_, opts, default='/tmp/.saltcloud'
         ),
@@ -330,6 +412,8 @@ def bootstrap(vm_, opts):
         'conf_file': opts['conf_file'],
         'minion_pem': vm_['priv_key'],
         'minion_pub': vm_['pub_key'],
+        'master_sign_pub_file': salt.config.get_cloud_config_value(
+            'master_sign_pub_file', vm_, opts, default=None),
         'keep_tmp': opts['keep_tmp'],
         'sudo': salt.config.get_cloud_config_value(
             'sudo', vm_, opts, default=(ssh_username != 'root')
@@ -350,7 +434,7 @@ def bootstrap(vm_, opts):
         'script_env': salt.config.get_cloud_config_value(
             'script_env', vm_, opts
         ),
-        'minion_conf': salt.utils.cloud.minion_config(opts, vm_),
+        'minion_conf': minion_conf,
         'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
         'display_ssh_output': salt.config.get_cloud_config_value(
             'display_ssh_output', vm_, opts, default=True
@@ -358,7 +442,16 @@ def bootstrap(vm_, opts):
         'known_hosts_file': salt.config.get_cloud_config_value(
             'known_hosts_file', vm_, opts, default='/dev/null'
         ),
+        'file_map': salt.config.get_cloud_config_value(
+            'file_map', vm_, opts, default=None
+        ),
+        'maxtries': salt.config.get_cloud_config_value(
+            'wait_for_passwd_maxtries', vm_, opts, default=15
+        ),
     }
+
+    inline_script_kwargs = deploy_kwargs
+
     # forward any info about possible ssh gateway to deploy script
     # as some providers need also a 'gateway' configuration
     if 'gateway' in vm_:
@@ -383,14 +476,22 @@ def bootstrap(vm_, opts):
         'win_installer', vm_, opts
     )
     if win_installer:
+        deploy_kwargs['port'] = salt.config.get_cloud_config_value(
+            'smb_port', vm_, opts, default=445
+        )
         deploy_kwargs['win_installer'] = win_installer
         minion = salt.utils.cloud.minion_config(opts, vm_)
         deploy_kwargs['master'] = minion['master']
         deploy_kwargs['username'] = salt.config.get_cloud_config_value(
             'win_username', vm_, opts, default='Administrator'
         )
-        deploy_kwargs['password'] = salt.config.get_cloud_config_value(
+        win_pass = salt.config.get_cloud_config_value(
             'win_password', vm_, opts, default=''
+        )
+        if win_pass:
+            deploy_kwargs['password'] = win_pass
+        deploy_kwargs['use_winrm'] = salt.config.get_cloud_config_value(
+            'use_winrm', vm_, opts, default=False
         )
 
     # Store what was used to the deploy the VM
@@ -411,16 +512,29 @@ def bootstrap(vm_, opts):
         transport=opts.get('transport', 'zeromq')
     )
 
-    deployed = False
-    if win_installer:
-        deployed = deploy_windows(**deploy_kwargs)
-    else:
-        deployed = deploy_script(**deploy_kwargs)
-
-    if deployed:
-        ret['deployed'] = deployed
-        log.info('Salt installed on {0}'.format(vm_['name']))
+    if inline_script_config and deploy_config is False:
+        inline_script_deployed = run_inline_script(**inline_script_kwargs)
+        if inline_script_deployed is not False:
+            log.info('Inline script(s) ha(s|ve) run on {0}'.format(vm_['name']))
+        ret['deployed'] = False
         return ret
+    else:
+        if win_installer:
+            deployed = deploy_windows(**deploy_kwargs)
+        else:
+            deployed = deploy_script(**deploy_kwargs)
+
+        if inline_script_config:
+            inline_script_deployed = run_inline_script(**inline_script_kwargs)
+            if inline_script_deployed is not False:
+                log.info('Inline script(s) ha(s|ve) run on {0}'.format(vm_['name']))
+
+        if deployed is not False:
+            ret['deployed'] = True
+            if deployed is not True:
+                ret.update(deployed)
+            log.info('Salt installed on {0}'.format(vm_['name']))
+            return ret
 
     log.error('Failed to start Salt on host {0}'.format(vm_['name']))
     return {
@@ -447,7 +561,7 @@ def ssh_usernames(vm_, opts, default_users=None):
         usernames = [usernames]
 
     # get rid of None's or empty names
-    usernames = filter(lambda x: x, usernames)
+    usernames = [x for x in usernames if x]
     # Keep a copy of the usernames the user might have provided
     initial = usernames[:]
 
@@ -474,20 +588,19 @@ def wait_for_fun(fun, timeout=900, **kwargs):
         trycount += 1
         try:
             response = fun(**kwargs)
-            if type(response) is not bool:
+            if not isinstance(response, bool):
                 return response
         except Exception as exc:
             log.debug('Caught exception in wait_for_fun: {0}'.format(exc))
             time.sleep(1)
-            if time.time() - start > timeout:
-                log.error('Function timed out: {0}'.format(timeout))
-                return False
-
             log.debug(
                 'Retrying function {0} on  (try {1})'.format(
                     fun, trycount
                 )
             )
+        if time.time() - start > timeout:
+            log.error('Function timed out: {0}'.format(timeout))
+            return False
 
 
 def wait_for_port(host, port=22, timeout=900, gateway=None):
@@ -529,7 +642,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(30)
-            sock.connect((test_ssh_host, test_ssh_port))
+            sock.connect((test_ssh_host, int(test_ssh_port)))
             # Stop any remaining reads/writes on the socket
             sock.shutdown(socket.SHUT_RDWR)
             # Close it!
@@ -559,8 +672,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         return True
     # Let the user know that his gateway is good!
     log.debug(
-        'Gateway {0} on port {1} '
-        'is reachable.'.format(
+        'Gateway {0} on port {1} is reachable.'.format(
             test_ssh_host, test_ssh_port
         )
     )
@@ -571,7 +683,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
     ssh_args.extend([
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -584,6 +696,8 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
             '-oChallengeResponseAuthentication=no',
             # Make sure public key authentication is enabled
             '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
@@ -600,7 +714,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         ' '.join(ssh_args), gateway['ssh_gateway_user'], ssh_gateway,
         ssh_gateway_port, pipes.quote(command)
     )
-    log.debug('SSH command: {0!r}'.format(cmd))
+    log.debug('SSH command: \'{0}\''.format(cmd))
 
     kwargs = {'display_ssh_output': False,
               'password': gateway.get('ssh_gateway_password', None)}
@@ -611,7 +725,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         trycount += 1
         # test gateway usage
         if not usable_gateway:
-            pstatus = _exec_ssh_cmd(pcmd, **kwargs)
+            pstatus = _exec_ssh_cmd(pcmd, allow_failure=True, **kwargs)
             if pstatus == 0:
                 usable_gateway = True
             else:
@@ -624,7 +738,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
                     'SSH gateway is reachable but we can not login')
         # then try to reach out the target
         if usable_gateway:
-            status = _exec_ssh_cmd(cmd, **kwargs)
+            status = _exec_ssh_cmd(cmd, allow_failure=True, **kwargs)
             # Get the exit code of the SSH command.
             # If 0 then the port is open.
             if status == 0:
@@ -642,24 +756,36 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
         )
 
 
-def wait_for_winexesvc(host, port, username, password, timeout=900, gateway=None):
+def wait_for_winexesvc(host, port, username, password, timeout=900):
     '''
     Wait until winexe connection can be established.
     '''
     start = time.time()
     log.debug(
         'Attempting winexe connection to host {0} on port {1}'.format(
-            host, port
+            host,
+            port
         )
     )
-    creds = '-U {0}%{1} //{2}'.format(
-            username, password, host)
-    trycount = 0
+    creds = "-U '{0}%{1}' //{2}".format(
+        username,
+        password,
+        host
+    )
+    logging_creds = "-U '{0}%XXX-REDACTED-XXX' //{1}".format(
+        username,
+        host
+    )
+
+    try_count = 0
     while True:
-        trycount += 1
+        try_count += 1
         try:
             # Shell out to winexe to check %TEMP%
-            ret_code = win_cmd('winexe {0} "sc query winexesvc"'.format(creds))
+            ret_code = win_cmd(
+                'winexe {0} "sc query winexesvc"'.format(creds),
+                logging_command=logging_creds
+            )
             if ret_code == 0:
                 log.debug('winexe connected...')
                 return True
@@ -674,25 +800,82 @@ def wait_for_winexesvc(host, port, username, password, timeout=900, gateway=None
             log.debug(
                 'Retrying winexe connection to host {0} on port {1} '
                 '(try {2})'.format(
+                    host,
+                    port,
+                    try_count
+                )
+            )
+
+
+def wait_for_winrm(host, port, username, password, timeout=900):
+    '''
+    Wait until WinRM connection can be established.
+    '''
+    start = time.time()
+    log.debug(
+        'Attempting WinRM connection to host {0} on port {1}'.format(
+            host, port
+        )
+    )
+    trycount = 0
+    while True:
+        trycount += 1
+        try:
+            s = winrm.Session(host, auth=(username, password), transport='ssl')
+            s.protocol.set_timeout(15)
+            log.trace('WinRM endpoint url: {0}'.format(s.url))
+            r = s.run_cmd('sc query winrm')
+            if r.status_code == 0:
+                log.debug('WinRM session connected...')
+                return s
+            log.debug('Return code was {0}'.format(r.status_code))
+            time.sleep(1)
+        except WinRMTransportError as exc:
+            log.debug('Caught exception in wait_for_winrm: {0}'.format(exc))
+            if time.time() - start > timeout:
+                log.error('WinRM connection timed out: {0}'.format(timeout))
+                return None
+            log.debug(
+                'Retrying WinRM connection to host {0} on port {1} '
+                '(try {2})'.format(
                     host, port, trycount
                 )
             )
 
 
-def validate_windows_cred(host, username='Administrator', password=None):
+def validate_windows_cred(host,
+                          username='Administrator',
+                          password=None,
+                          retries=10,
+                          retry_delay=1):
     '''
     Check if the windows credentials are valid
     '''
-    retcode = win_cmd('winexe -U {0}%{1} //{2} "hostname"'.format(
-        username, password, host
-    ))
-    return retcode == 0
+    cmd = "winexe -U '{0}%{1}' //{2} \"hostname\"".format(
+        username,
+        password,
+        host
+    )
+    logging_cmd = "winexe -U '{0}%XXX-REDACTED-XXX' //{1} \"hostname\"".format(
+        username,
+        host
+    )
+
+    for i in xrange(retries):
+        ret_code = win_cmd(
+            cmd,
+            logging_command=logging_cmd
+        )
+        if ret_code == 0:
+            break
+        time.sleep(retry_delay)
+    return ret_code == 0
 
 
 def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                     password=None, key_filename=None, maxtries=15,
                     trysleep=1, display_ssh_output=True, gateway=None,
-                    known_hosts_file='/dev/null'):
+                    known_hosts_file='/dev/null', hard_timeout=None):
     '''
     Wait until ssh connection can be accessed via password or ssh key
     '''
@@ -706,7 +889,9 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                       'password_retries': maxtries,
                       'timeout': ssh_timeout,
                       'display_ssh_output': display_ssh_output,
-                      'known_hosts_file': known_hosts_file}
+                      'known_hosts_file': known_hosts_file,
+                      'ssh_timeout': ssh_timeout,
+                      'hard_timeout': hard_timeout}
             if gateway:
                 kwargs['ssh_gateway'] = gateway['ssh_gateway']
                 kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
@@ -715,7 +900,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
             if key_filename:
                 if not os.path.isfile(key_filename):
                     raise SaltCloudConfigError(
-                        'The defined key_filename {0!r} does not exist'.format(
+                        'The defined key_filename \'{0}\' does not exist'.format(
                             key_filename
                         )
                     )
@@ -723,7 +908,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
                 log.debug('Using {0} as the key_filename'.format(key_filename))
             elif password:
                 kwargs['password'] = password
-                log.debug('Using password authentication'.format(password))
+                log.debug('Using password authentication')
 
             trycount += 1
             log.debug(
@@ -778,6 +963,8 @@ def deploy_windows(host,
                    master=None,
                    tmp_dir='C:\\salttmp',
                    opts=None,
+                   master_sign_pub_file=None,
+                   use_winrm=False,
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
@@ -785,55 +972,111 @@ def deploy_windows(host,
     if not isinstance(opts, dict):
         opts = {}
 
+    if use_winrm and not HAS_WINRM:
+        log.error('WinRM requested but module winrm could not be imported')
+        return False
+
     starttime = time.mktime(time.localtime())
     log.debug('Deploying {0} at {1} (Windows)'.format(host, starttime))
-    if wait_for_port(host=host, port=port, timeout=port_timeout * 60) and \
-                wait_for_winexesvc(host=host, port=port,
-                             username=username, password=password,
-                             timeout=port_timeout * 60):
+    log.trace('HAS_WINRM: {0}, use_winrm: {1}'.format(HAS_WINRM, use_winrm))
+
+    port_available = wait_for_port(host=host, port=port, timeout=port_timeout * 60)
+
+    if not port_available:
+        return False
+
+    service_available = False
+    winrm_session = None
+
+    if HAS_WINRM and use_winrm:
+        winrm_session = wait_for_winrm(host=host, port=5986,
+                                           username=username, password=password,
+                                           timeout=port_timeout * 60)
+        if winrm_session is not None:
+            service_available = True
+    else:
+        service_available = wait_for_winexesvc(host=host, port=port,
+                                               username=username, password=password,
+                                               timeout=port_timeout * 60)
+
+    if port_available and service_available:
         log.debug('SMB port {0} on {1} is available'.format(port, host))
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         log.debug(
             'Logging into {0}:{1} as {2}'.format(
                 host, port, username
             )
         )
         newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-        creds = '-U {0}%{1} //{2}'.format(
-            username, password, host)
-        # Shell out to smbclient to create C:\salttmp\
-        win_cmd('smbclient {0}/c$ -c "mkdir salttemp; exit;"'.format(creds))
-        # Shell out to smbclient to create C:\salt\conf\pki\minion
-        win_cmd('smbclient {0}/c$ -c "mkdir salt; mkdir salt\\conf; mkdir salt\\conf\\pki; mkdir salt\\conf\\pki\\minion; exit;"'.format(creds))
-        # Shell out to smbclient to copy over minion keys
-        ## minion_pub, minion_pem
+
+        smb_conn = salt.utils.smb.get_conn(host, username, password)
+        if smb_conn is False:
+            log.error('Please install impacket to enable SMB functionality')
+            return False
+
+        creds = "-U '{0}%{1}' //{2}".format(
+            username,
+            password,
+            host
+        )
+        logging_creds = "-U '{0}%XXX-REDACTED-XXX' //{1}".format(
+            username,
+            host
+        )
+
+        salt.utils.smb.mkdirs('salttemp', conn=smb_conn)
+        salt.utils.smb.mkdirs('salt/conf/pki/minion', conn=smb_conn)
+        #  minion_pub, minion_pem
         kwargs = {'hostname': host,
                   'creds': creds}
 
         if minion_pub:
-            smb_file('salt\\conf\\pki\\minion\\minion.pub', minion_pub, kwargs)
+            salt.utils.smb.put_str(minion_pub, 'salt\\conf\\pki\\minion\\minion.pub', conn=smb_conn)
 
         if minion_pem:
-            smb_file('salt\\conf\\pki\\minion\\minion.pem', minion_pem, kwargs)
+            salt.utils.smb.put_str(minion_pem, 'salt\\conf\\pki\\minion\\minion.pem', conn=smb_conn)
 
-        # Shell out to smbclient to copy over win_installer
-        ## win_installer refers to a file such as:
-        ## /root/Salt-Minion-0.17.0-win32-Setup.exe
-        ## ..which exists on the same machine as salt-cloud
+        if master_sign_pub_file:
+            # Read master-sign.pub file
+            log.debug("Copying master_sign.pub file from {0} to minion".format(master_sign_pub_file))
+            try:
+                with salt.utils.fopen(master_sign_pub_file, 'rb') as master_sign_fh:
+                    smb_conn.putFile('C$', 'salt\\conf\\pki\\minion\\master_sign.pub', master_sign_fh.read)
+            except Exception as e:
+                log.debug("Exception copying master_sign.pub file {0} to minion".format(master_sign_pub_file))
+
+        # Copy over win_installer
+        # win_installer refers to a file such as:
+        # /root/Salt-Minion-0.17.0-win32-Setup.exe
+        # ..which exists on the same machine as salt-cloud
         comps = win_installer.split('/')
         local_path = '/'.join(comps[:-1])
         installer = comps[-1]
-        win_cmd('smbclient {0}/c$ -c "cd salttemp; prompt; lcd {1}; mput {2}; exit;"'.format(
-            creds, local_path, installer
-        ))
-        # Shell out to winexe to execute win_installer
-        ## We don't actually need to set the master and the minion here since
-        ## the minion config file will be set next via smb_file
-        win_cmd('winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
-            creds, installer, master, name
-        ))
+        with salt.utils.fopen(win_installer, 'rb') as inst_fh:
+            smb_conn.putFile('C$', 'salttemp/{0}'.format(installer), inst_fh.read)
 
-        # Shell out to smbclient to copy over minion_conf
+        if use_winrm:
+            winrm_cmd(winrm_session, 'c:\\salttemp\\{0}'.format(installer), ['/S', '/master={0}'.format(master),
+                                                                             '/minion-name={0}'.format(name)]
+            )
+        else:
+            # Shell out to winexe to execute win_installer
+            #  We don't actually need to set the master and the minion here since
+            #  the minion config file will be set next via impacket
+            cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
+                creds,
+                installer,
+                master,
+                name
+            )
+            logging_cmd = 'winexe {0} "c:\\salttemp\\{1} /S /master={2} /minion-name={3}"'.format(
+                logging_creds,
+                installer,
+                master,
+                name
+            )
+            win_cmd(cmd, logging_command=logging_cmd)
+
+        # Copy over minion_conf
         if minion_conf:
             if not isinstance(minion_conf, dict):
                 # Let's not just fail regarding this change, specially
@@ -845,10 +1088,10 @@ def deploy_windows(host,
                 )
             minion_grains = minion_conf.pop('grains', {})
             if minion_grains:
-                smb_file(
-                    'salt\\conf\\grains',
+                salt.utils.smb.put_str(
                     salt_config_to_yaml(minion_grains, line_break='\r\n'),
-                    kwargs
+                    'salt\\conf\\grains',
+                    conn=smb_conn
                 )
             # Add special windows minion configuration
             # that must be in the minion config file
@@ -859,28 +1102,37 @@ def deploy_windows(host,
                 'multiprocessing': False,
             }
             minion_conf = dict(minion_conf, **windows_minion_conf)
-            smb_file(
-                'salt\\conf\\minion',
+            salt.utils.smb.put_str(
                 salt_config_to_yaml(minion_conf, line_break='\r\n'),
-                kwargs
+                'salt\\conf\\minion',
+                conn=smb_conn
             )
-        # Shell out to smbclient to delete C:\salttmp\ and installer file
-        ## Unless keep_tmp is True
+        # Delete C:\salttmp\ and installer file
+        # Unless keep_tmp is True
         if not keep_tmp:
-            win_cmd('smbclient {0}/c$ -c "del salttemp\\{1}; prompt; exit;"'.format(
-                creds,
-                installer,
-            ))
-            win_cmd('smbclient {0}/c$ -c "rmdir salttemp; prompt; exit;"'.format(
-                creds,
-            ))
+            smb_conn.deleteFile('C$', 'salttemp/{0}'.format(installer))
+            smb_conn.deleteDirectory('C$', 'salttemp')
         # Shell out to winexe to ensure salt-minion service started
-        win_cmd('winexe {0} "sc stop salt-minion"'.format(
-            creds,
-        ))
-        win_cmd('winexe {0} "sc start salt-minion"'.format(
-            creds,
-        ))
+        if use_winrm:
+            winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
+            time.sleep(5)
+            winrm_cmd(winrm_session, 'sc', ['start', 'salt-minion'])
+        else:
+            stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
+                creds
+            )
+            logging_stop_cmd = 'winexe {0} "sc stop salt-minion"'.format(
+                logging_creds
+            )
+            win_cmd(stop_cmd, logging_command=logging_stop_cmd)
+
+            time.sleep(5)
+
+            start_cmd = 'winexe {0} "sc start salt-minion"'.format(creds)
+            logging_start_cmd = 'winexe {0} "sc start salt-minion"'.format(
+                logging_creds
+            )
+            win_cmd(start_cmd, logging_command=logging_start_cmd)
 
         # Fire deploy action
         fire_event(
@@ -918,6 +1170,7 @@ def deploy_script(host,
                   script_args=None,
                   script_env=None,
                   ssh_timeout=15,
+                  maxtries=15,
                   make_syndic=False,
                   make_minion=True,
                   display_ssh_output=True,
@@ -929,6 +1182,8 @@ def deploy_script(host,
                   deploy_command='/tmp/.saltcloud/deploy.sh',
                   opts=None,
                   tmp_dir='/tmp/.saltcloud',
+                  file_map=None,
+                  master_sign_pub_file=None,
                   **kwargs):
     '''
     Copy a deploy script to a remote server, execute it, and remove it
@@ -936,9 +1191,11 @@ def deploy_script(host,
     if not isinstance(opts, dict):
         opts = {}
 
+    tmp_dir = '{0}-{1}'.format(tmp_dir.rstrip('/'), uuid.uuid4())
+    deploy_command = os.path.join(tmp_dir, 'deploy.sh')
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined key_filename {0!r} does not exist'.format(
+            'The defined key_filename \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -951,76 +1208,118 @@ def deploy_script(host,
     log.debug('Deploying {0} at {1}'.format(host, starttime))
 
     known_hosts_file = kwargs.get('known_hosts_file', '/dev/null')
+    hard_timeout = opts.get('hard_timeout', None)
 
     if wait_for_port(host=host, port=port, gateway=gateway):
         log.debug('SSH port {0} on {1} is available'.format(port, host))
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
         if wait_for_passwd(host, port=port, username=username,
                            password=password, key_filename=key_filename,
                            ssh_timeout=ssh_timeout,
                            display_ssh_output=display_ssh_output,
-                           gateway=gateway, known_hosts_file=known_hosts_file):
+                           gateway=gateway, known_hosts_file=known_hosts_file,
+                           maxtries=maxtries, hard_timeout=hard_timeout):
 
-            def remote_exists(path):
-                return not root_cmd('test -e \\"{0}\\"'.format(path),
-                                    tty, sudo, **kwargs)
             log.debug(
                 'Logging into {0}:{1} as {2}'.format(
                     host, port, username
                 )
             )
-            newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-            kwargs = {
+            ssh_kwargs = {
                 'hostname': host,
                 'port': port,
                 'username': username,
                 'timeout': ssh_timeout,
                 'display_ssh_output': display_ssh_output,
                 'sudo_password': sudo_password,
+                'sftp': opts.get('use_sftp', False)
             }
             if gateway:
-                kwargs['ssh_gateway'] = gateway['ssh_gateway']
-                kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
-                kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
+                ssh_kwargs['ssh_gateway'] = gateway['ssh_gateway']
+                ssh_kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
+                ssh_kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
             if key_filename:
                 log.debug('Using {0} as the key_filename'.format(key_filename))
-                kwargs['key_filename'] = key_filename
-            elif password:
-                log.debug('Using {0} as the password'.format(password))
-                kwargs['password'] = password
+                ssh_kwargs['key_filename'] = key_filename
+            elif password and kwargs.get('has_ssh_agent', False) is False:
+                ssh_kwargs['password'] = password
 
-            if not remote_exists(tmp_dir):
-                ret = root_cmd(('sh -c "( mkdir -p \\"{0}\\" &&'
-                                ' chmod 700 \\"{0}\\" )"').format(tmp_dir),
-                               tty, sudo, **kwargs)
+            if root_cmd('test -e \'{0}\''.format(tmp_dir), tty, sudo,
+                        allow_failure=True, **ssh_kwargs):
+                ret = root_cmd(('sh -c "( mkdir -p \'{0}\' &&'
+                                ' chmod 700 \'{0}\' )"').format(tmp_dir),
+                               tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
-                        'Cant create temporary '
+                        'Can\'t create temporary '
                         'directory in {0} !'.format(tmp_dir)
                     )
             if sudo:
                 comps = tmp_dir.lstrip('/').rstrip('/').split('/')
-                if len(comps) > 0:
-                    if len(comps) > 1 or comps[0] != 'tmp':
-                        ret = root_cmd(
-                            'chown {0}. {1}'.format(username, tmp_dir),
-                            tty, sudo, **kwargs
+                if comps and comps[0] != 'tmp':
+                    ret = root_cmd(
+                        'chown {0} \'{1}\''.format(username, tmp_dir),
+                        tty, sudo, **ssh_kwargs
+                    )
+                    if ret:
+                        raise SaltCloudSystemExit(
+                            'Cant set {0} ownership on {1}'.format(
+                                username, tmp_dir))
+
+            if not isinstance(file_map, dict):
+                file_map = {}
+
+            # Copy an arbitrary group of files to the target system
+            remote_dirs = []
+            file_map_success = []
+            file_map_fail = []
+            for map_item in file_map:
+                local_file = map_item
+                remote_file = file_map[map_item]
+                if not os.path.exists(map_item):
+                    log.error(
+                        'The local file "{0}" does not exist, and will not be '
+                        'copied to "{1}" on the target system'.format(
+                            local_file, remote_file
                         )
-                        if ret:
-                            raise SaltCloudSystemExit(
-                                'Cant set {0} ownership on {1}'.format(
-                                    username, tmp_dir))
+                    )
+                    file_map_fail.append({local_file: remote_file})
+                    continue
+
+                if os.path.isdir(local_file):
+                    dir_name = os.path.basename(local_file)
+                    remote_dir = os.path.join(os.path.dirname(remote_file),
+                                              dir_name)
+                else:
+                    remote_dir = os.path.dirname(remote_file)
+
+                if remote_dir not in remote_dirs:
+                    root_cmd('mkdir -p \'{0}\''.format(remote_dir), tty, sudo, **ssh_kwargs)
+                    if ssh_kwargs['username'] != 'root':
+                        root_cmd(
+                            'chown {0} \'{1}\''.format(
+                                ssh_kwargs['username'], remote_dir
+                            ),
+                            tty, sudo, **ssh_kwargs
+                        )
+                    remote_dirs.append(remote_dir)
+                ssh_file(
+                    opts, remote_file, kwargs=ssh_kwargs, local_file=local_file
+                )
+                file_map_success.append({local_file: remote_file})
 
             # Minion configuration
             if minion_pem:
-                scp_file('{0}/minion.pem'.format(tmp_dir), minion_pem, kwargs)
-                ret = root_cmd('chmod 600 {0}/minion.pem'.format(tmp_dir),
-                               tty, sudo, **kwargs)
+                ssh_file(opts, '{0}/minion.pem'.format(tmp_dir), minion_pem, ssh_kwargs)
+                ret = root_cmd('chmod 600 \'{0}/minion.pem\''.format(tmp_dir),
+                               tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}/minion.pem'.format(tmp_dir))
             if minion_pub:
-                scp_file('{0}/minion.pub'.format(tmp_dir), minion_pub, kwargs)
+                ssh_file(opts, '{0}/minion.pub'.format(tmp_dir), minion_pub, ssh_kwargs)
+
+            if master_sign_pub_file:
+                ssh_file(opts, '{0}/master_sign.pub'.format(tmp_dir), kwargs=ssh_kwargs, local_file=master_sign_pub_file)
 
             if minion_conf:
                 if not isinstance(minion_conf, dict):
@@ -1033,28 +1332,30 @@ def deploy_script(host,
                     )
                 minion_grains = minion_conf.pop('grains', {})
                 if minion_grains:
-                    scp_file(
+                    ssh_file(
+                        opts,
                         '{0}/grains'.format(tmp_dir),
                         salt_config_to_yaml(minion_grains),
-                        kwargs
+                        ssh_kwargs
                     )
-                scp_file(
+                ssh_file(
+                    opts,
                     '{0}/minion'.format(tmp_dir),
                     salt_config_to_yaml(minion_conf),
-                    kwargs
+                    ssh_kwargs
                 )
 
             # Master configuration
             if master_pem:
-                scp_file('{0}/master.pem'.format(tmp_dir), master_pem, kwargs)
-                ret = root_cmd('chmod 600 {0}/master.pem'.format(tmp_dir),
-                               tty, sudo, **kwargs)
+                ssh_file(opts, '{0}/master.pem'.format(tmp_dir), master_pem, ssh_kwargs)
+                ret = root_cmd('chmod 600 \'{0}/master.pem\''.format(tmp_dir),
+                               tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}/master.pem'.format(tmp_dir))
 
             if master_pub:
-                scp_file('{0}/master.pub'.format(tmp_dir), master_pub, kwargs)
+                ssh_file(opts, '{0}/master.pub'.format(tmp_dir), master_pub, ssh_kwargs)
 
             if master_conf:
                 if not isinstance(master_conf, dict):
@@ -1066,10 +1367,11 @@ def deploy_script(host,
                         'Loading from YAML ...'
                     )
 
-                scp_file(
+                ssh_file(
+                    opts,
                     '{0}/master'.format(tmp_dir),
                     salt_config_to_yaml(master_conf),
-                    kwargs
+                    ssh_kwargs
                 )
 
             # XXX: We need to make these paths configurable
@@ -1078,41 +1380,41 @@ def deploy_script(host,
             if preseed_minion_keys is not None:
                 # Create remote temp dir
                 ret = root_cmd(
-                    'mkdir "{0}"'.format(preseed_minion_keys_tempdir),
-                    tty, sudo, **kwargs
+                    'mkdir \'{0}\''.format(preseed_minion_keys_tempdir),
+                    tty, sudo, **ssh_kwargs
                 )
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant create {0}'.format(preseed_minion_keys_tempdir))
                 ret = root_cmd(
-                    'chmod 700 "{0}"'.format(preseed_minion_keys_tempdir),
-                    tty, sudo, **kwargs
+                    'chmod 700 \'{0}\''.format(preseed_minion_keys_tempdir),
+                    tty, sudo, **ssh_kwargs
                 )
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}'.format(
                             preseed_minion_keys_tempdir))
-                if kwargs['username'] != 'root':
+                if ssh_kwargs['username'] != 'root':
                     root_cmd(
-                        'chown {0} "{1}"'.format(
-                            kwargs['username'], preseed_minion_keys_tempdir
+                        'chown {0} \'{1}\''.format(
+                            ssh_kwargs['username'], preseed_minion_keys_tempdir
                         ),
-                        tty, sudo, **kwargs
+                        tty, sudo, **ssh_kwargs
                     )
 
                 # Copy pre-seed minion keys
-                for minion_id, minion_key in preseed_minion_keys.iteritems():
+                for minion_id, minion_key in six.iteritems(preseed_minion_keys):
                     rpath = os.path.join(
                         preseed_minion_keys_tempdir, minion_id
                     )
-                    scp_file(rpath, minion_key, kwargs)
+                    ssh_file(opts, rpath, minion_key, ssh_kwargs)
 
-                if kwargs['username'] != 'root':
+                if ssh_kwargs['username'] != 'root':
                     root_cmd(
-                        'chown -R root \\"{0}\\"'.format(
+                        'chown -R root \'{0}\''.format(
                             preseed_minion_keys_tempdir
                         ),
-                        tty, sudo, **kwargs
+                        tty, sudo, **ssh_kwargs
                     )
                     if ret:
                         raise SaltCloudSystemExit(
@@ -1123,11 +1425,11 @@ def deploy_script(host,
             if script:
                 # got strange escaping issues with sudoer, going onto a
                 # subshell fixes that
-                scp_file('{0}/deploy.sh'.format(tmp_dir), script, kwargs)
+                ssh_file(opts, '{0}/deploy.sh'.format(tmp_dir), script, ssh_kwargs)
                 ret = root_cmd(
-                    ('sh -c "( chmod +x \\"{0}/deploy.sh\\" )";'
+                    ('sh -c "( chmod +x \'{0}/deploy.sh\' )";'
                      'exit $?').format(tmp_dir),
-                    tty, sudo, **kwargs)
+                    tty, sudo, **ssh_kwargs)
                 if ret:
                     raise SaltCloudSystemExit(
                         'Cant set perms on {0}/deploy.sh'.format(tmp_dir))
@@ -1152,7 +1454,7 @@ def deploy_script(host,
             # Run the deploy script
             if script:
                 if 'bootstrap-salt' in script:
-                    deploy_command += ' -c {0}'.format(tmp_dir)
+                    deploy_command += ' -c \'{0}\''.format(tmp_dir)
                     if make_syndic is True:
                         deploy_command += ' -S'
                     if make_master is True:
@@ -1162,7 +1464,7 @@ def deploy_script(host,
                     if keep_tmp is True:
                         deploy_command += ' -K'
                     if preseed_minion_keys is not None:
-                        deploy_command += ' -k {0}'.format(
+                        deploy_command += ' -k \'{0}\''.format(
                             preseed_minion_keys_tempdir
                         )
                 if script_args:
@@ -1177,7 +1479,7 @@ def deploy_script(host,
                             )
                         )
                     environ_script_contents = ['#!/bin/sh']
-                    for key, value in script_env.iteritems():
+                    for key, value in six.iteritems(script_env):
                         environ_script_contents.append(
                             'setenv {0} \'{1}\' >/dev/null 2>&1 || '
                             'export {0}=\'{1}\''.format(key, value)
@@ -1185,38 +1487,39 @@ def deploy_script(host,
                     environ_script_contents.append(deploy_command)
 
                     # Upload our environ setter wrapper
-                    scp_file(
+                    ssh_file(
+                        opts,
                         '{0}/environ-deploy-wrapper.sh'.format(tmp_dir),
                         '\n'.join(environ_script_contents),
-                        kwargs
+                        ssh_kwargs
                     )
                     root_cmd(
-                        'chmod +x {0}/environ-deploy-wrapper.sh'.format(tmp_dir),
-                        tty, sudo, **kwargs
+                        'chmod +x \'{0}/environ-deploy-wrapper.sh\''.format(tmp_dir),
+                        tty, sudo, **ssh_kwargs
                     )
                     # The deploy command is now our wrapper
-                    deploy_command = '{0}/environ-deploy-wrapper.sh'.format(
+                    deploy_command = '\'{0}/environ-deploy-wrapper.sh\''.format(
                         tmp_dir,
                     )
-                if root_cmd(deploy_command, tty, sudo, **kwargs) != 0:
+                if root_cmd(deploy_command, tty, sudo, **ssh_kwargs) != 0:
                     raise SaltCloudSystemExit(
-                        'Executing the command {0!r} failed'.format(
+                        'Executing the command \'{0}\' failed'.format(
                             deploy_command
                         )
                     )
-                log.debug('Executed command {0!r}'.format(deploy_command))
+                log.debug('Executed command \'{0}\''.format(deploy_command))
 
                 # Remove the deploy script
                 if not keep_tmp:
-                    root_cmd('rm -f {0}/deploy.sh'.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                    root_cmd('rm -f \'{0}/deploy.sh\''.format(tmp_dir),
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/deploy.sh'.format(tmp_dir))
                     if script_env:
                         root_cmd(
-                            'rm -f {0}/environ-deploy-wrapper.sh'.format(
+                            'rm -f \'{0}/environ-deploy-wrapper.sh\''.format(
                                 tmp_dir
                             ),
-                            tty, sudo, **kwargs
+                            tty, sudo, **ssh_kwargs
                         )
                         log.debug(
                             'Removed {0}/environ-deploy-wrapper.sh'.format(
@@ -1231,41 +1534,45 @@ def deploy_script(host,
             else:
                 # Remove minion configuration
                 if minion_pub:
-                    root_cmd('rm -f {0}/minion.pub'.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                    root_cmd('rm -f \'{0}/minion.pub\''.format(tmp_dir),
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/minion.pub'.format(tmp_dir))
                 if minion_pem:
-                    root_cmd('rm -f {0}/minion.pem'.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                    root_cmd('rm -f \'{0}/minion.pem\''.format(tmp_dir),
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/minion.pem'.format(tmp_dir))
                 if minion_conf:
-                    root_cmd('rm -f {0}/grains'.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                    root_cmd('rm -f \'{0}/grains\''.format(tmp_dir),
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/grains'.format(tmp_dir))
-                    root_cmd('rm -f {0}/minion'.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                    root_cmd('rm -f \'{0}/minion\''.format(tmp_dir),
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/minion'.format(tmp_dir))
+                if master_sign_pub_file:
+                    root_cmd('rm -f {0}/master_sign.pub'.format(tmp_dir),
+                             tty, sudo, **ssh_kwargs)
+                    log.debug('Removed {0}/master_sign.pub'.format(tmp_dir))
 
                 # Remove master configuration
                 if master_pub:
-                    root_cmd('rm -f {0}/master.pub'.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                    root_cmd('rm -f \'{0}/master.pub\''.format(tmp_dir),
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/master.pub'.format(tmp_dir))
                 if master_pem:
-                    root_cmd('rm -f {0}/master.pem'.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                    root_cmd('rm -f \'{0}/master.pem\''.format(tmp_dir),
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/master.pem'.format(tmp_dir))
                 if master_conf:
-                    root_cmd('rm -f {0}/master'.format(tmp_dir),
-                             tty, sudo, **kwargs)
+                    root_cmd('rm -f \'{0}/master\''.format(tmp_dir),
+                             tty, sudo, **ssh_kwargs)
                     log.debug('Removed {0}/master'.format(tmp_dir))
 
                 # Remove pre-seed keys directory
                 if preseed_minion_keys is not None:
                     root_cmd(
-                        'rm -rf {0}'.format(
+                        'rm -rf \'{0}\''.format(
                             preseed_minion_keys_tempdir
-                        ), tty, sudo, **kwargs
+                        ), tty, sudo, **ssh_kwargs
                     )
                     log.debug(
                         'Removed {0}'.format(preseed_minion_keys_tempdir)
@@ -1275,11 +1582,11 @@ def deploy_script(host,
                 queuereturn = queue.get()
                 process.join()
                 if queuereturn and start_action:
-                    #client = salt.client.LocalClient(conf_file)
-                    #output = client.cmd_iter(
-                    #    host, 'state.highstate', timeout=timeout
-                    #)
-                    #for line in output:
+                    # client = salt.client.LocalClient(conf_file)
+                    # output = client.cmd_iter(
+                    # host, 'state.highstate', timeout=timeout
+                    # )
+                    # for line in output:
                     #    print(line)
                     log.info(
                         'Executing {0} on the salt-minion'.format(
@@ -1288,7 +1595,7 @@ def deploy_script(host,
                     )
                     root_cmd(
                         'salt-call {0}'.format(start_action),
-                        tty, sudo, **kwargs
+                        tty, sudo, **ssh_kwargs
                     )
                     log.info(
                         'Finished executing {0} on the salt-minion'.format(
@@ -1306,8 +1613,94 @@ def deploy_script(host,
                 },
                 transport=opts.get('transport', 'zeromq')
             )
+            if file_map_fail or file_map_success:
+                return {
+                    'File Upload Success': file_map_success,
+                    'File Upload Failure': file_map_fail,
+                }
             return True
     return False
+
+
+def run_inline_script(host,
+                      name=None,
+                      port=22,
+                      timeout=900,
+                      username='root',
+                      key_filename=None,
+                      inline_script=None,
+                      ssh_timeout=15,
+                      display_ssh_output=True,
+                      parallel=False,
+                      sudo_password=None,
+                      sudo=False,
+                      password=None,
+                      tty=None,
+                      opts=None,
+                      tmp_dir='/tmp/.saltcloud-inline_script',
+                      **kwargs):
+    '''
+    Run the inline script commands, one by one
+    :**kwargs: catch all other things we may get but don't actually need/use
+    '''
+
+    gateway = None
+    if 'gateway' in kwargs:
+        gateway = kwargs['gateway']
+
+    starttime = time.mktime(time.localtime())
+    log.debug('Deploying {0} at {1}'.format(host, starttime))
+
+    known_hosts_file = kwargs.get('known_hosts_file', '/dev/null')
+
+    if wait_for_port(host=host, port=port, gateway=gateway):
+        log.debug('SSH port {0} on {1} is available'.format(port, host))
+        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+        if wait_for_passwd(host, port=port, username=username,
+                           password=password, key_filename=key_filename,
+                           ssh_timeout=ssh_timeout,
+                           display_ssh_output=display_ssh_output,
+                           gateway=gateway, known_hosts_file=known_hosts_file):
+
+            log.debug(
+                'Logging into {0}:{1} as {2}'.format(
+                    host, port, username
+                )
+            )
+            newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+            ssh_kwargs = {
+                'hostname': host,
+                'port': port,
+                'username': username,
+                'timeout': ssh_timeout,
+                'display_ssh_output': display_ssh_output,
+                'sudo_password': sudo_password,
+                'sftp': opts.get('use_sftp', False)
+            }
+            if gateway:
+                ssh_kwargs['ssh_gateway'] = gateway['ssh_gateway']
+                ssh_kwargs['ssh_gateway_key'] = gateway['ssh_gateway_key']
+                ssh_kwargs['ssh_gateway_user'] = gateway['ssh_gateway_user']
+            if key_filename:
+                log.debug('Using {0} as the key_filename'.format(key_filename))
+                ssh_kwargs['key_filename'] = key_filename
+            elif password and 'has_ssh_agent' in kwargs and kwargs['has_ssh_agent'] is False:
+                ssh_kwargs['password'] = password
+
+            # TODO: write some tests ???
+            # TODO: check edge cases (e.g. ssh gateways, salt deploy disabled, etc.)
+            if root_cmd('test -e \\"{0}\\"'.format(tmp_dir), tty, sudo,
+                        allow_failure=True, **ssh_kwargs) and inline_script:
+                log.debug('Found inline script to execute.')
+                for cmd_line in inline_script:
+                    log.info("Executing inline command: " + str(cmd_line))
+                    ret = root_cmd('sh -c "( {0} )"'.format(cmd_line),
+                                   tty, sudo, allow_failure=True, **ssh_kwargs)
+                    if ret:
+                        log.info("[" + str(cmd_line) + "] Output: " + str(ret))
+
+    # TODO: ensure we send the correct return value
+    return True
 
 
 def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
@@ -1315,15 +1708,15 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     if sock_dir is None:
         sock_dir = os.path.join(syspaths.SOCK_DIR, 'master')
     event = salt.utils.event.get_event(
-            'master',
-            sock_dir,
-            transport,
-            listen=False)
+        'master',
+        sock_dir,
+        transport,
+        listen=False)
     try:
         event.fire_event(msg, tag)
     except ValueError:
-        # We're using develop or a 0.17.x version of salt
-        if type(args) is dict:
+        # We're using at least a 0.17.x version of salt
+        if isinstance(args, dict):
             args[key] = msg
         else:
             args = {key: msg}
@@ -1334,12 +1727,10 @@ def fire_event(key, msg, tag, args=None, sock_dir=None, transport='zeromq'):
     time.sleep(0.025)
 
 
-def _exec_ssh_cmd(cmd,
-                  error_msg='Failed to execute command {0!r}: {1}\n{2}',
-                  **kwargs):
+def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
+    if error_msg is None:
+        error_msg = 'A wrong password has been issued while establishing ssh session.'
     password_retries = kwargs.get('password_retries', 3)
-    error_msg = (
-        'A wrong password has been issued while establishing ssh session')
     try:
         stdout, stderr = None, None
         proc = vt.Terminal(
@@ -1348,49 +1739,74 @@ def _exec_ssh_cmd(cmd,
             log_stdout=True,
             log_stderr=True,
             stream_stdout=kwargs.get('display_ssh_output', True),
-            stream_stderr=kwargs.get('display_ssh_output', True))
+            stream_stderr=kwargs.get('display_ssh_output', True)
+        )
         sent_password = 0
-        while proc.isalive():
+        while proc.has_unread_data:
             stdout, stderr = proc.recv()
             if stdout and SSH_PASSWORD_PROMP_RE.search(stdout):
-                if (
-                    kwargs.get('password', None)
-                    and (sent_password < password_retries)
+                # if authenticating with an SSH key and 'sudo' is found
+                # in the password prompt
+                if ('key_filename' in kwargs and kwargs['key_filename']
+                    and SSH_PASSWORD_PROMP_SUDO_RE.search(stdout)
+                ):
+                    proc.sendline(kwargs['sudo_password', None])
+                # elif authenticating via password and haven't exhausted our
+                # password_retires
+                elif (
+                            kwargs.get('password', None)
+                        and (sent_password < password_retries)
                 ):
                     sent_password += 1
                     proc.sendline(kwargs['password'])
+                # else raise an error as we are not authenticating properly
+                #  * not authenticating with an SSH key
+                #  * not authenticating with a Password
                 else:
                     raise SaltCloudPasswordError(error_msg)
             # 0.0125 is really too fast on some systems
             time.sleep(0.5)
+        if proc.exitstatus != 0 and allow_failure is False:
+            raise SaltCloudSystemExit(
+                'Command \'{0}\' failed. Exit code: {1}'.format(
+                    cmd, proc.exitstatus
+                )
+            )
         return proc.exitstatus
     except vt.TerminalException as err:
         trace = traceback.format_exc()
         log.error(error_msg.format(cmd, err, trace))
     finally:
-        proc.terminate()
+        proc.close(terminate=True, kill=True)
     # Signal an error
     return 1
 
 
-def scp_file(dest_path, contents, kwargs):
+def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
     '''
-    Use scp to copy a file to a server
+    Use scp or sftp to copy a file to a server
     '''
-    tmpfh, tmppath = tempfile.mkstemp()
-    with salt.utils.fopen(tmppath, 'w') as tmpfile:
-        tmpfile.write(contents)
+    if contents is not None:
+        tmpfh, tmppath = tempfile.mkstemp()
+        with salt.utils.fopen(tmppath, 'w') as tmpfile:
+            tmpfile.write(contents)
 
-    log.debug('Uploading {0} to {1} (scp)'.format(dest_path, kwargs['hostname']))
+    log.debug('Uploading {0} to {1}'.format(dest_path, kwargs['hostname']))
 
     ssh_args = [
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking=no',
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile=/dev/null',
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
     ]
+
+    if local_file is not None:
+        tmppath = local_file
+        if os.path.isdir(local_file):
+            ssh_args.append('-r')
+
     if 'key_filename' in kwargs:
         # There should never be both a password and an ssh key passed in, so
         ssh_args.extend([
@@ -1399,6 +1815,8 @@ def scp_file(dest_path, contents, kwargs):
             '-oChallengeResponseAuthentication=no',
             # Make sure public key authentication is enabled
             '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
@@ -1406,7 +1824,7 @@ def scp_file(dest_path, contents, kwargs):
         ])
 
     if 'port' in kwargs:
-        ssh_args.extend(['-P {0}'.format(kwargs['port'])])
+        ssh_args.append('-oPort={0}'.format(kwargs['port']))
 
     if 'ssh_gateway' in kwargs:
         ssh_gateway = kwargs['ssh_gateway']
@@ -1422,62 +1840,142 @@ def scp_file(dest_path, contents, kwargs):
         if 'ssh_gateway_user' in kwargs:
             ssh_gateway_user = kwargs['ssh_gateway_user']
 
-        ssh_args.extend([
+        ssh_args.append(
             # Setup ProxyCommand
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
-            # Don't add new hosts to the host key database
-            '-oStrictHostKeyChecking=no',
-            # Set hosts key database path to /dev/null, ie, non-existing
-            '-oUserKnownHostsFile=/dev/null',
-            # Don't re-use the SSH connection. Less failures.
-            '-oControlPath=none',
+                # Don't add new hosts to the host key database
+                '-oStrictHostKeyChecking=no',
+                # Set hosts key database path to /dev/null, i.e., non-existing
+                '-oUserKnownHostsFile=/dev/null',
+                # Don't re-use the SSH connection. Less failures.
+                '-oControlPath=none',
                 ssh_gateway_key,
                 ssh_gateway_user,
                 ssh_gateway,
                 ssh_gateway_port
             )
-        ])
-
-    cmd = 'scp {0} {1} {2[username]}@{2[hostname]}:{3}'.format(
-        ' '.join(ssh_args), tmppath, kwargs, dest_path
+        )
+    cmd = (
+        'scp {0} {1} {2[username]}@{2[hostname]}:{3} || '
+        'echo "put {1} {3}" | sftp {0} {2[username]}@{2[hostname]} || '
+        'rsync -avz -e "ssh {0}" {1} {2[username]}@{2[hostname]}:{3}'.format(
+            ' '.join(ssh_args), tmppath, kwargs, dest_path
+        )
     )
-    log.debug('SCP command: {0!r}'.format(cmd))
+
+    log.debug('SCP command: \'{0}\''.format(cmd))
     retcode = _exec_ssh_cmd(cmd,
-                            error_msg='Failed to upload file {0!r}: {1}\n{2}',
+                            error_msg='Failed to upload file \'{0}\': {1}\n{2}',
+                            password_retries=3,
                             **kwargs)
     return retcode
 
 
-def smb_file(dest_path, contents, kwargs):
+def ssh_file(opts, dest_path, contents=None, kwargs=None, local_file=None):
     '''
-    Use smbclient to copy a file to a server
+    Copies a file to the remote SSH target using either sftp or scp, as
+    configured.
     '''
-    tmpfh, tmppath = tempfile.mkstemp()
-    with salt.utils.fopen(tmppath, 'w') as tmpfile:
-        tmpfile.write(contents)
+    if opts.get('file_transport', 'sftp') == 'sftp':
+        return sftp_file(dest_path, contents, kwargs, local_file)
+    return scp_file(dest_path, contents, kwargs, local_file)
 
-    log.debug('Uploading {0} to {1} (smbclient)'.format(
-        dest_path, kwargs['hostname'])
-    )
 
-    # Shell out to smbclient
-    comps = tmppath.split('/')
-    src_dir = '/'.join(comps[:-1])
-    src_file = comps[-1]
-    comps = dest_path.split('\\')
-    dest_dir = '\\'.join(comps[:-1])
-    dest_file = comps[-1]
-    cmd = 'smbclient {0}/c$ -c "cd {3}; prompt; lcd {1}; del {4}; mput {2}; rename {2} {4}; exit;"'.format(
-        kwargs['creds'], src_dir, src_file, dest_dir, dest_file
+def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
+    '''
+    Use sftp to upload a file to a server
+    '''
+    put_args = []
+
+    if kwargs is None:
+        kwargs = {}
+
+    if contents is not None:
+        tmpfh, tmppath = tempfile.mkstemp()
+        with salt.utils.fopen(tmppath, 'w') as tmpfile:
+            tmpfile.write(contents)
+
+    if local_file is not None:
+        tmppath = local_file
+        if os.path.isdir(local_file):
+            put_args = ['-r']
+
+    log.debug('Uploading {0} to {1} (sfcp)'.format(dest_path, kwargs.get('hostname')))
+
+    ssh_args = [
+        # Don't add new hosts to the host key database
+        '-oStrictHostKeyChecking=no',
+        # Set hosts key database path to /dev/null, i.e., non-existing
+        '-oUserKnownHostsFile=/dev/null',
+        # Don't re-use the SSH connection. Less failures.
+        '-oControlPath=none'
+    ]
+    if 'key_filename' in kwargs:
+        # There should never be both a password and an ssh key passed in, so
+        ssh_args.extend([
+            # tell SSH to skip password authentication
+            '-oPasswordAuthentication=no',
+            '-oChallengeResponseAuthentication=no',
+            # Make sure public key authentication is enabled
+            '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
+            # No Keyboard interaction!
+            '-oKbdInteractiveAuthentication=no',
+            # Also, specify the location of the key file
+            '-oIdentityFile={0}'.format(kwargs['key_filename'])
+        ])
+
+    if 'port' in kwargs:
+        ssh_args.append('-oPort={0}'.format(kwargs['port']))
+
+    if 'ssh_gateway' in kwargs:
+        ssh_gateway = kwargs['ssh_gateway']
+        ssh_gateway_port = 22
+        ssh_gateway_key = ''
+        ssh_gateway_user = 'root'
+        if ':' in ssh_gateway:
+            ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
+        if 'ssh_gateway_port' in kwargs:
+            ssh_gateway_port = kwargs['ssh_gateway_port']
+        if 'ssh_gateway_key' in kwargs:
+            ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key'])
+        if 'ssh_gateway_user' in kwargs:
+            ssh_gateway_user = kwargs['ssh_gateway_user']
+
+        ssh_args.append(
+            # Setup ProxyCommand
+            '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
+                # Don't add new hosts to the host key database
+                '-oStrictHostKeyChecking=no',
+                # Set hosts key database path to /dev/null, i.e., non-existing
+                '-oUserKnownHostsFile=/dev/null',
+                # Don't re-use the SSH connection. Less failures.
+                '-oControlPath=none',
+                ssh_gateway_key,
+                ssh_gateway_user,
+                ssh_gateway,
+                ssh_gateway_port
+            )
+        )
+
+    cmd = 'echo "put {0} {1} {2}" | sftp {3} {4[username]}@{4[hostname]}'.format(
+        ' '.join(put_args), tmppath, dest_path, ' '.join(ssh_args), kwargs
     )
-    log.debug('SCP command: {0!r}'.format(cmd))
-    win_cmd(cmd)
+    log.debug('SFTP command: \'{0}\''.format(cmd))
+    retcode = _exec_ssh_cmd(cmd,
+                            error_msg='Failed to upload file \'{0}\': {1}\n{2}',
+                            password_retries=3,
+                            **kwargs)
+    return retcode
 
 
 def win_cmd(command, **kwargs):
     '''
     Wrapper for commands to be run against Windows boxes
     '''
+    logging_command = kwargs.get('logging_command', None)
+
     try:
         proc = NonBlockingPopen(
             command,
@@ -1485,19 +1983,32 @@ def win_cmd(command, **kwargs):
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stream_stds=kwargs.get('display_ssh_output', True),
+            logging_command=logging_command,
         )
-        log.debug(
-            'Executing command(PID {0}): {1!r}'.format(
-                proc.pid, command
+
+        if logging_command is None:
+            log.debug(
+                'Executing command(PID {0}): {1!r}'.format(
+                    proc.pid,
+                    command
+                )
             )
-        )
+        else:
+            log.debug(
+                'Executing command(PID {0}): {1!r}'.format(
+                    proc.pid,
+                    logging_command
+                )
+            )
+
         proc.poll_and_read_until_finish()
         proc.communicate()
         return proc.returncode
     except Exception as err:
         log.error(
             'Failed to execute command {0!r}: {1}\n'.format(
-                command, err
+                logging_command,
+                err
             ),
             exc_info=True
         )
@@ -1505,19 +2016,33 @@ def win_cmd(command, **kwargs):
     return 1
 
 
-def root_cmd(command, tty, sudo, **kwargs):
+def winrm_cmd(session, command, flags, **kwargs):
+    '''
+    Wrapper for commands to be run against Windows boxes using WinRM.
+    '''
+    log.debug('Executing WinRM command: {0} {1}'.format(
+        command, flags
+    ))
+    r = session.run_cmd(command, flags)
+    return r.status_code
+
+
+def root_cmd(command, tty, sudo, allow_failure=False, **kwargs):
     '''
     Wrapper for commands to be run as root
     '''
+    logging_command = command
+    sudo_password = kwargs.get('sudo_password', None)
+
     if sudo:
-        if 'sudo_password' in kwargs and kwargs['sudo_password'] is not None:
-            command = 'echo "{1}" | sudo -S {0}'.format(
-                command,
-                kwargs['sudo_password'],
-            )
-        else:
+        if sudo_password is None:
             command = 'sudo {0}'.format(command)
-        log.debug('Using sudo to run command {0}'.format(command))
+            logging_command = command
+        else:
+            logging_command = 'sudo -S "XXX-REDACTED-XXX" {0}'.format(command)
+            command = 'sudo -S {0}'.format(command)
+
+        log.debug('Using sudo to run command {0}'.format(logging_command))
 
     ssh_args = []
 
@@ -1534,7 +2059,7 @@ def root_cmd(command, tty, sudo, **kwargs):
     ssh_args.extend([
         # Don't add new hosts to the host key database
         '-oStrictHostKeyChecking={0}'.format(host_key_checking),
-        # Set hosts key database path to /dev/null, ie, non-existing
+        # Set hosts key database path to /dev/null, i.e., non-existing
         '-oUserKnownHostsFile={0}'.format(known_hosts_file),
         # Don't re-use the SSH connection. Less failures.
         '-oControlPath=none'
@@ -1548,11 +2073,15 @@ def root_cmd(command, tty, sudo, **kwargs):
             '-oChallengeResponseAuthentication=no',
             # Make sure public key authentication is enabled
             '-oPubkeyAuthentication=yes',
+            # do only use the provided identity file
+            '-oIdentitiesOnly=yes',
             # No Keyboard interaction!
             '-oKbdInteractiveAuthentication=no',
             # Also, specify the location of the key file
             '-i {0}'.format(kwargs['key_filename'])
         ])
+    if 'ssh_timeout' in kwargs:
+        ssh_args.extend(['-oConnectTimeout={0}'.format(kwargs['ssh_timeout'])])
 
     if 'ssh_gateway' in kwargs:
         ssh_gateway = kwargs['ssh_gateway']
@@ -1573,7 +2102,7 @@ def root_cmd(command, tty, sudo, **kwargs):
             '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} nc -q0 %h %p"'.format(
                 # Don't add new hosts to the host key database
                 '-oStrictHostKeyChecking=no',
-                # Set hosts key database path to /dev/null, ie, non-existing
+                # Set hosts key database path to /dev/null, i.e., non-existing
                 '-oUserKnownHostsFile=/dev/null',
                 # Don't re-use the SSH connection. Less failures.
                 '-oControlPath=none',
@@ -1592,11 +2121,21 @@ def root_cmd(command, tty, sudo, **kwargs):
     if 'port' in kwargs:
         ssh_args.extend(['-p {0}'.format(kwargs['port'])])
 
-    cmd = 'ssh {0} {1[username]}@{1[hostname]} {2}'.format(
-        ' '.join(ssh_args), kwargs, pipes.quote(command)
+    cmd = 'ssh {0} {1[username]}@{1[hostname]} '.format(
+        ' '.join(ssh_args),
+        kwargs
     )
-    log.debug('SSH command: {0!r}'.format(cmd))
-    retcode = _exec_ssh_cmd(cmd, **kwargs)
+    logging_command = cmd + logging_command
+    cmd = cmd + pipes.quote(command)
+
+    hard_timeout = kwargs.get('hard_timeout')
+    if hard_timeout is not None:
+        logging_command = 'timeout {0} {1}'.format(hard_timeout, logging_command)
+        cmd = 'timeout {0} {1}'.format(hard_timeout, cmd)
+
+    log.debug('SSH command: \'{0}\''.format(logging_command))
+
+    retcode = _exec_ssh_cmd(cmd, allow_failure=allow_failure, **kwargs)
     return retcode
 
 
@@ -1605,7 +2144,7 @@ def check_auth(name, sock_dir=None, queue=None, timeout=300):
     This function is called from a multiprocess instance, to wait for a minion
     to become available to receive salt commands
     '''
-    event = salt.utils.event.SaltEvent('master', sock_dir)
+    event = salt.utils.event.SaltEvent('master', sock_dir, listen=True)
     starttime = time.mktime(time.localtime())
     newtimeout = timeout
     log.debug(
@@ -1638,6 +2177,12 @@ def is_public_ip(ip):
     '''
     Determines whether an IP address falls within one of the private IP ranges
     '''
+    if ':' in ip:
+        # ipv6
+        if ip.startswith('fe80:'):
+            # ipv6 link local
+            return False
+        return True
     addr = ip_to_int(ip)
     if addr > 167772160 and addr < 184549375:
         # 10.0.0.0/24
@@ -1713,7 +2258,7 @@ def wait_for_ip(update_callback,
     :param update_kwargs: Keyword arguments to pass to update_callback
     :param timeout: The maximum amount of time(in seconds) to wait for the IP
                     address.
-    :param interval: The looping interval, ie, the amount of time to sleep
+    :param interval: The looping interval, i.e., the amount of time to sleep
                      before the next iteration.
     :param interval_multiplier: Increase the interval by this multiplier after
                                 each request; helps with throttling
@@ -1732,7 +2277,7 @@ def wait_for_ip(update_callback,
     duration = timeout
     while True:
         log.debug(
-            'Waiting for VM IP. Giving up in 00:{0:02d}:{1:02d}'.format(
+            'Waiting for VM IP. Giving up in 00:{0:02d}:{1:02d}.'.format(
                 int(timeout // 60),
                 int(timeout % 60)
             )
@@ -1740,21 +2285,23 @@ def wait_for_ip(update_callback,
         data = update_callback(*update_args, **update_kwargs)
         if data is False:
             log.debug(
-                'update_callback has returned False which is considered a '
-                'failure. Remaining Failures: {0}'.format(max_failures)
+                '\'update_callback\' has returned \'False\', which is '
+                'considered a failure. Remaining Failures: {0}.'.format(
+                    max_failures
+                )
             )
             max_failures -= 1
             if max_failures <= 0:
                 raise SaltCloudExecutionFailure(
-                    'Too much failures occurred while waiting for '
-                    'the IP address'
+                    'Too many failures occurred while waiting for '
+                    'the IP address.'
                 )
         elif data is not None:
             return data
 
         if timeout < 0:
             raise SaltCloudExecutionTimeout(
-                'Unable to get IP for 00:{0:02d}:{1:02d}'.format(
+                'Unable to get IP for 00:{0:02d}:{1:02d}.'.format(
                     int(duration // 60),
                     int(duration % 60)
                 )
@@ -1767,30 +2314,44 @@ def wait_for_ip(update_callback,
             if interval > timeout:
                 interval = timeout + 1
             log.info('Interval multiplier in effect; interval is '
-                     'now {0}s'.format(interval))
+                     'now {0}s.'.format(interval))
 
 
-def simple_types_filter(datadict):
+def simple_types_filter(data):
     '''
-    Convert the data dictionary into simple types, ie, int, float, string,
+    Convert the data list, dictionary into simple types, i.e., int, float, string,
     bool, etc.
     '''
-    if not isinstance(datadict, dict):
-        # This function is only supposed to work on dictionaries
-        return datadict
+    if data is None:
+        return data
 
-    simpletypes_keys = (str, unicode, int, long, float, bool)
+    simpletypes_keys = (six.string_types, six.text_type, six.integer_types, float, bool)
     simpletypes_values = tuple(list(simpletypes_keys) + [list, tuple])
-    simpledict = {}
-    for key, value in datadict.iteritems():
-        if key is not None and not isinstance(key, simpletypes_keys):
-            key = repr(key)
-        if value is not None and isinstance(value, dict):
-            value = simple_types_filter(value)
-        elif value is not None and not isinstance(value, simpletypes_values):
-            value = repr(value)
-        simpledict[key] = value
-    return simpledict
+
+    if isinstance(data, (list, tuple)):
+        simplearray = []
+        for value in data:
+            if value is not None:
+                if isinstance(value, (dict, list)):
+                    value = simple_types_filter(value)
+                elif not isinstance(value, simpletypes_values):
+                    value = repr(value)
+            simplearray.append(value)
+        return simplearray
+
+    if isinstance(data, dict):
+        simpledict = {}
+        for key, value in six.iteritems(data):
+            if key is not None and not isinstance(key, simpletypes_keys):
+                key = repr(key)
+            if value is not None and isinstance(value, (dict, list, tuple)):
+                value = simple_types_filter(value)
+            elif value is not None and not isinstance(value, simpletypes_values):
+                value = repr(value)
+            simpledict[key] = value
+        return simpledict
+
+    return data
 
 
 def list_nodes_select(nodes, selection, call=None):
@@ -1823,6 +2384,66 @@ def list_nodes_select(nodes, selection, call=None):
     return ret
 
 
+def cachedir_index_add(minion_id, profile, driver, provider, base=None):
+    '''
+    Add an entry to the cachedir index. This generally only needs to happen when
+    a new instance is created. This entry should contain:
+
+    .. code-block:: yaml
+
+        - minion_id
+        - profile used to create the instance
+        - provider and driver name
+
+    The intent of this function is to speed up lookups for the cloud roster for
+    salt-ssh. However, other code that makes use of profile information can also
+    make use of this function.
+    '''
+    base = init_cachedir(base)
+    index_file = os.path.join(base, 'index.p')
+
+    if os.path.exists(index_file):
+        with salt.utils.fopen(index_file, 'r') as fh_:
+            index = msgpack.load(fh_)
+    else:
+        index = {}
+
+    prov_comps = provider.split(':')
+
+    index.update({
+        minion_id: {
+            'id': minion_id,
+            'profile': profile,
+            'driver': driver,
+            'provider': prov_comps[0],
+        }
+    })
+
+    with salt.utils.fopen(index_file, 'w') as fh_:
+        msgpack.dump(index, fh_)
+
+
+def cachedir_index_del(minion_id, base=None):
+    '''
+    Delete an entry from the cachedir index. This generally only needs to happen
+    when an instance is deleted.
+    '''
+    base = init_cachedir(base)
+    index_file = os.path.join(base, 'index.p')
+
+    if os.path.exists(index_file):
+        with salt.utils.fopen(index_file, 'r') as fh_:
+            index = msgpack.load(fh_)
+    else:
+        return
+
+    if minion_id in index:
+        del index[minion_id]
+
+    with salt.utils.fopen(index_file, 'w') as fh_:
+        msgpack.dump(index, fh_)
+
+
 def init_cachedir(base=None):
     '''
     Initialize the cachedir needed for Salt Cloud to keep track of minions
@@ -1835,7 +2456,7 @@ def init_cachedir(base=None):
     for dir_ in needed_dirs:
         if not os.path.exists(dir_):
             os.makedirs(dir_)
-        os.chmod(base, 0755)
+        os.chmod(base, 0o755)
 
     return base
 
@@ -1846,7 +2467,7 @@ def request_minion_cachedir(
         pubkey=None,
         provider=None,
         base=None,
-    ):
+):
     '''
     Creates an entry in the requested/ cachedir. This means that Salt Cloud has
     made a request to a cloud provider to create an instance, but it has not
@@ -1859,9 +2480,8 @@ def request_minion_cachedir(
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    if not fingerprint:
-        if pubkey is not None:
-            fingerprint = salt.utils.pem_finger(key=pubkey)
+    if not fingerprint and pubkey is not None:
+        fingerprint = salt.utils.pem_finger(key=pubkey)
 
     init_cachedir(base)
 
@@ -1871,10 +2491,10 @@ def request_minion_cachedir(
         'provider': provider,
     }
 
-    fname = '{0}.json'.format(minion_id)
+    fname = '{0}.p'.format(minion_id)
     path = os.path.join(base, 'requested', fname)
     with salt.utils.fopen(path, 'w') as fh_:
-        json.dump(data, fh_)
+        msgpack.dump(data, fh_)
 
 
 def change_minion_cachedir(
@@ -1882,7 +2502,7 @@ def change_minion_cachedir(
         cachedir,
         data=None,
         base=None,
-    ):
+):
     '''
     Changes the info inside a minion's cachedir entry. The type of cachedir
     must be specified (i.e., 'requested' or 'active'). A dict is also passed in
@@ -1902,16 +2522,16 @@ def change_minion_cachedir(
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    fname = '{0}.json'.format(minion_id)
+    fname = '{0}.p'.format(minion_id)
     path = os.path.join(base, cachedir, fname)
 
     with salt.utils.fopen(path, 'r') as fh_:
-        cache_data = json.load(fh_)
+        cache_data = msgpack.load(fh_)
 
     cache_data.update(data)
 
     with salt.utils.fopen(path, 'w') as fh_:
-        json.dump(cache_data, fh_)
+        msgpack.dump(cache_data, fh_)
 
 
 def activate_minion_cachedir(minion_id, base=None):
@@ -1923,7 +2543,7 @@ def activate_minion_cachedir(minion_id, base=None):
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    fname = '{0}.json'.format(minion_id)
+    fname = '{0}.p'.format(minion_id)
     src = os.path.join(base, 'requested', fname)
     dst = os.path.join(base, 'active')
     shutil.move(src, dst)
@@ -1941,37 +2561,114 @@ def delete_minion_cachedir(minion_id, provider, opts, base=None):
     if base is None:
         base = os.path.join(syspaths.CACHE_DIR, 'cloud')
 
-    driver = opts['providers'][provider].keys()[0]
-    fname = '{0}.json'.format(minion_id)
-    for cachedir in ('requested', 'active'):
+    driver = next(six.iterkeys(opts['providers'][provider]))
+    fname = '{0}.p'.format(minion_id)
+    for cachedir in 'requested', 'active':
         path = os.path.join(base, cachedir, driver, provider, fname)
         log.debug('path: {0}'.format(path))
         if os.path.exists(path):
             os.remove(path)
 
 
-def update_bootstrap(config):
+def list_cache_nodes_full(opts, provider=None, base=None):
+    '''
+    Return a list of minion data from the cloud cache, rather from the cloud
+    providers themselves. This is the cloud cache version of list_nodes_full().
+    '''
+    if opts.get('update_cachedir', False) is False:
+        return
+
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
+
+    minions = {}
+    # First, get a list of all drivers in use
+    for driver in os.listdir(base):
+        minions[driver] = {}
+        prov_dir = os.path.join(base, driver)
+        # Then, get a list of all providers per driver
+        for prov in os.listdir(prov_dir):
+            # If a specific provider is requested, filter out everyone else
+            if provider and provider != prov:
+                continue
+            minions[driver][prov] = {}
+            min_dir = os.path.join(prov_dir, prov)
+            # Get a list of all nodes per provider
+            for minion_id in os.listdir(min_dir):
+                # Finally, get a list of full minion data
+                fname = '{0}.p'.format(minion_id)
+                fpath = os.path.join(min_dir, fname)
+                with salt.utils.fopen(fpath, 'r') as fh_:
+                    minions[driver][prov][minion_id] = msgpack.load(fh_)
+
+    return minions
+
+
+def cache_nodes_ip(opts, base=None):
+    '''
+    Retrieve a list of all nodes from Salt Cloud cache, and any associated IP
+    addresses. Returns a dict.
+    '''
+    if base is None:
+        base = os.path.join(syspaths.CACHE_DIR, 'cloud')
+
+    minions = list_cache_nodes_full(opts, base=base)
+
+
+def update_bootstrap(config, url=None):
     '''
     Update the salt-bootstrap script
+
+        url can be either:
+
+            - The URL to fetch the bootstrap script from
+            - The absolute path to the bootstrap
+            - The content of the bootstrap script
+
+
     '''
-    log.debug('Updating the bootstrap-salt.sh script to latest stable')
-    try:
-        import requests
-    except ImportError:
-        return {'error': (
-            'Updating the bootstrap-salt.sh script requires the '
-            'Python requests library to be installed'
-        )}
-    url = 'https://raw.githubusercontent.com/saltstack/salt-bootstrap/stable/bootstrap-salt.sh'
-    req = requests.get(url)
-    if req.status_code != 200:
-        return {'error': (
-            'Failed to download the latest stable version of the '
-            'bootstrap-salt.sh script from {0}. HTTP error: '
-            '{1}'.format(
-                url, req.status_code
-            )
-        )}
+    default_url = config.get('bootstrap_script_url',
+                             'https://bootstrap.saltstack.com')
+    if not url:
+        url = default_url
+    if not url:
+        raise ValueError('Cant get any source to update')
+    if url.startswith('http') or '://' in url:
+        log.debug('Updating the bootstrap-salt.sh script to latest stable')
+        try:
+            import requests
+        except ImportError:
+            return {'error': (
+                'Updating the bootstrap-salt.sh script requires the '
+                'Python requests library to be installed'
+            )}
+        req = requests.get(url)
+        if req.status_code != 200:
+            return {'error': (
+                'Failed to download the latest stable version of the '
+                'bootstrap-salt.sh script from {0}. HTTP error: '
+                '{1}'.format(
+                    url, req.status_code
+                )
+            )}
+        script_content = req.text
+        if url == default_url:
+            script_name = 'bootstrap-salt.sh'
+        else:
+            script_name = os.path.basename(url)
+    elif os.path.exists(url):
+        with salt.utils.fopen(url) as fic:
+            script_content = fic.read()
+        script_name = os.path.basename(url)
+    # in last case, assuming we got a script content
+    else:
+        script_content = url
+        script_name = '{0}.sh'.format(
+            hashlib.sha1(script_content).hexdigest()
+        )
+
+    if not script_content:
+        raise ValueError('No content in bootstrap script !')
 
     # Get the path to the built-in deploy scripts directory
     builtin_deploy_dir = os.path.join(
@@ -2034,23 +2731,23 @@ def update_bootstrap(config):
                 os.makedirs(entry)
             except (OSError, IOError) as err:
                 log.info(
-                    'Failed to create directory {0!r}'.format(entry)
+                    'Failed to create directory \'{0}\''.format(entry)
                 )
                 continue
 
         if not is_writeable(entry):
             log.debug(
-                'The {0!r} is not writeable. Continuing...'.format(
+                'The \'{0}\' is not writeable. Continuing...'.format(
                     entry
                 )
             )
             continue
 
-        deploy_path = os.path.join(entry, 'bootstrap-salt.sh')
+        deploy_path = os.path.join(entry, script_name)
         try:
             finished_full.append(deploy_path)
             with salt.utils.fopen(deploy_path, 'w') as fp_:
-                fp_.write(req.text)
+                fp_.write(script_content)
         except (OSError, IOError) as err:
             log.debug(
                 'Failed to write the updated script: {0}'.format(err)
@@ -2065,13 +2762,13 @@ def cache_node_list(nodes, provider, opts):
     If configured to do so, update the cloud cachedir with the current list of
     nodes. Also fires configured events pertaining to the node list.
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
     '''
-    if not 'update_cachedir' in opts or not opts['update_cachedir']:
+    if 'update_cachedir' not in opts or not opts['update_cachedir']:
         return
 
     base = os.path.join(init_cachedir(), 'active')
-    driver = opts['providers'][provider].keys()[0]
+    driver = next(six.iterkeys(opts['providers'][provider]))
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
         os.makedirs(prov_dir)
@@ -2081,26 +2778,31 @@ def cache_node_list(nodes, provider, opts):
 
     for node in nodes:
         diff_node_cache(prov_dir, node, nodes[node], opts)
-        path = os.path.join(prov_dir, '{0}.json'.format(node))
+        path = os.path.join(prov_dir, '{0}.p'.format(node))
         with salt.utils.fopen(path, 'w') as fh_:
-            json.dump(nodes[node], fh_)
+            msgpack.dump(nodes[node], fh_)
 
 
 def cache_node(node, provider, opts):
     '''
     Cache node individually
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
     '''
-    if not 'update_cachedir' in opts or not opts['update_cachedir']:
+    if 'update_cachedir' not in opts or not opts['update_cachedir']:
         return
+
+    if not os.path.exists(os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')):
+        init_cachedir()
 
     base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
     provider, driver = provider.split(':')
     prov_dir = os.path.join(base, driver, provider)
-    path = os.path.join(prov_dir, '{0}.json'.format(node['name']))
+    if not os.path.exists(prov_dir):
+        os.makedirs(prov_dir)
+    path = os.path.join(prov_dir, '{0}.p'.format(node['name']))
     with salt.utils.fopen(path, 'w') as fh_:
-        json.dump(node, fh_)
+        msgpack.dump(node, fh_)
 
 
 def missing_node_cache(prov_dir, node_list, provider, opts):
@@ -2115,11 +2817,11 @@ def missing_node_cache(prov_dir, node_list, provider, opts):
 
         diff_cache_events: True
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
     '''
     cached_nodes = []
     for node in os.listdir(prov_dir):
-        cached_nodes.append(node.replace('.json', ''))
+        cached_nodes.append(os.path.splitext(node)[0])
 
     log.debug(sorted(cached_nodes))
     log.debug(sorted(node_list))
@@ -2148,13 +2850,15 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
         diff_cache_events: True
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
     '''
-    if not 'diff_cache_events' in opts or not opts['diff_cache_events']:
+    if 'diff_cache_events' not in opts or not opts['diff_cache_events']:
         return
 
+    if node is None:
+        return
     path = os.path.join(prov_dir, node)
-    path = '{0}.json'.format(path)
+    path = '{0}.p'.format(path)
 
     if not os.path.exists(path):
         event_data = _strip_cache_events(new_data, opts)
@@ -2170,8 +2874,8 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
     with salt.utils.fopen(path, 'r') as fh_:
         try:
-            cache_data = json.load(fh_)
-        except ValueError as exc:
+            cache_data = msgpack.load(fh_)
+        except ValueError:
             log.warning('Cache for {0} was corrupt: Deleting'.format(node))
             cache_data = {}
 
@@ -2204,7 +2908,7 @@ def _strip_cache_events(data, opts):
           - password
           - priv_key
 
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
     '''
     event_data = copy.deepcopy(data)
     strip_fields = opts.get('cache_event_strip_fields', [])
@@ -2229,8 +2933,10 @@ def _salt_cloud_force_ascii(exc):
         raise TypeError('Can\'t handle {0}'.format(exc))
 
     unicode_trans = {
-        u'\xa0': u' ',   # Convert non-breaking space to space
-        u'\u2013': u'-',  # Convert en dash to dash
+        # Convert non-breaking space to space
+        u'\xa0': u' ',
+        # Convert en dash to dash
+        u'\u2013': u'-',
     }
 
     if exc.object[exc.start:exc.end] in unicode_trans:
@@ -2238,6 +2944,7 @@ def _salt_cloud_force_ascii(exc):
 
     # There's nothing else we can do, raise the exception
     raise exc
+
 
 codecs.register_error('salt-cloud-force-ascii', _salt_cloud_force_ascii)
 
@@ -2247,7 +2954,7 @@ def retrieve_password_from_keyring(credential_id, username):
     Retrieve particular user's password for a specified credential set from system keyring.
     '''
     try:
-        import keyring
+        import keyring  # pylint: disable=import-error
         return keyring.get_password(credential_id, username)
     except ImportError:
         log.error('USE_KEYRING configured as a password, but no keyring module is installed')
@@ -2259,7 +2966,7 @@ def _save_password_in_keyring(credential_id, username, password):
     Saves provider password in system keyring
     '''
     try:
-        import keyring
+        import keyring  # pylint: disable=import-error
         return keyring.set_password(credential_id, username, password)
     except ImportError:
         log.error('Tried to store password in keyring, but no keyring module is installed')
@@ -2271,8 +2978,10 @@ def store_password_in_keyring(credential_id, username, password=None):
     Interactively prompts user for a password and stores it in system keyring
     '''
     try:
+        # pylint: disable=import-error
         import keyring
         import keyring.errors
+        # pylint: enable=import-error
         if password is None:
             prompt = 'Please enter password for {0}: '.format(credential_id)
             try:
@@ -2308,7 +3017,8 @@ def _unwrap_dict(dictionary, index_string):
     return dictionary
 
 
-def run_func_until_ret_arg(fun, kwargs, fun_call=None, argument_being_watched=None, required_argument_response=None):
+def run_func_until_ret_arg(fun, kwargs, fun_call=None,
+                           argument_being_watched=None, required_argument_response=None):
     '''
     Waits until the function retrieves some required argument.
     NOTE: Tested with ec2 describe_volumes and describe_snapshots only.
@@ -2318,13 +3028,73 @@ def run_func_until_ret_arg(fun, kwargs, fun_call=None, argument_being_watched=No
         f_result = fun(kwargs, call=fun_call)
         r_set = {}
         for d in f_result:
-            for k, v in d.items():
-                r_set[k] = v
-        result = r_set.get('item')
-        status = _unwrap_dict(result, argument_being_watched)
+            if isinstance(d, list):
+                d0 = d[0]
+                if isinstance(d0, dict):
+                    for k, v in six.iteritems(d0):
+                        r_set[k] = v
+        status = _unwrap_dict(r_set, argument_being_watched)
         log.debug('Function: {0}, Watched arg: {1}, Response: {2}'.format(str(fun).split(' ')[1],
                                                                           argument_being_watched,
                                                                           status))
         time.sleep(5)
+
+    return True
+
+
+def get_salt_interface(vm_, opts):
+    '''
+    Return the salt_interface type to connect to. Either 'public_ips' (default)
+    or 'private_ips'.
+    '''
+    salt_host = salt.config.get_cloud_config_value(
+        'salt_interface', vm_, opts, default=False,
+        search_global=False
+    )
+
+    if salt_host is False:
+        salt_host = salt.config.get_cloud_config_value(
+            'ssh_interface', vm_, opts, default='public_ips',
+            search_global=False
+        )
+
+    return salt_host
+
+
+def check_key_path_and_mode(provider, key_path):
+    '''
+    Checks that the key_path exists and the key_mode is either 0400 or 0600.
+
+    Returns True or False.
+
+    .. versionadded:: Boron
+
+    provider
+        The provider name that the key_path to check belongs to.
+
+    key_path
+        The key_path to ensure that it exists and to check adequate permissions
+        against.
+    '''
+    if not os.path.exists(key_path):
+        log.error(
+            'The key file \'{0}\' used in the \'{1}\' provider configuration '
+            'does not exist.\n'.format(
+                key_path,
+                provider
+            )
+        )
+        return False
+
+    key_mode = str(oct(stat.S_IMODE(os.stat(key_path).st_mode)))
+    if key_mode not in ('0400', '0600'):
+        log.error(
+            'The key file \'{0}\' used in the \'{1}\' provider configuration '
+            'needs to be set to mode 0400 or 0600.\n'.format(
+                key_path,
+                provider
+            )
+        )
+        return False
 
     return True

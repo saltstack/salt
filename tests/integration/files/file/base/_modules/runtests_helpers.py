@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     runtests_helpers.py
@@ -10,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import tempfile
 

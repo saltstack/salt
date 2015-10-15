@@ -3,7 +3,7 @@
 Configuration of network interfaces on Windows hosts
 ====================================================
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 This module provides the ``network`` state(s) on Windows hosts. DNS servers, IP
 addresses and default gateways can currently be managed.
@@ -59,6 +59,7 @@ default gateway using the ``gateway`` parameter:
           - 10.2.3.4/24
         - gateway: 10.2.3.1
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -66,6 +67,7 @@ import logging
 # Import salt libs
 import salt.utils
 import salt.utils.validate.net
+from salt.ext.six.moves import range
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -174,6 +176,8 @@ def _changes(cur, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
     )
     if cur_dns_proto == 'static':
         cur_dns_servers = cur['Statically Configured DNS Servers']
+        if set(dns_servers or ['None']) != set(cur_dns_servers):
+            changes['dns_servers'] = dns_servers
     elif 'DNS servers configured through DHCP' in cur:
         cur_dns_servers = cur['DNS servers configured through DHCP']
     cur_ip_proto = 'static' if cur['DHCP enabled'] == 'No' else 'dhcp'
@@ -182,8 +186,6 @@ def _changes(cur, dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
 
     if dns_proto != cur_dns_proto:
         changes['dns_proto'] = dns_proto
-    if set(dns_servers or ['None']) != set(cur_dns_servers):
-        changes['dns_servers'] = dns_servers
     if ip_proto != cur_ip_proto:
         changes['ip_proto'] = ip_proto
     if set(ip_addrs or []) != set(cur_ip_addrs):
@@ -357,7 +359,7 @@ def managed(name,
                 changes['ip_addrs'] = ip_addrs
             if changes.get('ip_proto') == 'static' and not changes.get('ip_addrs'):
                 changes['ip_addrs'] = ip_addrs
-            for idx in xrange(len(changes['ip_addrs'])):
+            for idx in range(len(changes['ip_addrs'])):
                 if idx == 0:
                     __salt__['ip.set_static_ip'](
                         name,

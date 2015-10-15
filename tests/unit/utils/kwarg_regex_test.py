@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     unit.utils.kwarg_regex_test
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
+
+# Import Pytohn libs
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import TestCase

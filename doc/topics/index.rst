@@ -9,7 +9,7 @@ The 30 second summary
 
 Salt is:
 
-* a configuration management system, capable of maintaining remote nodes 
+* a configuration management system, capable of maintaining remote nodes
   in defined states (for example, ensuring that specific packages are installed and
   specific services are running)
 
@@ -30,7 +30,7 @@ Providing versatility between massive scale deployments and smaller systems may 
 daunting, but Salt is very simple to set up and maintain, regardless of the
 size of the project. The architecture of Salt is designed to work with any
 number of servers, from a handful of local network systems to international
-deployments across different datacenters. The topology is a simple
+deployments across different data centers. The topology is a simple
 server/client model with the needed functionality built into a single set of
 daemons. While the default configuration will work with little to no
 modification, Salt can be fine tuned to meet specific needs.
@@ -44,7 +44,7 @@ The core functions of Salt:
 * use a secure and encrypted protocol
 * use the smallest and fastest network payloads possible
 * provide a simple programming interface
-  
+
 Salt also introduces more granular controls to the realm of remote
 execution, allowing systems to be targeted not just by hostname, but
 also by system properties.
@@ -82,7 +82,7 @@ The result is a system that can execute commands at high speed on
 target server groups ranging from one to very many servers. Salt is
 very fast, easy to set up, amazingly malleable and provides a single
 remote execution architecture that can manage the diverse
-requirements of any number of servers.  The Salt infrastructure 
+requirements of any number of servers.  The Salt infrastructure
 brings together the best of the remote execution world, amplifies its
 capabilities and expands its range, resulting in a system that is as
 versatile as it is practical, suitable for any network.
@@ -118,6 +118,12 @@ https://groups.google.com/forum/#!forum/salt-users
 
 .. _`salt-users mailing list`: https://groups.google.com/forum/#!forum/salt-users
 
+There is also a low-traffic list used to announce new releases
+called `salt-announce`_
+
+https://groups.google.com/forum/#!forum/salt-announce
+
+.. _`salt-announce`: https://groups.google.com/forum/#!forum/salt-announce
 
 IRC
 ===
@@ -135,10 +141,10 @@ If you wish to discuss the development of Salt itself join us in
 ``#salt-devel``.
 
 
-Follow on Github
+Follow on GitHub
 ================
 
-The Salt code is developed via Github. Follow Salt for constant updates on what
+The Salt code is developed via GitHub. Follow Salt for constant updates on what
 is happening in Salt development:
 
 |saltrepo|
@@ -169,7 +175,6 @@ A few examples of salt states from the community:
 
 * https://github.com/blast-hardcheese/blast-salt-states
 * https://github.com/kevingranade/kevingranade-salt-state
-* https://github.com/uggedal/states
 * https://github.com/mattmcclean/salt-openstack/tree/master/salt
 * https://github.com/rentalita/ubuntu-setup/
 * https://github.com/brutasse/states

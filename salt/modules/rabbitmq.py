@@ -4,15 +4,20 @@ Module to provide RabbitMQ compatibility to Salt.
 Todo: A lot, need to add cluster support, logging, and minion configuration
 data.
 '''
-
-# Import salt libs
-import salt.utils
-from salt.utils import decorators
+from __future__ import absolute_import
 
 # Import python libs
+import json
 import logging
 import random
 import string
+
+# Import salt libs
+import salt.utils
+import salt.utils.itertools
+import salt.ext.six as six
+from salt.exceptions import SaltInvocationError
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +43,63 @@ def _format_response(response, msg):
     }
 
 
+def _get_rabbitmq_plugin():
+    '''
+    Returns the rabbitmq-plugin command path if we're running an OS that
+    doesn't put it in the standard /usr/bin or /usr/local/bin
+    This works by taking the rabbitmq-server version and looking for where it
+    seems to be hidden in /usr/lib.
+    '''
+    rabbitmq = salt.utils.which('rabbitmq-plugins')
+
+    if rabbitmq is None:
+        version = __salt__['pkg.version']('rabbitmq-server').split('-')[0]
+
+        rabbitmq = ('/usr/lib/rabbitmq/lib/rabbitmq_server-{0}'
+                    '/sbin/rabbitmq-plugins').format(version)
+
+    return rabbitmq
+
+
+def _strip_listing_to_done(output_list):
+    '''Conditionally remove non-relevant first and last line,
+    "Listing ..." - "...done".
+    outputlist: rabbitmq command output split by newline
+    return value: list, conditionally modified, may be empty.
+    '''
+
+    # conditionally remove non-relevant first line
+    f_line = ''.join(output_list[:1])
+    if f_line.startswith('Listing') and f_line.endswith('...'):
+        output_list.pop(0)
+
+    # some versions of rabbitmq have no trailing '...done' line,
+    # which some versions do not output.
+    l_line = ''.join(output_list[-1:])
+    if '...done' in l_line:
+        output_list.pop()
+
+    return output_list
+
+
+def _output_to_dict(cmdoutput, values_mapper=None):
+    '''Convert rabbitmqctl output to a dict of data
+    cmdoutput: string output of rabbitmqctl commands
+    values_mapper: function object to process the values part of each line
+    '''
+    ret = {}
+    if values_mapper is None:
+        values_mapper = lambda string: string.split('\t')
+
+    # remove first and last line: Listing ... - ...done
+    data_rows = _strip_listing_to_done(cmdoutput.splitlines())
+
+    for row in data_rows:
+        key, values = row.split('\t', 1)
+        ret[key] = values_mapper(values)
+    return ret
+
+
 def list_users(runas=None):
     '''
     Return a list of users based off of rabbitmqctl user_list.
@@ -48,17 +110,16 @@ def list_users(runas=None):
 
         salt '*' rabbitmq.list_users
     '''
-    ret = {}
-    res = __salt__['cmd.run']('rabbitmqctl list_users',
-                              runas=runas)
-    for line in res.splitlines():
-        if '...' not in line or line == '\n':
-            parts = line.split('\t')
-            if len(parts) < 2:
-                continue
-            user, properties = parts[0], parts[1]
-            ret[user] = properties
-    return ret
+    if runas is None:
+        runas = salt.utils.get_user()
+    res = __salt__['cmd.run'](
+        ['rabbitmqctl', 'list_users'],
+        runas=runas,
+        python_shell=False)
+
+    # func to get tags from string such as "[admin, monitoring]"
+    func = lambda string: set(string[1:-1].split(','))
+    return _output_to_dict(res, func)
 
 
 def list_vhosts(runas=None):
@@ -71,11 +132,15 @@ def list_vhosts(runas=None):
 
         salt '*' rabbitmq.list_vhosts
     '''
-    res = __salt__['cmd.run']('rabbitmqctl list_vhosts',
-                              runas=runas)
-    lines = res.splitlines()
-    vhost_list = [line for line in lines if '...' not in line]
-    return vhost_list
+    if runas is None:
+        runas = salt.utils.get_user()
+    res = __salt__['cmd.run'](
+        ['rabbitmqctl', 'list_vhosts'],
+        runas=runas,
+        python_shell=False)
+
+    # remove first and last line: Listing ... - ...done
+    return _strip_listing_to_done(res.splitlines())
 
 
 def user_exists(name, runas=None):
@@ -88,6 +153,8 @@ def user_exists(name, runas=None):
 
         salt '*' rabbitmq.user_exists rabbit_user
     '''
+    if runas is None:
+        runas = salt.utils.get_user()
     user_list = list_users(runas=runas)
     log.debug(user_list)
 
@@ -104,6 +171,8 @@ def vhost_exists(name, runas=None):
 
         salt '*' rabbitmq.vhost_exists rabbit_host
     '''
+    if runas is None:
+        runas = salt.utils.get_user()
     return name in list_vhosts(runas=runas)
 
 
@@ -122,19 +191,22 @@ def add_user(name, password=None, runas=None):
     if password is None:
         # Generate a random, temporary password. RabbitMQ requires one.
         clear_pw = True
-        password = ''.join(random.choice(
+        password = ''.join(random.SystemRandom().choice(
             string.ascii_uppercase + string.digits) for x in range(15))
 
+    if runas is None:
+        runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
-        'rabbitmqctl add_user {0} {1!r}'.format(name, password),
+        ['rabbitmqctl', 'add_user', name, password],
         output_loglevel='quiet',
-        runas=runas)
+        runas=runas,
+        python_shell=False)
 
     if clear_pw:
         # Now, Clear the random password from the account, if necessary
         res2 = clear_password(name, runas)
 
-        if 'Error' in res2.keys():
+        if 'Error' in res2:
             # Clearing the password failed. We should try to cleanup
             # and rerun and error.
             delete_user(name, runas)
@@ -155,8 +227,12 @@ def delete_user(name, runas=None):
 
         salt '*' rabbitmq.delete_user rabbit_user
     '''
-    res = __salt__['cmd.run']('rabbitmqctl delete_user {0}'.format(name),
-                              runas=runas)
+    if runas is None:
+        runas = salt.utils.get_user()
+    res = __salt__['cmd.run'](
+        ['rabbitmqctl', 'delete_user', name],
+        python_shell=False,
+        runas=runas)
     msg = 'Deleted'
 
     return _format_response(res, msg)
@@ -172,10 +248,13 @@ def change_password(name, password, runas=None):
 
         salt '*' rabbitmq.change_password rabbit_user password
     '''
+    if runas is None:
+        runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
-        'rabbitmqctl change_password {0} {1!r}'.format(name, password),
+        ['rabbitmqctl', 'change_password', name, password],
+        runas=runas,
         output_loglevel='quiet',
-        runas=runas)
+        python_shell=False)
     msg = 'Password Changed'
 
     return _format_response(res, msg)
@@ -191,8 +270,12 @@ def clear_password(name, runas=None):
 
         salt '*' rabbitmq.clear_password rabbit_user
     '''
-    res = __salt__['cmd.run']('rabbitmqctl clear_password {0}'.format(name),
-                              runas=runas)
+    if runas is None:
+        runas = salt.utils.get_user()
+    res = __salt__['cmd.run'](
+        ['rabbitmqctl', 'clear_password', name],
+        runas=runas,
+        python_shell=False)
     msg = 'Password Cleared'
 
     return _format_response(res, msg)
@@ -208,8 +291,12 @@ def add_vhost(vhost, runas=None):
 
         salt '*' rabbitmq add_vhost '<vhost_name>'
     '''
-    res = __salt__['cmd.run']('rabbitmqctl add_vhost {0}'.format(vhost),
-                              runas=runas)
+    if runas is None:
+        runas = salt.utils.get_user()
+    res = __salt__['cmd.run'](
+        ['rabbitmqctl', 'add_vhost', vhost],
+        runas=runas,
+        python_shell=False)
 
     msg = 'Added'
     return _format_response(res, msg)
@@ -225,14 +312,17 @@ def delete_vhost(vhost, runas=None):
 
         salt '*' rabbitmq.delete_vhost '<vhost_name>'
     '''
-    res = __salt__['cmd.run']('rabbitmqctl delete_vhost {0}'.format(vhost),
-                              runas=runas)
+    if runas is None:
+        runas = salt.utils.get_user()
+    res = __salt__['cmd.run'](
+        ['rabbitmqctl', 'delete_vhost', vhost],
+        runas=runas,
+        python_shell=False)
     msg = 'Deleted'
     return _format_response(res, msg)
 
 
-def set_permissions(vhost, user, conf='.*', write='.*', read='.*',
-        runas=None):
+def set_permissions(vhost, user, conf='.*', write='.*', read='.*', runas=None):
     '''
     Sets permissions for vhost via rabbitmqctl set_permissions
 
@@ -242,10 +332,13 @@ def set_permissions(vhost, user, conf='.*', write='.*', read='.*',
 
         salt '*' rabbitmq.set_permissions 'myvhost' 'myuser'
     '''
+    if runas is None:
+        runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
-        'rabbitmqctl set_permissions -p {0} {1} "{2}" "{3}" "{4}"'.format(
-            vhost, user, conf, write, read),
-        runas=runas)
+        ['rabbitmqctl', 'set_permissions', '-p',
+         vhost, user, conf, write, read],
+        runas=runas,
+        python_shell=False)
     msg = 'Permissions Set'
     return _format_response(res, msg)
 
@@ -260,13 +353,17 @@ def list_permissions(vhost, runas=None):
 
         salt '*' rabbitmq.list_permissions '/myvhost'
     '''
+    if runas is None:
+        runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
-        'rabbitmqctl list_permissions -p {0}'.format(vhost),
-        runas=runas)
-    return [r.split('\t') for r in res.splitlines()]
+        ['rabbitmqctl', 'list_permissions', '-p', vhost],
+        runas=runas,
+        python_shell=False)
+
+    return _output_to_dict(res)
 
 
-def list_user_permissions(name, user=None):
+def list_user_permissions(name, runas=None):
     '''
     List permissions for a user via rabbitmqctl list_user_permissions
 
@@ -276,14 +373,18 @@ def list_user_permissions(name, user=None):
 
         salt '*' rabbitmq.list_user_permissions 'user'.
     '''
+    if runas is None:
+        runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
-        'rabbitmqctl list_user_permissions {0}'.format(name),
-        runas=user)
-    return [r.split('\t') for r in res.splitlines()]
+        ['rabbitmqctl', 'list_user_permissions', name],
+        runas=runas,
+        python_shell=False)
+
+    return _output_to_dict(res)
 
 
 def set_user_tags(name, tags, runas=None):
-    '''Add user tags via rabbitctl set_user_tags
+    '''Add user tags via rabbitmqctl set_user_tags
 
     CLI Example:
 
@@ -291,14 +392,21 @@ def set_user_tags(name, tags, runas=None):
 
         salt '*' rabbitmq.set_user_tags 'myadmin' 'administrator'
     '''
+    if runas is None:
+        runas = salt.utils.get_user()
+
+    if tags and isinstance(tags, (list, tuple)):
+        tags = ' '.join(tags)
+
     res = __salt__['cmd.run'](
-        'rabbitmqctl set_user_tags {0} {1}'.format(name, tags),
-        runas=runas)
+        ['rabbitmqctl', 'set_user_tags', name, tags],
+        runas=runas,
+        python_shell=False)
     msg = "Tag(s) set"
     return _format_response(res, msg)
 
 
-def status(user=None):
+def status(runas=None):
     '''
     return rabbitmq status
 
@@ -308,14 +416,16 @@ def status(user=None):
 
         salt '*' rabbitmq.status
     '''
+    if runas is None:
+        runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
-        'rabbitmqctl status',
-        runas=user
-    )
+        ['rabbitmqctl', 'status'],
+        runas=runas,
+        python_shell=False)
     return res
 
 
-def cluster_status(user=None):
+def cluster_status(runas=None):
     '''
     return rabbitmq cluster_status
 
@@ -325,14 +435,17 @@ def cluster_status(user=None):
 
         salt '*' rabbitmq.cluster_status
     '''
+    if runas is None:
+        runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
-        'rabbitmqctl cluster_status',
-        runas=user)
+        ['rabbitmqctl', 'cluster_status'],
+        runas=runas,
+        python_shell=False)
 
     return res
 
 
-def join_cluster(host, user='rabbit', runas=None):
+def join_cluster(host, user='rabbit', ram_node=None, runas=None):
     '''
     Join a rabbit cluster
 
@@ -340,13 +453,17 @@ def join_cluster(host, user='rabbit', runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.join_cluster 'rabbit' 'rabbit.example.com'
+        salt '*' rabbitmq.join_cluster 'rabbit.example.com' 'rabbit'
     '''
+    cmd = ['rabbitmqctl', 'join_cluster']
+    if ram_node:
+        cmd.append('--ram')
+    cmd.append('{0}@{1}'.format(user, host))
 
+    if runas is None:
+        runas = salt.utils.get_user()
     stop_app(runas)
-    res = __salt__['cmd.run'](
-        'rabbitmqctl join_cluster {0}@{1}'.format(user, host),
-        runas=runas)
+    res = __salt__['cmd.run'](cmd, runas=runas, python_shell=False)
     start_app(runas)
 
     return _format_response(res, 'Join')
@@ -362,11 +479,12 @@ def stop_app(runas=None):
 
         salt '*' rabbitmq.stop_app
     '''
-    res = __salt__['cmd.run'](
-        'rabbitmqctl stop_app',
-        runas=runas)
-
-    return res
+    if runas is None:
+        runas = salt.utils.get_user()
+    return __salt__['cmd.run'](
+        ['rabbitmqctl', 'stop_app'],
+        runas=runas,
+        python_shell=False)
 
 
 def start_app(runas=None):
@@ -379,11 +497,12 @@ def start_app(runas=None):
 
         salt '*' rabbitmq.start_app
     '''
-    res = __salt__['cmd.run'](
-        'rabbitmqctl start_app',
-        runas=runas)
-
-    return res
+    if runas is None:
+        runas = salt.utils.get_user()
+    return __salt__['cmd.run'](
+        ['rabbitmqctl', 'start_app'],
+        runas=runas,
+        python_shell=False)
 
 
 def reset(runas=None):
@@ -396,11 +515,12 @@ def reset(runas=None):
 
         salt '*' rabbitmq.reset
     '''
-    res = __salt__['cmd.run'](
-        'rabbitmqctl reset',
-        runas=runas)
-
-    return res
+    if runas is None:
+        runas = salt.utils.get_user()
+    return __salt__['cmd.run'](
+        ['rabbitmqctl', 'reset'],
+        runas=runas,
+        python_shell=False)
 
 
 def force_reset(runas=None):
@@ -413,14 +533,15 @@ def force_reset(runas=None):
 
         salt '*' rabbitmq.force_reset
     '''
-    res = __salt__['cmd.run'](
-        'rabbitmqctl force_reset',
-        runas=runas)
+    if runas is None:
+        runas = salt.utils.get_user()
+    return __salt__['cmd.run'](
+        ['rabbitmqctl', 'force_reset'],
+        runas=runas,
+        python_shell=False)
 
-    return res
 
-
-def list_queues(*kwargs):
+def list_queues(runas=None, *args):
     '''
     Returns queue details of the / virtual host
 
@@ -430,12 +551,14 @@ def list_queues(*kwargs):
 
         salt '*' rabbitmq.list_queues messages consumers
     '''
-    res = __salt__['cmd.run'](
-        'rabbitmqctl list_queues {0}'.format(' '.join(list(kwargs))))
-    return res
+    if runas is None:
+        runas = salt.utils.get_user()
+    cmd = ['rabbitmqctl', 'list_queues']
+    cmd.extend(args)
+    return __salt__['cmd.run'](cmd, runas=runas, python_shell=False)
 
 
-def list_queues_vhost(vhost, *kwargs):
+def list_queues_vhost(vhost, runas=None, *args):
     '''
     Returns queue details of specified virtual host. This command will consider
     first parameter as the vhost name and rest will be treated as
@@ -448,12 +571,14 @@ def list_queues_vhost(vhost, *kwargs):
 
         salt '*' rabbitmq.list_queues messages consumers
     '''
-    res = __salt__['cmd.run'](
-        'rabbitmqctl list_queues -p {0} {1}'.format(vhost, ' '.join(list(kwargs))))
-    return res
+    if runas is None:
+        runas = salt.utils.get_user()
+    cmd = ['rabbitmqctl', 'list_queues', '-p', vhost]
+    cmd.extend(args)
+    return __salt__['cmd.run'](cmd, runas=runas, python_shell=False)
 
 
-def list_policies(runas=None):
+def list_policies(vhost="/", runas=None):
     '''
     Return a dictionary of policies nested by vhost and name
     based on the data returned from rabbitmqctl list_policies.
@@ -467,22 +592,31 @@ def list_policies(runas=None):
         salt '*' rabbitmq.list_policies'
     '''
     ret = {}
-    res = __salt__['cmd.run']('rabbitmqctl list_policies',
-                              runas=runas)
-    for line in res.splitlines():
-        if '...' not in line and line != '\n':
+    if runas is None:
+        runas = salt.utils.get_user()
+    output = __salt__['cmd.run'](
+        ['rabbitmqctl', 'list_policies', '-p', vhost],
+        runas=runas,
+        python_shell=False)
+    for line in salt.utils.itertools.split(output, '\n'):
+        if '...' not in line:
             parts = line.split('\t')
-            if len(parts) != 6:
+            if len(parts) not in (5, 6):
                 continue
             vhost, name = parts[0], parts[1]
             if vhost not in ret:
                 ret[vhost] = {}
-            ret[vhost][name] = {
-                'apply_to': parts[2],
-                'pattern': parts[3],
-                'definition': parts[4],
-                'priority': parts[5]
-            }
+            ret[vhost][name] = {}
+            # How many fields are there? - 'apply_to' was inserted in position
+            # 2 at some point
+            offset = len(parts) - 5
+            if len(parts) == 6:
+                ret[vhost][name]['apply_to'] = parts[2]
+            ret[vhost][name].update({
+                'pattern': parts[offset+2],
+                'definition': parts[offset+3],
+                'priority': parts[offset+4]
+            })
     log.debug('Listing policies: {0}'.format(ret))
     return ret
 
@@ -497,17 +631,21 @@ def set_policy(vhost, name, pattern, definition, priority=None, runas=None):
 
     .. code-block:: bash
 
-        salt '*' rabbitmq.set_policy / HA '.*' '{"ha-mode": "all"}'
+        salt '*' rabbitmq.set_policy / HA '.*' '{"ha-mode":"all"}'
     '''
-    res = __salt__['cmd.run'](
-        "rabbitmqctl set_policy -p {0}{1}{2} {3} '{4}' '{5}'".format(
-            vhost,
-            ' --priority ' if priority else '',
-            priority if priority else '',
-            name,
-            pattern,
-            definition.replace("'", '"')),
-        runas=runas)
+    if runas is None:
+        runas = salt.utils.get_user()
+    if isinstance(definition, dict):
+        definition = json.dumps(definition)
+    if not isinstance(definition, six.string_types):
+        raise SaltInvocationError(
+            'The \'definition\' argument must be a dictionary or JSON string'
+        )
+    cmd = ['rabbitmqctl', 'set_policy', '-p', vhost]
+    if priority:
+        cmd.extend(['--priority', priority])
+    cmd.extend([name, pattern, definition])
+    res = __salt__['cmd.run'](cmd, runas=runas, python_shell=False)
     log.debug('Set policy: {0}'.format(res))
     return _format_response(res, 'Set')
 
@@ -524,10 +662,12 @@ def delete_policy(vhost, name, runas=None):
 
         salt '*' rabbitmq.delete_policy / HA'
     '''
+    if runas is None:
+        runas = salt.utils.get_user()
     res = __salt__['cmd.run'](
-        'rabbitmqctl clear_policy -p {0} {1}'.format(
-            vhost, name),
-        runas=runas)
+        ['rabbitmqctl', 'clear_policy', '-p', vhost, name],
+        runas=runas,
+        python_shell=False)
     log.debug('Delete policy: {0}'.format(res))
     return _format_response(res, 'Deleted')
 
@@ -544,11 +684,12 @@ def policy_exists(vhost, name, runas=None):
 
         salt '*' rabbitmq.policy_exists / HA
     '''
+    if runas is None:
+        runas = salt.utils.get_user()
     policies = list_policies(runas=runas)
     return bool(vhost in policies and name in policies[vhost])
 
 
-@decorators.which('rabbitmq-plugins')
 def plugin_is_enabled(name, runas=None):
     '''
     Return whether the plugin is enabled.
@@ -559,11 +700,13 @@ def plugin_is_enabled(name, runas=None):
 
         salt '*' rabbitmq.plugin_is_enabled foo
     '''
-    ret = __salt__['cmd.run']('rabbitmq-plugins list -m -e', runas=runas)
+    if runas is None:
+        runas = salt.utils.get_user()
+    cmd = [_get_rabbitmq_plugin(), 'list', '-m', '-e']
+    ret = __salt__['cmd.run'](cmd, runas=runas, python_shell=False)
     return bool(name in ret)
 
 
-@decorators.which('rabbitmq-plugins')
 def enable_plugin(name, runas=None):
     '''
     Enable a RabbitMQ plugin via the rabbitmq-plugins command.
@@ -574,13 +717,13 @@ def enable_plugin(name, runas=None):
 
         salt '*' rabbitmq.enable_plugin foo
     '''
-    ret = __salt__['cmd.run_all'](
-            'rabbitmq-plugins enable {0}'.format(name),
-            runas=runas)
+    if runas is None:
+        runas = salt.utils.get_user()
+    cmd = [_get_rabbitmq_plugin(), 'enable', name]
+    ret = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
     return _format_response(ret, 'Enabled')
 
 
-@decorators.which('rabbitmq-plugins')
 def disable_plugin(name, runas=None):
     '''
     Disable a RabbitMQ plugin via the rabbitmq-plugins command.
@@ -591,8 +734,8 @@ def disable_plugin(name, runas=None):
 
         salt '*' rabbitmq.disable_plugin foo
     '''
-
-    ret = __salt__['cmd.run_all'](
-            'rabbitmq-plugins disable {0}'.format(name),
-            runas=runas)
+    if runas is None:
+        runas = salt.utils.get_user()
+    cmd = [_get_rabbitmq_plugin(), 'disable', name]
+    ret = __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
     return _format_response(ret, 'Disabled')

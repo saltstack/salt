@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     tests.integration.modules.event
@@ -10,9 +8,9 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import time
 import threading
-from Queue import Queue, Empty
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -22,13 +20,16 @@ ensure_in_syspath('../../')
 import integration
 from salt.utils import event
 
+# Import 3rd-party libs
+from salt.ext.six.moves.queue import Queue, Empty  # pylint: disable=import-error,no-name-in-module
+
 
 class EventModuleTest(integration.ModuleCase):
     def __test_event_fire_master(self):
         events = Queue()
 
         def get_event(events):
-            me = event.MasterEvent(self.master_opts['sock_dir'])
+            me = event.MasterEvent(self.master_opts['sock_dir'], listen=True)
             events.put_nowait(
                 me.get_event(wait=10, tag='salttest', full=False)
             )
@@ -61,7 +62,7 @@ class EventModuleTest(integration.ModuleCase):
         events = Queue()
 
         def get_event(events):
-            me = event.MinionEvent(self.minion_opts)
+            me = event.MinionEvent(self.minion_opts, listen=True)
             events.put_nowait(
                 me.get_event(wait=10, tag='salttest', full=False)
             )
@@ -90,7 +91,7 @@ class EventModuleTest(integration.ModuleCase):
         events = Queue()
 
         def get_event(events):
-            me = event.MinionEvent(self.sub_minion_opts)
+            me = event.MinionEvent(self.sub_minion_opts, listen=True)
             events.put_nowait(
                 me.get_event(wait=10, tag='salttest', full=False)
             )

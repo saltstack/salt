@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #
 # Name:     build_shar.sh
 # Requires: python-virtualenv, gcc, gcc-c++, swig, sharutils, and the
@@ -12,6 +12,10 @@
 #   2. To be used as a basis for creating your own salt rpm/deb.
 #
 # It will fetch libzmq and build it as a pyzmq extension.
+#
+# IMPORTANT: Unpacking the shar requires uudecode, which is distributed along
+# with sharutils. Thus, you should have sharutils installed on any host which
+# will need to unpack the shar archive.
 #
 # The script is capable of building a shar archive using several methods:
 #
@@ -27,8 +31,10 @@
 # option can be used to specify directory from which dependencies will be
 # sourced. Any missing dependencies will be retrieved with pip.
 #
-# It is recommended to run this script on a machine which does not have any of
-# the Salt dependencies already installed.
+# It is strongly recommended to run this script on a machine which does not
+# have any of the Salt dependencies already installed, because if the script
+# detects that ZeroMQ is already installed, then pyzmq's setup.py will not
+# build a bundled ZeroMQ.
 #
 # Run the script with -h for usage details.
 #

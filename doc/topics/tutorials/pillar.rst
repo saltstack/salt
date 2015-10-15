@@ -7,14 +7,14 @@ Pillar Walkthrough
     This walkthrough assumes that the reader has already completed the initial
     Salt :doc:`walkthrough </topics/tutorials/walkthrough>`.
 
-Pillars are tree-like structures of data defined on the Salt Master and passed 
+Pillars are tree-like structures of data defined on the Salt Master and passed
 through to minions. They allow confidential, targeted data to be securely sent
 only to the relevant minion.
 
 .. note::
 
     Grains and Pillar are sometimes confused, just remember that Grains
-    is data about a minion which is stored or generated from the minion.
+    are data about a minion which is stored or generated from the minion.
     This is why information like the OS and CPU type are found in Grains.
     Pillar is information about a minion or many minions stored or generated
     on the Salt Master.
@@ -23,7 +23,7 @@ Pillar data is useful for:
 
 Highly Sensitive Data:
     Information transferred via pillar is guaranteed to only be presented to
-    the minions that are targeted, making Pillar suitable 
+    the minions that are targeted, making Pillar suitable
     for managing security information, such as cryptographic keys and
     passwords.
 Minion Configuration:
@@ -34,11 +34,11 @@ Variables:
     minions can be defined in pillar and then accessed inside sls formulas
     and template files.
 Arbitrary Data:
-    Pillar can contain any basic data structure, so a list of values, or a
-    key/value store can be defined making it easy to iterate over a group
-    of values in sls formulas
+    Pillar can contain any basic data structure in dictionary format,
+    so a key/value store can be defined making it easy to iterate over a group
+    of values in sls formulas.
 
-Pillar is therefore one of the most important systems when using Salt, this
+Pillar is therefore one of the most important systems when using Salt. This
 walkthrough is designed to get a simple Pillar up and running in a few minutes
 and then to dive into the capabilities of Pillar and where the data is
 available.
@@ -96,7 +96,14 @@ This top file associates the data.sls file to all minions. Now the
 
     info: some data
 
-Now that the file has been saved, the minions' pillars will be updated:
+To ensure that the minions have the new pillar data, issue a command
+to them asking that they fetch their pillars from the master:
+
+.. code-block:: bash
+
+    salt '*' saltutil.refresh_pillar
+
+Now that the minions have the new pillar, it can be retrieved:
 
 .. code-block:: bash
 
@@ -107,7 +114,7 @@ The key ``info`` should now appear in the returned pillar data.
 More Complex Data
 ~~~~~~~~~~~~~~~~~
 
-Unlike states, pillar files do not need to define :strong:`formulas`. 
+Unlike states, pillar files do not need to define :strong:`formulas`.
 This example sets up user data with a UID:
 
 ``/srv/pillar/users/init.sls``:
@@ -156,10 +163,10 @@ user data is applied in an sls file.
 Parameterizing States With Pillar
 =================================
 
-Pillar data can be accessed in state files to customise behaviour for each 
-minion. All pillar (and grain) data applicable to each minion is substituted 
+Pillar data can be accessed in state files to customise behavior for each
+minion. All pillar (and grain) data applicable to each minion is substituted
 into the state files through templating before being run. Typical uses
-include setting directories appropriate for the minion and skipping states 
+include setting directories appropriate for the minion and skipping states
 that don't apply.
 
 A simple example is to set up a mapping of package names in pillar for
@@ -240,8 +247,7 @@ A simple formula:
 .. code-block:: yaml
 
     vim:
-      pkg:
-        - installed
+      pkg.installed: []
 
     /etc/vimrc:
       file.managed:
@@ -259,8 +265,7 @@ Can be easily transformed into a powerful, parameterized formula:
 .. code-block:: jinja
 
     vim:
-      pkg:
-        - installed
+      pkg.installed:
         - name: {{ pillar['pkgs']['vim'] }}
 
     /etc/vimrc:
@@ -288,6 +293,28 @@ Where the vimrc source location can now be changed via pillar:
 
 Ensuring that the right vimrc is sent out to the correct minions.
 
+Setting Pillar Data on the Command Line
+=======================================
+
+Pillar data can be set on the command line like so:
+
+.. code-block:: bash
+
+    salt '*' state.highstate pillar='{"foo": "bar"}'
+
+The ``state.sls`` command can also be used to set pillar values via the command
+line:
+
+.. code-block:: bash
+
+    salt '*' state.sls my_sls_file pillar='{"hello": "world"}'
+
+.. note::
+
+    If a key is passed on the command line that already exists on the minion,
+    the key that is passed in will overwrite the entire value of that key,
+    rather than merging only the specified value set via the command line.
+
 More On Pillar
 ==============
 
@@ -300,3 +327,37 @@ Reference information on pillar and the external pillar interface can be found
 in the Salt documentation:
 
 :doc:`Pillar </topics/pillar/index>`
+
+Minion Config in Pillar
+=======================
+
+Minion configuration options can be set on pillars. Any option that you want
+to modify, should be in the first level of the pillars, in the same way you set
+the options in the config file. For example, to configure the MySQL root
+password to be used by MySQL Salt execution module:
+
+.. code-block:: yaml
+
+    mysql.pass: hardtoguesspassword
+
+This is very convenient when you need some dynamic configuration change that
+you want to be applied on the fly. For example, there is a chicken and the egg
+problem if you do this:
+
+.. code-block:: yaml
+
+    mysql-admin-passwd:
+      mysql_user.present:
+        - name: root
+        - password: somepasswd
+
+    mydb:
+      mysql_db.present
+
+The second state will fail, because you changed the root password and the
+minion didn't notice it. Setting mysql.pass in the pillar, will help to sort
+out the issue. But always change the root admin password in the first place.
+
+This is very helpful for any module that needs credentials to apply state
+changes: mysql, keystone, etc.
+

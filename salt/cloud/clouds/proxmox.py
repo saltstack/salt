@@ -3,7 +3,7 @@
 Proxmox Cloud Module
 ======================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 The Proxmox cloud module is used to control access to cloud providers using
 the Proxmox system (KVM / OpenVZ).
@@ -18,35 +18,34 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       user: myuser@pam or myuser@pve
       password: mypassword
       url: hypervisor.domain.tld
-      provider: proxmox
+      driver: proxmox
+      verify_ssl: True
 
 :maintainer: Frank Klaassen <frank@cloudright.nl>
-:maturity: new
 :depends: requests >= 2.2.1
 :depends: IPy >= 0.81
 '''
 
 # Import python libs
-import copy
+from __future__ import absolute_import
 import time
 import pprint
 import logging
 
 # Import salt libs
+import salt.ext.six as six
 import salt.utils
 
 # Import salt cloud libs
 import salt.utils.cloud
 import salt.config as config
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudSystemExit,
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
 
-# Get logging started
-log = logging.getLogger(__name__)
-
+# Import Third Party Libs
 try:
     import requests
     HAS_REQUESTS = True
@@ -59,18 +58,23 @@ try:
 except ImportError:
     HAS_IPY = False
 
+# Get logging started
+log = logging.getLogger(__name__)
+
+__virtualname__ = 'proxmox'
+
 
 def __virtual__():
     '''
     Check for PROXMOX configurations
     '''
-    if not (HAS_IPY and HAS_REQUESTS):
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -79,21 +83,36 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'proxmox',
+        __active_provider_name__ or __virtualname__,
         ('user',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'requests': HAS_REQUESTS,
+        'IPy': HAS_IPY
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
 url = None
 ticket = None
 csrf = None
+verify_ssl = None
 
 
 def _authenticate():
     '''
     Retrieve CSRF and API tickets for the Proxmox API
     '''
-    global url, ticket, csrf
+    global url, ticket, csrf, verify_ssl
     url = config.get_cloud_config_value(
         'url', get_configured_provider(), __opts__, search_global=False
     )
@@ -103,12 +122,17 @@ def _authenticate():
     passwd = config.get_cloud_config_value(
         'password', get_configured_provider(), __opts__, search_global=False
     )
+    verify_ssl = config.get_cloud_config_value(
+        'verify_ssl', get_configured_provider(), __opts__, search_global=False
+    )
+    if verify_ssl is None:
+        verify_ssl = True
 
     connect_data = {'username': username, 'password': passwd}
     full_url = 'https://{0}:8006/api2/json/access/ticket'.format(url)
 
     returned_data = requests.post(
-        full_url, verify=False, data=connect_data).json()
+        full_url, verify=verify_ssl, data=connect_data).json()
 
     ticket = {'PVEAuthCookie': returned_data['data']['ticket']}
     csrf = str(returned_data['data']['CSRFPreventionToken'])
@@ -132,24 +156,24 @@ def query(conn_type, option, post_data=None):
 
     if conn_type == 'post':
         httpheaders['CSRFPreventionToken'] = csrf
-        response = requests.post(full_url, verify=False,
+        response = requests.post(full_url, verify=verify_ssl,
                                  data=post_data,
                                  cookies=ticket,
                                  headers=httpheaders)
     elif conn_type == 'put':
         httpheaders['CSRFPreventionToken'] = csrf
-        response = requests.put(full_url, verify=False,
+        response = requests.put(full_url, verify=verify_ssl,
                                 data=post_data,
                                 cookies=ticket,
                                 headers=httpheaders)
     elif conn_type == 'delete':
         httpheaders['CSRFPreventionToken'] = csrf
-        response = requests.delete(full_url, verify=False,
+        response = requests.delete(full_url, verify=verify_ssl,
                                    data=post_data,
                                    cookies=ticket,
                                    headers=httpheaders)
     elif conn_type == 'get':
-        response = requests.get(full_url, verify=False,
+        response = requests.get(full_url, verify=verify_ssl,
                                 cookies=ticket)
 
     response.raise_for_status()
@@ -164,7 +188,7 @@ def query(conn_type, option, post_data=None):
         log.error(response)
 
 
-def _getVmByName(name, allDetails=False):
+def _get_vm_by_name(name, allDetails=False):
     '''
     Since Proxmox works based op id's rather than names as identifiers this
     requires some filtering to retrieve the required information.
@@ -177,11 +201,11 @@ def _getVmByName(name, allDetails=False):
     return False
 
 
-def _getVmById(vmid, allDetails=False):
+def _get_vm_by_id(vmid, allDetails=False):
     '''
     Retrieve a VM based on the ID.
     '''
-    for vm_name, vm_details in get_resources_vms(includeConfig=allDetails).items():
+    for vm_name, vm_details in six.iteritems(get_resources_vms(includeConfig=allDetails)):
         if str(vm_details['vmid']) == str(vmid):
             return vm_details
 
@@ -191,7 +215,7 @@ def _getVmById(vmid, allDetails=False):
 
 def _get_next_vmid():
     '''
-    Proxmox allows to use alternative ids instead of autoincrementing.
+    Proxmox allows the use of alternative ids instead of autoincrementing.
     Because of that its required to query what the first available ID is.
     '''
     return int(query('get', 'cluster/nextid'))
@@ -203,13 +227,13 @@ def _check_ip_available(ip_addr):
     This function can be used to prevent VMs being created with duplicate
     IP's or to generate a warning.
     '''
-    for vm_name, vm_details in get_resources_vms(includeConfig=True).items():
+    for vm_name, vm_details in six.iteritems(get_resources_vms(includeConfig=True)):
         vm_config = vm_details['config']
         if ip_addr in vm_config['ip_address'] or vm_config['ip_address'] == ip_addr:
             log.debug('IP "{0}" is already defined'.format(ip_addr))
             return False
 
-    log.debug('IP {0!r} is available to be defined'.format(ip_addr))
+    log.debug('IP \'{0}\' is available to be defined'.format(ip_addr))
     return True
 
 
@@ -365,7 +389,7 @@ def avail_locations(call=None):
     return ret
 
 
-def avail_images(call=None, location='local', img_type='vztpl'):
+def avail_images(call=None, location='local'):
     '''
     Return a list of the images that are on the provider
 
@@ -382,7 +406,7 @@ def avail_images(call=None, location='local', img_type='vztpl'):
         )
 
     ret = {}
-    for host_name, host_details in avail_locations().items():
+    for host_name, host_details in six.iteritems(avail_locations()):
         for item in query('get', 'nodes/{0}/storage/{1}/content'.format(host_name, location)):
             ret[item['volid']] = item
     return ret
@@ -404,7 +428,7 @@ def list_nodes(call=None):
         )
 
     ret = {}
-    for vm_name, vm_details in get_resources_vms(includeConfig=True).items():
+    for vm_name, vm_details in six.iteritems(get_resources_vms(includeConfig=True)):
         log.debug('VM_Name: {0}'.format(vm_name))
         log.debug('vm_details: {0}'.format(vm_details))
 
@@ -412,7 +436,7 @@ def list_nodes(call=None):
         ret[vm_name] = {}
         ret[vm_name]['id'] = str(vm_details['vmid'])
         ret[vm_name]['image'] = str(vm_details['vmid'])
-        ret[vm_name]['size'] = str(vm_details['config']['disk'])
+        ret[vm_name]['size'] = str(vm_details['disk'])
         ret[vm_name]['state'] = str(vm_details['status'])
 
         # Figure out which is which to put it in the right column
@@ -476,13 +500,21 @@ def create(vm_):
 
         salt-cloud -p proxmox-ubuntu vmhostname
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'proxmox',
+                                                           vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     ret = {}
-    deploy = config.get_cloud_config_value('deploy', vm_, __opts__)
-    if deploy is True and salt.utils.which('sshpass') is None:
-        raise SaltCloudSystemExit(
-            'Cannot deploy salt in a VM if the \'sshpass\' binary is not '
-            'present on the system.'
-        )
 
     salt.utils.cloud.fire_event(
         'event',
@@ -491,12 +523,23 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
 
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
+
+    if 'use_dns' in vm_ and 'ip_address' not in vm_:
+        use_dns = vm_['use_dns']
+        if use_dns:
+            from socket import gethostbyname, gaierror
+            try:
+                ip_address = gethostbyname(str(vm_['name']))
+            except gaierror:
+                log.debug('Resolving of {hostname} failed'.format(hostname=str(vm_['name'])))
+            else:
+                vm_['ip_address'] = str(ip_address)
 
     try:
         data = create_node(vm_)
@@ -505,10 +548,10 @@ def create(vm_):
             'Error creating {0} on PROXMOX\n\n'
             'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], exc.message
+                vm_['name'], str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -541,7 +584,7 @@ def create(vm_):
 
     # Wait until the VM has fully started
     log.debug('Waiting for state "running" for vm {0} on {1}'.format(vmid, host))
-    if not wait_for_state(vmid, host, nodeType, 'running'):
+    if not wait_for_state(vmid, 'running'):
         return {'Error': 'Unable to start {0}, command timed out'.format(name)}
 
     ssh_username = config.get_cloud_config_value(
@@ -555,118 +598,14 @@ def create(vm_):
     ret['username'] = ssh_username
     ret['password'] = ssh_password
 
-    # Check whether we need to deploy and are on OpenVZ rather than KVM which
-    # does not (yet) provide support for automatic provisioning
-    if config.get_cloud_config_value('deploy', vm_, __opts__) is True and config.get_cloud_config_value('technology', vm_, __opts__) == 'openvz':
-        deploy_script = script(vm_)
-        deploy_kwargs = {
-            'opts': __opts__,
-            'host': ip_address,
-            'username': ssh_username,
-            'password': ssh_password,
-            'script': deploy_script,
-            'name': vm_['name'],
-            'tmp_dir': config.get_cloud_config_value(
-                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
-            ),
-            'deploy_command': config.get_cloud_config_value(
-                'deploy_command', vm_, __opts__,
-                default='/tmp/.saltcloud/deploy.sh',
-            ),
-            'start_action': __opts__['start_action'],
-            'parallel': __opts__['parallel'],
-            'sock_dir': __opts__['sock_dir'],
-            'conf_file': __opts__['conf_file'],
-            'minion_pem': vm_['priv_key'],
-            'minion_pub': vm_['pub_key'],
-            'keep_tmp': __opts__['keep_tmp'],
-            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'sudo': config.get_cloud_config_value(
-                'sudo', vm_, __opts__, default=(ssh_username != 'root')
-            ),
-            'sudo_password': config.get_cloud_config_value(
-                'sudo_password', vm_, __opts__, default=None
-            ),
-            'tty': config.get_cloud_config_value(
-                'tty', vm_, __opts__, default=False
-            ),
-            'display_ssh_output': config.get_cloud_config_value(
-                'display_ssh_output', vm_, __opts__, default=True
-            ),
-            'script_args': config.get_cloud_config_value(
-                'script_args', vm_, __opts__
-            ),
-            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
-        }
-
-        # Deploy salt-master files, if necessary
-        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
-            deploy_kwargs['make_master'] = True
-            deploy_kwargs['master_pub'] = vm_['master_pub']
-            deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = salt.utils.cloud.master_config(__opts__, vm_)
-            deploy_kwargs['master_conf'] = master_conf
-
-            if master_conf.get('syndic_master', None):
-                deploy_kwargs['make_syndic'] = True
-
-        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
-            'make_minion', vm_, __opts__, default=True
-        )
-
-        win_installer = config.get_cloud_config_value(
-            'win_installer', vm_, __opts__)
-        if win_installer:
-            deploy_kwargs['win_installer'] = win_installer
-            minion = salt.utils.cloud.minion_config(__opts__, vm_)
-            deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_cloud_config_value(
-                'win_username', vm_, __opts__, default='Administrator'
-            )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=''
-            )
-
-        # Store what was used to the deploy the VM
-        event_kwargs = copy.deepcopy(deploy_kwargs)
-        del event_kwargs['minion_pem']
-        del event_kwargs['minion_pub']
-        del event_kwargs['sudo_password']
-        if 'password' in event_kwargs:
-            del event_kwargs['password']
-
-        # Store what was used to the deploy the VM
-        ret['deploy_kwargs'] = deploy_kwargs
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'executing deploy script',
-            'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': event_kwargs},
-            transport=__opts__['transport']
-        )
-
-        deployed = False
-        if win_installer:
-            deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
-        else:
-            deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
-
-        if deployed:
-            log.info('Salt installed on {0}'.format(vm_['name']))
-        else:
-            log.error(
-                'Failed to start Salt on Cloud VM {0}'.format(
-                    vm_['name']
-                )
-            )
-    # END Install Salt role(s)
+    vm_['ssh_host'] = ip_address
+    vm_['password'] = ssh_password
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
 
     # Report success!
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
@@ -678,7 +617,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
     )
 
@@ -713,8 +652,8 @@ def create_node(vm_):
     vmhost = vm_['host']
     newnode['vmid'] = _get_next_vmid()
 
-    for prop in ('cpuunits', 'description', 'memory', 'onboot'):
-        if prop in vm_:  # if the propery is set, use it for the VM request
+    for prop in 'cpuunits', 'description', 'memory', 'onboot':
+        if prop in vm_:  # if the property is set, use it for the VM request
             newnode[prop] = vm_[prop]
 
     if vm_['technology'] == 'openvz':
@@ -723,13 +662,13 @@ def create_node(vm_):
         newnode['ostemplate'] = vm_['image']
 
         # optional VZ settings
-        for prop in ('cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid'):
-            if prop in vm_:  # if the propery is set, use it for the VM request
+        for prop in 'cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid', 'storage':
+            if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
-        for prop in ('acpi', 'cores', 'cpu', 'pool'):
-            if prop in vm_:  # if the propery is set, use it for the VM request
+        for prop in 'acpi', 'cores', 'cpu', 'pool', 'storage':
+            if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
     # The node is ready. Lets request it to be added
@@ -746,7 +685,7 @@ def create_node(vm_):
     return _parse_proxmox_upid(node, vm_)
 
 
-def show_instance(name, call=None, instance_type=None):
+def show_instance(name, call=None):
     '''
     Show the details from Proxmox concerning an instance
     '''
@@ -766,7 +705,7 @@ def get_vmconfig(vmid, node=None, node_type='openvz'):
     '''
     if node is None:
         # We need to figure out which node this VM is on.
-        for host_name, host_details in avail_locations().items():
+        for host_name, host_details in six.iteritems(avail_locations()):
             for item in query('get', 'nodes/{0}/{1}'.format(host_name, node_type)):
                 if item['vmid'] == vmid:
                     node = host_name
@@ -779,7 +718,7 @@ def get_vmconfig(vmid, node=None, node_type='openvz'):
 
 def wait_for_created(upid, timeout=300):
     '''
-    Wait until a the vm has been created succesfully
+    Wait until a the vm has been created successfully
     '''
     start_time = time.time()
     info = _lookup_proxmox_task(upid)
@@ -799,12 +738,12 @@ def wait_for_created(upid, timeout=300):
         info = _lookup_proxmox_task(upid)
 
 
-def wait_for_state(vmid, node, nodeType, state, timeout=300):
+def wait_for_state(vmid, state, timeout=300):
     '''
-    Wait until a specific state has been reached on  a node
+    Wait until a specific state has been reached on a node
     '''
     start_time = time.time()
-    node = get_vm_status(vmid=vmid, host=node, nodeType=nodeType)
+    node = get_vm_status(vmid=vmid)
     if not node:
         log.error('wait_for_state: No VM retrieved based on given criteria.')
         raise SaltCloudExecutionFailure
@@ -820,7 +759,7 @@ def wait_for_state(vmid, node, nodeType, state, timeout=300):
             log.debug('Timeout reached while waiting for {0} to '
                       'become {1}'.format(node['name'], state))
             return False
-        node = get_vm_status(vmid=vmid, host=node, nodeType=nodeType)
+        node = get_vm_status(vmid=vmid)
         log.debug('State for {0} is: "{1}" instead of "{2}"'.format(
                   node['name'], node['status'], state))
 
@@ -849,10 +788,18 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
-    vmobj = _getVmByName(name)
+    vmobj = _get_vm_by_name(name)
     if vmobj is not None:
-        query('delete', 'nodes/{0}/{1}/{2}'.format(
-            vmobj['host'], vmobj['type'], vmobj['id']
+        # stop the vm
+        if get_vm_status(vmid=vmobj['vmid'])['status'] != 'stopped':
+            stop(name, vmobj['vmid'], 'action')
+
+        # wait until stopped
+        if not wait_for_state(vmobj['vmid'], 'stopped'):
+            return {'Error': 'Unable to stop {0}, command timed out'.format(name)}
+
+        query('delete', 'nodes/{0}/{1}'.format(
+            vmobj['node'], vmobj['id']
         ))
         salt.utils.cloud.fire_event(
             'event',
@@ -876,11 +823,11 @@ def set_vm_status(status, name=None, vmid=None):
     if vmid is not None:
         log.debug('set_vm_status: via ID - VMID {0} ({1}): {2}'.format(
                   vmid, name, status))
-        vmobj = _getVmById(vmid)
+        vmobj = _get_vm_by_id(vmid)
     else:
         log.debug('set_vm_status: via name - VMID {0} ({1}): {2}'.format(
                   vmid, name, status))
-        vmobj = _getVmByName(name)
+        vmobj = _get_vm_by_name(name)
 
     if not vmobj or 'node' not in vmobj or 'type' not in vmobj or 'vmid' not in vmobj:
         log.error('Unable to set status {0} for {1} ({2})'.format(
@@ -900,16 +847,16 @@ def set_vm_status(status, name=None, vmid=None):
     return False
 
 
-def get_vm_status(vmid=None, name=None, host=None, nodeType=None):
+def get_vm_status(vmid=None, name=None):
     '''
     Get the status for a VM, either via the ID or the hostname
     '''
     if vmid is not None:
         log.debug('get_vm_status: VMID {0}'.format(vmid))
-        vmobj = _getVmById(vmid)
+        vmobj = _get_vm_by_id(vmid)
     elif name is not None:
         log.debug('get_vm_status: name {0}'.format(name))
-        vmobj = _getVmByName(name)
+        vmobj = _get_vm_by_name(name)
     else:
         log.debug("get_vm_status: No ID or NAME given")
         raise SaltCloudExecutionFailure

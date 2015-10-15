@@ -2,13 +2,19 @@
 '''
 Various network validation utilities
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import re
 import socket
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
+import salt.utils
+
+# Import third party libs
+if salt.utils.is_windows():
+    from salt.ext import win_inet_pton  # pylint: disable=unused-import
 
 
 def mac(addr):
@@ -24,38 +30,47 @@ def mac(addr):
     return valid.match(addr) is not None
 
 
-def ipv4_addr(addr):
+def __ip_addr(addr, address_family=socket.AF_INET):
     '''
     Returns True if the IP address (and optional subnet) are valid, otherwise
     returns False.
     '''
+    mask_max = '32'
+    if address_family == socket.AF_INET6:
+        mask_max = '128'
+
     try:
         if '/' not in addr:
-            addr += '/32'
+            addr = '{addr}/{mask_max}'.format(addr=addr, mask_max=mask_max)
     except TypeError:
         return False
 
-    ip, subnet_len = addr.rsplit('/', 1)
+    ip, mask = addr.rsplit('/', 1)
 
     # Verify that IP address is valid
     try:
-        socket.inet_aton(ip)
+        socket.inet_pton(address_family, ip)
     except socket.error:
         return False
-    else:
-        if len(ip.split('.')) != 4:
-            return False
 
-    # Verify that subnet length is valid
+    # Verify that mask is valid
     try:
-        subnet_len = int(subnet_len)
+        mask = int(mask)
     except ValueError:
         return False
     else:
-        if not 1 <= subnet_len <= 32:
+        if not 1 <= mask <= int(mask_max):
             return False
 
     return True
+
+
+def ipv4_addr(addr):
+    '''
+    Returns True if the IPv4 address (and optional subnet) are valid, otherwise
+    returns False.
+    '''
+    return __ip_addr(addr, socket.AF_INET)
 
 
 def ipv6_addr(addr):
@@ -63,33 +78,7 @@ def ipv6_addr(addr):
     Returns True if the IPv6 address (and optional subnet) are valid, otherwise
     returns False.
     '''
-    # From http://stackoverflow.com/questions/6276115/ipv6-regexp-python
-    ip6_regex = (r'(\A([0-9a-f]{1,4}:){1,1}(:[0-9a-f]{1,4}){1,6}\Z)|'
-                 r'(\A([0-9a-f]{1,4}:){1,2}(:[0-9a-f]{1,4}){1,5}\Z)|'
-                 r'(\A([0-9a-f]{1,4}:){1,3}(:[0-9a-f]{1,4}){1,4}\Z)|'
-                 r'(\A([0-9a-f]{1,4}:){1,4}(:[0-9a-f]{1,4}){1,3}\Z)|'
-                 r'(\A([0-9a-f]{1,4}:){1,5}(:[0-9a-f]{1,4}){1,2}\Z)|'
-                 r'(\A([0-9a-f]{1,4}:){1,6}(:[0-9a-f]{1,4}){1,1}\Z)|'
-                 r'(\A(([0-9a-f]{1,4}:){1,7}|:):\Z)|(\A:(:[0-9a-f]{1,4})'
-                 r'{1,7}\Z)|(\A((([0-9a-f]{1,4}:){6})(25[0-5]|2[0-4]\d|[0-1]'
-                 r'?\d?\d)(\.(25[0-5]|2[0-4]\d|[0-1]?\d?\d)){3})\Z)|'
-                 r'(\A(([0-9a-f]{1,4}:){5}[0-9a-f]{1,4}:(25[0-5]|2[0-4]\d|'
-                 r'[0-1]?\d?\d)(\.(25[0-5]|2[0-4]\d|[0-1]?\d?\d)){3})\Z)|'
-                 r'(\A([0-9a-f]{1,4}:){5}:[0-9a-f]{1,4}:(25[0-5]|2[0-4]\d|'
-                 r'[0-1]?\d?\d)(\.(25[0-5]|2[0-4]\d|[0-1]?\d?\d)){3}\Z)|'
-                 r'(\A([0-9a-f]{1,4}:){1,1}(:[0-9a-f]{1,4}){1,4}:(25[0-5]|'
-                 r'2[0-4]\d|[0-1]?\d?\d)(\.(25[0-5]|2[0-4]\d|[0-1]?\d?\d))'
-                 r'{3}\Z)|(\A([0-9a-f]{1,4}:){1,2}(:[0-9a-f]{1,4}){1,3}:'
-                 r'(25[0-5]|2[0-4]\d|[0-1]?\d?\d)(\.(25[0-5]|2[0-4]\d|[0-1]?'
-                 r'\d?\d)){3}\Z)|(\A([0-9a-f]{1,4}:){1,3}(:[0-9a-f]{1,4})'
-                 r'{1,2}:(25[0-5]|2[0-4]\d|[0-1]?\d?\d)(\.(25[0-5]|2[0-4]\d|'
-                 r'[0-1]?\d?\d)){3}\Z)|(\A([0-9a-f]{1,4}:){1,4}(:[0-9a-f]'
-                 r'{1,4}){1,1}:(25[0-5]|2[0-4]\d|[0-1]?\d?\d)(\.(25[0-5]|'
-                 r'2[0-4]\d|[0-1]?\d?\d)){3}\Z)|(\A(([0-9a-f]{1,4}:){1,5}|:):'
-                 r'(25[0-5]|2[0-4]\d|[0-1]?\d?\d)(\.(25[0-5]|2[0-4]\d|[0-1]?'
-                 r'\d?\d)){3}\Z)|(\A:(:[0-9a-f]{1,4}){1,5}:(25[0-5]|2[0-4]\d|'
-                 r'[0-1]?\d?\d)(\.(25[0-5]|2[0-4]\d|[0-1]?\d?\d)){3}\Z)')
-    return bool(re.match(ip6_regex, addr))
+    return __ip_addr(addr, socket.AF_INET6)
 
 
 def netmask(mask):

@@ -33,7 +33,7 @@ Configuring the Mongo ext_pillar
 The Mongo ext_pillar takes advantage of the fact that the Salt Master
 configuration file is yaml. It uses a sub-dictionary of values to adjust
 specific features of the pillar. This is the explicit single-line dictionary
-notation for yaml. One may be able to get the easier-to-read multine dict to
+notation for yaml. One may be able to get the easier-to-read multi-line dict to
 work correctly with some experimentation.
 
 .. code-block:: yaml
@@ -54,6 +54,7 @@ dict in your SLS templates.
 Module Documentation
 ====================
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
@@ -84,7 +85,7 @@ log = logging.getLogger(__name__)
 
 
 def ext_pillar(minion_id,
-               pillar,
+               pillar,  # pylint: disable=W0613
                collection='pillar',
                id_field='_id',
                re_pattern=None,
@@ -116,7 +117,7 @@ def ext_pillar(minion_id,
     host = __opts__['mongo.host']
     port = __opts__['mongo.port']
     log.info('connecting to {0}:{1} for mongo ext_pillar'.format(host, port))
-    conn = pymongo.Connection(host, port)
+    conn = pymongo.MongoClient(host, port)
 
     log.debug('using database \'{0}\''.format(__opts__['mongo.db']))
     mdb = conn[__opts__['mongo.db']]
@@ -139,7 +140,7 @@ def ext_pillar(minion_id,
         )
     )
 
-    result = mdb[collection].find_one({id_field: minion_id}, fields=fields)
+    result = mdb[collection].find_one({id_field: minion_id}, projection=fields)
     if result:
         if fields:
             log.debug(

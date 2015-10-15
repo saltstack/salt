@@ -7,6 +7,7 @@ data
             - win32file
             - win32security
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -15,6 +16,9 @@ import os.path
 import logging
 import struct
 # pylint: disable=W0611
+import operator  # do not remove
+from collections import Iterable, Mapping  # do not remove
+import datetime  # do not remove.
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp
 import itertools  # same as above, do not remove, it's used in __clean_tmp
 import contextlib  # do not remove, used in imported file.py functions
@@ -26,8 +30,11 @@ import re  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import fileinput  # do not remove, used in imported file.py functions
 import fnmatch  # do not remove, used in imported file.py functions
+from salt.ext.six import string_types  # do not remove, used in imported file.py functions
+# do not remove, used in imported file.py functions
+import salt.ext.six as six  # pylint: disable=import-error,no-name-in-module
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 import salt.utils.atomicfile  # do not remove, used in imported file.py functions
-import salt._compat  # do not remove, used in imported file.py functions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 # pylint: enable=W0611
 
@@ -45,15 +52,16 @@ except ImportError:
 import salt.utils
 from salt.modules.file import (check_hash,  # pylint: disable=W0611
         directory_exists, get_managed, mkdir, makedirs_, makedirs_perms,
-        check_managed, check_perms, remove, source_list,
+        check_managed, check_managed_changes, check_perms, remove, source_list,
         touch, append, contains, contains_regex, contains_regex_multiline,
-        contains_glob, find, psed, get_sum, _get_bkroot,
+        contains_glob, find, psed, get_sum, _get_bkroot, _mkstemp_copy,
         get_hash, manage_file, file_exists, get_diff, list_backups,
         __clean_tmp, check_file_meta, _binary_replace, restore_backup,
         access, copy, readdir, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
         RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
-        lstat, path_exists_glob, HASHES)
+        lstat, path_exists_glob, write, pardir, join, HASHES, comment,
+        uncomment, _add_flags, comment_line)
 
 from salt.utils import namespaced_function as _namespaced_function
 
@@ -71,15 +79,16 @@ def __virtual__():
         if HAS_WINDOWS_MODULES:
             global check_perms, get_managed, makedirs_perms, manage_file
             global source_list, mkdir, __clean_tmp, makedirs_, file_exists
-            global check_managed, check_file_meta, remove, append, _error
-            global directory_exists, touch, contains
+            global check_managed, check_managed_changes, check_file_meta
+            global remove, append, _error, directory_exists, touch, contains
             global contains_regex, contains_regex_multiline, contains_glob
             global find, psed, get_sum, check_hash, get_hash, delete_backup
-            global get_diff, _get_flags, extract_hash
+            global get_diff, _get_flags, extract_hash, comment_line
             global access, copy, readdir, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global blockreplace, prepend, seek_read, seek_write, rename, lstat
-            global path_exists_glob
+            global write, pardir, join, _add_flags
+            global path_exists_glob, comment, uncomment, _mkstemp_copy
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -96,6 +105,7 @@ def __virtual__():
             check_perms = _namespaced_function(check_perms, globals())
             get_managed = _namespaced_function(get_managed, globals())
             check_managed = _namespaced_function(check_managed, globals())
+            check_managed_changes = _namespaced_function(check_managed_changes, globals())
             check_file_meta = _namespaced_function(check_file_meta, globals())
             makedirs_perms = _namespaced_function(makedirs_perms, globals())
             makedirs_ = _namespaced_function(makedirs_, globals())
@@ -128,6 +138,14 @@ def __virtual__():
             rename = _namespaced_function(rename, globals())
             lstat = _namespaced_function(lstat, globals())
             path_exists_glob = _namespaced_function(path_exists_glob, globals())
+            write = _namespaced_function(write, globals())
+            pardir = _namespaced_function(pardir, globals())
+            join = _namespaced_function(join, globals())
+            comment = _namespaced_function(comment, globals())
+            uncomment = _namespaced_function(uncomment, globals())
+            comment_line = _namespaced_function(comment_line, globals())
+            _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
+            _add_flags = _namespaced_function(_add_flags, globals())
 
             return __virtualname__
     return False
@@ -327,15 +345,29 @@ def get_pgid(path, follow_symlinks=True):
 
     # Under Windows, if the path is a symlink, the user that owns the symlink is
     # returned, not the user that owns the file/directory the symlink is
-    # pointing to. This behaviour is *different* to *nix, therefore the symlink
+    # pointing to. This behavior is *different* to *nix, therefore the symlink
     # is first resolved manually if necessary. Remember symlinks are only
     # supported on Windows Vista or later.
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
 
-    secdesc = win32security.GetFileSecurity(
-        path, win32security.GROUP_SECURITY_INFORMATION
-    )
+    try:
+        secdesc = win32security.GetFileSecurity(
+            path, win32security.GROUP_SECURITY_INFORMATION
+        )
+    # Not all filesystems mountable within windows
+    # have SecurityDescriptor's.  For instance, some mounted
+    # SAMBA shares, or VirtualBox's shared folders.  If we
+    # can't load a file descriptor for the file, we default
+    # to "Everyone" - http://support.microsoft.com/kb/243330
+    except MemoryError:
+        # generic memory error (win2k3+)
+        return 'S-1-1-0'
+    except pywinerror as exc:
+        # Incorrect function error (win2k8+)
+        if exc.winerror == 1 or exc.winerror == 50:
+            return 'S-1-1-0'
+        raise
     group_sid = secdesc.GetSecurityDescriptorGroup()
     return win32security.ConvertSidToStringSid(group_sid)
 
@@ -377,7 +409,7 @@ def get_gid(path, follow_symlinks=True):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps this function to provide functionality that
-    somewhat resembles Unix behaviour for API compatibility reasons. When
+    somewhat resembles Unix behavior for API compatibility reasons. When
     managing Windows systems, this function is superfluous and will generate
     an info level log entry if used directly.
 
@@ -411,7 +443,7 @@ def get_group(path, follow_symlinks=True):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps this function to provide functionality that
-    somewhat resembles Unix behaviour for API compatibility reasons. When
+    somewhat resembles Unix behavior for API compatibility reasons. When
     managing Windows systems, this function is superfluous and will generate
     an info level log entry if used directly.
 
@@ -500,8 +532,8 @@ def get_uid(path, follow_symlinks=True):
     '''
     Return the id of the user that owns a given file
 
-    Symlinks are followed by default to mimic Unix behaviour. Specify
-    `follow_symlinks=False` to turn off this behaviour.
+    Symlinks are followed by default to mimic Unix behavior. Specify
+    `follow_symlinks=False` to turn off this behavior.
 
     CLI Example:
 
@@ -515,15 +547,23 @@ def get_uid(path, follow_symlinks=True):
 
     # Under Windows, if the path is a symlink, the user that owns the symlink is
     # returned, not the user that owns the file/directory the symlink is
-    # pointing to. This behaviour is *different* to *nix, therefore the symlink
+    # pointing to. This behavior is *different* to *nix, therefore the symlink
     # is first resolved manually if necessary. Remember symlinks are only
     # supported on Windows Vista or later.
     if follow_symlinks and sys.getwindowsversion().major >= 6:
         path = _resolve_symlink(path)
-
-    secdesc = win32security.GetFileSecurity(
-        path, win32security.OWNER_SECURITY_INFORMATION
-    )
+    try:
+        secdesc = win32security.GetFileSecurity(
+            path, win32security.OWNER_SECURITY_INFORMATION
+        )
+    except MemoryError:
+        # generic memory error (win2k3+)
+        return 'S-1-1-0'
+    except pywinerror as exc:
+        # Incorrect function error (win2k8+)
+        if exc.winerror == 1 or exc.winerror == 50:
+            return 'S-1-1-0'
+        raise
     owner_sid = secdesc.GetSecurityDescriptorOwner()
     return win32security.ConvertSidToStringSid(owner_sid)
 
@@ -532,8 +572,8 @@ def get_user(path, follow_symlinks=True):
     '''
     Return the user that owns a given file
 
-    Symlinks are followed by default to mimic Unix behaviour. Specify
-    `follow_symlinks=False` to turn off this behaviour.
+    Symlinks are followed by default to mimic Unix behavior. Specify
+    `follow_symlinks=False` to turn off this behavior.
 
     CLI Example:
 
@@ -779,7 +819,7 @@ def chgrp(path, group):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps this function to do nothing while still being
-    compatible with Unix behaviour. When managing Windows systems,
+    compatible with Unix behavior. When managing Windows systems,
     this function is superfluous and will generate an info level log entry if
     used directly.
 
@@ -813,7 +853,7 @@ def stats(path, hash_type='md5', follow_symlinks=True):
     Services For Unix, NFS services).
 
     Salt, therefore, remaps these properties to keep some kind of
-    compatibility with Unix behaviour. If the 'primary group' is required, it
+    compatibility with Unix behavior. If the 'primary group' is required, it
     can be accessed in the `pgroup` and `pgid` properties.
 
     CLI Example:
@@ -842,7 +882,8 @@ def stats(path, hash_type='md5', follow_symlinks=True):
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
     ret['mode'] = str(oct(stat.S_IMODE(pstat.st_mode)))
-    ret['sum'] = get_sum(path, hash_type)
+    if hash_type:
+        ret['sum'] = get_sum(path, hash_type)
     ret['type'] = 'file'
     if stat.S_ISDIR(pstat.st_mode):
         ret['type'] = 'dir'
@@ -903,7 +944,7 @@ def get_attributes(path):
     attributes['mountedVolume'] = False
     if attributes['reparsePoint'] is True and attributes['directory'] is True:
         fileIterator = win32file.FindFilesIterator(path)
-        findDataTuple = fileIterator.next()
+        findDataTuple = next(fileIterator)
         if findDataTuple[6] == 0xA0000003:
             attributes['mountedVolume'] = True
     # check if it's a soft (symbolic) link
@@ -915,7 +956,7 @@ def get_attributes(path):
     attributes['symbolicLink'] = False
     if attributes['reparsePoint'] is True:
         fileIterator = win32file.FindFilesIterator(path)
-        findDataTuple = fileIterator.next()
+        findDataTuple = next(fileIterator)
         if findDataTuple[6] == 0xA000000C:
             attributes['symbolicLink'] = True
 
@@ -1010,7 +1051,7 @@ def symlink(src, link):
     This is only supported with Windows Vista or later and must be executed by
     a user with the SeCreateSymbolicLink privilege.
 
-    The behaviour of this function matches the Unix equivalent, with one
+    The behavior of this function matches the Unix equivalent, with one
     exception - invalid symlinks cannot be created. The source path must exist.
     If it doesn't, an error will be raised.
 
@@ -1042,7 +1083,11 @@ def symlink(src, link):
         return True
     except pywinerror as exc:
         raise CommandExecutionError(
-            'Could not create {0!r} - [{1}] {2}'.format(link, exc.winerror, exc.strerror)
+            'Could not create \'{0}\' - [{1}] {2}'.format(
+                link,
+                exc.winerror,
+                exc.strerror
+            )
         )
 
 
@@ -1070,7 +1115,7 @@ def is_link(path):
 
     This is only supported on Windows Vista or later.
 
-    Inline with Unix behaviour, this function will raise an error if the path
+    Inline with Unix behavior, this function will raise an error if the path
     is not a symlink, however, the error raised will be a SaltInvocationError,
     not an OSError.
 
@@ -1160,7 +1205,7 @@ def readlink(path):
 
     This is only supported on Windows Vista or later.
 
-    Inline with Unix behaviour, this function will raise an error if the path is
+    Inline with Unix behavior, this function will raise an error if the path is
     not a symlink, however, the error raised will be a SaltInvocationError, not
     an OSError.
 

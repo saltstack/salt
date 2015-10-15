@@ -2,20 +2,40 @@
 '''
 Publish a command from a minion to a target
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import time
-import ast
 import logging
 
 # Import salt libs
 import salt.crypt
 import salt.payload
 import salt.transport
+import salt.utils.args
 from salt.exceptions import SaltReqTimeoutError
-from salt._compat import string_types, integer_types
 
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'publish'
+
+
+def __virtual__():
+    return __virtualname__ if __opts__.get('transport', '') == 'zeromq' else False
+
+
+def _parse_args(arg):
+    '''
+    yamlify `arg` and ensure it's outermost datatype is a list
+    '''
+    yaml_args = salt.utils.args.yamlify_arg(arg)
+
+    if yaml_args is None:
+        return []
+    elif not isinstance(yaml_args, list):
+        return [yaml_args]
+    else:
+        return yaml_args
 
 
 def _publish(
@@ -25,7 +45,8 @@ def _publish(
         expr_form='glob',
         returner='',
         timeout=5,
-        form='clean'):
+        form='clean',
+        wait=False):
     '''
     Publish a command from the minion out to other minions, publications need
     to be enabled on the Salt master and the minion needs to have permission
@@ -45,13 +66,16 @@ def _publish(
 
         salt system.example.com publish.publish '*' cmd.run 'ls -la /tmp'
     '''
-    if fun == 'publish.publish':
-        log.info('Function name is \'publish.publish\'. Returning {}')
+    if 'master_uri' not in __opts__:
+        log.error('Cannot run publish commands without a connection to a salt master. No command sent.')
+        return {}
+    if fun.startswith('publish.'):
+        log.info('Cannot publish publish calls. Returning {}')
         return {}
 
-    arg = _normalize_arg(arg)
+    arg = _parse_args(arg)
 
-    log.info('Publishing {0!r} to {master_uri}'.format(fun, **__opts__))
+    log.info('Publishing \'{0}\' to {master_uri}'.format(fun, **__opts__))
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'minion_pub',
@@ -65,45 +89,60 @@ def _publish(
             'form': form,
             'id': __opts__['id']}
 
-    sreq = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.Channel.factory(__opts__)
     try:
-        peer_data = sreq.send(load)
+        peer_data = channel.send(load)
     except SaltReqTimeoutError:
-        return '{0!r} publish timed out'.format(fun)
+        return '\'{0}\' publish timed out'.format(fun)
     if not peer_data:
         return {}
     # CLI args are passed as strings, re-cast to keep time.sleep happy
-    time.sleep(float(timeout))
-    load = {'cmd': 'pub_ret',
-            'id': __opts__['id'],
-            'tok': tok,
-            'jid': peer_data['jid']}
-    ret = sreq.send(load)
-    if form == 'clean':
-        cret = {}
-        for host in ret:
-            cret[host] = ret[host]['ret']
-        return cret
+    if wait:
+        loop_interval = 0.3
+        matched_minions = set(peer_data['minions'])
+        returned_minions = set()
+        loop_counter = 0
+        while len(returned_minions ^ matched_minions) > 0:
+            load = {'cmd': 'pub_ret',
+                    'id': __opts__['id'],
+                    'tok': tok,
+                    'jid': peer_data['jid']}
+            ret = channel.send(load)
+            returned_minions = set(ret.keys())
+
+            end_loop = False
+            if returned_minions >= matched_minions:
+                end_loop = True
+            elif (loop_interval * loop_counter) > timeout:
+                # This may be unnecessary, but I am paranoid
+                if len(returned_minions) < 1:
+                    return {}
+                end_loop = True
+
+            if end_loop:
+                if form == 'clean':
+                    cret = {}
+                    for host in ret:
+                        cret[host] = ret[host]['ret']
+                    return cret
+                else:
+                    return ret
+            loop_counter = loop_counter + 1
+            time.sleep(loop_interval)
     else:
-        return ret
-
-
-def _normalize_arg(arg):
-    '''
-    Take the arguments and return them in a standard list
-    '''
-    if not arg:
-        arg = []
-
-    try:
-        # Numeric checks here because of all numeric strings, like JIDs
-        if isinstance(ast.literal_eval(arg), (dict, integer_types, long)):
-            arg = [arg]
-    except Exception:
-        if isinstance(arg, string_types):
-            arg = arg.split(',')
-
-    return arg
+        time.sleep(float(timeout))
+        load = {'cmd': 'pub_ret',
+                'id': __opts__['id'],
+                'tok': tok,
+                'jid': peer_data['jid']}
+        ret = channel.send(load)
+        if form == 'clean':
+            cret = {}
+            for host in ret:
+                cret[host] = ret[host]['ret']
+            return cret
+        else:
+            return ret
 
 
 def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
@@ -124,9 +163,13 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
     - grain
     - grain_pcre
     - pillar
+    - pillar_pcre
     - ipcidr
     - range
     - compound
+
+    Note that for pillar matches must be exact, both in the pillar matcher
+    and the compound matcher. No globbing is supported.
 
     The arguments sent to the minion publish function are separated with
     commas. This means that for a minion executing a command with multiple
@@ -154,6 +197,13 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
 
             salt '*' publish.publish test.kwarg arg='cheese=spam'
 
+        Multiple keyword arguments should be passed as a list.
+
+        .. code-block:: bash
+
+            salt '*' publish.publish test.kwarg arg="['cheese=spam','spam=cheese']"
+
+
 
     '''
     return _publish(tgt,
@@ -162,7 +212,8 @@ def publish(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
                     expr_form=expr_form,
                     returner=returner,
                     timeout=timeout,
-                    form='clean')
+                    form='clean',
+                    wait=True)
 
 
 def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
@@ -193,7 +244,8 @@ def full_data(tgt, fun, arg=None, expr_form='glob', returner='', timeout=5):
                     expr_form=expr_form,
                     returner=returner,
                     timeout=timeout,
-                    form='full')
+                    form='full',
+                    wait=True)
 
 
 def runner(fun, arg=None, timeout=5):
@@ -207,11 +259,11 @@ def runner(fun, arg=None, timeout=5):
 
         salt publish.runner manage.down
     '''
-    arg = _normalize_arg(arg)
+    arg = _parse_args(arg)
 
     if 'master_uri' not in __opts__:
         return 'No access to master. If using salt-call with --local, please remove.'
-    log.info('Publishing runner {0!r} to {master_uri}'.format(fun, **__opts__))
+    log.info('Publishing runner \'{0}\' to {master_uri}'.format(fun, **__opts__))
     auth = salt.crypt.SAuth(__opts__)
     tok = auth.gen_token('salt')
     load = {'cmd': 'minion_runner',
@@ -221,8 +273,8 @@ def runner(fun, arg=None, timeout=5):
             'tmo': timeout,
             'id': __opts__['id']}
 
-    sreq = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.Channel.factory(__opts__)
     try:
-        return sreq.send(load)
+        return channel.send(load)
     except SaltReqTimeoutError:
-        return '{0!r} runner publish timed out'.format(fun)
+        return '\'{0}\' runner publish timed out'.format(fun)

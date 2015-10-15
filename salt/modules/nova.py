@@ -36,12 +36,17 @@ Module for handling OpenStack Nova calls
 
         salt '*' nova.flavor_list profile=openstack1
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
 
 # Import salt libs
-import salt.utils.openstack.nova as suon
+try:
+    import salt.utils.openstack.nova as suon
+    HAS_NOVA = True
+except NameError as exc:
+    HAS_NOVA = False
 
 
 # Get logging started
@@ -58,7 +63,7 @@ def __virtual__():
     Only load this module if nova
     is installed on this minion.
     '''
-    return suon.check_nova()
+    return HAS_NOVA
 
 
 __opts__ = {}
@@ -91,7 +96,8 @@ def _auth(profile=None):
         'api_key': api_key,
         'project_id': tenant,
         'auth_url': auth_url,
-        'region_name': region_name
+        'region_name': region_name,
+        'os_auth_plugin': os_auth_system
     }
 
     return suon.SaltNova(**kwargs)
@@ -114,7 +120,7 @@ def boot(name, flavor_id=0, image_id=0, profile=None, timeout=300):
         How long to wait, after creating the instance, for the provider to
         return information about it (default 300 seconds).
 
-        .. versionadded:: 2014.1.0 (Hydrogen)
+        .. versionadded:: 2014.1.0
 
     CLI Example:
 

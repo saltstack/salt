@@ -1,20 +1,17 @@
-==================================
-Getting Started With Digital Ocean
-==================================
+=================================
+Getting Started With DigitalOcean
+=================================
 
-Digital Ocean is a public cloud provider that specializes in Linux instances.
-
-
-Dependencies
-============
-This driver requires the Python ``requests`` library to be installed.
+DigitalOcean is a public cloud host that specializes in Linux instances.
 
 
 Configuration
 =============
-Using Salt for Digital Ocean requires a client_key and an api_key. These can be
-found in the Digital Ocean web interface, in the "My Settings" section, under
-the API Access tab.
+Using Salt for DigitalOcean requires a ``personal_access_token``, an ``ssh_key_file``,
+and at least one SSH key name in ``ssh_key_names``. More ``ssh_key_names`` can be added
+by separating each key with a comma. The ``personal_access_token`` can be found in the
+DigitalOcean web interface in the "Apps & API" section. The SSH key name can be found
+under the "SSH Keys" section.
 
 .. code-block:: yaml
 
@@ -22,11 +19,20 @@ the API Access tab.
     # /etc/salt/cloud.providers.d/ directory.
 
     my-digitalocean-config:
-      provider: digital_ocean
-      client_key: wFGEwgregeqw3435gDger
-      api_key: GDE43t43REGTrkilg43934t34qT43t4dgegerGEgg
+      driver: digital_ocean
+      personal_access_token: xxx
+      ssh_key_file: /path/to/ssh/key/file
+      ssh_key_names: my-key-name,my-key-name-2
       location: New York 1
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Profiles
 ========
@@ -40,11 +46,36 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
 
     digitalocean-ubuntu:
         provider: my-digitalocean-config
-        image: Ubuntu 12.10 x64
+        image: 14.04 x64
         size: 512MB
         location: New York 1
         private_networking: True
         backups_enabled: True
+        ipv6: True
+
+Locations can be obtained using the ``--list-locations`` option for the ``salt-cloud``
+command:
+
+.. code-block:: bash
+
+    # salt-cloud --list-locations my-digitalocean-config
+    my-digitalocean-config:
+        ----------
+        digital_ocean:
+            ----------
+            Amsterdam 1:
+                ----------
+                available:
+                    False
+                features:
+                    [u'backups']
+                name:
+                    Amsterdam 1
+                sizes:
+                    []
+                slug:
+                    ams1
+    ...SNIP...
 
 Sizes can be obtained using the ``--list-sizes`` option for the ``salt-cloud``
 command:
@@ -86,18 +117,20 @@ command:
         ----------
         digital_ocean:
             ----------
-            Arch Linux 2013.05 x64:
+            10.1:
                 ----------
+                created_at:
+                    2015-01-20T20:04:34Z
                 distribution:
-                    Arch Linux
+                    FreeBSD
                 id:
-                    350424
+                    10144573
+                min_disk_size:
+                    20
                 name:
-                    Arch Linux 2013.05 x64
+                    10.1
                 public:
                     True
-                slug:
-                    None
     ...SNIP...
 
 .. note::
@@ -111,4 +144,11 @@ command:
 
 .. note::
 
-    Additional documentation is available from `Digital Ocean <https://www.digitalocean.com/community/articles/automated-provisioning-of-digitalocean-cloud-servers-with-salt-cloud-on-ubuntu-12-04>`_.
+    If your domain's DNS is managed with DigitalOcean, you can automatically
+    create A-records for newly created droplets. Use ``create_dns_record: True``
+    in your config to enable this. Add ``delete_dns_record: True`` to also
+    delete records when a droplet is destroyed.
+
+.. note::
+
+    Additional documentation is available from `DigitalOcean <https://www.digitalocean.com/community/articles/automated-provisioning-of-digitalocean-cloud-servers-with-salt-cloud-on-ubuntu-12-04>`_.

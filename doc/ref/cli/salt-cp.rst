@@ -7,7 +7,7 @@ Copy a file to a set of systems
 Synopsis
 ========
 
-::
+.. code-block:: bash
 
     salt-cp '*' [ options ] SOURCE DEST
 
@@ -20,6 +20,11 @@ Description
 
 Salt copy copies a local file out to all of the Salt minions matched by the
 given target.
+
+Note: salt-cp uses salt's publishing mechanism. This means the privacy of the
+contents of the file on the wire are completely dependant upon the transport
+in use. In addition, if the salt-master is running with debug logging it is
+possible that the contents of the file will be logged to disk.
 
 Options
 =======

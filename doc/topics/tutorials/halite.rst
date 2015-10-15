@@ -2,9 +2,13 @@
 Installing and Configuring Halite
 =================================
 
+.. warning:: Halite is deprecated
+
+    The Halite project is retired. The code will remain available on GitHub.
+
 In this tutorial, we'll walk through installing and setting up Halite.  The
 current version of Halite is considered pre-alpha and is supported only in Salt
-``v2014.1.0 (Hydrogen)`` or greater. Additional information is available on GitHub:
+``v2014.1.0`` or greater. Additional information is available on GitHub:
 https://github.com/saltstack/halite
 
 Before beginning this tutorial, ensure that the salt-master is installed. To
@@ -13,7 +17,7 @@ http://docs.saltstack.com/topics/installation/index.html
 
 .. note::
 
-    Halite only works with Salt versions greater than 2014.1.0 (Hydrogen).
+    Halite only works with Salt versions greater than 2014.1.0.
 
 Installing Halite Via Package
 =============================
@@ -140,8 +144,7 @@ Configuring Halite Settings
 ===========================
 
 Once you've configured the permissions for Halite, you'll need to set up the
-Halite settings in the /etc/salt/master file. Halite supports CherryPy, Paste
-and Gevent out of the box.
+Halite settings in the /etc/salt/master file. Halite supports CherryPy, Paste, and Gevent out of the box.
 
 To configure cherrypy, add the following to the bottom of your /etc/salt/master file:
 
@@ -221,8 +224,8 @@ Starting Halite
 Once you've configured the halite section of your /etc/salt/master, you can
 restart the salt-master service, and your halite instance will be available.
 Depending on your configuration, the instance will be available either at
-http://localhost:8080/app, http://domain:8080/app, or 
-http://123.456.789.012:8080/app .
+https://localhost:8080/app, https://domain:8080/app, or
+https://123.456.789.012:8080/app .
 
 .. note::
 

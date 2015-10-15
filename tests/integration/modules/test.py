@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-# Import python libs
-import os
+# Import Python libs
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -9,9 +9,12 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.version
+from salt import config
 
 
-class TestModuleTest(integration.ModuleCase):
+class TestModuleTest(integration.ModuleCase,
+                     integration.AdaptedConfigurationTestCaseMixIn):
     '''
     Validate the test module
     '''
@@ -31,8 +34,8 @@ class TestModuleTest(integration.ModuleCase):
         '''
         test.version
         '''
-        import salt
-        self.assertEqual(self.run_function('test.version'), salt.__version__)
+        self.assertEqual(self.run_function('test.version'),
+                         salt.version.__saltstack_version__.string)
 
     def test_conf_test(self):
         '''
@@ -44,17 +47,13 @@ class TestModuleTest(integration.ModuleCase):
         '''
         test.get_opts
         '''
-        import salt.config
-        opts = salt.config.minion_config(
-                os.path.join(
-                    integration.INTEGRATION_TEST_DIR,
-                    'files/conf/minion'
-                    )
-                )
+        opts = config.minion_config(
+            self.get_config_file_path('minion')
+        )
         self.assertEqual(
-                self.run_function('test.get_opts')['cachedir'],
-                opts['cachedir']
-                )
+            self.run_function('test.get_opts')['cachedir'],
+            opts['cachedir']
+        )
 
     def test_cross_test(self):
         '''
@@ -74,9 +73,9 @@ class TestModuleTest(integration.ModuleCase):
         self.assertEqual(
                 self.run_function(
                     'test.fib',
-                    ['40'],
-                    )[0][-1],
-                34
+                    ['20'],
+                    )[0],
+                6765
                 )
 
     def test_collatz(self):

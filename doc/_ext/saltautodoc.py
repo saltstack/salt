@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     saltautodoc.py
@@ -42,4 +40,10 @@ class SaltFunctionDocumenter(FunctionDocumenter):
 
 
 def setup(app):
-    app.add_autodocumenter(SaltFunctionDocumenter)
+    def add_documenter(app, env, docnames):
+        app.add_autodocumenter(SaltFunctionDocumenter)
+
+    # add_autodocumenter() must be called after the initial setup and the
+    # 'builder-inited' event, as sphinx.ext.autosummary will restore the
+    # original documenter on 'builder-inited'
+    app.connect('env-before-read-docs', add_documenter)

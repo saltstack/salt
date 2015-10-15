@@ -124,21 +124,83 @@ starts at the root of the state tree or pillar.
 Filters
 =======
 
-Saltstack extends `builtin filters`_ with his custom filters:
+Saltstack extends `builtin filters`_ with these custom filters:
 
 strftime
   Converts any time related object into a time based string. It requires a
   valid :ref:`strftime directives <python2:strftime-strptime-behavior>`. An
   :ref:`exhaustive list <python2:strftime-strptime-behavior>` can be found in
-  the official Python documentation. Fuzzy dates are parsed by `timelib`_ python
-  module. Some examples are available on this pages.
+  the official Python documentation.
+
+  .. code-block:: yaml
+
+      {% set curtime = None | strftime() %}
+
+  Fuzzy dates require the `timelib`_ Python module is installed.
 
   .. code-block:: yaml
 
       {{ "2002/12/25"|strftime("%y") }}
       {{ "1040814000"|strftime("%Y-%m-%d") }}
       {{ datetime|strftime("%u") }}
-      {{ "now"|strftime }}
+      {{ "tomorrow"|strftime }}
+
+sequence
+  Ensure that parsed data is a sequence.
+
+yaml_encode
+  Serializes a single object into a YAML scalar with any necessary
+  handling for escaping special characters.  This will work for any
+  scalar YAML data type: ints, floats, timestamps, booleans, strings,
+  unicode.  It will *not* work for multi-objects such as sequences or
+  maps.
+
+  .. code-block:: yaml
+
+      {%- set bar = 7 %}
+      {%- set baz = none %}
+      {%- set zip = true %}
+      {%- set zap = 'The word of the day is "salty"' %}
+
+      {%- load_yaml as foo %}
+      bar: {{ bar|yaml_encode }}
+      baz: {{ baz|yaml_encode }}
+      baz: {{ zip|yaml_encode }}
+      baz: {{ zap|yaml_encode }}
+      {%- endload %}
+
+  In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
+  identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
+  identical.
+
+yaml_dquote
+  Serializes a string into a properly-escaped YAML double-quoted
+  string.  This is useful when the contents of a string are unknown
+  and may contain quotes or unicode that needs to be preserved.  The
+  resulting string will be emitted with opening and closing double
+  quotes.
+
+  .. code-block:: yaml
+
+      {%- set bar = '"The quick brown fox . . ."' %}
+      {%- set baz = 'The word of the day is "salty".' %}
+
+      {%- load_yaml as foo %}
+      bar: {{ bar|yaml_dquote }}
+      baz: {{ baz|yaml_dquote }}
+      {%- endload %}
+
+  In the above case ``{{ bar }}`` and ``{{ foo.bar }}`` should be
+  identical and ``{{ baz }}`` and ``{{ foo.baz }}`` should be
+  identical.  If variable contents are not guaranteed to be a string
+  then it is better to use ``yaml_encode`` which handles all YAML
+  scalar types.
+
+yaml_squote
+   Similar to the ``yaml_dquote`` filter but with single quotes.  Note
+   that YAML only allows special escapes inside double quotes so
+   ``yaml_squote`` is not nearly as useful (viz. you likely want to
+   use ``yaml_encode`` or ``yaml_dquote``).
 
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
@@ -180,29 +242,68 @@ external template file.
     following tags: `macro`, `set`, `load_yaml`, `load_json`, `import_yaml` and
     `import_json`.
 
+Calling Salt Functions
+======================
+
+The Jinja renderer provides a shorthand lookup syntax for the ``salt``
+dictionary of :term:`execution function <Execution Function>`.
+
+.. versionadded:: 2014.7.0
+
+.. code-block:: yaml
+
+    # The following two function calls are equivalent.
+    {{ salt['cmd.run']('whoami') }}
+    {{ salt.cmd.run('whoami') }}
+
 Debugging
 =========
 
 The ``show_full_context`` function can be used to output all variables present
 in the current Jinja context.
 
+.. versionadded:: 2014.7.0
+
 .. code-block:: yaml
 
-    Context is: {{ show_full_context }}
+    Context is: {{ show_full_context() }}
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from StringIO import StringIO
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
 from salt.exceptions import SaltRenderError
 import salt.utils.templates
 
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import StringIO  # pylint: disable=import-error
 
 log = logging.getLogger(__name__)
+
+
+def _split_module_dicts():
+    '''
+    Create a copy of __salt__ dictionary with module.function and module[function]
+
+    Takes advantage of Jinja's syntactic sugar lookup:
+
+    .. code-block::
+
+        {{ salt.cmd.run('uptime') }}
+    '''
+    if not isinstance(__salt__, dict):
+        return __salt__
+    mod_dict = dict(__salt__)
+    for module_func_name, mod_fun in six.iteritems(mod_dict.copy()):
+        mod, fun = module_func_name.split('.', 1)
+        if mod not in mod_dict:
+            # create an empty object that we can add attributes to
+            mod_dict[mod] = lambda: None
+        setattr(mod_dict[mod], fun, mod_fun)
+    return mod_dict
 
 
 def render(template_file, saltenv='base', sls='', argline='',
@@ -218,9 +319,10 @@ def render(template_file, saltenv='base', sls='', argline='',
         raise SaltRenderError(
                 'Unknown renderer option: {opt}'.format(opt=argline)
         )
+
     tmp_data = salt.utils.templates.JINJA(template_file,
                                           to_str=True,
-                                          salt=__salt__,
+                                          salt=_split_module_dicts(),
                                           grains=__grains__,
                                           opts=__opts__,
                                           pillar=__pillar__,

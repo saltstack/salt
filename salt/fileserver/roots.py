@@ -2,9 +2,20 @@
 '''
 The default file server backend
 
-Based on the environments in the :conf_master:`file_roots` configuration
-option.
+This fileserver backend serves files from the Master's local filesystem. If
+:conf_master:`fileserver_backend` is not defined in the Master config file,
+then this backend is enabled by default. If it *is* defined then ``roots`` must
+be in the :conf_master:`fileserver_backend` list to enable this backend.
+
+.. code-block:: yaml
+
+    fileserver_backend:
+      - roots
+
+Fileserver environments are defined using the :conf_master:`file_roots`
+configuration option.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -14,6 +25,7 @@ import logging
 import salt.fileserver
 import salt.utils
 from salt.utils.event import tagify
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -31,6 +43,7 @@ def find_file(path, saltenv='base', env=None, **kwargs):
         # Backwards compatibility
         saltenv = env
 
+    path = os.path.normpath(path)
     fnd = {'path': '',
            'rel': ''}
     if os.path.isabs(path):
@@ -64,7 +77,7 @@ def envs():
     '''
     Return the file server environments
     '''
-    return __opts__['file_roots'].keys()
+    return list(__opts__['file_roots'].keys())
 
 
 def serve_file(load, fnd):
@@ -87,8 +100,7 @@ def serve_file(load, fnd):
         return ret
     ret['dest'] = fnd['rel']
     gzip = load.get('gzip', None)
-
-    with salt.utils.fopen(fnd['path'], 'rb') as fp_:
+    with salt.utils.fopen(os.path.normpath(fnd['path']), 'rb') as fp_:
         fp_.seek(load['loc'])
         data = fp_.read(__opts__['file_buffer_size'])
         if gzip and data:
@@ -119,10 +131,15 @@ def update():
     old_mtime_map = {}
     # if you have an old map, load that
     if os.path.exists(mtime_map_path):
-        with salt.utils.fopen(mtime_map_path, 'rb') as fp_:
+        with salt.utils.fopen(mtime_map_path, 'r') as fp_:
             for line in fp_:
-                file_path, mtime = line.split(':', 1)
-                old_mtime_map[file_path] = mtime
+                try:
+                    file_path, mtime = line.split(':', 1)
+                    old_mtime_map[file_path] = mtime
+                except ValueError:
+                    # Document the invalid entry in the log
+                    log.warning('Skipped invalid cache mtime entry in {0}: {1}'
+                                .format(mtime_map_path, line))
 
     # generate the new map
     new_mtime_map = salt.fileserver.generate_mtime_map(__opts__['file_roots'])
@@ -135,7 +152,7 @@ def update():
     if not os.path.exists(mtime_map_path_dir):
         os.makedirs(mtime_map_path_dir)
     with salt.utils.fopen(mtime_map_path, 'w') as fp_:
-        for file_path, mtime in new_mtime_map.iteritems():
+        for file_path, mtime in six.iteritems(new_mtime_map):
             fp_.write('{file_path}:{mtime}\n'.format(file_path=file_path,
                                                      mtime=mtime))
 
@@ -145,6 +162,7 @@ def update():
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
+                opts=__opts__,
                 listen=False)
         event.fire_event(data, tagify(['roots', 'update'], prefix='fileserver'))
 
@@ -178,12 +196,12 @@ def file_hash(load, fnd):
     cache_path = os.path.join(__opts__['cachedir'],
                               'roots/hash',
                               load['saltenv'],
-                              '{0}.hash.{1}'.format(fnd['rel'],
+                              u'{0}.hash.{1}'.format(fnd['rel'],
                               __opts__['hash_type']))
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.fopen(cache_path, 'rb') as fp_:
+            with salt.utils.fopen(cache_path, 'r') as fp_:
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
@@ -212,7 +230,10 @@ def file_hash(load, fnd):
     cache_dir = os.path.dirname(cache_path)
     # make cache directory if it doesn't exist
     if not os.path.exists(cache_dir):
-        os.makedirs(cache_dir)
+        try:
+            os.makedirs(cache_dir)
+        except OSError:
+            pass
     # save the cache object "hash:mtime"
     cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
     with salt.utils.flopen(cache_path, 'w') as fp_:
@@ -261,6 +282,8 @@ def _file_lists(load, form):
                     path,
                     followlinks=__opts__['fileserver_followsymlinks']):
                 dir_rel_fn = os.path.relpath(root, path)
+                if __opts__.get('file_client', 'remote') == 'local' and os.path.sep == "\\":
+                    dir_rel_fn = dir_rel_fn.replace('\\', '/')
                 ret['dirs'].append(dir_rel_fn)
                 if len(dirs) == 0 and len(files) == 0:
                     if not salt.fileserver.is_file_ignored(__opts__, dir_rel_fn):
@@ -276,11 +299,17 @@ def _file_lists(load, form):
                                 path
                             )
                     if not salt.fileserver.is_file_ignored(__opts__, rel_fn):
+                        if __opts__.get('file_client', 'remote') == 'local' and os.path.sep == "\\":
+                            rel_fn = rel_fn.replace('\\', '/')
                         ret['files'].append(rel_fn)
         if save_cache:
-            salt.fileserver.write_file_list_cache(
-                __opts__, ret, list_cache, w_lock
-            )
+            try:
+                salt.fileserver.write_file_list_cache(
+                    __opts__, ret, list_cache, w_lock
+                )
+            except NameError:
+                # Catch msgpack error in salt-ssh
+                pass
         return ret.get(form, [])
     # Shouldn't get here, but if we do, this prevents a TypeError
     return []

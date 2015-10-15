@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Manage Launch Configurations
-============================
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Create and destroy Launch Configurations. Be aware that this interacts with
 Amazon's services, and so may incur charges.
@@ -19,23 +18,26 @@ Also note that a launch configuration that's in use by an autoscale group can
 not be deleted until the autoscale group is no longer using it. This may affect
 the way in which you want to order your states.
 
-This module uses boto, which can be installed via package, or pip.
+This module uses ``boto``, which can be installed via package, or pip.
 
 This module accepts explicit autoscale credentials but can also utilize
-IAM roles assigned to the instance trough Instance Profiles. Dynamic
+IAM roles assigned to the instance through Instance Profiles. Dynamic
 credentials are then automatically obtained from AWS API and no further
-configuration is necessary. More Information available at::
+configuration is necessary. More information available `here
+<http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html>`_.
 
-   http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+If IAM roles are not used you need to specify them either in a pillar file or
+in the minion's config file:
 
-If IAM roles are not used you need to specify them either in a pillar or
-in the minion's config file::
+.. code-block:: yaml
 
     asg.keyid: GKTADJGHEIQSXMKKRBJ08H
     asg.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-It's also possible to specify key, keyid and region via a profile, either
-as a passed in dict, or as a string to pull from pillars or minion config:
+It's also possible to specify ``key``, ``keyid`` and ``region`` via a profile, either
+passed in as a dict, or as a string to pull from pillars or minion config:
+
+.. code-block:: yaml
 
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
@@ -60,6 +62,10 @@ and autoscale groups are completely dependent on each other.
             - '/dev/sda1':
                 size: 20
         - cloud_init:
+            boothooks:
+              'disable-master.sh': |
+                #!/bin/bash
+                echo "manual" > /etc/init/salt-master.override
             scripts:
               'run_salt.sh': |
                 #!/bin/bash
@@ -89,6 +95,7 @@ and autoscale groups are completely dependent on each other.
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
             region: us-east-1
 '''
+from __future__ import absolute_import
 from salt.exceptions import SaltInvocationError
 
 
@@ -147,7 +154,7 @@ def present(
 
     cloud_init
         A dict of cloud_init configuration. Currently supported values:
-        scripts, cloud-config. Mutually exlusive with user_data.
+        scripts, cloud-config. Mutually exclusive with user_data.
 
     instance_type
         The instance type. ex: m1.small.
@@ -210,7 +217,7 @@ def present(
     if user_data and cloud_init:
         raise SaltInvocationError('user_data and cloud_init are mutually'
                                   ' exclusive options.')
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     exists = __salt__['boto_asg.launch_configuration_exists'](name, region,
                                                               key, keyid,
                                                               profile)
@@ -218,6 +225,7 @@ def present(
         if __opts__['test']:
             msg = 'Launch configuration set to be created.'
             ret['comment'] = msg
+            ret['result'] = None
             return ret
         if cloud_init:
             user_data = __salt__['boto_asg.get_cloud_init_mime'](cloud_init)
@@ -231,7 +239,6 @@ def present(
             delete_on_termination, iops, use_block_device_types, region, key,
             keyid, profile)
         if created:
-            ret['result'] = True
             ret['changes']['old'] = None
             ret['changes']['new'] = name
         else:
@@ -267,19 +274,18 @@ def absent(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     exists = __salt__['boto_asg.launch_configuration_exists'](name, region,
                                                               key, keyid,
                                                               profile)
     if exists:
         if __opts__['test']:
-            ret['result'] = None
             ret['comment'] = 'Launch configuration set to be deleted.'
+            ret['result'] = None
             return ret
         deleted = __salt__['boto_asg.delete_launch_configuration'](
             name, region, key, keyid, profile)
         if deleted:
-            ret['result'] = True
             ret['changes']['old'] = name
             ret['changes']['new'] = None
             ret['comment'] = 'Deleted launch configuration.'

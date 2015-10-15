@@ -5,6 +5,7 @@ Tests for the salt-run command
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import yaml
 import shutil
@@ -15,6 +16,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
 class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -62,13 +64,13 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         os.chdir(config_dir)
 
         config_file_name = 'master'
-        config = yaml.load(
-            open(self.get_config_file_path(config_file_name), 'r').read()
-        )
-        config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-        open(os.path.join(config_dir, config_file_name), 'w').write(
-            yaml.dump(config, default_flow_style=False)
-        )
+        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+            config = yaml.load(fhr.read())
+            config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
+            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+                fhw.write(
+                    yaml.dump(config, default_flow_style=False)
+                )
         ret = self.run_script(
             self._call_binary_,
             '--config-dir {0} -d'.format(
@@ -79,7 +81,7 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             with_retcode=True
         )
         try:
-            self.assertIn('doc.runner:', ret[0])
+            self.assertIn("'doc.runner:'", ret[0])
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
         except AssertionError:
             if os.path.exists('/dev/log') and ret[2] != 2:
@@ -92,7 +94,7 @@ class RunTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             )
             self.assertEqual(ret[2], 2)
         finally:
-            os.chdir(old_cwd)
+            self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 

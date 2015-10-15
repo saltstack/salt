@@ -9,6 +9,23 @@ Salt 2014.1.0 Release Notes - Codename Hydrogen
    More info on backwards-compatibility policy :doc:`here
    </topics/installation/index>`, under the "Upgrading Salt" subheading.
 
+.. note::
+
+    A change in the grammar in the state compiler makes ``module.run`` in
+    requisites illegal syntax.  Its use is replaced simply with the word
+    ``module``.  In other words you will need to change requisites like this::
+
+        require:
+            module.run: some_module_name
+
+    to::
+
+        require:
+            module: some_module_name
+
+    This is a breaking change.  We apologize for the inconvenience, we needed to
+    do this to remove some ambiguity in parsing requisites.
+
 :release: 2014-02-24
 
 The 2014.1.0 release of Salt is a major release which not only increases
@@ -18,7 +35,8 @@ testing making roughly double the coverage in the Salt tests, and comes with
 many new features.
 
 2014.1.0 is the first release to follow the new date-based release naming
-system.
+system. See the :doc:`version numbers</topics/releases/version_numbers>`
+page for more details.
 
 Major Features
 ==============
@@ -51,7 +69,7 @@ Salt Virt
 ---------
 
 Salt Virt is a cloud controller that supports virtual machine deployment,
-inspection, migration and integration with many aspects of Salt.
+inspection, migration, and integration with many aspects of Salt.
 
 Salt Virt has undergone a major overhaul with this release and now supports
 many more features and includes a number of critical improvements.
@@ -217,11 +235,11 @@ documentation for the :mod:`pagerduty <salt.modules.pagerduty>` module.
 Virtual Terminal
 ----------------
 
-Sometimes the subprocess module is not good enough, and, in fact, not even 
-``askpass`` is. This virtual terminal is still in it's infant childhood, needs 
-quite some love, and was originally created to replace ``askpass``, but, while 
-developing it, it immediately proved that it could do so much more. It's 
-currently used by salt-cloud when bootstrapping salt on clouds which require 
+Sometimes the subprocess module is not good enough, and, in fact, not even
+``askpass`` is. This virtual terminal is still in it's infant childhood, needs
+quite some love, and was originally created to replace ``askpass``, but, while
+developing it, it immediately proved that it could do so much more. It's
+currently used by salt-cloud when bootstrapping salt on clouds which require
 the use of a password.
 
 

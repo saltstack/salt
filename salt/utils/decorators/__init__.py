@@ -4,6 +4,7 @@ Helpful decorators module writing
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import inspect
 import logging
 from functools import wraps
@@ -12,6 +13,9 @@ from collections import defaultdict
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandNotFoundError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -22,8 +26,8 @@ class Depends(object):
     dependencies passed in are in the globals of the module. If not, it will
     cause the function to be unloaded (or replaced)
     '''
-    # Dependency -> list of things that depend on it
-    dependency_dict = defaultdict(set)
+    # kind -> Dependency -> list of things that depend on it
+    dependency_dict = defaultdict(lambda: defaultdict(set))
 
     def __init__(self, *dependencies, **kwargs):
         '''
@@ -43,7 +47,7 @@ class Depends(object):
                 return 'foo'
         '''
 
-        log.debug(
+        log.trace(
             'Depends decorator instantiated with dep list of {0}'.format(
                 dependencies
             )
@@ -57,59 +61,77 @@ class Depends(object):
         and determine which module and function name it is to store in the
         class wide depandancy_dict
         '''
-        module = inspect.getmodule(inspect.stack()[1][0])
+        frame = inspect.stack()[1][0]
+        # due to missing *.py files under esky we cannot use inspect.getmodule
+        # module name is something like salt.loaded.int.modules.test
+        kind = frame.f_globals['__name__'].rsplit('.', 2)[1]
         for dep in self.dependencies:
-            self.dependency_dict[dep].add(
-                (module, function, self.fallback_function)
+            self.dependency_dict[kind][dep].add(
+                (frame, function, self.fallback_function)
             )
         return function
 
     @classmethod
-    def enforce_dependencies(cls, functions):
+    def enforce_dependencies(cls, functions, kind):
         '''
         This is a class global method to enforce the dependencies that you
         currently know about.
         It will modify the "functions" dict and remove/replace modules that
         are missing dependencies.
         '''
-        for dependency, dependent_set in cls.dependency_dict.iteritems():
+        for dependency, dependent_set in six.iteritems(cls.dependency_dict[kind]):
             # check if dependency is loaded
-            for module, func, fallback_function in dependent_set:
+            for frame, func, fallback_function in dependent_set:
                 # check if you have the dependency
-                if dependency in dir(module):
-                    log.debug(
-                        'Dependency ({0}) already loaded inside {1}, '
-                        'skipping'.format(
-                            dependency,
-                            module.__name__.split('.')[-1]
+                if dependency is True:
+                    log.trace(
+                        'Dependency for {0}.{1} exists, not unloading'.format(
+                            frame.f_globals['__name__'].split('.')[-1],
+                            func.__name__,
                         )
                     )
                     continue
-                log.debug(
+
+                if dependency in dir(frame):
+                    log.trace(
+                        'Dependency ({0}) already loaded inside {1}, '
+                        'skipping'.format(
+                            dependency,
+                            frame.f_globals['__name__'].split('.')[-1]
+                        )
+                    )
+                    continue
+                log.trace(
                     'Unloading {0}.{1} because dependency ({2}) is not '
                     'imported'.format(
-                        module,
+                        frame.f_globals['__name__'],
                         func,
                         dependency
                     )
                 )
                 # if not, unload dependent_set
-                mod_key = '{0}.{1}'.format(module.__name__.split('.')[-1],
-                                           func.__name__)
+                if frame:
+                    try:
+                        func_name = frame.f_globals['__func_alias__'][func.__name__]
+                    except (AttributeError, KeyError):
+                        func_name = func.__name__
 
-                # if we don't have this module loaded, skip it!
-                if mod_key not in functions:
-                    continue
+                    mod_key = '{0}.{1}'.format(frame.f_globals['__name__'].split('.')[-1],
+                                               func_name)
 
-                try:
-                    if fallback_function is not None:
-                        functions[mod_key] = fallback_function
-                    else:
-                        del functions[mod_key]
-                except AttributeError:
-                    # we already did???
-                    log.debug('{0} already removed, skipping'.format(mod_key))
-                    continue
+                    # if we don't have this module loaded, skip it!
+                    if mod_key not in functions:
+                        continue
+
+                    try:
+                        if fallback_function is not None:
+                            functions[mod_key] = fallback_function
+                        else:
+                            del functions[mod_key]
+                    except AttributeError:
+                        # we already did???
+                        log.trace('{0} already removed, skipping'.format(mod_key))
+                        continue
 
 
 class depends(Depends):  # pylint: disable=C0103
@@ -126,7 +148,7 @@ def which(exe):
         def wrapped(*args, **kwargs):
             if salt.utils.which(exe) is None:
                 raise CommandNotFoundError(
-                    'The {0!r} binary was not found in $PATH.'.format(exe)
+                    'The \'{0}\' binary was not found in $PATH.'.format(exe)
                 )
             return function(*args, **kwargs)
         return identical_signature_wrapper(function, wrapped)
@@ -143,7 +165,7 @@ def which_bin(exes):
                 raise CommandNotFoundError(
                     'None of provided binaries({0}) was not found '
                     'in $PATH.'.format(
-                        ['{0!r}'.format(exe) for exe in exes]
+                        ['\'{0}\''.format(exe) for exe in exes]
                     )
                 )
             return function(*args, **kwargs)
@@ -162,7 +184,7 @@ def identical_signature_wrapper(original_function, wrapped_function):
         '    return __wrapped__({2})'.format(
             # Keep the original function name
             original_function.__name__,
-            # The function signature including defaults, ie, 'timeout=1'
+            # The function signature including defaults, i.e., 'timeout=1'
             inspect.formatargspec(
                 *inspect.getargspec(original_function)
             )[1:-1],
@@ -175,7 +197,7 @@ def identical_signature_wrapper(original_function, wrapped_function):
         '<string>',
         'exec'
     )
-    exec function_def in context
+    six.exec_(function_def, context)
     return wraps(original_function)(context[original_function.__name__])
 
 

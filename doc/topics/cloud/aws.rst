@@ -5,9 +5,9 @@ Getting Started With AWS EC2
 Amazon EC2 is a very widely used public cloud platform and one of the core
 platforms Salt Cloud has been built to support.
 
-Previously, the suggested provider for AWS EC2 was the ``aws`` provider. This
-has been deprecated in favor of the ``ec2`` provider. Configuration using the
-old ``aws`` provider will still function, but that driver is no longer in
+Previously, the suggested driver for AWS EC2 was the ``aws`` driver. This
+has been deprecated in favor of the ``ec2`` driver. Configuration using the
+old ``aws`` driver will still function, but that driver is no longer in
 active development.
 
 
@@ -41,15 +41,21 @@ parameters are discussed in more detail below.
       # Specify whether to use public or private IP for deploy script.
       #
       # Valid options are:
-      #     private_ips - The salt-master is also hosted with EC2
-      #     public_ips - The salt-master is hosted outside of EC2
+      #     private_ips - The salt-cloud command is run inside the EC2
+      #     public_ips - The salt-cloud command is run outside of EC2
       #
       ssh_interface: public_ips
 
+      # Optionally configure the Windows credential validation number of
+      # retries and delay between retries.  This defaults to 10 retries
+      # with a one second delay betwee retries
+      win_deploy_auth_retries: 10
+      win_deploy_auth_retry_delay: 1
+      
       # Set the EC2 access credentials (see below)
       #
-      id: HJGRYCILJLKJYG
-      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      id: 'use-instance-role-credentials'
+      key: 'use-instance-role-credentials'
 
       # Make sure this key is owned by root with permissions 0400.
       #
@@ -58,6 +64,7 @@ parameters are discussed in more detail below.
       securitygroup: default
 
       # Optionally configure default region
+      # Use salt-cloud --list-locations <provider> to obtain valid regions
       #
       location: ap-southeast-1
       availability_zone: ap-southeast-1b
@@ -77,7 +84,7 @@ parameters are discussed in more detail below.
       # Optionally add an IAM profile
       iam_profile: 'arn:aws:iam::123456789012:instance-profile/ExampleInstanceProfile'
 
-      provider: ec2
+      driver: ec2
 
 
     my-ec2-southeast-private-ips:
@@ -94,15 +101,27 @@ parameters are discussed in more detail below.
       #
       ssh_interface: private_ips
 
+      # Optionally configure the Windows credential validation number of
+      # retries and delay between retries.  This defaults to 10 retries
+      # with a one second delay betwee retries
+      win_deploy_auth_retries: 10
+      win_deploy_auth_retry_delay: 1
+      
       # Set the EC2 access credentials (see below)
       #
-      id: HJGRYCILJLKJYG
-      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      id: 'use-instance-role-credentials'
+      key: 'use-instance-role-credentials'
 
       # Make sure this key is owned by root with permissions 0400.
       #
       private_key: /etc/salt/my_test_key.pem
       keyname: my_test_key
+
+      # This one should NOT be specified if VPC was not configured in AWS to be
+      # the default. It might cause an error message which says that network
+      # interfaces and an instance-level security groups may not be specified
+      # on the same request.
+      #
       securitygroup: default
 
       # Optionally configure default region
@@ -125,8 +144,16 @@ parameters are discussed in more detail below.
       # Optionally add an IAM profile
       iam_profile: 'my other profile name'
 
-      provider: ec2
+      driver: ec2
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Access Credentials
 ==================
@@ -138,6 +165,35 @@ https://portal.aws.amazon.com/gp/aws/securityCredentials
 Both are located in the Access Credentials area of the page, under the Access
 Keys tab. The ``id`` setting is labeled Access Key ID, and the ``key`` setting
 is labeled Secret Access Key.
+
+Note: if either ``id`` or ``key`` is set to 'use-instance-role-credentials' it is
+assumed that Salt is running on an AWS instance, and the instance role
+credentials will be retrieved and used.  Since both the ``id`` and ``key`` are
+required parameters for the AWS ec2 provider, it is recommended to set both
+to 'use-instance-role-credentials' for this functionality.
+
+A "static" and "permanent" Access Key ID and Secret Key can be specified,
+but this is not recommended.  Instance role keys are rotated on a regular
+basis, and are the recommended method of specifying AWS credentials.
+
+Windows Deploy Timeouts
+=======================
+For Windows instances, it may take longer than normal for the instance to be
+ready.  In these circumstances, the provider configuration can be configured
+with a ``win_deploy_auth_retries`` and/or a ``win_deploy_auth_retry_delay``
+setting, which default to 10 retries and a one second delay between retries.
+These retries and timeouts relate to validating the Administrator password
+once AWS provides the credentials via the AWS API.
+
+
+Windows Deploy Timeouts
+=======================
+For Windows instances, it may take longer than normal for the instance to be
+ready.  In these circumstances, the provider configuration can be configured
+with a ``win_deploy_auth_retries`` and/or a ``win_deploy_auth_retry_delay``
+setting, which default to 10 retries and a one second delay between retries.
+These retries and timeouts relate to validating the Administrator password
+once AWS provides the credentials via the AWS API.
 
 
 Key Pairs
@@ -209,13 +265,13 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
     base_ec2_private:
       provider: my-ec2-southeast-private-ips
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t2.micro
       ssh_username: ec2-user
 
     base_ec2_public:
       provider: my-ec2-southeast-public-ips
       image: ami-e565ba8c
-      size: Micro Instance
+      size: t2.micro
       ssh_username: ec2-user
 
     base_ec2_db:
@@ -292,7 +348,7 @@ The following settings are always required for EC2:
       keyname: test
       securitygroup: quick-start
       private_key: /root/test.pem
-      provider: ec2
+      driver: ec2
 
 
 Optional Settings
@@ -411,7 +467,7 @@ each cloud profile. Note that the number of instance stores varies by instance
 type.  If more mappings are provided than are supported by the instance type,
 mappings will be created in the order provided and additional mappings will be
 ignored. Consult the `AWS documentation`_ for a listing of the available
-instance stores, device names, and mount points.
+instance stores, and device names.
 
 .. code-block:: yaml
 
@@ -432,6 +488,8 @@ its size to 100G by using the following configuration.
       block_device_mappings:
         - DeviceName: /dev/sda
           Ebs.VolumeSize: 100
+          Ebs.VolumeType: gp2
+          Ebs.SnapshotId: dummy0
 
 Existing EBS volumes may also be attached (not created) to your instances or
 you can create new EBS volumes based on EBS snapshots. To simply attach an
@@ -440,7 +498,6 @@ existing volume use the ``volume_id`` parameter.
 .. code-block:: yaml
 
     device: /dev/xvdj
-    mount_point: /mnt/my_ebs
     volume_id: vol-12345abcd
 
 Or, to create a volume from an EBS snapshot, use the ``snapshot`` parameter.
@@ -448,7 +505,6 @@ Or, to create a volume from an EBS snapshot, use the ``snapshot`` parameter.
 .. code-block:: yaml
 
     device: /dev/xvdj
-    mount_point: /mnt/my_ebs
     snapshot: snap-abcd12345
 
 Note that ``volume_id`` will take precedence over the ``snapshot`` parameter.
@@ -496,17 +552,6 @@ function exists which renames both the instance, and the salt keys.
 .. code-block:: bash
 
     salt-cloud -a rename mymachine newname=yourmachine
-
-
-EC2 Termination Protection
-==========================
-EC2 allows the user to enable and disable termination protection on a specific
-instance. An instance with this protection enabled cannot be destroyed.
-
-.. code-block:: bash
-
-    salt-cloud -a enable_term_protect mymachine
-    salt-cloud -a disable_term_protect mymachine
 
 
 Rename on Destroy
@@ -794,7 +839,7 @@ will be used.
 Attaching Volumes
 -----------------
 Unattached volumes may be attached to an instance. The following values are
-required; name or instance_id, volume_id and device.
+required; name or instance_id, volume_id, and device.
 
 .. code-block:: bash
 
@@ -864,4 +909,81 @@ This function removes the key pair from Amazon.
 
     salt-cloud -f delete_keypair ec2 keyname=mykeypair
 
+Launching instances into a VPC
+==============================
 
+Simple launching into a VPC
+---------------------------
+
+In the amazon web interface, identify the id of the subnet into which your
+image should be created. Then, edit your cloud.profiles file like so:-
+
+.. code-block:: yaml
+
+    profile-id:
+      provider: provider-name
+      subnetid: subnet-XXXXXXXX
+      image: ami-XXXXXXXX
+      size: m1.medium
+      ssh_username: ubuntu
+      securitygroupid:
+        - sg-XXXXXXXX
+
+Specifying interface properties
+-------------------------------
+
+.. versionadded:: 2014.7.0
+
+Launching into a VPC allows you to specify more complex configurations for
+the network interfaces of your virtual machines, for example:-
+
+.. code-block:: yaml
+
+    profile-id:
+      provider: provider-name
+      image: ami-XXXXXXXX
+      size: m1.medium
+      ssh_username: ubuntu
+
+      # Do not include either 'subnetid' or 'securitygroupid' here if you are
+      # going to manually specify interface configuration
+      #
+      network_interfaces:
+        - DeviceIndex: 0
+          SubnetId: subnet-XXXXXXXX
+          SecurityGroupId:
+            - sg-XXXXXXXX
+          
+          # Uncomment this line if you would like to set an explicit private
+          # IP address for the ec2 instance
+          #
+          # PrivateIpAddress: 192.168.1.66
+
+          # Uncomment this to associate an existing Elastic IP Address with
+          # this network interface:
+          #
+          # associate_eip: eni-XXXXXXXX
+
+          # You can allocate more than one IP address to an interface. Use the
+          # 'ip addr list' command to see them.
+          #
+          # SecondaryPrivateIpAddressCount: 2
+
+          # Uncomment this to allocate a new Elastic IP Address to this
+          # interface (will be associated with the primary private ip address
+          # of the interface
+          #
+          # allocate_new_eip: True
+
+          # Uncomment this instead to allocate a new Elastic IP Address to
+          # both the primary private ip address and each of the secondary ones
+          #
+          allocate_new_eips: True
+
+          # Uncomment this if you're creating NAT instances. Allows an instance
+          # to accept IP packets with destinations other than itself.
+          # SourceDestCheck: False
+
+Note that it is an error to assign a 'subnetid' or 'securitygroupid' to a
+profile where the interfaces are manually configured like this. These are both
+really properties of each network interface, not of the machine itself.

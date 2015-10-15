@@ -6,16 +6,11 @@ welcome!
 
 To assist in Salt development, you can help in a number of ways.
 
-Setting a Github pull request
+Setting a GitHub pull request
 -----------------------------
 
-This is the preferred method for contributions, simply create a Github
+This is the preferred method for contributions, simply create a GitHub
 fork, commit your changes to the fork, and then open up a pull request.
-If you want to make our life really easier, please also enable Travis-CI on
-your fork. Salt is already configured, all you need to do is follow the first
-two(2) steps on their `Getting Started Doc`_.
-
-.. _`Getting Started Doc`: http://about.travis-ci.org/docs/user/getting-started
 
 Posting patches to the mailing list
 -----------------------------------
@@ -145,6 +140,10 @@ M2Crypto installed using apt::
 
     virtualenv --system-site-packages /path/to/your/virtualenv
 
+On Gentoo systems you should use ``--system-site-packages`` when creating
+the virtualenv to enable pkg and portage_config functionality as the
+portage package is not available via pip
+
 .. note:: Using your system Python modules in the virtualenv
 
     If you have the required python modules installed on your system already
@@ -162,9 +161,13 @@ Activate the virtualenv::
 
     source /path/to/your/virtualenv/bin/activate
 
-Install Salt (and dependencies) into the virtualenv::
+Install Salt (and dependencies) into the virtualenv.
 
-    pip install -r requirements.txt
+ZeroMQ Transport:
+
+.. code-block:: bash
+
+    pip install -r requirements/zeromq.txt
     pip install psutil
     pip install -e .
 
@@ -175,6 +178,15 @@ Install Salt (and dependencies) into the virtualenv::
     while installing M2Crypto, try installing it with the following command::
 
         env SWIG_FEATURES="-cpperraswarn -includeall -D__`uname -m`__ -I/usr/include/openssl" pip install M2Crypto
+
+
+RAET Transport:
+
+.. code-block:: bash
+
+    pip install -r requirements/raet.txt
+    pip install psutil
+    pip install -e .
 
 
 Running a self-contained development version
@@ -244,7 +256,7 @@ Once the minion starts, you may see an error like the following::
 
     zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc" is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
 
-This means the the path to the socket the minion is using is too long. This is
+This means that the path to the socket the minion is using is too long. This is
 a system limitation, so the only workaround is to reduce the length of this
 path. This can be done in a couple different ways:
 
@@ -271,9 +283,9 @@ If it is less than 2047, you should increase it with::
 Running the tests
 ~~~~~~~~~~~~~~~~~
 
-For running tests, you'll also need to install ``dev_requirements_python2x.txt``::
+For running tests, you'll also need to install ``requirements/dev_python2x.txt``::
 
-    pip install -r dev_requirements_python2x.txt
+    pip install -r requirements/dev_python2x.txt
 
 Finally you use setup.py to run the tests with the following command::
 

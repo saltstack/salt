@@ -10,7 +10,7 @@ Glossary
     Bootstrap
         A stand-alone Salt project which can download and install a Salt master
         and/or a Salt minion onto a host. *See also*: `salt-bootstrap
-        <https://github.com/saltstack/salt-bootstrap>`.
+        <https://github.com/saltstack/salt-bootstrap>`_.
 
     Compound Matcher
         A combination of many target definitions that can be combined with
@@ -26,13 +26,6 @@ Glossary
         A directory tree containing state files which can be applied to
         minions. *See also*: :ref:`top file<states-top-environments>`.
 
-    Execution Module
-        A Python module that contains execution functions which directly
-        perform various system-management tasks on a server. Salt ships with a
-        number of execution modules but users can also write their own
-        execution modules to perform specialized tasks. *See also*: :ref:`the
-        list of execution modules <all-salt.modules>`.
-
     Execution Function
         A Python function inside an Execution Module that may take arguments
         and performs specific system-management tasks. *See also*: :ref:`the
@@ -43,6 +36,17 @@ Glossary
         have been run. A default returner. *See also*:
         :conf_master:`ext_job_cache`, :ref:`the list of returners
         <all-salt.returners>`.
+
+    Execution Module
+        A Python module that contains execution functions which directly
+        perform various system-management tasks on a server. Salt ships with a
+        number of execution modules but users can also write their own
+        execution modules to perform specialized tasks. *See also*: :ref:`the
+        list of execution modules <all-salt.modules>`.
+
+    External Pillar
+        A module that accepts arbitrary arguments and returns a dictionary.
+        The dictionary is automatically added to a pillar for a minion.
 
     Event
         A notice emitted onto an event bus. Events are often driven by requests
@@ -60,9 +64,14 @@ Glossary
         hostname, network addresses. *See also*: :ref:`targeting with grains
         <targeting-grains>`.
 
-    Halite
-        The Salt GUI. *See also*: `Halite
-        <https://github.com/saltstack/halite>`_.
+    Highdata
+        The data structure in a SLS file the represents a set of state
+        declarations. *See also*: :ref:`state layers
+        <state-layers-high-data>`.
+
+    Highstate
+        The collection of states to be applied to a system. *See also*:
+        :ref:`state layers <state-layers-highstate>`.
 
     Jinja
         A templating language which allows variables and simple logic to be
@@ -78,15 +87,6 @@ Glossary
     Job ID
         A unique identifier to represent a given :term:`job`.
 
-    Highdata
-        The data structure in a SLS file the represents a set of state
-        declarations. *See also*: :ref:`state layers
-        <state-layers-high-data>`.
-
-    Highstate
-        The collection of states to be applied to a system. *See also*:
-        :ref:`state layers <state-layers-highstate>`.
-
     Low State
         The collection of processed states after requisites and order are
         evaluated. *See also*: :ref:`state layers <state-layers-low-state>`.
@@ -98,6 +98,10 @@ Glossary
     Masterless
         A minion which does not require a Salt master to operate. All
         configuration is local. *See also*: :conf_minion:`file_client`.
+
+    Master Tops
+        A system for the master that allows hooks into external systems to
+        generate top file data.
 
     Mine
         A facility to collect arbitrary data from minions and store that data
@@ -125,10 +129,6 @@ Glossary
     Outputter
         A formatter for defining the characteristics of output data from a Salt
         command. *See also*: :ref:`list of outputters <all-salt.output>`.
-
-    Overstate
-        A system by which a Master can issue function calls to minions in a
-        deterministic order. *See also*: :ref:`overstate <states-overstate>`.
 
     Peer Communication
         The ability for minions to communicate directly with other minions
@@ -206,15 +206,14 @@ Glossary
     SLS Module
         Contains a set of :term:`state declarations <State Declaration>`.
 
+    State Compiler
+        Translates :term:`highdata` into lowdata.
+
     State Declaration
         A data structure which contains a unique ID and describes one or more
         states of a system such as ensuring that a package is installed or a
         user is defined. *See also*: :ref:`highstate structure
         <state-declaration>`.
-
-    State Module
-        A module which contains a set of state functions. *See also*:
-        :ref:`list of state modules <all-salt.states>`.
 
     State Function
         A function contained inside a :term:`state module <State Module>` which
@@ -222,11 +221,12 @@ Glossary
         functions frequently call out to one or more :term:`execution modules
         <Execution Module>` to perform a given task.
 
+    State Module
+        A module which contains a set of state functions. *See also*:
+        :ref:`list of state modules <all-salt.states>`.
+
     State Run
         The application of a set of states on a set of systems.
-
-    State Compiler
-        Translates :term:`highdata` into lowdata.
 
     Syndic
         A forwarder which can relay messages between tiered masters. **See
@@ -242,6 +242,13 @@ Glossary
         :ref:`top file <states-top>`, :ref:`list of master top modules
         <all-salt.tops>`.
 
+    __virtual__
+        A function in a module that is called on module load to determine
+        whether or not the module should be available to a minion. This
+        function commonly contains logic to determine if all requirements
+        for a module are available, such as external libraries.
+
     Worker
         A master process which can send notices and receive replies from
-        minions. *See also*: :conf_master:`worker_threads`.
+        minions. *See also*:
+        :conf_master:`worker_threads`.

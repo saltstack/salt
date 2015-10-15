@@ -10,6 +10,7 @@ sock_dir: .salt-unix
 open_mode: True
 syndic_master: localhost
 fileserver_list_cache_time: 0
+pillar_opts: True
 peer:
   '.*':
     - 'test.*'
@@ -20,6 +21,9 @@ token_file: /tmp/ksfjhdgiuebfgnkefvsikhfjdgvkjahcsidk
 file_buffer_size: 8192
 
 ext_pillar:
+  - git: master https://github.com/saltstack/pillar1.git
+  - git: master https://github.com/saltstack/pillar2.git
+  - git: dev:testing https://github.com/saltstack/pillar1.git
   - test_ext_pillar_opts:
     - test_issue_5951_actual_file_roots_in_opts
 
@@ -28,8 +32,41 @@ config_opt:
 yaml_utf8: True
 
 external_auth:
-  auto:
+  pam:
     saltdev:
       - '@wheel'
       - '@runner'
       - test.*
+    saltops%:
+      - '@wheel'
+      - '@runner'
+      - 'test.*'
+  auto:
+    saltdev_auto:
+      - '@wheel'
+      - '@runner'
+      - test.*
+    saltdev_api:
+      - '@wheel'
+      - '@runner'
+      - test.*
+      - grains.*
+    '*':
+      - '@wheel'
+      - '@runner'
+      - test.*
+
+master_tops:
+  master_tops_test: True
+
+nodegroups:
+  min: minion
+  sub_min: sub_minion
+  mins: N@min or N@sub_min
+  multiline_nodegroup:
+    - 'minion'
+    - 'or'
+    - 'sub_minion'
+  redundant_minions: N@min or N@mins
+  nodegroup_loop_a: N@nodegroup_loop_b
+  nodegroup_loop_b: N@nodegroup_loop_a

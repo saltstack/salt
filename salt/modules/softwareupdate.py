@@ -2,6 +2,7 @@
 '''
 Support for the softwareupdate command on MacOS.
 '''
+from __future__ import absolute_import
 
 
 # Import python libs
@@ -29,7 +30,7 @@ def _get_upgradable(rec=False, restart=False):
     { 'updatename': '1.2.3-45', ... }
     '''
     cmd = 'softwareupdate --list'
-    out = __salt__['cmd.run_stdout'](cmd)
+    out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
     # rexp parses lines that look like the following:
     #    * Safari6.1.2MountainLion-6.1.2
     #         Safari (6.1.2), 51679K [recommended]
@@ -97,7 +98,7 @@ def list_upgrades(rec=False, restart=False):
 def ignore(*updates):
     '''
     Ignore a specific program update. When an update is ignored the '-' and
-    version number at the end will be omited, so "SecUpd2014-001-1.0" becomes
+    version number at the end will be omitted, so "SecUpd2014-001-1.0" becomes
     "SecUpd2014-001". It will be removed automatically if present. An update
     is successfully ignored when it no longer shows up after list_upgrades.
 
@@ -138,7 +139,7 @@ def list_ignored():
        salt '*' softwareupdate.list_ignored
     '''
     cmd = 'softwareupdate --list --ignore'
-    out = __salt__['cmd.run_stdout'](cmd)
+    out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
 
     # rep parses lines that look like the following:
     #     "Safari6.1.2MountainLion-6.1.2",
@@ -171,7 +172,7 @@ def reset_ignored():
     ignored_updates = list_ignored()
 
     if ignored_updates:
-        __salt__['cmd.run_stdout'](cmd)
+        __salt__['cmd.run_stdout'](cmd, python_shell=False)
         ret = ignored_updates
     else:
         ret = None
@@ -182,8 +183,8 @@ def reset_ignored():
 def schedule(*status):
     '''
     Decide if automatic checking for upgrades should be on or off.
-    If no argumentsare given it will return the current status.
-    Appaend on or off to change the status.
+    If no arguments are given it will return the current status.
+    Append on or off to change the status.
 
     Return values:
     - ``True``: Automatic checking is now on,
@@ -206,7 +207,7 @@ def schedule(*status):
     else:
         return None
 
-    out = __salt__['cmd.run_stdout'](cmd)
+    out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
 
     current_status = out.split()[-1]
     if current_status == 'off':
@@ -342,8 +343,9 @@ def list_downloads():
     ret = []
     for update in _get_upgradable():
         for f in dist_files:
-            if update.rsplit('-', 1)[0] in open(f).read():
-                ret.append(update)
+            with salt.utils.fopen(f) as fhr:
+                if update.rsplit('-', 1)[0] in fhr.read():
+                    ret.append(update)
 
     return ret
 

@@ -2,23 +2,27 @@
 '''
 Return cached data from minions
 '''
+from __future__ import absolute_import
 # Import python libs
 import logging
 
 # Import salt libs
 import salt.log
+import salt.utils
 import salt.utils.master
-import salt.output
 import salt.payload
-from salt._compat import string_types
+from salt.ext.six import string_types
+from salt.exceptions import SaltInvocationError
+from salt.fileserver import clear_lock as _clear_lock
+from salt.fileserver.gitfs import PER_REMOTE_OVERRIDES as __GITFS_OVERRIDES
+from salt.pillar.git_pillar \
+    import PER_REMOTE_OVERRIDES as __GIT_PILLAR_OVERRIDES
+from salt.runners.winrepo import PER_REMOTE_OVERRIDES as __WINREPO_OVERRIDES
 
 log = logging.getLogger(__name__)
 
-deprecation_warning = ("The 'minion' arg will be removed from "
-                    "cache.py runner. Specify minion with 'tgt' arg!")
 
-
-def grains(tgt=None, expr_form='glob', **kwargs):
+def grains(tgt=None, expr_form='glob', outputter=None, **kwargs):
     '''
     Return cached grains of the targeted minions
 
@@ -30,23 +34,35 @@ def grains(tgt=None, expr_form='glob', **kwargs):
     '''
     deprecated_minion = kwargs.get('minion', None)
     if tgt is None and deprecated_minion is None:
-        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
         tgt = '*'  # targat all minions for backward compatibility
     elif tgt is None and isinstance(deprecated_minion, string_types):
-        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        salt.utils.warn_until(
+            'Boron',
+            'The \'minion\' argument to the cache.grains runner is '
+            'deprecated. Please specify the minion using the \'tgt\' '
+            'argument.'
+        )
         tgt = deprecated_minion
     elif tgt is None:
         return {}
     pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
-                                                use_cached_grains=True,
-                                                grains_fallback=False,
-                                                opts=__opts__)
+                                                     use_cached_grains=True,
+                                                     grains_fallback=False,
+                                                     opts=__opts__)
     cached_grains = pillar_util.get_minion_grains()
-    salt.output.display_output(cached_grains, None, __opts__)
-    return cached_grains
+    if outputter:
+        salt.utils.warn_until(
+            'Boron',
+            'The \'outputter\' argument to the cache.grains runner has '
+            'been deprecated. Please specify an outputter using --out. '
+            'See the output of \'salt-run -h\' for more information.'
+        )
+        return {'outputter': outputter, 'data': cached_grains}
+    else:
+        return cached_grains
 
 
-def pillar(tgt=None, expr_form='glob', **kwargs):
+def pillar(tgt=None, expr_form='glob', outputter=None, **kwargs):
     '''
     Return cached pillars of the targeted minions
 
@@ -58,25 +74,37 @@ def pillar(tgt=None, expr_form='glob', **kwargs):
     '''
     deprecated_minion = kwargs.get('minion', None)
     if tgt is None and deprecated_minion is None:
-        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
         tgt = '*'  # targat all minions for backward compatibility
     elif tgt is None and isinstance(deprecated_minion, string_types):
-        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        salt.utils.warn_until(
+            'Boron',
+            'The \'minion\' argument to the cache.pillar runner is '
+            'deprecated. Please specify the minion using the \'tgt\' '
+            'argument.'
+        )
         tgt = deprecated_minion
     elif tgt is None:
         return {}
     pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
-                                                use_cached_grains=True,
-                                                grains_fallback=False,
-                                                use_cached_pillar=True,
-                                                pillar_fallback=False,
-                                                opts=__opts__)
+                                                     use_cached_grains=True,
+                                                     grains_fallback=False,
+                                                     use_cached_pillar=True,
+                                                     pillar_fallback=False,
+                                                     opts=__opts__)
     cached_pillar = pillar_util.get_minion_pillar()
-    salt.output.display_output(cached_pillar, None, __opts__)
-    return cached_pillar
+    if outputter:
+        salt.utils.warn_until(
+            'Boron',
+            'The \'outputter\' argument to the cache.pillar runner has '
+            'been deprecated. Please specify an outputter using --out. '
+            'See the output of \'salt-run -h\' for more information.'
+        )
+        return {'outputter': outputter, 'data': cached_pillar}
+    else:
+        return cached_pillar
 
 
-def mine(tgt=None, expr_form='glob', **kwargs):
+def mine(tgt=None, expr_form='glob', outputter=None, **kwargs):
     '''
     Return cached mine data of the targeted minions
 
@@ -88,44 +116,57 @@ def mine(tgt=None, expr_form='glob', **kwargs):
     '''
     deprecated_minion = kwargs.get('minion', None)
     if tgt is None and deprecated_minion is None:
-        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
         tgt = '*'  # targat all minions for backward compatibility
     elif tgt is None and isinstance(deprecated_minion, string_types):
-        log.warn("DEPRECATION WARNING: {0}".format(deprecation_warning))
+        salt.utils.warn_until(
+            'Boron',
+            'The \'minion\' argument to the cache.mine runner is '
+            'deprecated. Please specify the minion using the \'tgt\' '
+            'argument.'
+        )
         tgt = deprecated_minion
     elif tgt is None:
         return {}
     pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
-                                                use_cached_grains=False,
-                                                grains_fallback=False,
-                                                use_cached_pillar=False,
-                                                pillar_fallback=False,
-                                                opts=__opts__)
+                                                     use_cached_grains=False,
+                                                     grains_fallback=False,
+                                                     use_cached_pillar=False,
+                                                     pillar_fallback=False,
+                                                     opts=__opts__)
     cached_mine = pillar_util.get_cached_mine_data()
-    salt.output.display_output(cached_mine, None, __opts__)
+    if outputter:
+        salt.utils.warn_until(
+            'Boron',
+            'The \'outputter\' argument to the cache.mine runner has '
+            'been deprecated. Please specify an outputter using --out. '
+            'See the output of \'salt-run -h\' for more information.'
+        )
+        return {'outputter': outputter, 'data': cached_mine}
+    else:
+        return cached_mine
 
 
 def _clear_cache(tgt=None,
                  expr_form='glob',
-                 clear_pillar=False,
-                 clear_grains=False,
-                 clear_mine=False,
-                 clear_mine_func=None):
+                 clear_pillar_flag=False,
+                 clear_grains_flag=False,
+                 clear_mine_flag=False,
+                 clear_mine_func_flag=None):
     '''
     Clear the cached data/files for the targeted minions.
     '''
     if tgt is None:
         return False
     pillar_util = salt.utils.master.MasterPillarUtil(tgt, expr_form,
-                                            use_cached_grains=True,
-                                            grains_fallback=False,
-                                            use_cached_pillar=True,
-                                            pillar_fallback=False,
-                                            opts=__opts__)
-    return pillar_util.clear_cached_minion_data(clear_pillar=clear_pillar,
-                                                clear_grains=clear_grains,
-                                                clear_mine=clear_mine,
-                                                clear_mine_func=clear_mine_func)
+                                                     use_cached_grains=True,
+                                                     grains_fallback=False,
+                                                     use_cached_pillar=True,
+                                                     pillar_fallback=False,
+                                                     opts=__opts__)
+    return pillar_util.clear_cached_minion_data(clear_pillar=clear_pillar_flag,
+                                                clear_grains=clear_grains_flag,
+                                                clear_mine=clear_mine_flag,
+                                                clear_mine_func=clear_mine_func_flag)
 
 
 def clear_pillar(tgt=None, expr_form='glob'):
@@ -138,7 +179,7 @@ def clear_pillar(tgt=None, expr_form='glob'):
 
         salt-run cache.clear_pillar
     '''
-    return _clear_cache(tgt, expr_form, clear_pillar=True)
+    return _clear_cache(tgt, expr_form, clear_pillar_flag=True)
 
 
 def clear_grains(tgt=None, expr_form='glob'):
@@ -151,7 +192,7 @@ def clear_grains(tgt=None, expr_form='glob'):
 
         salt-run cache.clear_grains
     '''
-    return _clear_cache(tgt, expr_form, clear_grains=True)
+    return _clear_cache(tgt, expr_form, clear_grains_flag=True)
 
 
 def clear_mine(tgt=None, expr_form='glob'):
@@ -164,10 +205,10 @@ def clear_mine(tgt=None, expr_form='glob'):
 
         salt-run cache.clear_mine
     '''
-    return _clear_cache(tgt, expr_form, clear_mine=True)
+    return _clear_cache(tgt, expr_form, clear_mine_flag=True)
 
 
-def clear_mine_func(tgt=None, expr_form='glob', clear_mine_func=None):
+def clear_mine_func(tgt=None, expr_form='glob', clear_mine_func_flag=None):
     '''
     Clear the cached mine function data of the targeted minions
 
@@ -177,7 +218,7 @@ def clear_mine_func(tgt=None, expr_form='glob', clear_mine_func=None):
 
         salt-run cache.clear_mine_func tgt='*' clear_mine_func='network.interfaces'
     '''
-    return _clear_cache(tgt, expr_form, clear_mine_func=clear_mine_func)
+    return _clear_cache(tgt, expr_form, clear_mine_func_flag=clear_mine_func_flag)
 
 
 def clear_all(tgt=None, expr_form='glob'):
@@ -192,6 +233,93 @@ def clear_all(tgt=None, expr_form='glob'):
     '''
     return _clear_cache(tgt,
                         expr_form,
-                        clear_pillar=True,
-                        clear_grains=True,
-                        clear_mine=True)
+                        clear_pillar_flag=True,
+                        clear_grains_flag=True,
+                        clear_mine_flag=True)
+
+
+def clear_git_lock(role, remote=None):
+    '''
+    .. versionadded:: 2015.8.2
+
+    Remove the update locks for Salt components (gitfs, git_pillar, winrepo)
+    which use gitfs backend code from salt.utils.gitfs.
+
+    .. note::
+        Running :py:func:`cache.clear_all <salt.runners.cache.clear_all>` will
+        not include this function as it does for pillar, grains, and mine.
+
+        Additionally, executing this function with a ``role`` of ``gitfs`` is
+        equivalent to running ``salt-run fileserver.clear_lock backend=git``.
+
+    role
+        Which type of lock to remove (``gitfs``, ``git_pillar``, or
+        ``winrepo``)
+
+    remote
+        If specified, then any remotes which contain the passed string will
+        have their lock cleared. For example, a ``remote`` value of **github**
+        will remove the lock from all github.com remotes.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.clear_git_lock git_pillar
+    '''
+    if role == 'gitfs':
+        git_objects = [salt.utils.gitfs.GitFS(__opts__)]
+        git_objects[0].init_remotes(__opts__['gitfs_remotes'],
+                                    __GITFS_OVERRIDES)
+    elif role == 'git_pillar':
+        git_objects = []
+        for ext_pillar in __opts__['ext_pillar']:
+            key = next(iter(ext_pillar))
+            if key == 'git':
+                if not isinstance(ext_pillar['git'], list):
+                    continue
+                obj = salt.utils.gitfs.GitPillar(__opts__)
+                obj.init_remotes(ext_pillar['git'], __GIT_PILLAR_OVERRIDES)
+                git_objects.append(obj)
+    elif role == 'winrepo':
+        if 'win_repo' in __opts__:
+            salt.utils.warn_until(
+                'Nitrogen',
+                'The \'win_repo\' config option is deprecated, please use '
+                '\'winrepo_dir\' instead.'
+            )
+            winrepo_dir = __opts__['win_repo']
+        else:
+            winrepo_dir = __opts__['winrepo_dir']
+
+        if 'win_gitrepos' in __opts__:
+            salt.utils.warn_until(
+                'Nitrogen',
+                'The \'win_gitrepos\' config option is deprecated, please use '
+                '\'winrepo_remotes\' instead.'
+            )
+            winrepo_remotes = __opts__['win_gitrepos']
+        else:
+            winrepo_remotes = __opts__['winrepo_remotes']
+
+        git_objects = []
+        for remotes, base_dir in (
+            (winrepo_remotes, winrepo_dir),
+            (__opts__['winrepo_remotes_ng'], __opts__['winrepo_dir_ng'])
+        ):
+            obj = salt.utils.gitfs.WinRepo(__opts__, base_dir)
+            obj.init_remotes(remotes, __WINREPO_OVERRIDES)
+            git_objects.append(obj)
+    else:
+        raise SaltInvocationError('Invalid role \'{0}\''.format(role))
+
+    ret = {}
+    for obj in git_objects:
+        cleared, errors = _clear_lock(obj.clear_lock, role, remote)
+        if cleared:
+            ret.setdefault('cleared', []).extend(cleared)
+        if errors:
+            ret.setdefault('errors', []).extend(errors)
+    if not ret:
+        ret = 'No locks were removed'
+    salt.output.display_output(ret, 'nested', opts=__opts__)

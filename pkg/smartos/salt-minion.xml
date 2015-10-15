@@ -14,7 +14,7 @@
                   grouping="require_all"
                   restart_on="none"
                   type="path">
-          <service_fmri value='file:///opt/local/etc/salt/minion'/>
+          <service_fmri value="file:///opt/local/etc/salt/minion"/>
       </dependency>
 
       <dependency name="network"
@@ -31,12 +31,17 @@
         <service_fmri value="svc:/system/filesystem/local"/>
       </dependency>
 
-      <method_context/>
-
       <exec_method type="method"
                    name="start"
                    exec="/opt/local/bin/salt-minion -c %{config_dir}"
-                   timeout_seconds="60"/>
+                   timeout_seconds="60">
+        <method_context>
+          <method_environment>
+            <envvar name="PATH"
+                    value="/usr/local/sbin:/usr/local/bin:/opt/local/sbin:/opt/local/bin:/usr/sbin:/usr/bin:/sbin"/>
+          </method_environment>
+        </method_context>
+      </exec_method>
 
       <exec_method type="method"
                    name="stop"

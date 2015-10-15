@@ -2,7 +2,7 @@
 '''
 Utilities for working with etcd
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 :depends:  - python-etcd
 
@@ -33,15 +33,19 @@ It should be noted that some usages of etcd require a profile to be specified,
 rather than top-level configurations. This being the case, it is better to
 always use a named configuration profile, as shown above.
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
+
+# Import salt libs
+from salt.exceptions import CommandExecutionError
 
 # Import third party libs
 try:
     import etcd
     HAS_LIBS = True
-except Exception:
+except ImportError:
     HAS_LIBS = False
 
 # Set up logging
@@ -50,24 +54,38 @@ log = logging.getLogger(__name__)
 
 def get_conn(opts, profile=None):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Return a client object for accessing etcd
     '''
+    opts_pillar = opts.get('pillar', {})
+    opts_master = opts_pillar.get('master', {})
+
+    opts_merged = {}
+    opts_merged.update(opts_master)
+    opts_merged.update(opts_pillar)
+    opts_merged.update(opts)
+
     if profile:
-        conf = opts.get(profile, {})
+        conf = opts_merged.get(profile, {})
     else:
-        conf = opts
+        conf = opts_merged
 
     host = conf.get('etcd.host', '127.0.0.1')
     port = conf.get('etcd.port', 4001)
 
-    return etcd.Client(host, port)
+    if HAS_LIBS:
+        return etcd.Client(host, port)
+    else:
+        raise CommandExecutionError(
+            '(unable to import etcd, '
+            'module most likely not installed)'
+        )
 
 
 def tree(client, path):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Recurse through etcd and return all values
     '''

@@ -6,10 +6,10 @@ Management of incron, the inotify cron
 The incron state module allows for user incrontabs to be cleanly managed.
 
 Incron declarations require a number of parameters. The parameters needed
-to be declared: path, mask, and cmd. The user whose incrontab is to be edited
+to be declared: ``path``, ``mask``, and ``cmd``. The ``user`` whose incrontab is to be edited
 also needs to be defined.
 
-When making changes to an existing incron job, the path declaration is the unique
+When making changes to an existing incron job, the ``path`` declaration is the unique
 factor, so if an existing cron that looks like this:
 
 .. code-block:: yaml
@@ -55,14 +55,13 @@ def _check_cron(user,
 
     lst = __salt__['incron.list_tab'](user)
     for cron in lst['crons']:
-        if path == cron['path']:
-            if cron['cmd'] == cmd:
-                cron_mask = cron['mask'].split(',')
-                cron_mask.sort()
-                if cron_mask == arg_mask:
-                    return 'present'
-                if any([x in cron_mask for x in arg_mask]):
-                    return 'update'
+        if path == cron['path'] and cron['cmd'] == cmd:
+            cron_mask = cron['mask'].split(',')
+            cron_mask.sort()
+            if cron_mask == arg_mask:
+                return 'present'
+            if any([x in cron_mask for x in arg_mask]):
+                return 'update'
     return 'absent'
 
 
@@ -150,7 +149,7 @@ def present(name,
         return ret
 
     if data == 'updated':
-        ret['comment'] = 'Incron {0} updated'.format(name, user)
+        ret['comment'] = 'Incron {0} updated'.format(name)
         ret['changes'] = {user: name}
         return ret
     ret['comment'] = ('Incron {0} for user {1} failed to commit with error \n{2}'

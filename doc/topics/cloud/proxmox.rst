@@ -1,19 +1,24 @@
-==============================
+============================
 Getting Started With Proxmox
-==============================
+============================
 
-Proxmox Virtual Environment is a complete server virtualization management solution, 
+Proxmox Virtual Environment is a complete server virtualization management solution,
 based on KVM virtualization and OpenVZ containers.
 Further information can be found at:
 
 http://www.proxmox.org/
 
+Dependencies
+============
+* IPy >= 0.81
+* requests >= 2.2.1
+
 Please note:
 This module allows you to create both OpenVZ and KVM but installing Salt on it will only be
 done when the VM is an OpenVZ container rather than a KVM virtual machine.
 
-* Set up the cloud configuration at 
-  ``/etc/salt/cloud.providers`` or 
+* Set up the cloud configuration at
+  ``/etc/salt/cloud.providers`` or
   ``/etc/salt/cloud.providers.d/proxmox.conf``:
 
 .. code-block:: yaml
@@ -29,22 +34,29 @@ done when the VM is an OpenVZ container rather than a KVM virtual machine.
       user: myuser@pve
       password: badpass
 
-      # Set the access URL for your PROXMOX provider
+      # Set the access URL for your PROXMOX host
       #
       url: your.proxmox.host
-      provider: proxmox
+      driver: proxmox
 
+.. note::
+    .. versionchanged:: 2015.8.0
 
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Access Credentials
 ==================
-The ``user``, ``password`` and ``url`` will be provided to you by your cloud 
-provider. These are all required in order for the PROXMOX driver to work.
+The ``user``, ``password``, and ``url`` will be provided to you by your cloud
+host. These are all required in order for the PROXMOX driver to work.
 
 
 Cloud Profiles
 ==============
-Set up an initial profile at ``/etc/salt/cloud.profiles`` or 
+Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 ``/etc/salt/cloud.profiles.d/proxmox.conf``:
 
 * Configure a profile to be used:
@@ -52,7 +64,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 .. code-block:: yaml
 
     proxmox-ubuntu:
-        provider: proxmox
+        provider: my-proxmox-config
         image: local:vztmpl/ubuntu-12.04-standard_12.04-1_amd64.tar.gz
         technology: openvz
         host: myvmhost
@@ -66,12 +78,12 @@ The profile can be realized now with a salt command:
 
     # salt-cloud -p proxmox-ubuntu myubuntu
 
-This will create an instance named ``myubuntu`` on the cloud provider. The 
+This will create an instance named ``myubuntu`` on the cloud host. The
 minion that is installed on this instance will have a ``hostname`` of ``myubuntu``.
-If the command was executed on the salt-master, its Salt key will automatically 
+If the command was executed on the salt-master, its Salt key will automatically
 be signed on the master.
 
-Once the instance has been created with salt-minion installed, connectivity to 
+Once the instance has been created with salt-minion installed, connectivity to
 it can be verified with Salt:
 
 .. code-block:: bash
@@ -88,17 +100,17 @@ The following settings are always required for PROXMOX:
 .. code-block:: yaml
 
     my-proxmox-config:
-      provider: proxmox
+      driver: proxmox
       user: saltcloud@pve
       password: xyzzy
       url: your.proxmox.host
 
 Optional Settings
 =================
-Unlike other cloud providers in Salt Cloud, Proxmox does not utilize a 
-``size`` setting. This is because Proxmox allows the end-user to specify a 
-more detailed configuration for their instances, than is allowed by many other 
-cloud providers. The following options are available to be used in a profile, 
+Unlike other cloud providers in Salt Cloud, Proxmox does not utilize a
+``size`` setting. This is because Proxmox allows the end-user to specify a
+more detailed configuration for their instances, than is allowed by many other
+cloud providers. The following options are available to be used in a profile,
 with their default settings listed.
 
 .. code-block:: yaml

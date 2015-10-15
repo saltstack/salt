@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
-    :codauthor: :email:`Mike Place <mp@saltstack.com>`
+    :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
+
+# Import python libs
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf

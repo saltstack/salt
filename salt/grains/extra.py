@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+
+from __future__ import absolute_import
+
 # Import python libs
 import os
 
@@ -25,7 +28,7 @@ def config():
     '''
     Return the grains set in the grains file
     '''
-    if not 'conf_file' in __opts__:
+    if 'conf_file' not in __opts__:
         return {}
     if os.path.isdir(__opts__['conf_file']):
         gfn = os.path.join(

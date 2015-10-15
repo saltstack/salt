@@ -21,53 +21,90 @@ Full list of builtin execution modules
     apache
     aptpkg
     archive
+    artifactory
     at
     augeas_cfg
     aws_sqs
+    bamboohr
+    beacons
+    bigip
     blockdev
     bluez
+    boto_asg
+    boto_cfn
+    boto_cloudwatch
+    boto_dynamodb
+    boto_ec2
+    boto_elasticache
+    boto_elb
+    boto_iam
+    boto_kms
+    boto_rds
+    boto_route53
+    boto_secgroup
+    boto_sns
+    boto_sqs
+    boto_vpc
+    bower
     brew
     bridge
     bsd_shadow
+    btrfs
+    cabal
     cassandra
+    cassandra_cql
     chef
     chocolatey
     cloud
     cmdmod
     composer
     config
+    consul
+    container_resource
     cp
+    cpan
     cron
+    cyg
     daemontools
+    darwin_pkgutil
     darwin_sysctl
     data
     ddns
     deb_apache
+    deb_postgres
+    debbuild
     debconfmod
     debian_ip
     debian_service
     defaults
+    devmap
     dig
     disk
     djangomod
     dnsmasq
     dnsutil
     dockerio
+    dockerng
     dpkg
+    drac
+    drbd
     ebuild
     eix
+    elasticsearch
     environ
     eselect
     etcd_mod
     event
     extfs
     file
+    firewalld
     freebsd_sysctl
     freebsdjail
     freebsdkmod
     freebsdpkg
     freebsdports
     freebsdservice
+    fsutils
     gem
     genesis
     gentoo_service
@@ -76,35 +113,48 @@ Full list of builtin execution modules
     glance
     glusterfs
     gnomedesktop
+    gpg
     grains
     groupadd
     grub_legacy
     guestfs
     hadoop
     haproxyconn
+    hashutil
     hg
+    hipchat
     hosts
     htpasswd
+    http
+    ifttt
+    ilo
     img
     incron
     influx
     ini_manage
+    inspectlib
     introspect
+    ipmi
     ipset
     iptables
+    jboss7
+    jboss7_cli
     junos
+    kerberos
     key
     keyboard
     keystone
     kmod
     launchctl
     layman
+    ldap3
     ldapmod
     linux_acl
     linux_lvm
     linux_sysctl
     localemod
     locate
+    logadm
     logrotate
     lvs
     lxc
@@ -116,29 +166,43 @@ Full list of builtin execution modules
     mdadm
     memcached
     mine
+    mod_random
     modjk
     mongodb
     monit
     moosefs
     mount
+    mssql
     munin
     mysql
+    nacl
     nagios
+    nagios_rpc
+    netaddress
     netbsd_sysctl
     netbsdservice
+    netscaler
     network
+    neutron
     nfs3
     nftables
     nginx
+    node
     nova
     npm
+    nspawn
     omapi
+    openbsd_sysctl
     openbsdpkg
+    openbsdrcctl
     openbsdservice
     openstack_config
+    oracle
+    osquery
     osxdesktop
     pacman
     pagerduty
+    pagerduty_util
     pam
     parted
     pecl
@@ -149,22 +213,28 @@ Full list of builtin execution modules
     pkgng
     pkgutil
     portage_config
+    postfix
     postgres
     poudriere
     powerpath
     ps
     publish
     puppet
+    pushover_notify
     pw_group
     pw_user
+    pyenv
     qemu_img
     qemu_nbd
     quota
     rabbitmq
+    raet_publish
+    rallydev
+    random_org
     rbenv
     rdp
-    reg
     redismod
+    reg
     rest_package
     rest_sample
     rest_service
@@ -173,46 +243,78 @@ Full list of builtin execution modules
     rh_service
     riak
     rpm
+    rpmbuild
     rsync
+    runit
     rvm
     s3
     saltcloudmod
     saltutil
+    schedule
+    scsi
+    sdb
     seed
     selinux
+    sensors
+    serverdensity_device
     service
     shadow
+    slack_notify
     smartos_imgadm
+    smartos_virt
     smartos_vmadm
+    smbios
     smf
     smtp
     softwareupdate
     solaris_group
     solaris_shadow
     solaris_user
+    solarisips
     solarispkg
     solr
+    splay
+    splunk
+    splunk_search
     sqlite3
     ssh
     state
     status
+    stormpath
+    sudo
     supervisord
     svn
     swift
     sysbench
+    syslog_ng
     sysmod
+    sysrc
     system
+    system_profiler
+    system_rest_sample
     systemd
+    telemetry
+    temp
     test
+    test_virtual
     timezone
     tls
     tomcat
+    trafficserver
+    tuned
+    twilio_notify
+    udev
     upstart
+    uptime
     useradd
     uwsgi
+    varnish
+    vbox_guest
+    victorops
     virt
     virtualenv_mod
     win_autoruns
+    win_dacl
     win_disk
     win_dns_client
     win_file
@@ -223,6 +325,7 @@ Full list of builtin execution modules
     win_ntp
     win_path
     win_pkg
+    win_powercfg
     win_repo
     win_servermanager
     win_service
@@ -230,12 +333,18 @@ Full list of builtin execution modules
     win_status
     win_system
     win_timezone
+    win_update
     win_useradd
+    win_wua
+    x509
     xapi
+    xfs
     xmpp
     yumpkg
     zcbuildout
+    zenoss
     zfs
+    zk_concurrency
     znc
     zpool
     zypper

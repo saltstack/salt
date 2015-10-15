@@ -9,13 +9,13 @@ configuration file:
 
 .. code-block:: yaml
 
-    my_etd_config:
+    my_etcd_config:
       etcd.host: 127.0.0.1
       etcd.port: 4001
 
 It is technically possible to configure etcd without using a profile, but this
-is not consided to be a best practice, especially when multiple etcd servers or
-clusters are available.
+is not considered to be a best practice, especially when multiple etcd servers
+or clusters are available.
 
 .. code-block:: yaml
 
@@ -40,6 +40,7 @@ CLI Example:
 
     salt '*' test.ping --return etcd
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import json
@@ -49,8 +50,11 @@ import logging
 try:
     import salt.utils.etcd_util
     HAS_LIBS = True
-except Exception:
+except ImportError:
     HAS_LIBS = False
+
+import salt.utils
+import salt.utils.jid
 
 log = logging.getLogger(__name__)
 
@@ -86,7 +90,7 @@ def returner(ret):
         ret['jid'],
     )
 
-    for field in ret.keys():
+    for field in ret:
         # Not using os.path.join because we're not dealing with file paths
         dest = '/'.join((
             path,
@@ -114,7 +118,7 @@ def get_load(jid):
     Return the load data that marks a specified jid
     '''
     client, path = _get_conn(__opts__)
-    return json.loads(client.get('/'.join(path, 'jobs', jid, '.load.p')))
+    return json.loads(client.get('/'.join((path, 'jobs', jid, '.load.p'))))
 
 
 def get_jid(jid):
@@ -126,7 +130,7 @@ def get_jid(jid):
     return salt.utils.etcd_util.tree(client, jid_path)
 
 
-def get_fun(fun):
+def get_fun():
     '''
     Return a dict of the last function called for all minions
     '''
@@ -164,3 +168,10 @@ def get_minions():
         comps = str(item.key).split('/')
         ret.append(comps[-1])
     return ret
+
+
+def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
+    '''
+    Do any work necessary to prepare a JID, including sending a custom id
+    '''
+    return passed_jid if passed_jid is not None else salt.utils.jid.gen_jid()

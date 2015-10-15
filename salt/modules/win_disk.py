@@ -4,12 +4,14 @@ Module for gathering disk information on Windows
 
 :depends:   - win32api Python module
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import ctypes
 import string
 
 # Import salt libs
+import salt.ext.six as six
 import salt.utils
 
 try:
@@ -19,6 +21,12 @@ except ImportError:
 
 # Define the module's virtual name
 __virtualname__ = 'disk'
+
+
+if six.PY3:
+    UPPERCASE = string.ascii_uppercase
+else:
+    UPPERCASE = string.uppercase
 
 
 def __virtual__():
@@ -43,30 +51,25 @@ def usage():
     drives = []
     ret = {}
     drive_bitmask = ctypes.windll.kernel32.GetLogicalDrives()
-    for letter in string.uppercase:
+    for letter in UPPERCASE:
         if drive_bitmask & 1:
             drives.append(letter)
         drive_bitmask >>= 1
     for drive in drives:
         try:
-            (sectorspercluster,
-             bytespersector,
-             freeclusters,
-             totalclusters) = win32api.GetDiskFreeSpace(
+            (available_bytes,
+             total_bytes,
+             total_free_bytes) = win32api.GetDiskFreeSpaceEx(
                  '{0}:\\'.format(drive)
-             )
-            totalsize = sectorspercluster * bytespersector * totalclusters
-            available_space = (
-                sectorspercluster * bytespersector * freeclusters
             )
-            used = totalsize - available_space
-            capacity = int(used / float(totalsize) * 100)
+            used = total_bytes - total_free_bytes
+            capacity = used / float(total_bytes) * 100
             ret['{0}:\\'.format(drive)] = {
                 'filesystem': '{0}:\\'.format(drive),
-                '1K-blocks': totalsize,
-                'used': used,
-                'available': available_space,
-                'capacity': '{0}%'.format(capacity),
+                '1K-blocks': total_bytes / 1024,
+                'used': used / 1024,
+                'available': total_free_bytes / 1024,
+                'capacity': '{0:.0f}%'.format(capacity),
             }
         except Exception:
             ret['{0}:\\'.format(drive)] = {

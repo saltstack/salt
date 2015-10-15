@@ -21,24 +21,32 @@ Module to provide Postgres compatibility to salt.
     security audits.
 '''
 
+# This pylint error is popping up where there are no colons?
+# pylint: disable=E8203
+
 # Import python libs
+from __future__ import absolute_import
 import datetime
-import distutils.version  # pylint: disable=E0611
+import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
-import StringIO
 import hashlib
 import os
 import tempfile
 try:
-    import pipes
     import csv
-    HAS_ALL_IMPORTS = True
+    HAS_CSV = True
 except ImportError:
-    HAS_ALL_IMPORTS = False
+    HAS_CSV = False
 
 # Import salt libs
 import salt.utils
-from salt._compat import string_types
+import salt.utils.itertools
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import StringIO
+
 
 log = logging.getLogger(__name__)
 
@@ -60,13 +68,12 @@ def __virtual__():
     '''
     Only load this module if the psql bin exists
     '''
-    if all((salt.utils.which('psql'), HAS_ALL_IMPORTS)):
+    if all((salt.utils.which('psql'), HAS_CSV)):
         return True
     return False
 
 
-def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
-              run_cmd="cmd.run_all"):
+def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
     '''
     Helper function to call psql, because the password requirement
     makes this too much code to be repeated in each function below
@@ -81,6 +88,8 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
         if not host or host.startswith('/'):
             if 'FreeBSD' in __grains__['os_family']:
                 runas = 'pgsql'
+            if 'OpenBSD' in __grains__['os_family']:
+                runas = '_postgresql'
             else:
                 runas = 'postgres'
 
@@ -104,7 +113,7 @@ def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None,
             __salt__['file.chown'](pgpassfile, runas, '')
             kwargs['env'] = {'PGPASSFILE': pgpassfile}
 
-    ret = __salt__[run_cmd](cmd, **kwargs)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, **kwargs)
 
     if ret.get('retcode', 0) != 0:
         log.error('Error connecting to Postgresql server')
@@ -137,7 +146,8 @@ def version(user=None, host=None, port=None, maintenance_db=None,
     ret = _run_psql(
         cmd, runas=runas, password=password, host=host, port=port, user=user)
 
-    for line in ret['stdout'].splitlines():
+    for line in salt.utils.itertools.split(ret['stdout'], '\n'):
+        # Just return the first line
         return line
 
 
@@ -202,9 +212,8 @@ def _psql_cmd(*args, **kwargs):
 
     cmd = [salt.utils.which('psql'),
            '--no-align',
-           '--no-readline']
-    if password is None:
-        cmd += ['--no-password']
+           '--no-readline',
+           '--no-password']  # It is never acceptable to issue a password prompt.
     if user:
         cmd += ['--username', user]
     if host:
@@ -213,10 +222,9 @@ def _psql_cmd(*args, **kwargs):
         cmd += ['--port', str(port)]
     if not maintenance_db:
         maintenance_db = 'postgres'
-    cmd += ['--dbname', maintenance_db]
-    cmd += args
-    cmdstr = ' '.join([pipes.quote(c) for c in cmd])
-    return cmdstr
+    cmd.extend(['--dbname', maintenance_db])
+    cmd.extend(args)
+    return cmd
 
 
 def _psql_prepare_and_run(cmd,
@@ -239,7 +247,11 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
                password=None, runas=None):
     '''
     Run an SQL-Query and return the results as a list. This command
-    only supports SELECT statements.
+    only supports SELECT statements.  This limitation can be worked around
+    with a query like this:
+
+    WITH updated AS (UPDATE pg_authid SET rolconnlimit = 2000 WHERE
+    rolname = 'rolename' RETURNING rolconnlimit) SELECT * FROM updated;
 
     CLI Example:
 
@@ -263,7 +275,7 @@ def psql_query(query, user=None, host=None, port=None, maintenance_db=None,
     if cmdret['retcode'] > 0:
         return ret
 
-    csv_file = StringIO.StringIO(cmdret['stdout'])
+    csv_file = StringIO(cmdret['stdout'])
     header = {}
     for row in csv.reader(csv_file, delimiter=',', quotechar='"'):
         if not row:
@@ -360,18 +372,18 @@ def db_create(name,
     query = 'CREATE DATABASE "{0}"'.format(name)
 
     # "With"-options to create a database
-    with_args = {
+    with_args = salt.utils.odict.OrderedDict({
         # owner needs to be enclosed in double quotes so postgres
         # doesn't get thrown by dashes in the name
         'OWNER': owner and '"{0}"'.format(owner),
         'TEMPLATE': template,
-        'ENCODING': encoding and '{0!r}'.format(encoding),
-        'LC_COLLATE': lc_collate and '{0!r}'.format(lc_collate),
-        'LC_CTYPE': lc_ctype and '{0!r}'.format(lc_ctype),
+        'ENCODING': encoding and '\'{0}\''.format(encoding),
+        'LC_COLLATE': lc_collate and '\'{0}\''.format(lc_collate),
+        'LC_CTYPE': lc_ctype and '\'{0}\''.format(lc_ctype),
         'TABLESPACE': tablespace,
-    }
+    })
     with_chunks = []
-    for key, value in with_args.iteritems():
+    for key, value in with_args.items():
         if value is not None:
             with_chunks += [key, '=', value]
     # Build a final query
@@ -388,10 +400,10 @@ def db_create(name,
 
 
 def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
-             password=None, tablespace=None, owner=None,
+             password=None, tablespace=None, owner=None, owner_recurse=False,
              runas=None):
     '''
-    Change tablesbase or/and owner of databse.
+    Change tablespace or/and owner of database.
 
     CLI Example:
 
@@ -402,22 +414,31 @@ def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
     if not any((tablespace, owner)):
         return True  # Nothing todo?
 
-    queries = []
-    if owner:
-        queries.append('ALTER DATABASE "{0}" OWNER TO "{1}"'.format(
-            name, owner
-        ))
-    if tablespace:
-        queries.append('ALTER DATABASE "{0}" SET TABLESPACE "{1}"'.format(
-            name, tablespace
-        ))
-    for query in queries:
-        ret = _psql_prepare_and_run(['-c', query],
-                                    user=user, host=host, port=port,
-                                    maintenance_db=maintenance_db,
-                                    password=password, runas=runas)
-        if ret['retcode'] != 0:
-            return False
+    if owner and owner_recurse:
+        ret = owner_to(name, owner,
+                       user=user,
+                       host=host,
+                       port=port,
+                       password=password,
+                       runas=runas)
+    else:
+        queries = []
+        if owner:
+            queries.append('ALTER DATABASE "{0}" OWNER TO "{1}"'.format(
+                name, owner
+            ))
+        if tablespace:
+            queries.append('ALTER DATABASE "{0}" SET TABLESPACE "{1}"'.format(
+                name, tablespace
+            ))
+        for query in queries:
+            ret = _psql_prepare_and_run(['-c', query],
+                                        user=user, host=host, port=port,
+                                        maintenance_db=maintenance_db,
+                                        password=password, runas=runas)
+
+    if ret['retcode'] != 0:
+        return False
 
     return True
 
@@ -436,6 +457,168 @@ def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
 
     # db doesn't exist, proceed
     query = 'DROP DATABASE {0}'.format(name)
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user,
+                                host=host,
+                                port=port,
+                                runas=runas,
+                                maintenance_db=maintenance_db,
+                                password=password)
+    return ret['retcode'] == 0
+
+
+# Tablespace related actions
+
+def tablespace_list(user=None, host=None, port=None, maintenance_db=None,
+                    password=None, runas=None):
+    '''
+    Return dictionary with information about tablespaces of a Postgres server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.tablespace_list
+
+    .. versionadded:: 2015.8.0
+    '''
+
+    ret = {}
+
+    query = (
+        'SELECT spcname as "Name", pga.rolname as "Owner", spcacl as "ACL", '
+        'spcoptions as "Opts", pg_tablespace_location(pgts.oid) as "Location" '
+        'FROM pg_tablespace pgts, pg_roles pga WHERE pga.oid = pgts.spcowner'
+    )
+
+    rows = __salt__['postgres.psql_query'](query, runas=runas, host=host,
+                                           user=user, port=port,
+                                           maintenance_db=maintenance_db,
+                                           password=password)
+
+    for row in rows:
+        ret[row['Name']] = row
+        ret[row['Name']].pop('Name')
+
+    return ret
+
+
+def tablespace_exists(name, user=None, host=None, port=None, maintenance_db=None,
+              password=None, runas=None):
+    '''
+    Checks if a tablespace exists on the Postgres server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.tablespace_exists 'dbname'
+
+    .. versionadded:: 2015.8.0
+    '''
+
+    tablespaces = tablespace_list(user=user, host=host, port=port,
+                        maintenance_db=maintenance_db,
+                        password=password, runas=runas)
+    return name in tablespaces
+
+
+def tablespace_create(name, location, options=None, owner=None, user=None,
+                      host=None, port=None, maintenance_db=None, password=None,
+                      runas=None):
+    '''
+    Adds a tablespace to the Postgres server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.tablespace_create tablespacename '/path/datadir'
+
+    .. versionadded:: 2015.8.0
+    '''
+    owner_query = ''
+    options_query = ''
+    if owner:
+        owner_query = 'OWNER {0}'.format(owner)
+        # should come out looking like: 'OWNER postgres'
+    if options:
+        optionstext = ['{0} = {1}'.format(k, v) for k, v in options.items()]
+        options_query = 'WITH ( {0} )'.format(', '.join(optionstext))
+        # should come out looking like: 'WITH ( opt1 = 1.0, opt2 = 4.0 )'
+    query = 'CREATE TABLESPACE {0} {1} LOCATION \'{2}\' {3}'.format(name,
+                                                                owner_query,
+                                                                location,
+                                                                options_query)
+
+    # Execute the command
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user, host=host, port=port,
+                                maintenance_db=maintenance_db,
+                                password=password, runas=runas)
+    return ret['retcode'] == 0
+
+
+def tablespace_alter(name, user=None, host=None, port=None, maintenance_db=None,
+                     password=None, new_name=None, new_owner=None,
+                     set_option=None, reset_option=None, runas=None):
+    '''
+    Change tablespace name, owner, or options.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.tablespace_alter tsname new_owner=otheruser
+        salt '*' postgres.tablespace_alter index_space new_name=fast_raid
+        salt '*' postgres.tablespace_alter test set_option="{'seq_page_cost': '1.1'}"
+        salt '*' postgres.tablespace_alter tsname reset_option=seq_page_cost
+
+    .. versionadded:: 2015.8.0
+    '''
+    if not any([new_name, new_owner, set_option, reset_option]):
+        return True  # Nothing todo?
+
+    queries = []
+
+    if new_name:
+        queries.append('ALTER TABLESPACE {0} RENAME TO {1}'.format(
+                       name, new_name))
+    if new_owner:
+        queries.append('ALTER TABLESPACE {0} OWNER TO {1}'.format(
+                       name, new_owner))
+    if set_option:
+        queries.append('ALTER TABLESPACE {0} SET ({1} = {2})'.format(
+                       name, set_option.keys()[0], set_option.values()[0]))
+    if reset_option:
+        queries.append('ALTER TABLESPACE {0} RESET ({1})'.format(
+                       name, reset_option))
+
+    for query in queries:
+        ret = _psql_prepare_and_run(['-c', query],
+                                    user=user, host=host, port=port,
+                                    maintenance_db=maintenance_db,
+                                    password=password, runas=runas)
+        if ret['retcode'] != 0:
+            return False
+
+    return True
+
+
+def tablespace_remove(name, user=None, host=None, port=None,
+                      maintenance_db=None, password=None, runas=None):
+    '''
+    Removes a tablespace from the Postgres server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.tablespace_remove tsname
+
+    .. versionadded:: 2015.8.0
+    '''
+    query = 'DROP TABLESPACE {0}'.format(name)
     ret = _psql_prepare_and_run(['-c', query],
                                 user=user,
                                 host=host,
@@ -479,7 +662,10 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         log.error('Could not retrieve Postgres version. Is Postgresql server running?')
         return False
 
-    query = (
+    # will return empty string if return_password = False
+    _x = lambda s: s if return_password else ''
+
+    query = (''.join([
         'SELECT '
         'pg_roles.rolname as "name",'
         'pg_roles.rolsuper as "superuser", '
@@ -491,13 +677,12 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         '{0} as "replication", '
         'pg_roles.rolconnlimit as "connections", '
         'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
-        'pg_roles.rolconfig  as "defaults variables", '
-        'COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '
+        'pg_roles.rolconfig  as "defaults variables" '
+        , _x(', COALESCE(pg_shadow.passwd, pg_authid.rolpassword) as "password" '),
         'FROM pg_roles '
-        'LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid '
-        'LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid'
-        .format(replication_column)
-    )
+        , _x('LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid ')
+        , _x('LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid')
+    ]).format(replication_column))
 
     rows = psql_query(query,
                       runas=runas,
@@ -535,6 +720,35 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
             retrow['password'] = row['password']
         ret[row['name']] = retrow
 
+    # for each role, determine the inherited roles
+    for role in six.iterkeys(ret):
+        rdata = ret[role]
+        groups = rdata.setdefault('groups', [])
+        query = (
+            'select rolname'
+            ' from pg_user'
+            ' join pg_auth_members'
+            '      on (pg_user.usesysid=pg_auth_members.member)'
+            ' join pg_roles '
+            '      on (pg_roles.oid=pg_auth_members.roleid)'
+            ' where pg_user.usename=\'{0}\''
+        ).format(role)
+        try:
+            rows = psql_query(query,
+                              runas=runas,
+                              host=host,
+                              user=user,
+                              port=port,
+                              maintenance_db=maintenance_db,
+                              password=password)
+            for row in rows:
+                if row['rolname'] not in groups:
+                    groups.append(row['rolname'])
+        except Exception:
+            # do not fail here, it is just a bonus
+            # to try to determine groups, but the query
+            # is not portable amongst all pg versions
+            continue
     return ret
 
 
@@ -562,7 +776,7 @@ def role_get(name, user=None, host=None, port=None, maintenance_db=None,
         return all_users.get(name, None)
     except AttributeError:
         log.error('Could not retrieve Postgres role. Is Postgres running?')
-        return False
+        return None
 
 
 def user_exists(name,
@@ -586,7 +800,7 @@ def user_exists(name,
                  maintenance_db=maintenance_db,
                  password=password,
                  runas=runas,
-                 return_password=True))
+                 return_password=False))
 
 
 def _add_role_flag(string,
@@ -617,7 +831,7 @@ def _maybe_encrypt_password(role,
     '''
     if encrypted and password and not password.startswith('md5'):
         password = "md5{0}".format(
-            hashlib.md5('{0}{1}'.format(password, role)).hexdigest())
+            hashlib.md5(salt.utils.to_bytes('{0}{1}'.format(password, role))).hexdigest())
     return password
 
 
@@ -626,6 +840,7 @@ def _role_cmd_args(name,
                    typ_='role',
                    encrypted=None,
                    login=None,
+                   connlimit=None,
                    inherit=None,
                    createdb=None,
                    createuser=None,
@@ -633,7 +848,8 @@ def _role_cmd_args(name,
                    superuser=None,
                    groups=None,
                    replication=None,
-                   rolepassword=None):
+                   rolepassword=None,
+                   db_role=None):
     if createuser is not None and superuser is None:
         superuser = createuser
     if inherit is None:
@@ -654,25 +870,33 @@ def _role_cmd_args(name,
         # first is passwd set
         # second is for handling NOPASSWD
         and (
-            isinstance(rolepassword, string_types) and bool(rolepassword)
+            isinstance(rolepassword, six.string_types) and bool(rolepassword)
         )
         or (
             isinstance(rolepassword, bool)
         )
     ):
         skip_passwd = True
-    if isinstance(rolepassword, string_types) and bool(rolepassword):
-        escaped_password = '{0!r}'.format(
+    if isinstance(rolepassword, six.string_types) and bool(rolepassword):
+        escaped_password = '\'{0}\''.format(
             _maybe_encrypt_password(name,
                                     rolepassword.replace('\'', '\'\''),
                                     encrypted=encrypted))
+    skip_superuser = False
+    if bool(db_role) and bool(superuser) == bool(db_role['superuser']):
+        skip_superuser = True
     flags = (
         {'flag': 'INHERIT', 'test': inherit},
         {'flag': 'CREATEDB', 'test': createdb},
         {'flag': 'CREATEROLE', 'test': createroles},
-        {'flag': 'SUPERUSER', 'test': superuser},
+        {'flag': 'SUPERUSER', 'test': superuser,
+         'skip': skip_superuser},
         {'flag': 'REPLICATION', 'test': replication},
         {'flag': 'LOGIN', 'test': login},
+        {'flag': 'CONNECTION LIMIT',
+         'test': bool(connlimit),
+         'addtxt': str(connlimit),
+         'skip': connlimit is None},
         {'flag': 'ENCRYPTED',
          'test': (encrypted is not None and bool(rolepassword)),
          'skip': skip_passwd or isinstance(rolepassword, bool),
@@ -687,8 +911,10 @@ def _role_cmd_args(name,
     if sub_cmd.endswith('WITH'):
         sub_cmd = sub_cmd.replace(' WITH', '')
     if groups:
+        if isinstance(groups, list):
+            groups = ','.join(groups)
         for group in groups.split(','):
-            sub_cmd = '{0}; GRANT {1} TO {2}'.format(sub_cmd, group, name)
+            sub_cmd = '{0}; GRANT "{1}" TO "{2}"'.format(sub_cmd, group, name)
     return sub_cmd
 
 
@@ -704,6 +930,7 @@ def _role_create(name,
                  encrypted=None,
                  superuser=None,
                  login=None,
+                 connlimit=None,
                  inherit=None,
                  replication=None,
                  rolepassword=None,
@@ -718,7 +945,7 @@ def _role_create(name,
     # check if role exists
     if user_exists(name, user, host, port, maintenance_db,
                    password=password, runas=runas):
-        log.info('{0} {1!r} already exists'.format(typ_.capitalize(), name))
+        log.info('{0} \'{1}\' already exists'.format(typ_.capitalize(), name))
         return False
 
     sub_cmd = 'CREATE ROLE "{0}" WITH'.format(name)
@@ -727,6 +954,7 @@ def _role_create(name,
         typ_=typ_,
         encrypted=encrypted,
         login=login,
+        connlimit=connlimit,
         inherit=inherit,
         createdb=createdb,
         createroles=createroles,
@@ -755,6 +983,7 @@ def user_create(username,
                 createroles=None,
                 inherit=None,
                 login=None,
+                connlimit=None,
                 encrypted=None,
                 superuser=None,
                 replication=None,
@@ -784,6 +1013,7 @@ def user_create(username,
                         createroles=createroles,
                         inherit=inherit,
                         login=login,
+                        connlimit=connlimit,
                         encrypted=encrypted,
                         superuser=superuser,
                         replication=replication,
@@ -804,6 +1034,7 @@ def _role_update(name,
                  createroles=None,
                  inherit=None,
                  login=None,
+                 connlimit=None,
                  encrypted=None,
                  superuser=None,
                  replication=None,
@@ -813,18 +1044,28 @@ def _role_update(name,
     '''
     Updates a postgres role.
     '''
+    role = role_get(name,
+                    user=user,
+                    host=host,
+                    port=port,
+                    maintenance_db=maintenance_db,
+                    password=password,
+                    runas=runas,
+                    return_password=False)
 
     # check if user exists
-    if not user_exists(name, user, host, port, maintenance_db, password,
-                       runas=runas):
-        log.info('{0} {1!r} could not be found'.format(typ_.capitalize(), name))
+    if not bool(role):
+        log.info(
+            '{0} \'{1}\' could not be found'.format(typ_.capitalize(), name)
+        )
         return False
 
-    sub_cmd = 'ALTER ROLE {0} WITH'.format(name)
+    sub_cmd = 'ALTER ROLE "{0}" WITH'.format(name)
     sub_cmd = '{0} {1}'.format(sub_cmd, _role_cmd_args(
         name,
         encrypted=encrypted,
         login=login,
+        connlimit=connlimit,
         inherit=inherit,
         createdb=createdb,
         createuser=createuser,
@@ -832,7 +1073,8 @@ def _role_update(name,
         superuser=superuser,
         groups=groups,
         replication=replication,
-        rolepassword=rolepassword
+        rolepassword=rolepassword,
+        db_role=role
     ))
     ret = _psql_prepare_and_run(['-c', sub_cmd],
                                 runas=runas, host=host, user=user, port=port,
@@ -855,18 +1097,19 @@ def user_update(username,
                 superuser=None,
                 inherit=None,
                 login=None,
+                connlimit=None,
                 replication=None,
                 rolepassword=None,
                 groups=None,
                 runas=None):
     '''
-    Creates a Postgres user.
+    Updates a Postgres user.
 
     CLI Examples:
 
     .. code-block:: bash
 
-        salt '*' postgres.user_create 'username' user='user' \\
+        salt '*' postgres.user_update 'username' user='user' \\
                 host='hostname' port='port' password='password' \\
                 rolepassword='rolepassword'
     '''
@@ -879,6 +1122,7 @@ def user_update(username,
                         typ_='user',
                         inherit=inherit,
                         login=login,
+                        connlimit=connlimit,
                         createdb=createdb,
                         createuser=createuser,
                         createroles=createroles,
@@ -899,7 +1143,7 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
     # check if user exists
     if not user_exists(name, user, host, port, maintenance_db,
                        password=password, runas=runas):
-        log.info('User {0!r} does not exist'.format(name))
+        log.info('User \'{0}\' does not exist'.format(name))
         return False
 
     # user exists, proceed
@@ -913,7 +1157,7 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
                        password=password, runas=runas):
         return True
     else:
-        log.info('Failed to delete user {0!r}.'.format(name))
+        log.info('Failed to delete user \'{0}\'.'.format(name))
         return False
 
 
@@ -1037,13 +1281,13 @@ def is_available_extension(name,
                            password=None,
                            runas=None):
     '''
-    Test if a specific extension is installed
+    Test if a specific extension is available
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' postgres.is_installed_extension
+        salt '*' postgres.is_available_extension
 
     '''
     exts = available_extensions(user=user,
@@ -1106,7 +1350,7 @@ def create_metadata(name,
                     password=None,
                     runas=None):
     '''
-    Get lifecycle informations about an extension
+    Get lifecycle information about an extension
 
     CLI Example:
 
@@ -1386,7 +1630,7 @@ def group_update(groupname,
                  groups=None,
                  runas=None):
     '''
-    Updated a postgres group
+    Updates a postgres group
 
     CLI Examples:
 
@@ -1503,7 +1747,7 @@ def owner_to(dbname,
 
     sqlfile.write('commit;\n')
     sqlfile.flush()
-    os.chmod(sqlfile.name, 0644)  # ensure psql can read the file
+    os.chmod(sqlfile.name, 0o644)  # ensure psql can read the file
 
     # run the generated sqlfile in the db
     cmdret = _psql_prepare_and_run(['-f', sqlfile.name],
@@ -1514,3 +1758,237 @@ def owner_to(dbname,
                                    password=password,
                                    maintenance_db=dbname)
     return cmdret
+
+# Schema related actions
+
+
+def schema_create(dbname, name, owner=None,
+                  user=None,
+                  db_user=None, db_password=None,
+                  db_host=None, db_port=None):
+    '''
+    Creates a Postgres schema.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_create dbname name owner='owner' \\
+                user='user' \\
+                db_user='user' db_password='password'
+                db_host='hostname' db_port='port'
+    '''
+
+    # check if schema exists
+    if schema_exists(dbname, name,
+                     db_user=db_user, db_password=db_password,
+                     db_host=db_host, db_port=db_port):
+        log.info('\'{0}\' already exists in \'{1}\''.format(name, dbname))
+        return False
+
+    sub_cmd = 'CREATE SCHEMA {0}'.format(name)
+    if owner is not None:
+        sub_cmd = '{0} AUTHORIZATION {1}'.format(sub_cmd, owner)
+
+    ret = _psql_prepare_and_run(['-c', sub_cmd],
+                                user=db_user, password=db_password,
+                                port=db_port, host=db_host,
+                                maintenance_db=dbname, runas=user)
+
+    return ret['retcode'] == 0
+
+
+def schema_remove(dbname, name,
+                  user=None,
+                  db_user=None, db_password=None,
+                  db_host=None, db_port=None):
+    '''
+    Removes a schema from the Postgres server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_remove dbname schemaname
+
+    dbname
+        Database name we work on
+
+    schemaname
+        The schema's name we'll remove
+
+    user
+        System user all operations should be performed on behalf of
+
+    db_user
+        database username if different from config or default
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
+
+    '''
+
+    # check if schema exists
+    if not schema_exists(dbname, name,
+                         db_user=db_user, db_password=db_password,
+                         db_host=db_host, db_port=db_port):
+        log.info('Schema \'{0}\' does not exist in \'{1}\''.format(name, dbname))
+        return False
+
+    # schema exists, proceed
+    sub_cmd = 'DROP SCHEMA {0}'.format(name)
+    _psql_prepare_and_run(
+        ['-c', sub_cmd],
+        runas=user,
+        maintenance_db=dbname,
+        host=db_host, user=db_user, port=db_port, password=db_password)
+
+    if not schema_exists(dbname, name,
+                         db_user=db_user, db_password=db_password,
+                         db_host=db_host, db_port=db_port):
+        return True
+    else:
+        log.info('Failed to delete schema \'{0}\'.'.format(name))
+        return False
+
+
+def schema_exists(dbname, name,
+                  db_user=None, db_password=None,
+                  db_host=None, db_port=None):
+    '''
+    Checks if a schema exists on the Postgres server.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_exists dbname schemaname
+
+    dbname
+        Database name we query on
+
+    name
+       Schema name we look for
+
+    db_user
+        database username if different from config or default
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
+
+    '''
+    return bool(
+        schema_get(dbname, name,
+                   db_user=db_user,
+                   db_host=db_host,
+                   db_port=db_port,
+                   db_password=db_password))
+
+
+def schema_get(dbname, name,
+               db_user=None, db_password=None,
+               db_host=None, db_port=None):
+    '''
+    Return a dict with information about schemas in a database.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_get dbname name
+
+    dbname
+        Database name we query on
+
+    name
+       Schema name we look for
+
+    db_user
+        database username if different from config or default
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
+    '''
+    all_schemas = schema_list(dbname,
+                              db_user=db_user,
+                              db_host=db_host,
+                              db_port=db_port,
+                              db_password=db_password)
+    try:
+        return all_schemas.get(name, None)
+    except AttributeError:
+        log.error('Could not retrieve Postgres schema. Is Postgres running?')
+        return False
+
+
+def schema_list(dbname,
+                db_user=None, db_password=None,
+                db_host=None, db_port=None):
+    '''
+    Return a dict with information about schemas in a Postgres database.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' postgres.schema_list dbname
+
+    dbname
+        Database name we query on
+
+    db_user
+        database username if different from config or default
+
+    db_password
+        user password if any password for a specified user
+
+    db_host
+        Database host if different from config or default
+
+    db_port
+        Database port if different from config or default
+    '''
+
+    ret = {}
+
+    query = (''.join([
+        'SELECT '
+        'pg_namespace.nspname as "name",'
+        'pg_namespace.nspacl as "acl", '
+        'pg_roles.rolname as "owner" '
+        'FROM pg_namespace '
+        'LEFT JOIN pg_roles ON pg_roles.oid = pg_namespace.nspowner '
+    ]))
+
+    rows = psql_query(query,
+                      host=db_host,
+                      user=db_user,
+                      port=db_port,
+                      maintenance_db=dbname,
+                      password=db_password)
+
+    for row in rows:
+        retrow = {}
+        for key in ('owner', 'acl'):
+            retrow[key] = row[key]
+        ret[row['name']] = retrow
+
+    return ret

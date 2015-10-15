@@ -2,6 +2,7 @@
 '''
 Support for reboot, shutdown, etc
 '''
+from __future__ import absolute_import
 
 import salt.utils
 
@@ -25,8 +26,8 @@ def halt():
 
         salt '*' system.halt
     '''
-    cmd = 'halt'
-    ret = __salt__['cmd.run'](cmd)
+    cmd = ['halt']
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
@@ -40,8 +41,8 @@ def init(runlevel):
 
         salt '*' system.init 3
     '''
-    cmd = 'init {0}'.format(runlevel)
-    ret = __salt__['cmd.run'](cmd)
+    cmd = ['init', '{0}'.format(runlevel)]
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
@@ -55,14 +56,17 @@ def poweroff():
 
         salt '*' system.poweroff
     '''
-    cmd = 'poweroff'
-    ret = __salt__['cmd.run'](cmd)
+    cmd = ['poweroff']
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
-def reboot():
+def reboot(at_time=None):
     '''
-    Reboot the system using the 'reboot' command
+    Reboot the system
+
+    at_time
+        The wait time in minutes before the system will be shutdown.
 
     CLI Example:
 
@@ -70,8 +74,8 @@ def reboot():
 
         salt '*' system.reboot
     '''
-    cmd = 'reboot'
-    ret = __salt__['cmd.run'](cmd)
+    cmd = ['shutdown', '-r', ('{0}'.format(at_time) if at_time else 'now')]
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
 
@@ -79,16 +83,15 @@ def shutdown(at_time=None):
     '''
     Shutdown a running system
 
+    at_time
+        The wait time in minutes before the system will be shutdown.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' system.shutdown
+        salt '*' system.shutdown 5
     '''
-
-    if at_time:
-        cmd = 'shutdown -h {0}'.format(at_time)
-    else:
-        cmd = 'shutdown -h now'
-    ret = __salt__['cmd.run'](cmd)
+    cmd = ['shutdown', '-h', ('{0}'.format(at_time) if at_time else 'now')]
+    ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret

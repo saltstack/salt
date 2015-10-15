@@ -45,7 +45,7 @@ RSA key generation was done incorrectly, leading to very insecure keys. It is
 recommended to regenerate all RSA keys.
 
 This issue can be used to impersonate Salt masters or minions, or decrypt any
-transferred data. 
+transferred data.
 
 This issue can only be exploited by attackers who are able to observe or modify
 traffic between Salt minions and the legitimate Salt master.
@@ -53,7 +53,7 @@ traffic between Salt minions and the legitimate Salt master.
 A tool was included in 0.15.1 to assist in mass key regeneration, the
 manage.regen_keys runner.
 
-This issue affects all known versions of Salt. 
+This issue affects all known versions of Salt.
 
 This issue was reported by Ronald Volgers.
 
@@ -77,7 +77,7 @@ minion through options passed when requesting a pillar.
 Ext pillar options have been restricted to only allow safe external pillars to
 be called when prompted by the minion.
 
-This issue affects Salt versions from 0.14.0 to 0.15.0. 
+This issue affects Salt versions from 0.14.0 to 0.15.0.
 
 This issue was reported by Ronald Volgers.
 
@@ -89,4 +89,3 @@ The issue is fixed in Salt 0.15.1. Updated packages are available in the usual l
 Specific commits:
 
 https://github.com/saltstack/salt/commit/43d8c16bd26159d827d1a945c83ac28159ec5865
-

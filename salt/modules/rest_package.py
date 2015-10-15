@@ -2,9 +2,11 @@
 '''
 Service support for the REST example
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
+import salt.utils
 
 
 log = logging.getLogger(__name__)
@@ -16,28 +18,24 @@ __virtualname__ = 'pkg'
 
 def __virtual__():
     '''
-    Only work on RestExampleOS
+    Only work on proxy
     '''
-    # Enable on these platforms only.
-    enable = set((
-        'RestExampleOS',
-    ))
-    if __grains__['os'] in enable:
+    if salt.utils.is_proxy():
         return __virtualname__
     return False
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
-    return __opts__['proxyobject'].package_list()
+    return __proxy__['rest_sample.package_list']()
 
 
 def install(name=None, refresh=False, fromrepo=None,
             pkgs=None, sources=None, **kwargs):
-    return __opts__['proxyobject'].package_install(name, **kwargs)
+    return __proxy__['rest_sample.package_install'](name, **kwargs)
 
 
 def remove(name=None, pkgs=None, **kwargs):
-    return __opts__['proxyobject'].package_remove(name)
+    return __proxy__['rest_sample.package_remove'](name)
 
 
 def version(*names, **kwargs):
@@ -54,7 +52,7 @@ def version(*names, **kwargs):
         salt '*' pkg.version <package1> <package2> <package3> ...
     '''
     if len(names) == 1:
-        return str(__opts__['proxyobject'].package_status(names))
+        return str(__proxy__['rest_sample.package_status'](names[0]))
 
 
 def installed(
@@ -67,7 +65,7 @@ def installed(
         sources=None,
         **kwargs):
 
-    p = __opts__['proxyobject'].package_status(name)
+    p = __proxy__['rest_sample.package_status'](name)
     if version is None:
         if 'ret' in p:
             return str(p['ret'])

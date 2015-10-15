@@ -7,6 +7,7 @@ SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = _build
 SPHINXLANG    =
+XELATEX       = xelatex
 
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
@@ -49,6 +50,8 @@ help:
 	@echo "  devhelp    to make HTML files and a Devhelp project"
 	@echo "  epub       to make an epub"
 	@echo "  latex      to make LaTeX files, you can set PAPER=a4 or PAPER=letter"
+	@echo "  pdf        to make Salt-all.pdf and splitted pdf using xelatex"
+	@echo "  cheatsheet to create salt-cheatsheet.pdf"
 	@echo "  latexpdf   to make LaTeX files and run them through pdflatex"
 	@echo "  latexpdfja to make LaTeX files and run them through platex/dvipdfmx"
 	@echo "  text       to make text files"
@@ -64,7 +67,7 @@ help:
 
 clean:
 	rm -rf $(BUILDDIR)/*
-	find locale/ -name *.mo -exec rm {} \;
+	test -d 'locale' && find locale/ -name *.mo -exec rm {} \; || true
 
 html: translations
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
@@ -139,6 +142,21 @@ latexpdfja: translations
 	$(MAKE) -C $(BUILDDIR)/latex all-pdf-ja
 	@echo "pdflatex finished; the PDF files are in $(BUILDDIR)/latex."
 
+pdf: translations
+	@if [ "$(XELATEX)"  = "xelatex" ] || [ "x$(XELATEX)" = "x" ]; then \
+		echo "The '$(XELATEX)' command was not found."; \
+	fi
+	$(SPHINXBUILD) -b latex $(ALLSPHINXOPTS) $(BUILDDIR)/latex
+	@echo "Running LaTeX files through xelatex..."
+	perl -pi -e 's!pdflatex!xelatex!' $(BUILDDIR)/latex/Makefile
+	$(MAKE) -C $(BUILDDIR)/latex -i LATEXOPTS="-interaction=nonstopmode"
+	@echo "xelatex finished; the PDF files are in $(BUILDDIR)/latex."
+
+cheatsheet: translations
+	@echo "Running cheatsheet/salt.tex file through xelatex..."
+	cd cheatsheet &&  xelatex salt.tex && cp salt.pdf ../salt-cheatsheet.pdf 
+	@echo "./salt-cheatsheet.pdf created."
+
 text: translations
 	$(SPHINXBUILD) -b text $(ALLSPHINXOPTS) $(BUILDDIR)/text
 	@echo
@@ -172,6 +190,12 @@ changes: translations
 	@echo
 	@echo "The overview file is in $(BUILDDIR)/changes."
 
+spelling:
+	$(SPHINXBUILD) -b spelling $(ALLSPHINXOPTS) $(BUILDDIR)/spelling
+	@echo
+	@echo "Spell check complete; look for any errors in the above output " \
+	      "or in $(BUILDDIR)/spelling/output.txt."
+
 linkcheck:
 	$(SPHINXBUILD) -b linkcheck $(ALLSPHINXOPTS) $(BUILDDIR)/linkcheck
 	@echo
@@ -195,7 +219,6 @@ pseudoxml: translations
 
 
 translations:
-	
 	@if [ "$(SPHINXLANG)" = "en" ] || [ "x$(SPHINXLANG)" = "x" ]; then \
 		echo "No need to update translations. Skipping..."; \
 	elif [ ! -d locale/$(SPHINXLANG) ]; then \

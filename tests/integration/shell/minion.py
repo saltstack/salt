@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     tests.integration.shell.minion
@@ -10,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import yaml
 import signal
@@ -21,6 +20,7 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+import salt.utils
 
 
 class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -37,18 +37,18 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         config_file_name = 'minion'
         pid_path = os.path.join(config_dir, '{0}.pid'.format(config_file_name))
-        config = yaml.load(
-            open(self.get_config_file_path(config_file_name), 'r').read()
-        )
-        config['log_file'] = 'file:///tmp/log/LOG_LOCAL3'
+        with salt.utils.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
+            config = yaml.load(fhr.read())
+            config['log_file'] = 'file:///tmp/log/LOG_LOCAL3'
 
-        open(os.path.join(config_dir, config_file_name), 'w').write(
-            yaml.dump(config, default_flow_style=False)
-        )
+            with salt.utils.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
+                fhw.write(
+                    yaml.dump(config, default_flow_style=False)
+                )
 
         ret = self.run_script(
             self._call_binary_,
-            '--config-dir {0} --pid-file {1} -l debug'.format(
+            '--disable-keepalive --config-dir {0} --pid-file {1} -l debug'.format(
                 config_dir,
                 pid_path
             ),
@@ -59,10 +59,11 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         # Now kill it if still running
         if os.path.exists(pid_path):
-            try:
-                os.kill(int(open(pid_path).read()), signal.SIGKILL)
-            except OSError:
-                pass
+            with salt.utils.fopen(pid_path) as fhr:
+                try:
+                    os.kill(int(fhr.read()), signal.SIGKILL)
+                except OSError:
+                    pass
         try:
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
             self.assertIn(
@@ -70,7 +71,7 @@ class MinionTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             )
             self.assertEqual(ret[2], 2)
         finally:
-            os.chdir(old_cwd)
+            self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 

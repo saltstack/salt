@@ -7,9 +7,13 @@ Highstate data structure definitions
 The Salt State Tree
 ===================
 
-A state tree is a collection of ``SLS`` files that live under the directory
-specified in :conf_master:`file_roots`. A state tree can be organized into
-``SLS modules``.
+A state tree is a collection of ``SLS`` files and directories that live under the directory
+specified in :conf_master:`file_roots`.
+
+.. note::
+
+   Directory names or filenames in the state tree cannot contain a period, with the
+   exception of the period in the .sls file suffix.
 
 .. _states-highstate-top-file:
 
@@ -67,9 +71,8 @@ ID declarations with the same name will be ignored.
 
 .. note:: Naming gotchas
 
-        Until 0.9.6, IDs could **not** contain a dot, otherwise highstate
-        summary output was unpredictable. (It was fixed in versions 0.9.7 and
-        above)
+    In Salt versions earlier than 0.9.7, ID declarations containing dots would
+    result in unpredictable highstate output.
 
 .. _extend-declaration:
 
@@ -77,9 +80,8 @@ Extend declaration
 ------------------
 
 Extends a :ref:`name-declaration` from an included ``SLS module``. The
-keys of the extend declaration always define existing :ref`ID declaration`
-which have been defined in included
-``SLS modules``.
+keys of the extend declaration always refer to an existing
+:ref:`id-declaration` which have been defined in included ``SLS modules``.
 
 Occurs only in the top level and defines a dictionary.
 
@@ -104,8 +106,8 @@ declaration that will restart Apache whenever the Apache configuration file,
             - file: mywebsite
 
     mywebsite:
-      file:
-        - managed
+      file.managed:
+        - name: /var/www/mysite
 
 .. seealso:: watch_in and require_in
 
@@ -169,10 +171,10 @@ For example, the following state declaration calls the :mod:`installed
 .. code-block:: yaml
 
     httpd:
-      pkg.installed
+      pkg.installed: []
 
-The function can be declared inline with the state as a shortcut, but
-the actual data structure is better referenced in this form:
+The function can be declared inline with the state as a shortcut.
+The actual data structure is compiled to this form:
 
 .. code-block:: yaml
 
@@ -204,10 +206,8 @@ VALID:
 .. code-block:: yaml
 
     httpd:
-      pkg:
-        - installed
-      service:
-        - running
+      pkg.installed: []
+      service.running: []
 
 Occurs as the only index in the :ref:`state-declaration` list.
 
@@ -281,8 +281,7 @@ easier to specify ``mywebsite`` than to specify
           - file: mywebsite
 
     apache2:
-      service:
-        - running
+      service.running:
         - watch:
           - file: mywebsite
 
@@ -319,6 +318,24 @@ declaration will be expanded into the following three state declarations:
       python-yaml:
         pkg.installed
 
+Other values can be overridden during the expansion by providing an additional
+dictionary level.
+
+.. versionadded:: 2014.7.0
+
+.. code-block:: yaml
+
+  ius:
+    pkgrepo.managed:
+      - humanname: IUS Community Packages for Enterprise Linux 6 - $basearch
+      - gpgcheck: 1
+      - baseurl: http://mirror.rackspace.com/ius/stable/CentOS/6/$basearch
+      - gpgkey: http://dl.iuscommunity.org/pub/ius/IUS-COMMUNITY-GPG-KEY
+      - names:
+          - ius
+          - ius-devel:
+              - baseurl: http://mirror.rackspace.com/ius/development/CentOS/6/$basearch
+
 .. _states-highstate-example:
 
 Large example
@@ -341,7 +358,7 @@ components.
     # standard declaration
 
     <ID Declaration>:
-      <State Declaration>:
+      <State Module>:
         - <Function>
         - <Function Arg>
         - <Function Arg>
@@ -355,7 +372,7 @@ components.
     # inline function and names
 
     <ID Declaration>:
-      <State Declaration>.<Function>:
+      <State Module>.<Function>:
         - <Function Arg>
         - <Function Arg>
         - <Function Arg>
@@ -367,17 +384,17 @@ components.
           - <Requisite Reference>
           - <Requisite Reference>
 
- 
+
     # multiple states for single id
 
     <ID Declaration>:
-      <State Declaration>:
-        - <Function> 
+      <State Module>:
+        - <Function>
         - <Function Arg>
         - <Name>: <name>
         - <Requisite Declaration>:
           - <Requisite Reference>
-      <State Declaration>:
+      <State Module>:
         - <Function>
         - <Function Arg>
         - <Names>:

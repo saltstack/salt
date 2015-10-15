@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     download-translation-catalog
@@ -45,7 +43,7 @@ def main():
         sys.exit(1)
 
     for locale in sys.argv[1:]:
-        print('Download {0!r} translations catalog...'.format(locale))
+        print('Download \'{0}\' translations catalog...'.format(locale))
         txclib.utils.exec_command('pull', ['-l', locale], tx_root)
 
     print('Done')

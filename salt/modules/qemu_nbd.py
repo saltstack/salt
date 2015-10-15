@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
 Qemu Command Wrapper
-====================
 
 The qemu system comes with powerful tools, such as qemu-img and qemu-nbd which
 are used here to build up kvm images.
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import glob
 import tempfile
@@ -18,6 +18,8 @@ import logging
 import salt.utils
 import salt.crypt
 
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -57,7 +59,8 @@ def connect(image):
             while True:
                 # Sometimes nbd does not "take hold", loop until we can verify
                 __salt__['cmd.run'](
-                        'qemu-nbd -c {0} {1}'.format(nbd, image)
+                        'qemu-nbd -c {0} {1}'.format(nbd, image),
+                        python_shell=False,
                         )
                 if not __salt__['cmd.retcode']('{0} {1}'.format(fdisk, nbd)):
                     break
@@ -79,7 +82,8 @@ def mount(nbd):
         salt '*' qemu_nbd.mount /dev/nbd0
     '''
     __salt__['cmd.run'](
-            'partprobe {0}'.format(nbd)
+            'partprobe {0}'.format(nbd),
+            python_shell=False,
             )
     ret = {}
     for part in glob.glob('{0}p*'.format(nbd)):
@@ -127,7 +131,7 @@ def clear(mnt):
     '''
     ret = {}
     nbds = set()
-    for m_pt, dev in mnt.items():
+    for m_pt, dev in six.iteritems(mnt):
         mnt_ret = __salt__['mount.umount'](m_pt)
         if mnt_ret is not True:
             ret[m_pt] = dev
@@ -135,5 +139,5 @@ def clear(mnt):
     if ret:
         return ret
     for nbd in nbds:
-        __salt__['cmd.run']('qemu-nbd -d {0}'.format(nbd))
+        __salt__['cmd.run']('qemu-nbd -d {0}'.format(nbd), python_shell=False)
     return ret

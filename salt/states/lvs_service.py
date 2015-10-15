@@ -70,7 +70,7 @@ def present(name,
                     return ret
                 else:
                     ret['result'] = False
-                    ret['comment'] = 'LVS Service {0} update failed'.format(name, service_edit)
+                    ret['comment'] = 'LVS Service {0} update failed'.format(name)
                     return ret
     else:
         if __opts__['test']:
@@ -89,8 +89,6 @@ def present(name,
                 ret['comment'] = 'LVS Service {0} create failed({1})'.format(name, service_add)
                 ret['result'] = False
                 return ret
-
-    return ret
 
 
 def absent(name, protocol=None, service_address=None):

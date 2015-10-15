@@ -52,6 +52,7 @@ in IPTables Firewalls.
       ipset.flush:
 
 '''
+from __future__ import absolute_import
 
 import logging
 log = logging.getLogger(__name__)
@@ -66,7 +67,7 @@ def __virtual__():
 
 def set_present(name, set_type, family='ipv4', **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Verify the chain is exist.
 
@@ -116,7 +117,7 @@ def set_present(name, set_type, family='ipv4', **kwargs):
 
 def set_absent(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Verify the set is absent.
 
@@ -164,7 +165,7 @@ def set_absent(name, family='ipv4', **kwargs):
 
 def present(name, entry=None, family='ipv4', **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Append a entry to a set
 
@@ -216,12 +217,12 @@ def present(name, entry=None, family='ipv4', **kwargs):
                     family)
             else:
                 command = __salt__['ipset.add'](kwargs['set_name'], entry, family, **kwargs)
-                if not 'Error' in command:
+                if 'Error' not in command:
                     ret['changes'] = {'locale': name}
                     ret['result'] = True
                     ret['comment'] += 'entry {0} added to set {1} for family {2}\n'.format(
-                        kwargs['set_name'],
                         _entry,
+                        kwargs['set_name'],
                         family)
                 else:
                     ret['result'] = False
@@ -233,7 +234,7 @@ def present(name, entry=None, family='ipv4', **kwargs):
 
 def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Remove a entry or entries from a chain
 
@@ -285,7 +286,7 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
                     family)
             else:
                 command = __salt__['ipset.delete'](kwargs['set_name'], entry, family, **kwargs)
-                if not 'Error' in command:
+                if 'Error' not in command:
                     ret['changes'] = {'locale': name}
                     ret['result'] = True
                     ret['comment'] += 'ipset entry {1} for set {0} removed for family {2}\n'.format(
@@ -304,7 +305,7 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
 
 def flush(name, family='ipv4', **kwargs):
     '''
-    .. versionadded:: Helium
+    .. versionadded:: 2014.7.0
 
     Flush current ipset set
 

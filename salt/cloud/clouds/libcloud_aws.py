@@ -26,14 +26,14 @@ If this driver is still needed, set up the cloud configuration at
       # The location of the private key which corresponds to the keyname
       private_key: /root/default.pem
 
-      provider: aws
+      driver: aws
 
 '''
+from __future__ import absolute_import
 # pylint: disable=E0102
 
 # Import python libs
 import os
-import stat
 import uuid
 import pprint
 import logging
@@ -43,13 +43,14 @@ import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
 
-from salt.cloud.exceptions import (
+from salt.exceptions import (
     SaltCloudException,
     SaltCloudSystemExit,
     SaltCloudConfigError,
     SaltCloudExecutionTimeout,
     SaltCloudExecutionFailure
 )
+import salt.ext.six as six
 
 try:
     from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
@@ -85,9 +86,6 @@ def __virtual__():
     '''
     Set up the libcloud funcstions and check for AWS configs
     '''
-    if not HAS_LIBCLOUD:
-        return False
-
     try:
         import botocore
         # Since we have botocore, we won't load the libcloud AWS module
@@ -98,30 +96,18 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
-    for provider, details in __opts__['providers'].iteritems():
-        if 'provider' not in details or details['provider'] != 'aws':
+    if get_dependencies() is False:
+        return False
+
+    for provider, details in six.iteritems(__opts__['providers']):
+        if 'aws' not in details:
             continue
 
-        if not os.path.exists(details['private_key']):
-            raise SaltCloudException(
-                'The AWS key file {0!r} used in the {1!r} provider '
-                'configuration does not exist\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
-
-        keymode = str(
-            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
-        )
-        if keymode not in ('0400', '0600'):
-            raise SaltCloudException(
-                'The AWS key file {0!r} used in the {1!r} provider '
-                'configuration needs to be set to mode 0400 or 0600\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
+        parameters = details['aws']
+        if salt.utils.cloud.check_key_path_and_mode(
+            provider, parameters['private_key']
+        ) is False:
+            return False
 
     global avail_images, avail_sizes, script, list_nodes
     global avail_locations, list_nodes_full, list_nodes_select, get_image
@@ -147,6 +133,9 @@ def __virtual__():
     )
     show_instance = namespaced_function(show_instance, globals())
 
+    log.warning('This driver has been deprecated and will be removed in the '
+                'Boron release of Salt. Please use the ec2 driver instead.')
+
     return __virtualname__
 
 
@@ -158,6 +147,16 @@ def get_configured_provider():
         __opts__,
         __active_provider_name__ or 'aws',
         ('id', 'key', 'keyname', 'securitygroup', 'private_key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBCLOUD}
     )
 
 
@@ -238,12 +237,12 @@ def ssh_username(vm_):
         usernames = [usernames]
 
     # get rid of None's or empty names
-    usernames = filter(lambda x: x, usernames)
+    usernames = [x for x in usernames if x]
     # Keep a copy of the usernames the user might have provided
     initial = usernames[:]
 
     # Add common usernames to the list to be tested
-    for name in ('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root'):
+    for name in 'ec2-user', 'ubuntu', 'admin', 'bitnami', 'root':
         if name not in usernames:
             usernames.append(name)
     # Add the user provided usernames to the end of the list since enough time
@@ -305,12 +304,21 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'aws',
+                                                           vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
+
     key_filename = config.get_cloud_config_value(
         'private_key', vm_, __opts__, search_global=False, default=None
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined key_filename {0!r} does not exist'.format(
+            'The defined key_filename \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -369,7 +377,7 @@ def create(vm_):
                 vm_['name'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
         return False
 
@@ -404,7 +412,7 @@ def create(vm_):
         except SaltCloudSystemExit:
             pass
         finally:
-            raise SaltCloudSystemExit(exc.message)
+            raise SaltCloudSystemExit(str(exc))
 
     if tags:
         set_tags(vm_['name'], tags, call='action')
@@ -416,9 +424,19 @@ def create(vm_):
         log.info('Salt node data. Public_ip: {0}'.format(data.public_ips[0]))
         ip_address = data.public_ips[0]
 
+    if salt.utils.cloud.get_salt_interface(vm_, __opts__) == 'private_ips':
+        salt_ip_address = data.private_ips[0]
+        log.info('Salt interface set to: {0}'.format(salt_ip_address))
+    else:
+        salt_ip_address = data.public_ips[0]
+        log.debug('Salt interface set to: {0}'.format(salt_ip_address))
+
     username = 'ec2-user'
     ssh_connect_timeout = config.get_cloud_config_value(
         'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
+    )
+    ssh_port = config.get_cloud_config_value(
+        'ssh_port', vm_, __opts__, 22
     )
     if salt.utils.cloud.wait_for_port(ip_address, timeout=ssh_connect_timeout):
         for user in usernames:
@@ -448,6 +466,8 @@ def create(vm_):
         deploy_kwargs = {
             'opts': __opts__,
             'host': ip_address,
+            'port': ssh_port,
+            'salt_host': salt_ip_address,
             'username': username,
             'key_filename': key_filename,
             'tmp_dir': config.get_cloud_config_value(
@@ -528,11 +548,11 @@ def create(vm_):
         else:
             log.error('Failed to start Salt on Cloud VM {name}'.format(**vm_))
 
-    ret.update(data)
+    ret.update(data.__dict__)
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )
@@ -744,7 +764,7 @@ def rename(name, kwargs, call=None):
                 name, kwargs['newname'], exc
             ),
             # Show the traceback if the debug logging level is enabled
-            exc_info=log.isEnabledFor(logging.DEBUG)
+            exc_info_on_loglevel=logging.DEBUG
         )
     return kwargs['newname']
 
@@ -757,9 +777,14 @@ def destroy(name):
     ret = {}
 
     newname = name
-    if config.get_cloud_config_value('rename_on_destroy',
-                               get_configured_provider(),
-                               __opts__, search_global=False) is True:
+
+    # Default behavior is to rename AWS VMs when destroyed
+    # via salt-cloud, unless explicitly set to False.
+    rename_on_destroy = config.get_cloud_config_value('rename_on_destroy',
+                                                      get_configured_provider(),
+                                                      __opts__,
+                                                      search_global=False)
+    if rename_on_destroy is not False:
         newname = '{0}-DEL{1}'.format(name, uuid.uuid4().hex)
         rename(name, kwargs={'newname': newname}, call='action')
         log.info(
@@ -774,7 +799,7 @@ def destroy(name):
         result = libcloudfuncs_destroy(newname, get_conn())
         ret.update({'Destroyed': result})
     except Exception as exc:
-        if not exc.message.startswith('OperationNotPermitted'):
+        if not str(exc).startswith('OperationNotPermitted'):
             log.exception(exc)
             raise exc
 

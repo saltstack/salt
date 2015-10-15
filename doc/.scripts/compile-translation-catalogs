@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     compile-translation-catalogs
@@ -60,7 +58,7 @@ def main():
 
     for locale, po_files in sorted(entries.items()):
         lc_messages_path = os.path.join(LOCALES_DIR, locale, 'LC_MESSAGES')
-        print('\nCompiling the {0!r} locale:'.format(locale))
+        print('\nCompiling the \'{0}\' locale:'.format(locale))
         for po_file in sorted(po_files):
             relpath = os.path.relpath(po_file, lc_messages_path)
             print '  {0}.po -> {0}.mo'.format(relpath.split('.po', 1)[0])

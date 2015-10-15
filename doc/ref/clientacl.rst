@@ -13,13 +13,15 @@ specified user. This configuration is much like the ``peer`` configuration:
 
 .. code-block:: yaml
 
-    # Allow thatch to execute anything and allow fred to use ping and pkg
     client_acl:
+      # Allow thatch to execute anything.
       thatch:
         - .*
+      # Allow fred to use test and pkg, but only on "web*" minions.
       fred:
-        - test.*
-        - pkg.*
+        - web*:
+          - test.*
+          - pkg.*
 
 Permission Issues
 =================
@@ -29,14 +31,15 @@ users specified:
 
 .. code-block:: bash
 
-    chmod 755 /var/cache/salt /var/cache/salt/jobs /var/run/salt
+    chmod 755 /var/cache/salt /var/cache/salt/master /var/cache/salt/master/jobs /var/run/salt /var/run/salt/master
 
 .. note::
 
     In addition to the changes above you will also need to modify the
-    permissions of /var/log/salt and the existing log file. If you do not
-    wish to do this then you must disable logging or Salt will generate
-    errors as it cannot write to the logs as the system users.
+    permissions of /var/log/salt and the existing log file to be writable by
+    the user(s) which will be running the commands. If you do not wish to do
+    this then you must disable logging or Salt will generate errors as it
+    cannot write to the logs as the system users.
 
 If you are upgrading from earlier versions of salt you must also remove any
 existing user keys and re-start the Salt master:

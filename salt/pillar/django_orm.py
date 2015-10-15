@@ -89,12 +89,15 @@ work since the return from values() changes if a ManyToMany is present.
 Module Documentation
 ====================
 '''
+from __future__ import absolute_import
 
 import logging
 import os
 import sys
 
 import salt.exceptions
+import salt.ext.six as six
+import salt.utils
 
 HAS_VIRTUALENV = False
 
@@ -114,16 +117,16 @@ def __virtual__():
     return True
 
 
-def ext_pillar(minion_id,
-               pillar,
+def ext_pillar(minion_id,  # pylint: disable=W0613
+               pillar,  # pylint: disable=W0613
                pillar_name,
                project_path,
                settings_module,
                django_app,
                env=None,
                env_file=None,
-               *args,
-               **kwargs):
+               *args,  # pylint: disable=W0613
+               **kwargs):  # pylint: disable=W0613
     '''
     Connect to a Django database through the ORM and retrieve model fields
 
@@ -150,7 +153,7 @@ def ext_pillar(minion_id,
     '''
 
     if not os.path.isdir(project_path):
-        log.error('Django project dir: {0!r} not a directory!'.format(
+        log.error('Django project dir: \'{0}\' not a directory!'.format(
             project_path))
         return {}
     if HAS_VIRTUALENV and env is not None and os.path.isdir(env):
@@ -175,14 +178,14 @@ def ext_pillar(minion_id,
         base_env = {}
         proc = subprocess.Popen(['bash', '-c', 'env'], stdout=subprocess.PIPE)
         for line in proc.stdout:
-            (key, _, value) = line.partition('=')
+            (key, _, value) = salt.utils.to_str(line).partition('=')
             base_env[key] = value
 
         command = ['bash', '-c', 'source {0} && env'.format(env_file)]
         proc = subprocess.Popen(command, stdout=subprocess.PIPE)
 
         for line in proc.stdout:
-            (key, _, value) = line.partition('=')
+            (key, _, value) = salt.utils.to_str(line).partition('=')
             # only add a key if it is different or doesn't already exist
             if key not in base_env or base_env[key] != value:
                 os.environ[key] = value.rstrip('\n')
@@ -195,10 +198,10 @@ def ext_pillar(minion_id,
 
         django_pillar = {}
 
-        for proj_app, models in django_app.iteritems():
+        for proj_app, models in six.iteritems(django_app):
             _, _, app = proj_app.rpartition('.')
             django_pillar[app] = {}
-            for model_name, model_meta in models.iteritems():
+            for model_name, model_meta in six.iteritems(models):
                 model_orm = get_model(app, model_name)
                 if model_orm is None:
                     raise salt.exceptions.SaltException(
@@ -210,7 +213,7 @@ def ext_pillar(minion_id,
                 name_field = model_meta['name']
                 fields = model_meta['fields']
 
-                if 'filter' in model_meta.keys():
+                if 'filter' in model_meta:
                     qs = (model_orm.objects
                         .filter(**model_meta['filter'])
                         .values(*fields))
@@ -221,7 +224,7 @@ def ext_pillar(minion_id,
                     # Check that the human-friendly name given is valid (will
                     # be able to pick up a value from the query) and unique
                     # (since we're using it as the key in a dictionary)
-                    if not name_field in model:
+                    if name_field not in model:
                         raise salt.exceptions.SaltException(
                             "Name '{0}' not found in returned fields.".format(
                                 name_field))
@@ -235,9 +238,9 @@ def ext_pillar(minion_id,
 
         return {pillar_name: django_pillar}
     except ImportError as e:
-        log.error('Failed to import library: {0}'.format(e.message))
+        log.error('Failed to import library: {0}'.format(str(e)))
         return {}
     except Exception as e:
-        log.error('Failed on Error: {0}'.format(e.message))
+        log.error('Failed on Error: {0}'.format(str(e)))
         log.debug('django_orm traceback', exc_info=True)
         return {}

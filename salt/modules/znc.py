@@ -2,10 +2,11 @@
 '''
 znc - An advanced IRC bouncer
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 Provides an interface to basic ZNC functionality
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import hashlib
@@ -16,6 +17,7 @@ import signal
 
 # Import salt libs
 import salt.utils
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +48,7 @@ def _makepass(password, hasher='sha256'):
         "0123456789!?.,:;/*-+_()"
     r = {
         'Method': h.name,
-        'Salt': ''.join(random.choice(c) for x in xrange(20)),
+        'Salt': ''.join(random.SystemRandom().choice(c) for x in range(20)),
     }
 
     # Salt the password hash
@@ -71,8 +73,9 @@ def buildmod(*modules):
     if missing:
         return 'Error: The file ({0}) does not exist.'.format(', '.join(missing))
 
-    cmd = 'znc-buildmod {0}'.format(' '.join(modules))
-    out = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['znc-buildmod']
+    cmd.extend(modules)
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out[-1]
 
 
@@ -112,7 +115,7 @@ def version():
 
         salt '*' znc.version
     '''
-    cmd = 'znc --version'
-    out = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ['znc', '--version']
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     ret = out[0].split(' - ')
     return ret[0]

@@ -5,15 +5,24 @@ Management of InfluxDB users
 
 (compatible with InfluxDB version 0.5+)
 
-.. versionadded:: Helium
+.. versionadded:: 2014.7.0
 
 '''
 
 
-def present(name, passwd, database, user=None, password=None, host=None,
+def __virtual__():
+    '''
+    Only load if the influxdb module is available
+    '''
+    if 'influxdb.db_exists' in __salt__:
+        return 'influxdb_user'
+    return False
+
+
+def present(name, passwd, database=None, user=None, password=None, host=None,
             port=None):
     '''
-    Ensure that the user is present
+    Ensure that the cluster admin or database user is present.
 
     name
         The name of the user to manage
@@ -43,7 +52,7 @@ def present(name, passwd, database, user=None, password=None, host=None,
            'comment': ''}
 
     # check if db does not exist
-    if not __salt__['influxdb.db_exists'](
+    if database and not __salt__['influxdb.db_exists'](
             database, user, password, host, port):
         ret['result'] = False
         ret['comment'] = 'Database {0} does not exist'.format(database)
@@ -73,9 +82,10 @@ def present(name, passwd, database, user=None, password=None, host=None,
     return ret
 
 
-def absent(name, database, user=None, password=None, host=None, port=None):
+def absent(name, database=None, user=None, password=None, host=None,
+           port=None):
     '''
-    Ensure that the named user is absent
+    Ensure that the named cluster admin or database user is absent.
 
     name
         The name of the user to remove

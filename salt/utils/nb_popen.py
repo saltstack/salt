@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2013 by the SaltStack Team, see AUTHORS for more details.
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     salt.utils.nb_popen
@@ -15,6 +13,7 @@
 
         http://code.activestate.com/recipes/440554/
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
@@ -26,7 +25,9 @@ import logging
 import tempfile
 import subprocess
 
-if subprocess.mswindows:
+mswindows = (sys.platform == "win32")
+
+if mswindows:
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
     import msvcrt
@@ -60,6 +61,7 @@ class NonBlockingPopen(subprocess.Popen):
             'stderr_logger_name', self._stderr_logger_name_
         )
 
+        logging_command = kwargs.pop('logging_command', None)
         stderr = kwargs.get('stderr', None)
 
         super(NonBlockingPopen, self).__init__(*args, **kwargs)
@@ -88,9 +90,20 @@ class NonBlockingPopen(subprocess.Popen):
             self._stderr_logger_name_.format(pid=self.pid)
         )
 
-        log.info(
-            'Running command under pid {0}: {1!r}'.format(self.pid, *args)
-        )
+        if logging_command is None:
+            log.info(
+                'Running command under pid {0}: {1!r}'.format(
+                    self.pid,
+                    *args
+                )
+            )
+        else:
+            log.info(
+                'Running command under pid {0}: {1!r}'.format(
+                    self.pid,
+                    logging_command
+                )
+            )
 
     def recv(self, maxsize=None):
         return self._recv('stdout', maxsize)
@@ -112,7 +125,7 @@ class NonBlockingPopen(subprocess.Popen):
         getattr(self, which).close()
         setattr(self, which, None)
 
-    if subprocess.mswindows:
+    if mswindows:
         def send(self, input):
             if not self.stdin:
                 return None
@@ -124,7 +137,7 @@ class NonBlockingPopen(subprocess.Popen):
             except ValueError:
                 return self._close('stdin')
             except (subprocess.pywintypes.error, Exception) as why:
-                if why[0] in (109, errno.ESHUTDOWN):
+                if why.args[0] in (109, errno.ESHUTDOWN):
                     return self._close('stdin')
                 raise
 
@@ -145,7 +158,7 @@ class NonBlockingPopen(subprocess.Popen):
             except ValueError:
                 return self._close(which)
             except (subprocess.pywintypes.error, Exception) as why:
-                if why[0] in (109, errno.ESHUTDOWN):
+                if why.args[0] in (109, errno.ESHUTDOWN):
                     return self._close(which)
                 raise
 
@@ -171,7 +184,7 @@ class NonBlockingPopen(subprocess.Popen):
                 written = os.write(self.stdin.fileno(), input)
                 #self._stdin_logger.debug(input.rstrip())
             except OSError as why:
-                if why[0] == errno.EPIPE:  # broken pipe
+                if why.args[0] == errno.EPIPE:  # broken pipe
                     return self._close('stdin')
                 raise
 
@@ -207,7 +220,7 @@ class NonBlockingPopen(subprocess.Popen):
                 if not conn.closed:
                     fcntl.fcntl(conn, fcntl.F_SETFL, flags)
 
-    def poll_and_read_until_finish(self):
+    def poll_and_read_until_finish(self, interval=0.01):
         silent_iterations = 0
         while self.poll() is None:
             if self.stdout is not None:
@@ -227,7 +240,7 @@ class NonBlockingPopen(subprocess.Popen):
                     log.debug(stdoutdata)
                 if stderrdata:
                     log.error(stderrdata)
-            time.sleep(0.01)
+            time.sleep(interval)
 
     def communicate(self, input=None):
         super(NonBlockingPopen, self).communicate(input)

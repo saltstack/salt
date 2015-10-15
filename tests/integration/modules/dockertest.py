@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 '''
 Tests for integration with Docker's Python library
+
+:codeauthor: :email:`C. R. Oldham <cr@saltstack.com>`
 '''
 
-__author__ = 'cro'
-
 # Import python libs
-import string
+from __future__ import absolute_import
 import os
+import string
+import logging
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath, requires_salt_modules
@@ -16,6 +18,8 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+
+log = logging.getLogger(__name__)
 
 
 @requires_salt_modules('docker')
@@ -116,13 +120,13 @@ class DockerTest(integration.ModuleCase):
         '''
 
         run_ret = self.run_function('docker.create_container', image='testsuite_image')
-        print "first container: {0}".format(run_ret)
+        log.debug("first container: {0}".format(run_ret))
         base_container_id = run_ret['id']
         ret = self.run_function('docker.run_stdout', container=base_container_id, cmd='echo "The cheese shop is now closed." > /tmp/deadcheese')
-        print "second container: {0}".format(ret)
+        log.debug("second container: {0}".format(ret))
         run_container_id = ret['id']
         commit_ret = self.run_function('docker.commit', container=base_container_id, repository='testsuite_committed_img', message='This image was created by the testsuite')
-        print "post-commit: {0}".format(commit_ret)
+        log.debug("post-commit: {0}".format(commit_ret))
         self.run_function('docker.stop', run_container_id)
         new_container = self.run_function('docker.create_container', image='testsuite_committed_img')
         final_ret = self.run_function('docker.run_stdout', container=new_container['id'], cmd='cat /tmp/cheese')

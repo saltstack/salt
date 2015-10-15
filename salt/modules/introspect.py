@@ -4,7 +4,12 @@ Functions to perform introspection on a minion, and return data in a format
 usable by Salt States
 '''
 
+# Import python libs
+from __future__ import absolute_import
 import os
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def running_service_owners(
@@ -22,13 +27,13 @@ def running_service_owners(
         salt myminion introspect.running_service_owners
     '''
     error = {}
-    if not 'pkg.owner' in __salt__:
+    if 'pkg.owner' not in __salt__:
         error['Unsupported Package Manager'] = (
             'The module for the package manager on this system does not '
             'support looking up which package(s) owns which file(s)'
         )
 
-    if not 'file.open_files' in __salt__:
+    if 'file.open_files' not in __salt__:
         error['Unsupported File Module'] = (
             'The file module on this system does not '
             'support looking up open files on the system'
@@ -56,7 +61,7 @@ def running_service_owners(
         for service in execs:
             if path == execs[service]:
                 pkg = __salt__['pkg.owner'](path)
-                ret[service] = pkg.values()[0]
+                ret[service] = next(six.itervalues(pkg))
 
     return ret
 
@@ -70,13 +75,13 @@ def enabled_service_owners():
         salt myminion introspect.enabled_service_owners
     '''
     error = {}
-    if not 'pkg.owner' in __salt__:
+    if 'pkg.owner' not in __salt__:
         error['Unsupported Package Manager'] = (
             'The module for the package manager on this system does not '
             'support looking up which package(s) owns which file(s)'
         )
 
-    if not 'service.show' in __salt__:
+    if 'service.show' not in __salt__:
         error['Unsupported Service Manager'] = (
             'The module for the service manager on this system does not '
             'support showing descriptive service data'
@@ -90,11 +95,11 @@ def enabled_service_owners():
 
     for service in services:
         data = __salt__['service.show'](service)
-        if not 'ExecStart' in data:
+        if 'ExecStart' not in data:
             continue
         start_cmd = data['ExecStart']['path']
         pkg = __salt__['pkg.owner'](start_cmd)
-        ret[service] = pkg.values()[0]
+        ret[service] = next(six.itervalues(pkg))
 
     return ret
 
@@ -131,7 +136,7 @@ def service_highstate(requires=True):
         if requires:
             exists = False
             for item in ret[service]['service']:
-                if type(item) is dict and item.keys()[0] == 'require':
+                if isinstance(item, dict) and next(six.iterkeys(item)) == 'require':
                     exists = True
             if not exists:
                 ret[service]['service'].append(

@@ -3,6 +3,11 @@
 Support for modifying make.conf under Gentoo
 
 '''
+# Import python libs
+from __future__ import absolute_import, print_function
+
+# Import Salt libs
+import salt.utils
 
 
 def __virtual__():
@@ -39,11 +44,10 @@ def _add_var(var, value):
     fullvar = '{0}="{1}"'.format(var, value)
     if __salt__['file.contains'](makeconf, layman):
         # TODO perhaps make this a function in the file module?
-        cmd = r"sed -i '/{0}/ i\{1}' {2}".format(
-            layman.replace("/", "\\/"),
-            fullvar,
-            makeconf)
-        print cmd
+        cmd = ['sed', '-i', r'/{0}/ i\{1}'.format(
+                    layman.replace('/', '\\/'),
+                    fullvar),
+               makeconf]
         __salt__['cmd.run'](cmd)
     else:
         __salt__['file.append'](makeconf, fullvar)
@@ -179,13 +183,19 @@ def get_var(var):
         salt '*' makeconf.get_var 'LINGUAS'
     '''
     makeconf = _get_makeconf()
-    cmd = 'grep "^{0}" {1} | grep -vE "^#"'.format(var, makeconf)
-    out = __salt__['cmd.run'](cmd, ignore_retcode=True).split('=', 1)
-    try:
-        ret = out[1].replace('"', '')
-        return ret
-    except IndexError:
-        return None
+    # Open makeconf
+    with salt.utils.fopen(makeconf) as fn_:
+        conf_file = fn_.readlines()
+    for line in conf_file:
+        if line.startswith(var):
+            ret = line.split('=', 1)[1]
+            if '"' in ret:
+                ret = ret.split('"')[1]
+            elif '#' in ret:
+                ret = ret.split('#')[0]
+            ret = ret.strip()
+            return ret
+    return None
 
 
 def var_contains(var, value):

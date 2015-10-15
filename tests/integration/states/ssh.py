@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-
 '''
 Test the ssh_known_hosts state
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import shutil
 
@@ -13,14 +13,10 @@ from salttesting import skipIf
 from salttesting.helpers import (
     destructiveTest,
     ensure_in_syspath,
-    with_system_user
+    with_system_user,
+    skip_if_binaries_missing
 )
 ensure_in_syspath('../../')
-
-try:
-    from salttesting.helpers import skip_if_binaries_missing
-except ImportError:
-    from integration import skip_if_binaries_missing
 
 # Import salt libs
 import integration
@@ -75,8 +71,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
         )
 
         # save twice, no changes
-        ret = self.run_state('ssh_known_hosts.present', **kwargs)
-        self.assertSaltStateChangesEqual(ret, {})
+        self.run_state('ssh_known_hosts.present', **kwargs)
 
         # test again, nothing is about to be changed
         ret = self.run_state('ssh_known_hosts.present', test=True, **kwargs)
@@ -97,7 +92,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
             self.assertNotIn(ret, ('', None))
         except AssertionError:
             raise AssertionError(
-                'Salt return {0!r} is in (\'\', None).'.format(ret)
+                'Salt return \'{0}\' is in (\'\', None).'.format(ret)
             )
         ret = self.run_function(
             'ssh.get_known_host', ['root', GITHUB_IP], config=KNOWN_HOSTS
@@ -106,7 +101,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
             self.assertNotIn(ret, ('', None, {}))
         except AssertionError:
             raise AssertionError(
-                'Salt return {0!r} is in (\'\', None,'.format(ret) + ' {})'
+                'Salt return \'{0}\' is in (\'\', None,'.format(ret) + ' {})'
             )
 
     def test_present_fail(self):
@@ -150,7 +145,7 @@ class SSHKnownHostsStateTest(integration.ModuleCase,
 
         # test again
         ret = self.run_state('ssh_known_hosts.absent', test=True, **kwargs)
-        self.assertSaltNoneReturn(ret)
+        self.assertSaltTrueReturn(ret)
 
 
 class SSHAuthStateTests(integration.ModuleCase,
@@ -170,6 +165,7 @@ class SSHAuthStateTests(integration.ModuleCase,
             name=authorized_keys_file,
             user=username,
             makedirs=True,
+            contents_newline=False,
             # Explicit no ending line break
             contents='ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root'
         )
@@ -185,11 +181,12 @@ class SSHAuthStateTests(integration.ModuleCase,
         self.assertSaltStateChangesEqual(
             ret, {'AAAAB3NzaC1kcQ9J5bYTEyZ==': 'New'}
         )
-        self.assertEqual(
-            open(authorized_keys_file, 'r').read(),
-            'ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n'
-            'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
-        )
+        with salt.utils.fopen(authorized_keys_file, 'r') as fhr:
+            self.assertEqual(
+                fhr.read(),
+                'ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n'
+                'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
+            )
 
     @destructiveTest
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
@@ -222,10 +219,11 @@ class SSHAuthStateTests(integration.ModuleCase,
             comment=username
         )
         self.assertSaltTrueReturn(ret)
-        self.assertEqual(
-            open(authorized_keys_file, 'r').read(),
-            'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
-        )
+        with salt.utils.fopen(authorized_keys_file, 'r') as fhr:
+            self.assertEqual(
+                fhr.read(),
+                'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
+            )
 
         os.unlink(authorized_keys_file)
 
@@ -239,10 +237,11 @@ class SSHAuthStateTests(integration.ModuleCase,
             saltenv='prod'
         )
         self.assertSaltTrueReturn(ret)
-        self.assertEqual(
-            open(authorized_keys_file, 'r').read(),
-            'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
-        )
+        with salt.utils.fopen(authorized_keys_file, 'r') as fhr:
+            self.assertEqual(
+                fhr.read(),
+                'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
+            )
 
 
 if __name__ == '__main__':

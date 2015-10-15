@@ -6,6 +6,14 @@ OpenStack is one the most popular cloud projects. It's an open source project
 to build public and/or private clouds. You can use Salt Cloud to launch
 OpenStack instances.
 
+
+Dependencies
+============
+* Libcloud >= 0.13.2
+
+
+Configuration
+=============
 * Using the new format, set up the cloud configuration at
   ``/etc/salt/cloud.providers`` or
   ``/etc/salt/cloud.providers.d/openstack.conf``:
@@ -20,7 +28,7 @@ OpenStack instances.
 
       # Configure the OpenStack driver
       #
-      identity_url: http://identity.youopenstack.com/v2.0/
+      identity_url: http://identity.youopenstack.com/v2.0/tokens
       compute_name: nova
       protocol: ipv4
 
@@ -33,12 +41,19 @@ OpenStack instances.
       # tenant is the project name
       tenant: myproject
 
-      provider: openstack
+      driver: openstack
 
       # skip SSL certificate validation (default false)
       insecure: false
 
+.. note::
+    .. versionchanged:: 2015.8.0
 
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Using nova client to get information from OpenStack
 ===================================================
@@ -81,14 +96,43 @@ Here is an example of a profile:
 .. code-block:: yaml
 
     openstack_512:
-        provider: my-openstack-config
-        size: m1.tiny
-        image: cirros-0.3.1-x86_64-uec
-        ssh_key_file: /tmp/test.pem
+      provider: my-openstack-config
+      size: m1.tiny
+      image: cirros-0.3.1-x86_64-uec
+      ssh_key_file: /tmp/test.pem
+      ssh_key_name: test
+      ssh_interface: private_ips
 
-``size`` can be one of the options listed in the output of ``nova flavor-list``.
+The following list explains some of the important properties.
 
-``image`` can be one of the options listed in the output of ``nova image-list``.
+
+size
+    can be one of the options listed in the output of ``nova flavor-list``.
+
+image
+    can be one of the options listed in the output of ``nova image-list``.
+
+ssh_key_file
+    The SSH private key that the salt-cloud uses to SSH into the VM after its
+    first booted in order to execute a command or script. This private key's
+    *public key* must be the openstack public key inserted into the
+    authorized_key's file of the VM's root user account.
+
+ssh_key_name
+    The name of the openstack SSH public key that is inserted into the
+    authorized_keys file of the VM's root user account. Prior to using this
+    public key, you must use openstack commands or the horizon web UI to load
+    that key into the tenant's account. Note that this openstack tenant must be
+    the one you defined in the cloud provider.
+
+ssh_interface
+    This option allows you to create a VM without a public IP. If this option
+    is omitted and the VM does not have a public IP, then the salt-cloud waits
+    for a certain period of time and then destroys the VM. With the nova drive,
+    private cloud networks can be defined here.
+
+For more information concerning cloud profiles, see :doc:`here
+</topics/cloud/profiles>`.
 
 
 change_password
@@ -100,3 +144,13 @@ bootstrapped.
 .. code-block:: yaml
 
     change_password: True
+
+
+userdata_file
+~~~~~~~~~~~~~
+Use `userdata_file` to specify the userdata file to upload for use with
+cloud-init if available.
+
+.. code-block:: yaml
+
+    userdata_file: /etc/salt/cloud-init/packages.yml

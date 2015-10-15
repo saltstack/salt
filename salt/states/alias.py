@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Configuration of email aliases
-==============================
 
 The mail aliases file can be managed to contain definitions for specific email
 aliases:
@@ -11,6 +10,12 @@ aliases:
     username:
       alias.present:
         - target: user@example.com
+
+.. code-block:: yaml
+
+    thomas:
+      alias.present:
+        - target: thomas@example.com
 '''
 
 
@@ -48,7 +53,7 @@ def present(name, target):
         return ret
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to set alias'
+        ret['comment'] = 'Failed to set alias {0} -> {1}'.format(name, target)
         return ret
 
 
@@ -78,5 +83,5 @@ def absent(name):
         return ret
     else:
         ret['result'] = False
-        ret['comment'] = 'Failed to remove alias'
+        ret['comment'] = 'Failed to remove alias {0}'.format(name)
         return ret

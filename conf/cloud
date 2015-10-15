@@ -16,7 +16,6 @@
 #script: bootstrap-salt
 
 
-
 ##########################################
 #####         Logging Settings       #####
 ##########################################
@@ -28,6 +27,9 @@
 
 # The level of messages to send to the console.
 # One of 'garbage', 'trace', 'debug', info', 'warning', 'error', 'critical'.
+#
+# The following log levels are considered INSECURE and may log sensitive data:
+# ['garbage', 'trace', 'debug']
 #
 # Default: 'info'
 #
@@ -55,7 +57,20 @@
 #
 #	http://docs.python.org/library/logging.html#logrecord-attributes
 #
+# Console log colors are specified by these additional formatters:
+#
+# %(colorlevel)s
+# %(colorname)s
+# %(colorprocess)s
+# %(colormsg)s
+#
+# Since it is desirable to include the surrounding brackets, '[' and ']', in
+# the coloring of the messages, these color formatters also include padding as
+# well.  Color LogRecord attributes are only available for console logging.
+#
+#log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
+#
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 
@@ -75,7 +90,7 @@
 #####         Misc Defaults          #####
 ##########################################
 
-# Whether or not to remove the accompnaying SSH key from the known_hosts file
+# Whether or not to remove the accompanying SSH key from the known_hosts file
 # when an instance is destroyed.
 #
 # Default: 'False'

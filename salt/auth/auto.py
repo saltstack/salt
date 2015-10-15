@@ -5,7 +5,7 @@ production use
 '''
 
 
-def auth(username, password):
+def auth(username, password):  # pylint: disable=unused-argument
     '''
     Authenticate!
     '''

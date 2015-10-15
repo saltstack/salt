@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
 
     tests.unit.utils.path_join_test
@@ -10,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import sys
 import posixpath
@@ -24,6 +23,9 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 from salt.utils import path_join
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class PathJoinTestCase(TestCase):
@@ -103,7 +105,7 @@ class PathJoinTestCase(TestCase):
 
         code = """'''Salt unittest loaded NT module'''"""
         module = imp.new_module('nt')
-        exec code in module.__dict__
+        six.exec_(code, module.__dict__)
         sys.modules['nt'] = module
 
         sys.builtin_module_names = modules

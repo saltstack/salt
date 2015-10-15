@@ -2,6 +2,7 @@
 '''
 Create ssh executor system
 '''
+from __future__ import absolute_import
 # Import python libs
 import os
 import tarfile
@@ -15,6 +16,7 @@ import salt.client.ssh.shell
 import salt.client.ssh
 import salt.utils
 import salt.utils.thin
+import salt.utils.url
 import salt.roster
 import salt.state
 import salt.loader
@@ -29,13 +31,14 @@ class SSHState(salt.state.State):
         self.wrapper = wrapper
         super(SSHState, self).__init__(opts, pillar)
 
-    def load_modules(self, data=None):
+    def load_modules(self, data=None, proxy=None):
         '''
         Load up the modules for remote compilation via ssh
         '''
         self.functions = self.wrapper
-        locals_ = salt.loader.minion_mods(self.opts)
-        self.states = salt.loader.states(self.opts, locals_)
+        self.utils = salt.loader.utils(self.opts)
+        locals_ = salt.loader.minion_mods(self.opts, utils=self.utils)
+        self.states = salt.loader.states(self.opts, locals_, self.utils)
         self.rend = salt.loader.render(self.opts, self.functions)
 
     def check_refresh(self, data, ret):
@@ -57,8 +60,8 @@ class SSHHighState(salt.state.BaseHighState):
     '''
     stack = []
 
-    def __init__(self, opts, pillar=None, wrapper=None):
-        self.client = salt.fileclient.LocalClient(opts)
+    def __init__(self, opts, pillar=None, wrapper=None, fsclient=None):
+        self.client = fsclient
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(opts, pillar, wrapper)
         self.matcher = salt.minion.Matcher(self.opts)
@@ -70,7 +73,7 @@ class SSHHighState(salt.state.BaseHighState):
         return
 
 
-def lowstate_file_refs(chunks):
+def lowstate_file_refs(chunks, extras=''):
     '''
     Create a list of file ref objects to reconcile
     '''
@@ -87,49 +90,60 @@ def lowstate_file_refs(chunks):
                 continue
             crefs.extend(salt_refs(chunk[state]))
         if crefs:
-            if not saltenv in refs:
+            if saltenv not in refs:
                 refs[saltenv] = []
             refs[saltenv].append(crefs)
+    if extras:
+        extra_refs = extras.split(',')
+        if extra_refs:
+            for env in refs:
+                for x in extra_refs:
+                    refs[env].append([x])
     return refs
 
 
-def salt_refs(data):
+def salt_refs(data, ret=None):
     '''
     Pull salt file references out of the states
     '''
     proto = 'salt://'
-    ret = []
+    if ret is None:
+        ret = []
     if isinstance(data, str):
-        if data.startswith(proto):
-            return [data]
+        if data.startswith(proto) and data not in ret:
+            ret.append(data)
     if isinstance(data, list):
         for comp in data:
-            if isinstance(comp, str):
-                if comp.startswith(proto):
-                    ret.append(comp)
+            salt_refs(comp, ret)
+    if isinstance(data, dict):
+        for comp in data:
+            salt_refs(data[comp], ret)
     return ret
 
 
-def prep_trans_tar(opts, chunks, file_refs):
+def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
     '''
     Generate the execution package from the saltenv file refs and a low state
     data structure
     '''
     gendir = tempfile.mkdtemp()
     trans_tar = salt.utils.mkstemp()
-    file_client = salt.fileclient.LocalClient(opts)
     lowfn = os.path.join(gendir, 'lowstate.json')
+    pillarfn = os.path.join(gendir, 'pillar.json')
     sync_refs = [
-            ['salt://_modules'],
-            ['salt://_states'],
-            ['salt://_grains'],
-            ['salt://_renderers'],
-            ['salt://_returners'],
-            ['salt://_outputters'],
-            ['salt://_utils'],
+            [salt.utils.url.create('_modules')],
+            [salt.utils.url.create('_states')],
+            [salt.utils.url.create('_grains')],
+            [salt.utils.url.create('_renderers')],
+            [salt.utils.url.create('_returners')],
+            [salt.utils.url.create('_output')],
+            [salt.utils.url.create('_utils')],
             ]
-    with open(lowfn, 'w+') as fp_:
+    with salt.utils.fopen(lowfn, 'w+') as fp_:
         fp_.write(json.dumps(chunks))
+    if pillar:
+        with salt.utils.fopen(pillarfn, 'w+') as fp_:
+            fp_.write(json.dumps(pillar))
     for saltenv in file_refs:
         file_refs[saltenv].extend(sync_refs)
         env_root = os.path.join(gendir, saltenv)
@@ -137,7 +151,7 @@ def prep_trans_tar(opts, chunks, file_refs):
             os.makedirs(env_root)
         for ref in file_refs[saltenv]:
             for name in ref:
-                short = name[7:]
+                short = salt.utils.url.parse(name)[0]
                 path = file_client.cache_file(name, saltenv)
                 if path:
                     tgt = os.path.join(env_root, short)
@@ -145,27 +159,35 @@ def prep_trans_tar(opts, chunks, file_refs):
                     if not os.path.isdir(tgt_dir):
                         os.makedirs(tgt_dir)
                     shutil.copy(path, tgt)
-                    break
+                    continue
                 files = file_client.cache_dir(name, saltenv)
                 if files:
                     for filename in files:
+                        fn = filename[filename.find(short) + len(short):]
+                        if fn.startswith('/'):
+                            fn = fn.strip('/')
                         tgt = os.path.join(
                                 env_root,
                                 short,
-                                filename[filename.find(short) + len(short) + 1:],
+                                fn,
                                 )
                         tgt_dir = os.path.dirname(tgt)
                         if not os.path.isdir(tgt_dir):
                             os.makedirs(tgt_dir)
                         shutil.copy(filename, tgt)
-                    break
-    cwd = os.getcwd()
+                    continue
+    try:
+        # cwd may not exist if it was removed but salt was run from it
+        cwd = os.getcwd()
+    except OSError:
+        cwd = None
     os.chdir(gendir)
     with closing(tarfile.open(trans_tar, 'w:gz')) as tfp:
         for root, dirs, files in os.walk(gendir):
             for name in files:
                 full = os.path.join(root, name)
                 tfp.add(full[len(gendir):].lstrip(os.sep))
-    os.chdir(cwd)
+    if cwd:
+        os.chdir(cwd)
     shutil.rmtree(gendir)
     return trans_tar

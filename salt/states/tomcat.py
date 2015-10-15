@@ -40,6 +40,11 @@ Notes:
       Apache Tomcat/7.0.37
 '''
 
+from __future__ import absolute_import
+
+# import salt libs
+from salt.modules.tomcat import _extract_version
+
 
 # Private
 def __virtual__():
@@ -53,6 +58,7 @@ def __virtual__():
 # Functions
 def war_deployed(name,
                  war,
+                 force=False,
                  url='http://localhost:8080/manager',
                  timeout=180,
                  temp_war_location=None):
@@ -68,6 +74,8 @@ def war_deployed(name,
     war
         absolute path to WAR file (should be accessible by the user running
         tomcat) or a path supported by the salt.modules.cp.get_url function
+    force
+        force deploy even if version strings are the same, False by default.
     url : http://localhost:8080/manager
         the URL of the server manager webapp
     timeout : 180
@@ -87,14 +95,15 @@ def war_deployed(name,
             - require:
               - service: application-service
     '''
-
     # Prepare
     ret = {'name': name,
        'result': True,
        'changes': {},
        'comment': ''}
     basename = war.split('/')[-1]
-    version = basename.replace('.war', '')
+
+    version = _extract_version(basename)
+
     webapps = __salt__['tomcat.ls'](url, timeout)
     deploy = False
     undeploy = False
@@ -102,7 +111,7 @@ def war_deployed(name,
 
     # Determine what to do
     try:
-        if version != webapps[name]['version']:
+        if not webapps[name]['version'].endswith(version) or force:
             deploy = True
             undeploy = True
             ret['changes']['undeploy'] = ('undeployed {0} in version {1}'.
@@ -114,7 +123,7 @@ def war_deployed(name,
             ret['comment'] = ('{0} in version {1} is already deployed'.
                     format(name, version))
             if webapps[name]['mode'] != 'running':
-                ret['changes']['start'] = 'starting {0}'.format(name, version)
+                ret['changes']['start'] = 'starting {0}'.format(name)
                 status = False
             else:
                 return ret
@@ -156,7 +165,7 @@ def war_deployed(name,
     # Return
     if deploy_res.startswith('OK'):
         ret['result'] = True
-        ret['comment'] = __salt__['tomcat.ls'](url, timeout)[name]
+        ret['comment'] = str(__salt__['tomcat.ls'](url, timeout)[name])
         ret['changes']['deploy'] = 'deployed {0} in version {1}'.format(name,
                 version)
     else:
@@ -185,21 +194,18 @@ def wait(name, url='http://localhost:8080/manager', timeout=180):
     .. code-block:: yaml
 
         tomcat-service:
-          service:
-            - running
+          service.running:
             - name: tomcat
             - enable: True
 
         wait-for-tomcatmanager:
-          tomcat:
-            - wait
+          tomcat.wait:
             - timeout: 300
             - require:
               - service: tomcat-service
 
         jenkins:
-          tomcat:
-            - war_deployed
+          tomcat.war_deployed:
             - name: /ran
             - war: salt://jenkins-1.2.4.war
             - require:

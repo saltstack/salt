@@ -9,8 +9,11 @@ Manage OpenStack configuration file settings.
 
 '''
 
-# Import salt libs
-import salt.exceptions
+# Import Python Libs
+from __future__ import absolute_import
+
+# Import Salt Libs
+from salt.exceptions import CommandExecutionError
 
 
 def __virtual__():
@@ -47,19 +50,31 @@ def present(name, filename, section, value, parameter=None):
     if parameter is None:
         parameter = name
 
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
     try:
         old_value = __salt__['openstack_config.get'](filename=filename,
                                                      section=section,
                                                      parameter=parameter)
 
         if old_value == value:
-            return {'name': name,
-                    'changes': {},
-                    'result': True,
-                    'comment': 'The value is already set to the correct value'}
+            ret['result'] = True
+            ret['comment'] = 'The value is already set to the correct value'
+            return ret
 
-    except salt.exceptions.CommandExecutionError as e:
-        if not e.message.lower().startswith('parameter not found:'):
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Value \'{0}\' is set to be changed to \'{1}\'.'.format(
+                old_value,
+                value
+            )
+            return ret
+
+    except CommandExecutionError as e:
+        if not str(e).lower().startswith('parameter not found:'):
             raise
 
     __salt__['openstack_config.set'](filename=filename,
@@ -67,10 +82,11 @@ def present(name, filename, section, value, parameter=None):
                                      parameter=parameter,
                                      value=value)
 
-    return {'name': name,
-            'changes': {'Value': 'Updated'},
-            'result': True,
-            'comment': 'The value has been updated'}
+    ret['changes'] = {'Value': 'Updated'}
+    ret['result'] = True
+    ret['comment'] = 'The value has been updated'
+
+    return ret
 
 
 def absent(name, filename, section, parameter=None):
@@ -91,23 +107,35 @@ def absent(name, filename, section, parameter=None):
     if parameter is None:
         parameter = name
 
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
     try:
         old_value = __salt__['openstack_config.get'](filename=filename,
                                                      section=section,
                                                      parameter=parameter)
-    except salt.exceptions.CommandExecutionError as e:
-        if e.message.lower().startswith('parameter not found:'):
-            return {'name': name,
-                    'changes': {},
-                    'result': True,
-                    'comment': 'The value is already absent'}
+    except CommandExecutionError as e:
+        if str(e).lower().startswith('parameter not found:'):
+            ret['result'] = True
+            ret['comment'] = 'The value is already absent'
+            return ret
         raise
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Value \'{0}\' is set to be deleted.'.format(
+            old_value
+        )
+        return ret
 
     __salt__['openstack_config.delete'](filename=filename,
                                         section=section,
                                         parameter=parameter)
 
-    return {'name': name,
-            'changes': {'Value': 'Deleted'},
-            'result': True,
-            'comment': 'The value has been deleted'}
+    ret['changes'] = {'Value': 'Deleted'}
+    ret['result'] = True
+    ret['comment'] = 'The value has been deleted'
+
+    return ret

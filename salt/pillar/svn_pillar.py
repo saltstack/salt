@@ -13,7 +13,7 @@ so:
 The `root=` parameter is optional and used to set the subdirectory from where
 to look for Pillar files (such as ``top.sls``).
 
-.. versionchanged:: Helium
+.. versionchanged:: 2014.7.0
     The optional ``root`` parameter will be added.
 
 Note that this is not the same thing as configuring pillar data using the
@@ -46,6 +46,7 @@ section in it, like this:
       '*':
         - bar
 '''
+from __future__ import absolute_import
 
 # Import python libs
 from copy import deepcopy
@@ -139,21 +140,22 @@ class SvnPillar(object):
         return repo_dir
 
 
-def _extract_key_val(kv, delim='='):
+def _extract_key_val(kv, delimiter='='):
     '''Extract key and value from key=val string.
 
     Example:
     >>> _extract_key_val('foo=bar')
     ('foo', 'bar')
     '''
-    delim = '='
-    pieces = kv.split(delim)
+    pieces = kv.split(delimiter)
     key = pieces[0]
-    val = delim.join(pieces[1:])
+    val = delimiter.join(pieces[1:])
     return key, val
 
 
-def ext_pillar(minion_id, pillar, repo_string):
+def ext_pillar(minion_id,
+               pillar,  # pylint: disable=W0613
+               repo_string):
     '''
     Execute a command and read the output as YAML
     '''
@@ -168,7 +170,7 @@ def ext_pillar(minion_id, pillar, repo_string):
         DELIM = '='
         if DELIM not in extraopt:
             log.error('Incorrectly formatted extra parameter. '
-                      'Missing {0!r}: {1}'.format(DELIM, extraopt))
+                      'Missing \'{0}\': {1}'.format(DELIM, extraopt))
         key, val = _extract_key_val(extraopt, DELIM)
         if key == 'root':
             root = val

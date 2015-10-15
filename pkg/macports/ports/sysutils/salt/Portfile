@@ -1,0 +1,109 @@
+# -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
+# $Id$
+
+PortSystem          1.0
+PortGroup           github 1.0
+PortGroup           python 1.0
+
+github.setup        saltstack salt 2014.1.13 v
+name                salt
+categories          sysutils
+platforms           darwin
+maintainers         saltstack.com:cr
+license             Apache-2
+supported_archs     noarch
+distname            v2014.1.13
+revision            1
+
+description         Salt is a Python-based remote execution, automation, \
+                    configuration, and orchestration engine.
+
+long_description    SaltStack is fast, scalable and flexible software for data \
+                    center automation, from infrastructure and any cloud, \
+                    to the entire application stack.
+
+homepage            http://saltstack.com/
+
+python.default_version 27
+python.link_binaries_suffix
+
+checksums           rmd160 2695fc2e63ae73b1b63eaa30cae8f15fd4784466 \
+                    sha256 5ce29633a6d290ce11c375b5af6bfd84aecc5b41b2cc3272342ecc56f8c63375
+
+depends_build       port:py${python.version}-setuptools
+
+depends_lib-append  port:py${python.version}-crypto \
+                    port:py${python.version}-m2crypto \
+                    port:py${python.version}-jinja2 \
+                    port:py${python.version}-msgpack \
+                    port:py${python.version}-pip \
+                    port:py${python.version}-yaml \
+                    port:py${python.version}-zmq \
+                    port:swig-python
+
+startupitem.create        yes
+startupitem.name          salt-minion
+startupitem.netchange     yes
+startupitem.logevents     yes
+startupitem.logfile       ${prefix}/var/log/salt/minion
+startupitem.executable    ${prefix}/bin/salt-minion
+
+
+
+post-activate {
+
+    file mkdir ${prefix}/etc/salt
+
+    if ![file exists /etc/salt] {
+        ln -s ${prefix}/etc/salt /etc/salt
+    }
+
+    if ![file exists ${prefix}/etc/salt/minion] {
+        copy ${worksrcpath}/conf/minion ${prefix}/etc/salt
+    }
+
+    if ![file exists ${prefix}/etc/salt/master] {
+        copy ${worksrcpath}/conf/master ${prefix}/etc/salt
+    }
+}
+
+post-destroot {
+
+    if ![file exists ${destroot}/Library/LaunchDaemons] {
+        file mkdir ${destroot}/Library/LaunchDaemons
+    }
+    copy ${worksrcpath}/pkg/darwin/com.saltstack.salt.master.plist ${destroot}/Library/LaunchDaemons
+    copy ${worksrcpath}/pkg/darwin/com.saltstack.salt.syndic.plist ${destroot}/Library/LaunchDaemons
+
+}
+
+pre-deactivate {
+
+    if { [file type /etc/salt] == "link" } {
+        file delete /etc/salt
+    }
+
+}
+
+notes "
+This port configures a LaunchItem for salt-minion.
+
+It also installs LaunchItems for the salt-master and the salt-syndic.
+
+To start the salt-master via launchd, run
+    
+sudo launchctl load -w /Library/LaunchDaemons/com.saltstack.salt.master.plist
+
+To start the salt-syndic via launchd, run
+
+sudo launchctl load -w /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
+
+To disable launchd management for the master or syndic, run the appropriate
+unload command:
+
+sudo launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.master.plist
+or
+sudo launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.syndic.plist
+
+"
+

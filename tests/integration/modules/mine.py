@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-
 '''
 Test the salt mine system
 '''
+# Import Pytohn libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')

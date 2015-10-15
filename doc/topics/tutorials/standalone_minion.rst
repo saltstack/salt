@@ -1,3 +1,5 @@
+.. _tutorial-standalone-minion:
+
 =================
 Standalone Minion
 =================
@@ -6,9 +8,14 @@ Since the Salt minion contains such extensive functionality it can be useful
 to run it standalone. A standalone minion can be used to do a number of
 things:
 
-- Stand up a master server via States (Salting a Salt Master)
 - Use salt-call commands on a system without connectivity to a master
 - Masterless States, run states entirely from files local to the minion
+
+.. note::
+
+    When running Salt in masterless mode, do not run the salt-minion daemon.
+    Otherwise, it will attempt to connect to a master and fail. The salt-call
+    command stands on its own and does not need the salt-minion daemon.
 
 Telling Salt Call to Run Masterless
 ===================================
@@ -73,3 +80,9 @@ it unnecessary to change the configuration file:
 .. code-block:: bash
 
     salt-call state.highstate --local
+
+External Pillars
+================
+
+:ref:`External pillars <external-pillars>` are supported when running in masterless mode.
+

@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 '''
-    :codauthor: :email:`Mike Place <mp@saltstack.com>`
+    :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
+# Import Python libs
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
-ensure_in_syspath('../')
+ensure_in_syspath('../..')
 
 # Import salt libs
 import integration
@@ -35,7 +37,7 @@ class FileClientTest(integration.ModuleCase):
             self.file_client.get_file(None)
 
     def test_get_file_client(self):
-        with patch.dict(self.minion_opts, {'file_client': 'remote'}):
+        with patch.dict(self.get_config('minion', from_scratch=True), {'file_client': 'remote'}):
             with patch('salt.fileclient.RemoteClient', MagicMock(return_value='remote_client')):
                 ret = fileclient.get_file_client(self.minion_opts)
                 self.assertEqual('remote_client', ret)

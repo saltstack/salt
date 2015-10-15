@@ -4,13 +4,21 @@ Connection library for Amazon IAM
 
 :depends: requests
 '''
+from __future__ import absolute_import
 
 # Import Python libs
 import json
 import logging
 import time
-import requests
 import pprint
+from salt.ext.six.moves import range
+import salt.ext.six as six
+import salt.utils
+try:
+    import requests
+    HAS_REQUESTS = True  # pylint: disable=W0612
+except ImportError:
+    HAS_REQUESTS = False  # pylint: disable=W0612
 
 log = logging.getLogger(__name__)
 
@@ -22,8 +30,13 @@ def _retry_get_url(url, num_retries=10, timeout=5):
     '''
     for i in range(0, num_retries):
         try:
-            result = requests.get(url, timeout=timeout)
-            return result.text
+            result = requests.get(url, timeout=timeout, proxies={'http': ''})
+            if hasattr(result, 'text'):
+                return result.text
+            elif hasattr(result, 'content'):
+                return result.content
+            else:
+                return ''
         except requests.exceptions.HTTPError as exc:
             return ''
         except Exception as exc:
@@ -44,18 +57,44 @@ def _convert_key_to_str(key):
     '''
     Stolen completely from boto.providers
     '''
-    if isinstance(key, unicode):
+    if isinstance(key, six.text_type):
         # the secret key must be bytes and not unicode to work
         #  properly with hmac.new (see http://bugs.python.org/issue5285)
         return str(key)
     return key
 
 
+def get_iam_region(version='latest', url='http://169.254.169.254',
+                   timeout=None, num_retries=5):
+    '''
+    Gets instance identity document and returns region
+    '''
+    salt.utils.warn_until(
+        'Carbon',
+        '''The \'get_iam_region\' function has been deprecated in favor of
+        \'salt.utils.aws.get_region_from_metadata\'. Please update your code
+        to reflect this.''')
+    instance_identity_url = '{0}/{1}/dynamic/instance-identity/document'.format(url, version)
+
+    region = None
+    try:
+        document = _retry_get_url(instance_identity_url, num_retries, timeout)
+        region = json.loads(document)['region']
+    except (ValueError, TypeError, KeyError):
+        # JSON failed to decode
+        log.error('Failed to read region from instance metadata. Giving up.')
+    return region
+
+
 def get_iam_metadata(version='latest', url='http://169.254.169.254',
-        timeout=None, num_retries=5):
+                     timeout=None, num_retries=5):
     '''
     Grabs the first IAM role from this instances metadata if it exists.
     '''
+    salt.utils.warn_until(
+        'Carbon',
+        '''The \'get_iam_metadata\' function has been deprecated in favor of
+        \'salt.utils.aws.creds\'. Please update your code to reflect this.''')
     iam_url = '{0}/{1}/meta-data/iam/security-credentials/'.format(url, version)
     roles = _retry_get_url(iam_url, num_retries, timeout).splitlines()
 

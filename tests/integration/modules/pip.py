@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
-    :copyright: © 2012-2013 by the SaltStack Team, see AUTHORS for more details
-    :license: Apache 2.0, see LICENSE for more details.
 
     tests.integration.modules.pip
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import pwd
 import shutil
@@ -56,10 +55,10 @@ class PipModuleTest(integration.ModuleCase):
         # Let's run a pip depending functions
         for func in ('pip.freeze', 'pip.list'):
             ret = self.run_function(func, bin_env=self.venv_dir)
-            self.assertEqual(
-                ret,
-                'Command required for \'{0}\' not found: Could not find '
-                'a `pip` binary'.format(func)
+            self.assertIn(
+                'Command required for \'{0}\' not found: '
+                'Could not find a `pip` binary in virtualenv'.format(func),
+                ret
             )
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
@@ -69,9 +68,9 @@ class PipModuleTest(integration.ModuleCase):
         # Create a requirements file that depends on another one.
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
-        with open(req1_filename, 'wb') as f:
+        with salt.utils.fopen(req1_filename, 'wb') as f:
             f.write('-r requirements2.txt')
-        with open(req2_filename, 'wb') as f:
+        with salt.utils.fopen(req2_filename, 'wb') as f:
             f.write('pep8')
 
         this_user = pwd.getpwuid(os.getuid())[0]
@@ -183,10 +182,11 @@ class PipModuleTest(integration.ModuleCase):
         )
         try:
             self.assertEqual(ret['retcode'], 0)
-            self.assertIn(
-                'Successfully installed pep8 Blinker SaltTesting',
-                ret['stdout']
-            )
+            for package in ('Blinker', 'SaltTesting', 'pep8'):
+                self.assertRegexpMatches(
+                    ret['stdout'],
+                    r'(?:.*)(Successfully installed)(?:.*)({0})(?:.*)'.format(package)
+                )
         except AssertionError:
             import pprint
             pprint.pprint(ret)

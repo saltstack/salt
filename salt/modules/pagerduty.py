@@ -2,12 +2,11 @@
 '''
 Module for Firing Events via PagerDuty
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
-:depends:   - pygerduty python module
-:configuration: This module can be used by either passing a jid and password
-    directly to send_message, or by specifying the name of a configuration
-    profile in the minion config, minion pillar, or master config.
+:configuration: This module can be used by specifying the name of a
+    configuration profile in the minion config, minion pillar, or master
+    config.
 
     For example:
 
@@ -17,144 +16,147 @@ Module for Firing Events via PagerDuty
             pagerduty.api_key: F3Rbyjbve43rfFWf2214
             pagerduty.subdomain: mysubdomain
 '''
+from __future__ import absolute_import
 
-HAS_LIBS = False
-try:
-    import pygerduty
-    HAS_LIBS = True
-except ImportError:
-    pass
+# Import python libs
+import yaml
+import json
 
-__virtualname__ = 'pagerduty'
+# Import salt libs
+import salt.utils.pagerduty
+from salt.ext.six import string_types
 
 
 def __virtual__():
     '''
-    Only load this module if pygerduty is installed on this minion.
+    No dependencies outside of what Salt itself requires
     '''
-    if HAS_LIBS:
-        return __virtualname__
-    return False
+    return True
 
 
-def _get_pager(profile):
+def list_services(profile=None, api_key=None):
     '''
-    Return the pagerduty connection
-    '''
-    creds = __salt__['config.option'](profile)
+    List services belonging to this account
 
-    pager = pygerduty.PagerDuty(
-        creds.get('pagerduty.subdomain'),
-        creds.get('pagerduty.api_key'),
+    CLI Example:
+
+        salt myminion pagerduty.list_services my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'services',
+        'name',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
     )
 
-    return pager
 
-
-def list_services(profile):
+def list_incidents(profile=None, api_key=None):
     '''
-    List services belonging to this account
+    List incidents belonging to this account
 
     CLI Example:
 
-        pagerduty.list_services my-pagerduty-account
+        salt myminion pagerduty.list_incidents my-pagerduty-account
     '''
-    pager = _get_pager(profile)
-    ret = {}
-    for service in pager.services.list():
-        ret[service.name] = {
-            'acknowledgement_timeout': service.acknowledgement_timeout,
-            'auto_resolve_timeout': service.auto_resolve_timeout,
-            'created_at': service.created_at,
-            'deleted_at': service.deleted_at,
-            'description': service.description,
-            'email_filter_mode': service.email_filter_mode,
-            'email_incident_creation': service.email_incident_creation,
-            'id': service.id,
-            'incident_counts': {
-                'acknowledged': service.incident_counts.acknowledged,
-                'resolved': service.incident_counts.resolved,
-                'total': service.incident_counts.total,
-                'triggered': service.incident_counts.triggered,
-            },
-            'last_incident_timestamp': service.last_incident_timestamp,
-            'name': service.name,
-            'service_key': service.service_key,
-            'service_url': service.service_url,
-            'status': service.status,
-            'type': service.type,
-        }
-    return ret
+    return salt.utils.pagerduty.list_items(
+        'incidents',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
+    )
 
 
-def list_incidents(profile):
+def list_users(profile=None, api_key=None):
     '''
-    List services belonging to this account
+    List users belonging to this account
 
     CLI Example:
 
-        pagerduty.list_incidents my-pagerduty-account
+        salt myminion pagerduty.list_users my-pagerduty-account
     '''
-    pager = _get_pager(profile)
-    ret = {}
-    for incident in pager.incidents.list():
-        ret[incident.id] = {
-            'status': incident.status,
-            'service': {
-                'deleted_at': incident.service.deleted_at,
-                'id': incident.service.id,
-                'name': incident.service.name,
-                'html_url': incident.service.html_url,
-            },
-            'trigger_type': incident.trigger_type,
-            'escalation_policy': {
-                'id': incident.escalation_policy.id,
-                'name': incident.escalation_policy.name,
-            },
-            'assigned_to_user': incident.assigned_to_user,
-            'html_url': incident.html_url,
-            'last_status_change_on': incident.last_status_change_on,
-            'last_status_change_by': {},
-            'incident_key': incident.incident_key,
-            'created_on': incident.created_on,
-            'number_of_escalations': incident.number_of_escalations,
-            'incident_number': incident.incident_number,
-            'resolved_by_user': {},
-            'trigger_details_html_url': incident.trigger_details_html_url,
-            'id': incident.id,
-            'trigger_summary_data': {
-                'subject': None,
-            },
-        }
-        if hasattr(incident.trigger_summary_data, 'subject'):
-            ret[incident.id]['trigger_summary_data']['subject'] = \
-                incident.trigger_summary_data.subject
-        if hasattr(incident, 'resolved_by_user'):
-            ret[incident.id]['resolved_by_user'] = {
-                'id': incident.resolved_by_user.id,
-                'name': incident.resolved_by_user.name,
-                'html_url': incident.resolved_by_user.html_url,
-                'email': incident.resolved_by_user.email,
-            }
-        if hasattr(incident.last_status_change_by, 'id'):
-            ret[incident.id]['last_status_change_by'] = {
-                'id': incident.last_status_change_by.id,
-                'name': incident.last_status_change_by.name,
-                'html_url': incident.last_status_change_by.html_url,
-                'email': incident.last_status_change_by.email,
-            }
-    return ret
+    return salt.utils.pagerduty.list_items(
+        'users',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
+    )
 
 
-def create_event(service_key, description, details, incident_key=None,
-                 profile=None):
+def list_schedules(profile=None, api_key=None):
+    '''
+    List schedules belonging to this account
+
+    CLI Example:
+
+        salt myminion pagerduty.list_schedules my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'schedules',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
+    )
+
+
+def list_windows(profile=None, api_key=None):
+    '''
+    List maintenance windows belonging to this account
+
+    CLI Example:
+
+        salt myminion pagerduty.list_windows my-pagerduty-account
+        salt myminion pagerduty.list_maintenance_windows my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'maintenance_windows',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
+    )
+
+
+# The long version, added for consistency
+list_maintenance_windows = list_windows
+
+
+def list_policies(profile=None, api_key=None):
+    '''
+    List escalation policies belonging to this account
+
+    CLI Example:
+
+        salt myminion pagerduty.list_policies my-pagerduty-account
+        salt myminion pagerduty.list_escalation_policies my-pagerduty-account
+    '''
+    return salt.utils.pagerduty.list_items(
+        'escalation_policies',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
+    )
+
+
+# The long version, added for consistency
+list_escalation_policies = list_policies
+
+
+def create_event(service_key=None, description=None, details=None,
+                 incident_key=None, profile=None):
     '''
     Create an event in PagerDuty. Designed for use in states.
 
     CLI Example:
 
-        pagerduty.create_event <service_key> <description> <details> \
-            profile=my-pagerduty-account
+    .. code-block:: yaml
+
+        salt myminion pagerduty.create_event <service_key> <description> <details> \
+        profile=my-pagerduty-account
 
     The following parameters are required:
 
@@ -171,12 +173,25 @@ def create_event(service_key, description, details, incident_key=None,
         This refers to the configuration profile to use to connect to the
         PagerDuty service.
     '''
-    pager = _get_pager(profile)
-    event = pager.create_event(
-        service_key=service_key,
-        description=description,
-        details=details,
-        event_type='trigger',
-        incident_key=incident_key,
-    )
-    return {'incident_key': str(event)}
+    trigger_url = 'https://events.pagerduty.com/generic/2010-04-15/create_event.json'
+
+    if isinstance(details, string_types):
+        details = yaml.safe_load(details)
+        if isinstance(details, string_types):
+            details = {'details': details}
+
+    ret = json.loads(salt.utils.pagerduty.query(
+        method='POST',
+        profile_dict=__salt__['config.option'](profile),
+        api_key=service_key,
+        data={
+            'service_key': service_key,
+            'incident_key': incident_key,
+            'event_type': 'trigger',
+            'description': description,
+            'details': details,
+        },
+        url=trigger_url,
+        opts=__opts__
+    ))
+    return ret

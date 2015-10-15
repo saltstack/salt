@@ -6,10 +6,13 @@ Note that not all Windows applications will rehash the PATH environment variable
 Only the ones that listen to the WM_SETTINGCHANGE message
 http://support.microsoft.com/kb/104011
 '''
+from __future__ import absolute_import
 
 # Python Libs
 import logging
 import re
+import os
+from salt.ext.six.moves import map
 
 # Third party libs
 try:
@@ -44,25 +47,51 @@ def _normalize_dir(string):
 
 def rehash():
     '''
-    Send a WM_SETTINGCHANGE Broadcast to Windows to rehash the Environment variables
+    Send a WM_SETTINGCHANGE Broadcast to Windows to refresh the Environment variables
+
+    CLI Example:
+
+    ... code-block:: bash
+
+        salt '*' win_path.rehash
     '''
-    return win32gui.SendMessageTimeout(win32con.HWND_BROADCAST, win32con.WM_SETTINGCHANGE, 0, 'Environment', 0, 10000)[0] == 1
+    return win32gui.SendMessageTimeout(win32con.HWND_BROADCAST,
+                                       win32con.WM_SETTINGCHANGE,
+                                       0,
+                                       'Environment',
+                                       0,
+                                       10000)[0] == 1
 
 
 def get_path():
     '''
-    Returns the system path
+    Returns a list of items in the SYSTEM path
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_path.get_path
     '''
-    ret = __salt__['reg.read_key']('HKEY_LOCAL_MACHINE', 'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment', 'PATH').split(';')
+    ret = __salt__['reg.read_value']('HKEY_LOCAL_MACHINE',
+                                   'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
+                                   'PATH')
+    if isinstance(ret, dict):
+        ret = ret['vdata'].split(';')
+    if isinstance(ret, str):
+        ret = ret.split(';')
 
     # Trim ending backslash
-    return map(_normalize_dir, ret)
+    return list(map(_normalize_dir, ret))
 
 
 def exists(path):
     '''
     Check if the directory is configured in the SYSTEM path
     Case-insensitive and ignores trailing backslash
+
+    Returns:
+        boolean True if path exists, False if not
 
     CLI Example:
 
@@ -81,6 +110,9 @@ def exists(path):
 def add(path, index=0):
     '''
     Add the directory to the SYSTEM path in the index location
+
+    Returns:
+        boolean True if successful, False if unsuccessful
 
     CLI Example:
 
@@ -103,6 +135,11 @@ def add(path, index=0):
     if index > len(sysPath):
         index = len(sysPath)
 
+    localPath = os.environ["PATH"].split(os.pathsep)
+    if path not in localPath:
+        localPath.append(path)
+        os.environ["PATH"] = os.pathsep.join(localPath)
+
     # Check if we are in the system path at the right location
     try:
         currIndex = sysPath.index(path)
@@ -115,13 +152,13 @@ def add(path, index=0):
 
     # Add it to the Path
     sysPath.insert(index, path)
-    regedit = __salt__['reg.set_key'](
+    regedit = __salt__['reg.set_value'](
         'HKEY_LOCAL_MACHINE',
         'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
         'PATH',
         ';'.join(sysPath),
         'REG_EXPAND_SZ'
-        )
+    )
 
     # Broadcast WM_SETTINGCHANGE to Windows
     if regedit:
@@ -131,17 +168,33 @@ def add(path, index=0):
 
 
 def remove(path):
-    '''
+    r'''
     Remove the directory from the SYSTEM path
+
+    Returns:
+        boolean True if successful, False if unsuccessful
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Will remove C:\Python27 from the path
+        salt '*' win_path.remove 'c:\\python27'
     '''
     path = _normalize_dir(path)
     sysPath = get_path()
+
+    localPath = os.environ["PATH"].split(os.pathsep)
+    if path in localPath:
+        localPath.remove(path)
+        os.environ["PATH"] = os.pathsep.join(localPath)
+
     try:
         sysPath.remove(path)
     except ValueError:
         return True
 
-    regedit = __salt__['reg.set_key'](
+    regedit = __salt__['reg.set_value'](
         'HKEY_LOCAL_MACHINE',
         'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
         'PATH',

@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 '''
 Module for Management of Memcached Keys
-=======================================
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 '''
+from __future__ import absolute_import
+
+# TODO: use salt.utils.memcache
 
 # Import python libs
 import logging
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt._compat import integer_types
+from salt.ext.six import integer_types
 
 # Import third party libs
 try:
@@ -220,10 +222,10 @@ def increment(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
     cur = get(key)
 
     if cur is None:
-        raise CommandExecutionError('Key {0!r} does not exist'.format(key))
+        raise CommandExecutionError('Key \'{0}\' does not exist'.format(key))
     elif not isinstance(cur, integer_types):
         raise CommandExecutionError(
-            'Value for key {0!r} must be an integer to be '
+            'Value for key \'{0}\' must be an integer to be '
             'incremented'.format(key)
         )
 
@@ -251,10 +253,10 @@ def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
 
     cur = get(key)
     if cur is None:
-        raise CommandExecutionError('Key {0!r} does not exist'.format(key))
+        raise CommandExecutionError('Key \'{0}\' does not exist'.format(key))
     elif not isinstance(cur, integer_types):
         raise CommandExecutionError(
-            'Value for key {0!r} must be an integer to be '
+            'Value for key \'{0}\' must be an integer to be '
             'decremented'.format(key)
         )
 

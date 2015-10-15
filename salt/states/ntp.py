@@ -3,7 +3,7 @@
 Management of Windows Time Service's upstream time servers
 =========================
 
-.. versionadded:: 2014.1.0 (Hydrogen)
+.. versionadded:: 2014.1.0
 
 This state is used to manage w32tm upstream NTP servers on Windows.
 
@@ -15,12 +15,13 @@ This state is used to manage w32tm upstream NTP servers on Windows.
           - pool.ntp.org
           - us.pool.ntp.org
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import logging
 
 # Import salt libs
-from salt._compat import string_types
+from salt.ext.six import string_types
 import salt.utils
 
 

@@ -11,7 +11,9 @@ Example:
         rabbitmq_user.present:
             - password: password
             - force: True
-            - tags: administrator
+            - tags:
+                - monitoring
+                - user
             - perms:
               - '/':
                 - '.*'
@@ -21,10 +23,14 @@ Example:
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -34,6 +40,39 @@ def __virtual__():
     Only load if RabbitMQ is installed.
     '''
     return salt.utils.which('rabbitmqctl') is not None
+
+
+def _check_perms_changes(name, newperms, runas=None):
+    '''
+    Whether Rabbitmq user's permissions need to be changed
+    '''
+    if not newperms:
+        return False
+
+    existing_perms = __salt__['rabbitmq.list_user_permissions'](name, runas=runas)
+
+    perm_need_change = False
+    for vhost_perms in newperms:
+        for vhost, perms in vhost_perms.iteritems():
+            if vhost in existing_perms:
+                if perms != existing_perms[vhost]:
+                    perm_need_change = True
+            else:
+                perm_need_change = True
+
+    return perm_need_change
+
+
+def _check_tags_changes(name, newtags, runas=None):
+    '''
+    Whether Rabbitmq user's tags need to be changed
+    '''
+    if newtags:
+        if isinstance(newtags, str):
+            newtags = newtags.split()
+        return __salt__['rabbitmq.list_users'](runas=runas)[name] - set(newtags)
+    else:
+        return []
 
 
 def present(name,
@@ -52,7 +91,7 @@ def present(name,
     force
         If user exists, forcibly change the password
     tags
-        Optionally set user tags for user
+        Optional list of tags for the user
     perms
         A list of dicts with vhost keys and 3-tuple values
     runas
@@ -64,59 +103,75 @@ def present(name,
 
     user_exists = __salt__['rabbitmq.user_exists'](name, runas=runas)
 
-    if user_exists and not force:
-        ret['comment'] = 'User {0} already exists'.format(name)
-
-    elif __opts__['test']:
-        ret['result'] = None
-
-        if not user_exists:
-            ret['comment'] = 'User {0} is set to be created'
-        elif force:
-            ret['comment'] = 'User {0} is set to be updated'
-        ret['comment'] = ret['comment'].format(name)
-
+    if user_exists and not any((force, perms, tags)):
+        log.debug('RabbitMQ user %s exists, '
+                  'and force is not set.', name)
+        ret['comment'] = 'User {0} already presents'.format(name)
+        return ret
     else:
         changes = {'old': '', 'new': ''}
+
         if not user_exists:
-            log.debug(
-                "User doesn't exist - Creating")
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] = 'User {0} is set to be created'.format(name)
+                return ret
+
+            log.debug("RabbitMQ user %s doesn't exist - Creating", name)
             result = __salt__['rabbitmq.add_user'](
                 name, password, runas=runas)
-
-            if tags:
-                result = __salt__['rabbitmq.set_user_tags'](
-                    name, tags, runas=runas)
-            for element in perms:
-                for vhost, perm in element.items():
-                    result = __salt__['rabbitmq.set_permissions'](
-                        vhost, name, perm[0], perm[1], perm[2], runas)
-                    changes['new'] += ' {0} {1} {2}'.format(vhost, name, tags)
-        elif force:
-            log.debug('User exists and force is set - Overriding')
-            if password is not None:
-                result = __salt__['rabbitmq.change_password'](
-                    name, password, runas=runas)
-                changes['new'] = ' New password'
-            else:
-                log.debug('Password is not set - Clearing password')
-                result = __salt__['rabbitmq.clear_password'](
-                    name, runas=runas)
-                changes['old'] += ' Old password removed'
-            if tags:
-                result.update(__salt__['rabbitmq.set_user_tags'](
-                    name, tags, runas=runas)
-                )
-                changes['new'] += tags
-            for element in perms:
-                for vhost, perm in element.items():
-                    result.update(__salt__['rabbitmq.set_permissions'](
-                        vhost, name, perm[0], perm[1], perm[2], runas)
-                    )
-                    changes['new'] += ' {0} {1}'.format(vhost, perm)
         else:
-            log.debug('User exists, and force is not set - Abandoning')
-            ret['comment'] = 'User {0} is not going to be modified'.format(name)
+            log.debug('RabbitMQ user %s exists', name)
+            if force:
+                if __opts__['test']:
+                    ret['result'] = None
+
+                if password is not None:
+                    if __opts__['test']:
+                        ret['comment'] = ('User {0}\'s password is '
+                                          'set to be updated'.format(name))
+                        return ret
+
+                    result = __salt__['rabbitmq.change_password'](
+                        name, password, runas=runas)
+                    changes['new'] = 'Set password.\n'
+                else:
+                    log.debug('Password for %s is not set - Clearing password',
+                              name)
+                    if __opts__['test']:
+                        ret['comment'] = ('User {0}\'s password is '
+                                          'set to be removed'.format(name))
+                        return ret
+
+                    result = __salt__['rabbitmq.clear_password'](
+                        name, runas=runas)
+                    changes['old'] += 'Removed password.\n'
+
+        if _check_tags_changes(name, tags, runas=runas):
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] += ('Tags for user {0} '
+                                   'is set to be changed'.format(name))
+                return ret
+            result.update(__salt__['rabbitmq.set_user_tags'](
+                name, tags, runas=runas)
+            )
+            changes['new'] += 'Set tags: {0}\n'.format(tags)
+
+        if _check_perms_changes(name, perms, runas=runas):
+            if __opts__['test']:
+                ret['result'] = None
+                ret['comment'] += ('Permissions for user {0} '
+                                   'is set to be changed'.format(name))
+                return ret
+            for vhost_perm in perms:
+                for vhost, perm in six.iteritems(vhost_perm):
+                    result.update(__salt__['rabbitmq.set_permissions'](
+                        vhost, name, perm[0], perm[1], perm[2], runas=runas)
+                    )
+                    changes['new'] += (
+                        'Set permissions {0} for vhost {1}'
+                    ).format(perm, vhost)
 
         if 'Error' in result:
             ret['result'] = False
@@ -131,7 +186,7 @@ def present(name,
             ret['comment'] = result['Password Cleared']
             ret['changes'] = changes
 
-    return ret
+        return ret
 
 
 def absent(name,
