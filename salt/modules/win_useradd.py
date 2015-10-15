@@ -659,7 +659,7 @@ def info(name):
         ret['logonscript'] = items['script_path']
         ret['profile'] = items['profile']
         if not ret['profile']:
-            ret['profile'] = _get_userprofile_from_registry(name, ret['uid'])
+            ret['profile'] = _get_userprofile_from_registry(name, ret['uid'])['vdata']
         ret['home'] = items['home_dir']
         ret['homedrive'] = items['home_dir_drive']
         if not ret['home']:
