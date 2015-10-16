@@ -394,7 +394,7 @@ VALID_OPTS = {
     'range_server': str,
 
     # The tcp keepalive interval to set on TCP ports. This setting can be used to tune salt connectivity
-    # issues in messy network environments with misbeahving firewalls
+    # issues in messy network environments with misbehaving firewalls
     'tcp_keepalive': bool,
 
     # Sets zeromq TCP keepalive idle. May be used to tune issues with minion disconnects
