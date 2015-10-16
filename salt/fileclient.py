@@ -10,6 +10,7 @@ import logging
 import hashlib
 import os
 import shutil
+import ftplib
 
 # Import salt libs
 from salt.exceptions import (
@@ -569,6 +570,15 @@ class Client(object):
                 return dest
             except Exception:
                 raise MinionError('Could not fetch from {0}'.format(url))
+        if url_data.scheme == 'ftp':
+            try:
+                ftp = ftplib.FTP(url_data.hostname)
+                ftp.login()
+                ftp.retrbinary('RETR {0}'.format(url_data.path), salt.utils.fopen(dest, 'wb').write)
+                return dest
+            except Exception as exc:
+                raise MinionError('Could not retrieve {0} from FTP server. Exception: {1}'.format(url, exc))
+	
 
         if url_data.scheme == 'swift':
             try:
