@@ -15,6 +15,7 @@ import collections
 from functools import reduce
 
 # Import 3rd-party libs
+from salt.utils.odict import OrderedDict
 import yaml
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -86,7 +87,7 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM):
         pkg:apache
 
 
-    delimiter
+    :param delimiter:
         Specify an alternate delimiter to use when traversing a nested dict
 
         .. versionadded:: 2014.7.0
@@ -239,6 +240,8 @@ def setvals(grains, destructive=False):
     # Cast defaultdict to dict; is there a more central place to put this?
     yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
             yaml.representer.SafeRepresenter.represent_dict)
+    yaml.representer.SafeRepresenter.add_representer(OrderedDict,
+            yaml.representer.SafeRepresenter.represent_dict)
     cstr = yaml.safe_dump(grains, default_flow_style=False)
     try:
         with salt.utils.fopen(gfn, 'w+') as fp_:
@@ -295,9 +298,10 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
         is given. Defaults to False.
 
     :param delimiter: The key can be a nested dict key. Use this parameter to
-        specify the delimiter you use.
+        specify the delimiter you use, instead of the default ``:``.
         You can now append values to a list in nested dictionnary grains. If the
         list doesn't exist at this level, it will be created.
+
         .. versionadded:: 2014.7.6
 
     CLI Example:
@@ -329,11 +333,18 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
     return setval(key, grains)
 
 
-def remove(key, val):
+def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.17.0
 
     Remove a value from a list in the grains config file
+
+    :param delimiter: The key can be a nested dict key. Use this parameter to
+        specify the delimiter you use, instead of the default ``:``.
+        You can now append values to a list in nested dictionnary grains. If the
+        list doesn't exist at this level, it will be created.
+
+        .. versionadded:: Boron
 
     CLI Example:
 
@@ -341,12 +352,20 @@ def remove(key, val):
 
         salt '*' grains.remove key val
     '''
-    grains = get(key, [])
+    grains = get(key, [], delimiter)
     if not isinstance(grains, list):
         return 'The key {0} is not a valid list'.format(key)
     if val not in grains:
         return 'The val {0} was not in the list {1}'.format(val, key)
     grains.remove(val)
+
+    while delimiter in key:
+        key, rest = key.rsplit(delimiter, 1)
+        _grain = get(key, None, delimiter)
+        if isinstance(_grain, dict):
+            _grain.update({rest: grains})
+        grains = _grain
+
     return setval(key, grains)
 
 
@@ -538,7 +557,7 @@ def get_or_set_hash(name,
     .. warning::
 
         This function could return strings which may contain characters which are reserved
-        as directives by the YAML parser, such as strings beginning with `%`. To avoid
+        as directives by the YAML parser, such as strings beginning with ``%``. To avoid
         issues when using the output of this function in an SLS file containing YAML+Jinja,
         surround the call with single quotes.
     '''
@@ -569,7 +588,7 @@ def set(key,
     with nested keys.
 
     This function is conservative. It will only overwrite an entry if
-    its value and the given one are not a list or a dict. The `force`
+    its value and the given one are not a list or a dict. The ``force``
     parameter is used to allow overwriting in all cases.
 
     .. versionadded:: 2015.8.0
@@ -579,7 +598,8 @@ def set(key,
     :param destructive: If an operation results in a key being removed,
                   delete the key, too. Defaults to False.
     :param delimiter:
-        Specify an alternate delimiter to use when traversing a nested dict
+        Specify an alternate delimiter to use when traversing a nested dict,
+        the default being ``:``
 
     CLI Example:
 
@@ -589,7 +609,7 @@ def set(key,
         salt '*' grains.set 'apps:myApp' '{port: 2209}'
     '''
 
-    ret = {'comment': [],
+    ret = {'comment': '',
            'changes': {},
            'result': True}
 
@@ -600,19 +620,21 @@ def set(key,
     elif isinstance(val, list):
         _new_value_type = 'complex'
 
-    _existing_value = get(key, _non_existent_key, delimiter)
+    _non_existent = object()
+    _existing_value = get(key, _non_existent, delimiter)
     _value = _existing_value
 
     _existing_value_type = 'simple'
-    if _existing_value == _non_existent_key:
+    if _existing_value is _non_existent:
         _existing_value_type = None
     elif isinstance(_existing_value, dict):
         _existing_value_type = 'complex'
     elif isinstance(_existing_value, list):
         _existing_value_type = 'complex'
 
-    if _existing_value_type is not None and _existing_value == val:
-        ret['comment'] = 'The value \'{0}\' was already set for key \'{1}\''.format(val, key)
+    if _existing_value_type is not None and _existing_value == val \
+                   and (val is not None or destructive is not True):
+        ret['comment'] = 'Grain is already set'
         return ret
 
     if _existing_value is not None and not force:

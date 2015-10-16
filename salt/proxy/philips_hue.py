@@ -18,18 +18,12 @@
 Philips HUE lamps module for proxy.
 '''
 
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 from __future__ import absolute_import
+import salt.ext.six.moves.http_client as http_client
 
 # Import python libs
 import logging
-
-# INFO: This is going to be removed anytime soon in favor of salt.utils.http
-#       But it needs a separate PR!
-try:
-    import requests
-except ImportError as err:
-    requests = None
-
 import time
 import json
 from salt.exceptions import (CommandExecutionError, MinionError)
@@ -63,22 +57,22 @@ def __virtual__():
     '''
     Validate the module.
     '''
-    return requests is not None
+    return True
 
 
 def init(cnf):
     '''
     Initialize the module.
     '''
-    host = cnf.get('proxy', {}).get('host')
-    if not host:
+    CONFIG['host'] = cnf.get('proxy', {}).get('host')
+    if not CONFIG['host']:
         raise MinionError(message="Cannot find 'host' parameter in the proxy configuration")
 
-    user = cnf.get('proxy', {}).get('user')
-    if not user:
+    CONFIG['user'] = cnf.get('proxy', {}).get('user')
+    if not CONFIG['user']:
         raise MinionError(message="Cannot find 'user' parameter in the proxy configuration")
 
-    CONFIG['url'] = "http://{0}/api/{1}".format(host, user)
+    CONFIG['uri'] = "/api/{0}".format(CONFIG['user'])
 
 
 def ping(*args, **kw):
@@ -97,6 +91,36 @@ def shutdown(opts, *args, **kw):
     return True
 
 
+def _query(lamp_id, state, action='', method='GET'):
+    '''
+    Query the URI
+
+    :return:
+    '''
+    # Because salt.utils.query is that dreadful... :(
+
+    err = None
+    url = "{0}/lights{1}".format(CONFIG['uri'],
+                                 lamp_id and '/{0}'.format(lamp_id) or '') \
+          + (action and "/{0}".format(action) or '')
+    conn = http_client.HTTPConnection(CONFIG['host'])
+    if method == 'PUT':
+        conn.request(method, url, json.dumps(state))
+    else:
+        conn.request(method, url)
+    resp = conn.getresponse()
+
+    if resp.status == http_client.OK:
+        res = json.loads(resp.read())
+    else:
+        err = "HTTP error: {0}, {1}".format(resp.status, resp.reason)
+    conn.close()
+    if err:
+        raise CommandExecutionError(err)
+
+    return res
+
+
 def _set(lamp_id, state, method="state"):
     '''
     Set state to the device by ID.
@@ -105,10 +129,8 @@ def _set(lamp_id, state, method="state"):
     :param state:
     :return:
     '''
-    url = "{0}/lights/{1}".format(CONFIG['url'], lamp_id) + (method and "/{0}".format(method) or '')
-    res = None
     try:
-        res = json.loads(requests.put(url, json=state).content)
+        res = _query(lamp_id, state, action=method, method='PUT')
     except Exception as err:
         raise CommandExecutionError(err)
 
@@ -140,13 +162,8 @@ def _get_devices(params):
 def _get_lights():
     '''
     Get all available lighting devices.
-
-    :return:
     '''
-    try:
-        return json.loads(requests.get(CONFIG['url'] + "/lights").content)
-    except Exception as exc:
-        raise CommandExecutionError(exc)
+    return _query(None, None)
 
 
 # Callers
