@@ -363,6 +363,47 @@ def create(vm_):
             raise SaltCloudConfigError("'ipv6' should be a boolean value.")
         kwargs['ipv6'] = ipv6
 
+    create_record = config.get_cloud_config_value(
+        'create_dns_record', get_configured_provider(), __opts__, search_global=False, default=None,
+    )
+    if create_record:
+        log.info('create_record: will attempt to write DNS records')
+        log.debug('create_record: {}'.format(pprint.pformat(create_record)))
+        dns_hostname = None
+        dns_domain = None
+        if not isinstance(create_record, bool) and not isinstance(create_record, dict):
+            raise SaltCloudConfigError(
+                '\'create_dns_record\' should be a boolean value or a non-empty dict.'
+            )
+        else:
+            if isinstance(create_record, dict):
+                log.info('create_record: looking for dns "domain" value')
+                dns_domain = config.get_cloud_config_value(
+                    'create_dns_record:domain', vm_, __opts__, search_global=true, default=None,
+                )
+                log.debug('create_record:domain: {}'.format(dns_domain))
+                log.info('create_record: looking for dns "hostname" value')
+                dns_hostname = config.get_cloud_config_value(
+                    'create_dns_record:hostname', vm_, __opts__, search_global=true, default=None,
+                )
+                log.debug('create_record:hostname: {}'.format(dns_hostname))
+
+            else:
+                log.info('create_record: inferring dns hostname, domain from minion name as FQDN')
+                dnsdomainname = name.split('.')
+                if len(dnsdomainname) > 2:
+                    dns_hostname = '.'.join(dnsdomainname[:-2])
+                    dns_domain = '.'.join(dnsdomainname[-2:])
+        if dns_hostname and dns_domain:
+            log.info('create_record: using dns_hostname="{}", dns_domain="{}"'.format(dns_hostname,dns_domain))
+            __add_dns_addr__ = lambda t,d : post_dns_record(dns_domain, dns_hostname, t, d)
+        else:
+            log.error('create_record: could not determine dns_hostname and/or dns_domain')
+            raise SaltCloudConfigError(
+                '\'create_dns_record\' must be a dict specifying "domain" and "hostname" or the minion name must be a FQDN.'
+            )
+            
+
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
@@ -414,12 +455,27 @@ def create(vm_):
             pass
         finally:
             raise SaltCloudSystemExit(str(exc))
-
-    for network in data['networks']['v4']:
-        if network['type'] == 'public':
-            ip_address = network['ip_address']
+    
+    # add DNS records, set ssh_host, default to first found IP, preferring IPv4 for ssh bootstrap script target
+    addr_familys, dns_arec_types =  ( ('v4','v6') , ('A','AAAA') )
+    arec_map = dict(zip(addr_familys, dns_arec_types))
+    for facing, addr_family, ip_address in [(net['type'],family,net['ip_address'])
+						for family in addr_familys for net in data['networks'][family]]:
+        log.info('found {} IP{} interface for "{}"'.format(facing, addr_family, ip_address))
+        dns_rec_type = arec_map[addr_family]
+        if facing == 'public':
+            dnsrv = None
+            if create_record:
+                dnsrv = __add_dns_addr__(dns_rec_type, ip_address)
+            if 'ssh_host' not in vm_ or not vm_['ssh_host']:
+                if dnsrv:
+                    log.info('ssh_host: using hostname={} for ssh bootstrap script remote execution.'.format(dns_hostname))
+                    vm_['ssh_host'] = dns_hostname
+                else:
+                    log.info('ssh_host: no hostname found, using IP address={} for ssh bootstrap script remote execution.'.format(ip_address))
+                    vm_['ssh_host'] = ip_address
+    
     vm_['key_filename'] = key_filename
-    vm_['ssh_host'] = ip_address
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data)
 
@@ -720,20 +776,18 @@ def destroy(name, call=None):
     return node
 
 
-def create_dns_record(hostname, ip_address):
+def post_dns_record(dns_domain, name, record_type, record_data):
     '''
-    Creates a DNS record for the given hostname if the domain is managed with DO.
+    Creates or updates a DNS record for the given name if the domain is managed with DO.
     '''
-    domainname = '.'.join(hostname.split('.')[-2:])
-    subdomain = '.'.join(hostname.split('.')[:-2])
-    domain = query(method='domains', droplet_id=domainname)
+    domain = query(method='domains', droplet_id=dns_domain)
 
     if domain:
         result = query(
             method='domains',
-            droplet_id=domainname,
+            droplet_id=dns_domain,
             command='records',
-            args={'type': 'A', 'name': subdomain, 'data': ip_address},
+            args={'type': record_type, 'name': name, 'data': record_data},
             http_method='post'
         )
         return result
@@ -741,12 +795,12 @@ def create_dns_record(hostname, ip_address):
     return False
 
 
-def delete_dns_record(hostname):
+def delete_dns_record(fqdn):
     '''
-    Deletes a DNS for the given hostname if the domain is managed with DO.
+    Deletes DNS records for the given hostname if the domain is managed with DO.
     '''
-    domainname = '.'.join(hostname.split('.')[-2:])
-    subdomain = '.'.join(hostname.split('.')[:-2])
+    domain = '.'.join(fqdn.split('.')[-2:])
+    hostname = '.'.join(fqdn.split('.')[:-2])
     records = query(method='domains', droplet_id=domainname, command='records')
 
     if records:
