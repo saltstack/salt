@@ -29,3 +29,12 @@ def __virtual__():
 
 def list_pkgs(versions_as_list=False, **kwargs):
     return __proxy__['ssh_sample.package_list']()
+
+
+def install(name=None, refresh=False, fromrepo=None,
+            pkgs=None, sources=None, **kwargs):
+    return __proxy__['ssh_sample.package_install'](name, **kwargs)
+
+
+def remove(name=None, pkgs=None, **kwargs):
+    return __proxy__['ssh_sample.package_remove'](name)
