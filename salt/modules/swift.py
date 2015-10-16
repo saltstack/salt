@@ -17,7 +17,6 @@ Inspired by the S3 and Nova modules
         # or
         keystone.auth_key: 203802934809284k2j34lkj2l3kj43k
 
-
     If configuration for multiple OpenStack accounts is required, they can be
     set up as different configuration profiles:
     For example::
@@ -85,7 +84,7 @@ def _auth(profile=None):
         os_auth_system = credentials.get('keystone.os_auth_system', None)
     else:
         user = __salt__['config.option']('keystone.user')
-        password = __salt__['config.option']('keystone.password')
+        password = __salt__['config.option']('keystone.password', None)
         tenant = __salt__['config.option']('keystone.tenant')
         auth_url = __salt__['config.option']('keystone.auth_url')
         auth_version = __salt__['config.option']('keystone.auth_version')
