@@ -100,14 +100,18 @@ def extracted(name,
     archive_user
         The user to own each extracted file.
 
-        .. deprecated:: 2014.7.2
+        .. deprecated:: Boron
             replaced by standardized `user` parameter.
 
     user
         The user to own each extracted file.
 
+        .. versionadded:: 2015.8.0
+
     group
         The group to own each extracted file.
+
+        .. versionadded:: 2015.8.0
 
     if_missing
         Some archives, such as tar, extract themselves in a subfolder.
