@@ -50,6 +50,7 @@ Full list of builtin state modules
     cyg
     ddns
     debconfmod
+    dellchassis
     disk
     dockerio
     dockerng
