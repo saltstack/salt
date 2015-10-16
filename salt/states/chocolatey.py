@@ -13,7 +13,7 @@ def __virtual__():
     return 'chocolatey' if 'chocolatey.install' in __salt__ else False
 
 
-def install(name, version=None, source=None, force=False, install_args=None,
+def installed(name, version=None, source=None, force=False, install_args=None,
             override_args=False, force_x86=False):
 
     '''
@@ -48,7 +48,7 @@ def install(name, version=None, source=None, force=False, install_args=None,
     .. code-block:: yaml
 
         Installsomepackage:
-          chocolatey.install:
+          chocolatey.installed:
             - name: packagename
             - version: '12.04'
             - source: 'mychocolatey/source'
@@ -95,7 +95,7 @@ def install(name, version=None, source=None, force=False, install_args=None,
     return ret
 
 
-def uninstall(name, version=None, uninstall_args=None, override_args=False):
+def uninstalled(name, version=None, uninstall_args=None, override_args=False):
     '''
     Uninstalls a package
 
@@ -119,7 +119,7 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     .. code-block: yaml
 
       Removemypackage:
-        chocolatey.uninstall:
+        chocolatey.uninstalled:
           - name: mypackage
           - version: '21.5'
 
