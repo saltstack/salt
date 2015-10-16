@@ -179,10 +179,10 @@ class ScheduleTestCase(TestCase):
                                               'comment': 'Job job1 in correct state',
                                               'result': True})
                     elif sys.version_info[1] >= 6:
-                        self.assertDictEqual(schedule.modify('job1', function='test.ping'),
-                                {'changes': {'diff': '---  \n+++  \n@@ -1,4 +1,3 @@\n-enabled:True\n function:test.ping\n jid_include:True\n maxrunning:1\n'},
-                                              'comment': 'Modified job: job1 in schedule.',
-                                              'result': True})
+                        self.assertDictEqual(schedule.modify('job1', function='test.ping', seconds=2600),
+                                {'changes': {'diff': '---  \n+++  \n@@ -3,3 +3,4 @@\n jid_include:True\n maxrunning:1\n name:job1\n+seconds:2600\n'},
+                                             'comment': 'Modified job: job1 in schedule.',
+                                             'result': True})
 
                     ret = schedule.modify('job3', function='test.ping', test=True)
                     if 'diff' in ret['changes']:
