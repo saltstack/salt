@@ -37,13 +37,13 @@ To install using the SaltStack repository:
 
    .. code-block:: bash
 
-       deb http://repo.saltstack.com/apt/ubuntu/latest/ubuntu14 trusty main
+       deb http://repo.saltstack.com/apt/ubuntu/ubuntu14/latest trusty main
 
    Ubuntu 12:
 
    .. code-block:: bash
 
-       deb http://repo.saltstack.com/apt/ubuntu/latest/ubuntu12 precise main
+       deb http://repo.saltstack.com/apt/ubuntu/ubuntu12/latest precise main
 
 #. Run ``sudo apt-get update``.
 
