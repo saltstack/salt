@@ -1,6 +1,15 @@
 # -*- coding: utf-8 -*-
 '''
-Glue execution module to link to the fx2 proxymodule.
+Glue execution module to link to the :doc:`fx2 proxymodule </ref/proxy/all/salt.proxy.fx2>`.
+
+Depends: :doc:`iDRAC Remote execution module (salt.modules.dracr) </ref/modules/all/salt.modules.dracr>`
+
+For documentation on commands that you can direct to a Dell chassis via proxy,
+look in the documentation for :doc:`salt.modules.dracr </ref/modules/all/salt.modules.dracr>`.
+
+This execution module calls through to a function in the fx2 proxy module
+called ``chconfig``.  That function looks up the function passed in the ``cmd``
+parameter in :doc:`salt.modules.dracr </ref/modules/all/salt.modules.dracr>` and calls it.
 
 .. versionadded:: 2015.8.2
 '''
