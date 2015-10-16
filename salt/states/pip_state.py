@@ -104,7 +104,7 @@ def _check_pkg_version_format(pkg):
     if not HAS_PIP:
         ret['comment'] = (
             'An importable pip module is required but could not be found on '
-            'your system. This usually means that the system''s pip package '
+            'your system. This usually means that the system\'s pip package '
             'is not installed properly.'
         )
 
@@ -173,7 +173,7 @@ def _check_if_installed(prefix, state_pkg_name, version_spec,
     # result: False means the package is not installed
     ret = {'result': False, 'comment': None}
 
-    # Check if the requested packated is already installed.
+    # Check if the requested package is already installed.
     try:
         pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
                                         user=user, cwd=cwd)
@@ -591,7 +591,6 @@ def installed(name,
     target_pkgs = []
     already_installed_comments = []
     if requirements or editable:
-        name = ''
         comments = []
         # Append comments if this is a dry run.
         if __opts__['test']:
@@ -620,6 +619,12 @@ def installed(name,
                 out = _check_if_installed(prefix, state_pkg_name, version_spec,
                                           ignore_installed, force_reinstall,
                                           upgrade, user, cwd, bin_env)
+                # If _check_if_installed result is None, something went wrong with
+                # the command running. This way we keep stateful output.
+                if out['result'] is None:
+                    ret['result'] = False
+                    ret['comment'] = out['comment']
+                    return ret
             else:
                 out = {'result': False, 'comment': None}
 
