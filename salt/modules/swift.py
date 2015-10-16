@@ -7,7 +7,7 @@ Inspired by the S3 and Nova modules
 
 :depends:   - swiftclient Python module
 :configuration: This module is not usable until the user, tenant, auth URL, and password or auth_key
-                are specified either in a pillar or in the minion's config file.
+    are specified either in a pillar or in the minion's config file.
     For example::
 
         keystone.user: admin
