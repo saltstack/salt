@@ -46,9 +46,6 @@ def init(opts):
                                           password=__opts__['proxy']['password'])
         out, err = DETAILS['server'].sendline('help')
 
-        log.debug(out)
-        log.debug(err)
-
     except TerminalException as e:
         log.error(e)
         return False
@@ -60,6 +57,7 @@ def shutdown(opts):
     Disconnect
     '''
     DETAILS['server'].close_connection()
+
 
 def package_list():
     '''
@@ -81,7 +79,7 @@ def package_list():
         if '{' in l:
             in_json = True
         if in_json:
-           jsonret.append(l)
+            jsonret.append(l)
         if '}' in l:
             in_json = False
     return json.loads('\n'.join(jsonret))
