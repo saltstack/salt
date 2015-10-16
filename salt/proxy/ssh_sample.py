@@ -49,7 +49,6 @@ def init(opts):
     except TerminalException as e:
         log.error(e)
         return False
-    pass
 
 
 def shutdown(opts):
