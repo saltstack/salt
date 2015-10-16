@@ -366,7 +366,7 @@ def create(vm_):
     create_dns_record = config.get_cloud_config_value(
         'create_dns_record', vm_, __opts__, search_global=False, default=None,
     )
-
+    
     if create_dns_record:
         log.info('create_dns_record: will attempt to write DNS records')
         default_dns_hostname = None
@@ -377,9 +377,9 @@ def create(vm_):
             default_dns_hostname = '.'.join(dnsdomainname[:-2])
             default_dns_domain = '.'.join(dnsdomainname[-2:])
         else:
-            log.debug("create_dns_record: can't infer dns_domain from {0}".format(vm_['name']))
+            log.debug("create_dns_record: can't infer dns_domain from {}".format(vm_['name']))
             default_dns_hostname = dnsdomainname[0]
-
+        
         dns_hostname = config.get_cloud_config_value(
                 'dns_hostname', vm_, __opts__, search_global=False, default=default_dns_hostname,
             )
@@ -387,14 +387,15 @@ def create(vm_):
                 'dns_domain', vm_, __opts__, search_global=False, default=default_dns_domain,
             )
         if dns_hostname and dns_domain:
-            log.info('create_dns_record: using dns_hostname="{0}", dns_domain="{1}"'.format(dns_hostname, dns_domain))
-            __add_dns_addr__ = lambda t, d: post_dns_record(dns_domain, dns_hostname, t, d)
-            log.debug('create_dns_record: {0}'.format(__add_dns_addr__))
+            log.info('create_dns_record: using dns_hostname="{}", dns_domain="{}"'.format(dns_hostname,dns_domain))
+            __add_dns_addr__ = lambda t,d : post_dns_record(dns_domain, dns_hostname, t, d)
+            log.debug('create_dns_record: {}'.format(pprint.pformat(__add_dns_addr__)))
         else:
             log.error('create_dns_record: could not determine dns_hostname and/or dns_domain')
             raise SaltCloudConfigError(
                 '\'create_dns_record\' must be a dict specifying "domain" and "hostname" or the minion name must be a FQDN.'
             )
+            
 
     salt.utils.cloud.fire_event(
         'event',
@@ -447,14 +448,13 @@ def create(vm_):
             pass
         finally:
             raise SaltCloudSystemExit(str(exc))
-
+    
     # add DNS records, set ssh_host, default to first found IP, preferring IPv4 for ssh bootstrap script target
-    addr_families, dns_arec_types = (('v4', 'v6'), ('A', 'AAAA'))
-    arec_map = dict(zip(addr_families, dns_arec_types))
-    for facing, addr_family, ip_address in [(net['type'], family, net['ip_address'])
-                                            for family in addr_families
-                                            for net in data['networks'][family]]:
-        log.info('found {0} IP{1} interface for "{2}"'.format(facing, addr_family, ip_address))
+    addr_familys, dns_arec_types =  ( ('v4','v6') , ('A','AAAA') )
+    arec_map = dict(zip(addr_familys, dns_arec_types))
+    for facing, addr_family, ip_address in [(net['type'],family,net['ip_address'])
+						for family in addr_familys for net in data['networks'][family]]:
+        log.info('found {} IP{} interface for "{}"'.format(facing, addr_family, ip_address))
         dns_rec_type = arec_map[addr_family]
         if facing == 'public':
             dnsrv = None
@@ -462,7 +462,7 @@ def create(vm_):
                 dnsrv = __add_dns_addr__(dns_rec_type, ip_address)
             if 'ssh_host' not in vm_ or not vm_['ssh_host']:
                 vm_['ssh_host'] = ip_address
-
+    
     vm_['key_filename'] = key_filename
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data)
@@ -738,12 +738,9 @@ def destroy(name, call=None):
     data = show_instance(name, call='action')
     node = query(method='droplets', droplet_id=data['id'], http_method='delete')
 
-    ## This is all terribly optomistic:
-    # vm_ = get_vm_config(name=name)
-    # delete_dns_record = config.get_cloud_config_value(
-    #     'delete_dns_record', vm_, __opts__, search_global=False, default=None,
-    # )
-    delete_dns_record = True
+    delete_dns_record = config.get_cloud_config_value(
+        'delete_dns_record', get_configured_provider(), __opts__, search_global=False, default=None,
+    )
 
     if delete_dns_record and not isinstance(delete_dns_record, bool):
         raise SaltCloudConfigError(
@@ -751,12 +748,10 @@ def destroy(name, call=None):
         )
 
     if delete_dns_record:
-        log.debug('Deleting DNS records for {0}.'.format(name))
-        destroy_dns_records(name)
+        log.debug('Deleting DNS records for {}.'.format(name))
+        delete_dns_record(name)
     else:
-        log.debug('delete_dns_record : {0}'.format(delete_dns_record))
-        for line in pprint.pformat(dir()).splitlines():
-            log.debug('delete  context: {0}'.format(line))
+        log.debug('delete_dns_record : {}'.format(delete_dns_record))
 
     salt.utils.cloud.fire_event(
         'event',
@@ -790,88 +785,32 @@ def post_dns_record(dns_domain, name, record_type, record_data):
 
     return False
 
-# Delete this with create_dns_record() and delete_dns_record() for Carbon release
-__deprecated_fqdn_parsing = lambda fqdn: ('.'.join(fqdn.split('.')[-2:]), '.'.join(fqdn.split('.')[:-2]))
 
-
-def create_dns_record(hostname, ip_address):
-    salt.utils.warn_until(
-        'Carbon',
-        'create_dns_record() is deprecated and will be removed in Carbon. Please use post_dns_record() instead.'
-    )
-    return __deprecated_create_dns_record(hostname, ip_address)
-
-
-def __deprecated_create_dns_record(hostname, ip_address):
-    domainname, subdomain = __deprecated_fqdn_parsing(hostname)
-    domain = query(method='domains', droplet_id=domainname)
-
-    if domain:
-        result = query(
-            method='domains',
-            droplet_id=domainname,
-            command='records',
-            args={'type': 'A', 'name': subdomain, 'data': ip_address},
-            http_method='post'
-        )
-        return result
-
-    return False
-
-
-def destroy_dns_records(fqdn):
+def delete_dns_record(fqdn):
     '''
     Deletes DNS records for the given hostname if the domain is managed with DO.
     '''
     domain = '.'.join(fqdn.split('.')[-2:])
     hostname = '.'.join(fqdn.split('.')[:-2])
     response = query(method='domains', droplet_id=domain, command='records')
-    log.debug("found DNS records: {0}".format(pprint.pformat(response)))
+    log.debug("found DNS records: {}".format(pprint.pformat(response)))
     records = response['domain_records']
 
     if records:
         record_ids = [r['id'] for r in records if r['name'].decode() == hostname]
-        log.debug("deleting DNS record IDs: {0}".format(repr(record_ids)))
+        log.debug("deleting DNS record IDs: {}".format(repr(record_ids)))
         for id in record_ids:
             try:
-                log.info('deleting DNS record {0}'.format(id))
-                ret = query(
-                    method='domains',
-                    droplet_id=domain,
-                    command='records/{0}'.format(id),
-                    http_method='delete'
-                )
-            except SaltCloudSystemExit:
-                log.error('failed to delete DNS domain {0} record ID {1}.'.format(domain, hostname))
-            log.debug('DNS deletion REST call returned: {0}'.format(pprint.pformat(ret)))
-
-    return False
-
-
-def delete_dns_record(hostname):
-    salt.utils.warn_until(
-        'Carbon',
-        'delete_dns_record() is deprecated and will be removed in Carbon. Please use destroy_dns_records() instead.'
-    )
-    return __deprecated_delete_dns_record(hostname)
-
-
-def __deprecated_delete_dns_record(hostname):
-    '''
-    Deletes a DNS for the given hostname if the domain is managed with DO.
-    '''
-    domainname, subdomain = __deprecated_fqdn_parsing(hostname)
-    records = query(method='domains', droplet_id=domainname, command='records')
-
-    if records:
-        for record in records['domain_records']:
-            if record['name'] == subdomain:
+                log.info('deleting DNS record {}'.format(id))
                 return query(
                     method='domains',
-                    droplet_id=domainname,
-                    command='records/' + str(record['id']),
+                    droplet_id=domain,
+                    command='records/{}'.format(id),
                     http_method='delete'
                 )
+            except:
+                log.error('failed to delete DNS domain {} record ID {}.'.format(domain, hostname))
+
     return False
 
 
