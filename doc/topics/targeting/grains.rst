@@ -200,9 +200,10 @@ change, consider using :doc:`Pillar <../pillar/index>` instead.
 Loading Custom Grains
 ---------------------
 
-If you have more than one function specifying grains and calling those functions
-in a custom grains file, be sure to prepend function names with an underscore.
-This prevents Salt from loading grains more than once. For example:
+If you have multiple functions specifying grains that are called from a ``main``
+function, be sure to prepend grain function names with an underscore. This prevents
+Salt from including the loaded grains from the grain functions in the final
+grain data structure. For example, consider this custom grain file:
 
 .. code-block:: python
 
@@ -222,9 +223,10 @@ The output of this example renders like so:
 
 .. code-block:: bash
 
-    # salt-call --local grains.item my_grains
+    # salt-call --local grains.items
     local:
         ----------
+        <Snipped for brevity>
         my_grains:
             ----------
             foo:
@@ -233,8 +235,9 @@ The output of this example renders like so:
                 world
 
 However, if you don't prepend the ``my_custom_grain`` function with an underscore,
-the function will be loaded twice by Salt: once for the ``my_custom_grain`` call
-itself, and again when it is called in the ``main`` function:
+the function will be rendered twice by Salt in the items output: once for the
+``my_custom_grain`` call itself, and again when it is called in the ``main``
+function:
 
 .. code-block:: bash
 
