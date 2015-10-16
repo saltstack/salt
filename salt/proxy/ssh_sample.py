@@ -13,9 +13,12 @@ import logging
 
 # Import Salt's libs
 from salt.utils.vt_helper import SSHConnection
+from salt.utils.vt import TerminalException
 
 # This must be present or the Salt loader won't load this module
 __proxyenabled__ = ['ssh_sample']
+
+DETAILS = {}
 
 # Want logging!
 log = logging.getLogger(__file__)
@@ -28,6 +31,7 @@ def __virtual__():
     Only return if all the modules are available
     '''
     log.info('ssh_sample proxy __virtual__() called...')
+
     return True
 
 
@@ -36,16 +40,26 @@ def init(opts):
     Required.
     Can be used to initialize the server connection.
     '''
+    try:
+        DETAILS['server'] = SSHConnection(host=__opts__['proxy']['host'],
+                                          username=__opts__['proxy']['username'],
+                                          password=__opts__['proxy']['password'])
+        out, err = DETAILS['server'].sendline('help')
+
+        log.debug(out)
+        log.debug(err)
+
+    except TerminalException as e:
+        log.error(e)
+        return False
     pass
 
 
 def shutdown(opts):
     '''
-    Required.
-    Can be used to dispose the server connection.
+    Disconnect
     '''
-    pass
-
+    DETAILS['server'].close_connection()
 
 def package_list():
     '''
@@ -56,19 +70,18 @@ def package_list():
         salt target_minion pkg.list_pkgs
 
     '''
-    # This method shows the full sequence from
-    # initializing a connection, executing a command,
-    # parsing the output and closing the connection.
-    # In production these steps can (and probably should)
-    # be in separate methods.
-
-    # Create the server connection
-    server = SSHConnection(host='salt',
-                           username='salt',
-                           password='password')
 
     # Send the command to execute
-    out, err = server.sendline('pkg_list')
+    out, err = DETAILS['server'].sendline('pkg_list')
 
+    jsonret = []
+    in_json = False
     # "scrape" the output and return the right fields as a dict
-    return json.loads(out[9:-7])
+    for l in out.split():
+        if '{' in l:
+            in_json = True
+        if in_json:
+           jsonret.append(l)
+        if '}' in l:
+            in_json = False
+    return json.loads('\n'.join(jsonret))
