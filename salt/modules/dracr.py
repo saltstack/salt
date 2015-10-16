@@ -608,8 +608,8 @@ def set_permissions(username, permissions,
 def set_snmp(community, host=None,
              admin_username=None, admin_password=None):
     '''
-    Configure CMC or individual iDRAC SNMP community string
-    Use `deploy_snmp` for configuring chassis switch SNMP
+    Configure CMC or individual iDRAC SNMP community string.
+    Use ``deploy_snmp`` for configuring chassis switch SNMP.
 
     CLI Example:
 
@@ -628,7 +628,7 @@ def set_network(ip, netmask, gateway, host=None,
                 admin_username=None, admin_password=None):
     '''
     Configure Network on the CMC or individual iDRAC.
-    Use `set_niccfg` for blade and switch addresses.
+    Use ``set_niccfg`` for blade and switch addresses.
 
     CLI Example:
 

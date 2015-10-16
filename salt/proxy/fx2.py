@@ -16,6 +16,7 @@ Dependencies
 - :doc:`iDRAC Remote execution module (salt.modules.dracr) </ref/modules/all/salt.modules.dracr>`
 - :doc:`Chassis command shim (salt.modules.chassis) </ref/modules/all/salt.modules.chassis>`
 - :doc:`Dell Chassis States (salt.states.dellchassis) </ref/states/all/salt.states.dellchassis>`
+- Dell's ``racadm`` command line interface to CMC and iDRAC devices.
 
 
 **Special Note: SaltStack thanks** `Adobe Corporation <http://adobe.com/>`_
@@ -32,7 +33,7 @@ process that "proxies" communication from the salt-master.  The master does not
 know nor care that the target is not a real minion.
 
 More in-depth conceptual reading on Proxy Minions can be found
-:doc:`here </topics/proxyminion/index>` in
+:doc:`in the Proxy Minion section </topics/proxyminion/index>` of
 Salt's documentation.
 
 To configure this integration, follow these steps:
@@ -53,25 +54,36 @@ look like this:
       admin_password: <iDRAC password.  Dell default is 'calvin'>
       proxytype: fx2
 
-The `proxytype` line above is critical, it tells Salt which interface to load
-from the `proxy` directory in Salt's install heirarchy, or from `/srv/salt/_proxy`
+The ``proxytype`` line above is critical, it tells Salt which interface to load
+from the ``proxy`` directory in Salt's install hierarchy, or from ``/srv/salt/_proxy``
 on the salt-master (if you have created your own proxy module, for example).
 
 salt-proxy
 ----------
 
-After your pillar is in place, you can test the proxy.  If your salt-master
-has network connectivity to the chassis in question you can start the proxy
-on the salt master with
+After your pillar is in place, you can test the proxy.  The proxy can run on
+any machine that has network connectivity to your salt-master and to the chassis in question.
+SaltStack recommends that this machine also run a regular minion, though
+it is not strictly necessary.
+
+On the machine that will run the proxy, make sure there is an ``/etc/salt/proxy``
+file with at least the following in it:
+
+.. code-block:: yaml
+
+    master: <ip or hostname of salt-master>
+
+You can start the proxy with
 
 .. code-block:: bash
 
     salt-proxy --proxyid <id you want to give the chassis>
 
-You may want to add `-l debug` to run the above in the foreground in debug
+You may want to add ``-l debug`` to run the above in the foreground in debug
 mode just to make sure everything is OK.
 
-Next, accept the key for the proxy, just like you would for a regular minion:
+Next, accept the key for the proxy on your salt-master, just like you would
+for a regular minion:
 
 .. code-block:: bash
 
@@ -100,19 +112,32 @@ Note that you don't need to provide credentials or an ip/hostname.  Salt knows
 to use the credentials you stored in Pillar.
 
 It's important to understand how this particular proxy works.
-:ref:<salt.modules.dracr `salt.modules.dracr`> is a standard Salt execution
+:doc:`Salt.modules.dracr </ref/modules/all/salt.modules.dracr>` is a standard Salt execution
 module.  If you pull up the docs for it you'll see that almost every function
 in the module takes credentials and a target host.  When credentials and a host
-aren't passed, Salt runs `racadm` against the local machine.  If you wanted
+aren't passed, Salt runs ``racadm`` against the local machine.  If you wanted
 you could run functions from this module on any host where an appropriate
-version of `racadm` is installed, and that host would reach out over the network
+version of ``racadm`` is installed, and that host would reach out over the network
 and communicate with the chassis.
 
-`Chassis.cmd` acts as a "shim" between the execution module and the proxy.  It's
+``Chassis.cmd`` acts as a "shim" between the execution module and the proxy.  It's
 first parameter is always the function from salt.modules.dracr to execute.  If the
 function takes more positional or keyword arguments you can append them to the call.
 It's this shim that speaks to the chassis through the proxy, arranging for the
 credentials and hostname to be pulled from the pillar section for this proxy minion.
+
+Because of the presence of the shim, to lookup documentation for what
+functions you can use to interface with the chassis, you'll want to
+look in :doc:`salt.modules.dracr </ref/modules/all/salt.modules.dracr>` instead
+of :doc:`salt.modules.chassis </ref/modules/all/salt.modules.chassis>`.
+
+States
+------
+
+Associated states are thoroughly documented in :doc:`salt.states.dellchassis </ref/states/all/salt.states.dellchassis>`.
+Look there to find an example structure for pillar as well as an example
+``.sls`` file for standing up a Dell Chassis from scratch.
+
 '''
 from __future__ import absolute_import
 
@@ -179,7 +204,7 @@ def grains_refresh():
 def chconfig(cmd, *args, **kwargs):
     '''
     This function is called by the :doc:`salt.modules.chassis.cmd </ref/modules/all/salt.modules.chassis>`
-    shim.  It then calls whatever is passed in `cmd`
+    shim.  It then calls whatever is passed in ``cmd``
     inside the :doc:`salt.modules.dracr </ref/modules/all/salt.modules.dracr>`
     module.
 
