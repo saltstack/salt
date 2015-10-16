@@ -70,7 +70,6 @@ class SaltSwift(object):
             tenant_name,
             auth_url,
             password=None,
-            auth_version=2,
             **kwargs
     ):
         '''
@@ -85,9 +84,10 @@ class SaltSwift(object):
         self.kwargs['password'] = password
         self.kwargs['tenant_name'] = tenant_name
         self.kwargs['authurl'] = auth_url
-        self.kwargs['auth_version'] = auth_version
         if 'key' not in self.kwargs:
             self.kwargs['key'] = password
+        if 'auth_version' not in self.kwargs:
+            self.kwargs['auth_version'] = 2
 
         self.kwargs = _sanitize(self.kwargs)
 
