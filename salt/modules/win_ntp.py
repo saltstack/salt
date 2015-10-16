@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Management of NTP servers on Windows
+Management of Windows Time Service's upstream time servers
 
 .. versionadded:: 2014.1.0
 '''
@@ -15,7 +15,7 @@ import salt.utils
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'ntp'
+__virtualname__ = 'win_ntp'
 
 
 def __virtual__():
@@ -29,13 +29,13 @@ def __virtual__():
 
 def set_servers(*servers):
     '''
-    Set Windows to use a list of NTP servers
+    Set Windows Time Service to use a list of NTP servers
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' ntp.set_servers 'pool.ntp.org' 'us.pool.ntp.org'
+        salt '*' win_ntp.set_servers 'pool.ntp.org' 'us.pool.ntp.org'
     '''
     service_name = 'w32time'
     if not __salt__['service.status'](service_name):
@@ -58,13 +58,13 @@ def set_servers(*servers):
 
 def get_servers():
     '''
-    Get list of configured NTP servers
+    Get list of NTP servers configured in Windows Time Service
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' ntp.get_servers
+        salt '*' win_ntp.get_servers
     '''
     cmd = ['w32tm', '/query', '/configuration']
     lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
