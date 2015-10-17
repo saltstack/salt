@@ -58,6 +58,26 @@ def shutdown(opts):
     DETAILS['server'].close_connection()
 
 
+def parse(out):
+    '''
+    Extract json from out.
+
+    Parameter
+        out: Type string. The data returned by the
+        ssh command.
+    '''
+    jsonret = []
+    in_json = False
+    for ln_ in out.split('\n'):
+        if '{' in ln_:
+            in_json = True
+        if in_json:
+            jsonret.append(ln_)
+        if '}' in ln_:
+            in_json = False
+    return json.loads('\n'.join(jsonret))
+
+
 def package_list():
     '''
     List "packages" by executing a command via ssh
@@ -67,18 +87,38 @@ def package_list():
         salt target_minion pkg.list_pkgs
 
     '''
-
     # Send the command to execute
     out, err = DETAILS['server'].sendline('pkg_list')
 
-    jsonret = []
-    in_json = False
     # "scrape" the output and return the right fields as a dict
-    for l in out.split():
-        if '{' in l:
-            in_json = True
-        if in_json:
-            jsonret.append(l)
-        if '}' in l:
-            in_json = False
-    return json.loads('\n'.join(jsonret))
+    return parse(out)
+
+
+def package_install(name, **kwargs):
+    '''
+    Install a "package" on the REST server
+    '''
+    cmd = 'pkg_install ' + name
+    if 'version' in kwargs:
+        cmd += '/'+kwargs['version']
+    else:
+        cmd += '/1.0'
+
+    # Send the command to execute
+    out, err = DETAILS['server'].sendline(cmd)
+
+    # "scrape" the output and return the right fields as a dict
+    return parse(out)
+
+
+def package_remove(name):
+    '''
+    Remove a "package" on the REST server
+    '''
+    cmd = 'pkg_remove ' + name
+
+    # Send the command to execute
+    out, err = DETAILS['server'].sendline(cmd)
+
+    # "scrape" the output and return the right fields as a dict
+    return parse(out)
