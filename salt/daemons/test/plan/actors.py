@@ -12,7 +12,7 @@ from collections import deque
 
 # Import ioflo libs
 import ioflo.base.deeding
-from ioflo.base.odicting import odict
+from ioflo.aid.odicting import odict
 
 from ioflo.base.consoling import getConsole
 console = getConsole()

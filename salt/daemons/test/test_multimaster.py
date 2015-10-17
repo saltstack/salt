@@ -19,7 +19,7 @@ import time
 import tempfile
 import shutil
 
-from ioflo.base.odicting import odict
+from ioflo.aid.odicting import odict
 from ioflo.base.aiding import Timer, StoreTimer
 from ioflo.base import storing
 from ioflo.base.consoling import getConsole

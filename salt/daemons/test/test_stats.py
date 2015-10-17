@@ -14,7 +14,7 @@ import time
 
 from ioflo.base.consoling import getConsole
 console = getConsole()
-from ioflo.base.odicting import odict
+from ioflo.aid.odicting import odict
 from ioflo.test import testing
 
 from raet.abiding import ns2u
