@@ -77,3 +77,6 @@ tests/unit/templates/roots
 
 # Pycharm
 .idea
+
+# Ignore the log directory created by tests
+/logs
