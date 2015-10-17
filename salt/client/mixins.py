@@ -10,6 +10,7 @@ import weakref
 import traceback
 import collections
 import multiprocessing
+import tornado.stack_context
 
 # Import Salt libs
 import salt.exceptions
@@ -333,8 +334,10 @@ class SyncClientMixin(object):
             else:
                 kwargs = low['kwargs']
 
-            data['return'] = self.functions[fun](*args, **kwargs)
-            data['success'] = True
+            # Initialize a context for executing the method.
+            with tornado.stack_context.StackContext(self.functions.context_dict.clone):
+                data['return'] = self.functions[fun](*args, **kwargs)
+                data['success'] = True
         except (Exception, SystemExit) as ex:
             if isinstance(ex, salt.exceptions.NotImplemented):
                 data['return'] = str(ex)
