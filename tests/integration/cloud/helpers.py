@@ -1,5 +1,6 @@
 import unittest
-import virtualbox
+
+from cloud.clouds import virtualbox
 
 
 class VirtualboxTestCase(unittest.TestCase):

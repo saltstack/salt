@@ -2,9 +2,9 @@
 # being in PYTHONPATH, or installed system-wide
 import unittest
 import logging
-from tests.helpers import VirtualboxTestCase
 
-import virtualbox
+from integration.cloud.helpers import VirtualboxTestCase
+from cloud.clouds import virtualbox
 
 log = logging.getLogger()
 log_handler = logging.StreamHandler()

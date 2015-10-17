@@ -18,8 +18,8 @@ Dicts provided by salt:
 import logging
 
 # Import salt libs
-import salt.config as config
-import salt.utils.cloud
+import config as config
+import utils.cloud
 
 log = logging.getLogger(__name__)
 
@@ -120,7 +120,7 @@ def create(vm_info):
         log.error('"clone_from" not in profile configuration!')
         return False
 
-    salt.utils.cloud.fire_event(
+    utils.cloud.fire_event(
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_info['name']),
@@ -139,7 +139,7 @@ def create(vm_info):
         'clone_from': vm_info['clone_from']
     }
 
-    salt.utils.cloud.fire_event(
+    utils.cloud.fire_event(
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_info['name']),
@@ -155,7 +155,7 @@ def create(vm_info):
     deploy_kwargs = {
     }
 
-    salt.utils.cloud.fire_event(
+    utils.cloud.fire_event(
         'event',
         'deploying salt',
         'salt/cloud/{0}/deploying'.format(vm_info['name']),
@@ -170,9 +170,9 @@ def create(vm_info):
     # TODO wait for target machine to become available
     # TODO deploy!
     # Do we have to call this?
-    salt.utils.cloud.deploy_script(None, **deploy_kwargs)
+    utils.cloud.deploy_script(None, **deploy_kwargs)
 
-    salt.utils.cloud.fire_event(
+    utils.cloud.fire_event(
         'event',
         'created machine',
         'salt/cloud/{0}/created'.format(vm_info['name']),
