@@ -30,7 +30,7 @@ from salt.utils import kinds, is_windows
 from salt.utils.event import tagify
 
 # Import ioflo libs
-from ioflo.base.odicting import odict
+from ioflo.aid.odicting import odict
 import ioflo.base.deeding
 
 from ioflo.base.consoling import getConsole
