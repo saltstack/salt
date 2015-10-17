@@ -15,6 +15,7 @@ import fnmatch
 import logging
 import threading
 import traceback
+import contextlib
 import multiprocessing
 from random import randint, shuffle
 from salt.config import DEFAULT_MINION_OPTS
@@ -988,10 +989,18 @@ class Minion(MinionBase):
         else:
             self.win_proc.append(process)
 
+    def ctx(self):
+        '''Return a single context manager for the minion's data
+        '''
+        return contextlib.nested(
+            self.functions.context_dict.clone(),
+            self.returners.context_dict.clone(),
+            self.executors.context_dict.clone(),
+        )
+
     @classmethod
     def _target(cls, minion_instance, opts, data):
-        # TODO: clone all contexts? Should be one per loader :/
-        with tornado.stack_context.StackContext(minion_instance.functions.context_dict.clone):
+        with tornado.stack_context.StackContext(minion_instance.ctx):
             if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
                 Minion._thread_multi_return(minion_instance, opts, data)
             else:
