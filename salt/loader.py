@@ -1020,7 +1020,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     # if we do, we want it if we have a higher precidence ext
                     else:
                         curr_ext = self.file_mapping[f_noext][1]
-                        if suffix_order.index(ext) < suffix_order.index(curr_ext):
+                        #log.debug("****** curr_ext={0} ext={1} suffix_order={2}".format(curr_ext, ext, suffix_order))
+                        if curr_ext and suffix_order.index(ext) < suffix_order.index(curr_ext):
                             self.file_mapping[f_noext] = (fpath, ext)
                 except OSError:
                     continue
