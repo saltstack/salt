@@ -28,6 +28,7 @@ import salt.utils.context
 import salt.utils.lazy
 import salt.utils.event
 import salt.utils.odict
+import salt.utils.dictupdate
 
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
@@ -665,7 +666,7 @@ def grains(opts, force_refresh=False, proxy=None):
         ret = fun()
         if not isinstance(ret, dict):
             continue
-        grains_data.update(ret)
+        salt.utils.dictupdate.update(grains_data, ret)
 
     # Run the rest of the grains
     for key, fun in six.iteritems(funcs):
@@ -684,7 +685,7 @@ def grains(opts, force_refresh=False, proxy=None):
             continue
         if not isinstance(ret, dict):
             continue
-        grains_data.update(ret)
+        salt.utils.dictupdate.update(grains_data, ret)
 
     # Write cache if enabled
     if opts.get('grains_cache', False):
@@ -705,7 +706,7 @@ def grains(opts, force_refresh=False, proxy=None):
             log.error(msg.format(cfn))
         os.umask(cumask)
 
-    grains_data.update(opts['grains'])
+    salt.utils.dictupdate.update(grains_data, opts['grains'])
     return grains_data
 
 
