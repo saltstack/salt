@@ -36,6 +36,9 @@ except ImportError:
     VirtualBoxManager = None
     log.error("Couldn't import VirtualBox API")
 
+"""
+The name salt will identify the lib by
+"""
 __virtualname__ = 'virtualbox'
 _virtualboxManager = None
 
@@ -105,7 +108,7 @@ def create(vm_info):
         # TODO should this be a call to config.is_provider_configured ?
         if vm_info['profile'] and config.is_profile_configured(
                 __opts__,
-                        __active_provider_name__ or 'virtualbox',
+                __active_provider_name__ or 'virtualbox',
                 vm_info['profile']
         ) is False:
             return False
