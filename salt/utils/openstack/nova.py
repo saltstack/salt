@@ -18,6 +18,7 @@ try:
         from novaclient.v2 import client
     except ImportError:
         from novaclient.v1_1 import client
+    from novaclient import client as nclient
     from novaclient.shell import OpenStackComputeShell
     import novaclient.utils
     import novaclient.auth_plugin
@@ -137,7 +138,7 @@ class SaltNova(OpenStackComputeShell):
         self.kwargs = kwargs.copy()
 
         if not novaclient.base.Manager._hooks_map:
-            self.extensions = self._discover_extensions('1.1')
+            self.extensions = nclient.discover_extensions('1.1')
             for extension in self.extensions:
                 extension.run_hooks('__pre_parse_args__')
             self.kwargs['extensions'] = self.extensions
