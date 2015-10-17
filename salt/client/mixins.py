@@ -84,13 +84,13 @@ class ClientFuncsDict(collections.MutableMapping):
 
             user = salt.utils.get_specific_user()
             return self.client._proc_function(
-                   key,
-                   low,
-                   user,
-                   async_pub['tag'],  # TODO: fix
-                   async_pub['jid'],  # TODO: fix
-                   False,  # Don't daemonize
-                   )
+                key,
+                low,
+                user,
+                async_pub['tag'],  # TODO: fix
+                async_pub['jid'],  # TODO: fix
+                False,  # Don't daemonize
+            )
         return wrapper
 
     def __len__(self):
