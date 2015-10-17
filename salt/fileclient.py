@@ -582,7 +582,6 @@ class Client(object):
             except Exception as exc:
                 raise MinionError('Could not retrieve {0} from FTP server. Exception: {1}'.format(url, exc))
 
-
         if url_data.scheme == 'swift':
             try:
                 swift_conn = SaltSwift(self.opts.get('keystone.user', None),
