@@ -574,7 +574,8 @@ class Client(object):
             try:
                 ftp = ftplib.FTP(url_data.hostname)
                 ftp.login()
-                ftp.retrbinary('RETR {0}'.format(url_data.path), salt.utils.fopen(dest, 'wb').write)
+                with salt.utils.fopen(dest, 'wb') as fp_:
+                    ftp.retrbinary('RETR {0}'.format(url_data.path), fp_.write)
                 return dest
             except Exception as exc:
                 raise MinionError('Could not retrieve {0} from FTP server. Exception: {1}'.format(url, exc))
