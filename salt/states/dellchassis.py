@@ -35,7 +35,6 @@ def __virtual__():
     return 'chassis.cmd' in __salt__
 
 
-
 def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
                 idrac_ip=None, idrac_netmask=None, idrac_gateway=None,
                 drac_dhcp=None):
@@ -53,7 +52,8 @@ def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
     :return: A standard Salt changes dictionary
     '''
 
-    __execute_cmd('')
+    pass
+
 
 def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
          blade_power_states=None):
