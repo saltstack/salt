@@ -36,7 +36,7 @@ class ServiceTestCase(TestCase):
         Test to start the specified service
         '''
         with patch.object(os.path, 'join', return_value='A'):
-            with patch.dict(service.__salt__, {'cmd.retcode':
+            with patch.dict(service.__salt__, {'service.run':
                                                MagicMock(return_value=False)}):
                 self.assertTrue(service.start('name'))
 
@@ -45,7 +45,7 @@ class ServiceTestCase(TestCase):
         Test to stop the specified service
         '''
         with patch.object(os.path, 'join', return_value='A'):
-            with patch.dict(service.__salt__, {'cmd.retcode':
+            with patch.dict(service.__salt__, {'service.run':
                                                MagicMock(return_value=False)}):
                 self.assertTrue(service.stop('name'))
 
@@ -54,7 +54,7 @@ class ServiceTestCase(TestCase):
         Test to restart the specified service
         '''
         with patch.object(os.path, 'join', return_value='A'):
-            with patch.dict(service.__salt__, {'cmd.retcode':
+            with patch.dict(service.__salt__, {'service.run':
                                                MagicMock(return_value=False)}):
                 self.assertTrue(service.restart('name'))
 
@@ -73,7 +73,7 @@ class ServiceTestCase(TestCase):
         Test to restart the specified service
         '''
         with patch.object(os.path, 'join', return_value='A'):
-            with patch.dict(service.__salt__, {'cmd.retcode':
+            with patch.dict(service.__salt__, {'service.run':
                                                MagicMock(return_value=False)}):
                 self.assertTrue(service.reload_('name'))
 
