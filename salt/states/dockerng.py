@@ -75,7 +75,7 @@ def __virtual__():
             _validate_input, globals()
         )
         return __virtualname__
-    return False
+    return (False, __modules__.missing_fun_string('dockerng.version'))  # pylint: disable=E0602
 
 
 def _format_comments(comments):
