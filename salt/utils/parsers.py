@@ -2190,6 +2190,13 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
 
         return keys_config
 
+    def process_rotate_aes_key(self):
+        if hasattr(self.options, 'rotate_aes_key') and isinstance(self.options.rotate_aes_key, str):
+            if self.options.rotate_aes_key.lower() == 'true':
+                self.options.rotate_aes_key = True
+            elif self.options.rotate_aes_key.lower() == 'false':
+                self.options.rotate_aes_key = False
+
     def process_list(self):
         # Filter accepted list arguments as soon as possible
         if not self.options.list:
