@@ -4,7 +4,8 @@ Manage Dell DRAC.
 
 .. versionadded:: 2015.8.2
 '''
-# pylint=disable W0141
+# pylint: disable=W0141
+
 # Import python libs
 from __future__ import absolute_import
 import logging

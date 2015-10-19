@@ -42,4 +42,3 @@ def cmd(cmd, *args, **kwargs):
     kwargs['host'] = __pillar__['proxy']['host']
     return __proxy__[proxycmd](cmd, *args, **kwargs)
 
-
