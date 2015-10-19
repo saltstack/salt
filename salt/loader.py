@@ -62,6 +62,9 @@ LIBCLOUD_FUNCS_NOT_SUPPORTED = (
     'rackspace.list_locations'
 )
 
+# Will be set to pyximport module at runtime if cython is enabled in config.
+pyximport = None
+
 
 def static_loader(
         opts,
@@ -1094,7 +1097,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         try:
             sys.path.append(os.path.dirname(fpath))
             if suffix == '.pyx':
-                global pyximport
                 mod = pyximport.load_module(name, fpath, tempfile.gettempdir())
             elif suffix == '.o':
                 top_mod = __import__(fpath, globals(), locals(), [])
