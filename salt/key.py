@@ -825,13 +825,17 @@ class Key(object):
             for key in keys:
                 try:
                     if revoke_auth:
-                        try:
-                            self.client.cmd(key, 'saltutil.revoke_auth')
-                        except salt.exceptions.SaltClientError:
-                            print('Cannot contact Salt master. '
-                                  'Connection for {0} will remain up until '
-                                  'master AES key is rotated or auth is revoked '
-                                  'with \'saltutil.revoke_auth\'.'.format(key))
+                        if not self.opts['rotate_aes_key']:
+                            log.warn('Immediate auth revocation specified but AES key rotation not allowed. '
+                                     'Minion will not be disconnected until the master AES key is rotated.')
+                        else:
+                            try:
+                                self.client.cmd(key, 'saltutil.revoke_auth')
+                            except salt.exceptions.SaltClientError:
+                                print('Cannot contact Salt master. '
+                                      'Connection for {0} will remain up until '
+                                      'master AES key is rotated or auth is revoked '
+                                      'with \'saltutil.revoke_auth\'.'.format(key))
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                     eload = {'result': True,
                              'act': 'delete',
@@ -1274,13 +1278,17 @@ class RaetKey(Key):
         for status, keys in six.iteritems(matches):
             for key in keys:
                 if revoke_auth:
-                    try:
-                        self.client.cmd(key, 'saltutil.revoke_auth')
-                    except salt.exceptions.SaltClientError:
-                        print('Cannot contact Salt master. '
-                              'Connection for {0} will remain up until '
-                              'master AES key is rotated or auth is revoked '
-                              'with \'saltutil.revoke_auth\'.'.format(key))
+                    if not self.opts['rotate_aes_key']:
+                        log.warn('Immediate auth revocation specified but AES key rotation not allowed. '
+                                 'Minion will not be disconnected until the master AES key is rotated.')
+                    else:
+                        try:
+                            self.client.cmd(key, 'saltutil.revoke_auth')
+                        except salt.exceptions.SaltClientError:
+                            print('Cannot contact Salt master. '
+                                  'Connection for {0} will remain up until '
+                                  'master AES key is rotated or auth is revoked '
+                                  'with \'saltutil.revoke_auth\'.'.format(key))
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                 except (OSError, IOError):
