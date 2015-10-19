@@ -305,6 +305,7 @@ class ProcessManager(object):
                                           'args': args,
                                           'kwargs': kwargs,
                                           'Process': process}
+        return process
 
     def restart_process(self, pid):
         '''
