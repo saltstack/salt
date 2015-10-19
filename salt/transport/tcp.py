@@ -414,6 +414,18 @@ class SaltMessageClient(object):
     def destroy(self):
         self._closing = True
         if hasattr(self, '_stream') and not self._stream.closed():
+            if (self._read_until_future is not None and
+                    hasattr(self._stream.io_loop, '_closing') and
+                    self._stream.io_loop._closing):
+                # The io_loop is closed probably due to
+                # 'salt.utils.async.SyncWrapper.__del__'
+                # The call to set_exception(StreamClosedError()) on this read
+                # future (that will be called when closing the stream) will
+                # thus cause:
+                # 'raise RuntimeError("IOLoop is closing")'
+                # We want to prevent this.
+                if hasattr(self._stream, '_read_future'):
+                    self._stream._read_future = None
             self._stream.close()
             if self._read_until_future is not None:
                 # This will prevent this message from showing up:
