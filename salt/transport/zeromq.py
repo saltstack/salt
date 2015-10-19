@@ -793,7 +793,7 @@ class AsyncReqMessageClient(object):
     def _internal_send_recv(self):
         while len(self.send_queue) > 0:
             message = self.send_queue.pop(0)
-            future = self.send_future_map[message]
+            future = self.send_future_map.pop(message)
 
             # send
             def mark_future(msg):
