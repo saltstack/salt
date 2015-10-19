@@ -2157,12 +2157,12 @@ class State(object):
             return errors
         # Compile and verify the raw chunks
         chunks = self.compile_high_data(high)
+        log.critical("CHUNKS: {0}".format(chunks))
 
         # Check for any disabled states
         disabled = {}
         if 'state_runs_disabled' in self.opts['grains']:
-            _chunks = copy.deepcopy(chunks)
-            for low in _chunks:
+            for low in chunks[:]:
                 state_ = '{0}.{1}'.format(low['state'], low['fun'])
                 for pat in self.opts['grains']['state_runs_disabled']:
                     if fnmatch.fnmatch(state_, pat):
