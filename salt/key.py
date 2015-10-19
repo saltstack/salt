@@ -825,8 +825,8 @@ class Key(object):
             for key in keys:
                 try:
                     if revoke_auth:
-                        if not self.opts['rotate_aes_key']:
-                            log.warn('Immediate auth revocation specified but AES key rotation not allowed. '
+                        if self.opts.get('rotate_aes_key') is False:
+                            print('Immediate auth revocation specified but AES key rotation not allowed. '
                                      'Minion will not be disconnected until the master AES key is rotated.')
                         else:
                             try:
@@ -1278,8 +1278,8 @@ class RaetKey(Key):
         for status, keys in six.iteritems(matches):
             for key in keys:
                 if revoke_auth:
-                    if not self.opts['rotate_aes_key']:
-                        log.warn('Immediate auth revocation specified but AES key rotation not allowed. '
+                    if self.opts.get('rotate_aes_key') is False:
+                        print('Immediate auth revocation specified but AES key rotation not allowed. '
                                  'Minion will not be disconnected until the master AES key is rotated.')
                     else:
                         try:
