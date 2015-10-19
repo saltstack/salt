@@ -832,6 +832,7 @@ def convert_cidr(cidr):
     if '/' not in cidr:
         msg = 'The specified CIDR network does not appear to be in the correct format.'
         raise SaltInvocationError(msg)
+    cidr = calc_net(cidr)
     network_info = cidr.split('/')
     ret['network'] = network_info[0]
     ret['netmask'] = salt.utils.network.cidr_to_ipv4_netmask(network_info[1])
