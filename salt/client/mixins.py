@@ -5,7 +5,6 @@ A collection of mixins useful for the various *Client interfaces
 
 # Import Python libs
 from __future__ import absolute_import, print_function
-import copy
 import logging
 import weakref
 import traceback
