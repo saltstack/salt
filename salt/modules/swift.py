@@ -6,14 +6,16 @@ Author: Anthony Stanton <anthony.stanton@gmail.com>
 Inspired by the S3 and Nova modules
 
 :depends:   - swiftclient Python module
-:configuration: This module is not usable until the user, password, tenant, and
-    auth URL are specified either in a pillar or in the minion's config file.
+:configuration: This module is not usable until the user, tenant, auth URL, and password or auth_key
+    are specified either in a pillar or in the minion's config file.
     For example::
 
         keystone.user: admin
-        keystone.password: verybadpass
         keystone.tenant: admin
         keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+        keystone.password: verybadpass
+        # or
+        keystone.auth_key: 203802934809284k2j34lkj2l3kj43k
 
     If configuration for multiple OpenStack accounts is required, they can be
     set up as different configuration profiles:
@@ -21,21 +23,27 @@ Inspired by the S3 and Nova modules
 
         openstack1:
           keystone.user: admin
-          keystone.password: verybadpass
           keystone.tenant: admin
           keystone.auth_url: 'http://127.0.0.1:5000/v2.0/'
+          keystone.password: verybadpass
+          # or
+          keystone.auth_key: 203802934809284k2j34lkj2l3kj43k
 
         openstack2:
           keystone.user: admin
-          keystone.password: verybadpass
           keystone.tenant: admin
           keystone.auth_url: 'http://127.0.0.2:5000/v2.0/'
+          keystone.password: verybadpass
+          # or
+          keystone.auth_key: 303802934809284k2j34lkj2l3kj43k
 
     With this configuration in place, any of the swift functions can make use of
     a configuration profile by declaring it explicitly.
     For example::
 
         salt '*' swift.get mycontainer myfile /tmp/file profile=openstack1
+
+    NOTE: For Rackspace cloud files setting keystone.auth_version = 1 is recommended.
 '''
 from __future__ import absolute_import
 
@@ -67,26 +75,29 @@ def _auth(profile=None):
     if profile:
         credentials = __salt__['config.option'](profile)
         user = credentials['keystone.user']
-        password = credentials['keystone.password']
+        password = credentials.get('keystone.password', None)
         tenant = credentials['keystone.tenant']
         auth_url = credentials['keystone.auth_url']
+        auth_version = credentials.get('keystone.auth_version', 2)
         region_name = credentials.get('keystone.region_name', None)
         api_key = credentials.get('keystone.api_key', None)
         os_auth_system = credentials.get('keystone.os_auth_system', None)
     else:
         user = __salt__['config.option']('keystone.user')
-        password = __salt__['config.option']('keystone.password')
+        password = __salt__['config.option']('keystone.password', None)
         tenant = __salt__['config.option']('keystone.tenant')
         auth_url = __salt__['config.option']('keystone.auth_url')
+        auth_version = __salt__['config.option']('keystone.auth_version', 2)
         region_name = __salt__['config.option']('keystone.region_name')
         api_key = __salt__['config.option']('keystone.api_key')
         os_auth_system = __salt__['config.option']('keystone.os_auth_system')
     kwargs = {
         'user': user,
         'password': password,
-        'api_key': api_key,
+        'key': api_key,
         'tenant_name': tenant,
         'auth_url': auth_url,
+        'auth_version': auth_version,
         'region_name': region_name
     }
 
