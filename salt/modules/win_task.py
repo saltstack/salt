@@ -18,8 +18,12 @@ import logging
 import time
 
 # Import 3rd Party Libraries
-import pythoncom
-import win32com.client
+try:
+    import pythoncom
+    import win32com.client
+    HAS_DEPENDENCIES = True
+except ImportError:
+    HAS_DEPENDENCIES = False
 from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
@@ -146,6 +150,8 @@ def __virtual__():
     Only works on Windows systems
     '''
     if salt.utils.is_windows():
+        if not HAS_DEPENDENCIES:
+            log.warn('Could not load dependencies for {0}'.format(__virtualname__))
         return __virtualname__
     return False
 
