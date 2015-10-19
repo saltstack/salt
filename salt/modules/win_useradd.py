@@ -341,7 +341,7 @@ def info(name):
         ret['logonscript'] = items['script_path']
         ret['profile'] = items['profile']
         if not ret['profile']:
-            ret['profile'] = _get_userprofile_from_registry(name, ret['uid'])['vdata']
+            ret['profile'] = _get_userprofile_from_registry(name, ret['uid'])
         ret['home'] = items['home_dir']
         if not ret['home']:
             ret['home'] = ret['profile']
@@ -360,7 +360,7 @@ def _get_userprofile_from_registry(user, sid):
         'HKEY_LOCAL_MACHINE',
         u'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
         'ProfileImagePath'
-    )
+    )['vdata']
     log.debug(u'user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
     return profile_dir
 
