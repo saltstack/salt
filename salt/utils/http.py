@@ -304,7 +304,7 @@ def query(url,
 
         result_status_code = result.status_code
         result_headers = result.headers
-        result_text = result.text
+        result_text = result.content
         result_cookies = result.cookies
     elif backend == 'urllib2':
         request = urllib_request.Request(url_full, data)
