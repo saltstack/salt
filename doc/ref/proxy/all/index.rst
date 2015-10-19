@@ -10,5 +10,6 @@ Full list of builtin proxy modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    fx2
     junos
     rest_sample
