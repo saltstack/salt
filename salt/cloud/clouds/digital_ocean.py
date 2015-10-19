@@ -363,42 +363,35 @@ def create(vm_):
             raise SaltCloudConfigError("'ipv6' should be a boolean value.")
         kwargs['ipv6'] = ipv6
 
-    create_record = config.get_cloud_config_value(
-        'create_dns_record', get_configured_provider(), __opts__, search_global=False, default=None,
+    create_dns_record = config.get_cloud_config_value(
+        'create_dns_record', vm_, __opts__, search_global=False, default=None,
     )
-    if create_record:
-        log.info('create_record: will attempt to write DNS records')
-        log.debug('create_record: {}'.format(pprint.pformat(create_record)))
-        dns_hostname = None
-        dns_domain = None
-        if not isinstance(create_record, bool) and not isinstance(create_record, dict):
-            raise SaltCloudConfigError(
-                '\'create_dns_record\' should be a boolean value or a non-empty dict.'
+    
+    if create_dns_record:
+        log.info('create_dns_record: will attempt to write DNS records')
+        default_dns_hostname = None
+        default_dns_domain = None
+        dnsdomainname = vm_['name'].split('.')
+        if len(dnsdomainname) > 2:
+            log.debug('create_dns_record: inferring default dns_hostname, dns_domain from minion name as FQDN')
+            default_dns_hostname = '.'.join(dnsdomainname[:-2])
+            default_dns_domain = '.'.join(dnsdomainname[-2:])
+        else:
+            log.debug("create_dns_record: can't infer dns_domain from {}".format(vm_['name']))
+            default_dns_hostname = dnsdomainname[0]
+        
+        dns_hostname = config.get_cloud_config_value(
+                'dns_hostname', vm_, __opts__, search_global=False, default=default_dns_hostname,
             )
-        else:
-            if isinstance(create_record, dict):
-                log.info('create_record: looking for dns "domain" value')
-                dns_domain = config.get_cloud_config_value(
-                    'create_dns_record:domain', vm_, __opts__, search_global=true, default=None,
-                )
-                log.debug('create_record:domain: {}'.format(dns_domain))
-                log.info('create_record: looking for dns "hostname" value')
-                dns_hostname = config.get_cloud_config_value(
-                    'create_dns_record:hostname', vm_, __opts__, search_global=true, default=None,
-                )
-                log.debug('create_record:hostname: {}'.format(dns_hostname))
-
-            else:
-                log.info('create_record: inferring dns hostname, domain from minion name as FQDN')
-                dnsdomainname = name.split('.')
-                if len(dnsdomainname) > 2:
-                    dns_hostname = '.'.join(dnsdomainname[:-2])
-                    dns_domain = '.'.join(dnsdomainname[-2:])
+        dns_domain = config.get_cloud_config_value(
+                'dns_domain', vm_, __opts__, search_global=False, default=default_dns_domain,
+            )
         if dns_hostname and dns_domain:
-            log.info('create_record: using dns_hostname="{}", dns_domain="{}"'.format(dns_hostname,dns_domain))
+            log.info('create_dns_record: using dns_hostname="{}", dns_domain="{}"'.format(dns_hostname,dns_domain))
             __add_dns_addr__ = lambda t,d : post_dns_record(dns_domain, dns_hostname, t, d)
+            log.debug('create_dns_record: {}'.format(pprint.pformat(__add_dns_addr__)))
         else:
-            log.error('create_record: could not determine dns_hostname and/or dns_domain')
+            log.error('create_dns_record: could not determine dns_hostname and/or dns_domain')
             raise SaltCloudConfigError(
                 '\'create_dns_record\' must be a dict specifying "domain" and "hostname" or the minion name must be a FQDN.'
             )
@@ -465,7 +458,7 @@ def create(vm_):
         dns_rec_type = arec_map[addr_family]
         if facing == 'public':
             dnsrv = None
-            if create_record:
+            if create_dns_record:
                 dnsrv = __add_dns_addr__(dns_rec_type, ip_address)
             if 'ssh_host' not in vm_ or not vm_['ssh_host']:
                 if dnsrv:
