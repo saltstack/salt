@@ -18,7 +18,6 @@ import salt.utils.decorators as decorators
 import salt.utils.network
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
-from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
 import salt.ext.six as six
