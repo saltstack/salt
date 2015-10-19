@@ -456,6 +456,18 @@ def create(vm_, call=None):
         __opts__['internal_lxc_profile'] = __opts__['profile']
         del __opts__['profile']
 
+    salt.utils.cloud.fire_event(
+        'event',
+        'created instance',
+        'salt/cloud/{0}/created'.format(vm_['name']),
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['driver'],
+        },
+        transport=__opts__['transport']
+    )
+
     return ret
 
 
