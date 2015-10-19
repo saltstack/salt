@@ -2011,6 +2011,9 @@ class Minion(MinionBase):
                 payload = self.serial.loads(messages[0])
             # 2 includes a header which says who should do it
             elif messages_len == 2:
+                if messages[0] not in ('broadcast', self.hexid):
+                    log.debug('Publish recieved for not this minion: {0}'.format(messages[0]))
+                    return
                 payload = self.serial.loads(messages[1])
             else:
                 raise Exception(('Invalid number of messages ({0}) in zeromq pub'
