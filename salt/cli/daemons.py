@@ -106,7 +106,9 @@ class Master(parsers.MasterOptionParser):
                                                                    'udp://',
                                                                    'file://')):
                     # Logfile is not using Syslog, verify
+                    current_umask = os.umask(0o027)
                     verify_files([logfile], self.config['user'])
+                    os.umask(current_umask)
                 # Clear out syndics from cachedir
                 for syndic_file in os.listdir(self.config['syndic_dir']):
                     os.remove(os.path.join(self.config['syndic_dir'], syndic_file))
@@ -505,7 +507,9 @@ class Syndic(parsers.SyndicOptionParser):
                                                                    'udp://',
                                                                    'file://')):
                     # Logfile is not using Syslog, verify
+                    current_umask = os.umask(0o027)
                     verify_files([logfile], self.config['user'])
+                    os.umask(current_umask)
         except OSError as err:
             logger.exception('Failed to prepare salt environment')
             self.shutdown(err.errno)
