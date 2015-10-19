@@ -18,6 +18,7 @@ import salt.utils.decorators as decorators
 import salt.utils.network
 import salt.utils.validate.net
 from salt.exceptions import CommandExecutionError
+from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -812,6 +813,29 @@ def ip_in_subnet(ip_addr, cidr):
         salt '*' network.ip_in_subnet 172.17.0.4 172.16.0.0/12
     '''
     return salt.utils.network.in_subnet(cidr, ip_addr)
+
+
+def convert_cidr(cidr):
+    '''
+    returns the network and subnet mask of a cidr addr
+
+    ::version added Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.convert_cidr 172.31.0.0/16
+    '''
+    ret = {'network': None,
+           'netmask': None}
+    if '/' not in cidr:
+        msg = 'The specified CIDR network does not appear to be in the correct format.'
+        raise SaltInvocationError(msg)
+    network_info = cidr.split('/')
+    ret['network'] = network_info[0]
+    ret['netmask'] = salt.utils.network.cidr_to_ipv4_netmask(network_info[1])
+    return ret
 
 
 def calc_net(ip_addr, netmask=None):
