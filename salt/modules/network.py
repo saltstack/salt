@@ -17,6 +17,7 @@ import salt.utils
 import salt.utils.decorators as decorators
 import salt.utils.network
 import salt.utils.validate.net
+import salt.ext.ipaddress
 from salt.exceptions import CommandExecutionError
 from salt.exceptions import SaltInvocationError
 
@@ -833,9 +834,9 @@ def convert_cidr(cidr):
         msg = 'The specified CIDR network does not appear to be in the correct format.'
         raise SaltInvocationError(msg)
     cidr = calc_net(cidr)
-    network_info = cidr.split('/')
-    ret['network'] = network_info[0]
-    ret['netmask'] = salt.utils.network.cidr_to_ipv4_netmask(network_info[1])
+    network_info = salt.ext.ipaddress.ip_network(cidr)
+    ret['network'] = network_info.network_address
+    ret['netmask'] = network_info.netmask 
     return ret
 
 
