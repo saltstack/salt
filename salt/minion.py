@@ -101,7 +101,8 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltReqTimeoutError,
     SaltClientError,
-    SaltSystemExit
+    SaltSystemExit,
+    SaltDaemonNotRunning
 )
 
 
@@ -714,14 +715,22 @@ class Minion(MinionBase):
             self.opts['grains'] = salt.loader.grains(opts)
 
     # TODO: remove?
-    def sync_connect_master(self):
+    def sync_connect_master(self, timeout=None):
         '''
         Block until we are connected to a master
         '''
+        self._sync_connect_master_success = False
         log.debug("sync_connect_master")
+
+        def on_connect_master_future_done(future):
+            self._sync_connect_master_success = True
+            self.io_loop.stop()
+
         self._connect_master_future = self.connect_master()
         # finish connecting to master
-        self._connect_master_future.add_done_callback(lambda f: self.io_loop.stop())
+        self._connect_master_future.add_done_callback(on_connect_master_future_done)
+        if timeout:
+            self.io_loop.call_later(timeout, self.io_loop.stop)
         self.io_loop.start()
         # I made the following 3 line oddity to preserve traceback.
         # Please read PR #23978 before changing, hopefully avoiding regressions.
@@ -729,6 +738,8 @@ class Minion(MinionBase):
         future_exception = self._connect_master_future.exc_info()
         if future_exception:
             raise six.reraise(*future_exception)
+        if timeout and self._sync_connect_master_success is False:
+            raise SaltDaemonNotRunning('Failed to connect to the salt-master')
 
     @tornado.gen.coroutine
     def connect_master(self):
