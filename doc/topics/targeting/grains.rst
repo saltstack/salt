@@ -197,6 +197,67 @@ change, consider using :doc:`Pillar <../pillar/index>` instead.
     <minion-start-reactor>` to ensure that the custom grains are synced when
     the minion starts.
 
+Loading Custom Grains
+---------------------
+
+If you have multiple functions specifying grains that are called from a ``main``
+function, be sure to prepend grain function names with an underscore. This prevents
+Salt from including the loaded grains from the grain functions in the final
+grain data structure. For example, consider this custom grain file:
+
+.. code-block:: python
+
+    #!/usr/bin/env python
+    def _my_custom_grain():
+        my_grain = {'foo': 'bar', 'hello': 'world'}
+        return my_grain
+
+
+    def main():
+        # initialize a grains dictionary
+        grains = {}
+        grains['my_grains'] = _my_custom_grain()
+        return grains
+
+The output of this example renders like so:
+
+.. code-block:: bash
+
+    # salt-call --local grains.items
+    local:
+        ----------
+        <Snipped for brevity>
+        my_grains:
+            ----------
+            foo:
+                bar
+            hello:
+                world
+
+However, if you don't prepend the ``my_custom_grain`` function with an underscore,
+the function will be rendered twice by Salt in the items output: once for the
+``my_custom_grain`` call itself, and again when it is called in the ``main``
+function:
+
+.. code-block:: bash
+
+    # salt-call --local grains.items
+    local:
+    ----------
+        <Snipped for brevity>
+        foo:
+            bar
+        <Snipped for brevity>
+        hello:
+            world
+        <Snipped for brevity>
+        my_grains:
+            ----------
+            foo:
+                bar
+            hello:
+                world
+
 
 Precedence
 ==========
