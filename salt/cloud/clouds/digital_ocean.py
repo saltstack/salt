@@ -461,12 +461,7 @@ def create(vm_):
             if create_dns_record:
                 dnsrv = __add_dns_addr__(dns_rec_type, ip_address)
             if 'ssh_host' not in vm_ or not vm_['ssh_host']:
-                if dnsrv:
-                    log.info('ssh_host: using hostname={} for ssh bootstrap script remote execution.'.format(dns_hostname))
-                    vm_['ssh_host'] = dns_hostname
-                else:
-                    log.info('ssh_host: no hostname found, using IP address={} for ssh bootstrap script remote execution.'.format(ip_address))
-                    vm_['ssh_host'] = ip_address
+                vm_['ssh_host'] = ip_address
     
     vm_['key_filename'] = key_filename
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
@@ -743,17 +738,20 @@ def destroy(name, call=None):
     data = show_instance(name, call='action')
     node = query(method='droplets', droplet_id=data['id'], http_method='delete')
 
-    delete_record = config.get_cloud_config_value(
+    delete_dns_record = config.get_cloud_config_value(
         'delete_dns_record', get_configured_provider(), __opts__, search_global=False, default=None,
     )
 
-    if delete_record and not isinstance(delete_record, bool):
+    if delete_dns_record and not isinstance(delete_dns_record, bool):
         raise SaltCloudConfigError(
             '\'delete_dns_record\' should be a boolean value.'
         )
 
-    if delete_record:
+    if delete_dns_record:
+        log.debug('Deleting DNS records for {}.'.format(name))
         delete_dns_record(name)
+    else:
+        log.debug('delete_dns_record : {}'.format(delete_dns_record))
 
     salt.utils.cloud.fire_event(
         'event',
@@ -794,17 +792,24 @@ def delete_dns_record(fqdn):
     '''
     domain = '.'.join(fqdn.split('.')[-2:])
     hostname = '.'.join(fqdn.split('.')[:-2])
-    records = query(method='domains', droplet_id=domainname, command='records')
+    response = query(method='domains', droplet_id=domain, command='records')
+    log.debug("found DNS records: {}".format(pprint.pformat(response)))
+    records = response['domain_records']
 
     if records:
-        for record in records['domain_records']:
-            if record['name'] == subdomain:
+        record_ids = [r['id'] for r in records if r['name'].decode() == hostname]
+        log.debug("deleting DNS record IDs: {}".format(repr(record_ids)))
+        for id in record_ids:
+            try:
+                log.info('deleting DNS record {}'.format(id))
                 return query(
                     method='domains',
-                    droplet_id=domainname,
-                    command='records/' + str(record['id']),
+                    droplet_id=domain,
+                    command='records/{}'.format(id),
                     http_method='delete'
                 )
+            except:
+                log.error('failed to delete DNS domain {} record ID {}.'.format(domain, hostname))
 
     return False
 
