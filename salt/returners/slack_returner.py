@@ -13,6 +13,7 @@ The following fields can be set in the minion conf file::
     slack.username (required)
     slack.as_user (required to see the profile picture of your bot)
     slack.profile (optional)
+    slack.changes(optional, only show changes and failed states)
 
 
 Alternative configuration values can be used by prefacing the configuration.
@@ -104,6 +105,7 @@ def _get_options(ret=None):
              'username': 'username',
              'as_user': 'as_user',
              'api_key': 'api_key',
+             'changes': 'changes',
              }
 
     profile_attr = 'slack_profile'
@@ -180,6 +182,7 @@ def returner(ret):
     username = _options.get('username')
     as_user = _options.get('as_user')
     api_key = _options.get('api_key')
+    changes = _options.get('changes')
 
     if not channel:
         log.error('slack.channel not defined in salt config')
@@ -197,6 +200,10 @@ def returner(ret):
         log.error('slack.api_key not defined in salt config')
         return
 
+    returns = ret.get('return')
+    if changes:
+        returns = dict((key, value) for key, value in returns.items if value['result'] is not True or value['changes'])
+
     message = ('id: {0}\r\n'
                'function: {1}\r\n'
                'function args: {2}\r\n'
@@ -206,7 +213,7 @@ def returner(ret):
                     ret.get('fun'),
                     ret.get('fun_args'),
                     ret.get('jid'),
-                    pprint.pformat(ret.get('return')))
+                    pprint.pformat(returns)
 
     slack = _post_message(channel,
                           message,
