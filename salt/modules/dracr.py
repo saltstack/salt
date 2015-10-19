@@ -1005,7 +1005,7 @@ def get_chassis_name(host=None, admin_username=None, admin_password=None):
     '''
     return system_info(host=host, admin_username=admin_username,
                        admin_password=
-                         admin_password)['Chassis Information']['Chassis Name']
+                       admin_password)['Chassis Information']['Chassis Name']
 
 
 def inventory(host=None, admin_username=None, admin_password=None):
