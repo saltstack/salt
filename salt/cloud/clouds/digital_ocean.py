@@ -366,7 +366,11 @@ def create(vm_):
     create_dns_record = config.get_cloud_config_value(
         'create_dns_record', vm_, __opts__, search_global=False, default=None,
     )
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> implement DigitalOcean salt-cloud vm options create_dns_record, dns_domainname, and dns_hostname
     if create_dns_record:
         log.info('create_dns_record: will attempt to write DNS records')
         default_dns_hostname = None
@@ -379,7 +383,11 @@ def create(vm_):
         else:
             log.debug("create_dns_record: can't infer dns_domain from {}".format(vm_['name']))
             default_dns_hostname = dnsdomainname[0]
+<<<<<<< HEAD
         
+=======
+
+>>>>>>> implement DigitalOcean salt-cloud vm options create_dns_record, dns_domainname, and dns_hostname
         dns_hostname = config.get_cloud_config_value(
                 'dns_hostname', vm_, __opts__, search_global=False, default=default_dns_hostname,
             )
