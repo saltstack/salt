@@ -227,7 +227,9 @@ def chconfig(cmd, *args, **kwargs):
 def ping():
     '''
     Is the chassis responding?
+
     :return: Returns False if the chassis didn't respond, True otherwise.
+
     '''
     r = __salt__['dracr.system_info'](host=DETAILS['host'],
                                       admin_username=DETAILS['admin_username'],
