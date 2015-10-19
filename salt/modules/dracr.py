@@ -15,8 +15,7 @@ import salt.utils
 
 # Import 3rd-party libs
 import salt.ext.six as six
-from salt.ext.six.moves import \
-    range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -1004,10 +1003,9 @@ def get_chassis_name(host=None, admin_username=None, admin_password=None):
             admin_username=root admin_password=secret
 
     '''
-    return system_info(host=host,
-                       admin_username=admin_username,
-                       admin_password=admin_password)['Chassis Information']\
-                           ['Chassis Name']
+    return system_info(host=host, admin_username=admin_username,
+                       admin_password=
+                         admin_password)['Chassis Information']['Chassis Name']
 
 
 def inventory(host=None, admin_username=None, admin_password=None):
