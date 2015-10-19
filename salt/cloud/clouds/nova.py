@@ -174,9 +174,8 @@ def get_dependencies():
     Warn if dependencies aren't met.
     '''
     deps = {
-        'libcloud': HAS_LIBCLOUD,
         'netaddr': HAS_NETADDR,
-        'nova': HAS_NOVA,
+        'python-novaclient': HAS_NOVA,
     }
     return config.check_driver_dependencies(
         __virtualname__,
