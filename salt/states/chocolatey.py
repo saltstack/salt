@@ -5,6 +5,12 @@ Manage Chocolatey package installs
 .. versionadded:: Boron
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
+# Import salt libs
+import salt.utils
+
 
 def __virtual__():
     '''
@@ -13,9 +19,20 @@ def __virtual__():
     return 'chocolatey' if 'chocolatey.install' in __salt__ else False
 
 
-def install(name, version=None, source=None, force=False, install_args=None,
-            override_args=False, force_x86=False, package_args=None):
+def install(*args, **kwargs):
+    '''
+    Deprecated, please use 'installed'. This function will be removed in Salt
+    Nitrogen.
+    '''
+    salt.utils.warn_until('Nitrogen',
+                          'Please use chocolatey.installed. '
+                          'chocolatey.install will be removed in '
+                          'Salt Nitrogen.')
+    installed(*args, **kwargs)
 
+
+def installed(name, version=None, source=None, force=False, install_args=None,
+            override_args=False, force_x86=False, package_args=None):
     '''
     Installs a package if not already installed
 
@@ -51,7 +68,7 @@ def install(name, version=None, source=None, force=False, install_args=None,
     .. code-block:: yaml
 
         Installsomepackage:
-          chocolatey.install:
+          chocolatey.installed:
             - name: packagename
             - version: '12.04'
             - source: 'mychocolatey/source'
@@ -99,7 +116,19 @@ def install(name, version=None, source=None, force=False, install_args=None,
     return ret
 
 
-def uninstall(name, version=None, uninstall_args=None, override_args=False):
+def uninstall(*args, **kwargs):
+    '''
+    Deprecated, please use 'uninstalled'. This function will be removed in Salt
+    Nitrogen.
+    '''
+    salt.utils.warn_until('Nitrogen',
+                          'Please use chocolatey.uninstalled. '
+                          'chocolatey.uninstall will be removed in '
+                          'Salt Nitrogen.')
+    uninstalled(*args, **kwargs)
+
+
+def uninstalled(name, version=None, uninstall_args=None, override_args=False):
     '''
     Uninstalls a package
 
@@ -123,7 +152,7 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     .. code-block: yaml
 
       Removemypackage:
-        chocolatey.uninstall:
+        chocolatey.uninstalled:
           - name: mypackage
           - version: '21.5'
 
