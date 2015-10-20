@@ -1090,7 +1090,6 @@ def inventory(host=None, admin_username=None, admin_password=None):
 
     return ret
 
-
 def set_chassis_location(location,
                          host=None,
                          admin_username=None,
@@ -1147,8 +1146,67 @@ def get_chassis_location(host=None,
 
     '''
     return system_info(host=host,
-                        admin_username=admin_username,
-                        admin_password=admin_password)['Chassis Information']['Chassis Location']
+                       admin_username=admin_username,
+                       admin_password=admin_password)['Chassis Information'] \
+        ['Chassis Location']
+
+def set_chassis_datacenter(location,
+                         host=None,
+                         admin_username=None,
+                         admin_password=None):
+    '''
+    Set the location of the chassis.
+
+    location
+        The name of the datacenter to be set on the chassis.
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dracr.set_chassis_datacenter datacenter-name host=111.222.333.444
+            admin_username=root admin_password=secret
+
+    '''
+    return set_general('cfgLocation', 'cfgLocationDatacenter', location,
+                         host=host, admin_username=admin_username,
+                         admin_password=admin_password)
+
+
+def get_chassis_datacenter(host=None,
+                         admin_username=None,
+                         admin_password=None):
+    '''
+    Get the datacenter of the chassis.
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dracr.set_chassis_location host=111.222.333.444
+           admin_username=root admin_password=secret
+
+    '''
+    return get_general('cfgLocation', 'cfgLocationDatacenter', host=host,
+                       admin_username=admin_username, admin_password=admin_password)
 
 
 def set_general(cfg_sec, cfg_var, val, host=None,

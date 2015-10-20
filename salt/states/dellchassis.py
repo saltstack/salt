@@ -4,13 +4,14 @@ Manage chassis via Salt Proxies.
 
 .. versionadded:: 2015.8.2
 
-Example managing a Dell chassis:
+Below is an example state that sets parameters just to show the basics.
 
 .. code-block:: yaml
 
     my-dell-chassis:
-      chassis.dell:
+      dellchassis.chassis:
         - name: my-dell-chassis
+        - datacenter: dc-1-us
         - location: my-location
         - mode: 2
         - idrac_launch: 1
@@ -21,6 +22,112 @@ Example managing a Dell chassis:
           - server-1: on
           - server-2: off
           - server-3: powercycle
+
+However, it is possible to place the entire set of chassis configuration
+data in pillar. Here's an example pillar
+structure:
+
+.. code-block:: yaml
+
+    proxy:
+      host: 10.27.20.18
+      admin_username: root
+      admin_password: saltstack
+      proxytype: fx2
+
+      chassis:
+        name: fx2-1
+        username: root
+        password: saltstack1
+        datacenter: london
+        location: rack-1-shelf-3
+        management_mode: 2
+        idrac_launch: 0
+        slot_names:
+          1: blade1
+          2: blade2
+
+        blades:
+           blade1:
+             idrac_password: saltstack1
+             ipmi_over_lan: True
+             ip: 172.17.17.1
+             subnet: 255.255.0.0
+             netmask: 172.17.255.255
+          blade2:
+             idrac_password: saltstack1
+             ipmi_over_lan: True
+             ip: 172.17.17.2
+             subnet: 255.255.0.0
+             netmask: 172.17.255.255
+          blade3:
+             idrac_password: saltstack1
+             ipmi_over_lan: True
+             ip: 172.17.17.2
+             subnet: 255.255.0.0
+             netmask: 172.17.255.255
+          blade4:
+             idrac_password: saltstack1
+             ipmi_over_lan: True
+             ip: 172.17.17.2
+             subnet: 255.255.0.0
+             netmask: 172.17.255.255
+
+        switches:
+          switch-1:
+            ip: 192.168.1.2
+            netmask: 255.255.255.0
+            broadcast: 192.168.1.255
+            snmp: nonpublic
+            password: saltstack1
+          switch-2:
+            ip: 192.168.1.3
+            netmask: 255.255.255.0
+            broadcast: 192.168.1.255
+            snmp: nonpublic
+            password: saltstack1
+
+And to go with it, here's an example state that pulls the data from pillar
+
+.. code-block:: yaml
+
+    {% set details = pillar['chassis'] with context %}
+    standup-step1:
+      dellchassis.chassis:
+        - name: {{ details['name'] }}
+        - location: {{ details['location'] }}
+        - mode: {{ details['management_mode'] }}
+        - idrac_launch: {{ details['idrac_launch'] }}
+        - slot_names
+          {% for k, v in details['chassis']['slot_names'].iteritems() %}
+          - {{ k }}: {{ v }}
+          {% endfor %}
+
+
+    {% for k, v in details['chassis']['switches'].iteritems() %}
+    standup-switches-{{ k }}:
+      dellchassis.dell_switch:
+        - name: {{ k }}
+        - ip: {{ v['ip'] }}
+        - netmask: {{ v['netmask'] }}
+        - gateway: {{ v['gateway'] }}
+        - password: {{ v['password'] }}
+        - snmp: {{ v['snmp'] }}
+    {% endfor %}
+
+    dellchassis
+    {% for k, v in details['chassis']['slot_names'].iteritems() %}
+
+          - {{ k }}: {{ v }}
+          {% endfor %}
+
+    blade_powercycle:
+      chassis.dell_chassis:
+        - blade_power_states:
+          - server-1: powercycle
+          - server-2: powercycle
+          - server-3: powercycle
+          - server-4: powercycle
 
 '''
 
@@ -55,16 +162,23 @@ def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
     pass
 
 
-def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
-         blade_power_states=None):
+def chassis(name, password=None, datacenter=None,
+            location=None, mode=None, idrac_launch=None, slot_names=None,
+            blade_power_states=None):
     '''
     Manage a Dell Chassis.
 
     name
         The name of the chassis.
 
+    datacenter
+        The datacenter in which the chassis is located
+
     location
         The location of the chassis.
+
+    password
+        Password for the chassis
 
     mode
         The management mode of the chassis. Viable options are:
@@ -96,9 +210,10 @@ def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
     .. code-block:: yaml
 
         my-dell-chassis:
-          chassis.dell:
+          dellchassis.chassis:
             - name: my-dell-chassis
             - location: my-location
+            - datacenter: london
             - mode: 2
             - idrac_launch: 1
             - slot_names:
@@ -119,12 +234,25 @@ def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
     mode_cmd = 'cfgRacTuneChassisMgmtAtServer'
     launch_cmd = 'cfgRacTuneIdracDNSLaunchEnable'
 
+    if idrac_launch:
+        idrac_launch = str(idrac_launch)
+
     current_name = __salt__[chassis_cmd]('get_chassis_name')
     if name != current_name:
         ret['changes'].update({'Name':
                               {'Old': current_name,
                                'New': name}})
 
+    current_dc = __salt__[chassis_cmd]('get_chassis_datacenter')
+    if datacenter != current_dc:
+        ret['changes'].update({'Datacenter':
+                                   {'Old': current_dc,
+                                    'New': datacenter}})
+
+    if password:
+        ret['changes'].update({'Password':
+                                   { 'Old': '******',
+                                     'New': '******'}})
     if location:
         current_location = __salt__[chassis_cmd]('get_chassis_location')
         if location != current_location:
@@ -159,7 +287,7 @@ def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
                 ret['changes']['Slot Names']['Old'].update(old)
                 ret['changes']['Slot Names']['New'].update(new)
 
-    # TODO: Refactor this and make DRY - can probable farm this out to a new funciton
+    # TODO: Refactor this and make DRY - can probable farm this out to a new function
     if blade_power_states:
         # TODO: Get the power state list working
         current_power_states = 'get a list of current power states'
@@ -190,6 +318,12 @@ def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
     name = __salt__[chassis_cmd]('set_chassis_name', name)
     if location:
         location = __salt__[chassis_cmd]('set_chassis_location', location)
+    if password:
+        pw_result = __salt__[chassis_cmd]('change_password', username='root',
+                                          password=password)
+    if datacenter:
+        datacenter_result = __salt__[chassis_cmd]('set_chassis_datacenter',
+                                                  datacenter)
     if mode:
         mode = __salt__[chassis_cmd]('set_general', cfg_tuning, mode_cmd, mode)
     if idrac_launch:
@@ -212,7 +346,7 @@ def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
     return ret
 
 
-def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
+def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
                 password=None, snmp=None):
     '''
     Manage switches in a Dell Chassis.
@@ -245,7 +379,7 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
     .. code-block:: yaml
 
         my-dell-chassis:
-          chassis.dell_switch:
+          dellchassis.dell_switch:
             - switch: switch-1
             - ip: 192.168.1.1
             - netmask: 255.255.255.0
