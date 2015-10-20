@@ -63,7 +63,7 @@ def write(key, value):
     try:
         key = target(key)
         log.trace('Writing {0} to {1}'.format(value, key))
-        with open(key, 'w') as twriter:
+        with salt.utils.fopen(key, 'w') as twriter:
             twriter.write('{0}\n'.format(value))
             return True
     except:  # pylint: disable=bare-except
