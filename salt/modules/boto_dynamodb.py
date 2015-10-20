@@ -63,6 +63,7 @@ try:
     from boto.dynamodb2.fields import HashKey, RangeKey
     from boto.dynamodb2.fields import AllIndex, GlobalAllIndex
     from boto.dynamodb2.table import Table
+    from boto.exception import JSONResponseError
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
@@ -171,10 +172,14 @@ def exists(table_name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_dynamodb.exists table_name region=us-east-1
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    tables = conn.list_tables()
-    return bool(tables and table_name in tables['TableNames'])
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.describe_table(table_name)
+    except JSONResponseError as e:
+        if e.error_code == 'ResourceNotFoundException':
+            return False
+        raise
+    return True
 
 
 def delete(table_name, region=None, key=None, keyid=None, profile=None):
