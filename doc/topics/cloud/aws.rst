@@ -890,6 +890,13 @@ point, and should be stored immediately.
 
     salt-cloud -f create_keypair ec2 keyname=mykeypair
 
+Importing a Key Pair
+-------------------
+
+.. code-block:: bash
+
+    salt-cloud -f import_keypair ec2 keyname=mykeypair file=/path/to/id_rsa.pub
+
 
 Show a Key Pair
 ---------------
