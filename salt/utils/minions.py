@@ -104,7 +104,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None):
     '''
     Recursively expand ``nodegroup`` from ``nodegroups``; ignore nodegroups in ``skip``
     '''
-
+    expanded_nodegroup = False
     if skip is None:
         skip = set()
     elif nodegroup in skip:
@@ -134,6 +134,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None):
         if word in opers:
             ret.append(word)
         elif len(word) >= 3 and word.startswith('N@'):
+            expanded_nodegroup = True
             ret.extend(nodegroup_comp(word[2:], nodegroups, skip=skip))
         else:
             ret.append(word)
@@ -145,7 +146,12 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None):
     skip.remove(nodegroup)
 
     log.debug('nodegroup_comp({0}) => {1}'.format(nodegroup, ret))
-    return ret
+    # Only return list form if a nodegroup was expanded. Otherwise return
+    # the original string to conserve 
+    if expanded_nodegroup:
+        return ret
+    else:
+        return nodegroups[nodegroup]
 
 
 class CkMinions(object):
