@@ -70,7 +70,7 @@ def write(key, value):
         return False
 
 
-def read(key, root=None):
+def read(key, root=''):
     '''
     Read from SysFS
     :param key: file or path in SysFS; if key is a list then root will be prefixed on each key
