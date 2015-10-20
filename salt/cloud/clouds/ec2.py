@@ -841,6 +841,7 @@ def avail_sizes(call=None):
     }
     return sizes
 
+
 def avail_images(kwargs=None, call=None):
     '''
     Return a dict of all available VM images on the cloud provider.
