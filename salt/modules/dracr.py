@@ -17,6 +17,7 @@ import salt.utils
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
+from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -1146,9 +1147,8 @@ def get_chassis_location(host=None,
 
     '''
     return system_info(host=host,
-                       admin_username=admin_username,
-                       admin_password=admin_password)['Chassis Information']\
-                                                     ['Chassis Location']
+                        admin_username=admin_username,
+                        admin_password=admin_password)['Chassis Information']['Chassis Location']
 
 
 def set_general(cfg_sec, cfg_var, val, host=None,
