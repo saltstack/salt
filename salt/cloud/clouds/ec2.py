@@ -133,19 +133,17 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 SIZE_MAP = {
-    'Micro Instance': 't1.micro',
-    'Small Instance': 'm1.small',
-    'Medium Instance': 'm1.medium',
-    'Large Instance': 'm1.large',
-    'Extra Large Instance': 'm1.xlarge',
-    'High-CPU Medium Instance': 'c1.medium',
-    'High-CPU Extra Large Instance': 'c1.xlarge',
-    'High-Memory Extra Large Instance': 'm2.xlarge',
-    'High-Memory Double Extra Large Instance': 'm2.2xlarge',
-    'High-Memory Quadruple Extra Large Instance': 'm2.4xlarge',
-    'Cluster GPU Quadruple Extra Large Instance': 'cg1.4xlarge',
-    'Cluster Compute Quadruple Extra Large Instance': 'cc1.4xlarge',
-    'Cluster Compute Eight Extra Large Instance': 'cc2.8xlarge',
+    'Micro Instance': 't2.micro',
+    'Small Instance': 't2.small',
+    'Medium Instance': 'm3.medium',
+    'Large Instance': 'm4.large',
+    'Extra Large Instance': 'm4.xlarge',
+    'High-CPU Medium Instance': 'c4.large',
+    'High-CPU Extra Large Instance': 'c4.xlarge',
+    'High-Memory Extra Large Instance': 'r3.xlarge',
+    'High-Memory Double Extra Large Instance': 'r3.2xlarge',
+    'High-Memory Quadruple Extra Large Instance': 'r3.4xlarge',
+    'Cluster GPU Quadruple Extra Large Instance': 'g2.8xlarge'
 }
 
 
@@ -605,57 +603,93 @@ def avail_sizes(call=None):
                 'ram': '22.5 GiB'
             },
         },
-        'High CPU': {
-            'c1.xlarge': {
-                'id': 'c1.xlarge',
-                'cores': '8 (with 2.5 ECUs each)',
-                'disk': '1680 GiB (4 x 420 GiB)',
-                'ram': '8 GiB'
+        'Compute Optimized': {
+            'c4.large': {
+                'id': 'c4.large',
+                'cores': '2',
+                'disk': 'EBS - 500 Mbps',
+                'ram': '3.75 GiB'
             },
-            'c1.medium': {
-                'id': 'c1.medium',
-                'cores': '2 (with 2.5 ECUs each)',
-                'disk': '340 GiB (1 x 340 GiB)',
-                'ram': '1.7 GiB'
+            'c4.xlarge': {
+                'id': 'c4.xlarge',
+                'cores': '4',
+                'disk': 'EBS - 750 Mbps',
+                'ram': '7.5 GiB'
+            },
+            'c4.2xlarge': {
+                'id': 'c4.2xlarge',
+                'cores': '8',
+                'disk': 'EBS - 1000 Mbps',
+                'ram': '15 GiB'
+            },
+            'c4.4xlarge': {
+                'id': 'c4.4xlarge',
+                'cores': '16',
+                'disk': 'EBS - 2000 Mbps',
+                'ram': '30 GiB'
+            },
+            'c4.8xlarge': {
+                'id': 'c4.8xlarge',
+                'cores': '36',
+                'disk': 'EBS - 4000 Mbps',
+                'ram': '60 GiB'
             },
             'c3.large': {
                 'id': 'c3.large',
-                'cores': '2 (with 3.5 ECUs each)',
+                'cores': '2',
                 'disk': '32 GiB (2 x 16 GiB SSD)',
                 'ram': '3.75 GiB'
             },
             'c3.xlarge': {
                 'id': 'c3.xlarge',
-                'cores': '4 (with 3.5 ECUs each)',
+                'cores': '4',
                 'disk': '80 GiB (2 x 40 GiB SSD)',
                 'ram': '7.5 GiB'
             },
             'c3.2xlarge': {
                 'id': 'c3.2xlarge',
-                'cores': '8 (with 3.5 ECUs each)',
+                'cores': '8',
                 'disk': '160 GiB (2 x 80 GiB SSD)',
                 'ram': '15 GiB'
             },
             'c3.4xlarge': {
                 'id': 'c3.4xlarge',
-                'cores': '16 (with 3.5 ECUs each)',
-                'disk': '320 GiB (2 x 80 GiB SSD)',
+                'cores': '16',
+                'disk': '320 GiB (2 x 160 GiB SSD)',
                 'ram': '30 GiB'
             },
             'c3.8xlarge': {
                 'id': 'c3.8xlarge',
-                'cores': '32 (with 3.5 ECUs each)',
-                'disk': '320 GiB (2 x 160 GiB SSD)',
+                'cores': '32',
+                'disk': '640 GiB (2 x 320 GiB SSD)',
                 'ram': '60 GiB'
             }
         },
         'High I/O': {
-            'hi1.4xlarge': {
-                'id': 'hi1.4xlarge',
-                'cores': '8 (with 4.37 ECUs each)',
-                'disk': '2 TiB',
-                'ram': '60.5 GiB'
+            'i2.xlarge': {
+                'id': 'i2.xlarge',
+                'cores': '4',
+                'disk': 'SSD (1 x 800 GiB)',
+                'ram': '30.5 GiB'
             },
+            'i2.2xlarge': {
+                'id': 'i2.2xlarge',
+                'cores': '8',
+                'disk': 'SSD (2 x 800 GiB)',
+                'ram': '61 GiB'
+            },
+            'i2.4xlarge': {
+                'id': 'i2.4xlarge',
+                'cores': '16',
+                'disk': 'SSD (4 x 800 GiB)',
+                'ram': '122 GiB'
+            },
+            'i2.8xlarge': {
+                'id': 'i2.8xlarge',
+                'cores': '32',
+                'disk': 'SSD (8 x 800 GiB)',
+                'ram': '244 GiB'
+            }
         },
         'High Memory': {
             'm2.2xlarge': {
@@ -723,50 +757,84 @@ def avail_sizes(call=None):
                 'ram': '117 GiB'
             },
         },
-        'Micro': {
-            't1.micro': {
-                'id': 't1.micro',
+        'General Purpose': {
+            't2.micro': {
+                'id': 't2.micro',
                 'cores': '1',
                 'disk': 'EBS',
-                'ram': '615 MiB'
+                'ram': '1 GiB'
             },
-        },
-        'Standard': {
-            'm1.xlarge': {
-                'id': 'm1.xlarge',
-                'cores': '4 (with 2 ECUs each)',
-                'disk': '1680 GB (4 x 420 GiB)',
-                'ram': '15 GiB'
-            },
-            'm1.large': {
-                'id': 'm1.large',
-                'cores': '2 (with 2 ECUs each)',
-                'disk': '840 GiB (2 x 420 GiB)',
-                'ram': '7.5 GiB'
-            },
-            'm1.medium': {
-                'id': 'm1.medium',
+            't2.small': {
+                'id': 't2.small',
                 'cores': '1',
-                'disk': '400 GiB',
+                'disk': 'EBS',
+                'ram': '2 GiB'
+            },
+            't2.medium': {
+                'id': 't2.medium',
+                'cores': '2',
+                'disk': 'EBS',
+                'ram': '4 GiB'
+            },
+            't2.large': {
+                'id': 't2.large',
+                'cores': '2',
+                'disk': 'EBS',
+                'ram': '8 GiB'
+            },
+            'm4.large': {
+                'id': 'm4.large',
+                'cores': '2',
+                'disk': 'EBS - 450 Mbps',
+                'ram': '8 GiB'
+            },
+            'm4.xlarge': {
+                'id': 'm4.xlarge',
+                'cores': '4',
+                'disk': 'EBS - 750 Mbps',
+                'ram': '16 GiB'
+            },
+            'm4.2xlarge': {
+                'id': 'm4.2xlarge',
+                'cores': '8',
+                'disk': 'EBS - 1000 Mbps',
+                'ram': '32 GiB'
+            },
+            'm4.4xlarge': {
+                'id': 'm4.4xlarge',
+                'cores': '16',
+                'disk': 'EBS - 2000 Mbps',
+                'ram': '64 GiB'
+            },
+            'm4.10xlarge': {
+                'id': 'm4.10xlarge',
+                'cores': '40',
+                'disk': 'EBS - 4000 Mbps',
+                'ram': '160 GiB'
+            },
+            'm3.medium': {
+                'id': 'm3.medium',
+                'cores': '1',
+                'disk': 'SSD (1 x 4)',
                 'ram': '3.75 GiB'
             },
-            'm1.small': {
-                'id': 'm1.small',
-                'cores': '1',
-                'disk': '150 GiB',
-                'ram': '1.7 GiB'
-            },
-            'm3.2xlarge': {
-                'id': 'm3.2xlarge',
-                'cores': '8 (with 3.25 ECUs each)',
-                'disk': 'EBS',
-                'ram': '30 GiB'
+            'm3.large': {
+                'id': 'm3.large',
+                'cores': '2',
+                'disk': 'SSD (1 x 32)',
+                'ram': '7.5 GiB'
             },
             'm3.xlarge': {
                 'id': 'm3.xlarge',
-                'cores': '4 (with 3.25 ECUs each)',
-                'disk': 'EBS',
+                'cores': '4',
+                'disk': 'SSD (2 x 40)',
                 'ram': '15 GiB'
+            },
+           'm3.2xlarge': {
+                'id': 'm3.2xlarge',
+                'cores': '8',
+                'disk': 'SSD (2 x 80)',
+                'ram': '30 GiB'
             },
         }
     }
@@ -3799,6 +3867,50 @@ def create_keypair(kwargs=None, call=None):
 
     params = {'Action': 'CreateKeyPair',
               'KeyName': kwargs['keyname']}
+
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
+    return data
+
+
+def import_keypair(kwargs=None, call=None):
+    '''
+    Import an SSH public key.
+
+    .. versionadded:: Boron
+    '''
+    if call != 'function':
+        log.error(
+            'The import_keypair function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'keyname' not in kwargs:
+        log.error('A keyname is required.')
+        return False
+
+    if 'file' not in kwargs:
+        log.error('A public key file is required.')
+        return False
+
+    params = {'Action': 'ImportKeyPair',
+              'KeyName': kwargs['keyname']}
+
+    public_key_file = kwargs['file']
+
+    if os.path.exists(public_key_file):
+        with salt.utils.fopen(public_key_file, 'r') as fh_:
+            public_key = fh_.read()
+
+    if public_key is not None:
+        params['PublicKeyMaterial'] = base64.b64encode(public_key)
 
     data = aws.query(params,
                      return_url=True,
