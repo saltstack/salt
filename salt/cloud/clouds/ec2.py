@@ -3808,6 +3808,46 @@ def create_keypair(kwargs=None, call=None):
                      sigver='4')
     return data
 
+def import_keypair(kwargs=None, call=None):
+    '''
+    Import an SSH public key
+    '''
+    if call != 'function':
+        log.error(
+            'The import_keypair function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'keyname' not in kwargs:
+        log.error('A keyname is required.')
+        return False
+
+    if 'file' not in kwargs:
+        log.error('A public key file is required.')
+        return False
+
+    params = {'Action': 'ImportKeyPair',
+              'KeyName': kwargs['keyname']}
+
+    public_key_file = kwargs['file']
+
+    if os.path.exists(public_key_file):
+        with salt.utils.fopen(public_key_file, 'r') as fh_:
+            public_key = fh_.read()
+
+    if public_key is not None:
+        params['PublicKeyMaterial'] = base64.b64encode(public_key)
+
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
+    return data
 
 def show_keypair(kwargs=None, call=None):
     '''
