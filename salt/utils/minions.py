@@ -147,7 +147,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None):
 
     log.debug('nodegroup_comp({0}) => {1}'.format(nodegroup, ret))
     # Only return list form if a nodegroup was expanded. Otherwise return
-    # the original string to conserve 
+    # the original string to conserve backwards compat
     if expanded_nodegroup:
         return ret
     else:
