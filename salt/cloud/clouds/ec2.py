@@ -798,7 +798,7 @@ def avail_sizes(call=None):
                 'cores': '2',
                 'disk': 'EBS',
                 'ram': '8 GiB'
-            }
+            },
             'm4.large': {
                 'id': 'm4.large',
                 'cores': '2',
