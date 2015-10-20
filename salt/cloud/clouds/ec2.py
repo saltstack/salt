@@ -3879,7 +3879,9 @@ def create_keypair(kwargs=None, call=None):
 
 def import_keypair(kwargs=None, call=None):
     '''
-    Import an SSH public key
+    Import an SSH public key.
+
+    .. versionadded:: Boron
     '''
     if call != 'function':
         log.error(
