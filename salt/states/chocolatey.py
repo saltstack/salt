@@ -26,12 +26,13 @@ def install(*args, **kwargs):
     '''
     salt.utils.warn_until('Nitrogen',
                           'Please use chocolatey.installed. '
-                          'chocolatey.install will be removed in Salt Nitrogen.')
+                          'chocolatey.install will be removed in '
+                          'Salt Nitrogen.')
     installed(*args, **kwargs)
 
 
 def installed(name, version=None, source=None, force=False, install_args=None,
-            override_args=False, force_x86=False):
+            override_args=False, force_x86=False, package_args=None):
     '''
     Installs a package if not already installed
 
@@ -60,6 +61,9 @@ def installed(name, version=None, source=None, force=False, install_args=None,
 
     force_x86
       Force x86 (32bit) installation on 64 bit systems. Defaults to false.
+
+    package_args
+        A list of arguments you want to pass to the package
 
     .. code-block:: yaml
 
@@ -98,7 +102,8 @@ def installed(name, version=None, source=None, force=False, install_args=None,
                                                              force,
                                                              install_args,
                                                              override_args,
-                                                             force_x86)}
+                                                             force_x86,
+                                                             package_args)}
 
     if 'Running chocolatey failed' not in ret['changes']:
         ret['result'] = True
@@ -118,7 +123,8 @@ def uninstall(*args, **kwargs):
     '''
     salt.utils.warn_until('Nitrogen',
                           'Please use chocolatey.uninstalled. '
-                          'chocolatey.uninstall will be removed in Salt Nitrogen.')
+                          'chocolatey.uninstall will be removed in '
+                          'Salt Nitrogen.')
     uninstalled(*args, **kwargs)
 
 
