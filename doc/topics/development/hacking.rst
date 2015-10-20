@@ -224,8 +224,8 @@ tools, you can explicitly tweak the default system paths that Salt expects:
 
 .. code-block:: bash
 
-    GENERATE_SALT_SYSPATHS=1 pip --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
-        install -e ./salt   # the path to the salt git clone from above
+    GENERATE_SALT_SYSPATHS=1 pip install --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
+        -e ./salt   # the path to the salt git clone from above
 
 
 You can now call all of Salt's CLI tools without explicitly passing the configuration directory.
@@ -240,8 +240,8 @@ version information which is distributable:
 
 .. code-block:: bash
 
-    GENERATE_SALT_SYSPATHS=1 WRITE_SALT_VERSION=1 pip --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
-        install -e ./salt   # the path to the salt git clone from above
+    GENERATE_SALT_SYSPATHS=1 WRITE_SALT_VERSION=1 pip install --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
+        -e ./salt   # the path to the salt git clone from above
 
 
 Instead of passing those two environmental variables, you can just pass a
@@ -249,8 +249,8 @@ single one which will trigger the other two:
 
 .. code-block:: bash
 
-    MIMIC_SALT_INSTALL=1 pip --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
-        install -e ./salt   # the path to the salt git clone from above
+    MIMIC_SALT_INSTALL=1 pip install --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
+        -e ./salt   # the path to the salt git clone from above
 
 
 This last one will grant you an edditable salt installation with hardcoded
