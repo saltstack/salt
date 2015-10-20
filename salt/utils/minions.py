@@ -100,7 +100,7 @@ def get_minion_data(minion, opts):
     return minion if minion else None, None, None
 
 
-def nodegroup_comp(nodegroup, nodegroups, skip=None):
+def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
     '''
     Recursively expand ``nodegroup`` from ``nodegroups``; ignore nodegroups in ``skip``
     '''
@@ -135,7 +135,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None):
             ret.append(word)
         elif len(word) >= 3 and word.startswith('N@'):
             expanded_nodegroup = True
-            ret.extend(nodegroup_comp(word[2:], nodegroups, skip=skip))
+            ret.extend(nodegroup_comp(word[2:], nodegroups, skip=skip, first_call=False))
         else:
             ret.append(word)
 
@@ -148,9 +148,12 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None):
     log.debug('nodegroup_comp({0}) => {1}'.format(nodegroup, ret))
     # Only return list form if a nodegroup was expanded. Otherwise return
     # the original string to conserve backwards compat
-    if expanded_nodegroup:
+    if expanded_nodegroup or not first_call:
         return ret
     else:
+        log.debug('No nested nodegroups detected. '
+                  'Using original nodegroup definition: {0}'
+                  .format(nodegroups[nodegroup]))
         return nodegroups[nodegroup]
 
 
