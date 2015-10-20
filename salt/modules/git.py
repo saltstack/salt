@@ -1375,10 +1375,8 @@ def fetch(cwd,
     command.extend(
         [x for x in _format_opts(opts) if x not in ('-f', '--force')]
     )
-    if not isinstance(remote, six.string_types):
-        remote = str(remote)
     if remote:
-        command.append(remote)
+        command.append(str(remote))
     if refspecs is not None:
         if isinstance(refspecs, (list, tuple)):
             refspec_list = []
