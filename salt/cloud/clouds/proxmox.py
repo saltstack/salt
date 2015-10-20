@@ -685,7 +685,7 @@ def create_node(vm_, newid):
 
     log.debug('Preparing to generate a node using these parameters: {0} '.format(
               newnode))
-    if vm_['clone'] is and vm_['technology'] == 'qemu':
+    if vm_['clone'] is True and vm_['technology'] == 'qemu':
         postParams = {}
         postParams['newid'] = newnode['vmid']
 
