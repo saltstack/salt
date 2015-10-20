@@ -42,6 +42,7 @@ import tornado.gen
 import tornado.concurrent
 
 # Import third party libs
+import salt.ext.six as six
 from Crypto.Cipher import PKCS1_OAEP
 
 log = logging.getLogger(__name__)
@@ -243,7 +244,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             zmq.eventloop.ioloop.install()
             self.io_loop = tornado.ioloop.IOLoop.current()
 
-        self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
+        self.hexid = hashlib.sha1(six.b(self.opts['id'])).hexdigest()
 
         self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
 
