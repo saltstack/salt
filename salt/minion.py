@@ -714,7 +714,6 @@ class Minion(MinionBase):
         if not salt.utils.is_proxy():
             self.opts['grains'] = salt.loader.grains(opts)
 
-    # TODO: remove?
     def sync_connect_master(self, timeout=None):
         '''
         Block until we are connected to a master
