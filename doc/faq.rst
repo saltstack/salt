@@ -307,7 +307,7 @@ https://github.com/saltstack-formulas/salt-formula
 .. _faq-grain-security:
 
 Is Targeting using Grain Data Secure?
-=====================================
+-------------------------------------
 
 Because grains can be set by users that have access to the minion configuration
 files on the local system, grains are considered less secure than other

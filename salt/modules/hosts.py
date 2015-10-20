@@ -159,15 +159,15 @@ def set_host(ip, alias):
         comps = tmpline.split()
         if comps[0] == ip:
             if not ovr:
-                lines[ind] = ip + '\t\t' + alias + '\n'
+                lines[ind] = ip + '\t\t' + alias + os.linesep
                 ovr = True
             else:  # remove other entries
                 lines[ind] = ''
     if not ovr:
         # make sure there is a newline
-        if lines and not lines[-1].endswith(('\n', '\r')):
-            lines[-1] = '{0}\n'.format(lines[-1])
-        line = ip + '\t\t' + alias + '\n'
+        if lines and not lines[-1].endswith(os.linesep):
+            lines[-1] += os.linesep
+        line = ip + '\t\t' + alias + os.linesep
         lines.append(line)
     with salt.utils.fopen(hfn, 'w+') as ofile:
         ofile.writelines(lines)
@@ -206,7 +206,7 @@ def rm_host(ip, alias):
                 lines[ind] = ''
             else:
                 # Only an alias was removed
-                lines[ind] = '{0}\n'.format(newline)
+                lines[ind] = newline + os.linesep
     with salt.utils.fopen(hfn, 'w+') as ofile:
         ofile.writelines(lines)
     return True
@@ -262,4 +262,4 @@ def _write_hosts(hosts):
             if line.strip():
                 # /etc/hosts needs to end with EOL so that some utils that read
                 # it do not break
-                ofile.write('{0}\n'.format(line.strip()))
+                ofile.write(line.strip() + os.linesep)
