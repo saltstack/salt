@@ -85,6 +85,10 @@ by their ``os`` grain:
 
     company: Foo Industries
 
+.. important::
+  See :ref:`Is Targeting using Grain Data Secure? <faq-grain-security>` for
+  important security information.
+
 The above pillar sets two key/value pairs. If a minion is running RedHat, then
 the ``apache`` key is set to ``httpd`` and the ``git`` key is set to the value
 of ``git``. If the minion is running Debian, those values are changed to
