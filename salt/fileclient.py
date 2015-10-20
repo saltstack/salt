@@ -600,12 +600,12 @@ class Client(object):
         try:
             query = salt.utils.http.query(
                 fixed_url,
-                stream=True,
+                text=True,
                 username=url_data.username,
                 password=url_data.password,
                 **get_kwargs
             )
-            if 'handle' not in query:
+            if 'text' not in query:
                 raise MinionError('Error: {0}'.format(query['error']))
             if no_cache:
                 return query['text']
