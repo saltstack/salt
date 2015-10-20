@@ -103,6 +103,10 @@ def get_minion_data(minion, opts):
 def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
     '''
     Recursively expand ``nodegroup`` from ``nodegroups``; ignore nodegroups in ``skip``
+
+    If a top-level (non-recursive) call finds no nodegroups, return the original
+    nodegroup definition (for backwards compatibility). Keep track of recursive
+    calls via `first_call` argument
     '''
     expanded_nodegroup = False
     if skip is None:
