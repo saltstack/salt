@@ -347,6 +347,9 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             payload = self.serial.loads(messages[0])
         # 2 includes a header which says who should do it
         elif messages_len == 2:
+            if messages[0] not in ('broadcast', self.hexid):
+                log.debug('Publish recieved for not this minion: {0}'.format(messages[0]))
+                raise tornado.gen.Return(None)
             payload = self.serial.loads(messages[1])
         else:
             raise Exception(('Invalid number of messages ({0}) in zeromq pub'
@@ -377,7 +380,8 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         @tornado.gen.coroutine
         def wrap_callback(messages):
             payload = yield self._decode_messages(messages)
-            callback(payload)
+            if payload is not None:
+                callback(payload)
         return self.stream.on_recv(wrap_callback)
 
 
