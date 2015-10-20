@@ -530,13 +530,10 @@ def get_configured_provider(vm_=None):
                            {}).get(dalias, {}).get(driver, {})
     # in all cases, verify that the linked saltmaster is alive.
     if data:
-        try:
-            ret = _salt('test.ping', salt_target=data['target'])
-            if not ret:
-                raise Exception('error')
-            return data
-        except Exception:
+        ret = _salt('test.ping', salt_target=data['target'])
+        if not ret:
             raise SaltCloudSystemExit(
                 'Configured provider {0} minion: {1} is unreachable'.format(
                     __active_provider_name__, data['target']))
+        return data
     return False
