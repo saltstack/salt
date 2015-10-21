@@ -470,7 +470,7 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
     '''
     _validate_device(device)
 
-    if not start or not end:
+    if start in [None, ''] or end in [None, '']:
         raise CommandExecutionError(
             'partition.mkpart requires a start and an end'
         )
