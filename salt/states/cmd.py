@@ -1017,12 +1017,21 @@ def script(name,
                           'documentation.')
         return ret
 
-    if HAS_GRP:
-        pgid = os.getegid()
+    if context and not isinstance(context, dict):
+        ret['comment'] = ('Invalidly-formatted \'context\' parameter. Must '
+                          'be formed as a dict.')
+        return ret
+    if defaults and not isinstance(defaults, dict):
+        ret['comment'] = ('Invalidly-formatted \'defaults\' parameter. Must '
+                          'be formed as a dict.')
+        return ret
 
     tmpctx = defaults if defaults else {}
     if context:
         tmpctx.update(context)
+
+    if HAS_GRP:
+        pgid = os.getegid()
 
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({'runas': user,
