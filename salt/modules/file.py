@@ -1278,7 +1278,7 @@ def replace(path,
             pattern,
             repl,
             count=0,
-            flags=0,
+            flags=8,
             bufsize=1,
             append_if_not_found=False,
             prepend_if_not_found=False,
@@ -1798,7 +1798,7 @@ def blockreplace(path,
 
 def search(path,
         pattern,
-        flags=0,
+        flags=8,
         bufsize=1,
         ):
     '''
