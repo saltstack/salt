@@ -1452,7 +1452,8 @@ def replace(path,
                         # Search for content, to avoid pre/appending the
                         # content if it was pre/appended in a previous run.
                         if re.search('^{0}$'.format(re.escape(content)),
-                                     r_data):
+                                     r_data,
+                                     flags=flags_num):
                             # Content was found, so set found.
                             found = True
 
