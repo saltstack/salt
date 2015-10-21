@@ -1469,6 +1469,9 @@ def replace(path,
                 "Unable to open file '{0}'. "
                 "Exception: {1}".format(path, exc)
                 )
+        finally:
+            if r_data and isinstance(r_data, mmap.mmap):
+                r_data.close()
 
     # Just search. We've searched the whole file now; if we didn't return True
     # already, then the pattern isn't present, so return False.
@@ -1509,6 +1512,9 @@ def replace(path,
                                 )
                 except (OSError, IOError) as exc:
                     raise CommandExecutionError("Exception: {0}".format(exc))
+                finally:
+                    if r_data and isinstance(r_data, mmap.mmap):
+                        r_data.close()
         except (OSError, IOError) as exc:
             raise CommandExecutionError("Exception: {0}".format(exc))
 
