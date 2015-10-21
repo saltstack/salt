@@ -5,7 +5,6 @@ A collection of mixins useful for the various *Client interfaces
 
 # Import Python libs
 from __future__ import absolute_import, print_function
-import copy
 import logging
 import weakref
 import traceback
@@ -73,11 +72,11 @@ class ClientFuncsDict(collections.MutableMapping):
                    'kwargs': kwargs,
                    }
             pub_data = {}
-            # Copy kwargs so we can iterate over and pop the pub data
-            _kwargs = copy.deepcopy(kwargs)
+            # Copy kwargs keys so we can iterate over and pop the pub data
+            kwargs_keys = list(kwargs)
 
             # pull out pub_data if you have it
-            for kwargs_key, kwargs_value in six.iteritems(_kwargs):
+            for kwargs_key in kwargs_keys:
                 if kwargs_key.startswith('__pub_'):
                     pub_data[kwargs_key] = kwargs.pop(kwargs_key)
 
@@ -285,9 +284,9 @@ class SyncClientMixin(object):
             # Inject some useful globals to *all* the function's global
             # namespace only once per module-- not per func
             completed_funcs = []
-            _functions = copy.deepcopy(self.functions)
+            _func_keys = list(self.functions)
 
-            for mod_name in six.iterkeys(_functions):
+            for mod_name in _func_keys:
                 if '.' not in mod_name:
                     continue
                 mod, _ = mod_name.split('.', 1)
