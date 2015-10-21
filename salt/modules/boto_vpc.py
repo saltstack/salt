@@ -777,7 +777,7 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
     return _create_resource('subnet', name=subnet_name, tags=tags,
                             vpc_id=vpc_id, cidr_block=cidr_block,
                             region=region, key=key, keyid=keyid,
-                            profile=profile)
+                            profile=profile, availability_zone=availability_zone)
 
 
 def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,
