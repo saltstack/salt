@@ -738,9 +738,12 @@ def destroy(name, call=None):
     data = show_instance(name, call='action')
     node = query(method='droplets', droplet_id=data['id'], http_method='delete')
 
-    delete_dns_record = config.get_cloud_config_value(
-        'delete_dns_record', get_configured_provider(), __opts__, search_global=False, default=None,
-    )
+    ## This is all terribly optomistic:
+    # vm_ = get_vm_config(name=name)
+    # delete_dns_record = config.get_cloud_config_value(
+    #     'delete_dns_record', vm_, __opts__, search_global=False, default=None,
+    # )
+    delete_dns_record = True
 
     if delete_dns_record and not isinstance(delete_dns_record, bool):
         raise SaltCloudConfigError(
@@ -749,9 +752,11 @@ def destroy(name, call=None):
 
     if delete_dns_record:
         log.debug('Deleting DNS records for {}.'.format(name))
-        delete_dns_record(name)
+        destroy_dns_records(name)
     else:
         log.debug('delete_dns_record : {}'.format(delete_dns_record))
+        for line in pprint.pformat(dir()).splitlines():
+            log.debug('delete  context: {}'.format(line))
 
     salt.utils.cloud.fire_event(
         'event',
@@ -786,7 +791,7 @@ def post_dns_record(dns_domain, name, record_type, record_data):
     return False
 
 
-def delete_dns_record(fqdn):
+def destroy_dns_records(fqdn):
     '''
     Deletes DNS records for the given hostname if the domain is managed with DO.
     '''
@@ -802,7 +807,7 @@ def delete_dns_record(fqdn):
         for id in record_ids:
             try:
                 log.info('deleting DNS record {}'.format(id))
-                return query(
+                ret = query(
                     method='domains',
                     droplet_id=domain,
                     command='records/{}'.format(id),
@@ -810,6 +815,7 @@ def delete_dns_record(fqdn):
                 )
             except:
                 log.error('failed to delete DNS domain {} record ID {}.'.format(domain, hostname))
+            log.debug('DNS deletion REST call returned: {}'.format(pprint.pformat(ret)))
 
     return False
 
