@@ -30,6 +30,7 @@ import sys
 import tempfile
 import time
 import glob
+import mmap
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext.six import string_types
@@ -1397,8 +1398,9 @@ def replace(path,
 
     flags_num = _get_flags(flags)
     cpattern = re.compile(str(pattern), flags_num)
+    filesize = os.path.getsize(path)
     if bufsize == 'file':
-        bufsize = os.path.getsize(path)
+        bufsize = filesize
 
     # Search the file; track if any changes have been made for the return val
     has_changes = False
@@ -1419,48 +1421,54 @@ def replace(path,
                                         append_if_not_found) \
                                      else repl
 
-    # First check the whole file, determine whether to make the replacement
-    # Searching first avoids modifying the time stamp if there are no changes
-    try:
-        # Use a read-only handle to open the file
-        with salt.utils.fopen(path,
-                              mode='rb',
-                              buffering=bufsize) as r_file:
-            for line in r_file:
+    # mmap throws a ValueError if the file is empty, but if it is empty we
+    # should be able to skip the search anyway. NOTE: Is there a use case for
+    # searching an empty file with an empty pattern?
+    if filesize is not 0:
+        # First check the whole file, determine whether to make the replacement
+        # Searching first avoids modifying the time stamp if there are no changes
+        try:
+            # Use a read-only handle to open the file
+            with salt.utils.fopen(path,
+                                  mode='rb',
+                                  buffering=bufsize) as r_file:
+                r_data = mmap.mmap(r_file.fileno(),
+                                   0,
+                                   access=mmap.ACCESS_READ)
                 if search_only:
                     # Just search; bail as early as a match is found
-                    if re.search(cpattern, line):
+                    if re.search(cpattern, r_data):
                         return True  # `with` block handles file closure
                 else:
-                    result, nrepl = re.subn(cpattern, repl, line, count)
+                    result, nrepl = re.subn(cpattern, repl, r_data, count)
 
                     # found anything? (even if no change)
                     if nrepl > 0:
                         found = True
+                        # Identity check the potential change
+                        has_changes = result != r_data.read(filesize)
 
                     if prepend_if_not_found or append_if_not_found:
-                        # Search for content, so we don't continue pre/appending
-                        # the content if it's been pre/appended in a previous run.
-                        if re.search('^{0}$'.format(re.escape(content)), line):
+                        # Search for content, to avoid pre/appending the
+                        # content if it was pre/appended in a previous run.
+                        if re.search('^{0}$'.format(re.escape(content)),
+                                     r_data):
                             # Content was found, so set found.
                             found = True
-
-                    # Identity check each potential change until one change is made
-                    if has_changes is False and result != line:
-                        has_changes = True
 
                     # Keep track of show_changes here, in case the file isn't
                     # modified
                     if show_changes or append_if_not_found or \
                        prepend_if_not_found:
-                        orig_file.append(line)
-                        new_file.append(result)
+                        r_data.seek(0)
+                        orig_file = r_data.read(filesize).splitlines(True)
+                        new_file = result.splitlines(True)
 
-    except (OSError, IOError) as exc:
-        raise CommandExecutionError(
-            "Unable to open file '{0}'. "
-            "Exception: {1}".format(path, exc)
-            )
+        except (OSError, IOError) as exc:
+            raise CommandExecutionError(
+                "Unable to open file '{0}'. "
+                "Exception: {1}".format(path, exc)
+                )
 
     # Just search. We've searched the whole file now; if we didn't return True
     # already, then the pattern isn't present, so return False.
@@ -1485,18 +1493,20 @@ def replace(path,
                     with salt.utils.fopen(temp_file,
                                           mode='rb',
                                           buffering=bufsize) as r_file:
-                        for line in r_file:
-                            result, nrepl = re.subn(cpattern, repl,
-                                                    line, count)
-                            try:
-                                w_file.write(result)
-                            except (OSError, IOError) as exc:
-                                raise CommandExecutionError(
-                                    "Unable to write file '{0}'. Contents may "
-                                    "be truncated. Temporary file contains copy "
-                                    "at '{1}'. "
-                                    "Exception: {2}".format(path, temp_file, exc)
-                                    )
+                        r_data = mmap.mmap(r_file.fileno(),
+                                           0,
+                                           access=mmap.ACCESS_READ)
+                        result, nrepl = re.subn(cpattern, repl,
+                                                r_data, count)
+                        try:
+                            w_file.write(result)
+                        except (OSError, IOError) as exc:
+                            raise CommandExecutionError(
+                                "Unable to write file '{0}'. Contents may "
+                                "be truncated. Temporary file contains copy "
+                                "at '{1}'. "
+                                "Exception: {2}".format(path, temp_file, exc)
+                                )
                 except (OSError, IOError) as exc:
                     raise CommandExecutionError("Exception: {0}".format(exc))
         except (OSError, IOError) as exc:
