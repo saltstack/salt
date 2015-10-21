@@ -595,12 +595,10 @@ def create_disk_from_distro(vm_, linode_id, swap_size=None):
             'The Linode driver requires a password.'
         )
 
-    distribution_id = get_distribution_id(vm_)
-
     kwargs.update({'LinodeID': linode_id,
-                   'DistributionID': distribution_id,
+                   'DistributionID': get_distribution_id(vm_),
                    'Label': vm_['name'],
-                   'Size': get_disk_size(vm_, swap_size)})
+                   'Size': get_disk_size(vm_, swap_size, linode_id)})
 
     result = _query('linode', 'disk.createfromdistribution', args=kwargs)
 
@@ -750,15 +748,14 @@ def get_datacenter_id(location):
     return avail_locations()[location]['DATACENTERID']
 
 
-def get_disk_size(vm_, swap):
+def get_disk_size(vm_, swap, linode_id):
     r'''
     Returns the size of of the root disk in MB.
 
     vm_
         The VM to get the disk size for.
     '''
-    vm_size = get_vm_size(vm_)
-    disk_size = vm_size
+    disk_size = get_linode(kwargs={'linode_id': linode_id})['TOTALHD']
     return config.get_cloud_config_value(
         'disk_size', vm_, __opts__, default=disk_size - swap
     )
@@ -979,7 +976,7 @@ def get_swap_size(vm_):
         The VM profile to obtain the swap size from.
     '''
     return config.get_cloud_config_value(
-        'wap', vm_, __opts__, default=128
+        'swap', vm_, __opts__, default=128
     )
 
 
