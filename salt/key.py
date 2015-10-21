@@ -18,6 +18,7 @@ import logging
 # Import salt libs
 import salt.crypt
 import salt.utils
+import salt.client
 import salt.exceptions
 import salt.utils.event
 import salt.daemons.masterapi
@@ -206,7 +207,7 @@ class KeyCLI(object):
             if veri.lower().startswith('y'):
                 _print_deleted(
                     matches,
-                    self.key.delete_key(match_dict=matches)
+                    self.key.delete_key(match_dict=matches, revoke_auth=True)
                 )
         else:
             print('Deleting the following keys:')
@@ -521,6 +522,7 @@ class Key(object):
                 opts['transport'],
                 opts=opts,
                 listen=False)
+        self.client = salt.client.get_local_client(mopts=self.opts)
 
     def _check_minions_directories(self):
         '''
@@ -802,7 +804,11 @@ class Key(object):
                 pass
         return self.list_keys()
 
-    def delete_key(self, match=None, match_dict=None, preserve_minions=False):
+    def delete_key(self,
+                    match=None,
+                    match_dict=None,
+                    preserve_minions=False,
+                    revoke_auth=False):
         '''
         Delete public keys. If "match" is passed, it is evaluated as a glob.
         Pre-gathered matches can also be passed via "match_dict".
@@ -818,6 +824,18 @@ class Key(object):
         for status, keys in six.iteritems(matches):
             for key in keys:
                 try:
+                    if revoke_auth:
+                        if self.opts.get('rotate_aes_key') is False:
+                            print('Immediate auth revocation specified but AES key rotation not allowed. '
+                                     'Minion will not be disconnected until the master AES key is rotated.')
+                        else:
+                            try:
+                                self.client.cmd(key, 'saltutil.revoke_auth')
+                            except salt.exceptions.SaltClientError:
+                                print('Cannot contact Salt master. '
+                                      'Connection for {0} will remain up until '
+                                      'master AES key is rotated or auth is revoked '
+                                      'with \'saltutil.revoke_auth\'.'.format(key))
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                     eload = {'result': True,
                              'act': 'delete',
@@ -1242,7 +1260,11 @@ class RaetKey(Key):
                 pass
         return self.list_keys()
 
-    def delete_key(self, match=None, match_dict=None, preserve_minions=False):
+    def delete_key(self,
+                   match=None,
+                   match_dict=None,
+                   preserve_minions=False,
+                   revoke_auth=False):
         '''
         Delete public keys. If "match" is passed, it is evaluated as a glob.
         Pre-gathered matches can also be passed via "match_dict".
@@ -1255,6 +1277,18 @@ class RaetKey(Key):
             matches = {}
         for status, keys in six.iteritems(matches):
             for key in keys:
+                if revoke_auth:
+                    if self.opts.get('rotate_aes_key') is False:
+                        print('Immediate auth revocation specified but AES key rotation not allowed. '
+                                 'Minion will not be disconnected until the master AES key is rotated.')
+                    else:
+                        try:
+                            self.client.cmd(key, 'saltutil.revoke_auth')
+                        except salt.exceptions.SaltClientError:
+                            print('Cannot contact Salt master. '
+                                  'Connection for {0} will remain up until '
+                                  'master AES key is rotated or auth is revoked '
+                                  'with \'saltutil.revoke_auth\'.'.format(key))
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                 except (OSError, IOError):

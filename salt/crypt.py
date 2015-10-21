@@ -10,14 +10,16 @@ import os
 import sys
 import time
 import hmac
+import base64
 import hashlib
 import logging
 import traceback
 import binascii
 import weakref
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 # Import third party libs
+import salt.ext.six as six
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 try:
     from Crypto.Cipher import AES, PKCS1_OAEP
     from Crypto.Hash import SHA
@@ -1113,7 +1115,10 @@ class Crypticle(object):
     @classmethod
     def generate_key_string(cls, key_size=192):
         key = os.urandom(key_size // 8 + cls.SIG_SIZE)
-        return key.encode('base64').replace('\n', '')
+        b64key = base64.b64encode(key)
+        if six.PY3:
+            b64key = b64key.decode('utf-8')
+        return b64key.replace('\n', '')
 
     @classmethod
     def extract_keys(cls, key_string, key_size):
