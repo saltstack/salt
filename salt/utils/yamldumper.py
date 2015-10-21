@@ -17,12 +17,14 @@ except ImportError:
 
 from salt.utils.odict import OrderedDict
 
+# pylint: disable=import-error
 try:
     from ioflo.aid.odicting import odict
     HAS_IOFLO = True
 except ImportError:
     odict = None
     HAS_IOFLO = False
+# pylint: enable=import-error
 
 
 class OrderedDumper(Dumper):
