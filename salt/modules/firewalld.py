@@ -12,6 +12,7 @@ import logging
 import re
 
 # Import Salt Libs
+from salt.exceptions import CommandExecutionError
 import salt.utils
 
 log = logging.getLogger(__name__)
@@ -31,16 +32,18 @@ def __firewall_cmd(cmd):
     '''
     Return the firewall-cmd location
     '''
-    out = __salt__['cmd.run']('{0} {1}'.format(
-        salt.utils.which('firewall-cmd'),
-        cmd))
+    firewall_cmd = '{0} {1}'.format(salt.utils.which('firewall-cmd'), cmd)
+    out = __salt__['cmd.run_all'](firewall_cmd)
 
-    if out == 'success':
-        return 'success'
-    elif 'Error' in out:
-        return out[5:-5]
-
-    return out
+    if out['retcode'] != 0:
+        if not out['stderr']:
+            msg = out['stdout']
+        else:
+            msg = out['stderr']
+        raise CommandExecutionError(
+            'firewall-cmd failed: {0}'.format(msg)
+        )
+    return out['stdout']
 
 
 def __mgmt(name, _type, action):

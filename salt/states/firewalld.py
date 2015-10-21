@@ -36,10 +36,14 @@ to 2222, and forwards TCP traffic from port 80 to 443 at 192.168.0.1.
         - 22:2222:tcp
         - 80:443:tcp:192.168.0.1
 '''
-from __future__ import absolute_import
 
+# Import Python Libs
+from __future__ import absolute_import
 import logging
-import salt.exceptions
+
+# Import Salt Libs
+from salt.exceptions import CommandExecutionError
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -65,14 +69,24 @@ def present(name,
     Ensure a zone has specific attributes.
     '''
     ret = {'name': name,
-           'result': True,
+           'result': False,
            'changes': {},
            'comment': ''}
 
-    zones = __salt__['firewalld.get_zones']()
+    try:
+        zones = __salt__['firewalld.get_zones']()
+    except CommandExecutionError as err:
+        ret['comment'] = 'Error: {0}'.format(err)
+        return ret
+
     if name not in zones:
         if not __opts__['test']:
-            __salt__['firewalld.new_zone'](name)
+            try:
+                __salt__['firewalld.new_zone'](name)
+            except CommandExecutionError as err:
+                ret['comment'] = 'Error: {0}'.format(err)
+                return ret
+
         ret['changes'].update({name:
                               {'Old': zones,
                                'New': name}})
@@ -87,7 +101,11 @@ def present(name,
                 if icmp_type not in _current_icmp_blocks:
                     new_icmp_types.append(icmp_type)
                     if not __opts__['test']:
-                        __salt__['firewalld.block_icmp'](name, icmp_type)
+                        try:
+                            __salt__['firewalld.block_icmp'](name, icmp_type)
+                        except CommandExecutionError as err:
+                            ret['comment'] = 'Error: {0}'.format(err)
+                            return ret
             else:
                 log.error('{0} is an invalid ICMP type'.format(icmp_type))
         if new_icmp_types:
@@ -99,7 +117,11 @@ def present(name,
         default_zone = __salt__['firewalld.default_zone']()
         if name != default_zone:
             if not __opts__['test']:
-                __salt__['firewalld.set_default_zone'](name)
+                try:
+                    __salt__['firewalld.set_default_zone'](name)
+                except CommandExecutionError as err:
+                    ret['comment'] = 'Error: {0}'.format(err)
+                    return ret
             ret['changes'].update({'default':
                                   {'Old': default_zone,
                                    'New': name}})
@@ -107,7 +129,11 @@ def present(name,
     if masquerade:
         if not __salt__['firewalld.get_masquerade'](name):
             if not __opts__['test']:
-                __salt__['firewalld.add_masquerade'](name)
+                try:
+                    __salt__['firewalld.add_masquerade'](name)
+                except CommandExecutionError as err:
+                    ret['comment'] = 'Error: {0}'.format(err)
+                    return ret
             ret['changes'].update({'masquerade':
                                   {'Old': '',
                                    'New': 'Masquerading successfully set.'}})
@@ -119,7 +145,11 @@ def present(name,
             if port not in _current_ports:
                 new_ports.append(port)
                 if not __opts__['test']:
-                    __salt__['firewalld.add_port'](name, port)
+                    try:
+                        __salt__['firewalld.add_port'](name, port)
+                    except CommandExecutionError as err:
+                        ret['comment'] = 'Error: {0}'.format(err)
+                        return ret
         if new_ports:
             ret['changes'].update({'ports':
                                   {'Old': _current_ports,
@@ -146,7 +176,11 @@ def present(name,
             if rule_exists is False:
                 new_port_fwds.append(port)
                 if not __opts__['test']:
-                    __salt__['firewalld.add_port_fwd'](name, src, dest, protocol, dstaddr)
+                    try:
+                        __salt__['firewalld.add_port_fwd'](name, src, dest, protocol, dstaddr)
+                    except CommandExecutionError as err:
+                        ret['comment'] = 'Error: {0}'.format(err)
+                        return ret
 
         if new_port_fwds:
             ret['changes'].update({'port_fwd':
@@ -156,18 +190,21 @@ def present(name,
     if services:
         new_services = []
         _current_services = __salt__['firewalld.list_services'](name)
-
         for service in services:
             if service not in _current_services:
                 new_services.append(service)
                 if not __opts__['test']:
-                    __salt__['firewalld.new_service'](service)
-
+                    try:
+                        __salt__['firewalld.new_service'](service)
+                    except CommandExecutionError as err:
+                        ret['comment'] = 'Error: {0}'.format(err)
+                        return ret
         if new_services:
             ret['changes'].update({'services':
                                   {'Old': _current_services,
                                    'New': new_services}})
 
+    ret['result'] = True
     if ret['changes'] == {}:
         ret['comment'] = '\'{0}\' is already in the desired state.'.format(name)
         return ret
@@ -177,5 +214,5 @@ def present(name,
         ret['comment'] = 'Configuration for \'{0}\' will change.'.format(name)
         return ret
 
-    ret['comment'] = '\'{0}\' was configured.'
+    ret['comment'] = '\'{0}\' was configured.'.format(name)
     return ret
