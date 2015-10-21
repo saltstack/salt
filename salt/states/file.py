@@ -4310,6 +4310,8 @@ def serialize(name,
                 'result': False
                 }
 
+    contents += '\n'
+
     if __opts__['test']:
         ret['changes'] = __salt__['file.check_managed_changes'](
             name=name,
