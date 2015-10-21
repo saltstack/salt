@@ -29,13 +29,16 @@ def _proxy():
     '''
     Get proxy.
     '''
-    return __opts__['proxymodule']
+    return __opts__.get('proxymodule')
 
 
 def __virtual__():
     '''
     Start the Philips HUE only for proxies.
     '''
+
+    if not _proxy():
+        return False
 
     def _mkf(cmd_name, doc):
         def _cmd(*args, **kw):
