@@ -10,6 +10,11 @@ Installation from the SaltStack Repository
 2015.8.0 and later packages for Ubuntu 14 (Trusty) and Ubuntu 12 (Precise) are
 available in the SaltStack repository.
 
+.. important::
+  The repository folder structure changed between 2015.8.0 and 2015.8.1. If you
+  previously configured this repository, verify that your paths contain
+  ``latest``.
+
 To install using the SaltStack repository:
 
 #. Run the following command to import the SaltStack repository key:
@@ -18,13 +23,13 @@ To install using the SaltStack repository:
 
    .. code-block:: bash
 
-       wget -O - https://repo.saltstack.com/apt/ubuntu/ubuntu14/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
+       wget -O - https://repo.saltstack.com/apt/ubuntu/ubuntu14/latest/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
 
    Ubuntu 12:
 
    .. code-block:: bash
 
-       wget -O - https://repo.saltstack.com/apt/ubuntu/ubuntu12/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
+       wget -O - https://repo.saltstack.com/apt/ubuntu/ubuntu12/latest/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
 
 #. Add the following line to ``/etc/apt/sources.list``:
 
@@ -32,13 +37,13 @@ To install using the SaltStack repository:
 
    .. code-block:: bash
 
-       deb http://repo.saltstack.com/apt/ubuntu/ubuntu14 trusty main
+       deb http://repo.saltstack.com/apt/ubuntu/ubuntu14/latest trusty main
 
    Ubuntu 12:
 
    .. code-block:: bash
 
-       deb http://repo.saltstack.com/apt/ubuntu/ubuntu12 precise main
+       deb http://repo.saltstack.com/apt/ubuntu/ubuntu12/latest precise main
 
 #. Run ``sudo apt-get update``.
 

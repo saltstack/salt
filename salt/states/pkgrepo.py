@@ -223,6 +223,8 @@ def managed(name, **kwargs):
        If set to true, empty file before config repo, dangerous if use
        multiple sources in one file.
 
+       .. versionadded:: 2015.8.0
+
     refresh_db
        If set to false this will skip refreshing the apt package database on
        debian based systems.

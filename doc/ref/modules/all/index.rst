@@ -53,6 +53,7 @@ Full list of builtin execution modules
     cabal
     cassandra
     cassandra_cql
+    chassis
     chef
     chocolatey
     cloud
@@ -87,6 +88,7 @@ Full list of builtin execution modules
     dockerng
     dpkg
     drac
+    dracr
     drbd
     ebuild
     eix
