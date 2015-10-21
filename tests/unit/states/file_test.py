@@ -63,7 +63,7 @@ class TestFileState(TestCase):
         self.assertEqual(json.loads(returner.returned), dataset)
 
         filestate.serialize('/tmp', dataset, formatter="python")
-        self.assertEqual(returner.returned, pprint.pformat(dataset))
+        self.assertEqual(returner.returned, pprint.pformat(dataset) + '\n')
 
     def test_contents_and_contents_pillar(self):
         def returner(contents, *args, **kwargs):
