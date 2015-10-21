@@ -51,6 +51,19 @@ def init(opts):
         return False
 
 
+def ping(opts):
+    '''
+    Required.
+    Ping the device on the other end of the connection
+    '''
+    try:
+        out, err = DETAILS['server'].sendline('help')
+        return True
+    except TerminalException as e:
+        log.error(e)
+        return False
+
+
 def shutdown(opts):
     '''
     Disconnect
