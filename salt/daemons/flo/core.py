@@ -30,9 +30,7 @@ from salt.utils import kinds, is_windows
 from salt.utils.event import tagify
 
 # Import ioflo libs
-# pylint: disable=import-error
 from ioflo.aid.odicting import odict
-# pylint: enable=import-error
 import ioflo.base.deeding
 
 from ioflo.base.consoling import getConsole
