@@ -468,7 +468,6 @@ def query(method='droplets', droplet_id=None, command=None, args=None, http_meth
     if not isinstance(args, dict):
         args = {}
 
-
     personal_access_token = config.get_cloud_config_value(
         'personal_access_token', get_configured_provider(), __opts__, search_global=False
     )
@@ -1003,6 +1002,7 @@ def unassign_floating_ip(kwargs=None, call=None):
                    http_method='post')
 
     return result
+
 
 def _list_nodes(full=False, for_output=False):
     '''
