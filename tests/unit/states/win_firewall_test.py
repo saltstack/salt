@@ -54,10 +54,10 @@ class WinFirewallTestCase(TestCase):
             Test to add a new firewall rule (Windows only)
         '''
         ret = {'name': 'salt',
-               'changes': {},
+                'changes': {'new rule': 'salt'},
                'result': None,
                'comment': ''}
-        mock = MagicMock(return_value=True)
+        mock = MagicMock(return_value=False)
         with patch.dict(win_firewall.__salt__, {"firewall.get_rule": mock}):
             with patch.dict(win_firewall.__opts__, {"test": True}):
                 self.assertDictEqual(win_firewall.add_rule('salt', 'stack'),
