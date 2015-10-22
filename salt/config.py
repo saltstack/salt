@@ -387,6 +387,9 @@ VALID_OPTS = {
     # Events matching a tag in this list should never be sent to an event returner.
     'event_return_blacklist': list,
 
+    # default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
+    'event_match_type': str,
+
     # This pidfile to write out to when a daemon starts
     'pidfile': str,
 
@@ -781,7 +784,7 @@ DEFAULT_MINION_OPTS = {
     'user': 'root',
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'minion'),
-    'id': None,
+    'id': '',
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
     'cache_jobs': False,
     'grains_cache': False,
@@ -966,6 +969,7 @@ DEFAULT_MINION_OPTS = {
     'salt_event_pub_hwm': 2000,
     # ZMQ HWM for EventPublisher pub socket - different for minion vs. master
     'event_publisher_pub_hwm': 1000,
+    'event_match_type': 'startswith',
 }
 
 DEFAULT_MASTER_OPTS = {
@@ -1115,6 +1119,7 @@ DEFAULT_MASTER_OPTS = {
     'event_return_queue': 0,
     'event_return_whitelist': [],
     'event_return_blacklist': [],
+    'event_match_type': 'startswith',
     'serial': 'msgpack',
     'state_verbose': True,
     'state_output': 'full',

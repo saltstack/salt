@@ -220,10 +220,6 @@ class SaltEvent(object):
         Return the string URI for the location of the pull and pub sockets to
         use for firing and listening to events
         '''
-        hash_type = getattr(hashlib, self.opts['hash_type'])
-        # Only use the first 10 chars to keep longer hashes from exceeding the
-        # max socket path length.
-        id_hash = hash_type(salt.utils.to_bytes(self.opts.get('id', ''))).hexdigest()[:10]
         if node == 'master':
             if self.opts['ipc_mode'] == 'tcp':
                 puburi = 'tcp://127.0.0.1:{0}'.format(
@@ -252,6 +248,10 @@ class SaltEvent(object):
                     self.opts['tcp_pull_port']
                     )
             else:
+                hash_type = getattr(hashlib, self.opts['hash_type'])
+                # Only use the first 10 chars to keep longer hashes from exceeding the
+                # max socket path length.
+                id_hash = hash_type(salt.utils.to_bytes(self.opts['id'])).hexdigest()[:10]
                 puburi = 'ipc://{0}'.format(os.path.join(
                     sock_dir,
                     'minion_event_{0}_pub.ipc'.format(id_hash)
@@ -340,7 +340,7 @@ class SaltEvent(object):
 
     def _get_match_func(self, match_type=None):
         if match_type is None:
-            match_type = self.opts.get('event_match_type', 'startswith')
+            match_type = self.opts['event_match_type']
         return getattr(self, '_match_tag_{0}'.format(match_type), None)
 
     def _check_pending(self, tag, match_func=None):
@@ -724,7 +724,7 @@ class MinionEvent(SaltEvent):
     '''
     def __init__(self, opts, listen=True):
         super(MinionEvent, self).__init__(
-            'minion', sock_dir=opts['sock_dir'], opts=opts, listen=listen)
+            'minion', sock_dir=opts.get('sock_dir'), opts=opts, listen=listen)
 
 
 class AsyncEventPublisher(object):
@@ -745,7 +745,7 @@ class AsyncEventPublisher(object):
         hash_type = getattr(hashlib, self.opts['hash_type'])
         # Only use the first 10 chars to keep longer hashes from exceeding the
         # max socket path length.
-        id_hash = hash_type(salt.utils.to_bytes(self.opts.get('id', ''))).hexdigest()[:10]
+        id_hash = hash_type(salt.utils.to_bytes(self.opts['id'])).hexdigest()[:10]
         epub_sock_path = os.path.join(
             self.opts['sock_dir'],
             'minion_event_{0}_pub.ipc'.format(id_hash)
