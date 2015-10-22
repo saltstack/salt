@@ -6,7 +6,6 @@ Make me some salt!
 # Import python libs
 from __future__ import absolute_import
 import os
-import signal
 import warnings
 from salt.utils.verify import verify_log
 
