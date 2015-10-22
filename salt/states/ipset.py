@@ -163,7 +163,7 @@ def set_absent(name, family='ipv4', **kwargs):
     return ret
 
 
-def present(name, entry=None, family='ipv4', **kwargs):
+def present(name, set_name=None, entry=None, family='ipv4', **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -185,6 +185,11 @@ def present(name, entry=None, family='ipv4', **kwargs):
            'result': None,
            'comment': ''}
 
+    if not set_name:
+        ret['result'] = False
+        ret['comment'] = ('ipset set_name must be specified')
+        return ret
+
     if not entry:
         ret['result'] = False
         ret['comment'] = ('ipset entry must be specified')
@@ -201,38 +206,38 @@ def present(name, entry=None, family='ipv4', **kwargs):
         if 'comment' in kwargs:
             _entry = '{0} comment "{1}"'.format(entry, kwargs['comment'])
 
-        if __salt__['ipset.check'](kwargs['set_name'],
+        if __salt__['ipset.check'](set_name,
                                    _entry,
                                    family) is True:
             ret['result'] = True
             ret['comment'] += 'entry for {0} already in set ({1}) for {2}\n'.format(
                 entry,
-                kwargs['set_name'],
+                set_name,
                 family)
         else:
             if __opts__['test']:
                 ret['comment'] += 'entry {0} needs to be added to set {1} for family {2}\n'.format(
                     entry,
-                    kwargs['set_name'],
+                    set_name,
                     family)
             else:
-                command = __salt__['ipset.add'](kwargs['set_name'], entry, family, **kwargs)
+                command = __salt__['ipset.add'](set_name, entry, family, **kwargs)
                 if 'Error' not in command:
                     ret['changes'] = {'locale': name}
                     ret['result'] = True
                     ret['comment'] += 'entry {0} added to set {1} for family {2}\n'.format(
                         _entry,
-                        kwargs['set_name'],
+                        set_name,
                         family)
                 else:
                     ret['result'] = False
                     ret['comment'] = 'Failed to add to entry {1} to set {0} for family {2}.\n{3}'.format(
-                            kwargs['set_name'],
+                            set_name,
                             _entry, family, command)
     return ret
 
 
-def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
+def absent(name, set_name=None, entry=None, entries=None, family='ipv4', **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -250,6 +255,11 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
            'changes': {},
            'result': None,
            'comment': ''}
+
+    if not set_name:
+        ret['result'] = False
+        ret['comment'] = ('ipset set_name must be specified')
+        return ret
 
     if not entry:
         ret['result'] = False
@@ -269,37 +279,36 @@ def absent(name, entry=None, entries=None, family='ipv4', **kwargs):
             _entry = '{0} comment "{1}"'.format(entry, kwargs['comment'])
 
         log.debug('_entry {0}'.format(_entry))
-        if not __salt__['ipset.check'](kwargs['set_name'],
+        if not __salt__['ipset.check'](set_name,
                                       _entry,
                                       family) is True:
             ret['result'] = True
             ret['comment'] += 'ipset entry for {0} not present in set ({1}) for {2}\n'.format(
                 _entry,
-                kwargs['set_name'],
+                set_name,
                 family)
         else:
 
             if __opts__['test']:
                 ret['comment'] += 'ipset entry {0} needs to removed from set {1} for family {2}\n'.format(
                     entry,
-                    kwargs['set_name'],
+                    set_name,
                     family)
             else:
-                command = __salt__['ipset.delete'](kwargs['set_name'], entry, family, **kwargs)
+                command = __salt__['ipset.delete'](set_name, entry, family, **kwargs)
                 if 'Error' not in command:
                     ret['changes'] = {'locale': name}
                     ret['result'] = True
                     ret['comment'] += 'ipset entry {1} for set {0} removed for family {2}\n'.format(
-                        kwargs['set_name'],
+                        set_name,
                         _entry,
                         family)
                 else:
                     ret['result'] = False
                     ret['comment'] = ('Failed to delete from ipset entry for set {0}. '
                                       'Attempted entry was {1} for {2}.\n{3}\n').format(
-                                          kwargs['set_name'],
+                                          set_name,
                                           _entry, family, command)
-            return ret
     return ret
 
 
