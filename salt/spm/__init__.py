@@ -168,10 +168,11 @@ class SPMClient(object):
                 if data is not None:
                     continue
                 needs.append(dep)
-            raise SPMPackageError(
-                'Cannot install {0}, the following dependencies are needed:\n\n{1}'.format(
-                    formula_def['name'], '\n'.join(needs))
-            )
+            if len(needs) > 0
+                raise SPMPackageError(
+                    'Cannot install {0}, the following dependencies are needed:\n\n{1}'.format(
+                        formula_def['name'], '\n'.join(needs))
+                )
 
         if pkg_name is None:
             msg = 'Installing package from file {0}'.format(pkg_file)
