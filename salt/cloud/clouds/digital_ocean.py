@@ -790,6 +790,31 @@ def post_dns_record(dns_domain, name, record_type, record_data):
 
     return False
 
+# Delete this with create_dns_record() and delete_dns_record() for Carbon release
+__deprecated_fqdn_parsing = lambda fqdn: '.'.join(fqdn.split('.')[-2:]), '.'.join(fqdn.split('.')[:-2])
+
+def create_dns_record(hostname, ip_address):
+    salt.utils.warn_until(
+        'Carbon',
+        'create_dns_record() is deprecated and will be removed in Carbon. Please use post_dns_record() instead.'
+    )
+    return __deprecated_create_dns_record(hostname, ip_address)
+
+def __deprecated_create_dns_record(hostname, ip_address):
+    domainname, subdomain = __deprecated_fqdn_parsing(hostname)
+    domain = query(method='domains', droplet_id=domainname)
+
+    if domain:
+        result = query(
+            method='domains',
+            droplet_id=domainname,
+            command='records',
+            args={'type': 'A', 'name': subdomain, 'data': ip_address},
+            http_method='post'
+        )
+        return result
+
+    return False
 
 def destroy_dns_records(fqdn):
     '''
@@ -817,6 +842,31 @@ def destroy_dns_records(fqdn):
                 log.error('failed to delete DNS domain {0} record ID {1}.'.format(domain, hostname))
             log.debug('DNS deletion REST call returned: {0}'.format(pprint.pformat(ret)))
 
+    return False
+
+def delete_dns_record(hostname):
+    salt.utils.warn_until(
+        'Carbon',
+        'delete_dns_record() is deprecated and will be removed in Carbon. Please use destroy_dns_records() instead.'
+    )
+    return __deprecated_delete_dns_record(hostname)
+
+def __deprecated_delete_dns_record(hostname):
+    '''
+    Deletes a DNS for the given hostname if the domain is managed with DO.
+    '''
+    domainname, subdomain = __deprecated_fqdn_parsing(hostname)
+    records = query(method='domains', droplet_id=domainname, command='records')
+
+    if records:
+        for record in records['domain_records']:
+            if record['name'] == subdomain:
+                return query(
+                    method='domains',
+                    droplet_id=domainname,
+                    command='records/' + str(record['id']),
+                    http_method='delete'
+                )
     return False
 
 def show_pricing(kwargs=None, call=None):
