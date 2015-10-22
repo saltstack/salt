@@ -330,6 +330,7 @@ class Master(SMaster):
                 'upgrade your ZMQ!'
             )
         SMaster.__init__(self, opts)
+        self._prepared = True
 
     def __set_max_open_files(self):
         if not HAS_RESOURCE:
@@ -445,7 +446,7 @@ class Master(SMaster):
             **kwargs)
         reqserv.run()
 
-    def start(self):
+    def prepare(self):
         '''
         Turn on the master server components
         '''
@@ -461,7 +462,7 @@ class Master(SMaster):
 
         self.__set_max_open_files()
         log.info('Creating master process manager')
-        process_manager = salt.utils.process.ProcessManager()
+        self.process_manager = process_manager = salt.utils.process.ProcessManager()
         log.info('Creating master maintenance process')
         pub_channels = []
         for transport, opts in iter_transport_opts(self.opts):
@@ -516,13 +517,17 @@ class Master(SMaster):
             kwargs['log_queue'] = (
                     salt.log.setup.get_multiprocessing_logging_queue())
         process_manager.add_process(self.run_reqserver, kwargs=kwargs)
+        self._prepared = True
 
+    def start(self):
+        if not self._prepared:
+            self.prepare()
         try:
-            process_manager.run()
+            self.process_manager.run()
         except KeyboardInterrupt:
             # Shut the master down gracefully on SIGINT
             log.warn('Stopping the Salt Master')
-            process_manager.kill_children()
+            self.process_manager.kill_children()
             log.warn('Exiting on Ctrl-c')
 
 
