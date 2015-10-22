@@ -844,7 +844,7 @@ def list_floating_ips(call=None):
 def show_floating_ip(kwargs=None, call=None):
     '''
     Show the details of a floating IP
-    
+
     .. versionadded:: Boron
 
     CLI Examples:
@@ -877,7 +877,7 @@ def show_floating_ip(kwargs=None, call=None):
 def create_floating_ip(kwargs=None, call=None):
     '''
     Create a new floating IP
-    
+
     .. versionadded:: Boron
 
     CLI Examples:
@@ -919,7 +919,7 @@ def create_floating_ip(kwargs=None, call=None):
 def delete_floating_ip(kwargs=None, call=None):
     '''
     Delete a floating IP
-    
+
     .. versionadded:: Boron
 
     CLI Examples:
@@ -954,7 +954,7 @@ def delete_floating_ip(kwargs=None, call=None):
 def assign_floating_ip(kwargs=None, call=None):
     '''
     Assign a floating IP
-    
+
     .. versionadded:: Boron
 
     CLI Examples:
@@ -987,7 +987,7 @@ def assign_floating_ip(kwargs=None, call=None):
 def unassign_floating_ip(kwargs=None, call=None):
     '''
     Unassign a floating IP
-    
+
     .. versionadded:: Boron
 
     CLI Examples:
