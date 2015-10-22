@@ -156,7 +156,10 @@ class SPMClient(object):
 
         if 'dependencies' in formula_def:
             if not isinstance(formula_def['dependencies'], list):
-                formula_def['dependencies'] = [formula_def['dependencies']]
+                if formula_def['dependencies'] is None:
+                    formula_def['dependencies'] = []
+                else:
+                    formula_def['dependencies'] = [formula_def['dependencies']]
             needs = []
             for dep in formula_def['dependencies']:
                 if not isinstance(dep, string_types):
@@ -165,10 +168,11 @@ class SPMClient(object):
                 if data is not None:
                     continue
                 needs.append(dep)
-            raise SPMPackageError(
-                'Cannot install {0}, the following dependencies are needed:\n\n{1}'.format(
-                    formula_def['name'], '\n'.join(needs))
-            )
+            if len(needs) > 0:
+                raise SPMPackageError(
+                    'Cannot install {0}, the following dependencies are needed:\n\n{1}'.format(
+                        formula_def['name'], '\n'.join(needs))
+                )
 
         if pkg_name is None:
             msg = 'Installing package from file {0}'.format(pkg_file)
