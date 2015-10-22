@@ -73,6 +73,7 @@ def minion_process():
     if not salt.utils.is_windows():
         thread = threading.Thread(target=suicide_when_without_parent, args=(os.getppid(),))
         thread.start()
+
     minion = salt.cli.daemons.Minion()
 
     try:
@@ -93,6 +94,8 @@ def salt_minion():
     Start the salt minion in a subprocess.
     Auto restart minion on error.
     '''
+    import signal
+    import functools
     import salt.cli.daemons
     import multiprocessing
     if '' in sys.path:
@@ -109,26 +112,39 @@ def salt_minion():
         minion.start()
         return
 
+    def escalate_signal_to_process(pid, signum, sigframe):  # pylint: disable=unused-argument
+        '''
+        Escalate the signal received to the multiprocessing process that
+        is actually running the minion
+        '''
+        # escalate signal
+        os.kill(pid, signum)
+
     # keep one minion subprocess running
     while True:
         try:
             process = multiprocessing.Process(target=minion_process)
             process.start()
-        except Exception:
+            signal.signal(signal.SIGTERM,
+                          functools.partial(escalate_signal_to_process,
+                                            process.pid))
+            signal.signal(signal.SIGINT,
+                          functools.partial(escalate_signal_to_process,
+                                            process.pid))
+        except Exception:  # pylint: disable=broad-except
             # if multiprocessing does not work
             minion = salt.cli.daemons.Minion()
             minion.start()
             break
-        try:
-            process.join()
-            if not process.exitcode == salt.defaults.exitcodes.SALT_KEEPALIVE:
-                break
-            # ontop of the random_reauth_delay already preformed
-            # delay extra to reduce flooding and free resources
-            # NOTE: values are static but should be fine.
-            time.sleep(2 + randint(1, 10))
-        except KeyboardInterrupt:
+
+        process.join()
+
+        if not process.exitcode == salt.defaults.exitcodes.SALT_KEEPALIVE:
             break
+        # ontop of the random_reauth_delay already preformed
+        # delay extra to reduce flooding and free resources
+        # NOTE: values are static but should be fine.
+        time.sleep(2 + randint(1, 10))
         # need to reset logging because new minion objects
         # cause extra log handlers to accumulate
         rlogger = logging.getLogger()
