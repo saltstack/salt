@@ -468,6 +468,7 @@ def query(method='droplets', droplet_id=None, command=None, args=None, http_meth
     if not isinstance(args, dict):
         args = {}
 
+
     personal_access_token = config.get_cloud_config_value(
         'personal_access_token', get_configured_provider(), __opts__, search_global=False
     )
@@ -800,6 +801,208 @@ def show_pricing(kwargs=None, call=None):
 
     return {profile['profile']: ret}
 
+
+def list_floating_ips(call=None):
+    '''
+    Return a list of the floating ips that are on the provider
+
+    CLI Examples:
+
+    ... code-block:: bash
+    
+        salt-cloud -f list_floating_ips my-digitalocean-config
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_floating_ips function must be called with '
+            '-f or --function, or with the --list-floating-ips option'
+        )
+
+    fetch = True
+    page = 1
+    ret = {}
+
+    while fetch:
+        items = query(method='floating_ips',
+                      command='?page=' + str(page) + '&per_page=200')
+
+        for floating_ip in items['floating_ips']:
+            ret[floating_ip['ip']] = {}
+            for item in six.iterkeys(floating_ip):
+                ret[floating_ip['ip']][item] = floating_ip[item]
+
+        page += 1
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
+
+    return ret
+
+
+def show_floating_ip(kwargs=None, call=None):
+    '''
+    Show the details of a floating IP
+    
+    CLI Examples:
+
+    ... code-block:: bash
+
+        salt-cloud -f show_floating_ip my-digitalocean-config floating_ip='45.55.96.47'
+    '''
+    if call != 'function':
+        log.error(
+            'The show_floating_ip function must be called with -f or --function.'
+        )
+        return False
+   
+    if not kwargs:
+        kwargs = {}
+
+    if 'floating_ip' not in kwargs:
+        log.error('A floating IP is required.')
+        return False
+    
+    floating_ip = kwargs['floating_ip']
+    log.debug('Floating ip is {0}'.format(floating_ip))
+
+    details = query(method='floating_ips', command=floating_ip)
+
+    return details
+
+
+def create_floating_ip(kwargs=None, call=None):
+    '''
+    Create a new floating IP
+    
+    CLI Examples:
+
+    ... code-block:: bash
+
+        salt-cloud -f create_floating_ip my-digitalocean-config region='NYC2'
+
+        salt-cloud -f create_floating_ip my-digitalocean-config droplet_id='1234567'
+    '''
+    if call != 'function':
+        log.error(
+            'The create_floating_ip function must be called with -f or --function.'
+        )
+        return False
+    
+    if not kwargs:
+        kwargs = {}
+    
+    if not {'region', 'droplet_id'} & set(kwargs.keys()):
+        log.error('A droplet_id or region is required.')
+        return False
+
+    if 'droplet_id' in kwargs:
+        result = query(method='floating_ips',
+                           args={'droplet_id': kwargs['droplet_id']},
+                           http_method='post')
+    
+    elif 'region' in kwargs:
+        result = query(method='floating_ips',
+                           args={'region': kwargs['region']},
+                           http_method='post')
+
+    return result
+
+
+def delete_floating_ip(kwargs=None, call=None):
+    '''
+    Delete a floating IP
+    
+    CLI Examples:
+
+    ... code-block:: bash
+
+        salt-cloud -f delete_floating_ip my-digitalocean-config floating_ip='45.55.96.47'
+    '''
+    if call != 'function':
+        log.error(
+            'The delete_floating_ip function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'floating_ip' not in kwargs:
+        log.error('A floating IP is required.')
+        return False
+
+    floating_ip = kwargs['floating_ip']
+    log.debug('Floating ip is {0}'.format('floating_ip'))
+
+    result = query(method='floating_ips',
+                   command=floating_ip,
+                   http_method='delete')
+
+    return result
+
+
+def assign_floating_ip(kwargs=None, call=None):
+    '''
+    Assign a floating IP
+    
+    CLI Examples:
+
+    ... code-block:: bash
+
+        salt-cloud -f assign_floating_ip my-digitalocean-config droplet_id=1234567 floating_ip='45.55.96.47'
+    '''
+    if call != 'function':
+        log.error(
+            'The assign_floating_ip function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'floating_ip' and 'droplet_id' not in kwargs:
+        log.error('A floating IP and droplet_id is required.')
+        return False
+
+
+    result = query(method='floating_ips',
+                   command=kwargs['floating_ip'] + '/actions',
+                   args={'droplet_id': kwargs['droplet_id'], 'type': 'assign'},
+                   http_method='post')
+
+    return result
+
+
+def unassign_floating_ip(kwargs=None, call=None):
+    '''
+    Unassign a floating IP
+    
+    CLI Examples:
+
+    ... code-block:: bash
+
+        salt-cloud -f unassign_floating_ip my-digitalocean-config floating_ip='45.55.96.47'
+    '''
+    if call != 'function':
+        log.error(
+            'The inassign_floating_ip function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'floating_ip' not in kwargs:
+        log.error('A floating IP is required.')
+        return False
+    
+    result = query(method='floating_ips',
+                   command=kwargs['floating_ip'] + '/actions',
+                   args={'type': 'unassign'},
+                   http_method='post')
+
+    return result
 
 def _list_nodes(full=False, for_output=False):
     '''
