@@ -801,12 +801,14 @@ def post_dns_record(dns_domain, name, record_type, record_data):
 # Delete this with create_dns_record() and delete_dns_record() for Carbon release
 __deprecated_fqdn_parsing = lambda fqdn: '.'.join(fqdn.split('.')[-2:]), '.'.join(fqdn.split('.')[:-2])
 
+
 def create_dns_record(hostname, ip_address):
     salt.utils.warn_until(
         'Carbon',
         'create_dns_record() is deprecated and will be removed in Carbon. Please use post_dns_record() instead.'
     )
     return __deprecated_create_dns_record(hostname, ip_address)
+
 
 def __deprecated_create_dns_record(hostname, ip_address):
     domainname, subdomain = __deprecated_fqdn_parsing(hostname)
@@ -823,6 +825,7 @@ def __deprecated_create_dns_record(hostname, ip_address):
         return result
 
     return False
+
 
 def destroy_dns_records(fqdn):
     '''
@@ -852,12 +855,14 @@ def destroy_dns_records(fqdn):
 
     return False
 
+
 def delete_dns_record(hostname):
     salt.utils.warn_until(
         'Carbon',
         'delete_dns_record() is deprecated and will be removed in Carbon. Please use destroy_dns_records() instead.'
     )
     return __deprecated_delete_dns_record(hostname)
+
 
 def __deprecated_delete_dns_record(hostname):
     '''
@@ -876,6 +881,7 @@ def __deprecated_delete_dns_record(hostname):
                     http_method='delete'
                 )
     return False
+
 
 def show_pricing(kwargs=None, call=None):
     '''
