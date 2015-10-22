@@ -387,8 +387,8 @@ def create(vm_):
                 'dns_domain', vm_, __opts__, search_global=False, default=default_dns_domain,
             )
         if dns_hostname and dns_domain:
-            log.info('create_dns_record: using dns_hostname="{0}", dns_domain="{1}"'.format(dns_hostname,dns_domain))
-            __add_dns_addr__ = lambda t,d : post_dns_record(dns_domain, dns_hostname, t, d)
+            log.info('create_dns_record: using dns_hostname="{0}", dns_domain="{1}"'.format(dns_hostname, dns_domain))
+            __add_dns_addr__ = lambda t, d: post_dns_record(dns_domain, dns_hostname, t, d)
             log.debug('create_dns_record: {0}'.format(__add_dns_addr__))
         else:
             log.error('create_dns_record: could not determine dns_hostname and/or dns_domain')
@@ -449,9 +449,9 @@ def create(vm_):
             raise SaltCloudSystemExit(str(exc))
      
     # add DNS records, set ssh_host, default to first found IP, preferring IPv4 for ssh bootstrap script target
-    addr_families, dns_arec_types =  (('v4','v6'), ('A','AAAA'))
+    addr_families, dns_arec_types = (('v4', 'v6'), ('A', 'AAAA'))
     arec_map = dict(zip(addr_families, dns_arec_types))
-    for facing, addr_family, ip_address in [(net['type'],family,net['ip_address'])
+    for facing, addr_family, ip_address in [(net['type'], family, net['ip_address'])
                                             for family in addr_families
                                             for net in data['networks'][family]]:
         log.info('found {0} IP{1} interface for "{2}"'.format(facing, addr_family, ip_address))
@@ -791,7 +791,7 @@ def post_dns_record(dns_domain, name, record_type, record_data):
     return False
 
 # Delete this with create_dns_record() and delete_dns_record() for Carbon release
-__deprecated_fqdn_parsing = lambda fqdn: '.'.join(fqdn.split('.')[-2:]), '.'.join(fqdn.split('.')[:-2])
+__deprecated_fqdn_parsing = lambda fqdn: ('.'.join(fqdn.split('.')[-2:]), '.'.join(fqdn.split('.')[:-2]))
 
 
 def create_dns_record(hostname, ip_address):
@@ -838,7 +838,7 @@ def destroy_dns_records(fqdn):
                 ret = query(
                     method='domains',
                     droplet_id=domain,
-                    command='records/{}'.format(id),
+                    command='records/{0}'.format(id),
                     http_method='delete'
                 )
             except SaltCloudSystemExit:
