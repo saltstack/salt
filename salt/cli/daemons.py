@@ -6,6 +6,7 @@ Make me some salt!
 # Import python libs
 from __future__ import absolute_import
 import os
+import signal
 import warnings
 from salt.utils.verify import verify_log
 
@@ -69,7 +70,7 @@ class Master(parsers.MasterOptionParser):
 
             super(YourSubClass, self).prepare()
         '''
-        self.parse_args()
+        super(Master, self).prepare()
 
         try:
             if self.config['verify_env']:
@@ -148,7 +149,7 @@ class Master(parsers.MasterOptionParser):
 
         NOTE: Run any required code before calling `super()`.
         '''
-        self.prepare()
+        super(Master, self).start()
         if check_user(self.config['user']):
             logger.info('The salt master is starting up')
             try:
@@ -163,7 +164,7 @@ class Master(parsers.MasterOptionParser):
         If sub-classed, run any shutdown operations on this method.
         '''
         logger.info('The salt master is shut down')
-        self.exit(exitcode, exitmsg)
+        super(Master, self).shutdown(exitcode, exitmsg)
 
 
 class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
@@ -179,7 +180,7 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
 
             super(YourSubClass, self).prepare()
         '''
-        self.parse_args()
+        super(Minion, self).prepare()
 
         try:
             if self.config['verify_env']:
@@ -280,8 +281,8 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
 
         NOTE: Run any required code before calling `super()`.
         '''
+        super(Minion, self).start()
         try:
-            self.prepare()
             if check_user(self.config['user']):
                 logger.info('The salt minion is starting up')
                 self.minion.tune_in()
@@ -327,7 +328,7 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
         If sub-classed, run any shutdown operations on this method.
         '''
         logger.info('The salt minion is shut down')
-        self.exit(exitcode, exitmsg)
+        super(Minion, self).shutdown(exitcode, exitmsg)
     # pylint: enable=no-member
 
 
@@ -345,7 +346,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
 
             super(YourSubClass, self).prepare()
         '''
-        self.parse_args()
+        super(ProxyMinion, self).prepare()
 
         if not self.values.proxyid:
             raise SaltSystemExit('salt-proxy requires --proxyid')
@@ -447,8 +448,8 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
 
         NOTE: Run any required code before calling `super()`.
         '''
+        super(ProxyMinion, self).start()
         try:
-            self.prepare()
             if check_user(self.config['user']):
                 logger.info('The proxy minion is starting up')
                 self.minion.tune_in()
@@ -469,7 +470,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
             proxy_fn = self.minion.opts['proxymodule'].loaded_base_name + '.shutdown'
             self.minion.opts['proxymodule'][proxy_fn](self.minion.opts)
         logger.info('The proxy minion is shut down')
-        self.exit(exitcode, exitmsg)
+        super(ProxyMinion, self).shutdown(exitcode, exitmsg)
     # pylint: enable=no-member
 
 
@@ -486,7 +487,7 @@ class Syndic(parsers.SyndicOptionParser):
 
             super(YourSubClass, self).prepare()
         '''
-        self.parse_args()
+        super(Syndic, self).prepare()
         try:
             if self.config['verify_env']:
                 verify_env(
@@ -538,7 +539,7 @@ class Syndic(parsers.SyndicOptionParser):
 
         NOTE: Run any required code before calling `super()`.
         '''
-        self.prepare()
+        super(Syndic, self).start()
         if check_user(self.config['user']):
             logger.info('The salt syndic is starting up')
             try:
@@ -552,4 +553,4 @@ class Syndic(parsers.SyndicOptionParser):
         If sub-classed, run any shutdown operations on this method.
         '''
         logger.info('The salt syndic is shut down')
-        self.exit(exitcode, exitmsg)
+        super(Syndic, self).shutdown(exitcode, exitmsg)
