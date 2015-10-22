@@ -714,7 +714,8 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             if self.config['user'] != current_user:
                 # Yep, not the same user!
                 # Is the current user in ACL?
-                if current_user in self.config.get('client_acl', {}):
+                acl = self.config.get('publisher_acl') or self.config.get('client_acl', {})
+                if current_user in acl:
                     # Yep, the user is in ACL!
                     # Let's write the logfile to its home directory instead.
                     xdg_dir = salt.utils.xdg.xdg_config_dir()

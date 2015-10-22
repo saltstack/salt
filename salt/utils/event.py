@@ -919,6 +919,7 @@ class EventPublisher(multiprocessing.Process):
             self.epull_sock.bind(epull_uri)
             self.epub_sock.bind(epub_uri)
             if (self.opts['ipc_mode'] != 'tcp' and (
+                    self.opts['publisher_acl'] or
                     self.opts['client_acl'] or
                     self.opts['external_auth'])):
                 os.chmod(os.path.join(
