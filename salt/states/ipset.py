@@ -309,7 +309,6 @@ def absent(name, set_name=None, entry=None, entries=None, family='ipv4', **kwarg
                                       'Attempted entry was {1} for {2}.\n{3}\n').format(
                                           set_name,
                                           _entry, family, command)
-            return ret
     return ret
 
 
