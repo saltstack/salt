@@ -387,7 +387,7 @@ def create(vm_):
                 'dns_domain', vm_, __opts__, search_global=False, default=default_dns_domain,
             )
         if dns_hostname and dns_domain:
-          log.info('create_dns_record: using dns_hostname="{0}", dns_domain="{1}"'.format(dns_hostname,dns_domain))
+            log.info('create_dns_record: using dns_hostname="{0}", dns_domain="{1}"'.format(dns_hostname,dns_domain))
             __add_dns_addr__ = lambda t,d : post_dns_record(dns_domain, dns_hostname, t, d)
             log.debug('create_dns_record: {0}'.format(__add_dns_addr__))
         else:
