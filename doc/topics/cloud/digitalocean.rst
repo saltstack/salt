@@ -45,13 +45,13 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
 .. code-block:: yaml
 
     digitalocean-ubuntu:
-        provider: my-digitalocean-config
-        image: 14.04 x64
-        size: 512MB
-        location: New York 1
-        private_networking: True
-        backups_enabled: True
-        ipv6: True
+      provider: my-digitalocean-config
+      image: 14.04 x64
+      size: 512MB
+      location: New York 1
+      private_networking: True
+      backups_enabled: True
+      ipv6: True
 
 Locations can be obtained using the ``--list-locations`` option for the ``salt-cloud``
 command:
@@ -132,6 +132,28 @@ command:
                 public:
                     True
     ...SNIP...
+
+
+Profile Specifics:
+------------------
+
+ssh_username
+------------
+
+If using a FreeBSD image from Digital Ocean, you'll need to set the ``ssh_username``
+setting to ``freebsd`` in your profile configuration.
+
+.. code-block:: yaml
+
+    digitalocean-freebsd:
+      provider: my-digitalocean-config
+      image: 10.2
+      size: 512MB
+      ssh_username: freebsd
+
+
+Miscellaneous Information
+=========================
 
 .. note::
 
