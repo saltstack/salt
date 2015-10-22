@@ -71,8 +71,12 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
+
 # Import Salt Libs
 from salt.utils import SaltInvocationError
+
 
 def __virtual__():
     '''
