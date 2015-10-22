@@ -134,6 +134,11 @@ def present(
     record = __salt__['boto_route53.get_record'](name, zone, record_type,
                                                  False, region, key, keyid,
                                                  profile)
+    if record is None:
+        ret['comment'] = 'Error: Something went wrong getting the record. ' \
+                         'Please check your credentials.'
+        ret['result'] = False
+        return ret
 
     if isinstance(record, dict) and not record:
         if __opts__['test']:
