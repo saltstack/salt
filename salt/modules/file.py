@@ -1446,7 +1446,7 @@ def replace(path,
                     if nrepl > 0:
                         found = True
                         # Identity check the potential change
-                        has_changes = result != r_data.read(filesize)
+                        has_changes = True if pattern != repl else has_changes
 
                     if prepend_if_not_found or append_if_not_found:
                         # Search for content, to avoid pre/appending the
@@ -1461,7 +1461,6 @@ def replace(path,
                     # modified
                     if show_changes or append_if_not_found or \
                        prepend_if_not_found:
-                        r_data.seek(0)
                         orig_file = r_data.read(filesize).splitlines(True)
                         new_file = result.splitlines(True)
 
