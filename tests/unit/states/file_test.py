@@ -317,7 +317,8 @@ class FileTestCase(TestCase):
                         self.assertDictEqual(filestate.absent(name), ret)
 
                     with patch.dict(filestate.__opts__, {'test': False}):
-                        with patch.object(shutil, 'rmtree', mock_tree):
+                        with patch.object(filestate.__salt__,
+                                          {'file.remove': mock_tree}):
                             comt = ('Removed directory {0}'.format(name))
                             ret.update({'comment': comt, 'result': True,
                                         'changes': {'removed': name}})
@@ -619,7 +620,8 @@ class FileTestCase(TestCase):
                                                          True, True, True,
                                                          False])):
                     with patch.object(os.path, 'lexists', mock_t):
-                        with patch.object(os.path, 'islink', mock_f):
+                        with patch.object(filestate.__salt__,
+                                          {'file.is_link', mock_f}):
                             with patch.object(os.path, 'isdir', mock_f):
                                 comt = ('File exists where the backup target'
                                         ' A should go')
@@ -1280,15 +1282,12 @@ class FileTestCase(TestCase):
                         with patch.object(os.path, 'lexists', mock_t):
                             with patch.dict(filestate.__opts__,
                                             {'test': False}):
-                                with patch.object(os.path, 'isfile', mock_f):
-                                    with patch.object(os.path, 'islink',
-                                                      mock_io):
-                                        ret.update({'comment': comt1,
-                                                    'result': False})
-                                        self.assertDictEqual(filestate.copy
-                                                             (name, source,
-                                                              preserve=True,
-                                                              force=True), ret)
+                                ret.update({'comment': comt1,
+                                            'result': False})
+                                self.assertDictEqual(filestate.copy
+                                                     (name, source,
+                                                      preserve=True,
+                                                      force=True), ret)
 
                                 with patch.object(os.path, 'isfile', mock_t):
                                     ret.update({'comment': comt2,
@@ -1376,9 +1375,12 @@ class FileTestCase(TestCase):
                 with patch.dict(filestate.__opts__, {'test': False}):
                     comt = ('Failed to delete "{0}" in preparation for '
                             'forced move'.format(name))
-                    ret.update({'comment': comt, 'result': False})
-                    self.assertDictEqual(filestate.rename(name, source,
-                                                          force=True), ret)
+                    with patch.object(filestate.__salt__,
+                                      {'file.remove', mock_f},
+                                      MagicMock(side_effect=[IOError, True])):
+                        ret.update({'comment': comt, 'result': False})
+                        self.assertDictEqual(filestate.rename(name, source,
+                                                              force=True), ret)
 
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File "{0}" is set to be moved to "{1}"'
