@@ -621,7 +621,7 @@ class FileTestCase(TestCase):
                                                          False])):
                     with patch.object(os.path, 'lexists', mock_t):
                         with patch.object(filestate.__salt__,
-                                          {'file.is_link', mock_f}):
+                                          {'file.is_link': mock_f}):
                             with patch.object(os.path, 'isdir', mock_f):
                                 comt = ('File exists where the backup target'
                                         ' A should go')
@@ -1376,7 +1376,7 @@ class FileTestCase(TestCase):
                     comt = ('Failed to delete "{0}" in preparation for '
                             'forced move'.format(name))
                     with patch.object(filestate.__salt__,
-                                      {'file.remove', mock_f},
+                                      {'file.remove': mock_f},
                                       MagicMock(side_effect=[IOError, True])):
                         ret.update({'comment': comt, 'result': False})
                         self.assertDictEqual(filestate.rename(name, source,
