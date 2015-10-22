@@ -808,7 +808,7 @@ def list_floating_ips(call=None):
     CLI Examples:
 
     ... code-block:: bash
-    
+
         salt-cloud -f list_floating_ips my-digitalocean-config
     '''
     if call == 'action':
@@ -842,7 +842,7 @@ def list_floating_ips(call=None):
 def show_floating_ip(kwargs=None, call=None):
     '''
     Show the details of a floating IP
-    
+
     CLI Examples:
 
     ... code-block:: bash
@@ -854,14 +854,14 @@ def show_floating_ip(kwargs=None, call=None):
             'The show_floating_ip function must be called with -f or --function.'
         )
         return False
-   
+
     if not kwargs:
         kwargs = {}
 
     if 'floating_ip' not in kwargs:
         log.error('A floating IP is required.')
         return False
-    
+
     floating_ip = kwargs['floating_ip']
     log.debug('Floating ip is {0}'.format(floating_ip))
 
@@ -873,7 +873,7 @@ def show_floating_ip(kwargs=None, call=None):
 def create_floating_ip(kwargs=None, call=None):
     '''
     Create a new floating IP
-    
+
     CLI Examples:
 
     ... code-block:: bash
@@ -887,10 +887,10 @@ def create_floating_ip(kwargs=None, call=None):
             'The create_floating_ip function must be called with -f or --function.'
         )
         return False
-    
+
     if not kwargs:
         kwargs = {}
-    
+
     if not {'region', 'droplet_id'} & set(kwargs.keys()):
         log.error('A droplet_id or region is required.')
         return False
@@ -899,7 +899,7 @@ def create_floating_ip(kwargs=None, call=None):
         result = query(method='floating_ips',
                            args={'droplet_id': kwargs['droplet_id']},
                            http_method='post')
-    
+
     elif 'region' in kwargs:
         result = query(method='floating_ips',
                            args={'region': kwargs['region']},
@@ -911,7 +911,7 @@ def create_floating_ip(kwargs=None, call=None):
 def delete_floating_ip(kwargs=None, call=None):
     '''
     Delete a floating IP
-    
+
     CLI Examples:
 
     ... code-block:: bash
@@ -944,7 +944,7 @@ def delete_floating_ip(kwargs=None, call=None):
 def assign_floating_ip(kwargs=None, call=None):
     '''
     Assign a floating IP
-    
+
     CLI Examples:
 
     ... code-block:: bash
@@ -964,7 +964,6 @@ def assign_floating_ip(kwargs=None, call=None):
         log.error('A floating IP and droplet_id is required.')
         return False
 
-
     result = query(method='floating_ips',
                    command=kwargs['floating_ip'] + '/actions',
                    args={'droplet_id': kwargs['droplet_id'], 'type': 'assign'},
@@ -976,7 +975,7 @@ def assign_floating_ip(kwargs=None, call=None):
 def unassign_floating_ip(kwargs=None, call=None):
     '''
     Unassign a floating IP
-    
+
     CLI Examples:
 
     ... code-block:: bash
@@ -995,7 +994,7 @@ def unassign_floating_ip(kwargs=None, call=None):
     if 'floating_ip' not in kwargs:
         log.error('A floating IP is required.')
         return False
-    
+
     result = query(method='floating_ips',
                    command=kwargs['floating_ip'] + '/actions',
                    args={'type': 'unassign'},
