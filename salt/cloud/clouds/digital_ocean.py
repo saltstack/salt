@@ -34,7 +34,7 @@ import pprint
 import logging
 import decimal
 
-# Import Salt Cloud Libs
+# Import Salt Libs
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
@@ -44,6 +44,7 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+from salt.ext.six import string_types
 
 # Import Third Party Libs
 try:
@@ -207,6 +208,9 @@ def get_image(vm_):
     vm_image = config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
     )
+    if not isinstance(vm_image, string_types):
+        vm_image = str(vm_image)
+
     for image in images:
         if vm_image in (images[image]['name'], images[image]['slug'], images[image]['id']):
             if images[image]['slug'] is not None:
