@@ -739,6 +739,7 @@ class AsyncEventPublisher(object):
     '''
     def __init__(self, opts, publish_handler, io_loop=None):
         self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        default_minion_sock_dir = self.opts['sock_dir']
         self.opts.update(opts)
 
         self.publish_handler = publish_handler
@@ -789,12 +790,7 @@ class AsyncEventPublisher(object):
             )
         )
 
-        # Check to make sure the sock_dir is available, create if not
-        default_minion_sock_dir = os.path.join(
-            salt.syspaths.SOCK_DIR,
-            'minion'
-        )
-        minion_sock_dir = self.opts.get('sock_dir', default_minion_sock_dir)
+        minion_sock_dir = self.opts['sock_dir']
 
         if not os.path.isdir(minion_sock_dir):
             # Let's try to create the directory defined on the configuration
