@@ -2792,10 +2792,10 @@ def cache_node(node, provider, opts):
     if 'update_cachedir' not in opts or not opts['update_cachedir']:
         return
 
-    if not os.path.exists(os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')):
+    base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
+    if not os.path.exists(base):
         init_cachedir()
 
-    base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
     provider, driver = provider.split(':')
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
@@ -2823,8 +2823,6 @@ def missing_node_cache(prov_dir, node_list, provider, opts):
     for node in os.listdir(prov_dir):
         cached_nodes.append(os.path.splitext(node)[0])
 
-    log.debug(sorted(cached_nodes))
-    log.debug(sorted(node_list))
     for node in cached_nodes:
         if node not in node_list:
             delete_minion_cachedir(node, provider, opts)
@@ -2857,8 +2855,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
     if node is None:
         return
-    path = os.path.join(prov_dir, node)
-    path = '{0}.p'.format(path)
+    path = '{0}.p'.format(os.path.join(prov_dir, node))
 
     if not os.path.exists(path):
         event_data = _strip_cache_events(new_data, opts)
