@@ -156,7 +156,10 @@ class SPMClient(object):
 
         if 'dependencies' in formula_def:
             if not isinstance(formula_def['dependencies'], list):
-                formula_def['dependencies'] = [formula_def['dependencies']]
+                if formula_def['dependencies'] is None:
+                    formula_def['dependencies'] = []
+                else:
+                    formula_def['dependencies'] = [formula_def['dependencies']]
             needs = []
             for dep in formula_def['dependencies']:
                 if not isinstance(dep, string_types):
