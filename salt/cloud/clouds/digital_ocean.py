@@ -805,6 +805,8 @@ def list_floating_ips(call=None):
     '''
     Return a list of the floating ips that are on the provider
 
+    .. versionadded:: Boron
+
     CLI Examples:
 
     ... code-block:: bash
@@ -842,6 +844,8 @@ def list_floating_ips(call=None):
 def show_floating_ip(kwargs=None, call=None):
     '''
     Show the details of a floating IP
+    
+    .. versionadded:: Boron
 
     CLI Examples:
 
@@ -873,6 +877,8 @@ def show_floating_ip(kwargs=None, call=None):
 def create_floating_ip(kwargs=None, call=None):
     '''
     Create a new floating IP
+    
+    .. versionadded:: Boron
 
     CLI Examples:
 
@@ -891,26 +897,30 @@ def create_floating_ip(kwargs=None, call=None):
     if not kwargs:
         kwargs = {}
 
-    if not {'region', 'droplet_id'} & set(kwargs.keys()):
-        log.error('A droplet_id or region is required.')
-        return False
-
     if 'droplet_id' in kwargs:
         result = query(method='floating_ips',
                            args={'droplet_id': kwargs['droplet_id']},
                            http_method='post')
+
+        return result
 
     elif 'region' in kwargs:
         result = query(method='floating_ips',
                            args={'region': kwargs['region']},
                            http_method='post')
 
-    return result
+        return result
+
+    else:
+        log.error('A droplet_id or region is required.')
+        return False
 
 
 def delete_floating_ip(kwargs=None, call=None):
     '''
     Delete a floating IP
+    
+    .. versionadded:: Boron
 
     CLI Examples:
 
@@ -944,6 +954,8 @@ def delete_floating_ip(kwargs=None, call=None):
 def assign_floating_ip(kwargs=None, call=None):
     '''
     Assign a floating IP
+    
+    .. versionadded:: Boron
 
     CLI Examples:
 
@@ -975,6 +987,8 @@ def assign_floating_ip(kwargs=None, call=None):
 def unassign_floating_ip(kwargs=None, call=None):
     '''
     Unassign a floating IP
+    
+    .. versionadded:: Boron
 
     CLI Examples:
 
