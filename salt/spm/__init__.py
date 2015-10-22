@@ -168,7 +168,7 @@ class SPMClient(object):
                 if data is not None:
                     continue
                 needs.append(dep)
-            if len(needs) > 0
+            if len(needs) > 0:
                 raise SPMPackageError(
                     'Cannot install {0}, the following dependencies are needed:\n\n{1}'.format(
                         formula_def['name'], '\n'.join(needs))
