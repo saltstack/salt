@@ -726,37 +726,61 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
         cached_pkg = cached_pkg.replace('/', '\\')
         cache_path, _ = os.path.split(cached_pkg)
 
-        # Get settings for msiexec and allusers
-        msiexec = pkginfo[version_num].get('msiexec')
-        all_users = pkginfo[version_num].get('allusers')
-
-        # all_users defaults to True
-        if all_users is None:
-            all_users = True
-
         # Get install flags
         install_flags = '{0}'.format(pkginfo[version_num].get('install_flags'))
         if options and options.get('extra_install_flags'):
             install_flags = '{0} {1}'.format(install_flags,
                                              options.get('extra_install_flags', ''))
 
-        # Build the install command
-        cmd = []
-        if msiexec:
-            cmd.extend(['msiexec', '/i'])
-        cmd.append(cached_pkg)
-        cmd.extend(shlex.split(install_flags))
-        if msiexec and all_users:
-            cmd.append('ALLUSERS="1"')
-
         # Install the software
-        result = __salt__['cmd.run_stdout'](cmd, cache_path, output_loglevel='trace', python_shell=False)
-        if result:
-            log.error('Failed to install {0}'.format(pkg_name))
-            log.error('error message: {0}'.format(result))
-            ret[pkg_name] = {'failed': result}
+        # Check Use Scheduler Option
+        if pkginfo[version_num].get('use_scheduler', False):
+
+            # Build Scheduled Task Parameters
+            if pkginfo[version_num].get('msiexec'):
+                cmd = 'msiexec.exe'
+                arguments = ['/i', cached_pkg]
+                if pkginfo['version_num'].get('allusers', True):
+                    arguments.append('ALLUSERS="1"')
+                arguments.extend(shlex.split(install_flags))
+            else:
+                cmd = cached_pkg
+                arguments = shlex.split(install_flags)
+
+            # Create Scheduled Task
+            __salt__['task.create_task'](name='update-salt-software',
+                                         user_name='System',
+                                         force=True,
+                                         action_type='Execute',
+                                         cmd=cmd,
+                                         arguments=' '.join(arguments),
+                                         start_in=cache_path,
+                                         trigger_type='Once',
+                                         start_date='1975-01-01',
+                                         start_time='01:00')
+            # Run Scheduled Task
+            __salt__['task.run_wait'](name='update-salt-software')
         else:
-            changed.append(pkg_name)
+            # Build the install command
+            cmd = []
+            if pkginfo[version_num].get('msiexec'):
+                cmd.extend(['msiexec', '/i', cached_pkg])
+                if pkginfo[version_num].get('allusers', True):
+                    cmd.append('ALLUSERS="1"')
+            else:
+                cmd.append(cached_pkg)
+            cmd.extend(shlex.split(install_flags))
+            # Launch the command
+            result = __salt__['cmd.run_stdout'](cmd,
+                                                cache_path,
+                                                output_loglevel='trace',
+                                                python_shell=False)
+            if result:
+                log.error('Failed to install {0}'.format(pkg_name))
+                log.error('error message: {0}'.format(result))
+                ret[pkg_name] = {'failed': result}
+            else:
+                changed.append(pkg_name)
 
     # Get a new list of installed software
     new = list_pkgs()
@@ -920,33 +944,61 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
 
         # Fix non-windows slashes
         cached_pkg = cached_pkg.replace('/', '\\')
+        cache_path, _ = os.path.split(cached_pkg)
 
         # Get parameters for cmd
         expanded_cached_pkg = str(os.path.expandvars(cached_pkg))
 
-        uninstall_flags = ''
-        if pkginfo[version_num].get('uninstall_flags'):
-            uninstall_flags = '{0}'.format(pkginfo[version_num].get('uninstall_flags'))
-
+        # Get uninstall flags
+        uninstall_flags = '{0}'.format(pkginfo[version_num].get('uninstall_flags', ''))
         if kwargs.get('extra_uninstall_flags'):
             uninstall_flags = '{0} {1}'.format(uninstall_flags,
                                                kwargs.get('extra_uninstall_flags', ""))
 
-        # Build the install command
-        cmd = []
-        if pkginfo[version_num].get('msiexec'):
-            cmd.extend(['msiexec', '/x'])
-        cmd.append(expanded_cached_pkg)
-        cmd.extend(shlex.split(uninstall_flags))
-
         # Uninstall the software
-        result = __salt__['cmd.run_stdout'](cmd, output_loglevel='trace', python_shell=False)
-        if result:
-            log.error('Failed to install {0}'.format(target))
-            log.error('error message: {0}'.format(result))
-            ret[target] = {'failed': result}
+        # Check Use Scheduler Option
+        if pkginfo[version_num].get('use_scheduler', False):
+
+            # Build Scheduled Task Parameters
+            if pkginfo[version_num].get('msiexec'):
+                cmd = 'msiexec.exe'
+                arguments = ['/x']
+                arguments.extend(shlex.split(uninstall_flags))
+            else:
+                cmd = expanded_cached_pkg
+                arguments = shlex.split(uninstall_flags)
+
+            # Create Scheduled Task
+            __salt__['task.create_task'](name='update-salt-software',
+                                         user_name='System',
+                                         force=True,
+                                         action_type='Execute',
+                                         cmd=cmd,
+                                         arguments=' '.join(arguments),
+                                         start_in=cache_path,
+                                         trigger_type='Once',
+                                         start_date='1975-01-01',
+                                         start_time='01:00')
+            # Run Scheduled Task
+            __salt__['task.run_wait'](name='update-salt-software')
         else:
-            changed.append(target)
+            # Build the install command
+            cmd = []
+            if pkginfo[version_num].get('msiexec'):
+                cmd.extend(['msiexec', '/x', expanded_cached_pkg])
+            else:
+                cmd.append(expanded_cached_pkg)
+            cmd.extend(shlex.split(uninstall_flags))
+            # Launch the command
+            result = __salt__['cmd.run_stdout'](cmd,
+                                                output_loglevel='trace',
+                                                python_shell=False)
+            if result:
+                log.error('Failed to install {0}'.format(target))
+                log.error('error message: {0}'.format(result))
+                ret[target] = {'failed': result}
+            else:
+                changed.append(target)
 
     # Get a new list of installed software
     new = list_pkgs()

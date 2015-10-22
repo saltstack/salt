@@ -969,7 +969,7 @@ the network interfaces of your virtual machines, for example:-
           # Uncomment this to associate an existing Elastic IP Address with
           # this network interface:
           #
-          # associate_eip: eni-XXXXXXXX
+          # associate_eip: eipalloc-XXXXXXXX
 
           # You can allocate more than one IP address to an interface. Use the
           # 'ip addr list' command to see them.

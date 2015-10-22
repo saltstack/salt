@@ -251,7 +251,7 @@ def ext_pillar(minion_id, repo, pillar_dirs):
             'smart'
         )
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
-            opts['pillar_roots'] = {env: [pillar_dir]}
+            opts['pillar_roots'] = {env: [d for (d, e) in six.iteritems(pillar.pillar_dirs) if env == e]}
             local_pillar = Pillar(opts, __grains__, minion_id, env)
             ret = salt.utils.dictupdate.merge(
                 ret,

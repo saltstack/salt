@@ -675,10 +675,11 @@ def _get_userprofile_from_registry(user, sid):
     In case net user doesn't return the userprofile
     we can get it from the registry
     '''
-    profile_dir = __salt__['reg.read_key'](
-        'HKEY_LOCAL_MACHINE', u'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
+    profile_dir = __salt__['reg.read_value'](
+        'HKEY_LOCAL_MACHINE',
+        u'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
         'ProfileImagePath'
-    )
+    )['vdata']
     log.debug(u'user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
     return profile_dir
 
