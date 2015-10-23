@@ -33,7 +33,6 @@ from salt.utils.event import tagify
 
 from ioflo.aid.odicting import odict  # pylint: disable=E0611,F0401
 import ioflo.base.deeding
-
 from ioflo.base.consoling import getConsole
 console = getConsole()
 
