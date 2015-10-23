@@ -309,7 +309,7 @@ line:
 
     salt '*' state.sls my_sls_file pillar='{"hello": "world"}'
 
-Nested pillar values can also be set vai the command line:
+Nested pillar values can also be set via the command line:
 
 .. code-block:: bash
 
