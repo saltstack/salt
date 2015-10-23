@@ -29,14 +29,17 @@ import os.path
 # Import salt libs
 import salt.utils
 
+__virtualname__ = 'blockdev'
+
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Only load this module if the blockdev execution module is available
     '''
-    if salt.utils.is_windows():
-        return False
-    return True
+    if 'blockdev.tune' in __salt__:
+        return __virtualname__
+    return (False, ('Cannot load the {0} state module: '
+                    'blockdev execution module not found'.format(__virtualname__)))
 
 
 def tuned(name, **kwargs):
