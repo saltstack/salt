@@ -159,11 +159,13 @@ def info_available(*names, **kwargs):
             kw = [data.strip() for data in line.split(":", 1)]
             if len(kw) == 2 and kw[1]:
                 nfo[kw[0].lower()] = kw[1]
-        if nfo.get("name"):
-            name = nfo.pop("name")
+        if nfo.get('name'):
+            name = nfo.pop('name')
             ret[name] = nfo
-        if nfo.get("installed"):
-            nfo['installed'] = nfo.get("installed").lower() == "yes" and True or False
+        if nfo.get('status'):
+            nfo['status'] = nfo.get('status')
+        if nfo.get('installed'):
+            nfo['installed'] = nfo.get('installed').lower() == 'yes' and True or False
 
     return ret
 
