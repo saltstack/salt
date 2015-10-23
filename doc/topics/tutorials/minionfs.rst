@@ -1,7 +1,10 @@
 .. _tutorial-minionfs:
 
 ============================
-Propagating Files Walkthrough
+MinionFS Backend Walkthrough
+============================
+
+Propagating Files
 ============================
 
 .. versionadded:: 2014.1.0
@@ -38,9 +41,8 @@ This command will store the file, including its full path, under
     <salt.modules.cp.push>`. To get up to speed, check out the
     :doc:`walkthrough </topics/tutorials/walkthrough>`.
 
-============================
-MinionFS Backend Walkthrough
-============================
+MinionFS Backend
+====================
 
 Since it is not a good idea to expose the whole :conf_master:`cachedir`, MinionFS
 should be used to send these files to other minions.
