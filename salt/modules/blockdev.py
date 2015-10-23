@@ -40,7 +40,7 @@ def tune(device, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' blockdev.tune /dev/sda1 read-ahead=1024 read-write=True
+        salt '*' blockdev.tune /dev/sdX1 read-ahead=1024 read-write=True
 
     Valid options are: ``read-ahead``, ``filesystem-read-ahead``,
     ``read-only``, ``read-write``.
@@ -80,7 +80,7 @@ def wipe(device):
 
     .. code-block:: bash
 
-        salt '*' blockdev.wipe /dev/sda1
+        salt '*' blockdev.wipe /dev/sdX1
     '''
 
     cmd = 'wipefs {0}'.format(device)
@@ -103,7 +103,7 @@ def dump(device, args=None):
 
     .. code-block:: bash
 
-        salt '*' blockdev.dump /dev/sda1
+        salt '*' blockdev.dump /dev/sdX1
     '''
     cmd = ['blockdev',
            '--getro',
@@ -147,7 +147,7 @@ def resize2fs(device):
     CLI Example:
     .. code-block:: bash
 
-        salt '*' blockdev.resize2fs /dev/sda1
+        salt '*' blockdev.resize2fs /dev/sdX1
     '''
     ret = {}
     cmd = 'resize2fs {0}'.format(device)
