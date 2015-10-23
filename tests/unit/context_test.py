@@ -6,6 +6,8 @@
 # Import python libs
 from __future__ import absolute_import
 import tornado.stack_context
+import tornado.gen
+from tornado.testing import AsyncTestCase, gen_test
 import threading
 import time
 
@@ -18,13 +20,16 @@ ensure_in_syspath('../../')
 from salt.utils.context import ContextDict, NamespacedDictWrapper
 
 
-class ContextDictTests(TestCase):
+class ContextDictTests(AsyncTestCase):
     def setUp(self):
+        super(ContextDictTests, self).setUp()
         self.cd = ContextDict()
         # set a global value
         self.cd['foo'] = 'global'
 
     def test_threads(self):
+        '''Verify that ContextDict overrides properly within threads
+        '''
         rets = []
 
         def tgt(x, s):
@@ -55,6 +60,53 @@ class ContextDictTests(TestCase):
             self.assertEqual(r[0], r[1])
             self.assertEqual(r[2], r[3])
 
+    @gen_test
+    def test_coroutines(self):
+        '''Verify that ContextDict overrides properly within coroutines
+        '''
+        @tornado.gen.coroutine
+        def secondary_coroutine(over):
+            raise tornado.gen.Return(over.get('foo'))
+
+        @tornado.gen.coroutine
+        def tgt(x, s, over):
+            inner_ret = []
+            # first grab the global
+            inner_ret.append(self.cd.get('foo'))
+            # grab the child's global (should match)
+            inner_ret.append(over.get('foo'))
+            # override the global
+            over['foo'] = x
+            inner_ret.append(over.get('foo'))
+            # sleep for some time to let other coroutines do this section of code
+            yield tornado.gen.sleep(s)
+            # get the value of the global again.
+            inner_ret.append(over.get('foo'))
+            # Call another coroutine to verify that we keep our context
+            r = yield secondary_coroutine(over)
+            inner_ret.append(r)
+            raise tornado.gen.Return(inner_ret)
+
+        futures = []
+        NUM_JOBS = 5
+        for x in xrange(0, NUM_JOBS):
+            s = NUM_JOBS - x
+            over = self.cd.clone()
+            def run():
+                return tgt(x, s/5.0, over)
+            f = tornado.stack_context.run_with_stack_context(
+                tornado.stack_context.StackContext(lambda: over),
+                run,
+            )
+            futures.append(f)
+
+        wait_iterator = tornado.gen.WaitIterator(*futures)
+        while not wait_iterator.done():
+            r = yield wait_iterator.next()
+            self.assertEqual(r[0], r[1])  # verify that the global value remails
+            self.assertEqual(r[2], r[3])  # verify that the override sticks locally
+            self.assertEqual(r[3], r[4])  # verify that the override sticks across coroutines
+
     def test_basic(self):
         '''Test that the contextDict is a dict
         '''
@@ -75,7 +127,7 @@ class ContextDictTests(TestCase):
             dict(self.cd),
             {'foo': 'global'},
         )
-        with tornado.stack_context.StackContext(lambda: over):
+        with over:
             self.assertEqual(
                 dict(over),
                 {'foo': 'global', 'bar': 'global'},
@@ -108,7 +160,7 @@ class ContextDictTests(TestCase):
             cds.append(self.cd.clone(bar=x))
         for x, cd in enumerate(cds):
             self.assertNotIn('bar', self.cd)
-            with tornado.stack_context.StackContext(lambda: cd):
+            with cd:
                 self.assertEqual(
                     dict(self.cd),
                     {'bar': x, 'foo': 'global'},
