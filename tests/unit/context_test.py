@@ -12,6 +12,7 @@ import time
 # Import Salt Testing libs
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
+from salt.ext.six.moves import range
 ensure_in_syspath('../../')
 
 # Import Salt libs
@@ -42,7 +43,7 @@ class ContextDictTests(TestCase):
 
         threads = []
         NUM_JOBS = 5
-        for x in xrange(0, NUM_JOBS):
+        for x in range(0, NUM_JOBS):
             s = NUM_JOBS - x
             t = threading.Thread(target=tgt, args=(x, s))
             t.start()
@@ -104,11 +105,11 @@ class ContextDictTests(TestCase):
 
     def test_multiple_contexts(self):
         cds = []
-        for x in xrange(0, 10):
+        for x in range(0, 10):
             cds.append(self.cd.clone(bar=x))
         for x, cd in enumerate(cds):
             self.assertNotIn('bar', self.cd)
-            with tornado.stack_context.StackContext(lambda: cd):
+            with tornado.stack_context.StackContext(lambda: cd):  # pylint: disable=W0640
                 self.assertEqual(
                     dict(self.cd),
                     {'bar': x, 'foo': 'global'},

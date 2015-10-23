@@ -163,7 +163,7 @@ class NamespacedDictWrapper(collections.MutableMapping, dict):
 
     MUST inherit from dict to serialize through msgpack correctly
     '''
-    def __init__(self, d, pre_keys):
+    def __init__(self, d, pre_keys):  # pylint: disable=W0231
         self.__dict = d
         if isinstance(pre_keys, salt.ext.six.string_types):
             self.pre_keys = (pre_keys,)
