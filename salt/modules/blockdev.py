@@ -12,17 +12,24 @@ import subprocess
 
 # Import salt libs
 import salt.utils
+import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'blockdev'
 
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Only load this module if the blockdev utility is available
     '''
     if salt.utils.is_windows():
-        return False
-    return True
+        return (False, ('The {0} execution module '
+                        'is not supported on windows'.format(__virtualname__)))
+    elif not salt.utils.which('blockdev'):
+        return (False, ('Cannot load the {0} execution module: '
+                        'blockdev utility not found'.format(__virtualname__)))
+    return __virtualname__
 
 
 def tune(device, **kwargs):
@@ -64,6 +71,7 @@ def tune(device, **kwargs):
     return dump(device, args)
 
 
+@decorators.which('wipefs')
 def wipe(device):
     '''
     Remove the filesystem information
@@ -91,7 +99,7 @@ def dump(device, args=None):
     CLI Example:
     .. code-block:: bash
 
-        salt '*' extfs.dump /dev/sda1
+        salt '*' blockdev.dump /dev/sda1
     '''
     cmd = 'blockdev --getro --getsz --getss --getpbsz --getiomin --getioopt --getalignoff  --getmaxsect --getsize --getsize64 --getra --getfra {0}'.format(device)
     ret = {}
@@ -114,6 +122,7 @@ def dump(device, args=None):
         return False
 
 
+@decorators.which('resize2fs')
 def resize2fs(device):
     '''
     Resizes the filesystem.
