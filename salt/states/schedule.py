@@ -185,6 +185,12 @@ def present(name,
                 ret['comment'] = new_item['comment']
                 return ret
 
+            # The schedule.list gives us an item that is guaranteed to have an
+            # 'enabled' argument. Before comparing, add 'enabled' if it's not
+            # available (assume True, like schedule.list does)
+            if 'enabled' not in new_item:
+                new_item['enabled'] = True
+
         if new_item == current_schedule[name]:
             ret['comment'].append('Job {0} in correct state'.format(name))
         else:
