@@ -13,6 +13,7 @@ import time
 
 # Import Salt Testing libs
 from salttesting import TestCase
+from salt.ext.six.moves import range
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -47,7 +48,7 @@ class ContextDictTests(AsyncTestCase):
 
         threads = []
         NUM_JOBS = 5
-        for x in xrange(0, NUM_JOBS):
+        for x in range(0, NUM_JOBS):
             s = NUM_JOBS - x
             t = threading.Thread(target=tgt, args=(x, s))
             t.start()
@@ -89,7 +90,7 @@ class ContextDictTests(AsyncTestCase):
 
         futures = []
         NUM_JOBS = 5
-        for x in xrange(0, NUM_JOBS):
+        for x in range(0, NUM_JOBS):
             s = NUM_JOBS - x
             over = self.cd.clone()
             def run():
@@ -156,7 +157,7 @@ class ContextDictTests(AsyncTestCase):
 
     def test_multiple_contexts(self):
         cds = []
-        for x in xrange(0, 10):
+        for x in range(0, 10):
             cds.append(self.cd.clone(bar=x))
         for x, cd in enumerate(cds):
             self.assertNotIn('bar', self.cd)
