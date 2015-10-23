@@ -79,7 +79,7 @@ def present(name,
                                               infoblox_api_version=infoblox_api_version,
                                               sslVerify=sslVerify)
     if records:
-        #check records for updates
+        # check records for updates
         for record in records:
             update_record = False
             if record_type == 'cname':
@@ -126,7 +126,7 @@ def present(name,
                         ret['result'] = False
                         return ret
     else:
-        #no records
+        # no records
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = ' '.join([ret['comment'],
@@ -228,7 +228,7 @@ def absent(name,
                 ret['result'] = False
                 return ret
     else:
-        #record not found
+        # record not found
         ret['result'] = True
         ret['changes']['old'] = None
         ret['changes']['new'] = None
