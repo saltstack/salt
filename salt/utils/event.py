@@ -918,6 +918,14 @@ class EventPublisher(multiprocessing.Process):
         try:
             self.epull_sock.bind(epull_uri)
             self.epub_sock.bind(epub_uri)
+            if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
+                salt.utils.warn_until(
+                        'Nitrogen',
+                        'ACL rules should be configured with \'publisher_acl\' and '
+                        '\'publisher_acl_blacklist\' not \'client_acl\' and '
+                        '\'client_acl_blacklist\'. This functionality will be removed in Salt '
+                        'Nitrogen.'
+                        )
             if (self.opts['ipc_mode'] != 'tcp' and (
                     self.opts['publisher_acl'] or
                     self.opts['client_acl'] or

@@ -1769,6 +1769,13 @@ class ClearFuncs(object):
         '''
         extra = clear_load.get('kwargs', {})
 
+        if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
+            salt.utils.warn_until(
+                    'Nitrogen',
+                    'ACL rules should be configured with \'publisher_acl\' and '
+                    '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
+                    'This functionality will be removed in Salt Nitrogen.'
+                    )
         publisher_acl = salt.acl.PublisherACL(
                 self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist'])
 

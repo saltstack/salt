@@ -194,6 +194,13 @@ def access_keys(opts):
     '''
     users = []
     keys = {}
+    if opts['client_acl'] or opts['client_acl_blacklist']:
+        salt.utils.warn_until(
+                'Nitrogen',
+                'ACL rules should be configured with \'publisher_acl\' and '
+                '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
+                'This functionality will be removed in Salt Nitrogen.'
+                )
     publisher_acl = opts['publisher_acl'] or opts['client_acl']
     acl_users = set(publisher_acl.keys())
     if opts.get('user'):
@@ -1332,6 +1339,13 @@ class LocalFuncs(object):
         # check blacklist/whitelist
         good = True
         # Check if the user is blacklisted
+        if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
+            salt.utils.warn_until(
+                    'Nitrogen',
+                    'ACL rules should be configured with \'publisher_acl\' and '
+                    '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
+                    'This functionality will be removed in Salt Nitrogen.'
+                    )
         blacklist = self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist']
         for user_re in blacklist.get('users', []):
             if re.match(user_re, load['user']):
