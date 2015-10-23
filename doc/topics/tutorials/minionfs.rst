@@ -1,13 +1,27 @@
 .. _tutorial-minionfs:
 
 ============================
-MinionFS Backend Walkthrough
+Propagating Files Walkthrough
 ============================
 
 .. versionadded:: 2014.1.0
 
 Sometimes, you might need to propagate files that are generated on a minion.
-Salt already has a feature to send files from a minion to the master:
+Salt already has a feature to send files from a minion to the master.
+
+Enabling Feature
+====================
+
+To use the propagate feature one configuration change is required on the
+master. The :conf_master:`file_recv` option needs to be set to true.
+
+.. code-block:: yaml
+
+    file_recv: True
+
+These changes require a restart of the master, then new requests for the
+``salt://minion-id/`` protocol will send files that are pushed by ``cp.push``
+from ``minion-id`` to the master.
 
 .. code-block:: bash
 
@@ -23,6 +37,10 @@ This command will store the file, including its full path, under
     This walkthrough assumes basic knowledge of Salt and :mod:`cp.push
     <salt.modules.cp.push>`. To get up to speed, check out the
     :doc:`walkthrough </topics/tutorials/walkthrough>`.
+
+============================
+MinionFS Backend Walkthrough
+============================
 
 Since it is not a good idea to expose the whole :conf_master:`cachedir`, MinionFS
 should be used to send these files to other minions.
