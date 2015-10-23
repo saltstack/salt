@@ -104,7 +104,7 @@ class ContextDictTests(AsyncTestCase):
 
         wait_iterator = tornado.gen.WaitIterator(*futures)
         while not wait_iterator.done():
-            r = yield wait_iterator.next()
+            r = yield next(wait_iterator)
             self.assertEqual(r[0], r[1])  # verify that the global value remails
             self.assertEqual(r[2], r[3])  # verify that the override sticks locally
             self.assertEqual(r[3], r[4])  # verify that the override sticks across coroutines
