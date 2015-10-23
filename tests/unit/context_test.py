@@ -95,11 +95,10 @@ class ContextDictTests(AsyncTestCase):
         for x in range(0, self.num_concurrent_tasks):
             s = self.num_concurrent_tasks - x
             over = self.cd.clone()
-            def run():
-                return tgt(x, s/5.0, over)
+
             f = tornado.stack_context.run_with_stack_context(
-                tornado.stack_context.StackContext(lambda: over),
-                run,
+                tornado.stack_context.StackContext(lambda: over),  # pylint: disable=W0640
+                lambda: tgt(x, s/5.0, over),  # pylint: disable=W0640
             )
             futures.append(f)
 
