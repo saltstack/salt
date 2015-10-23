@@ -22,6 +22,9 @@ from salt.utils.context import ContextDict, NamespacedDictWrapper
 
 
 class ContextDictTests(AsyncTestCase):
+    # how many threads/coroutines to run at a time
+    num_concurrent_tasks = 5
+
     def setUp(self):
         super(ContextDictTests, self).setUp()
         self.cd = ContextDict()
@@ -47,9 +50,8 @@ class ContextDictTests(AsyncTestCase):
                 rets.append(inner_ret)
 
         threads = []
-        NUM_JOBS = 5
-        for x in range(0, NUM_JOBS):
-            s = NUM_JOBS - x
+        for x in range(0, self.num_concurrent_tasks):
+            s = self.num_concurrent_tasks - x
             t = threading.Thread(target=tgt, args=(x, s))
             t.start()
             threads.append(t)
@@ -89,9 +91,9 @@ class ContextDictTests(AsyncTestCase):
             raise tornado.gen.Return(inner_ret)
 
         futures = []
-        NUM_JOBS = 5
-        for x in range(0, NUM_JOBS):
-            s = NUM_JOBS - x
+
+        for x in range(0, self.num_concurrent_tasks):
+            s = self.num_concurrent_tasks - x
             over = self.cd.clone()
             def run():
                 return tgt(x, s/5.0, over)
