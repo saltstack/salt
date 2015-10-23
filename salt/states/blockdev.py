@@ -150,12 +150,7 @@ def formatted(name, fs_type='ext4', **kwargs):
         return ret
 
     __salt__['blockdev.format'](name, fs_type, **kwargs)
-
-    blk = __salt__['cmd.run']('lsblk -o fstype {0}'.format(name)).splitlines()
-    if len(blk) == 1:
-        current_fs = ''
-    else:
-        current_fs = blk[1]
+    current_fs = __salt__['blockdev.fstype'](name)
 
     if current_fs == fs_type:
         ret['comment'] = ('{0} has been formatted '

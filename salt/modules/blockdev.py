@@ -195,7 +195,41 @@ def format_(device, fs_type='ext4', inode_size=None, lazy_itable_init=None):
     return all([mkfs_success, sync_success])
 
 
-@decorators.which('resize2fs')
+@decorators.which_bin(['lsblk', 'df'])
+def fstype(device):
+    '''
+    Return the filesystem name of a block device
+
+    .. versionadded:: 2015.8.2
+
+    device
+        The name of the block device
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' blockdev.fstype /dev/sdX1
+    '''
+    if salt.utils.which('lsblk'):
+        lsblk_out = __salt__['cmd.run']('lsblk -o fstype {0}'.format(device)).splitlines()
+        if len(lsblk_out) > 1:
+            fs_type = lsblk_out[1].strip()
+            if fs_type:
+                return fs_type
+
+    if salt.utils.which('df'):
+        # the fstype was not set on the block device, so inspect the filesystem
+        # itself for its type
+        df_out = __salt__['cmd.run']('df -T {0}'.format(device)).splitlines()
+        if len(df_out) > 1:
+            fs_type = df_out[1].split()[1]
+            if fs_type:
+                return fs_type
+
+    return ''
+
+
 def resize2fs(device):
     '''
     Resizes the filesystem.
