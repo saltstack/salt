@@ -4,16 +4,17 @@ Module to provide RabbitMQ compatibility to Salt.
 Todo: A lot, need to add cluster support, logging, and minion configuration
 data.
 '''
+
+# Import Python Libs
 from __future__ import absolute_import
-
-# Import salt libs
-import salt.utils
-
-# Import python libs
 import logging
 import random
 import string
+
+# Import Salt Libs
+import salt.utils
 from salt.ext.six.moves import range
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -702,8 +703,12 @@ def plugin_is_enabled(name, runas=None):
     cmd = '{0} list -m -e'.format(rabbitmq)
     if runas is None:
         runas = salt.utils.get_user()
-    ret = __salt__['cmd.run'](cmd, python_shell=False, runas=runas)
-    return bool(name in ret)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(
+            'RabbitMQ command failed: {0}'.format(ret['stderr'])
+        )
+    return bool(name in ret['stdout'])
 
 
 def enable_plugin(name, runas=None):
