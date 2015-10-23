@@ -830,7 +830,6 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 30
 
     def _mixin_setup(self):
-        self._signal_handler_installed = False
         self.add_option(
             '-d', '--daemon',
             default=False,
@@ -850,10 +849,8 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
 
     # Common methods for scripts which can daemonize
     def _install_signal_handlers(self):
-        if self._signal_handler_installed is False:
-            signal.signal(signal.SIGTERM, self._handle_signals)
-            signal.signal(signal.SIGINT, self._handle_signals)
-            self._signal_handler_installed = True
+        signal.signal(signal.SIGTERM, self._handle_signals)
+        signal.signal(signal.SIGINT, self._handle_signals)
 
     def prepare(self):
         self.parse_args()

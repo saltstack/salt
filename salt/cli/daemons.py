@@ -138,12 +138,6 @@ class Master(parsers.MasterOptionParser):
         self.set_pidfile()
         salt.utils.process.notify_systemd()
 
-    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
-        # escalate signal to the process manager processes
-        self.master.process_manager.stop_restarting()
-        self.master.process_manager.send_signal_to_processes(signum)
-        super(Master, self)._handle_signals(signum, sigframe)
-
     def start(self):
         '''
         Start the actual master.
@@ -154,24 +148,21 @@ class Master(parsers.MasterOptionParser):
 
         NOTE: Run any required code before calling `super()`.
         '''
-        # Fake that the signal handlers are installed. They need to be setup at
-        # a later stage
-        self._signal_handler_installed = True
         super(Master, self).start()
         if check_user(self.config['user']):
             logger.info('The salt master is starting up')
-            self.master.prepare()
-            # Install signals
-            self._signal_handler_installed = False
-            self._install_signal_handlers()
-            self.master.start()
+            try:
+                self.master.start()
+            except KeyboardInterrupt:
+                logger.warn('The salt master is shutting down')
+            finally:
+                self.shutdown()
 
     def shutdown(self, exitcode=0, exitmsg=None):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        self.master.process_manager.kill_children()
-        logger.info('The salt master is shutting down')
+        logger.info('The salt master is shut down')
         super(Master, self).shutdown(exitcode, exitmsg)
 
 
