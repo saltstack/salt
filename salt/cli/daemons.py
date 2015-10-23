@@ -61,6 +61,14 @@ class Master(parsers.MasterOptionParser):
     '''
     Creates a master server
     '''
+    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+        # escalate signal to the process manager processes
+        self.master.process_manager.stop_restarting()
+        self.master.process_manager.send_signal_to_processes(signum)
+        # kill any remaining processes
+        self.master.process_manager.kill_children()
+        super(Master, self)._handle_signals(signum, sigframe)
+
     def prepare(self):
         '''
         Run the preparation sequence required to start a salt master server.
@@ -151,18 +159,18 @@ class Master(parsers.MasterOptionParser):
         super(Master, self).start()
         if check_user(self.config['user']):
             logger.info('The salt master is starting up')
-            try:
-                self.master.start()
-            except KeyboardInterrupt:
-                logger.warn('The salt master is shutting down')
-            finally:
-                self.shutdown()
+            self.master.start()
 
     def shutdown(self, exitcode=0, exitmsg=None):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        logger.info('The salt master is shut down')
+        logger.info('The salt master is shutting down..')
+        msg = 'The salt master is shutdown. '
+        if exitmsg is not None:
+            exitmsg = msg + exitmsg
+        else:
+            exitmsg = msg.strip()
         super(Master, self).shutdown(exitcode, exitmsg)
 
 
