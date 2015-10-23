@@ -71,6 +71,12 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
+
+# Import Salt Libs
+from salt.utils import SaltInvocationError
+
 
 def __virtual__():
     '''
@@ -144,10 +150,15 @@ def present(
     if isinstance(value, list):
         value = ','.join(value)
 
-    record = __salt__['boto_route53.get_record'](name, zone, record_type,
-                                                 False, region, key, keyid,
-                                                 profile, split_dns,
-                                                 private_zone)
+    try:
+        record = __salt__['boto_route53.get_record'](name, zone, record_type,
+                                                     False, region, key, keyid,
+                                                     profile, split_dns,
+                                                     private_zone)
+    except SaltInvocationError as err:
+        ret['comment'] = 'Error: {0}'.format(err)
+        ret['result'] = False
+        return ret
 
     if isinstance(record, dict) and not record:
         if __opts__['test']:
