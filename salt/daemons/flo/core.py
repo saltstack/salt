@@ -30,6 +30,7 @@ from salt.utils import kinds, is_windows
 from salt.utils.event import tagify
 
 # Import ioflo libs
+# pylint: disable=E0611,F0401
 from ioflo.aid.odicting import odict
 import ioflo.base.deeding
 
