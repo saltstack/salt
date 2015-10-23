@@ -230,6 +230,7 @@ def fstype(device):
     return ''
 
 
+@decorators.which('resize2fs')
 def resize2fs(device):
     '''
     Resizes the filesystem.
