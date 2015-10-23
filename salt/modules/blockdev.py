@@ -96,21 +96,38 @@ def dump(device, args=None):
     '''
     Return all contents of dumpe2fs for a specified device
 
+    args
+        a list containing only the desired arguments to return
+
     CLI Example:
+
     .. code-block:: bash
 
         salt '*' blockdev.dump /dev/sda1
     '''
-    cmd = 'blockdev --getro --getsz --getss --getpbsz --getiomin --getioopt --getalignoff  --getmaxsect --getsize --getsize64 --getra --getfra {0}'.format(device)
+    cmd = ['blockdev',
+           '--getro',
+           '--getsz',
+           '--getss',
+           '--getpbsz',
+           '--getiomin',
+           '--getioopt',
+           '--getalignoff',
+           '--getmaxsect',
+           '--getsize',
+           '--getsize64',
+           '--getra',
+           '--getfra',
+           str(device)]
     ret = {}
-    opts = [c[2:] for c in cmd.split() if c.startswith('--')]
+    opts = [c[2:] for c in cmd if c.startswith('--')]
     out = __salt__['cmd.run_all'](cmd, python_shell=False)
     if out['retcode'] == 0:
         lines = [line for line in out['stdout'].splitlines() if line]
         count = 0
         for line in lines:
             ret[opts[count]] = line
-            count = count+1
+            count += 1
         if args:
             temp_ret = {}
             for arg in args:
