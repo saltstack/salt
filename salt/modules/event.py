@@ -54,14 +54,20 @@ def fire_master(data, tag, preload=None):
     if preload or __opts__.get('__cli') == 'salt-call':
         # If preload is specified, we must send a raw event (this is
         # slower because it has to independently authenticate)
-        if preload:
-            load = preload
-            auth = salt.crypt.SAuth(__opts__)
-            load.update({'id': __opts__['id'],
-                    'tag': tag,
-                    'data': data,
-                    'tok': auth.gen_token('salt'),
-                    'cmd': '_minion_event'})
+        if 'master_uri' not in __opts__:
+            __opts__['master_uri'] = 'tcp://{ip}:{port}'.format(
+                    ip=salt.utils.ip_bracket(__opts__['interface']),
+                    port=__opts__.get('ret_port', '4506')  # TODO, no fallback
+                    )
+        auth = salt.crypt.SAuth(__opts__)
+        load = {'id': __opts__['id'],
+                'tag': tag,
+                'data': data,
+                'tok': auth.gen_token('salt'),
+                'cmd': '_minion_event'}
+
+        if isinstance(preload, dict):
+            load.update(preload)
 
         channel = salt.transport.Channel.factory(__opts__)
         try:
