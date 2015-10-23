@@ -122,5 +122,8 @@ class ExcInfoOnLogLevelFormatMixIn(object):
             #     for a script. See issue 13232.
             formatted_record += record.record.exc_info_on_loglevel_formatted.decode(sys.getfilesystemencoding(),
                                                                                     'replace')
-
+        # Reset the record.exc_info_on_loglevel_instance because it might need
+        # to "travel" through a multiprocessing process and it might contain
+        # data which is not pickle'able
+        record.exc_info_on_loglevel_instance = None
         return formatted_record
