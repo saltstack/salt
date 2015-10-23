@@ -615,6 +615,10 @@ class SPMClient(object):
         self.formula_conf = formula_conf
 
         formula_tar = tarfile.open(out_path, 'w:bz2')
+
+        # Add FORMULA first, to speed up create_repo on large packages
+        formula_tar.add(formula_path, formula_conf['name'], filter=self._exclude)
+
         try:
             formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
         except TypeError:
