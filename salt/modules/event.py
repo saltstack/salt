@@ -51,9 +51,7 @@ def fire_master(data, tag, preload=None):
             pass
         return True
 
-    if preload:
-        # If preload is specified, we must send a raw event (this is
-        # slower because it has to independently authenticate)
+    elif preload:
         load = preload
         auth = salt.crypt.SAuth(__opts__)
         load.update({'id': __opts__['id'],
@@ -69,16 +67,12 @@ def fire_master(data, tag, preload=None):
             pass
         return True
     else:
-        # Usually, we can send the event via the minion, which is faster
-        # because it is already authenticated
+        channel = salt.transport.Channel.factory(__opts__)
         try:
-            return salt.utils.event.MinionEvent(__opts__).fire_event(
-                {'data': data, 'tag': tag, 'events': None, 'pretag': None}, 'fire_master')
+            channel.send(load)
         except Exception:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
-            log.debug(lines)
-            return False
+            pass
+        return True
 
 
 def fire(data, tag):
