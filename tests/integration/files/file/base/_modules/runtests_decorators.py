@@ -46,7 +46,7 @@ def missing_depends():
 
 
 @salt.utils.decorators.depends('time', fallback_function=_fallbackfunc)
-def depends_will_fallback():
+def depends_will_not_fallback():
     ret = {'ret': True,
            'time': time.time()}
     return ret
