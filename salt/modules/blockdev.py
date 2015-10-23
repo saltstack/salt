@@ -16,6 +16,10 @@ import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 
+__func_alias__ = {
+    'format_': 'format'
+}
+
 __virtualname__ = 'blockdev'
 
 
@@ -137,6 +141,58 @@ def dump(device, args=None):
             return ret
     else:
         return False
+
+
+@decorators.which('sync')
+@decorators.which('mkfs')
+def format_(device, fs_type='ext4', inode_size=None, lazy_itable_init=None):
+    '''
+    Format a filesystem onto a block device
+
+    .. versionadded:: 2015.8.2
+
+    device
+        The block device in which to create the new filesystem
+
+    fs_type
+        The type of filesystem to create
+
+    inode_size
+        Size of the inodes
+
+        This option is only enabled for ext and xfs filesystems
+
+    lazy_itable_init
+        If enabled and the uninit_bg feature is enabled, the inode table will
+        not be fully initialized by mke2fs.  This speeds up filesystem
+        initialization noticeably, but it requires the kernel to finish
+        initializing the filesystem  in  the  background  when  the filesystem
+        is first mounted.  If the option value is omitted, it defaults to 1 to
+        enable lazy inode table zeroing.
+
+        This option is only enabled for ext filesystems
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' blockdev.format /dev/sdX1
+    '''
+    cmd = ['mkfs', '-t', str(fs_type)]
+    if inode_size is not None:
+        if fs_type[:3] == 'ext':
+            cmd.extend(['-i', str(inode_size)])
+        elif fs_type == 'xfs':
+            cmd.extend(['-i', 'size={0}'.format(inode_size)])
+    if lazy_itable_init is not None:
+        if fs_type[:3] == 'ext':
+            cmd.extend(['-E', 'lazy_itable_init={0}'.format(lazy_itable_init)])
+    cmd.append(str(device))
+
+    mkfs_success = __salt__['cmd.retcode'](cmd, ignore_retcode=True) == 0
+    sync_success = __salt__['cmd.retcode']('sync', ignore_retcode=True) == 0
+
+    return all([mkfs_success, sync_success])
 
 
 @decorators.which('resize2fs')
