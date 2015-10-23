@@ -18,8 +18,7 @@ except ImportError:
 from salt.utils.odict import OrderedDict
 
 try:
-    # pylint: disable=E011
-    from ioflo.aid.odicting import odict
+    from ioflo.aid.odicting import odict  # pylint: disable=E0611
     HAS_IOFLO = True
 except ImportError:
     odict = None
