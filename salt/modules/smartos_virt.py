@@ -6,12 +6,10 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import json
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
 import salt.utils
-import salt.utils.decorators as decorators
 
 log = logging.getLogger(__name__)
 
@@ -19,80 +17,13 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'virt'
 
 
-@decorators.memoize
-def _check_vmadm():
-    '''
-    Looks to see if vmadm is present on the system
-    '''
-    return salt.utils.which('vmadm')
-
-
-def _check_dladm():
-    '''
-    Looks to see if dladm is present on the system
-    '''
-    return salt.utils.which('dladm')
-
-
 def __virtual__():
     '''
     Provides virt on SmartOS
     '''
-    if salt.utils.is_smartos_globalzone() and _check_vmadm():
+    if salt.utils.is_smartos_globalzone() and salt.utils.which('vmadm'):
         return __virtualname__
     return False
-
-
-def _exit_status(retcode):
-    '''
-    Translate exit status of vmadm
-    '''
-    ret = {0: 'Successful completion.',
-           1: 'An error occurred.',
-           2: 'Usage error.'}[retcode]
-    return ret
-
-
-def _gen_zone_json(**kwargs):
-    '''
-    Generate the JSON for OS virtualization creation
-
-    Example layout (all keys are mandatory) :
-
-       {"brand": "joyent",
-        "image_uuid": "9eac5c0c-a941-11e2-a7dc-57a6b041988f",
-        "alias": "myname",
-        "hostname": "www.domain.com",
-        "max_physical_memory": 2048,
-        "quota": 10,
-        "nics": [
-            {
-                "nic_tag": "admin",
-                "ip": "192.168.0.1",
-                "netmask": "255.255.255.0",
-                "gateway": "192.168.0.254"
-            }
-        ]}
-    '''
-    ret = {}
-    nics = {}
-    check_args = (
-        'image_uuid', 'alias', 'hostname',
-        'max_physical_memory', 'quota', 'nic_tag',
-        'ip', 'netmask', 'gateway')
-    nics_args = ('nic_tag', 'ip', 'netmask', 'gateway')
-    # Lazy check of arguments
-    if not all(key in kwargs for key in check_args):
-        raise CommandExecutionError('Missing arguments for JSON generation')
-    # This one is mandatory for OS virt
-    ret.update(brand='joyent')
-    # Populate JSON without NIC information
-    ret.update((key, kwargs[key]) for key in check_args if key in kwargs and key not in nics_args)
-    # NICs are defined in a subdict
-    nics.update((key, kwargs[key]) for key in nics_args if key in kwargs)
-    ret.update(nics=[nics])
-
-    return json.dumps(ret)
 
 
 def init(**kwargs):
@@ -106,20 +37,6 @@ def init(**kwargs):
         salt '*' virt.init image_uuid='...' alias='...' [...]
     '''
     return __salt__['vmadm.create'](**kwargs)
-
-
-def _call_vmadm(cmd):
-    '''
-    Call vmadm and return the result or raise an exception.
-
-    :param cmd: command params for the vmadm on SmartOS.
-    :return:
-    '''
-    res = __salt__['cmd.run_all']('{vmadm} {cmd}'.format(vmadm=_check_vmadm(), cmd=cmd))
-    if res['retcode'] != 0:
-        raise CommandExecutionError(_exit_status(res['retcode']))
-
-    return res
 
 
 def list_domains():
