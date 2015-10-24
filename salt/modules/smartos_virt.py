@@ -5,6 +5,7 @@ virst compatibility module for managing VMs on SmartOS
 from __future__ import absolute_import
 
 # Import Python libs
+import logging
 import json
 
 # Import Salt libs
@@ -16,6 +17,7 @@ try:
 except ImportError:
     from pipes import quote as _cmd_quote
 
+log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'virt'
@@ -318,21 +320,18 @@ def setmem(uuid, memory):
 
         salt '*' virt.setmem <uuid> 512
     '''
-    warning = None
     vmtype = vm_virt_type(uuid)
     if vmtype == 'OS':
-        cmd = 'update {1} max_physical_memory={2}'.format(uuid, memory)
+        return __salt__['vmadm.update'](vm=uuid, max_physical_memory=memory)
+    elif vmtype == 'LX':
+        return __salt__['vmadm.update'](vm=uuid, max_physical_memory=memory)
     elif vmtype == 'KVM':
-        cmd = 'update {1} ram={2}'.format(uuid, memory)
-        warning = 'Changes will be applied after the VM restart.'
+        log.warning('Changes will be applied after the VM restart.')
+        return __salt__['vmadm.update'](vm=uuid, ram=memory)
     else:
         raise CommandExecutionError('Unknown VM type')
 
-    retcode = _call_vmadm(cmd)['retcode']
-    if retcode:
-        raise CommandExecutionError(_exit_status(retcode))
-
-    return warning or None
+    return False
 
 
 def get_macs(uuid):
