@@ -252,9 +252,7 @@ def stop(uuid):
     if uuid in list_inactive_vms():
         raise CommandExecutionError('The specified vm is stopped')
 
-    __salt__['vmadm.delete'](uuid)
-
-    return uuid in list_inactive_vms()
+    return __salt__['vmadm.delete'](uuid)
 
 
 def vm_virt_type(uuid):
