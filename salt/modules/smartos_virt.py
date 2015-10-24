@@ -232,7 +232,7 @@ def start(uuid):
     if uuid in list_active_vms():
         raise CommandExecutionError('The specified vm is already running')
 
-    _call_vmadm('start {0}'.format(uuid))
+    __salt__['vmadm.start'](uuid)
 
     return uuid in list_active_vms()
 
@@ -250,7 +250,7 @@ def shutdown(uuid):
     if uuid in list_inactive_vms():
         raise CommandExecutionError('The specified vm is already stopped')
 
-    _call_vmadm('stop {0}'.format(uuid))
+    __salt__['vmadm.stop'](uuid)
 
     return uuid in list_inactive_vms()
 
@@ -286,7 +286,7 @@ def stop(uuid):
     if uuid in list_inactive_vms():
         raise CommandExecutionError('The specified vm is stopped')
 
-    _call_vmadm('delete {0}'.format(uuid))
+    __salt__['vmadm.delete'](uuid)
 
     return uuid in list_inactive_vms()
 
