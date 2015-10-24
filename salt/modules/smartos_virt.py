@@ -212,11 +212,7 @@ def vm_info(uuid):
 
         salt '*' virt.vm_info <uuid>
     '''
-    res = __salt__['cmd.run_all']('{0} get {1}'.format(_check_vmadm(), uuid))
-    if res['retcode'] != 0:
-        raise CommandExecutionError(_exit_status(res['retcode']))
-
-    return res['stdout']
+    return __salt__['vmadm.get'](uuid)
 
 
 def start(uuid):
@@ -301,10 +297,11 @@ def vm_virt_type(uuid):
 
         salt '*' virt.vm_virt_type <uuid>
     '''
-    ret = _call_vmadm('list -p -o type uuid={0}'.format(uuid))['stdout']
-    if not ret:
-        raise CommandExecutionError('We can\'t determine the type of this VM')
-    return ret
+    ret = __salt__['vmadm.lookup'](search="uuid={uuid}".format(uuid=uuid), order='type')
+    if len(ret) < 1:
+        raise CommandExecutionError("We can't determine the type of this VM")
+
+    return ret[0]['type']
 
 
 def setmem(uuid, memory):
