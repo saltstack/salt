@@ -266,7 +266,7 @@ def reboot(uuid):
     if uuid in list_inactive_vms():
         raise CommandExecutionError('The specified vm is stopped')
 
-    _call_vmadm('reboot {0}'.format(uuid))
+    __salt__['vmadm.reboot'](uuid)
 
     return uuid in list_active_vms()
 
