@@ -12,10 +12,6 @@ import json
 from salt.exceptions import CommandExecutionError
 import salt.utils
 import salt.utils.decorators as decorators
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
 
 log = logging.getLogger(__name__)
 
@@ -109,33 +105,7 @@ def init(**kwargs):
 
         salt '*' virt.init image_uuid='...' alias='...' [...]
     '''
-    ret = {}
-    vmadm = _check_vmadm()
-    check_zone_args = ('image_uuid', 'alias', 'hostname', 'max_physical_memory',
-                       'quota', 'nic_tag', 'ip', 'netmask', 'gateway')
-    check_kvm_args = ('to_be_implemented')
-    # check routines for mandatory arguments
-    # Zones
-    if all(key in kwargs for key in check_zone_args):
-        ret = _gen_zone_json(**kwargs)
-        # validation first
-        cmd = 'echo {0} | {1} validate create'.format(_cmd_quote(ret), _cmd_quote(vmadm))
-        res = __salt__['cmd.run_all'](cmd, python_shell=True)
-        retcode = res['retcode']
-        if retcode != 0:
-            return CommandExecutionError(_exit_status(retcode))
-        # if succedeed, proceed to the VM creation
-        cmd = 'echo {0} | {1} create'.format(_cmd_quote(ret), _cmd_quote(vmadm))
-        res = __salt__['cmd.run_all'](cmd, python_shell=True)
-        retcode = res['retcode']
-        if retcode != 0:
-            return CommandExecutionError(_exit_status(retcode))
-        return True
-    # KVM
-    elif all(key in kwargs for key in check_kvm_args):
-        raise CommandExecutionError('KVM is not yet implemented')
-    else:
-        raise CommandExecutionError('Missing mandatory arguments')
+    return __salt__['vmadm.create'](**kwargs)
 
 
 def _call_vmadm(cmd):
