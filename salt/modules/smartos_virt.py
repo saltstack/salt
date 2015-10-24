@@ -309,13 +309,14 @@ def get_macs(uuid):
 
         salt '*' virt.get_macs <uuid>
     '''
-    dladm = _check_dladm()
-    cmd = '{0} show-vnic -o MACADDRESS -p -z {1}'.format(dladm, uuid)
-    res = __salt__['cmd.run_all'](cmd)
-    ret = res['stdout']
-    if ret != '':
-        return ret
-    raise CommandExecutionError('We can\'t find the MAC address of this VM')
+    macs = []
+    ret = __salt__['vmadm.lookup'](search="uuid={uuid}".format(uuid=uuid), order='nics')
+    if len(ret) < 1:
+        raise CommandExecutionError('We can\'t find the MAC address of this VM')
+    else:
+        for nic in ret[0]['nics']:
+            macs.append(nic['mac'])
+        return macs
 
 
 # Deprecated aliases
