@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Module for managing VMs on SmartOS
+virst compatibility module for managing VMs on SmartOS
 '''
 from __future__ import absolute_import
 
@@ -11,7 +11,6 @@ import json
 from salt.exceptions import CommandExecutionError
 import salt.utils
 import salt.utils.decorators as decorators
-import salt.ext.six as six
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
 except ImportError:
@@ -161,16 +160,17 @@ def list_domains():
 
         salt '*' virt.list_domains
     '''
-    vmadm = _check_vmadm()
-    cmd = '{0} list'.format(vmadm)
+    data = __salt__['vmadm.list'](keyed=True)
     vms = []
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    for key, uuid in six.iteritems(res):
-        if key == "stdout":
-            vms.append(uuid)
+    vms.append("UUID                                  TYPE  RAM      STATE             ALIAS")
+    for vm in data:
+        vms.append("{vmuuid}{vmtype}{vmram}{vmstate}{vmalias}".format(
+            vmuuid=vm.ljust(38),
+            vmtype=data[vm]['type'].ljust(6),
+            vmram=data[vm]['ram'].ljust(9),
+            vmstate=data[vm]['state'].ljust(18),
+            vmalias=data[vm]['alias'],
+        ))
     return vms
 
 
