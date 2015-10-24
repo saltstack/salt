@@ -197,17 +197,7 @@ def list_inactive_vms():
 
         salt '*' virt.list_inactive_vms
     '''
-    vmadm = _check_vmadm()
-    cmd = '{0} lookup state=stopped'.format(vmadm)
-    vms = []
-    res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
-    if retcode != 0:
-        raise CommandExecutionError(_exit_status(retcode))
-    for key, uuid in six.iteritems(res):
-        if key == "stdout":
-            vms.append(uuid)
-    return vms
+    return __salt__['vmadm.list'](search="state='stopped'", order='uuid')
 
 
 def vm_info(uuid):
