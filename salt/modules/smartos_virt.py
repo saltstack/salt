@@ -89,7 +89,7 @@ def list_inactive_vms():
     return __salt__['vmadm.list'](search="state='stopped'", order='uuid')
 
 
-def vm_info(uuid):
+def vm_info(domain):
     '''
     Return a dict with information about the specified VM on this CN
 
@@ -97,12 +97,12 @@ def vm_info(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.vm_info <uuid>
+        salt '*' virt.vm_info <domain>
     '''
-    return __salt__['vmadm.get'](uuid)
+    return __salt__['vmadm.get'](domain)
 
 
-def start(uuid):
+def start(domain):
     '''
     Start a defined domain
 
@@ -110,17 +110,17 @@ def start(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.start <uuid>
+        salt '*' virt.start <domain>
     '''
-    if uuid in list_active_vms():
+    if domain in list_active_vms():
         raise CommandExecutionError('The specified vm is already running')
 
-    __salt__['vmadm.start'](uuid)
+    __salt__['vmadm.start'](domain)
 
-    return uuid in list_active_vms()
+    return domain in list_active_vms()
 
 
-def shutdown(uuid):
+def shutdown(domain):
     '''
     Send a soft shutdown signal to the named vm
 
@@ -128,17 +128,17 @@ def shutdown(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.shutdown <uuid>
+        salt '*' virt.shutdown <domain>
     '''
-    if uuid in list_inactive_vms():
+    if domain in list_inactive_vms():
         raise CommandExecutionError('The specified vm is already stopped')
 
-    __salt__['vmadm.stop'](uuid)
+    __salt__['vmadm.stop'](domain)
 
-    return uuid in list_inactive_vms()
+    return domain in list_inactive_vms()
 
 
-def reboot(uuid):
+def reboot(domain):
     '''
     Reboot a domain via ACPI request
 
@@ -146,17 +146,17 @@ def reboot(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.reboot <uuid>
+        salt '*' virt.reboot <domain>
     '''
-    if uuid in list_inactive_vms():
+    if domain in list_inactive_vms():
         raise CommandExecutionError('The specified vm is stopped')
 
-    __salt__['vmadm.reboot'](uuid)
+    __salt__['vmadm.reboot'](domain)
 
-    return uuid in list_active_vms()
+    return domain in list_active_vms()
 
 
-def stop(uuid):
+def stop(domain):
     '''
     Hard power down the virtual machine, this is equivalent to powering off the hardware.
 
@@ -164,15 +164,15 @@ def stop(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.destroy <uuid>
+        salt '*' virt.destroy <domain>
     '''
-    if uuid in list_inactive_vms():
+    if domain in list_inactive_vms():
         raise CommandExecutionError('The specified vm is stopped')
 
-    return __salt__['vmadm.delete'](uuid)
+    return __salt__['vmadm.delete'](domain)
 
 
-def vm_virt_type(uuid):
+def vm_virt_type(domain):
     '''
     Return VM virtualization type : OS or KVM
 
@@ -180,16 +180,16 @@ def vm_virt_type(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.vm_virt_type <uuid>
+        salt '*' virt.vm_virt_type <domain>
     '''
-    ret = __salt__['vmadm.lookup'](search="uuid={uuid}".format(uuid=uuid), order='type')
+    ret = __salt__['vmadm.lookup'](search="uuid={uuid}".format(uuid=domain), order='type')
     if len(ret) < 1:
         raise CommandExecutionError("We can't determine the type of this VM")
 
     return ret[0]['type']
 
 
-def setmem(uuid, memory):
+def setmem(domain, memory):
     '''
     Change the amount of memory allocated to VM.
     <memory> is to be specified in MB.
@@ -200,23 +200,23 @@ def setmem(uuid, memory):
 
     .. code-block:: bash
 
-        salt '*' virt.setmem <uuid> 512
+        salt '*' virt.setmem <domain> 512
     '''
-    vmtype = vm_virt_type(uuid)
+    vmtype = vm_virt_type(domain)
     if vmtype == 'OS':
-        return __salt__['vmadm.update'](vm=uuid, max_physical_memory=memory)
+        return __salt__['vmadm.update'](vm=domain, max_physical_memory=memory)
     elif vmtype == 'LX':
-        return __salt__['vmadm.update'](vm=uuid, max_physical_memory=memory)
+        return __salt__['vmadm.update'](vm=domain, max_physical_memory=memory)
     elif vmtype == 'KVM':
         log.warning('Changes will be applied after the VM restart.')
-        return __salt__['vmadm.update'](vm=uuid, ram=memory)
+        return __salt__['vmadm.update'](vm=domain, ram=memory)
     else:
         raise CommandExecutionError('Unknown VM type')
 
     return False
 
 
-def get_macs(uuid):
+def get_macs(domain):
     '''
     Return a list off MAC addresses from the named VM
 
@@ -224,10 +224,10 @@ def get_macs(uuid):
 
     .. code-block:: bash
 
-        salt '*' virt.get_macs <uuid>
+        salt '*' virt.get_macs <domain>
     '''
     macs = []
-    ret = __salt__['vmadm.lookup'](search="uuid={uuid}".format(uuid=uuid), order='nics')
+    ret = __salt__['vmadm.lookup'](search="uuid={uuid}".format(uuid=domain), order='nics')
     if len(ret) < 1:
         raise CommandExecutionError('We can\'t find the MAC address of this VM')
     else:
