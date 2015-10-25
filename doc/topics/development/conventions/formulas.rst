@@ -415,12 +415,16 @@ from the Salt Master. For example:
     {% set some_data = salt.pillar.get('some_data', {'sane default': True}) %}
 
     {# or #}
+    
+    {% import_yaml 'path/to/file.yaml' as some_data %}
+    
+    {# or #}
 
-    {% load_json 'path/to/file.json' as some_data %}
+    {% import_json 'path/to/file.json' as some_data %}
 
     {# or #}
 
-    {% load_text 'path/to/ssh_key.pub' as ssh_pub_key %}
+    {% import_text 'path/to/ssh_key.pub' as ssh_pub_key %}
 
     {# or #}
 
