@@ -786,6 +786,14 @@ def setup_multiprocessing_logging(queue):
     )
 
 
+def shutdown_multiprocessing_logging():
+    for handler in logging.root.handlers:
+        if isinstance(handler, SaltLogQueueHandler):
+            # Let's remove the queue handler from the logging root handlers
+            logging.root.removeHandler(handler)
+
+
+
 def shutdown_multiprocessing_logging_listener():
     if __MP_LOGGING_QUEUE_PROCESS is None:
         return
