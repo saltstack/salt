@@ -793,7 +793,6 @@ def shutdown_multiprocessing_logging():
             logging.root.removeHandler(handler)
 
 
-
 def shutdown_multiprocessing_logging_listener():
     if __MP_LOGGING_QUEUE_PROCESS is None:
         return
