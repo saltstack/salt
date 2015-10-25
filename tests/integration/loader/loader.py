@@ -20,7 +20,7 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
-import integration
+import integration  # pylint: disable=import-error
 
 # Import Salt libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
