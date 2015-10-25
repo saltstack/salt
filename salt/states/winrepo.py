@@ -15,6 +15,7 @@ import salt.utils
 import salt.config
 import salt.syspaths
 
+
 def __virtual__():
     return 'winrepo'
 
