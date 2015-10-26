@@ -18,6 +18,7 @@ from __future__ import absolute_import
 import os
 import re
 import sys
+import time
 import types
 import socket
 import logging
@@ -738,20 +739,17 @@ def setup_extended_logging(opts):
 
 
 def get_multiprocessing_logging_queue():
+    global __MP_LOGGING_QUEUE
+    if __MP_LOGGING_QUEUE is None:
+        __MP_LOGGING_QUEUE = multiprocessing.Queue()
     return __MP_LOGGING_QUEUE
 
 
-def setup_multiprocessing_logging_listener(queue=None):
-    global __MP_LOGGING_QUEUE
-    if queue is not None:
-        __MP_LOGGING_QUEUE = queue
-    else:
-        __MP_LOGGING_QUEUE = multiprocessing.Queue()
-
+def setup_multiprocessing_logging_listener():
     global __MP_LOGGING_QUEUE_PROCESS
     __MP_LOGGING_QUEUE_PROCESS = multiprocessing.Process(
         target=__process_multiprocessing_logging_queue,
-        args=(__MP_LOGGING_QUEUE,)
+        args=(get_multiprocessing_logging_queue(),)
     )
     __MP_LOGGING_QUEUE_PROCESS.start()
 
@@ -765,6 +763,7 @@ def setup_multiprocessing_logging(queue):
     process instance.
     '''
     global __MP_LOGGING_CONFIGURED
+    global __MP_LOGGING_QUEUE_HANDLER
 
     if __MP_LOGGING_CONFIGURED is True:
         return
@@ -772,12 +771,12 @@ def setup_multiprocessing_logging(queue):
     # Let's set it to true as fast as possible
     __MP_LOGGING_CONFIGURED = True
 
-    for handler in logging.root.handlers:
-        if isinstance(handler, SaltLogQueueHandler):
-            return
+    if __MP_LOGGING_QUEUE_HANDLER is not None:
+        return
 
     # Let's add a queue handler to the logging root handlers
-    logging.root.addHandler(SaltLogQueueHandler(queue))
+    __MP_LOGGING_QUEUE_HANDLER = SaltLogQueueHandler(queue)
+    logging.root.addHandler(__MP_LOGGING_QUEUE_HANDLER)
     # Set the logging root level to the lowest to get all messages
     logging.root.setLevel(logging.GARBAGE)
     logging.getLogger(__name__).debug(
@@ -787,13 +786,19 @@ def setup_multiprocessing_logging(queue):
 
 
 def shutdown_multiprocessing_logging():
-    for handler in logging.root.handlers:
-        if isinstance(handler, SaltLogQueueHandler):
-            # Let's remove the queue handler from the logging root handlers
-            logging.root.removeHandler(handler)
+    global __MP_LOGGING_CONFIGURED
+    global __MP_LOGGING_QUEUE_HANDLER
+    if __MP_LOGGING_CONFIGURED is True:
+        # Let's remove the queue handler from the logging root handlers
+        logging.root.removeHandler(__MP_LOGGING_QUEUE_HANDLER)
+        __MP_LOGGING_QUEUE_HANDLER = None
+        __MP_LOGGING_CONFIGURED = False
 
 
 def shutdown_multiprocessing_logging_listener():
+    global __MP_LOGGING_QUEUE
+    global __MP_LOGGING_QUEUE_PROCESS
+    global __MP_LOGGING_LISTENER_CONFIGURED
     if __MP_LOGGING_QUEUE_PROCESS is None:
         return
     if __MP_LOGGING_QUEUE_PROCESS.is_alive():
@@ -802,7 +807,14 @@ def shutdown_multiprocessing_logging_listener():
             # Sent None sentinel to stop the logging processing queue
             __MP_LOGGING_QUEUE.put(None)
             # Let's join the multiprocessing logging handle thread
+            time.sleep(0.5)
+            #logging.getLogger(__name__).debug('closing multiprocessing queue')
+            #__MP_LOGGING_QUEUE.close()
+            #logging.getLogger(__name__).debug('joining multiprocessing queue thread')
+            #__MP_LOGGING_QUEUE.join_thread()
+            __MP_LOGGING_QUEUE = None
             __MP_LOGGING_QUEUE_PROCESS.join(1)
+            __MP_LOGGING_QUEUE = None
         except IOError:
             # We were unable to deliver the sentinel to the queue
             # carry on...
@@ -810,6 +822,8 @@ def shutdown_multiprocessing_logging_listener():
         if __MP_LOGGING_QUEUE_PROCESS.is_alive():
             # Process is still alive!?
             __MP_LOGGING_QUEUE_PROCESS.terminate()
+        __MP_LOGGING_QUEUE_PROCESS = None
+        __MP_LOGGING_LISTENER_CONFIGURED = False
         logging.getLogger(__name__).debug('Stopped the multiprocessing logging queue listener')
 
 
