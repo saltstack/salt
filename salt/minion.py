@@ -15,6 +15,7 @@ import fnmatch
 import logging
 import threading
 import traceback
+import contextlib
 import multiprocessing
 from random import randint, shuffle
 from salt.config import DEFAULT_MINION_OPTS
@@ -80,6 +81,7 @@ import salt.beacons
 import salt.payload
 import salt.syspaths
 import salt.utils
+import salt.utils.context
 import salt.utils.jid
 import salt.pillar
 import salt.utils.args
@@ -960,10 +962,6 @@ class Minion(MinionBase):
                 self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
                 self.schedule.functions = self.functions
                 self.schedule.returners = self.returners
-        if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
-            target = Minion._thread_multi_return
-        else:
-            target = Minion._thread_return
         # We stash an instance references to allow for the socket
         # communication in Windows. You can't pickle functions, and thus
         # python needs to be able to reconstruct the reference on the other
@@ -975,19 +973,38 @@ class Minion(MinionBase):
                 # running on windows
                 instance = None
             process = multiprocessing.Process(
-                target=target, args=(instance, self.opts, data)
+                target=self._target, args=(instance, self.opts, data)
             )
         else:
             process = threading.Thread(
-                target=target,
+                target=self._target,
                 args=(instance, self.opts, data),
                 name=data['jid']
             )
         process.start()
-        if not sys.platform.startswith('win'):
+        # TODO: remove the windows specific check?
+        if not sys.platform.startswith('win') and self.opts['multiprocessing']:
+            # we only want to join() immediately if we are daemonizing a process
             process.join()
         else:
             self.win_proc.append(process)
+
+    def ctx(self):
+        '''Return a single context manager for the minion's data
+        '''
+        return contextlib.nested(
+            self.functions.context_dict.clone(),
+            self.returners.context_dict.clone(),
+            self.executors.context_dict.clone(),
+        )
+
+    @classmethod
+    def _target(cls, minion_instance, opts, data):
+        with tornado.stack_context.StackContext(minion_instance.ctx):
+            if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
+                Minion._thread_multi_return(minion_instance, opts, data)
+            else:
+                Minion._thread_return(minion_instance, opts, data)
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
