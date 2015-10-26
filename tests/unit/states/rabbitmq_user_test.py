@@ -103,7 +103,7 @@ class RabbitmqUserTestCase(TestCase):
         ret = {'name': name,
                'changes': {},
                'result': True,
-               'comment': 'The user \'foo\' is not present.'.format(name)}
+               'comment': 'The user \'foo\' is not present.'}
 
         mock = MagicMock(return_value=False)
         with patch.dict(rabbitmq_user.__salt__, {'rabbitmq.user_exists': mock}):
