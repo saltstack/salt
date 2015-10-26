@@ -18,7 +18,6 @@ import traceback
 import contextlib
 import multiprocessing
 from random import randint, shuffle
-from salt.config import DEFAULT_MINION_OPTS
 from stat import S_IMODE
 
 # Import Salt Libs
@@ -94,10 +93,12 @@ import salt.defaults.exitcodes
 import salt.cli.daemons
 import salt.log.setup
 
+from salt.config import DEFAULT_MINION_OPTS
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.executors import FUNCTION_EXECUTORS
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
+from salt.utils.process import MultiprocessingProcess
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -976,7 +977,7 @@ class Minion(MinionBase):
                 # let python reconstruct the minion on the other side if we're
                 # running on windows
                 instance = None
-            process = multiprocessing.Process(
+            process = MultiprocessingProcess(
                 target=self._target, args=(instance, self.opts, data)
             )
         else:
