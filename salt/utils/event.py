@@ -61,7 +61,6 @@ import fnmatch
 import hashlib
 import logging
 import datetime
-import multiprocessing
 from collections import MutableMapping
 
 # Import third party libs
@@ -854,7 +853,7 @@ class AsyncEventPublisher(object):
         self.destroy()
 
 
-class EventPublisher(multiprocessing.Process):
+class EventPublisher(salt.utils.process.MultiprocessingProcess):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -926,7 +925,7 @@ class EventPublisher(multiprocessing.Process):
                 self.context.term()
 
 
-class EventReturn(multiprocessing.Process):
+class EventReturn(salt.utils.process.MultiprocessingProcess):
     '''
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
@@ -937,7 +936,7 @@ class EventReturn(multiprocessing.Process):
 
         Return an EventReturn instance
         '''
-        multiprocessing.Process.__init__(self)
+        salt.utils.process.MultiprocessingProcess.__init__(self)
 
         self.opts = opts
         self.event_return_queue = self.opts['event_return_queue']
