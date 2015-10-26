@@ -1,19 +1,20 @@
-=================
-Client ACL system
-=================
+====================
+Publisher ACL system
+====================
 
-The salt client ACL system is a means to allow system users other than root to
-have access to execute select salt commands on minions from the master.
+The salt publisher ACL system is a means to allow system users other than root
+to have access to execute select salt commands on minions from the master.
 
-The client ACL system is configured in the master configuration file via the
-``client_acl`` configuration option. Under the ``client_acl`` configuration
-option the users open to send commands are specified and then a list of regular
-expressions which specify the minion functions which will be made available to
-specified user. This configuration is much like the ``peer`` configuration:
+The publisher ACL system is configured in the master configuration file via the
+``publisher_acl`` configuration option. Under the ``publisher_acl``
+configuration option the users open to send commands are specified and then a
+list of regular expressions which specify the minion functions which will be
+made available to specified user. This configuration is much like the ``peer``
+configuration:
 
 .. code-block:: yaml
 
-    client_acl:
+    publisher_acl:
       # Allow thatch to execute anything.
       thatch:
         - .*
@@ -23,11 +24,15 @@ specified user. This configuration is much like the ``peer`` configuration:
           - test.*
           - pkg.*
 
+WARNING: client_acl and client_acl_blacklist options are deprecated and will be
+removed in the future releases. Use publisher_acl and publisher_acl_blacklist
+instead.
+
 Permission Issues
 =================
 
-Directories required for ``client_acl`` must be modified to be readable by the
-users specified:
+Directories required for ``publisher_acl`` must be modified to be readable by
+the users specified:
 
 .. code-block:: bash
 

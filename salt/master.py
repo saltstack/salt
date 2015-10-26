@@ -1769,10 +1769,18 @@ class ClearFuncs(object):
         '''
         extra = clear_load.get('kwargs', {})
 
-        client_acl = salt.acl.ClientACL(self.opts['client_acl_blacklist'])
+        if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
+            salt.utils.warn_until(
+                    'Nitrogen',
+                    'ACL rules should be configured with \'publisher_acl\' and '
+                    '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
+                    'This functionality will be removed in Salt Nitrogen.'
+                    )
+        publisher_acl = salt.acl.PublisherACL(
+                self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist'])
 
-        if client_acl.user_is_blacklisted(clear_load['user']) or \
-                client_acl.cmd_is_blacklisted(clear_load['fun']):
+        if publisher_acl.user_is_blacklisted(clear_load['user']) or \
+                publisher_acl.cmd_is_blacklisted(clear_load['fun']):
             log.error(
                 '{user} does not have permissions to run {function}. Please '
                 'contact your local administrator if you believe this is in '
@@ -1949,9 +1957,10 @@ class ClearFuncs(object):
                         'Authentication failure of type "user" occurred.'
                     )
                     return ''
-                if self.opts['sudo_acl'] and self.opts['client_acl']:
+                publisher_acl = self.opts['publisher_acl'] or self.opts['client_acl']
+                if self.opts['sudo_acl'] and publisher_acl:
                     good = self.ckminions.auth_check(
-                                self.opts['client_acl'].get(clear_load['user'].split('_', 1)[-1]),
+                                publisher_acl.get(clear_load['user'].split('_', 1)[-1]),
                                 clear_load['fun'],
                                 clear_load['tgt'],
                                 clear_load.get('tgt_type', 'glob'))
@@ -1985,13 +1994,14 @@ class ClearFuncs(object):
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
-                    if clear_load['user'] not in self.opts['client_acl']:
+                    acl = self.opts['publisher_acl'] or self.opts['client_acl']
+                    if clear_load['user'] not in acl:
                         log.warning(
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
                     good = self.ckminions.auth_check(
-                        self.opts['client_acl'][clear_load['user']],
+                        acl[clear_load['user']],
                         clear_load['fun'],
                         clear_load['tgt'],
                         clear_load.get('tgt_type', 'glob'))
