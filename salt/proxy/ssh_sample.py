@@ -127,6 +127,8 @@ def package_remove(name):
 def service_start(name):
     '''
     Start a "service" on the ssh server
+
+    .. versionadded:: 2015.8.2
     '''
     cmd = 'start ' + name
 
@@ -140,6 +142,8 @@ def service_start(name):
 def service_stop(name):
     '''
     Stop a "service" on the ssh server
+
+    .. versionadded:: 2015.8.2
     '''
     cmd = 'stop ' + name
 
@@ -153,6 +157,8 @@ def service_stop(name):
 def service_restart(name):
     '''
     Restart a "service" on the ssh server
+
+    .. versionadded:: 2015.8.2
     '''
     cmd = 'restart ' + name
 

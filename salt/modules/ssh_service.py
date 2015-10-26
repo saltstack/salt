@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Provide the service module for the proxy-minion SSH sample
+.. versionadded:: 2015.8.2
 '''
 # Import python libs
 from __future__ import absolute_import
@@ -32,8 +33,6 @@ def get_all():
     '''
     Return a list of all available services
 
-    .. versionadded:: 2015.8.0
-
     CLI Example:
 
     .. code-block:: bash
@@ -47,8 +46,6 @@ def get_all():
 def list_():
     '''
     Return a list of all available services.
-
-    .. versionadded: 2015.8.1
 
     CLI Example:
 
