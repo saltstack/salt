@@ -985,7 +985,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         '''
         # map of suffix to description for imp
         self.suffix_map = {}
-        suffix_order = []  # local list to determine precedence of extensions
+        suffix_order = ['']  # local list to determine precedence of extensions
+                             # Prefer packages (directories) over modules (single files)!
         for (suffix, mode, kind) in SUFFIXES:
             self.suffix_map[suffix] = (suffix, mode, kind)
             suffix_order.append(suffix)
@@ -1014,47 +1015,51 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             try:
                 files = os.listdir(mod_dir)
             except OSError:
-                continue
+                continue  # Next mod_dir
             for filename in files:
                 try:
                     if filename.startswith('_'):
                         # skip private modules
                         # log messages omitted for obviousness
-                        continue
+                        continue  # Next filename
                     f_noext, ext = os.path.splitext(filename)
                     # make sure it is a suffix we support
                     if ext not in self.suffix_map:
-                        continue
+                        continue  # Next filename
                     if f_noext in self.disabled:
                         log.trace(
                             'Skipping {0}, it is disabled by configuration'.format(
                             filename
                             )
                         )
-                        continue
+                        continue  # Next filename
                     fpath = os.path.join(mod_dir, filename)
                     # if its a directory, lets allow us to load that
                     if ext == '':
                         # is there something __init__?
                         subfiles = os.listdir(fpath)
-                        sub_path = None
                         for suffix in suffix_order:
+                            if '' == suffix:
+                                continue  # Next suffix (__init__ must have a suffix)
                             init_file = '__init__{0}'.format(suffix)
                             if init_file in subfiles:
-                                sub_path = os.path.join(fpath, init_file)
                                 break
-                        if sub_path is not None:
-                            self.file_mapping[f_noext] = (fpath, ext)
+                        else:
+                            continue  # Next filename
 
-                    # if we don't have it, we want it
-                    elif f_noext not in self.file_mapping:
-                        self.file_mapping[f_noext] = (fpath, ext)
-                    # if we do, we want it if we have a higher precidence ext
-                    else:
+                    if f_noext in self.file_mapping:
                         curr_ext = self.file_mapping[f_noext][1]
                         #log.debug("****** curr_ext={0} ext={1} suffix_order={2}".format(curr_ext, ext, suffix_order))
-                        if curr_ext and suffix_order.index(ext) < suffix_order.index(curr_ext):
-                            self.file_mapping[f_noext] = (fpath, ext)
+                        if '' in (curr_ext, ext) and curr_ext != ext:
+                            log.error('Module/package collision: {0!r} and {1!r}'.format(
+                                fpath, self.file_mapping[f_noext][0]
+                            ))
+                        if suffix_order.index(ext) >= suffix_order.index(curr_ext):
+                            continue  # Next filename
+
+                    # Made it this far - add it
+                    self.file_mapping[f_noext] = (fpath, ext)
+
                 except OSError:
                     continue
         for smod in self.static_modules:
