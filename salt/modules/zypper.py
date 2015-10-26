@@ -159,13 +159,13 @@ def info_available(*names, **kwargs):
             kw = [data.strip() for data in line.split(":", 1)]
             if len(kw) == 2 and kw[1]:
                 nfo[kw[0].lower()] = kw[1]
-        if nfo.get("name"):
-            name = nfo.pop("name")
+        if nfo.get('name'):
+            name = nfo.pop('name')
             ret[name] = nfo
-        if nfo.get("status"):
-            nfo['status'] = nfo.get("status").split(" ")[0]
-        if nfo.get("installed"):
-            nfo['installed'] = nfo.get("installed").lower() == "yes" and True or False
+        if nfo.get('status'):
+            nfo['status'] = nfo.get('status')
+        if nfo.get('installed'):
+            nfo['installed'] = nfo.get('installed').lower() == 'yes' and True or False
 
     return ret
 
@@ -214,7 +214,11 @@ def latest_version(*names, **kwargs):
     for name in names:
         pkg_info = package_info.get(name, {})
         if pkg_info.get('status', '').lower() in ['not installed', 'out-of-date']:
-            ret[name] = pkg_info
+            ret[name] = pkg_info.get('version')
+
+    # Return a string if only one package name passed
+    if len(names) == 1 and len(ret):
+        return ret[names[0]]
 
     return ret
 
