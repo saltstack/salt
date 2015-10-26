@@ -68,10 +68,17 @@ else:
                 return self.get_nice()
 
         def rlimit(self, *args, **kwargs):
-            if args or kwargs:
-                return self.set_rlimit(*args, **kwargs)
+            '''
+            set_rlimit and get_limit were not introduced until psutil v1.1.0
+            '''
+            if psutil.version_info >= (1, 1, 0):
+                if args or kwargs:
+                    return self.set_rlimit(*args, **kwargs)
+                else:
+                    return self.get_rlimit()
             else:
-                return self.get_rlimit()
+                pass
+
 
     # Alias renamed Process functions
     _PROCESS_FUNCTION_MAP = {
