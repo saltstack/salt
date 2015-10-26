@@ -802,7 +802,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc = self._create_vpc()
         self._create_subnet(vpc.id, name='subnet1', availability_zone='us-east-1a')
         describe_subnet_results = boto_vpc.describe_subnets(subnet_names=['subnet1'])
-        self.assertEqual(describe_subnet_results['subnets']['availability_zone'], 'us-east-1a')
+        self.assertEqual(describe_subnet_results['subnets'][0]['availability_zone'], 'us-east-1a')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
