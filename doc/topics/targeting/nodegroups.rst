@@ -84,6 +84,7 @@ To use Nodegroups in Jinja logic for SLS files, the :conf_master:'pillar_opts' o
 Once pillar_opts is enabled, you can find the nodegroups under the "master" pillar. To make sure that only the correct minions are targeted, you should use each matcher for the nodegroup definition.
 For example, to check if a minion is in the 'webserver' nodegroup:
 .. code-block:: yaml
+
     nodegroups:
       webserver: 'G@os:Debian and L@minion1,minion2'
 
