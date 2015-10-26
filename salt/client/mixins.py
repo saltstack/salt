@@ -9,8 +9,6 @@ import logging
 import weakref
 import traceback
 import collections
-import multiprocessing
-import tornado.stack_context
 
 # Import Salt libs
 import salt.exceptions
@@ -24,9 +22,11 @@ from salt.utils.error import raise_error
 from salt.utils.event import tagify
 from salt.utils.doc import strip_rst as _strip_rst
 from salt.utils.lazy import verify_fun
+from salt.utils.process import MultiprocessingProcess
 
 # Import 3rd-party libs
 import salt.ext.six as six
+import tornado.stack_context
 
 log = logging.getLogger(__name__)
 
@@ -441,7 +441,7 @@ class AsyncClientMixin(object):
         '''
         async_pub = self._gen_async_pub()
 
-        proc = multiprocessing.Process(
+        proc = MultiprocessingProcess(
                 target=self._proc_function,
                 args=(fun, low, user, async_pub['tag'], async_pub['jid']))
         proc.start()
