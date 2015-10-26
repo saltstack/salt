@@ -88,7 +88,7 @@ def disabled(name, runas=None):
     try:
         plugin_enabled = __salt__['rabbitmq.plugin_is_enabled'](name, runas=runas)
     except CommandExecutionError as err:
-        ret[result] = False
+        ret['result'] = False
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
 
