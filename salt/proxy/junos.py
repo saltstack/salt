@@ -22,6 +22,7 @@ thisproxy = {}
 
 log = logging.getLogger(__name__)
 
+
 def init(opts):
     '''
     Open the connection to the Junos device, login, and bind to the
