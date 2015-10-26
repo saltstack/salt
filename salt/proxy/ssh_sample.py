@@ -109,7 +109,7 @@ def package_list():
 
 def package_install(name, **kwargs):
     '''
-    Install a "package" on the REST server
+    Install a "package" on the ssh server
     '''
     cmd = 'pkg_install ' + name
     if 'version' in kwargs:
@@ -126,9 +126,54 @@ def package_install(name, **kwargs):
 
 def package_remove(name):
     '''
-    Remove a "package" on the REST server
+    Remove a "package" on the ssh server
     '''
     cmd = 'pkg_remove ' + name
+
+    # Send the command to execute
+    out, err = DETAILS['server'].sendline(cmd)
+
+    # "scrape" the output and return the right fields as a dict
+    return parse(out)
+
+
+def service_start(name):
+    '''
+    Start a "service" on the ssh server
+
+    .. versionadded:: 2015.8.2
+    '''
+    cmd = 'start ' + name
+
+    # Send the command to execute
+    out, err = DETAILS['server'].sendline(cmd)
+
+    # "scrape" the output and return the right fields as a dict
+    return parse(out)
+
+
+def service_stop(name):
+    '''
+    Stop a "service" on the ssh server
+
+    .. versionadded:: 2015.8.2
+    '''
+    cmd = 'stop ' + name
+
+    # Send the command to execute
+    out, err = DETAILS['server'].sendline(cmd)
+
+    # "scrape" the output and return the right fields as a dict
+    return parse(out)
+
+
+def service_restart(name):
+    '''
+    Restart a "service" on the ssh server
+
+    .. versionadded:: 2015.8.2
+    '''
+    cmd = 'restart ' + name
 
     # Send the command to execute
     out, err = DETAILS['server'].sendline(cmd)
