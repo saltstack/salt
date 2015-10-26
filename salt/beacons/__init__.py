@@ -50,15 +50,18 @@ class Beacon(object):
             log.trace('Beacon processing: {0}'.format(mod))
             fun_str = '{0}.beacon'.format(mod)
             if fun_str in self.beacons:
-                interval = _determine_beacon_config(mod, 'interval', config_mod)
+                interval = self._determine_beacon_config(mod, 'interval', b_config)
                 if interval:
-                    b_config = _trim_interval_config(b_config)
+                    b_config = self._trim_config(b_config, mod, 'interval')
                     if not self._process_interval(mod, interval):
                         log.trace('Skipping beacon {0}. Interval not reached.'.format(mod))
                         continue
-                if _determine_beacon_config(mod, 'disable_during_state_run', config_mod):
-                    log.trace('Skipping beacon {0}. State run in progress.'.format(mod))
-                    continue
+                if self._determine_beacon_config(mod, 'disable_during_state_run', b_config):
+                    b_config = self._trim_config(b_config, mod, 'disable_during_state_run')
+                    is_running =  map(re.compile('state.*'.match, salt.utils.minion_running(self.opts)))
+                    if [running.group(1) for running in is_running if running]:
+                        log.debug('Skipping beacon {0}. State run in progress.'.format(mod))
+                        continue
                 # Fire the beacon!
                 raw = self.beacons[fun_str](b_config[mod])
                 for data in raw:
@@ -72,27 +75,28 @@ class Beacon(object):
                 log.debug('Unable to process beacon {0}'.format(mod))
         return ret
 
-    def _trim_interval_config(b_config):
+    def _trim_config(self, b_config, mod, key):
         '''
         Take a beacon configuration and strip out the interval bits
         '''
         if isinstance(b_config[mod], list):
-            b_config[mod].remove(interval_config[0])
+            b_config[mod].remove(b_config[0])
         elif isinstance(b_config[mod], dict):
-            b_config[mod].pop('interval')
+            b_config[mod].pop(key)
+        print('Returning b_config: {0}'.format(b_config))
         return b_config
 
-    def _determine_beacon_config(mod, val, config_mod):
+    def _determine_beacon_config(self, mod, val, config_mod):
         '''
         Process a beacon configuration to determine its interval
         '''
-        if isinstance(config[mod], list):
+        if isinstance(config_mod, list):
             interval = None
-            interval_config = [arg for arg in config[mod] if val in arg]
+            interval_config = [arg for arg in config_mod if val in arg]
             if interval_config:
                 interval = interval_config[0][val]
-        elif isinstance(config[mod], dict):
-            interval = config[mod].get(val, False)
+        elif isinstance(config_mod, dict):
+            interval = config_mod.get(val, False)
         return interval
 
     def _process_interval(self, mod, interval):
