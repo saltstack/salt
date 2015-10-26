@@ -103,7 +103,7 @@ def commit():
 
 def rollback():
     ret = dict()
-    conn =__proxy__['junos.conn']()
+    conn = __proxy__['junos.conn']()
 
     ret['out'] = conn.cu.rollback(0)
 
@@ -133,6 +133,7 @@ def ping():
     ret['out'] = True
 
     return ret
+
 
 def cli(command):
 
