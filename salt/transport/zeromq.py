@@ -312,6 +312,8 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             # TODO: Optionally call stream.close() on newer pyzmq? Its broken on some
             self._stream.io_loop.remove_handler(self._stream.socket)
             self._stream.socket.close(0)
+        elif hasattr(self, '_socket'):
+            self._socket.close(0)
         if hasattr(self, 'context'):
             self.context.term()
 
