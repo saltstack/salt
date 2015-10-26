@@ -79,7 +79,6 @@ else:
             else:
                 pass
 
-
     # Alias renamed Process functions
     _PROCESS_FUNCTION_MAP = {
         "children": "get_children",
