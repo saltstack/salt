@@ -429,7 +429,7 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
 
     pil = Pillar(opts, __grains__, minion_id, branch)
 
-    return pil.compile_pillar()
+    return pil.compile_pillar(ext=False)
 
 
 def _update(branch, repo_location):
