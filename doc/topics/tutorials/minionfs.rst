@@ -9,14 +9,13 @@ Propagating Files
 
 .. versionadded:: 2014.1.0
 
-Sometimes, you might need to propagate files that are generated on a minion.
+Sometimes, one might need to propagate files that are generated on a minion.
 Salt already has a feature to send files from a minion to the master.
 
-Enabling File Propation
-=======================
+Enabling File Propagation
+=========================
 
-To use the propagate, update the following in the master config.
-The :conf_master:`file_recv` option needs to be set to true.
+To enable propagation, the :conf_master:`file_recv` option needs to be set to ``True``.
 
 .. code-block:: yaml
 
