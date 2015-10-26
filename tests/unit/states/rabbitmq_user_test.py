@@ -21,7 +21,7 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.states import rabbitmq_user
 
-rabbitmq_user.__opts__ = {}
+rabbitmq_user.__opts__ = {'test': False}
 rabbitmq_user.__salt__ = {}
 
 
@@ -56,38 +56,40 @@ class RabbitmqUserTestCase(TestCase):
                          'rabbitmq.list_users': mock_dct,
                          'rabbitmq.list_user_permissions': mock_pr,
                          'rabbitmq.set_user_tags': mock_add}):
-            comt = ('User foo already presents')
-            ret.update({'comment': comt})
+            comment = 'User \'foo\' is already present.'
+            ret.update({'comment': comment})
             self.assertDictEqual(rabbitmq_user.present(name), ret)
 
             with patch.dict(rabbitmq_user.__opts__, {'test': True}):
-                comt = ('User foo is set to be created')
-                ret.update({'comment': comt, 'result': None})
+                comment = 'User \'foo\' is set to be created.'
+                changes = {'user': {'new': 'foo', 'old': ''}}
+                ret.update({'comment': comment, 'result': None, 'changes': changes})
                 self.assertDictEqual(rabbitmq_user.present(name), ret)
 
-                comt = ("User foo's password is set to be updated")
-                ret.update({'comment': comt})
+                comment = 'Configuration for \'foo\' will change.'
+                changes = {'password': {'new': 'Set password.', 'old': ''}}
+                ret.update({'comment': comment, 'changes': changes})
                 self.assertDictEqual(rabbitmq_user.present(name,
                                                            password=passwd,
                                                            force=True), ret)
 
-                comt = ("User foo's password is set to be removed")
-                ret.update({'comment': comt})
+                changes = {'password': {'new': '', 'old': 'Removed password.'}}
+                ret.update({'changes': changes})
                 self.assertDictEqual(rabbitmq_user.present(name, force=True),
                                      ret)
 
-                comt = ('Tags for user foo is set to be changed')
-                ret.update({'comment': comt})
+                changes = {'tags': {'new': set(['e', 'r', 's', 'u']), 'old': 'user'}}
+                ret.update({'changes': changes})
                 self.assertDictEqual(rabbitmq_user.present(name, tags=tag), ret)
 
-                comt = ('Permissions for user foo is set to be changed')
-                ret.update({'comment': comt})
+                comment = '\'foo\' is already in the desired state.'
+                ret.update({'changes': {}, 'comment': comment, 'result': True})
                 self.assertDictEqual(rabbitmq_user.present(name, perms=perms),
                                      ret)
 
             with patch.dict(rabbitmq_user.__opts__, {'test': False}):
-                ret.update({'comment': name, 'result': True,
-                            'changes': {'new': 'Set tags: user\n', 'old': ''}})
+                ret.update({'comment': '\'foo\' was configured.', 'result': True,
+                            'changes': {'tags': {'new': set(['e', 'r', 's', 'u']), 'old': 'user'}}})
                 self.assertDictEqual(rabbitmq_user.present(name, tags=tag), ret)
 
     # 'absent' function tests: 1
@@ -101,7 +103,7 @@ class RabbitmqUserTestCase(TestCase):
         ret = {'name': name,
                'changes': {},
                'result': True,
-               'comment': 'User {0} is not present'.format(name)}
+               'comment': 'The user \'foo\' is not present.'.format(name)}
 
         mock = MagicMock(return_value=False)
         with patch.dict(rabbitmq_user.__salt__, {'rabbitmq.user_exists': mock}):
