@@ -299,26 +299,6 @@ def add_record(name,
     elif record_type == 'a':
         data = json.dumps({'name': name, 'ipv4addr': value, 'view': dns_view})
         log.debug('a record data {0}'.format(data))
-#    elif record_type == 'alias':
-#        data = json.dumps({'name': name, 'aliases': [value], 'view': dns_view})
-#        record_type = 'host'
-#        tRec = get_record(name,
-#            record_type,
-#            infoblox_server,
-#            infoblox_user,
-#            infoblox_password,
-#            dns_view,
-#            infoblox_api_version,
-#            sslVerify)
-#        if not tRec:
-#            log.error('A host record matching {0} was not found to add the alias to.'.format(name))
-#            return False
-#        else:
-#            for _rec in tRec:
-#                url = 'https://{0}/wapi/{1}/{2}'.format(
-#                    infoblox_server,
-#                    infoblox_api_version,
-#                    _rec['Record ID'])
 
     url = 'https://{0}/wapi/{1}/record:{2}'.format(infoblox_server,
                                                    infoblox_api_version,
