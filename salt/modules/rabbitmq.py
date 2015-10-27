@@ -704,8 +704,12 @@ def plugin_is_enabled(name, runas=None):
     cmd = '{0} list -m -e'.format(rabbitmq)
     if runas is None:
         runas = salt.utils.get_user()
-    ret = __salt__['cmd.run'](cmd, python_shell=False, runas=runas)
-    return bool(name in ret)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(
+            'RabbitMQ command failed: {0}'.format(ret['stderr'])
+        )
+    return bool(name in ret['stdout'])
 
 
 def enable_plugin(name, runas=None):
