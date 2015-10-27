@@ -190,7 +190,7 @@ def latest_version(*names, **kwargs):
     return '' if len(names) == 1 else dict((x, '') for x in names)
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def version(*names, **kwargs):
@@ -455,9 +455,9 @@ def remove(name=None, pkgs=None, **kwargs):
     return salt.utils.compare_dicts(old, new)
 
 # Support pkg.delete to remove packages to more closely match pkg_delete
-delete = remove
+delete = salt.utils.alias_function(remove, 'delete')
 # No equivalent to purge packages, use remove instead
-purge = remove
+purge = salt.utils.alias_function(remove, 'purge')
 
 
 def _rehash():
