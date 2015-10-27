@@ -11,8 +11,12 @@ import logging
 # Import Third Party Libs
 try:
     import win32con
-    import win32api, win32process, win32security
-    import win32pipe, win32event, win32profile
+    import win32api
+    import win32process
+    import win32security
+    import win32pipe
+    import win32event
+    import win32profile
     import msvcrt
     import ctypes
     from ctypes import wintypes
@@ -52,9 +56,9 @@ STD_ERROR_HANDLE = wintypes.DWORD(-12).value
 
 
 class SECURITY_ATTRIBUTES(ctypes.Structure):
-    _fields_ = (('nLength',              wintypes.DWORD),
+    _fields_ = (('nLength', wintypes.DWORD),
                 ('lpSecurityDescriptor', wintypes.LPVOID),
-                ('bInheritHandle',       wintypes.BOOL))
+                ('bInheritHandle', wintypes.BOOL))
 
     def __init__(self, **kwds):
         self.nLength = ctypes.sizeof(self)
@@ -68,24 +72,24 @@ LPDWORD = ctypes.POINTER(ctypes.c_ulong)
 
 class STARTUPINFO(ctypes.Structure):
     """https://msdn.microsoft.com/en-us/library/ms686331"""
-    _fields_ = (('cb',              wintypes.DWORD),
-                ('lpReserved',      wintypes.LPWSTR),
-                ('lpDesktop',       wintypes.LPWSTR),
-                ('lpTitle',         wintypes.LPWSTR),
-                ('dwX',             wintypes.DWORD),
-                ('dwY',             wintypes.DWORD),
-                ('dwXSize',         wintypes.DWORD),
-                ('dwYSize',         wintypes.DWORD),
-                ('dwXCountChars',   wintypes.DWORD),
-                ('dwYCountChars',   wintypes.DWORD),
+    _fields_ = (('cb', wintypes.DWORD),
+                ('lpReserved', wintypes.LPWSTR),
+                ('lpDesktop', wintypes.LPWSTR),
+                ('lpTitle', wintypes.LPWSTR),
+                ('dwX', wintypes.DWORD),
+                ('dwY', wintypes.DWORD),
+                ('dwXSize', wintypes.DWORD),
+                ('dwYSize', wintypes.DWORD),
+                ('dwXCountChars', wintypes.DWORD),
+                ('dwYCountChars', wintypes.DWORD),
                 ('dwFillAttribute', wintypes.DWORD),
-                ('dwFlags',         wintypes.DWORD),
-                ('wShowWindow',     wintypes.WORD),
-                ('cbReserved2',     wintypes.WORD),
-                ('lpReserved2',     LPBYTE),
-                ('hStdInput',       wintypes.HANDLE),
-                ('hStdOutput',      wintypes.HANDLE),
-                ('hStdError',       wintypes.HANDLE))
+                ('dwFlags', wintypes.DWORD),
+                ('wShowWindow', wintypes.WORD),
+                ('cbReserved2', wintypes.WORD),
+                ('lpReserved2', LPBYTE),
+                ('hStdInput', wintypes.HANDLE),
+                ('hStdOutput', wintypes.HANDLE),
+                ('hStdError', wintypes.HANDLE))
 
     def __init__(self, **kwds):
         self.cb = ctypes.sizeof(self)
@@ -108,10 +112,10 @@ LPSTARTUPINFOEX = ctypes.POINTER(STARTUPINFOEX)
 
 class PROCESS_INFORMATION(ctypes.Structure):
     """https://msdn.microsoft.com/en-us/library/ms684873"""
-    _fields_ = (('hProcess',    wintypes.HANDLE),
-                ('hThread',     wintypes.HANDLE),
+    _fields_ = (('hProcess', wintypes.HANDLE),
+                ('hThread', wintypes.HANDLE),
                 ('dwProcessId', wintypes.DWORD),
-                ('dwThreadId',  wintypes.DWORD))
+                ('dwThreadId', wintypes.DWORD))
 
 LPPROCESS_INFORMATION = ctypes.POINTER(PROCESS_INFORMATION)
 
@@ -155,7 +159,7 @@ def _win(func, restype, *argtypes):
 
 # https://msdn.microsoft.com/en-us/library/ms687032
 _win(kernel32.WaitForSingleObject, DWORD_IDV,
-    wintypes.HANDLE,  # _In_ hHandle,
+    wintypes.HANDLE,  # _In_ hHandle
     wintypes.DWORD)   # _In_ dwMilliseconds
 
 # https://msdn.microsoft.com/en-us/library/ms683231
@@ -174,13 +178,13 @@ _win(kernel32.SetHandleInformation, wintypes.BOOL,
 
 # https://msdn.microsoft.com/en-us/library/ms724251
 _win(kernel32.DuplicateHandle, wintypes.BOOL,
-    wintypes.HANDLE,   # _In_  hSourceProcessHandle,
-    wintypes.HANDLE,   # _In_  hSourceHandle,
-    wintypes.HANDLE,   # _In_  hTargetProcessHandle,
-    LPHANDLE,          # _Out_ lpTargetHandle,
-    wintypes.DWORD,    # _In_  dwDesiredAccess,
-    wintypes.BOOL,     # _In_  bInheritHandle,
-    wintypes.DWORD)    # _In_  dwOptions
+    wintypes.HANDLE,  # _In_  hSourceProcessHandle,
+    wintypes.HANDLE,  # _In_  hSourceHandle,
+    wintypes.HANDLE,  # _In_  hTargetProcessHandle,
+    LPHANDLE,         # _Out_ lpTargetHandle,
+    wintypes.DWORD,   # _In_  dwDesiredAccess,
+    wintypes.BOOL,    # _In_  bInheritHandle,
+    wintypes.DWORD)   # _In_  dwOptions
 
 # https://msdn.microsoft.com/en-us/library/ms683179
 _win(kernel32.GetCurrentProcess, wintypes.HANDLE)
