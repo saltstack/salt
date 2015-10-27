@@ -315,7 +315,7 @@ def _run(cmd,
 
         cmd = ' '.join(cmd)
 
-        return win_runas(cmd, runas, password)
+        return win_runas(cmd, runas, password, cwd)
 
     if runas:
         # Save the original command before munging it
@@ -1019,25 +1019,25 @@ def shell(cmd,
     else:
         python_shell = True
     return run(cmd,
-        cwd=cwd,
-        stdin=stdin,
-        runas=runas,
-        shell=shell,
-        env=env,
-        clean_env=clean_env,
-        template=template,
-        rstrip=rstrip,
-        umask=umask,
-        output_loglevel=output_loglevel,
-        log_callback=log_callback,
-        quiet=quiet,
-        timeout=timeout,
-        reset_system_locale=reset_system_locale,
-        ignore_retcode=ignore_retcode,
-        saltenv=saltenv,
-        use_vt=use_vt,
-        python_shell=python_shell,
-        **kwargs)
+               cwd=cwd,
+               stdin=stdin,
+               runas=runas,
+               shell=shell,
+               env=env,
+               clean_env=clean_env,
+               template=template,
+               rstrip=rstrip,
+               umask=umask,
+               output_loglevel=output_loglevel,
+               log_callback=log_callback,
+               quiet=quiet,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               ignore_retcode=ignore_retcode,
+               saltenv=saltenv,
+               use_vt=use_vt,
+               python_shell=python_shell,
+               **kwargs)
 
 
 def run_stdout(cmd,

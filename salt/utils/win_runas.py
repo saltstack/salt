@@ -372,7 +372,7 @@ def runas_system(cmd, username, password):
     return ret
 
 
-def runas(cmd, username, password):
+def runas(cmd, username, password, cwd=None):
     # This only works when not running under the system account
     # Debug mode for example
     if win32api.GetUserName() == 'SYSTEM':
@@ -409,7 +409,8 @@ def runas(cmd, username, password):
                                            password=password,
                                            logonflags=LOGON_WITH_PROFILE,
                                            commandline=cmd,
-                                           startupinfo=startup_info)
+                                           startupinfo=startup_info,
+                                           currentdirectory=cwd)
 
     kernel32.CloseHandle(dupin)
     kernel32.CloseHandle(c2pwrite)
