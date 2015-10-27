@@ -114,7 +114,7 @@ def items(*args, **kwargs):
     return pillar.compile_pillar()
 
 # Allow pillar.data to also be used to return pillar data
-data = items
+data = salt.utils.alias_function(items, 'data')
 
 
 def _obfuscate_inner(var):

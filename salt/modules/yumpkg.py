@@ -448,7 +448,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def upgrade_available(name):
@@ -1744,7 +1744,7 @@ def group_install(name,
 
     return install(pkgs=pkgs, **kwargs)
 
-groupinstall = group_install
+groupinstall = salt.utils.alias_function(group_install, 'groupinstall')
 
 
 def list_repos(basedir=None):

@@ -231,4 +231,4 @@ def managed(name,
                 'old': old if old else ''}
     return ret
 
-manage = managed  # pylint: disable=C0103
+manage = salt.utils.alias_function(managed, 'manage')

@@ -259,7 +259,7 @@ def latest_version(name, **kwargs):
     return ''
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def get_fmri(name, **kwargs):

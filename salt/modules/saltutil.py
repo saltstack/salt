@@ -427,7 +427,7 @@ def sync_output(saltenv=None, refresh=True):
         refresh_modules()
     return ret
 
-sync_outputters = sync_output
+sync_outputters = salt.utils.alias_function(sync_output, 'sync_outputters')
 
 
 def sync_utils(saltenv=None, refresh=True):
@@ -553,7 +553,7 @@ def refresh_pillar():
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
 
-pillar_refresh = refresh_pillar
+pillar_refresh = salt.utils.alias_function(refresh_pillar, 'pillar_refresh')
 
 
 def refresh_modules(async=True):
