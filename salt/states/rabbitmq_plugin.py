@@ -52,7 +52,7 @@ def enabled(name, runas=None):
         return ret
 
     if plugin_enabled:
-        ret['comment'] = 'Plugin {0} is already enabled.'.format(name)
+        ret['comment'] = 'Plugin \'{0}\' is already enabled.'.format(name)
         return ret
 
     if not __opts__['test']:
@@ -66,10 +66,10 @@ def enabled(name, runas=None):
 
     if __opts__['test'] and ret['changes']:
         ret['result'] = None
-        ret['comment'] = 'Plugin {0} is set to be enabled.'.format(name)
+        ret['comment'] = 'Plugin \'{0}\' is set to be enabled.'.format(name)
         return ret
 
-    ret['comment'] = 'Plugin {0} was enabled.'.format(name)
+    ret['comment'] = 'Plugin \'{0}\' was enabled.'.format(name)
     return ret
 
 
@@ -93,7 +93,7 @@ def disabled(name, runas=None):
         return ret
 
     if not plugin_enabled:
-        ret['comment'] = 'Plugin {0} is already. disabled'.format(name)
+        ret['comment'] = 'Plugin \'{0}\' is already disabled.'.format(name)
         return ret
 
     if not __opts__['test']:
@@ -107,8 +107,8 @@ def disabled(name, runas=None):
 
     if __opts__['test'] and ret['changes']:
         ret['result'] = None
-        ret['comment'] = 'Plugin {0} is set to be disabled.'.format(name)
+        ret['comment'] = 'Plugin \'{0}\' is set to be disabled.'.format(name)
         return ret
 
-    ret['comment'] = 'Plugin {0} was disabled.'.format(name)
+    ret['comment'] = 'Plugin \'{0}\' was disabled.'.format(name)
     return ret
