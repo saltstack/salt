@@ -94,7 +94,7 @@ def validate(config):
         'unmount'
     ]
 
-    # Configuration for diskusage beacon should be a list of dicts
+    # Configuration for inotify beacon should be a dict of dicts
     if not isinstance(config, dict):
         log.info('Configuration for inotify beacon must be a dictionary.')
         return False
