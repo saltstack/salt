@@ -652,7 +652,7 @@ def run(cmd,
         saltenv='base',
         use_vt=False,
         **kwargs):
-    '''
+    r'''
     Execute the passed command and return the output as a string
 
     Note that ``env`` represents the environment variables for the command, and
@@ -661,7 +661,7 @@ def run(cmd,
     :param str cmd: The command to run. ex: 'ls -lart /home'
 
     :param str cwd: The current working directory to execute the command in,
-    defaults to `/root` (`C:\Windows\System32` in windows)
+    defaults to `/root` (`C:\` in windows)
 
     :param str stdin: A string of standard input can be specified for the
     command to be run using the ``stdin`` parameter. This can be useful in cases
