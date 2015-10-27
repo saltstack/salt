@@ -126,7 +126,7 @@ case "$1" in
         ;;
     reload)
         echo "can't reload configuration, you have to restart it"
-        RETVAL=$?
+        RETVAL=1
         ;;
     *)
         echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}"

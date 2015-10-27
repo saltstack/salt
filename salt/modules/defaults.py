@@ -9,6 +9,9 @@ import salt.fileclient
 import salt.utils
 import salt.utils.url
 
+from salt.utils import dictupdate
+
+
 __virtualname__ = 'defaults'
 
 
@@ -97,3 +100,11 @@ def get(key, default=''):
         return salt.utils.traverse_dict_and_list(defaults, key, default)
     else:
         return defaults
+
+
+def merge(dest, upd):
+    """
+    defaults.merge
+        Allows deep merging of dicts in formulas.
+    """
+    return dictupdate.update(dest, upd)
