@@ -17,7 +17,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 my-vultr-config:
   # Vultr account api key
   api_key: <supersecretapi_key>
-  driver: vultrpy
+  driver: vultr
 
 '''
 
