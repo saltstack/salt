@@ -220,7 +220,7 @@ def present(name,
                 new_services.append(service)
                 if not __opts__['test']:
                     try:
-                        __salt__['firewalld.new_service'](service)
+                        __salt__['firewalld.add_service'](service, zone=name)
                     except CommandExecutionError as err:
                         ret['comment'] = 'Error: {0}'.format(err)
                         return ret
