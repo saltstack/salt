@@ -8,6 +8,7 @@ authenticating peers
 from __future__ import absolute_import, print_function
 import os
 import sys
+import copy
 import time
 import hmac
 import base64
@@ -376,6 +377,19 @@ class AsyncAuth(object):
             self._authenticate_future.set_result(True)
         else:
             self.authenticate()
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls, copy.deepcopy(self.opts), io_loop=None)
+        memo[id(self)] = result
+        for key, value in self.__dict__.items():
+            if key in ('io_loop',):
+                # The io_loop has a thread Lock which will fail to be deep
+                # copied. Skip it because it will just be recreated on the
+                # new copy.
+                continue
+            setattr(result, key, copy.deepcopy(value, memo))
+        return result
 
     @property
     def creds(self):
