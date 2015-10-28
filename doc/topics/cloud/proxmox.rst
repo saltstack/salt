@@ -153,7 +153,7 @@ with their default settings listed.
 QEMU
 ====
 
-Some functionnalities works differently if you use 'qemu' as technology. In order to create a new VM with qemu, you need to specificy some more informations.
+Some functionalities works differently if you use 'qemu' as technology. In order to create a new VM with qemu, you need to specificy some more informations.
 You can also clone a qemu template which already is on your Proxmox server.
 
 QEMU profile file (for a new VM):
