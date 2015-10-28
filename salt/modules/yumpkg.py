@@ -1857,6 +1857,11 @@ def mod_repo(repo, basedir=None, **kwargs):
             'Only one of \'mirrorlist\' and \'baseurl\' can be specified'
         )
 
+    if 'disabled' in repo_opts:
+        kw_disabled = repo_opts['disabled']
+        if kw_disabled is True or str(kw_disabled).lower() == 'true':
+            repo_opts['enabled'] = 0
+
     # Build a list of keys to be deleted
     todelete = []
     for key in repo_opts:
