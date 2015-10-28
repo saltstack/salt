@@ -380,7 +380,7 @@ class AsyncAuth(object):
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        result = cls.__new__(cls, copy.deepcopy(self.opts), io_loop=None)
+        result = cls.__new__(cls, copy.deepcopy(self.opts, memo), io_loop=None)
         memo[id(self)] = result
         for key, value in self.__dict__.items():
             if key in ('io_loop',):

@@ -98,7 +98,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        result = cls.__new__(cls, copy.deepcopy(self.opts))  # pylint: disable=too-many-function-args
+        result = cls.__new__(cls, copy.deepcopy(self.opts, memo))  # pylint: disable=too-many-function-args
         memo[id(self)] = result
         for key, value in self.__dict__.items():
             if key in ('_io_loop',):
