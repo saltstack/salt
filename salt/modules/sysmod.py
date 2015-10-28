@@ -709,7 +709,7 @@ def list_runner_functions(*args, **kwargs):
 
 def list_returners(*args):
     '''
-    List the runners loaded on the minion
+    List the returners loaded on the minion
 
     .. versionadded:: 2014.7.0
 
