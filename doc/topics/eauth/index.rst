@@ -101,7 +101,7 @@ adding a ``-T`` option when authenticating:
 
     $ salt -T -a pam web\* test.ping
 
-Now a token will be created that has a expiration of 12 hours (by default).
+Now a token will be created that has an expiration of 12 hours (by default).
 This token is stored in a file named ``salt_token`` in the active user's home
 directory.
 
@@ -173,14 +173,14 @@ Server configuration values and their defaults:
     auth.ldap.activedirectory: False
     auth.ldap.persontype: 'person'
 
-There are two phases to LDAP authentication.  First, Salt authenticates to search for a users's Distinguished Name
+There are two phases to LDAP authentication.  First, Salt authenticates to search for a users' Distinguished Name
 and group membership.  The user it authenticates as in this phase is often a special LDAP system user with
 read-only access to the LDAP directory.  After Salt searches the directory to determine the actual user's DN
 and groups, it re-authenticates as the user running the Salt commands.
 
 If you are already aware of the structure of your DNs and permissions in your LDAP store are set such that
 users can look up their own group memberships, then the first and second users can be the same.  To tell Salt this is
-the case, omit the ``auth.ldap.bindpw`` parameter.  You can template the binddn like this:
+the case, omit the ``auth.ldap.bindpw`` parameter.  You can template the ``binddn`` like this:
 
 .. code-block:: yaml
 
@@ -230,7 +230,7 @@ the master config:
 To determine group membership in AD, the username and password that is entered
 when LDAP is requested as the eAuth mechanism on the command line is used to
 bind to AD's LDAP interface. If this fails, then it doesn't matter what groups
-the user belongs to, he or she is denied access. Next, the distinguishedName
+the user belongs to, he or she is denied access. Next, the ``distinguishedName``
 of the user is looked up with the following LDAP search:
 
 .. code-block:: text
@@ -257,7 +257,7 @@ membership.  Then the following LDAP query is executed:
             - '*':
                 - test.ping
 
-To configure an LDAP group, append a ``%`` to the ID:
+To configure a LDAP group, append a ``%`` to the ID:
 
 .. code-block:: yaml
 
