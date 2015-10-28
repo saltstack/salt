@@ -46,6 +46,9 @@ automatically
 from __future__ import absolute_import, print_function
 import os
 
+# Import salt libs
+import salt.utils
+
 
 def built(
         name,
@@ -58,7 +61,8 @@ def built(
         deps=None,
         env=None,
         results=None,
-        always=False,
+        force=False,
+        always=None,
         saltenv='base'):
     '''
     Ensure that the named package is built and exists in the named directory
@@ -112,9 +116,18 @@ def built(
     results
         The names of the expected rpms that will be built
 
+    force : False
+        If ``True``, packages will be built even if they already exist in the
+        ``dest_dir``. This is useful when building a package for continuous or
+        nightly package builds.
+
     always
-        Build with every run (good if the package is for continuous or
-        nightly package builds)
+        If ``True``, packages will be built even if they already exist in the
+        ``dest_dir``. This is useful when building a package for continuous or
+        nightly package builds.
+
+        .. deprecated:: 2015.8.2
+            Use ``force`` instead.
 
     saltenv
         The saltenv to use for files downloaded from the salt filesever
@@ -123,7 +136,16 @@ def built(
            'changes': {},
            'comment': '',
            'result': True}
-    if not always:
+
+    if always is not None:
+        salt.utils.warn_until(
+            'Carbon',
+            'The \'always\' argument to the pkgbuild.built state has been '
+            'deprecated, please use \'force\' instead.'
+        )
+        force = always
+
+    if not force:
         if isinstance(results, str):
             results = results.split(',')
         results = set(results)
