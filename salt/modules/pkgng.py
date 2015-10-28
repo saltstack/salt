@@ -193,7 +193,7 @@ def version(*names, **kwargs):
     ])
 
 # Support pkg.info get version info, since this is the CLI usage
-info = version
+info = salt.utils.alias_function(version, 'info')
 
 
 def refresh_db(jail=None, chroot=None, force=False):
@@ -237,7 +237,7 @@ def refresh_db(jail=None, chroot=None, force=False):
 
 
 # Support pkg.update to refresh the db, since this is the CLI usage
-update = refresh_db
+update = salt.utils.alias_function(refresh_db, 'update')
 
 
 def latest_version(*names, **kwargs):
@@ -303,7 +303,7 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def list_pkgs(versions_as_list=False,
@@ -957,9 +957,9 @@ def remove(name=None,
     return salt.utils.compare_dicts(old, new)
 
 # Support pkg.delete to remove packages, since this is the CLI usage
-delete = remove
+delete = salt.utils.alias_function(remove, 'delete')
 # No equivalent to purge packages, use remove instead
-purge = remove
+purge = salt.utils.alias_function(remove, 'purge')
 
 
 def upgrade(*names, **kwargs):

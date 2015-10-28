@@ -3013,7 +3013,7 @@ def copy_from(name, source, dest, overwrite=False, makedirs=False):
 
 
 # Docker cp gets a file from the container, alias this to copy_from
-cp = copy_from
+cp = salt.utils.alias_function(copy_from, 'cp')
 
 
 @_ensure_exists
@@ -4297,7 +4297,7 @@ def pause(name):
                             .format(name))}
     return _change_state(name, 'pause', 'paused')
 
-freeze = pause
+freeze = salt.utils.alias_function(pause, 'freeze')
 
 
 @_ensure_exists
@@ -4492,7 +4492,7 @@ def unpause(name):
                             .format(name))}
     return _change_state(name, 'unpause', 'running')
 
-unfreeze = unpause
+unfreeze = salt.utils.alias_function(unpause, 'unfreeze')
 
 
 def wait(name):

@@ -92,7 +92,7 @@ def list_upgrades(refresh=True):
     return ret
 
 # Provide a list_updates function for those used to using zypper list-updates
-list_updates = list_upgrades
+list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
 
 
 def info_installed(*names):
@@ -224,7 +224,7 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def upgrade_available(name):
