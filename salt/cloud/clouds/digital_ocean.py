@@ -468,7 +468,7 @@ def create(vm_):
         raise SaltCloudSystemExit(
             'No suitable IP addresses found for ssh minion bootstrapping: {0}'.format(repr(data['networks']))
         )
-    
+
     log.debug('Found public IP address to use for ssh minion bootstrapping: {0}'.format(vm_['ssh_host']))
 
     vm_['key_filename'] = key_filename
