@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-======
-fx2.py
-======
+Dell FX2 chassis
+================
 
 .. versionadded:: 2015.8.2
 
