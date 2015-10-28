@@ -1857,7 +1857,12 @@ def mod_repo(repo, basedir=None, **kwargs):
             'Only one of \'mirrorlist\' and \'baseurl\' can be specified'
         )
 
+    # Build a list of keys to be deleted
     todelete = []
+    for key in repo_opts:
+        if repo_opts[key] != 0 and not repo_opts[key]:
+            del repo_opts[key]
+            todelete.append(key)
 
     # convert disabled=True to enabled=0 from pkgrepo state
     if 'disabled' in repo_opts:
@@ -1866,12 +1871,6 @@ def mod_repo(repo, basedir=None, **kwargs):
             repo_opts['enabled'] = 0
         del repo_opts['disabled']
         todelete.append('disabled')
-
-    # Build a list of keys to be deleted
-    for key in repo_opts:
-        if repo_opts[key] != 0 and not repo_opts[key]:
-            del repo_opts[key]
-            todelete.append(key)
 
     # Add baseurl or mirrorlist to the 'todelete' list if the other was
     # specified in the repo_opts
