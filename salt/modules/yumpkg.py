@@ -1861,6 +1861,8 @@ def mod_repo(repo, basedir=None, **kwargs):
         kw_disabled = repo_opts['disabled']
         if kw_disabled is True or str(kw_disabled).lower() == 'true':
             repo_opts['enabled'] = 0
+        del repo_opts['disabled']
+        todelete.append('disabled')
 
     # Build a list of keys to be deleted
     todelete = []
