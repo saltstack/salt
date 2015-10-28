@@ -939,7 +939,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         if '__context__' not in self.pack:
             self.pack['__context__'] = None
 
-        for k, v in self.pack.iteritems():
+        for k, v in six.iteritems(self.pack):
             if v is None:  # if the value of a pack is None, lets make an empty dict
                 self.context_dict.setdefault(k, {})
                 self.pack[k] = salt.utils.context.NamespacedDictWrapper(self.context_dict, k)
