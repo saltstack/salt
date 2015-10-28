@@ -7,14 +7,16 @@ from __future__ import absolute_import
 # Import salt libs
 from salt import utils
 
-if utils.is_windows():
-    hg_binary = 'hg.exe'
-else:
-    hg_binary = 'hg'
 
-
-def _check_hg():
-    utils.check_or_die(hg_binary)
+def __virtual__():
+    '''
+    Only load if hg is installed
+    '''
+    if utils.which('hg') is None:
+        return (False,
+                'The hg execution module cannot be loaded: hg unavailable.')
+    else:
+        return True
 
 
 def _ssh_flag(identity_path):
@@ -43,8 +45,6 @@ def revision(cwd, rev='tip', short=False, user=None):
 
         salt '*' hg.revision /path/to/repo mybranch
     '''
-    _check_hg()
-
     cmd = [
             'hg',
             'id',
@@ -84,8 +84,6 @@ def describe(cwd, rev='tip', user=None):
 
         salt '*' hg.describe /path/to/repo
     '''
-    _check_hg()
-
     cmd = [
             'hg',
             'log',
@@ -135,8 +133,6 @@ def archive(cwd, output, rev='tip', fmt=None, prefix=None, user=None):
 
         salt '*' hg.archive /path/to/repo output=/tmp/archive.tgz fmt=tgz
     '''
-    _check_hg()
-
     cmd = [
             'hg',
             'archive',
@@ -180,8 +176,6 @@ def pull(cwd, opts=None, user=None, identity=None, repository=None):
 
         salt '*' hg.pull /path/to/repo opts=-u
     '''
-    _check_hg()
-
     cmd = ['hg', 'pull']
     if identity:
         cmd.append(_ssh_flag(identity))
@@ -215,8 +209,6 @@ def update(cwd, rev, force=False, user=None):
 
         salt devserver1 hg.update /path/to/repo somebranch
     '''
-    _check_hg()
-
     cmd = ['hg', 'update', '{0}'.format(rev)]
     if force:
         cmd.append('-C')
@@ -250,7 +242,6 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
 
         salt '*' hg.clone /path/to/repo https://bitbucket.org/birkenfeld/sphinx
     '''
-    _check_hg()
     cmd = ['hg', 'clone', '{0}'.format(repository), '{0}'.format(cwd)]
     if opts:
         for opt in opts.split():
