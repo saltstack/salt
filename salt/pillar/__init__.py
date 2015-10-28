@@ -446,10 +446,12 @@ class Pillar(object):
                         self.opts.get('nodegroups', {}),
                         ):
                     if saltenv not in matches:
-                        matches[saltenv] = []
+                        matches[saltenv] = env_matches = []
+                    else:
+                        env_matches = matches[saltenv]
                     for item in data:
-                        if isinstance(item, six.string_types):
-                            matches[saltenv].append(item)
+                        if isinstance(item, six.string_types) and item not in env_matches:
+                            env_matches.append(item)
         return matches
 
     def render_pstate(self, sls, saltenv, mods, defaults=None):

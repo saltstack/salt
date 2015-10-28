@@ -130,6 +130,38 @@ class PillarTestCase(TestCase):
         pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
         self.assertEqual(pillar.compile_pillar()['ssh'], 'foo')
 
+    @patch('salt.pillar.salt.fileclient.get_file_client', autospec=True)
+    @patch('salt.pillar.salt.minion.Matcher')  # autospec=True disabled due to py3 mock bug
+    def test_pillar_multiple_matches(self, Matcher, get_file_client):
+        # Uses the ``recurse_list`` strategy.
+        opts = {
+            'renderer': 'yaml',
+            'state_top': '',
+            'pillar_roots': [],
+            'extension_modules': '',
+            'environment': 'base',
+            'file_roots': [],
+            'pillar_source_merging_strategy': 'recurse_list',
+        }
+        grains = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'raring',
+            'osfullname': 'Ubuntu',
+            'osrelease': '13.04',
+            'kernel': 'Linux'
+        }
+        self._setup_test_topfile_mocks(Matcher, get_file_client, 1, 2)
+        pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
+        # Pillars should be merged, but only once per pillar file.
+        self.assertDictEqual(pillar.compile_pillar()['generic'], {
+            'key1': ['value1', 'value2', 'value3'],
+            'key2': {
+                'sub_key1': [],
+                'sub_key2': [],
+            }
+        })
+
     def _setup_test_topfile_mocks(self, Matcher, get_file_client,
             nodegroup_order, glob_order):
         # Write a simple topfile and two pillar state files
@@ -140,9 +172,13 @@ base:
         - match: nodegroup
         - order: {nodegroup_order}
         - ssh
+        - generic
+    '*':
+        - generic
     minion:
         - order: {glob_order}
         - ssh.minion
+        - generic.minion
 '''.format(nodegroup_order=nodegroup_order, glob_order=glob_order)
         self.top_file.write(salt.utils.to_bytes(s))
         self.top_file.flush()
@@ -158,6 +194,25 @@ ssh:
     bar
 ''')
         self.ssh_minion_file.flush()
+        self.generic_file = tempfile.NamedTemporaryFile()
+        self.generic_file.write(b'''
+generic:
+    key1:
+      - value1
+      - value2
+    key2:
+        sub_key1: []
+''')
+        self.generic_file.flush()
+        self.generic_minion_file = tempfile.NamedTemporaryFile()
+        self.generic_minion_file.write(b'''
+generic:
+    key1:
+      - value3
+    key2:
+        sub_key2: []
+''')
+        self.generic_minion_file.flush()
 
         # Setup Matcher mock
         matcher = Matcher.return_value
@@ -171,6 +226,8 @@ ssh:
             return {
                 'ssh': {'path': '', 'dest': self.ssh_file.name},
                 'ssh.minion': {'path': '', 'dest': self.ssh_minion_file.name},
+                'generic': {'path': '', 'dest': self.generic_file.name},
+                'generic.minion': {'path': '', 'dest': self.generic_minion_file.name},
             }[sls]
 
         client.get_state.side_effect = get_state
