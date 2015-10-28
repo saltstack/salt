@@ -51,7 +51,11 @@ def mounted(name,
             persist=True,
             mount=True,
             user=None,
-            match_on='auto'):
+            match_on='auto',
+            extra_mount_invisible_options=None,
+            extra_mount_invisible_keys=None,
+            extra_mount_ignore_fs_keys=None,
+            extra_mount_translate_options=None):
     '''
     Verify that a device is mounted
 
@@ -97,6 +101,34 @@ def mounted(name,
         Default is ``auto``, a special value indicating to guess based on fstype.
         In general, ``auto`` matches on name for recognized special devices and
         device otherwise.
+
+    extra_mount_invisible_options
+        A list of extra options that are not visible through the /proc/self/mountinfo
+        interface. If a option is not visible through this interface it will always
+        remount the device. This Option extends the builtin mount_invisible_options list.
+
+    extra_mount_invisible_keys
+        A list of extra key options that are not visible through the /proc/self/mountinfo
+        interface. If a key option is not visible through this interface it will always
+        remount the device. This Option extends the builtin mount_invisible_keys list.
+        A good example for a key Option is the password Option:
+            password=badsecret
+
+    extra_ignore_fs_keys
+        A dict of filesystem options which should not force a remount. This will update
+        the internal dictionary. The dict should look like this:
+            {
+                'ramfs': ['size']
+            }
+
+    extra_mount_translate_options
+        A dict of mount options that gets translated when mounted. To prevent a remount
+        add additional Options to the default dictionary. This will update the internal
+        dictionary. The dictionary should look like this:
+            {
+                'tcp': 'proto=tcp',
+                'udp': 'proto=udp'
+            }
     '''
     ret = {'name': name,
            'changes': {},
@@ -223,6 +255,10 @@ def mounted(name,
                     'port',
                     'backup-volfile-servers',
                 ]
+
+                if extra_mount_invisible_options:
+                    mount_invisible_options.extend(extra_mount_invisible_options)
+
                 # options which are provided as key=value (e.g. password=Zohp5ohb)
                 mount_invisible_keys = [
                     'actimeo',
@@ -232,16 +268,26 @@ def mounted(name,
                     'retry',
                     'port',
                 ]
+
+                if extra_mount_invisible_keys:
+                    mount_invisible_keys.extend(extra_mount_invisible_keys)
+
                 # Some filesystems have options which should not force a remount.
                 mount_ignore_fs_keys = {
                         'ramfs': ['size']
                 }
+
+                if extra_mount_ignore_fs_keys:
+                    mount_ignore_fs_keys.update(extra_mount_ignore_fs_keys)
 
                 # Some options are translated once mounted
                 mount_translate_options = {
                     'tcp': 'proto=tcp',
                     'udp': 'proto=udp',
                 }
+
+                if extra_mount_translate_options:
+                    mount_translate_options.update(extra_mount_translate_options)
 
                 for opt in opts:
                     if opt in mount_translate_options:
@@ -267,7 +313,8 @@ def mounted(name,
                     and ('superopts' in active[real_name]
                          and opt not in active[real_name]['superopts']) \
                     and opt not in mount_invisible_options \
-                    and opt not in mount_ignore_fs_keys.get(fstype, []):
+                    and opt not in mount_ignore_fs_keys.get(fstype, []) \
+                    and opt not in mount_invisible_keys:
                         if __opts__['test']:
                             ret['result'] = None
                             ret['comment'] = "Remount would be forced because options ({0}) changed".format(opt)
