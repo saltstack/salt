@@ -1649,18 +1649,6 @@ def directory(name,
                     - user
                     - group
                     - mode
-                    - ignore_files
-
-            /var/log/httpd:
-                file.directory:
-                - user: root
-                - group: root
-                - dir_mode: 755
-                - file_mode: 644
-                - recurse:
-                    - user
-                    - group
-                    - mode
                     - ignore_dirs
 
         .. versionadded:: 2015.5.0
