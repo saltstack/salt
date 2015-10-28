@@ -369,21 +369,21 @@ def create(vm_):
     if create_dns_record:
         log.info('create_dns_record: will attempt to write DNS records')
         default_dns_domain = None
-        dnsdomainname = vm_['name'].split('.')
-        if len(dnsdomainname) > 2:
+        dns_domain_name = vm_['name'].split('.')
+        if len(dns_domain_name) > 2:
             log.debug('create_dns_record: inferring default dns_hostname, dns_domain from minion name as FQDN')
-            default_dns_hostname = '.'.join(dnsdomainname[:-2])
-            default_dns_domain = '.'.join(dnsdomainname[-2:])
+            default_dns_hostname = '.'.join(dns_domain_name[:-2])
+            default_dns_domain = '.'.join(dns_domain_name[-2:])
         else:
             log.debug("create_dns_record: can't infer dns_domain from {0}".format(vm_['name']))
-            default_dns_hostname = dnsdomainname[0]
+            default_dns_hostname = dns_domain_name[0]
 
         dns_hostname = config.get_cloud_config_value(
-                'dns_hostname', vm_, __opts__, search_global=False, default=default_dns_hostname,
-            )
+            'dns_hostname', vm_, __opts__, search_global=False, default=default_dns_hostname,
+        )
         dns_domain = config.get_cloud_config_value(
-                'dns_domain', vm_, __opts__, search_global=False, default=default_dns_domain,
-            )
+            'dns_domain', vm_, __opts__, search_global=False, default=default_dns_domain,
+        )
         if dns_hostname and dns_domain:
             log.info('create_dns_record: using dns_hostname="{0}", dns_domain="{1}"'.format(dns_hostname, dns_domain))
             __add_dns_addr__ = lambda t, d: post_dns_record(dns_domain, dns_hostname, t, d)
@@ -447,6 +447,9 @@ def create(vm_):
         finally:
             raise SaltCloudSystemExit(str(exc))
 
+    if not vm_.get('ssh_host'):
+        vm_['ssh_host'] = None
+
     # add DNS records, set ssh_host, default to first found IP, preferring IPv4 for ssh bootstrap script target
     addr_families, dns_arec_types = (('v4', 'v6'), ('A', 'AAAA'))
     arec_map = dict(list(zip(addr_families, dns_arec_types)))
@@ -458,13 +461,16 @@ def create(vm_):
         if facing == 'public':
             if create_dns_record:
                 __add_dns_addr__(dns_rec_type, ip_address)
-            if 'ssh_host' not in vm_ or not vm_['ssh_host']:
+            if not vm_['ssh_host']:
                 vm_['ssh_host'] = ip_address
-    try:
-        # the salt.cloud.bootstrap() later needs a guaranteed vm_['ssh_host']
-        log.info('Found public IP address to use for ssh minion bootstrapping: {ssh_host}'.format(vm_))
-    except KeyError:
-        log.error('No suitable IP addresses found for ssh minion bootstrapping: {0}'.format(repr(data['networks'])))
+
+    if vm_['ssh_host'] is None:
+        raise SaltCloudSystemExit(
+            'No suitable IP addresses found for ssh minion bootstrapping: {0}'.format(repr(data['networks']))
+        )
+    
+    log.debug('Found public IP address to use for ssh minion bootstrapping: {0}'.format(vm_['ssh_host']))
+
     vm_['key_filename'] = key_filename
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data)
