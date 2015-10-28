@@ -6,10 +6,12 @@ This package contains the loader modules for the salt streams system
 from __future__ import absolute_import
 import logging
 import copy
+import re
 
 # Import Salt libs
 import salt.loader
 import salt.utils
+import salt.utils.minion
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +60,7 @@ class Beacon(object):
                         continue
                 if self._determine_beacon_config(mod, 'disable_during_state_run', b_config):
                     b_config = self._trim_config(b_config, mod, 'disable_during_state_run')
-                    is_running =  map(re.compile('state.*'.match, salt.utils.minion_running(self.opts)))
+                    is_running =  map(re.compile('state.*').match, salt.utils.minion.running(self.opts))
                     if [running.group(1) for running in is_running if running]:
                         log.debug('Skipping beacon {0}. State run in progress.'.format(mod))
                         continue
@@ -91,13 +93,13 @@ class Beacon(object):
         Process a beacon configuration to determine its interval
         '''
         if isinstance(config_mod, list):
-            interval = None
-            interval_config = [arg for arg in config_mod if val in arg]
-            if interval_config:
-                interval = interval_config[0][val]
+            config = None
+            val_config = [arg for arg in config_mod if val in arg]
+            if val_config:
+                config = val_config[0][val]
         elif isinstance(config_mod, dict):
-            interval = config_mod.get(val, False)
-        return interval
+            config = config_mod[mod].get(val, False)
+        return config
 
     def _process_interval(self, mod, interval):
         '''
