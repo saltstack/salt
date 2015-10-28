@@ -121,6 +121,8 @@ def built(
         ``dest_dir``. This is useful when building a package for continuous or
         nightly package builds.
 
+        .. versionadded:: 2015.8.2
+
     always
         If ``True``, packages will be built even if they already exist in the
         ``dest_dir``. This is useful when building a package for continuous or
