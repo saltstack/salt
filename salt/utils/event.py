@@ -61,7 +61,6 @@ import fnmatch
 import hashlib
 import logging
 import datetime
-import multiprocessing
 from collections import MutableMapping
 
 # Import third party libs
@@ -86,6 +85,8 @@ import salt.utils.cache
 import salt.utils.dicttrim
 import salt.utils.process
 import salt.utils.zeromq
+import salt.log.setup
+import salt.defaults.exitcodes
 
 log = logging.getLogger(__name__)
 
@@ -865,7 +866,7 @@ class AsyncEventPublisher(object):
         self.destroy()
 
 
-class EventPublisher(multiprocessing.Process):
+class EventPublisher(salt.utils.process.MultiprocessingProcess):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -952,7 +953,7 @@ class EventPublisher(multiprocessing.Process):
                 self.context.term()
 
 
-class EventReturn(multiprocessing.Process):
+class EventReturn(salt.utils.process.MultiprocessingProcess):
     '''
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
@@ -963,7 +964,7 @@ class EventReturn(multiprocessing.Process):
 
         Return an EventReturn instance
         '''
-        multiprocessing.Process.__init__(self)
+        salt.utils.process.MultiprocessingProcess.__init__(self)
 
         self.opts = opts
         self.event_return_queue = self.opts['event_return_queue']
@@ -974,7 +975,11 @@ class EventReturn(multiprocessing.Process):
         self.stop = False
 
     def sig_stop(self, signum, frame):
-        self.stop = True  # tell it to stop
+        # Flush and terminate
+        if self.event_queue:
+            self.flush_events()
+        self.stop = True
+        exit(salt.defaults.exitcodes.EX_GENERIC)
 
     def flush_events(self):
         event_return = '{0}.event_return'.format(
@@ -999,8 +1004,9 @@ class EventReturn(multiprocessing.Process):
         '''
         Spin up the multiprocess event returner
         '''
-        # Properly exit if a SIGTERM is signalled
+        # Properly exit if a SIGTERM/SIGINT is signalled
         signal.signal(signal.SIGTERM, self.sig_stop)
+        signal.signal(signal.SIGINT, self.sig_stop)
 
         salt.utils.appendproctitle(self.__class__.__name__)
         self.event = get_event('master', opts=self.opts, listen=True)
@@ -1016,10 +1022,6 @@ class EventReturn(multiprocessing.Process):
                     self.flush_events()
                 if self.stop:
                     break
-        except KeyboardInterrupt:
-            if self.event_queue:
-                self.flush_events()
-            self.stop = True
         except zmq.error.ZMQError as exc:
             if exc.errno != errno.EINTR:  # Outside interrupt is a normal shutdown case
                 raise

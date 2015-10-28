@@ -1676,7 +1676,9 @@ class Minion(MinionBase):
         self._pre_tune()
 
         # Properly exit if a SIGTERM is signalled
-        signal.signal(signal.SIGTERM, self.clean_die)
+        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+            # No SIGTERM installed, install ours
+            signal.signal(signal.SIGTERM, self.clean_die)
 
         # start up the event publisher, so we can see events during startup
         self.event_publisher = salt.utils.event.AsyncEventPublisher(
@@ -1894,7 +1896,10 @@ class Syndic(Minion):
         '''
         Lock onto the publisher. This is the main event loop for the syndic
         '''
-        signal.signal(signal.SIGTERM, self.clean_die)
+        # Properly exit if a SIGTERM is signalled
+        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+            # No SIGTERM installed, install ours
+            signal.signal(signal.SIGTERM, self.clean_die)
         log.debug('Syndic \'{0}\' trying to tune in'.format(self.opts['id']))
 
         if start:

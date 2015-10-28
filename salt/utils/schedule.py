@@ -259,7 +259,6 @@ import os
 import time
 import datetime
 import itertools
-import multiprocessing
 import threading
 import logging
 import errno
@@ -277,7 +276,7 @@ import salt.payload
 import salt.syspaths
 import salt.exceptions
 from salt.utils.odict import OrderedDict
-from salt.utils.process import os_is_running
+from salt.utils.process import os_is_running, MultiprocessingProcess
 
 # Import 3rd-party libs
 import yaml
@@ -513,7 +512,7 @@ class Schedule(object):
                 'Running Job: {0}.'.format(name)
             )
             if self.opts.get('multiprocessing', True):
-                thread_cls = multiprocessing.Process
+                thread_cls = MultiprocessingProcess
             else:
                 thread_cls = threading.Thread
             proc = thread_cls(target=self.handle_func, args=(func, data))
@@ -1153,7 +1152,7 @@ class Schedule(object):
                 self.returners = {}
             try:
                 if self.opts.get('multiprocessing', True):
-                    thread_cls = multiprocessing.Process
+                    thread_cls = MultiprocessingProcess
                 else:
                     thread_cls = threading.Thread
                 proc = thread_cls(target=self.handle_func, args=(func, data))

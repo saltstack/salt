@@ -12,6 +12,7 @@ import re
 import sys
 import time
 import errno
+import signal
 import logging
 import tempfile
 import traceback
@@ -460,30 +461,40 @@ class Master(SMaster):
         enable_sigusr2_handler()
 
         self.__set_max_open_files()
+
+        # Before creating and adding processes to the process manager, store
+        # references to the SIGTERM/SIGINT signal handlers and restore the
+        # default handlers. We don't want the processes being started to
+        # inherit those signal handlers
+        old_sigint_handler = signal.getsignal(signal.SIGINT)
+        old_sigterm_handler = signal.getsignal(signal.SIGTERM)
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+
         log.info('Creating master process manager')
-        process_manager = salt.utils.process.ProcessManager()
+        self.process_manager = salt.utils.process.ProcessManager()
         log.info('Creating master maintenance process')
         pub_channels = []
         for transport, opts in iter_transport_opts(self.opts):
             chan = salt.transport.server.PubServerChannel.factory(opts)
-            chan.pre_fork(process_manager)
+            chan.pre_fork(self.process_manager)
             pub_channels.append(chan)
 
         log.info('Creating master event publisher process')
-        process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
-        salt.engines.start_engines(self.opts, process_manager)
+        self.process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
+        salt.engines.start_engines(self.opts, self.process_manager)
 
         # must be after channels
-        process_manager.add_process(Maintenance, args=(self.opts,))
+        self.process_manager.add_process(Maintenance, args=(self.opts,))
         log.info('Creating master publisher process')
 
         if 'reactor' in self.opts:
             log.info('Creating master reactor process')
-            process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
+            self.process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
 
         if self.opts.get('event_return'):
             log.info('Creating master event return process')
-            process_manager.add_process(salt.utils.event.EventReturn, args=(self.opts,))
+            self.process_manager.add_process(salt.utils.event.EventReturn, args=(self.opts,))
 
         ext_procs = self.opts.get('ext_processes', [])
         for proc in ext_procs:
@@ -493,19 +504,19 @@ class Master(SMaster):
                 cls = proc.split('.')[-1]
                 _tmp = __import__(mod, globals(), locals(), [cls], -1)
                 cls = _tmp.__getattribute__(cls)
-                process_manager.add_process(cls, args=(self.opts,))
+                self.process_manager.add_process(cls, args=(self.opts,))
             except Exception:
                 log.error(('Error creating ext_processes '
                            'process: {0}').format(proc))
 
         if HAS_HALITE and 'halite' in self.opts:
             log.info('Creating master halite process')
-            process_manager.add_process(Halite, args=(self.opts['halite'],))
+            self.process_manager.add_process(Halite, args=(self.opts['halite'],))
 
         # TODO: remove, or at least push into the transport stuff (pre-fork probably makes sense there)
         if self.opts['con_cache']:
             log.info('Creating master concache process')
-            process_manager.add_process(ConnectedCache, args=(self.opts,))
+            self.process_manager.add_process(ConnectedCache, args=(self.opts,))
             # workaround for issue #16315, race condition
             log.debug('Sleeping for two seconds to let concache rest')
             time.sleep(2)
@@ -515,15 +526,30 @@ class Master(SMaster):
         if salt.utils.is_windows():
             kwargs['log_queue'] = (
                     salt.log.setup.get_multiprocessing_logging_queue())
-        process_manager.add_process(self.run_reqserver, kwargs=kwargs)
+        self.process_manager.add_process(self.run_reqserver, kwargs=kwargs)
 
-        try:
-            process_manager.run()
-        except KeyboardInterrupt:
-            # Shut the master down gracefully on SIGINT
-            log.warn('Stopping the Salt Master')
-            process_manager.kill_children()
-            log.warn('Exiting on Ctrl-c')
+        # Restore the old SIGTERM/SIGINT handler now that all processes have
+        # been added to the process manager
+        if old_sigint_handler is signal.SIG_DFL:
+            # No custom signal handling was added, install our own
+            signal.signal(signal.SIGINT, self._handle_signals)
+        else:
+            signal.signal(signal.SIGINT, old_sigint_handler)
+
+        if old_sigterm_handler is signal.SIG_DFL:
+            # No custom signal handling was added, install our own
+            signal.signal(signal.SIGINT, self._handle_signals)
+        else:
+            signal.signal(signal.SIGTERM, old_sigterm_handler)
+
+        self.process_manager.run()
+
+    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+        # escalate the signals to the process manager
+        self.process_manager.stop_restarting()
+        self.process_manager.send_signal_to_processes(signum)
+        # kill any remaining processes
+        self.process_manager.kill_children()
 
 
 class Halite(MultiprocessingProcess):

@@ -252,6 +252,7 @@ class ProcessManager(object):
         # store some pointers for the SIGTERM handler
         self._pid = os.getpid()
         self._sigterm_handler = signal.getsignal(signal.SIGTERM)
+        self._restart_processes = True
 
     def add_process(self, tgt, args=None, kwargs=None):
         '''
@@ -324,6 +325,13 @@ class ProcessManager(object):
 
         del self._process_map[pid]
 
+    def stop_restarting(self):
+        self._restart_processes = False
+
+    def send_signal_to_processes(self, signal):
+        for pid in self._process_map:
+            os.kill(pid, signal)
+
     def run(self):
         '''
         Load and start all available api modules
@@ -331,7 +339,12 @@ class ProcessManager(object):
         salt.utils.appendproctitle(self.name)
 
         # make sure to kill the subprocesses if the parent is killed
-        signal.signal(signal.SIGTERM, self.kill_children)
+        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+            # There are not SIGTERM handlers installed, install ours
+            signal.signal(signal.SIGTERM, self.kill_children)
+        if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
+            # There are not SIGTERM handlers installed, install ours
+            signal.signal(signal.SIGINT, self.kill_children)
 
         while True:
             try:
@@ -356,9 +369,10 @@ class ProcessManager(object):
         '''
         Check the children once
         '''
-        for pid, mapping in six.iteritems(self._process_map):
-            if not mapping['Process'].is_alive():
-                self.restart_process(pid)
+        if self._restart_processes is True:
+            for pid, mapping in six.iteritems(self._process_map):
+                if not mapping['Process'].is_alive():
+                    self.restart_process(pid)
 
     def kill_children(self, *args):
         '''
@@ -385,6 +399,9 @@ class ProcessManager(object):
                     p_map['Process'].terminate()
         else:
             for pid, p_map in six.iteritems(self._process_map.copy()):
+                if args:
+                    # escalate the signal to the process
+                    os.kill(pid, args[0])
                 try:
                     p_map['Process'].terminate()
                 except OSError as exc:
@@ -416,6 +433,7 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
     def __init__(self, *args, **kwargs):
         self.log_queue = kwargs.pop('log_queue', salt.log.setup.get_multiprocessing_logging_queue())
         multiprocessing.util.register_after_fork(self, MultiprocessingProcess.__setup_process_logging)
+        multiprocessing.util.Finalize(self, salt.log.setup.shutdown_multiprocessing_logging, exitpriority=16)
         super(MultiprocessingProcess, self).__init__(*args, **kwargs)
 
     def __setup_process_logging(self):
