@@ -113,7 +113,7 @@ def package_install(name, **kwargs):
     '''
     cmd = 'pkg_install ' + name
     if 'version' in kwargs:
-        pkg_install += kwargs['version']
+        cmd += ' ' + kwargs['version']
 
     # Send the command to execute
     out, err = DETAILS['server'].sendline(cmd)
