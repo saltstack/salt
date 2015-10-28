@@ -6,7 +6,7 @@
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
 
 ; MUI 1.67 compatible ------
-!include "MUI.nsh"
+!include "MUI2.nsh"
 
 !include "nsDialogs.nsh"
 !include "LogicLib.nsh"
@@ -36,6 +36,7 @@ Var MasterHost
 Var MasterHost_State
 Var MinionName
 Var MinionName_State
+Var StartService
 
 ; MUI Settings
 !define MUI_ABORTWARNING
@@ -54,6 +55,7 @@ Page custom nsDialogsPage nsDialogsPageLeave
 !insertmacro MUI_PAGE_INSTFILES
 
 ; Finish page
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW FinishPage.Show
 !define MUI_FINISHPAGE_RUN "$INSTDIR\nssm"
 !define MUI_FINISHPAGE_RUN_PARAMETERS "start salt-minion"
 !insertmacro MUI_PAGE_FINISH
@@ -76,6 +78,7 @@ Page custom nsDialogsPage nsDialogsPageLeave
 
 
 Function nsDialogsPage
+
   nsDialogs::Create 1018
   Pop $Dialog
 
@@ -110,134 +113,7 @@ Function nsDialogsPageLeave
 FunctionEnd
 
 
-Function updateMinionConfig
-
-  ClearErrors
-  FileOpen $0 "$INSTDIR\conf\minion" "r"                     ; open target file for reading
-  GetTempFileName $R0                           ; get new temp file name
-  FileOpen $1 $R0 "w"                            ; open temp file for writing
-  loop:
-     FileRead $0 $2                              ; read line from target file
-     IfErrors done
-     ${If} $MasterHost_State != ""
-     ${AndIf} $MasterHost_State != "salt"                                ; check if end of file reached
-       StrCmp $2 "#master: salt$\r$\n" 0 +2      ; compare line with search string with CR/LF
-          StrCpy $2 "master: $MasterHost_State$\r$\n"    ; change line
-       StrCmp $2 "#master: salt" 0 +2            ; compare line with search string without CR/LF (at the end of the file)
-          StrCpy $2 "master: $MasterHost_State"          ; change line
-     ${EndIf}
-     ${If} $MinionName_State != ""
-     ${AndIf} $MinionName_State != "hostname"
-       StrCmp $2 "#id:$\r$\n" 0 +2      ; compare line with search string with CR/LF
-          StrCpy $2 "id: $MinionName_State$\r$\n"    ; change line
-       StrCmp $2 "#id:" 0 +2            ; compare line with search string without CR/LF (at the end of the file)
-          StrCpy $2 "id: $MinionName_State"          ; change line
-     ${EndIf}
-     FileWrite $1 $2                             ; write changed or unchanged line to temp file
-     Goto loop
-
-  done:
-     FileClose $0                                ; close target file
-     FileClose $1                                ; close temp file
-     Delete "$INSTDIR\conf\minion"                           ; delete target file
-     CopyFiles /SILENT $R0 "$INSTDIR\conf\minion"            ; copy temp file to target file
-     Delete $R0
-
-FunctionEnd
-
-
-Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
-InstallDir "c:\salt"
-InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
-ShowInstDetails show
-ShowUnInstDetails show
-
-
-Section "MainSection" SEC01
-
-  ; Remove previous version of salt, but don't remove conf and key
-  ; Service must be stopped to delete files that are in use
-  ExecWait "net stop salt-minion"
-  ; Remove the service in case we're installing over an older version
-  ; It will be recreated later
-  ExecWait "sc delete salt-minion"
-
-  ; Delete everything except conf and var
-  ClearErrors
-  FindFirst $0 $1 $INSTDIR\*
-
-  loop:
-    IfFileExists "$INSTDIR\$1\*.*" IsDir IsFile
-
-    IsDir:
-      ${IfNot} $1 == "."
-      ${AndIfNot} $1 == ".."
-      ${AndIfNot} $1 == "conf"
-      ${AndIfNot} $1 == "var"
-        RMDir /r "$INSTDIR\$1"
-      ${EndIf}
-
-    IsFile:
-      DELETE "$INSTDIR\$1"
-
-    FindNext $0 $1
-    IfErrors done
-
-    Goto loop
-
-  done:
-    FindClose $0
-
-  Sleep 3000
-  SetOutPath "$INSTDIR\"
-  SetOverwrite try
-  CreateDirectory $INSTDIR\conf\pki\minion
-  File /r "..\buildenv\"
-  Exec 'icacls c:\salt /inheritance:r /grant:r "BUILTIN\Administrators":(OI)(CI)F /grant:r "NT AUTHORITY\SYSTEM":(OI)(CI)F'
-
-SectionEnd
-
-
-Section -Post
-  WriteUninstaller "$INSTDIR\uninst.exe"
-  WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\bin\Scripts\salt-minion.exe"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName" "$(^Name)"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninst.exe"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\salt.ico"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
-  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
-  WriteRegStr HKLM "SYSTEM\CurrentControlSet\services\salt-minion" "DependOnService" "nsi"
-
-  ExecWait "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
-  ExecWait "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
-  RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
-
-  Call updateMinionConfig
-SectionEnd
-
-
-Function .onInstSuccess
-; If the installer is running Silently, start the service
-  IfSilent 0 +2
-  Exec 'net start salt-minion'
-FunctionEnd
-
-
-Function un.onUninstSuccess
-  HideWindow
-  MessageBox MB_ICONINFORMATION|MB_OK "$(^Name) was successfully removed from your computer." /SD IDOK
-FunctionEnd
-
-
-Function un.onInit
-  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 "Are you sure you want to completely remove $(^Name) and all of its components?" /SD IDYES IDYES +2
-  Abort
-FunctionEnd
-
-
-Function .onInit
+Function getMinionConfig
 
   confFind:
   IfFileExists "$INSTDIR\conf\minion" confFound confNotFound
@@ -299,6 +175,177 @@ Function .onInit
 FunctionEnd
 
 
+Function updateMinionConfig
+
+  ClearErrors
+  FileOpen $0 "$INSTDIR\conf\minion" "r"              ; open target file for reading
+  GetTempFileName $R0                                 ; get new temp file name
+  FileOpen $1 $R0 "w"                                 ; open temp file for writing
+  loop:
+     FileRead $0 $2                                   ; read line from target file
+     IfErrors done
+     ${If} $MasterHost_State != ""
+     ${AndIf} $MasterHost_State != "salt"             ; check if end of file reached
+       StrCmp $2 "#master: salt$\r$\n" 0 +2           ; compare line with search string with CR/LF
+          StrCpy $2 "master: $MasterHost_State$\r$\n" ; change line
+       StrCmp $2 "#master: salt" 0 +2                 ; compare line with search string without CR/LF (at the end of the file)
+          StrCpy $2 "master: $MasterHost_State"       ; change line
+     ${EndIf}
+     ${If} $MinionName_State != ""
+     ${AndIf} $MinionName_State != "hostname"
+       StrCmp $2 "#id:$\r$\n" 0 +2                    ; compare line with search string with CR/LF
+          StrCpy $2 "id: $MinionName_State$\r$\n"     ; change line
+       StrCmp $2 "#id:" 0 +2                          ; compare line with search string without CR/LF (at the end of the file)
+          StrCpy $2 "id: $MinionName_State"           ; change line
+     ${EndIf}
+     FileWrite $1 $2                                  ; write changed or unchanged line to temp file
+     Goto loop
+
+  done:
+     FileClose $0                                     ; close target file
+     FileClose $1                                     ; close temp file
+     Delete "$INSTDIR\conf\minion"                    ; delete target file
+     CopyFiles /SILENT $R0 "$INSTDIR\conf\minion"     ; copy temp file to target file
+     Delete $R0
+
+FunctionEnd
+
+
+Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
+OutFile "Salt-Minion-${PRODUCT_VERSION}-${CPUARCH}-Setup.exe"
+InstallDir "c:\salt"
+InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
+ShowInstDetails show
+ShowUnInstDetails show
+
+
+Section "MainSection" SEC01
+
+  SetOutPath "$INSTDIR\"
+  SetOverwrite try
+  CreateDirectory $INSTDIR\conf\pki\minion
+  File /r "..\buildenv\"
+  Exec 'icacls c:\salt /inheritance:r /grant:r "BUILTIN\Administrators":(OI)(CI)F /grant:r "NT AUTHORITY\SYSTEM":(OI)(CI)F'
+
+SectionEnd
+
+
+Section -Post
+  WriteUninstaller "$INSTDIR\uninst.exe"
+  WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\bin\Scripts\salt-minion.exe"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName" "$(^Name)"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninst.exe"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\salt.ico"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
+  WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
+  WriteRegStr HKLM "SYSTEM\CurrentControlSet\services\salt-minion" "DependOnService" "nsi"
+
+  ExecWait "nssm.exe install salt-minion $INSTDIR\bin\python.exe $INSTDIR\bin\Scripts\salt-minion -c $INSTDIR\conf -l quiet"
+  ExecWait "nssm.exe set salt-minion AppEnvironmentExtra PYTHONHOME="
+  RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
+
+  Call updateMinionConfig
+
+  Call checkStartService
+
+SectionEnd
+
+
+Function FinishPage.Show
+
+  ${IfNot} $StartService == 1
+    SendMessage $mui.FinishPage.Run ${BM_SETCHECK} ${BST_UNCHECKED} 0
+  ${EndIf}
+
+FunctionEnd
+
+
+Function checkStartService
+
+    ; Check if the start-service option was passed
+    Push $R0
+    Push $R1
+    ${GetParameters} $R0
+    ${GetOptions} $R0 "/start-service=" $R1
+    ; If start-service was passed something, then set it
+    ${IfNot} $R1 == ""
+      StrCpy $StartService $R1
+    ; Otherwise default to 1
+    ${Else}
+      StrCpy $StartService 1
+    ${EndIf}
+    Pop $R0
+    Pop $R1
+
+FunctionEnd
+
+
+Function .onInstSuccess
+  ; If the installer is running Silently, start the service
+  IfSilent silentOption notSilent
+
+  silentOption:
+
+    ; If start-service is 1, then start the service
+    ${If} $StartService == 1
+      Exec 'net start salt-minion'
+    ${EndIf}
+
+  notSilent:
+
+FunctionEnd
+
+
+Function un.onUninstSuccess
+  HideWindow
+  MessageBox MB_ICONINFORMATION|MB_OK "$(^Name) was successfully removed from your computer." /SD IDOK
+FunctionEnd
+
+
+Function un.onInit
+  MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 "Are you sure you want to completely remove $(^Name) and all of its components?" /SD IDYES IDYES +2
+  Abort
+FunctionEnd
+
+
+Function .onInit
+
+  Call getMinionConfig
+
+  ; Check for existing installation
+  ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" "UninstallString"
+  StrCmp $R0 "" skipUninstall
+
+  ; Found existing installation, prompt to uninstall
+  MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "${PRODUCT_NAME} is already installed. $\n$\nClick `OK` to remove the existing installation." /SD IDOK IDOK uninst
+  Abort
+
+  uninst:
+    ; Make sure we're in the right directory
+    ${If} $INSTDIR == "c:\salt\bin\Scripts"
+      StrCpy $INSTDIR "C:\salt"
+    ${EndIf}
+
+    ; Stop and remove the salt-minion service
+    ExecWait "net stop salt-minion"
+    ExecWait "sc delete salt-minion"
+
+    ; Remove salt binaries and batch files
+    Delete "$INSTDIR\uninst.exe"
+    Delete "$INSTDIR\nssm.exe"
+    Delete "$INSTDIR\salt*"
+    RMDir /r "$INSTDIR\bin"
+
+    ; Remove registry entries
+    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
+    DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"
+
+  skipUninstall:
+
+FunctionEnd
+
+
 Function Trim
 
     Exch $R1 ; Original string
@@ -339,7 +386,7 @@ Section Uninstall
   Delete "$INSTDIR\uninst.exe"
   Delete "$INSTDIR\nssm.exe"
   Delete "$INSTDIR\salt*"
-  Delete "$INSTDIR\bin"
+  RMDir /r "$INSTDIR\bin"
 
   ${If} $INSTDIR != 'Program Files'
   ${AndIf} $INSTDIR != 'Program Files (x86)'
