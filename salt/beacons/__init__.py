@@ -59,10 +59,15 @@ class Beacon(object):
                         log.trace('Skipping beacon {0}. Interval not reached.'.format(mod))
                         continue
                 if self._determine_beacon_config(mod, 'disable_during_state_run', b_config):
+                    log.trace('Evaluting if beacon {0} should be skipped due to a state run.'.format(mod))
                     b_config = self._trim_config(b_config, mod, 'disable_during_state_run')
-                    is_running =  map(re.compile('state.*').match, salt.utils.minion.running(self.opts))
-                    if [running.group(1) for running in is_running if running]:
-                        log.debug('Skipping beacon {0}. State run in progress.'.format(mod))
+                    is_running = False
+                    running_jobs = salt.utils.minion.running(self.opts)
+                    for job in running_jobs:
+                        if re.match('state.*', job['fun']):
+                            is_running = True
+                    if is_running:
+                        log.info('Skipping beacon {0}. State run in progress.'.format(mod))
                         continue
                 # Fire the beacon!
                 raw = self.beacons[fun_str](b_config[mod])
@@ -85,7 +90,6 @@ class Beacon(object):
             b_config[mod].remove(b_config[0])
         elif isinstance(b_config[mod], dict):
             b_config[mod].pop(key)
-        print('Returning b_config: {0}'.format(b_config))
         return b_config
 
     def _determine_beacon_config(self, mod, val, config_mod):
