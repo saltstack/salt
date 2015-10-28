@@ -34,7 +34,7 @@ import pprint
 import logging
 import decimal
 
-# Import Salt Cloud Libs
+# Import Salt Libs
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
@@ -44,6 +44,8 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+import salt.ext.six as six
+from salt.ext.six.moves import zip
 
 # Import Third Party Libs
 try:
@@ -51,9 +53,6 @@ try:
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
-
-# Import 3rd-party libs
-import salt.ext.six as six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -366,10 +365,9 @@ def create(vm_):
     create_dns_record = config.get_cloud_config_value(
         'create_dns_record', vm_, __opts__, search_global=False, default=None,
     )
-    
+
     if create_dns_record:
         log.info('create_dns_record: will attempt to write DNS records')
-        default_dns_hostname = None
         default_dns_domain = None
         dnsdomainname = vm_['name'].split('.')
         if len(dnsdomainname) > 2:
@@ -379,7 +377,7 @@ def create(vm_):
         else:
             log.debug("create_dns_record: can't infer dns_domain from {0}".format(vm_['name']))
             default_dns_hostname = dnsdomainname[0]
-        
+
         dns_hostname = config.get_cloud_config_value(
                 'dns_hostname', vm_, __opts__, search_global=False, default=default_dns_hostname,
             )
@@ -393,7 +391,8 @@ def create(vm_):
         else:
             log.error('create_dns_record: could not determine dns_hostname and/or dns_domain')
             raise SaltCloudConfigError(
-                '\'create_dns_record\' must be a dict specifying "domain" and "hostname" or the minion name must be a FQDN.'
+                '\'create_dns_record\' must be a dict specifying "domain" '
+                'and "hostname" or the minion name must be an FQDN.'
             )
 
     salt.utils.cloud.fire_event(
@@ -447,19 +446,18 @@ def create(vm_):
             pass
         finally:
             raise SaltCloudSystemExit(str(exc))
-     
+
     # add DNS records, set ssh_host, default to first found IP, preferring IPv4 for ssh bootstrap script target
     addr_families, dns_arec_types = (('v4', 'v6'), ('A', 'AAAA'))
-    arec_map = dict(zip(addr_families, dns_arec_types))
+    arec_map = dict(list(zip(addr_families, dns_arec_types)))
     for facing, addr_family, ip_address in [(net['type'], family, net['ip_address'])
                                             for family in addr_families
                                             for net in data['networks'][family]]:
         log.info('found {0} IP{1} interface for "{2}"'.format(facing, addr_family, ip_address))
         dns_rec_type = arec_map[addr_family]
         if facing == 'public':
-            dnsrv = None
             if create_dns_record:
-                dnsrv = __add_dns_addr__(dns_rec_type, ip_address)
+                __add_dns_addr__(dns_rec_type, ip_address)
             if 'ssh_host' not in vm_ or not vm_['ssh_host']:
                 vm_['ssh_host'] = ip_address
     try:
@@ -747,23 +745,27 @@ def destroy(name, call=None):
     # delete_dns_record = config.get_cloud_config_value(
     #     'delete_dns_record', vm_, __opts__, search_global=False, default=None,
     # )
-    # ToDo: when _vm config data can be made available, we should honor the configuration settings,
-    #         but until then, we should assume stale DNS records are bad, and default behavior should be to
-    #         delete them if we can.
+    # TODO: when _vm config data can be made available, we should honor the configuration settings,
+    # but until then, we should assume stale DNS records are bad, and default behavior should be to
+    # delete them if we can. When this is resolved, also resolve the comments a couple of lines below.
     delete_dns_record = True
 
-    if delete_dns_record and not isinstance(delete_dns_record, bool):
+    if not isinstance(delete_dns_record, bool):
         raise SaltCloudConfigError(
             '\'delete_dns_record\' should be a boolean value.'
         )
+    # When the "to do" a few lines up is resolved, remove these lines and use the if/else logic below.
+    log.debug('Deleting DNS records for {0}.'.format(name))
+    destroy_dns_records(name)
 
-    if delete_dns_record:
-        log.debug('Deleting DNS records for {0}.'.format(name))
-        destroy_dns_records(name)
-    else:
-        log.debug('delete_dns_record : {0}'.format(delete_dns_record))
-        for line in pprint.pformat(dir()).splitlines():
-            log.debug('delete  context: {0}'.format(line))
+    # Until the "to do" from line 748 is taken care of, we don't need this logic.
+    # if delete_dns_record:
+    #    log.debug('Deleting DNS records for {0}.'.format(name))
+    #    destroy_dns_records(name)
+    # else:
+    #    log.debug('delete_dns_record : {0}'.format(delete_dns_record))
+    #    for line in pprint.pformat(dir()).splitlines():
+    #       log.debug('delete  context: {0}'.format(line))
 
     salt.utils.cloud.fire_event(
         'event',
