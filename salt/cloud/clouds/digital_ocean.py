@@ -462,7 +462,11 @@ def create(vm_):
                 dnsrv = __add_dns_addr__(dns_rec_type, ip_address)
             if 'ssh_host' not in vm_ or not vm_['ssh_host']:
                 vm_['ssh_host'] = ip_address
-    
+    try:
+        # the salt.cloud.bootstrap() later needs a guaranteed vm_['ssh_host']
+        log.info('Found public IP address to use for ssh minion bootstrapping: {ssh_host}'.format(vm_))
+    except KeyError:
+        log.error('No suitable IP addresses found for ssh minion bootstrapping: {0}'.format(repr(data['networks'])))
     vm_['key_filename'] = key_filename
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data)
@@ -743,6 +747,9 @@ def destroy(name, call=None):
     # delete_dns_record = config.get_cloud_config_value(
     #     'delete_dns_record', vm_, __opts__, search_global=False, default=None,
     # )
+    # ToDo: when _vm config data can be made available, we should honor the configuration settings,
+    #         but until then, we should assume stale DNS records are bad, and default behavior should be to
+    #         delete them if we can.
     delete_dns_record = True
 
     if delete_dns_record and not isinstance(delete_dns_record, bool):
