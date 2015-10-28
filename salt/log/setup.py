@@ -808,10 +808,10 @@ def shutdown_multiprocessing_logging_listener():
             __MP_LOGGING_QUEUE.put(None)
             # Let's join the multiprocessing logging handle thread
             time.sleep(0.5)
-            #logging.getLogger(__name__).debug('closing multiprocessing queue')
-            #__MP_LOGGING_QUEUE.close()
-            #logging.getLogger(__name__).debug('joining multiprocessing queue thread')
-            #__MP_LOGGING_QUEUE.join_thread()
+            logging.getLogger(__name__).debug('closing multiprocessing queue')
+            __MP_LOGGING_QUEUE.close()
+            logging.getLogger(__name__).debug('joining multiprocessing queue thread')
+            __MP_LOGGING_QUEUE.join_thread()
             __MP_LOGGING_QUEUE = None
             __MP_LOGGING_QUEUE_PROCESS.join(1)
             __MP_LOGGING_QUEUE = None
