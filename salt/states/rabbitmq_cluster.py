@@ -74,4 +74,4 @@ def joined(name, host, user='rabbit', ram_node=None, runas='root'):
 
 
 # Alias join to preserve backward compat
-join = joined
+join = salt.utils.alias_function(joined, 'join')
