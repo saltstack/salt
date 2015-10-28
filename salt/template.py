@@ -79,9 +79,9 @@ def compile_template(template,
 
     input_data = string_io(input_data)
     for render, argline in render_pipe:
-        # For GPG renderer, input_data can be an OrderedDict. Repress the
-        # error.
-        if not isinstance(input_data, OrderedDict):
+        # For GPG renderer, input_data can be an OrderedDict (from YAML) or dict (from py renderer).
+        # Repress the error.
+        if not isinstance(input_data, (dict, OrderedDict)):
             try:
                 input_data.seek(0)
             except Exception as exp:
