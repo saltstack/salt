@@ -451,7 +451,7 @@ class LazyLoaderModulePackageTest(TestCase):
     def setUp(self):
         self.opts = _config = minion_config(None)
         self.opts['grains'] = grains(self.opts)
-        self.tmp_dir = tempfile.mkdtemp(dir=tests.integration.TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
 
         dirs = _module_dirs(self.opts, 'modules', 'module')
         dirs.append(self.tmp_dir)

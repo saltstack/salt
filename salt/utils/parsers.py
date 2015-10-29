@@ -558,7 +558,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         # Setup extended logging right before the last step
         self._mixin_after_parsed_funcs.append(self.__setup_extended_logging)
         # Setup the multiprocessing log queue listener if enabled
-        self._mixin_after_parsed_funcs.append(self.__setup_mp_logging_listener)
+        self._mixin_after_parsed_funcs.append(self._setup_mp_logging_listener)
         # Setup the console as the last _mixin_after_parsed_func to run
         self._mixin_after_parsed_funcs.append(self.__setup_console_logger)
 
@@ -759,7 +759,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
     def _get_mp_logging_listener_queue(self):
         return log.get_multiprocessing_logging_queue()
 
-    def __setup_mp_logging_listener(self, *args):
+    def _setup_mp_logging_listener(self, *args):
         if self._setup_mp_logging_listener_:
             log.setup_multiprocessing_logging_listener(
                 self._get_mp_logging_listener_queue()
@@ -840,9 +840,17 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
 
     def daemonize_if_required(self):
         if self.options.daemon:
+            if self._setup_mp_logging_listener_ is True:
+                # Stop the logging queue listener for the current process
+                # We'll restart it once forked
+                log.shutdown_multiprocessing_logging_listener()
+
             # Late import so logging works correctly
             import salt.utils
             salt.utils.daemonize()
+
+        # Setup the multiprocessing log queue listener if enabled
+        self._setup_mp_logging_listener()
 
     def is_daemonized(self, pid):
         import salt.utils.process

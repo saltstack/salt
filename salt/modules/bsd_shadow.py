@@ -144,6 +144,24 @@ def set_expire(name, expire):
         return post_info['expire'] == expire
 
 
+def del_password(name):
+    '''
+    .. versionadded:: 2015.8.3
+
+    Delete the password from name user
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.del_password username
+    '''
+    cmd = 'pw user mod {0} -w none'.format(name)
+    __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='quiet')
+    uinfo = info(name)
+    return not uinfo['passwd']
+
+
 def set_password(name, password):
     '''
     Set the password for a named user. The password must be a properly defined

@@ -522,7 +522,6 @@ class Key(object):
                 opts['transport'],
                 opts=opts,
                 listen=False)
-        self.client = salt.client.get_local_client(mopts=self.opts)
 
     def _check_minions_directories(self):
         '''
@@ -830,7 +829,8 @@ class Key(object):
                                      'Minion will not be disconnected until the master AES key is rotated.')
                         else:
                             try:
-                                self.client.cmd(key, 'saltutil.revoke_auth')
+                                client = salt.client.get_local_client(mopts=self.opts)
+                                client.cmd(key, 'saltutil.revoke_auth')
                             except salt.exceptions.SaltClientError:
                                 print('Cannot contact Salt master. '
                                       'Connection for {0} will remain up until '
@@ -1283,7 +1283,8 @@ class RaetKey(Key):
                                  'Minion will not be disconnected until the master AES key is rotated.')
                     else:
                         try:
-                            self.client.cmd(key, 'saltutil.revoke_auth')
+                            client = salt.client.get_local_client(mopts=self.opts)
+                            client.cmd(key, 'saltutil.revoke_auth')
                         except salt.exceptions.SaltClientError:
                             print('Cannot contact Salt master. '
                                   'Connection for {0} will remain up until '
