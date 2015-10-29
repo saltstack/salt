@@ -80,6 +80,8 @@ Detailed Function Documentation
 -------------------------------
 """
 
+from __future__ import absolute_import
+
 import inspect
 import logging
 import os
@@ -323,7 +325,7 @@ def stop(path, service_names=None):
     return __standardize_result(True, 'Stopping containers via docker-compose', result, debug_ret)
 
 
-def pause(path, service_names=None, **kwargs):
+def pause(path, service_names=None):
     """
     Pause running containers in the docker-compose file, service_names is a python
     list, if omitted pause all containers
@@ -360,7 +362,7 @@ def pause(path, service_names=None, **kwargs):
     return __standardize_result(True, 'Pausing containers via docker-compose', result, debug_ret)
 
 
-def unpause(path, service_names=None, **kwargs):
+def unpause(path, service_names=None):
     """
     Un-Pause containers in the docker-compose file, service_names is a python
     list, if omitted unpause all containers
@@ -397,7 +399,7 @@ def unpause(path, service_names=None, **kwargs):
     return __standardize_result(True, 'Un-Pausing containers via docker-compose', result, debug_ret)
 
 
-def start(path, service_names=None, **kwargs):
+def start(path, service_names=None):
     """
     Start containers in the docker-compose file, service_names is a python
     list, if omitted start all containers
@@ -434,7 +436,7 @@ def start(path, service_names=None, **kwargs):
     return __standardize_result(True, 'Starting containers via docker-compose', result, debug_ret)
 
 
-def kill(path, service_names=None, **kwargs):
+def kill(path, service_names=None):
     """
     Kill containers in the docker-compose file, service_names is a python
     list, if omitted kill all containers
@@ -471,7 +473,7 @@ def kill(path, service_names=None, **kwargs):
     return __standardize_result(True, 'Killing containers via docker-compose', result, debug_ret)
 
 
-def rm(path, service_names=None, **kwargs):
+def rm(path, service_names=None):
     """
     Remove stopped containers in the docker-compose file, service_names is a python
     list, if omitted remove all stopped containers
@@ -500,7 +502,7 @@ def rm(path, service_names=None, **kwargs):
     return __standardize_result(True, 'Removing stopped containers via docker-compose', None, None)
 
 
-def ps(path, **kwargs):
+def ps(path):
     """
     List all running containers and report some information about them
 
