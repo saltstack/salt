@@ -129,12 +129,12 @@ class WinSystemTestCase(TestCase):
 
         mock = MagicMock(return_value='salt')
         with patch.dict(win_system.__salt__, {"system.get_hostname": mock}):
-                ret.update({'name': 'SALT',
-                            'comment': "Hostname is already set to 'SALT'",
-                            'changes': {},
-                            'result': True})
+            ret.update({'name': 'SALT',
+                        'comment': "Hostname is already set to 'SALT'",
+                        'changes': {},
+                        'result': True})
 
-                self.assertDictEqual(win_system.hostname('SALT'), ret)
+            self.assertDictEqual(win_system.hostname('SALT'), ret)
 
 
 if __name__ == '__main__':
