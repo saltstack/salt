@@ -534,8 +534,8 @@ class Pillar(object):
                                         self.merge_strategy,
                                         self.opts.get('renderer', 'yaml'))
 
-                            if err:
-                                errors += err
+                                if err:
+                                    errors += err
         return state, mods, errors
 
     def render_pillar(self, matches):
