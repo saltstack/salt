@@ -100,7 +100,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         cls = self.__class__
         result = cls.__new__(cls, copy.deepcopy(self.opts, memo))  # pylint: disable=too-many-function-args
         memo[id(self)] = result
-        for key, value in self.__dict__.items():
+        for key in self.__dict__:
             if key in ('_io_loop',):
                 continue
                 # The _io_loop has a thread Lock which will fail to be deep
@@ -114,7 +114,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
                                               self.master_uri,
                                               io_loop=result._io_loop))
                 continue
-            setattr(result, key, copy.deepcopy(value, memo))
+            setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
         return result
 
     @classmethod
