@@ -4,8 +4,8 @@ from __future__ import absolute_import
 # Import python libs
 import fnmatch
 import glob
+import signal
 import logging
-import multiprocessing
 
 import yaml
 
@@ -16,12 +16,13 @@ import salt.utils
 import salt.utils.cache
 import salt.utils.event
 import salt.utils.process
+import salt.defaults.exitcodes
 from salt.ext.six import string_types, iterkeys
 from salt._compat import string_types
 log = logging.getLogger(__name__)
 
 
-class Reactor(multiprocessing.Process, salt.state.Compiler):
+class Reactor(salt.utils.process.MultiprocessingProcess, salt.state.Compiler):
     '''
     Read in the reactor configuration variable and compare it to events
     processed on the master.
@@ -29,11 +30,21 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
     as reactions to events
     '''
     def __init__(self, opts):
-        multiprocessing.Process.__init__(self)
+        salt.utils.process.MultiprocessingProcess.__init__(self)
         local_minion_opts = opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
         salt.state.Compiler.__init__(self, opts, self.minion.rend)
+
+    def sig_stop(self, signum, frame):
+        msg = 'Received a '
+        if signum == signal.SIGINT:
+            msg += 'SIGINT'
+        elif signum == signal.SIGTERM:
+            msg += 'SIGTERM'
+        msg += '. Exiting {0}.'.format(self.__class__.__name__)
+        log.info(msg)
+        exit(salt.defaults.exitcodes.EX_GENERIC)
 
     def render_reaction(self, glob_ref, tag, data):
         '''
@@ -186,6 +197,10 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         Enter into the server loop
         '''
+        # Properly exit if a SIGTERM/SIGINT is signalled
+        signal.signal(signal.SIGTERM, self.sig_stop)
+        signal.signal(signal.SIGINT, self.sig_stop)
+
         salt.utils.appendproctitle(self.__class__.__name__)
 
         # instantiate some classes inside our new process

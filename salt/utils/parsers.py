@@ -13,6 +13,7 @@
 from __future__ import absolute_import, print_function
 import os
 import sys
+import signal
 import getpass
 import logging
 import optparse
@@ -846,6 +847,29 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
     def is_daemonized(self, pid):
         import salt.utils.process
         return salt.utils.process.os_is_running(pid)
+
+    # Common methods for scripts which can daemonize
+    def _install_signal_handlers(self):
+        signal.signal(signal.SIGTERM, self._handle_signals)
+        signal.signal(signal.SIGINT, self._handle_signals)
+
+    def prepare(self):
+        self.parse_args()
+
+    def start(self):
+        self.prepare()
+        self._install_signal_handlers()
+
+    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+        if signum == signal.SIGINT:
+            msg = 'Received a SIGINT.'
+        elif signum == signal.SIGTERM:
+            msg = 'Received a SIGTERM.'
+        logging.getLogger(__name__).warning('{0} Exiting.'.format(msg))
+        self.shutdown(exitmsg='{0} Exited.'.format(msg))
+
+    def shutdown(self, exitcode=0, exitmsg=None):
+        self.exit(exitcode, exitmsg)
 
 
 class PidfileMixin(six.with_metaclass(MixInMeta, object)):

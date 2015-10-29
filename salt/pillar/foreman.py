@@ -69,8 +69,7 @@ def __virtual__():
     '''
     Only return if all the modules are available
     '''
-    if not HAS_REQUESTS:
-        return False
+    return HAS_REQUESTS
 
 
 def ext_pillar(minion_id,
