@@ -122,7 +122,7 @@ def set_expire(name, expire):
 
 def del_password(name):
     '''
-    .. versionadded:: 2015.8.3
+    .. versionadded:: 2015.8.2
 
     Delete the password from name user
 
