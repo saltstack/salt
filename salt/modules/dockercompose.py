@@ -161,10 +161,10 @@ def __write_docker_compose(path, docker_compose):
         f.close()
     else:
         return __standardize_result(False,
-                                    "Could not write docker-compose filein %s"
-                                    % path, None, None)
+                                    "Could not write docker-compose file in {0}".format(path),
+                                    None, None)
     project = __load_project(path)
-    if type(project) is dict:
+    if isinstance(project, dict):
         os.remove(os.path.join(path, dc_filename))
         return project
     return path
@@ -191,8 +191,10 @@ def __handle_except(inst):
     :param inst:
     :return:
     """
-    return __standardize_result(False, "Docker-compose command %s failed"
-                                % (inspect.stack()[1][3]), "%s" % (inst), None)
+    return __standardize_result(False,
+                                "Docker-compose command {0} failed".
+                                format(inspect.stack()[1][3]),
+                                "{0}".format(inst), None)
 
 
 def _get_convergence_plans(project, service_names):
@@ -237,7 +239,7 @@ def create(path, docker_compose):
     """
     if docker_compose:
         ret = __write_docker_compose(path, docker_compose)
-        if type(ret) is dict:
+        if isinstance(ret, dict):
             return ret
     else:
         return __standardize_result(False,
@@ -268,7 +270,7 @@ def restart(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
-    if type(project) is dict:
+    if isinstance(project, dict):
         return project
     else:
         try:
@@ -305,7 +307,7 @@ def stop(path, service_names=None):
     project = __load_project(path)
     debug_ret = {}
     result = {}
-    if type(project) is dict:
+    if isinstance(project, dict):
         return project
     else:
         try:
@@ -342,7 +344,7 @@ def pause(path, service_names=None, **kwargs):
     project = __load_project(path)
     debug_ret = {}
     result = {}
-    if type(project) is dict:
+    if isinstance(project, dict):
         return project
     else:
         try:
@@ -379,7 +381,7 @@ def unpause(path, service_names=None, **kwargs):
     project = __load_project(path)
     debug_ret = {}
     result = {}
-    if type(project) is dict:
+    if isinstance(project, dict):
         return project
     else:
         try:
@@ -416,7 +418,7 @@ def start(path, service_names=None, **kwargs):
     project = __load_project(path)
     debug_ret = {}
     result = {}
-    if type(project) is dict:
+    if isinstance(project, dict):
         return project
     else:
         try:
@@ -453,7 +455,7 @@ def kill(path, service_names=None, **kwargs):
     project = __load_project(path)
     debug_ret = {}
     result = {}
-    if type(project) is dict:
+    if isinstance(project, dict):
         return project
     else:
         try:
@@ -488,7 +490,7 @@ def rm(path, service_names=None, **kwargs):
     """
 
     project = __load_project(path)
-    if type(project) is dict:
+    if isinstance(project, dict):
         return project
     else:
         try:
@@ -514,7 +516,7 @@ def ps(path, **kwargs):
 
     project = __load_project(path)
     result = {}
-    if type(project) is dict:
+    if isinstance(project, dict):
         return project
     else:
         containers = sorted(
@@ -524,7 +526,7 @@ def ps(path, **kwargs):
         for container in containers:
             command = container.human_readable_command
             if len(command) > 30:
-                command = '%s ...' % command[:26]
+                command = '{0} ...'.format(command[:26])
             result[container.name] = {
                 'id': container.id,
                 'name': container.name,
@@ -556,7 +558,7 @@ def up(path, service_names=None):
 
     debug_ret = {}
     project = __load_project(path)
-    if type(project) is dict:
+    if isinstance(project, dict):
         return project
     else:
         try:
