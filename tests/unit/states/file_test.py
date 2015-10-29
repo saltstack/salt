@@ -153,7 +153,7 @@ class FileTestCase(TestCase):
         mock_gid = MagicMock(side_effect=['', 'G12', 'G12', 'G12', 'G12',
                                           'G12', 'G12', 'G12', 'G12', 'G12'])
         mock_if = MagicMock(side_effect=[False, True, False, False, False,
-                                         False, False, False])
+                                         False, False, False, False])
         mock_dir = MagicMock(side_effect=[True, True, True, True, False, True,
                                           True, True, True, False, True, False])
         mock_ret = MagicMock(return_value=target)
@@ -317,8 +317,8 @@ class FileTestCase(TestCase):
                         self.assertDictEqual(filestate.absent(name), ret)
 
                     with patch.dict(filestate.__opts__, {'test': False}):
-                        with patch.object(filestate.__salt__,
-                                          {'file.remove': mock_tree}):
+                        with patch.dict(filestate.__salt__,
+                                        {'file.remove': mock_tree}):
                             comt = ('Removed directory {0}'.format(name))
                             ret.update({'comment': comt, 'result': True,
                                         'changes': {'removed': name}})
@@ -620,8 +620,8 @@ class FileTestCase(TestCase):
                                                          True, True, True,
                                                          False])):
                     with patch.object(os.path, 'lexists', mock_t):
-                        with patch.object(filestate.__salt__,
-                                          {'file.is_link': mock_f}):
+                        with patch.dict(filestate.__salt__,
+                                        {'file.is_link': mock_f}):
                             with patch.object(os.path, 'isdir', mock_f):
                                 comt = ('File exists where the backup target'
                                         ' A should go')
@@ -1282,12 +1282,14 @@ class FileTestCase(TestCase):
                         with patch.object(os.path, 'lexists', mock_t):
                             with patch.dict(filestate.__opts__,
                                             {'test': False}):
-                                ret.update({'comment': comt1,
-                                            'result': False})
-                                self.assertDictEqual(filestate.copy
-                                                     (name, source,
-                                                      preserve=True,
-                                                      force=True), ret)
+                                with patch.dict(filestate.__salt__,
+                                                {'file.remove': mock_io}):
+                                    ret.update({'comment': comt1,
+                                                'result': False})
+                                    self.assertDictEqual(filestate.copy
+                                                         (name, source,
+                                                          preserve=True,
+                                                          force=True), ret)
 
                                 with patch.object(os.path, 'isfile', mock_t):
                                     ret.update({'comment': comt2,
@@ -1352,14 +1354,14 @@ class FileTestCase(TestCase):
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
-        mock_lex = MagicMock(side_effect=[False, True, True, True, True, True,
-                                          True, True, False, True, False, True,
-                                          False, True, False])
+
+        mock_lex = MagicMock(side_effect=[False, True, True])
         with patch.object(os.path, 'isabs', mock_f):
             comt = ('Specified file {0} is not an absolute path'.format(name))
             ret.update({'comment': comt, 'name': name})
             self.assertDictEqual(filestate.rename(name, source), ret)
 
+        mock_lex = MagicMock(return_value=False)
         with patch.object(os.path, 'isabs', mock_t):
             with patch.object(os.path, 'lexists', mock_lex):
                 comt = ('Source file "{0}" has already been moved out of '
@@ -1367,50 +1369,81 @@ class FileTestCase(TestCase):
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(filestate.rename(name, source), ret)
 
+        mock_lex = MagicMock(side_effect=[True, True, True])
+        with patch.object(os.path, 'isabs', mock_t):
+            with patch.object(os.path, 'lexists', mock_lex):
                 comt = ('The target file "{0}" exists and will not be '
                         'overwritten'.format(name))
                 ret.update({'comment': comt, 'result': False})
                 self.assertDictEqual(filestate.rename(name, source), ret)
 
+        mock_lex = MagicMock(side_effect=[True, True, True])
+        mock_rem = MagicMock(side_effect=IOError)
+        with patch.object(os.path, 'isabs', mock_t):
+            with patch.object(os.path, 'lexists', mock_lex):
                 with patch.dict(filestate.__opts__, {'test': False}):
                     comt = ('Failed to delete "{0}" in preparation for '
                             'forced move'.format(name))
-                    with patch.object(filestate.__salt__,
-                                      {'file.remove': mock_f},
-                                      MagicMock(side_effect=[IOError, True])):
-                        ret.update({'comment': comt, 'result': False})
+                    with patch.dict(filestate.__salt__,
+                                    {'file.remove': mock_rem}):
+                        ret.update({'name': name,
+                                    'comment': comt,
+                                    'result': False})
                         self.assertDictEqual(filestate.rename(name, source,
                                                               force=True), ret)
 
+        mock_lex = MagicMock(side_effect=[True, False, False])
+        with patch.object(os.path, 'isabs', mock_t):
+            with patch.object(os.path, 'lexists', mock_lex):
                 with patch.dict(filestate.__opts__, {'test': True}):
                     comt = ('File "{0}" is set to be moved to "{1}"'
                             .format(source, name))
-                    ret.update({'comment': comt, 'result': None})
+                    ret.update({'name': name,
+                                'comment': comt,
+                                'result': None})
                     self.assertDictEqual(filestate.rename(name, source), ret)
 
+        mock_lex = MagicMock(side_effect=[True, False, False])
+        with patch.object(os.path, 'isabs', mock_t):
+            with patch.object(os.path, 'lexists', mock_lex):
                 with patch.object(os.path, 'isdir', mock_f):
                     with patch.dict(filestate.__opts__, {'test': False}):
                         comt = ('The target directory /tmp is not present')
-                        ret.update({'comment': comt, 'result': False})
+                        ret.update({'name': name,
+                                    'comment': comt,
+                                    'result': False})
                         self.assertDictEqual(filestate.rename(name, source),
                                              ret)
 
+        mock_lex = MagicMock(side_effect=[True, False, False])
+        with patch.object(os.path, 'isabs', mock_t):
+            with patch.object(os.path, 'lexists', mock_lex):
                 with patch.object(os.path, 'isdir', mock_t):
                     with patch.object(os.path, 'islink', mock_f):
                         with patch.dict(filestate.__opts__, {'test': False}):
                             with patch.object(shutil, 'move',
-                                              MagicMock(side_effect=[IOError,
-                                                                     True])):
+                                              MagicMock(side_effect=IOError)):
                                 comt = ('Failed to move "{0}" to "{1}"'
                                         .format(source, name))
-                                ret.update({'comment': comt, 'result': False})
+                                ret.update({'name': name,
+                                            'comment': comt,
+                                            'result': False})
                                 self.assertDictEqual(filestate.rename(name,
                                                                       source),
                                                      ret)
 
+        mock_lex = MagicMock(side_effect=[True, False, False])
+        with patch.object(os.path, 'isabs', mock_t):
+            with patch.object(os.path, 'lexists', mock_lex):
+                with patch.object(os.path, 'isdir', mock_t):
+                    with patch.object(os.path, 'islink', mock_f):
+                        with patch.dict(filestate.__opts__, {'test': False}):
+                            with patch.object(shutil, 'move', MagicMock()):
                                 comt = ('Moved "{0}" to "{1}"'.format(source,
                                                                       name))
-                                ret.update({'comment': comt, 'result': True,
+                                ret.update({'name': name,
+                                            'comment': comt,
+                                            'result': True,
                                             'changes': {name: source}})
                                 self.assertDictEqual(filestate.rename(name,
                                                                       source),
