@@ -51,7 +51,7 @@ def init(opts):
         return False
 
 
-def ping(opts):
+def ping():
     '''
     Required.
     Ping the device on the other end of the connection
@@ -113,9 +113,7 @@ def package_install(name, **kwargs):
     '''
     cmd = 'pkg_install ' + name
     if 'version' in kwargs:
-        cmd += '/'+kwargs['version']
-    else:
-        cmd += '/1.0'
+        cmd += ' ' + kwargs['version']
 
     # Send the command to execute
     out, err = DETAILS['server'].sendline(cmd)
@@ -129,6 +127,21 @@ def package_remove(name):
     Remove a "package" on the ssh server
     '''
     cmd = 'pkg_remove ' + name
+
+    # Send the command to execute
+    out, err = DETAILS['server'].sendline(cmd)
+
+    # "scrape" the output and return the right fields as a dict
+    return parse(out)
+
+
+def service_list():
+    '''
+    Start a "service" on the ssh server
+
+    .. versionadded:: 2015.8.2
+    '''
+    cmd = 'ps'
 
     # Send the command to execute
     out, err = DETAILS['server'].sendline(cmd)
