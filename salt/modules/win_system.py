@@ -437,6 +437,50 @@ def get_computer_desc():
 get_computer_description = get_computer_desc
 
 
+def get_hostname():
+    '''
+    .. versionadded:: Boron
+
+    Get the hostname of the windows minion
+
+    :return:
+        Returns the hostname of the windows minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.get_hostname
+    '''
+    cmd = 'wmic computersystem get name'
+    ret = __salt__['cmd.run'](cmd=cmd)
+    _, hostname = ret.split("\n")
+    return hostname
+
+
+def set_hostname(hostname):
+    '''
+    .. versionadded:: Boron
+
+    Set the hostname of the windows minion, requires a restart before this
+    will be updated.
+
+    :param str hostname:
+        The hostname to set
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.set_hostname newhostname
+    '''
+    curr_hostname = get_hostname()
+    cmd = "wmic computersystem where name='{0}' call rename name='{1}'".format(curr_hostname, hostname)
+    ret = __salt__['cmd.run'](cmd=cmd)
+
+    return "successful" in ret
+
+
 def join_domain(
         domain=None,
         username=None,
