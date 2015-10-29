@@ -454,7 +454,7 @@ def get_hostname():
     '''
     cmd = 'wmic computersystem get name'
     ret = __salt__['cmd.run'](cmd=cmd)
-    _,hostname = ret.split("\n")
+    _, hostname = ret.split("\n")
     return hostname
 
 
