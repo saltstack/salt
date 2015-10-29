@@ -145,7 +145,7 @@ def hostname(name):
 
     current_hostname = __salt__['system.get_hostname']()
 
-    if current_hostname == name:
+    if current_hostname.upper() == name.upper():
         ret['comment'] = "Hostname is already set to '{0}'".format(name)
         return ret
 
