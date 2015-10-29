@@ -120,12 +120,16 @@ def chocolatey_version():
                     return __context__['chocolatey._version']
                 except Exception:
                     pass
+        return None
 
     # First try to find if we have a newer version of choco
     # which doesn't contain the help command,
     # else try for a legacy version
-    find_version(legacy=False)
-    find_version(legacy=True)
+    for legacy in [False, True]:
+        ver = find_version(legacy=legacy)
+        if ver is not None:
+            return ver
+
     raise CommandExecutionError('Unable to determine Chocolatey version')
 
 
