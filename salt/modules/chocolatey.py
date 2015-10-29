@@ -102,20 +102,34 @@ def chocolatey_version():
     '''
     if 'chocolatey._version' in __context__:
         return __context__['chocolatey._version']
-    cmd = [_find_chocolatey(__context__, __salt__)]
-    out = __salt__['cmd.run'](cmd, python_shell=False)
-    for line in out.splitlines():
-        line = line.lower()
-        if line.startswith('chocolatey v'):
-            __context__['chocolatey._version'] = line[12:]
-            return __context__['chocolatey._version']
-        elif line.startswith('version: '):
-            try:
-                __context__['chocolatey._version'] = \
-                    line.split(None, 1)[-1].strip("'")
+
+    def find_version(legacy=False):
+        cmd = [_find_chocolatey(__context__, __salt__)]
+        if legacy:
+            cmd.append('help')
+        out = __salt__['cmd.run'](cmd, python_shell=False)
+        for line in out.splitlines():
+            line = line.lower()
+            if line.startswith('chocolatey v'):
+                __context__['chocolatey._version'] = line[12:]
                 return __context__['chocolatey._version']
-            except Exception:
-                pass
+            elif line.startswith('version: '):
+                try:
+                    __context__['chocolatey._version'] = \
+                        line.split(None, 1)[-1].strip("'")
+                    return __context__['chocolatey._version']
+                except Exception:
+                    pass
+        return None
+
+    # First try to find if we have a newer version of choco
+    # which doesn't contain the help command,
+    # else try for a legacy version
+    for legacy in [False, True]:
+        ver = find_version(legacy=legacy)
+        if ver is not None:
+            return ver
+
     raise CommandExecutionError('Unable to determine Chocolatey version')
 
 
