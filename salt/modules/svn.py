@@ -18,16 +18,11 @@ def __virtual__():
     '''
     Only load if svn is installed
     '''
-    if utils.which('svn'):
+    if utils.which('svn') is None:
+        return (False,
+                'The svn execution module cannot be loaded: svn unavailable.')
+    else:
         return True
-    return False
-
-
-def _check_svn():
-    '''
-    Check for svn on this node.
-    '''
-    utils.check_or_die('svn')
 
 
 def _run_svn(cmd, cwd, user, username, password, opts, **kwargs):

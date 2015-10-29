@@ -24,26 +24,14 @@ def __virtual__():
     '''
     Only load if puppet is installed
     '''
-    if salt.utils.which('facter'):
+    unavailable_exes = ', '.join(exe for exe in ('facter', 'puppet')
+                                 if salt.utils.which(exe) is None)
+    if unavailable_exes:
+        return (False,
+                ('The puppet execution module cannot be loaded: '
+                 '{0} unavailable.'.format(unavailable_exes)))
+    else:
         return 'puppet'
-    return False
-
-
-def _check_puppet():
-    '''
-    Checks if puppet is installed
-    '''
-    # I thought about making this a virtual module, but then I realized that I
-    # would require the minion to restart if puppet was installed after the
-    # minion was started, and that would be rubbish
-    salt.utils.check_or_die('puppet')
-
-
-def _check_facter():
-    '''
-    Checks if facter is installed
-    '''
-    salt.utils.check_or_die('facter')
 
 
 def _format_fact(output):
@@ -95,7 +83,6 @@ class _Puppet(object):
         '''
         Format the command string to executed using cmd.run_all.
         '''
-
         cmd = 'puppet {subcmd} --vardir {vardir} --confdir {confdir}'.format(
             **self.__dict__
         )
@@ -154,7 +141,6 @@ def run(*args, **kwargs):
         salt '*' puppet.run debug
         salt '*' puppet.run apply /a/b/manifest.pp modulepath=/a/b/modules tags=basefiles::edit,apache::server
     '''
-    _check_puppet()
     puppet = _Puppet()
 
     if args:
@@ -209,8 +195,6 @@ def enable():
 
         salt '*' puppet.enable
     '''
-
-    _check_puppet()
     puppet = _Puppet()
 
     if os.path.isfile(puppet.disabled_lockfile):
@@ -244,7 +228,6 @@ def disable(message=None):
         salt '*' puppet.disable 'disabled for a good reason'
     '''
 
-    _check_puppet()
     puppet = _Puppet()
 
     if os.path.isfile(puppet.disabled_lockfile):
@@ -275,7 +258,6 @@ def status():
 
         salt '*' puppet.status
     '''
-    _check_puppet()
     puppet = _Puppet()
 
     if os.path.isfile(puppet.disabled_lockfile):
@@ -317,7 +299,6 @@ def summary():
         salt '*' puppet.summary
     '''
 
-    _check_puppet()
     puppet = _Puppet()
 
     try:
@@ -361,9 +342,6 @@ def plugin_sync():
 
         salt '*' puppet.plugin_sync
     '''
-
-    _check_puppet()
-
     ret = __salt__['cmd.run']('puppet plugin download')
 
     if not ret:
@@ -381,8 +359,6 @@ def facts(puppet=False):
 
         salt '*' puppet.facts
     '''
-    _check_facter()
-
     ret = {}
     opt_puppet = '--puppet' if puppet else ''
     output = __salt__['cmd.run']('facter {0}'.format(opt_puppet))
@@ -410,8 +386,6 @@ def fact(name, puppet=False):
 
         salt '*' puppet.fact kernel
     '''
-    _check_facter()
-
     opt_puppet = '--puppet' if puppet else ''
     ret = __salt__['cmd.run'](
             'facter {0} {1}'.format(opt_puppet, name),
