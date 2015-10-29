@@ -368,27 +368,28 @@ def _find_install_targets(name=None,
                 for name, version in desired.items()
                 if not (name in cur_pkgs and version in (None, cur_pkgs[name]))
             ])
-            problems = _preflight_check(not_installed, **kwargs)
-            comments = []
-            if problems.get('no_suggest'):
-                comments.append(
-                    'The following package(s) were not found, and no possible '
-                    'matches were found in the package db: '
-                    '{0}'.format(', '.join(sorted(problems['no_suggest'])))
-                )
-            if problems.get('suggest'):
-                for pkgname, suggestions in six.iteritems(problems['suggest']):
+            if not_installed:
+                problems = _preflight_check(not_installed, **kwargs)
+                comments = []
+                if problems.get('no_suggest'):
                     comments.append(
-                        'Package \'{0}\' not found (possible matches: {1})'
-                        .format(pkgname, ', '.join(suggestions))
+                        'The following package(s) were not found, and no possible '
+                        'matches were found in the package db: '
+                        '{0}'.format(', '.join(sorted(problems['no_suggest'])))
                     )
-            if comments:
-                if len(comments) > 1:
-                    comments.append('')
-                return {'name': name,
-                        'changes': {},
-                        'result': False,
-                        'comment': '. '.join(comments).rstrip()}
+                if problems.get('suggest'):
+                    for pkgname, suggestions in six.iteritems(problems['suggest']):
+                        comments.append(
+                            'Package \'{0}\' not found (possible matches: {1})'
+                            .format(pkgname, ', '.join(suggestions))
+                        )
+                if comments:
+                    if len(comments) > 1:
+                        comments.append('')
+                    return {'name': name,
+                            'changes': {},
+                            'result': False,
+                            'comment': '. '.join(comments).rstrip()}
 
     # Find out which packages will be targeted in the call to pkg.install
     targets = {}
