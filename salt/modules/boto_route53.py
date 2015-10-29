@@ -246,6 +246,13 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
     return ret
 
 
+def _munge_value(value, _type):
+    split_types = ['A', 'MX', 'AAAA', 'TXT', 'SRV', 'SPF', 'NS']
+    if _type in split_types:
+        return value.split(',')
+    return value
+
+
 def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                region=None, key=None, keyid=None, profile=None,
                wait_for_sync=True, split_dns=False, private_zone=False,
@@ -284,22 +291,23 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                 continue  # the while True; try again if not out of retries
             raise e
 
+    _value = _munge_value(value, _type)
     while rate_limit_retries > 0:
         try:
             if _type == 'A':
-                status = _zone.add_a(name, value, ttl, identifier)
+                status = _zone.add_a(name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
             elif _type == 'CNAME':
-                status = _zone.add_cname(name, value, ttl, identifier)
+                status = _zone.add_cname(name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
             elif _type == 'MX':
-                status = _zone.add_mx(name, value, ttl, identifier)
+                status = _zone.add_mx(name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
             else:
                 # add_record requires a ttl value, annoyingly.
                 if ttl is None:
                     ttl = 60
-                status = _zone.add_record(_type, name, value, ttl, identifier)
+                status = _zone.add_record(_type, name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
@@ -338,22 +346,23 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
         return False
     _type = record_type.upper()
 
+    _value = _munge_value(value, _type)
     while rate_limit_retries > 0:
         try:
             if _type == 'A':
-                status = _zone.update_a(name, value, ttl, identifier)
+                status = _zone.update_a(name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
             elif _type == 'CNAME':
-                status = _zone.update_cname(name, value, ttl, identifier)
+                status = _zone.update_cname(name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
             elif _type == 'MX':
-                status = _zone.update_mx(name, value, ttl, identifier)
+                status = _zone.update_mx(name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
             else:
                 old_record = _zone.find_records(name, _type)
                 if not old_record:
                     return False
-                status = _zone.update_record(old_record, value, ttl, identifier)
+                status = _zone.update_record(old_record, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
