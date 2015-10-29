@@ -522,20 +522,20 @@ class Pillar(object):
                                         mods,
                                         defaults
                                         )
-                            if nstate:
-                                if key:
-                                    nstate = {
-                                        key: nstate
-                                    }
+                                if nstate:
+                                    if key:
+                                        nstate = {
+                                            key: nstate
+                                        }
 
-                                state = merge(
-                                    state,
-                                    nstate,
-                                    self.merge_strategy,
-                                    self.opts.get('renderer', 'yaml'))
+                                    state = merge(
+                                        state,
+                                        nstate,
+                                        self.merge_strategy,
+                                        self.opts.get('renderer', 'yaml'))
 
-                            if err:
-                                errors += err
+                                if err:
+                                    errors += err
         return state, mods, errors
 
     def render_pillar(self, matches):
