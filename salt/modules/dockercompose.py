@@ -16,11 +16,9 @@ This module allows to deal with docker-compose file in a directory.
 
 This is  a first version only, the following commands are missing at the moment
 but will be built later on if the community is interested in this module:
-  - build
   - run
   - logs
   - port
-  - pull
   - scale
 
 Installation Prerequisites
@@ -73,6 +71,8 @@ Docker-compose method supported
  - kill
  - rm
  - ps
+ - pull
+ - build
 
 Functions
 ---------
@@ -88,6 +88,9 @@ Functions
     - :py:func:`dockercompose.kill <salt.modules.dockercompose.kill>`
     - :py:func:`dockercompose.rm <salt.modules.dockercompose.rm>`
     - :py:func:`dockercompose.up <salt.modules.dockercompose.up>`
+- Manage containers image:
+    - :py:func:`dockercompose.pull <salt.modules.dockercompose.pull>`
+    - :py:func:`dockercompose.build <salt.modules.dockercompose.build>`
 - Gather informations about containers:
     - :py:func:`dockercompose.ps <salt.modules.dockercompose.ps>`
 
@@ -303,6 +306,70 @@ def create(path, docker_compose):
                                     'Creating a docker-compose project failed, you must send a valid docker-compose file',
                                     None, None)
     return __standardize_result(True, 'Successfully created the docker-compose file', {'compose.base_dir': path}, None)
+
+
+def pull(path, service_names=None):
+    '''
+    Pull image for containers in the docker-compose file, service_names is a
+    python list, if omitted pull all images
+
+    path
+        Path where the docker-compose file is stored on the server
+    service_names
+        If specified will pull only the image for the specified services
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockercompose.pull /path/where/docker-compose/stored
+        salt myminion dockercompose.pull /path/where/docker-compose/stored '[janus]'
+    '''
+
+    project = __load_project(path)
+    if isinstance(project, dict):
+        return project
+    else:
+        try:
+            project.pull(service_names)
+        except Exception as inst:
+            return __handle_except(inst)
+    return __standardize_result(True, 'Pulling containers images via docker-compose succeeded',
+                                None, None)
+
+
+def build(path, service_names=None):
+    '''
+    Build image for containers in the docker-compose file, service_names is a
+    python list, if omitted build images for all containers. Please note
+    that at the moment the module does not allow you to upload your Dockerfile,
+    nor any other file you could need with your docker-compose.yml, you will
+    have to make sure the files you need are actually in the directory sepcified
+    in the `build` keyword
+
+    path
+        Path where the docker-compose file is stored on the server
+    service_names
+        If specified will pull only the image for the specified services
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockercompose.build /path/where/docker-compose/stored
+        salt myminion dockercompose.build /path/where/docker-compose/stored '[janus]'
+    '''
+
+    project = __load_project(path)
+    if isinstance(project, dict):
+        return project
+    else:
+        try:
+            project.build(service_names)
+        except Exception as inst:
+            return __handle_except(inst)
+    return __standardize_result(True, 'Building containers images via docker-compose succeeded',
+                                None, None)
 
 
 def restart(path, service_names=None):
