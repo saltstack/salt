@@ -611,34 +611,39 @@ class ReqServer(object):
                 os.remove(dfn)
             except os.error:
                 pass
-        self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
-        req_channels = []
-        tcp_only = True
-        for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.transport.server.ReqServerChannel.factory(opts)
-            chan.pre_fork(self.process_manager)
-            req_channels.append(chan)
-            if transport != 'tcp':
-                tcp_only = False
+        # Reset signals to default ones before adding processes to the process
+        # manager. We don't want the processes being started to inherit those
+        # signal handlers
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
-        kwargs = {}
-        if salt.utils.is_windows():
-            kwargs['log_queue'] = self.log_queue
-            # Use one worker thread if the only TCP transport is set up on Windows. See #27188.
-            if tcp_only:
-                log.warning("TCP transport is currently supporting the only 1 worker on Windows.")
-                self.opts['worker_threads'] = 1
+            req_channels = []
+            tcp_only = True
+            for transport, opts in iter_transport_opts(self.opts):
+                chan = salt.transport.server.ReqServerChannel.factory(opts)
+                chan.pre_fork(self.process_manager)
+                req_channels.append(chan)
+                if transport != 'tcp':
+                    tcp_only = False
 
-        for ind in range(int(self.opts['worker_threads'])):
-            self.process_manager.add_process(MWorker,
-                                             args=(self.opts,
-                                                   self.master_key,
-                                                   self.key,
-                                                   req_channels,
-                                                   ),
-                                             kwargs=kwargs
-                                             )
+            kwargs = {}
+            if salt.utils.is_windows():
+                kwargs['log_queue'] = self.log_queue
+                # Use one worker thread if the only TCP transport is set up on Windows. See #27188.
+                if tcp_only:
+                    log.warning("TCP transport is currently supporting the only 1 worker on Windows.")
+                    self.opts['worker_threads'] = 1
+
+            for ind in range(int(self.opts['worker_threads'])):
+                self.process_manager.add_process(MWorker,
+                                                args=(self.opts,
+                                                    self.master_key,
+                                                    self.key,
+                                                    req_channels,
+                                                    ),
+                                                kwargs=kwargs
+                                                )
         try:
             self.process_manager.run()
         except (KeyboardInterrupt, SystemExit) as exc:
