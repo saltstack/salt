@@ -42,6 +42,18 @@ def info(name):
     return ret
 
 
+def set_expire(name, expire):
+    return __salt__['user.update'](name, expiration_date=expire)
+
+
+def force_password_change(name):
+    return __salt__['user.update'](name, expired=True)
+
+
+def unlock_account(name):
+    return __salt__['user.update'](name, unlock_account=True)
+
+
 def set_password(name, password):
     '''
     Set the password for a named user.
@@ -52,7 +64,8 @@ def set_password(name, password):
 
         salt '*' shadow.set_password root mysecretpassword
     '''
-    cmd = ['net', 'user', name, password]
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    return __salt__['user.update'](name=name, password=password)
 
-    return not ret['retcode']
+
+def info(name):
+    return __salt__['user.info'](name=name)
