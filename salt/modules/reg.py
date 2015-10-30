@@ -35,7 +35,6 @@ Values/Entries are name/data pairs. There can be many values in a key. The
 # Import python libs
 from __future__ import absolute_import
 import logging
-import struct
 
 # Import third party libs
 try:
