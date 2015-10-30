@@ -82,7 +82,8 @@ def managed(name,
         Pass `--upgrade` to `pip install`.
 
 
-    Also accepts any kwargs that the virtualenv module will.
+    Also accepts any kwargs that the virtualenv module will. 
+     However, some kwargs require `- distribute: True`
 
     .. code-block:: yaml
 
