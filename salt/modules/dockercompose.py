@@ -78,6 +78,7 @@ Functions
 ---------
 - docker-compose.yml management
     - :py:func:`dockercompose.create <salt.modules.dockercompose.create>`
+    - :py:func:`dockercompose.get <salt.modules.dockercompose.get>`
 - Manage containers
     - :py:func:`dockercompose.restart <salt.modules.dockercompose.restart>`
     - :py:func:`dockercompose.stop <salt.modules.dockercompose.stop>`
@@ -154,6 +155,30 @@ def __standardize_result(status, message, data=None, debug_msg=None):
         result['debug'] = debug_msg
 
     return result
+
+
+def __read_docker_compose(path):
+    '''
+    Read the docker-compose.yml file if it exists in the directory
+
+    :param path:
+    :return:
+    '''
+    if os.path.isfile(os.path.join(path, dc_filename)) is False:
+        return __standardize_result(False,
+                                    'Path does not exist or docker-compose.yml is not present',
+                                    None, None)
+    f = open(os.path.join(path, dc_filename), 'r')
+    result = {'docker-compose.yml': ''}
+    if f:
+        for line in f:
+            result['docker-compose.yml'] += line
+        f.close()
+    else:
+        return __standardize_result(False, 'Could not read docker-compose.yml file.',
+                                    None, None)
+    return __standardize_result(True, 'Reading content of docker-compose.yml file',
+                                result, None)
 
 
 def __write_docker_compose(path, docker_compose):
@@ -235,6 +260,22 @@ def _get_convergence_plans(project, service_names):
         elif action == 'noop':
             ret[cont] = 'Container is up to date'
     return ret
+
+
+def get(path):
+    '''
+    Get the content of the docker-compose file into a directory
+
+    path
+        Path where the docker-compose file is stored on the server
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockercompose.get /path/where/docker-compose/stored
+    '''
+    return __read_docker_compose(path)
 
 
 def create(path, docker_compose):
