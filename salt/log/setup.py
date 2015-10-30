@@ -747,13 +747,14 @@ def get_multiprocessing_logging_queue():
 
 def setup_multiprocessing_logging_listener(queue=None):
     global __MP_LOGGING_QUEUE_PROCESS
+    global __MP_LOGGING_LISTENER_CONFIGURED
+    if __MP_LOGGING_LISTENER_CONFIGURED is True:
+        return
     __MP_LOGGING_QUEUE_PROCESS = multiprocessing.Process(
         target=__process_multiprocessing_logging_queue,
         args=(queue or get_multiprocessing_logging_queue(),)
     )
     __MP_LOGGING_QUEUE_PROCESS.start()
-
-    global __MP_LOGGING_LISTENER_CONFIGURED
     __MP_LOGGING_LISTENER_CONFIGURED = True
 
 
