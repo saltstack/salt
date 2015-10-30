@@ -256,6 +256,7 @@ dictionary, othewise it will be ignored.
 # Import python libs
 from __future__ import absolute_import, with_statement
 import os
+import sys
 import time
 import signal
 import datetime
@@ -276,6 +277,7 @@ import salt.minion
 import salt.payload
 import salt.syspaths
 import salt.exceptions
+import salt.log.setup as log_setup
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running, default_signals, SignalHandlingMultiprocessingProcess
 
@@ -512,19 +514,20 @@ class Schedule(object):
             log.info(
                 'Running Job: {0}.'.format(name)
             )
-            if self.opts.get('multiprocessing', True):
+            multiprocessing_enabled = self.opts.get('multiprocessing', True)
+            if multiprocessing_enabled:
                 thread_cls = SignalHandlingMultiprocessingProcess
             else:
                 thread_cls = threading.Thread
-            proc = thread_cls(target=self.handle_func, args=(func, data))
-            if self.opts.get('multiprocessing', True):
+            proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
+            if multiprocessing_enabled:
                 with default_signals(signal.SIGINT, signal.SIGTERM):
                     # Reset current signals before starting the process in
                     # order not to inherit the current signal handlers
                     proc.start()
             else:
                 proc.start()
-            if self.opts.get('multiprocessing', True):
+            if multiprocessing_enabled:
                 proc.join()
 
     def enable_schedule(self):
@@ -596,7 +599,7 @@ class Schedule(object):
         evt.fire_event({'complete': True},
                        tag='/salt/minion/minion_schedule_saved')
 
-    def handle_func(self, func, data):
+    def handle_func(self, multiprocessing_enabled, func, data):
         '''
         Execute this method in a multiprocess or thread
         '''
@@ -668,7 +671,15 @@ class Schedule(object):
                         except OSError:
                             log.info('Unable to remove file: {0}.'.format(fn_))
 
+        if multiprocessing_enabled and not salt.utils.is_windows():
+            # Shutdown the multiprocessing before daemonizing
+            log_setup.shutdown_multiprocessing_logging()
+
         salt.utils.daemonize_if(self.opts)
+
+        if multiprocessing_enabled and not salt.utils.is_windows():
+            # Reconfigure multiprocessing logging after daemonizing
+            log_setup.setup_multiprocessing_logging()
 
         ret['pid'] = os.getpid()
 
@@ -1149,6 +1160,8 @@ class Schedule(object):
                              'job {0}, defaulting to 1.'.format(job))
                     data['maxrunning'] = 1
 
+            multiprocessing_enabled = self.opts.get('multiprocessing', True)
+
             if salt.utils.is_windows():
                 # Temporarily stash our function references.
                 # You can't pickle function references, and pickling is
@@ -1158,13 +1171,13 @@ class Schedule(object):
                 returners = self.returners
                 self.returners = {}
             try:
-                if self.opts.get('multiprocessing', True):
+                if multiprocessing_enabled:
                     thread_cls = SignalHandlingMultiprocessingProcess
                 else:
                     thread_cls = threading.Thread
-                proc = thread_cls(target=self.handle_func, args=(func, data))
+                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
 
-                if self.opts.get('multiprocessing', True):
+                if multiprocessing_enabled:
                     with default_signals(signal.SIGINT, signal.SIGTERM):
                         # Reset current signals before starting the process in
                         # order not to inherit the current signal handlers
@@ -1172,7 +1185,7 @@ class Schedule(object):
                 else:
                     proc.start()
 
-                if self.opts.get('multiprocessing', True):
+                if multiprocessing_enabled:
                     proc.join()
             finally:
                 self.intervals[job] = now
