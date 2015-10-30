@@ -1,6 +1,6 @@
 
 # -*- coding: utf-8 -*-
-"""
+'''
 Module to import docker-compose via saltstack
 
 .. versionadded:: Boron
@@ -22,6 +22,20 @@ but will be built later on if the community is interested in this module:
   - port
   - pull
   - scale
+
+Installation Prerequisites
+--------------------------
+
+This execution module requires at least version 1.4.0 of both docker-compose_ and
+Docker_. docker-compose can easily be installed using :py:func:`pip.install
+<salt.modules.pip.install>`:
+
+.. code-block:: bash
+
+    salt myminion pip.install docker-compose>=1.5.0
+
+.. _docker-compose: https://pypi.python.org/pypi/docker-compose
+.. _Docker: https://www.docker.com/
 
 
 How to use this module?
@@ -78,7 +92,7 @@ Functions
 
 Detailed Function Documentation
 -------------------------------
-"""
+'''
 
 from __future__ import absolute_import
 
@@ -100,10 +114,10 @@ MIN_DOCKERCOMPOSE = (1, 5, 0)
 VERSION_RE = r'([\d.]+)'
 
 log = logging.getLogger(__name__)
-debug = True
+debug = False
 
 __virtualname__ = 'dockercompose'
-dc_filename = "docker-compose.yml"
+dc_filename = 'docker-compose.yml'
 
 
 def __virtual__():
@@ -114,12 +128,12 @@ def __virtual__():
             if MIN_DOCKERCOMPOSE >= version:
                 return __virtualname__
         else:
-            log.critical("Minimum version of docker-compose>=1.5.0")
+            log.critical('Minimum version of docker-compose>=1.5.0')
     return False
 
 
 def __standardize_result(status, message, data=None, debug_msg=None):
-    """
+    '''
     Standardizes all responses
 
     :param status:
@@ -127,7 +141,7 @@ def __standardize_result(status, message, data=None, debug_msg=None):
     :param data:
     :param debug_msg:
     :return:
-    """
+    '''
     result = {
         'status': status,
         'message': message
@@ -143,7 +157,7 @@ def __standardize_result(status, message, data=None, debug_msg=None):
 
 
 def __write_docker_compose(path, docker_compose):
-    """
+    '''
     Write docker-compose to a temp directory
     in order to use it with docker-compose ( config check )
 
@@ -153,7 +167,7 @@ def __write_docker_compose(path, docker_compose):
         contains the docker-compose file
 
     :return:
-    """
+    '''
 
     if os.path.isdir(path) is False:
         os.mkdir(path)
@@ -163,7 +177,7 @@ def __write_docker_compose(path, docker_compose):
         f.close()
     else:
         return __standardize_result(False,
-                                    "Could not write docker-compose file in {0}".format(path),
+                                    'Could not write docker-compose file in {0}'.format(path),
                                     None, None)
     project = __load_project(path)
     if isinstance(project, dict):
@@ -173,12 +187,12 @@ def __write_docker_compose(path, docker_compose):
 
 
 def __load_project(path):
-    """
+    '''
     Load a docker-compose project from path
 
     :param path:
     :return:
-    """
+    '''
     try:
         project = get_project(path)
     except Exception as inst:
@@ -187,44 +201,44 @@ def __load_project(path):
 
 
 def __handle_except(inst):
-    """
+    '''
     Handle exception and return a standart result
 
     :param inst:
     :return:
-    """
+    '''
     return __standardize_result(False,
-                                "Docker-compose command {0} failed".
+                                'Docker-compose command {0} failed'.
                                 format(inspect.stack()[1][3]),
-                                "{0}".format(inst), None)
+                                '{0}'.format(inst), None)
 
 
 def _get_convergence_plans(project, service_names):
-    """
+    '''
     Get action executed for each container
 
     :param project:
     :param service_names:
     :return:
-    """
+    '''
     ret = {}
     plans = project._get_convergence_plans(project.get_services(service_names),
                                            ConvergenceStrategy.changed)
     for cont in plans:
         (action, container) = plans[cont]
         if action == 'create':
-            ret[cont] = "Creating container"
+            ret[cont] = 'Creating container'
         elif action == 'recreate':
-            ret[cont] = "Re-creating container"
+            ret[cont] = 'Re-creating container'
         elif action == 'start':
-            ret[cont] = "Starting container"
+            ret[cont] = 'Starting container'
         elif action == 'noop':
-            ret[cont] = "Container is up to date"
+            ret[cont] = 'Container is up to date'
     return ret
 
 
 def create(path, docker_compose):
-    """
+    '''
     Create and validate a docker-compose file into a directory
 
     path
@@ -238,20 +252,20 @@ def create(path, docker_compose):
     .. code-block:: bash
 
         salt myminion dockercompose.create /path/to/docker-compose.yml content
-    """
+    '''
     if docker_compose:
         ret = __write_docker_compose(path, docker_compose)
         if isinstance(ret, dict):
             return ret
     else:
         return __standardize_result(False,
-                                    "Creating a docker-compose project failed, you must send a valid docker-compose file",
+                                    'Creating a docker-compose project failed, you must send a valid docker-compose file',
                                     None, None)
-    return __standardize_result(True, "Successfully created the docker-compose file", {'compose.base_dir': path}, None)
+    return __standardize_result(True, 'Successfully created the docker-compose file', {'compose.base_dir': path}, None)
 
 
 def restart(path, service_names=None):
-    """
+    '''
     Restart container(s) in the docker-compose file, service_names is a python
     list, if omitted restart all containers
 
@@ -267,7 +281,7 @@ def restart(path, service_names=None):
 
         salt myminion dockercompose.restart /path/to/docker-compose.yml
         salt myminion dockercompose.restart /path/to/docker-compose.yml '[janus]'
-    """
+    '''
 
     project = __load_project(path)
     debug_ret = {}
@@ -289,7 +303,7 @@ def restart(path, service_names=None):
 
 
 def stop(path, service_names=None):
-    """
+    '''
     Stop running containers in the docker-compose file, service_names is a python
     list, if omitted stop all containers
 
@@ -304,7 +318,7 @@ def stop(path, service_names=None):
 
         salt myminion dockercompose.stop /path/to/docker-compose.yml
         salt myminion dockercompose.stop  /path/to/docker-compose.yml '[janus]'
-    """
+    '''
 
     project = __load_project(path)
     debug_ret = {}
@@ -326,7 +340,7 @@ def stop(path, service_names=None):
 
 
 def pause(path, service_names=None):
-    """
+    '''
     Pause running containers in the docker-compose file, service_names is a python
     list, if omitted pause all containers
 
@@ -341,7 +355,7 @@ def pause(path, service_names=None):
 
         salt myminion dockercompose.pause /path/to/docker-compose.yml
         salt myminion dockercompose.pause /path/to/docker-compose.yml '[janus]'
-    """
+    '''
 
     project = __load_project(path)
     debug_ret = {}
@@ -363,7 +377,7 @@ def pause(path, service_names=None):
 
 
 def unpause(path, service_names=None):
-    """
+    '''
     Un-Pause containers in the docker-compose file, service_names is a python
     list, if omitted unpause all containers
 
@@ -378,7 +392,7 @@ def unpause(path, service_names=None):
 
         salt myminion dockercompose.pause /path/to/docker-compose.yml
         salt myminion dockercompose.pause /path/to/docker-compose.yml '[janus]'
-    """
+    '''
 
     project = __load_project(path)
     debug_ret = {}
@@ -400,7 +414,7 @@ def unpause(path, service_names=None):
 
 
 def start(path, service_names=None):
-    """
+    '''
     Start containers in the docker-compose file, service_names is a python
     list, if omitted start all containers
 
@@ -415,7 +429,7 @@ def start(path, service_names=None):
 
         salt myminion dockercompose.start /path/to/docker-compose.yml
         salt myminion dockercompose.start /path/to/docker-compose.yml '[janus]'
-    """
+    '''
 
     project = __load_project(path)
     debug_ret = {}
@@ -437,7 +451,7 @@ def start(path, service_names=None):
 
 
 def kill(path, service_names=None):
-    """
+    '''
     Kill containers in the docker-compose file, service_names is a python
     list, if omitted kill all containers
 
@@ -452,7 +466,7 @@ def kill(path, service_names=None):
 
         salt myminion dockercompose.kill /path/to/docker-compose.yml
         salt myminion dockercompose.kill /path/to/docker-compose.yml '[janus]'
-    """
+    '''
 
     project = __load_project(path)
     debug_ret = {}
@@ -474,7 +488,7 @@ def kill(path, service_names=None):
 
 
 def rm(path, service_names=None):
-    """
+    '''
     Remove stopped containers in the docker-compose file, service_names is a python
     list, if omitted remove all stopped containers
 
@@ -489,7 +503,7 @@ def rm(path, service_names=None):
 
         salt myminion dockercompose.rm /path/to/docker-compose.yml
         salt myminion dockercompose.rm /path/to/docker-compose.yml '[janus]'
-    """
+    '''
 
     project = __load_project(path)
     if isinstance(project, dict):
@@ -503,7 +517,7 @@ def rm(path, service_names=None):
 
 
 def ps(path):
-    """
+    '''
     List all running containers and report some information about them
 
     path
@@ -514,7 +528,7 @@ def ps(path):
     .. code-block:: bash
 
         salt myminion dockercompose.ps /path/to/docker-compose.yml
-    """
+    '''
 
     project = __load_project(path)
     result = {}
@@ -536,11 +550,11 @@ def ps(path):
                 'state': container.human_readable_state,
                 'ports': container.human_readable_ports,
             }
-    return __standardize_result(True, "Listing docker-compose containers", result, None)
+    return __standardize_result(True, 'Listing docker-compose containers', result, None)
 
 
 def up(path, service_names=None):
-    """
+    '''
     Create and start containers defined in the the docker-compose.yml file
     located in path, service_names is a python list, if omitted create and
     start all containers
@@ -556,7 +570,7 @@ def up(path, service_names=None):
 
         salt myminion dockercompose.up /path/to/docker-compose.yml
         salt myminion dockercompose.up /path/to/docker-compose.yml '[janus]'
-    """
+    '''
 
     debug_ret = {}
     project = __load_project(path)
