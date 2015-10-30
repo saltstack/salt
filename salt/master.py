@@ -659,11 +659,7 @@ class ReqServer(object):
         '''
         Start up the ReqServer
         '''
-        try:
-            self.__bind()
-        except KeyboardInterrupt:
-            log.warn('Stopping the Salt Maste ReqServer')
-            raise SystemExit('\nExiting on Ctrl-c')
+        self.__bind()
 
     def destroy(self):
         if hasattr(self, 'clients') and self.clients.closed is False:
@@ -676,6 +672,8 @@ class ReqServer(object):
             self.context.term()
         # Also stop the workers
         if hasattr(self, 'process_manager'):
+            self.process_manager.stop_restarting()
+            self.process_manager.send_signal_to_processes(signal.SIGTERM)
             self.process_manager.kill_children()
 
     def __del__(self):
