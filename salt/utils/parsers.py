@@ -1589,8 +1589,9 @@ class MasterOptionParser(six.with_metaclass(OptionParserMeta,
         Check if a pid file exists and if it is associated with
         a running process.
         '''
-        if self.check_pidfile():
-            return self.is_daemonized(self.get_pidfile())
+        pid = self.get_pidfile()
+        if self.check_pidfile() and self.is_daemonized(pid) and not os.getppid() == pid:
+            return True
 
 
 class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser)):  # pylint: disable=no-init
