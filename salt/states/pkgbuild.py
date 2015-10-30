@@ -56,8 +56,8 @@ def built(
         dest_dir,
         spec,
         sources,
-        template,
         tgt,
+        template=None,
         deps=None,
         env=None,
         results=None,
@@ -82,11 +82,15 @@ def built(
     sources
         The list of package sources
 
-    template
-        Set to run the spec file through a templating engine
-
     tgt
         The target platform to run the build on
+
+    template
+        Run the spec file through a templating engine
+
+        .. versionchanged:: 2015.8.2
+            This argument is now optional, allowing for no templating engine to
+            be used if none is desired.
 
     deps
         Packages required to ensure that the named package is built
