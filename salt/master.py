@@ -732,10 +732,6 @@ class MWorker(SignalHandlingMultiprocessingProcess):
                 'log_queue': self.log_queue,
                 'secrets': SMaster.secrets}
 
-    def _handle_signals(self, signum, sigframe):
-        self.io_loop.add_callback(self.io_loop.stop)
-        super(MWorker, self)._handle_signals(signum, sigframe)
-
     def __bind(self):
         '''
         Bind to the local port
