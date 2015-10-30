@@ -251,7 +251,7 @@ def create(path, docker_compose):
 
     .. code-block:: bash
 
-        salt myminion dockercompose.create /path/to/docker-compose.yml content
+        salt myminion dockercompose.create /path/where/docker-compose/stored content
     '''
     if docker_compose:
         ret = __write_docker_compose(path, docker_compose)
@@ -279,8 +279,8 @@ def restart(path, service_names=None):
 
     .. code-block:: bash
 
-        salt myminion dockercompose.restart /path/to/docker-compose.yml
-        salt myminion dockercompose.restart /path/to/docker-compose.yml '[janus]'
+        salt myminion dockercompose.restart /path/where/docker-compose/stored
+        salt myminion dockercompose.restart /path/where/docker-compose/stored '[janus]'
     '''
 
     project = __load_project(path)
@@ -316,8 +316,8 @@ def stop(path, service_names=None):
 
     .. code-block:: bash
 
-        salt myminion dockercompose.stop /path/to/docker-compose.yml
-        salt myminion dockercompose.stop  /path/to/docker-compose.yml '[janus]'
+        salt myminion dockercompose.stop /path/where/docker-compose/stored
+        salt myminion dockercompose.stop  /path/where/docker-compose/stored '[janus]'
     '''
 
     project = __load_project(path)
@@ -353,8 +353,8 @@ def pause(path, service_names=None):
 
     .. code-block:: bash
 
-        salt myminion dockercompose.pause /path/to/docker-compose.yml
-        salt myminion dockercompose.pause /path/to/docker-compose.yml '[janus]'
+        salt myminion dockercompose.pause /path/where/docker-compose/stored
+        salt myminion dockercompose.pause /path/where/docker-compose/stored '[janus]'
     '''
 
     project = __load_project(path)
@@ -390,8 +390,8 @@ def unpause(path, service_names=None):
 
     .. code-block:: bash
 
-        salt myminion dockercompose.pause /path/to/docker-compose.yml
-        salt myminion dockercompose.pause /path/to/docker-compose.yml '[janus]'
+        salt myminion dockercompose.pause /path/where/docker-compose/stored
+        salt myminion dockercompose.pause /path/where/docker-compose/stored '[janus]'
     '''
 
     project = __load_project(path)
@@ -427,8 +427,8 @@ def start(path, service_names=None):
 
     .. code-block:: bash
 
-        salt myminion dockercompose.start /path/to/docker-compose.yml
-        salt myminion dockercompose.start /path/to/docker-compose.yml '[janus]'
+        salt myminion dockercompose.start /path/where/docker-compose/stored
+        salt myminion dockercompose.start /path/where/docker-compose/stored '[janus]'
     '''
 
     project = __load_project(path)
@@ -464,8 +464,8 @@ def kill(path, service_names=None):
 
     .. code-block:: bash
 
-        salt myminion dockercompose.kill /path/to/docker-compose.yml
-        salt myminion dockercompose.kill /path/to/docker-compose.yml '[janus]'
+        salt myminion dockercompose.kill /path/where/docker-compose/stored
+        salt myminion dockercompose.kill /path/where/docker-compose/stored '[janus]'
     '''
 
     project = __load_project(path)
@@ -501,8 +501,8 @@ def rm(path, service_names=None):
 
     .. code-block:: bash
 
-        salt myminion dockercompose.rm /path/to/docker-compose.yml
-        salt myminion dockercompose.rm /path/to/docker-compose.yml '[janus]'
+        salt myminion dockercompose.rm /path/where/docker-compose/stored
+        salt myminion dockercompose.rm /path/where/docker-compose/stored '[janus]'
     '''
 
     project = __load_project(path)
@@ -527,7 +527,7 @@ def ps(path):
 
     .. code-block:: bash
 
-        salt myminion dockercompose.ps /path/to/docker-compose.yml
+        salt myminion dockercompose.ps /path/where/docker-compose/stored
     '''
 
     project = __load_project(path)
@@ -568,8 +568,8 @@ def up(path, service_names=None):
 
     .. code-block:: bash
 
-        salt myminion dockercompose.up /path/to/docker-compose.yml
-        salt myminion dockercompose.up /path/to/docker-compose.yml '[janus]'
+        salt myminion dockercompose.up /path/where/docker-compose/stored
+        salt myminion dockercompose.up /path/where/docker-compose/stored '[janus]'
     '''
 
     debug_ret = {}
