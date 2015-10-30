@@ -254,9 +254,10 @@ dictionary, othewise it will be ignored.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
 import os
 import time
+import signal
 import datetime
 import itertools
 import threading
@@ -276,7 +277,7 @@ import salt.payload
 import salt.syspaths
 import salt.exceptions
 from salt.utils.odict import OrderedDict
-from salt.utils.process import os_is_running, MultiprocessingProcess
+from salt.utils.process import os_is_running, default_signals, SignalHandlingMultiprocessingProcess
 
 # Import 3rd-party libs
 import yaml
@@ -512,11 +513,17 @@ class Schedule(object):
                 'Running Job: {0}.'.format(name)
             )
             if self.opts.get('multiprocessing', True):
-                thread_cls = MultiprocessingProcess
+                thread_cls = SignalHandlingMultiprocessingProcess
             else:
                 thread_cls = threading.Thread
             proc = thread_cls(target=self.handle_func, args=(func, data))
-            proc.start()
+            if self.opts.get('multiprocessing', True):
+                with default_signals(signal.SIGINT, signal.SIGTERM):
+                    # Reset current signals before starting the process in
+                    # order not to inherit the current signal handlers
+                    proc.start()
+            else:
+                proc.start()
             if self.opts.get('multiprocessing', True):
                 proc.join()
 
@@ -1152,11 +1159,19 @@ class Schedule(object):
                 self.returners = {}
             try:
                 if self.opts.get('multiprocessing', True):
-                    thread_cls = MultiprocessingProcess
+                    thread_cls = SignalHandlingMultiprocessingProcess
                 else:
                     thread_cls = threading.Thread
                 proc = thread_cls(target=self.handle_func, args=(func, data))
-                proc.start()
+
+                if self.opts.get('multiprocessing', True):
+                    with default_signals(signal.SIGINT, signal.SIGTERM):
+                        # Reset current signals before starting the process in
+                        # order not to inherit the current signal handlers
+                        proc.start()
+                else:
+                    proc.start()
+
                 if self.opts.get('multiprocessing', True):
                     proc.join()
             finally:
