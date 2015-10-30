@@ -277,6 +277,7 @@ import salt.payload
 import salt.syspaths
 import salt.exceptions
 import salt.log.setup as log_setup
+import salt.defaults.exitcodes
 from salt.utils.odict import OrderedDict
 from salt.utils.process import os_is_running, default_signals, SignalHandlingMultiprocessingProcess
 
@@ -623,7 +624,7 @@ class Schedule(object):
                 log.warning('schedule: The metadata parameter must be '
                             'specified as a dictionary.  Ignoring.')
 
-        salt.utils.appendproctitle(ret['jid'])
+        salt.utils.appendproctitle('{0} {1}'.format(self.__class__.__name__, ret['jid']))
 
         proc_fn = os.path.join(
             salt.minion.get_proc_dir(self.opts['cachedir']),
@@ -766,6 +767,10 @@ class Schedule(object):
                     # Otherwise, failing to delete this file is not something
                     # we can cleanly handle.
                     raise
+            finally:
+                if multiprocessing_enabled:
+                    # Let's make sure we exit the process!
+                    exit(salt.defaults.exitcodes.EX_GENERIC)
 
     def eval(self):
         '''
