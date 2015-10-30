@@ -237,7 +237,8 @@ def _run(cmd,
          pillarenv=None,
          pillar_override=None,
          use_vt=False,
-         password=None):
+         password=None,
+         **kwargs):
     '''
     Do the DRY thing and only call subprocess.Popen() once
     '''
