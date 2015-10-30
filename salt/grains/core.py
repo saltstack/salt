@@ -1482,6 +1482,7 @@ def fqdn_ip6():
 def ip_interfaces():
     '''
     Provide a dict of the connected interfaces and their ip addresses
+    The addresses will be passed as a list for each interface
     '''
     # Provides:
     #   ip_interfaces
@@ -1509,6 +1510,7 @@ def ip_interfaces():
 def ip4_interfaces():
     '''
     Provide a dict of the connected interfaces and their ip4 addresses
+    The addresses will be passed as a list for each interface
     '''
     # Provides:
     #   ip_interfaces
@@ -1533,6 +1535,7 @@ def ip4_interfaces():
 def ip6_interfaces():
     '''
     Provide a dict of the connected interfaces and their ip6 addresses
+    The addresses will be passed as a list for each interface
     '''
     # Provides:
     #   ip_interfaces
