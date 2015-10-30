@@ -73,7 +73,7 @@ def get_(key, recurse=False, profile=None):
     client = __utils__['etcd_util.get_conn'](__opts__, profile)
     try:
         result = client.get(key)
-    except KeyError as err:
+    except ValueError as err:
         log.error('etcd: {0}'.format(err))
         return ''
     except Exception:
