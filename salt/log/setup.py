@@ -850,6 +850,8 @@ def patch_python_logging_handlers():
 
 
 def __process_multiprocessing_logging_queue(queue):
+    import salt.utils
+    salt.utils.appendproctitle('MultiprocessingLoggingQueue')
     while True:
         try:
             record = queue.get()
