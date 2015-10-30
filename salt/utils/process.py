@@ -444,3 +444,23 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
 
     def __setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+
+
+class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
+    def __init__(self, *args, **kwargs):
+        multiprocessing.util.register_after_fork(self, SignalHandlingMultiprocessingProcess.__setup_signals)
+        super(SignalHandlingMultiprocessingProcess, self).__init__(*args, **kwargs)
+
+    def __setup_signals(self):
+        signal.signal(signal.SIGINT, self._handle_signals)
+        signal.signal(signal.SIGTERM, self._handle_signals)
+
+    def _handle_signals(self, signum, sigframe):
+        msg = '{0} received a '.format(self.__class__.__name__)
+        if signum == signal.SIGINT:
+            msg += 'SIGINT'
+        elif signum == signal.SIGTERM:
+            msg += 'SIGTERM'
+        msg += '. Exiting'
+        log.debug(msg)
+        exit(0)
