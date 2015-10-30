@@ -92,6 +92,7 @@ import salt.utils.error
 import salt.utils.zeromq
 import salt.defaults.exitcodes
 import salt.cli.daemons
+import salt.log.setup
 
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.executors import FUNCTION_EXECUTORS
@@ -146,7 +147,7 @@ def resolve_dns(opts):
                     import salt.log
                     msg = ('Master hostname: \'{0}\' not found. Retrying in {1} '
                            'seconds').format(opts['master'], opts['retry_dns'])
-                    if salt.log.is_console_configured():
+                    if salt.log.setup.is_console_configured():
                         log.error(msg)
                     else:
                         print('WARNING: {0}'.format(msg))
@@ -986,7 +987,7 @@ class Minion(MinionBase):
             )
         process.start()
         # TODO: remove the windows specific check?
-        if not sys.platform.startswith('win') and self.opts['multiprocessing']:
+        if self.opts['multiprocessing'] and not salt.utils.is_windows():
             # we only want to join() immediately if we are daemonizing a process
             process.join()
         else:
@@ -1019,11 +1020,11 @@ class Minion(MinionBase):
         # multiprocessing communication.
         if sys.platform.startswith('win') and \
                 opts['multiprocessing'] and \
-                not salt.log.is_logging_configured():
+                not salt.log.setup.is_logging_configured():
             # We have to re-init the logging system for Windows
-            salt.log.setup_console_logger(log_level=opts.get('log_level', 'info'))
+            salt.log.setup.setup_console_logger(log_level=opts.get('log_level', 'info'))
             if opts.get('log_file'):
-                salt.log.setup_logfile_logger(opts['log_file'], opts.get('log_level_logfile', 'info'))
+                salt.log.setup.setup_logfile_logger(opts['log_file'], opts.get('log_level_logfile', 'info'))
         if not minion_instance:
             minion_instance = cls(opts)
             if not hasattr(minion_instance, 'functions'):
@@ -1043,8 +1044,15 @@ class Minion(MinionBase):
                     )
 
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
-        if opts['multiprocessing']:
+
+        if opts['multiprocessing'] and not salt.utils.is_windows():
+            # Shutdown the multiprocessing before daemonizing
+            salt.log.setup.shutdown_multiprocessing_logging()
+
             salt.utils.daemonize_if(opts)
+
+            # Reconfigure multiprocessing logging after daemonizing
+            salt.log.setup.setup_multiprocessing_logging()
 
         salt.utils.appendproctitle(data['jid'])
 
