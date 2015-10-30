@@ -1881,8 +1881,8 @@ def _smartos_computenode_data():
 
     # *_vms grains
     grains['computenode_vms_total'] = len(__salt__['cmd.run']('vmadm list -p').split("\n"))
-    grains['computenode_vms_running'] = len(__salt__['cmd.run']('vmadm list -p "state=running"').split("\n"))
-    grains['computenode_vms_stopped'] = len(__salt__['cmd.run']('vmadm list -p "state=stopped"').split("\n"))
+    grains['computenode_vms_running'] = len(__salt__['cmd.run']('vmadm list -p state=running').split("\n"))
+    grains['computenode_vms_stopped'] = len(__salt__['cmd.run']('vmadm list -p state=stopped').split("\n"))
 
     # sysinfo derived grains
     sysinfo = json.loads(__salt__['cmd.run']('sysinfo'))
