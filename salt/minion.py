@@ -1054,7 +1054,7 @@ class Minion(MinionBase):
             # Reconfigure multiprocessing logging after daemonizing
             salt.log.setup.setup_multiprocessing_logging()
 
-        salt.utils.appendproctitle(data['jid'])
+        salt.utils.appendproctitle('{0}._thread_return {1}'.format(cls.__name__, data['jid']))
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
@@ -1211,7 +1211,7 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
-        salt.utils.appendproctitle(data['jid'])
+        salt.utils.appendproctitle('{0}._thread_multi_return {1}'.format(cls.__name__, data['jid']))
         # this seems awkward at first, but it's a workaround for Windows
         # multiprocessing communication.
         if sys.platform.startswith('win') and \
