@@ -166,8 +166,8 @@ def start(vm=None, options=None, key='uuid'):
         vm to be started
     options : string
         optional additional options
-    key : string
-        specifies if the value of 'vm' is a 'uuid', 'alias' or 'hostname'.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -211,8 +211,8 @@ def stop(vm=None, force=False, key='uuid'):
         vm to be stopped
     force : boolean
         force stop of vm if true
-    key : string
-        specifies if the value of 'vm' is a 'uuid', 'alias' or 'hostname'.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -256,8 +256,8 @@ def reboot(vm=None, force=False, key='uuid'):
         vm to be rebooted
     force : boolean
         force reboot of vm if true
-    key : string
-        specifies if the value of 'vm' is a 'uuid', 'alias' or 'hostname'.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -405,8 +405,8 @@ def sysrq(vm=None, action='nmi', key='uuid'):
         vm to be targetted
     action : string
         nmi or screenshot
-    key : string
-        specifies if the value of 'vm' is a 'uuid', 'alias' or 'hostname'.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -450,8 +450,8 @@ def delete(vm=None, key='uuid'):
 
     vm : string
         vm to be deleted
-    key : string
-        specifies if the value of 'vm' is a 'uuid', 'alias' or 'hostname'.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -490,8 +490,8 @@ def get(vm=None, key='uuid'):
 
     vm : string
         vm to be targetted
-    key : string
-        specifies if the value of 'vm' is a 'uuid', 'alias' or 'hostname'.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -532,8 +532,8 @@ def info(vm=None, info_type='all', key='uuid'):
         vm to be targetted
     info_type : string [all|block|blockstats|chardev|cpus|kvm|pci|spice|version|vnc]
         info type to return
-    key : string
-        specifies if the value of 'vm' is a 'uuid', 'alias' or 'hostname'.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -583,8 +583,8 @@ def create_snapshot(vm=None, name=None, key='uuid'):
             The snapname must be 64 characters or less
             and must only contain alphanumeric characters and
             characters in the set [-_.:%] to comply with ZFS restrictions.
-    key : string
-        specifies if the value of 'vm' is a 'uuid', 'alias' or 'hostname'.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -642,8 +642,8 @@ def delete_snapshot(vm=None, name=None, key='uuid'):
             The snapname must be 64 characters or less
             and must only contain alphanumeric characters and
             characters in the set [-_.:%] to comply with ZFS restrictions.
-    key : string
-        specifies if the value of 'vm' is a 'uuid', 'alias' or 'hostname'.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -698,9 +698,8 @@ def rollback_snapshot(vm=None, name=None, key='uuid'):
             The snapname must be 64 characters or less
             and must only contain alphanumeric characters and
             characters in the set [-_.:%] to comply with ZFS restrictions.
-
-    key : string
-        specifies if the value of 'vm' is a 'uuid', 'alias' or 'hostname'.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -752,8 +751,8 @@ def reprovision(vm=None, image=None, key='uuid'):
         vm to be reprovisioned
     image : string
         uuid of new image
-    key : string
-        specifies if the value of 'vm' is a 'uuid', 'alias' or 'hostname'.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -830,8 +829,8 @@ def update(**kwargs):
 
     vm : string
         vm to be updated
-    key : string
-        specifies if the value of 'vm' is a 'uuid', 'alias' or 'hostname'.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
     from_file : string
         json file to update the vm with -- if present, all other options will be ignored
     kwargs : string|int|...
@@ -883,8 +882,8 @@ def send(vm=None, target=None, key='uuid'):
         vm to be sent
     target : string
         target directory
-    key : string
-        specifies if the value of 'vm' is a 'uuid', 'alias' or 'hostname'.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
