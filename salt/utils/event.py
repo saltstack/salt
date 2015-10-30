@@ -61,6 +61,7 @@ import hashlib
 import logging
 import datetime
 from collections import MutableMapping
+from multiprocessing.util import Finalize
 
 # Import third party libs
 import salt.ext.six as six
@@ -929,6 +930,11 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
                     self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)
         finally:
             os.umask(old_umask)
+
+        # Make sure the ZMQ context and respective sockets are closed and
+        # destroyed
+        Finalize(self, self.destroy_zmq_context, exitpriority=15)
+
         while True:
             # Catch and handle EINTR from when this process is sent
             # SIGUSR1 gracefully so we don't choke and die horribly
@@ -940,7 +946,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
                     continue
                 raise exc
 
-    def _handle_signals(self, signum, sigframe):
+    def destroy_zmq_context(self):
         linger = 5000
         if self.epub_sock.closed is False:
             self.epub_sock.setsockopt(zmq.LINGER, linger)
@@ -950,7 +956,6 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
             self.epull_sock.close()
         if self.context.closed is False:
             self.context.term()
-        super(EventPublisher, self)._handle_signals(signum, sigframe)
 
 
 class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
