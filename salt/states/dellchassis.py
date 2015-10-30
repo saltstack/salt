@@ -191,10 +191,7 @@ def blade_idrac(idrac_password=None, idrac_ipmi=None,
                    'New': idrac_dnsname }
             changes['DNSRacName'] = ch
 
-    if
-    if 'IPMI' i
-
-    pass
+    return changes
 
 
 def chassis(name, chassis_name=None, password=None, datacenter=None,

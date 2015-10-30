@@ -144,6 +144,7 @@ def get_dns_dracname(host=None,
     parsed = __parse_drac(ret['stdout'])
     return parsed
 
+
 def set_dns_dracname(name,
                      host=None,
                      admin_username=None, admin_password=None):
@@ -153,6 +154,7 @@ def set_dns_dracname(name,
                         admin_username=admin_username,
                         admin_password=admin_password)
     return ret
+
 
 def system_info(host=None,
                 admin_username=None, admin_password=None,
@@ -703,6 +705,7 @@ def server_power(status, host=None,
                          host=host, admin_username=admin_username,
                          admin_password=admin_password, module=module)
 
+
 def server_reboot(host=None,
                   admin_username=None,
                   admin_password=None,
@@ -1147,6 +1150,7 @@ def inventory(host=None, admin_username=None, admin_password=None):
 
     return ret
 
+
 def set_chassis_location(location,
                          host=None,
                          admin_username=None,
@@ -1204,8 +1208,9 @@ def get_chassis_location(host=None,
     '''
     return system_info(host=host,
                        admin_username=admin_username,
-                       admin_password=admin_password)['Chassis Information'] \
-        ['Chassis Location']
+                       admin_password=admin_password)['Chassis Information']\
+                           ['Chassis Location']
+
 
 def set_chassis_datacenter(location,
                          host=None,
