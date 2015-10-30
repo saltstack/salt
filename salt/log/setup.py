@@ -758,7 +758,7 @@ def setup_multiprocessing_logging_listener(queue=None):
     __MP_LOGGING_LISTENER_CONFIGURED = True
 
 
-def setup_multiprocessing_logging(queue):
+def setup_multiprocessing_logging(queue=None):
     '''
     This code should be called from within a running multiprocessing
     process instance.
@@ -776,7 +776,7 @@ def setup_multiprocessing_logging(queue):
         return
 
     # Let's add a queue handler to the logging root handlers
-    __MP_LOGGING_QUEUE_HANDLER = SaltLogQueueHandler(queue)
+    __MP_LOGGING_QUEUE_HANDLER = SaltLogQueueHandler(queue or get_multiprocessing_logging_queue())
     logging.root.addHandler(__MP_LOGGING_QUEUE_HANDLER)
     # Set the logging root level to the lowest to get all messages
     logging.root.setLevel(logging.GARBAGE)
