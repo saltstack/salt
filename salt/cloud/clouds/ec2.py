@@ -3,8 +3,7 @@
 The EC2 Cloud Module
 ====================
 
-The EC2 cloud module is used to interact with the Amazon Elastic Cloud
-Computing.
+The EC2 cloud module is used to interact with the Amazon Elastic Compute Cloud.
 
 To use the EC2 cloud module, set up the cloud configuration at
  ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/ec2.conf``:
