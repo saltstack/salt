@@ -71,6 +71,8 @@ LOG_COLORS = {
         'TRACE': TextFormat('bold', 'magenta'),
         'GARBAGE': TextFormat('bold', 'blue'),
         'NOTSET': TextFormat('reset'),
+        'SUBDEBUG': TextFormat('bold', 'cyan'),  # used by multiprocessing.log_to_stderr()
+        'SUBWARNING': TextFormat('bold', 'yellow'),  # used by multiprocessing.log_to_stderr()
     },
     'msgs': {
         'QUIET': TextFormat('reset'),
@@ -82,6 +84,8 @@ LOG_COLORS = {
         'TRACE': TextFormat('magenta'),
         'GARBAGE': TextFormat('blue'),
         'NOTSET': TextFormat('reset'),
+        'SUBDEBUG': TextFormat('bold', 'cyan'),  # used by multiprocessing.log_to_stderr()
+        'SUBWARNING': TextFormat('bold', 'yellow'),  # used by multiprocessing.log_to_stderr()
     },
     'name': TextFormat('bold', 'green'),
     'process': TextFormat('bold', 'blue'),
