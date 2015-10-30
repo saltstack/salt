@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
 import os
 import sys
 import time
@@ -9,6 +9,7 @@ import types
 import signal
 import logging
 import threading
+import contextlib
 import subprocess
 import multiprocessing
 import multiprocessing.util
@@ -293,7 +294,11 @@ class ProcessManager(object):
         else:
             process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
 
-        process.start()
+        if isinstance(process, SignalHandlingMultiprocessingProcess):
+            with default_signals(signal.SIGINT, signal.SIGTERM):
+                process.start()
+        else:
+            process.start()
 
         # create a nicer name for the debug log
         if isinstance(tgt, types.FunctionType):
@@ -464,3 +469,24 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
         msg += '. Exiting'
         log.debug(msg)
         exit(0)
+
+    def start(self):
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            super(SignalHandlingMultiprocessingProcess, self).start()
+
+
+@contextlib.contextmanager
+def default_signals(*signals):
+    old_signals = {}
+    for signum in signals:
+        old_signals[signum] = signal.getsignal(signum)
+        signal.signal(signum, signal.SIG_DFL)
+
+    # Do whatever is needed with the reset signals
+    yield
+
+    # Restore signals
+    for signum in old_signals:
+        signal.signal(signum, old_signals[signum])
+
+    del old_signals
