@@ -55,13 +55,18 @@ Silent Installer Options
 ========================
 
 The installer can be run silently by providing the `/S` option at the command
-line. The options `/master` and `/minion-name` allow for configuring the master
-hostname and minion name, respectively. Here's an example of using the silent
-installer:
+line. The installer also accepts the following options for configuring the Salt
+Minion silently:
+
+- `/master=` A string value to set the IP address or host name of the master. Default value is 'salt'
+- `/minion-name=` A string value to set the minion name. Default is 'hostname'
+- `/start-service=` Either a 1 or 0. '1' will start the service, '0' will not. Default is to start the service after installation.
+
+Here's an example of using the silent installer:
 
 .. code-block:: bat
 
-    Salt-Minion-0.17.0-Setup-amd64.exe /S /master=yoursaltmaster /minion-name=yourminionname
+    Salt-Minion-2015.5.6-Setup-amd64.exe /S /master=yoursaltmaster /minion-name=yourminionname /start-service=0
 
 
 Running the Salt Minion on Windows as an Unprivileged User

@@ -113,6 +113,7 @@ class PillarModuleTest(integration.ModuleCase):
 
         self.assertEqual(grepo.rp_location, repo.remotes.origin.url)
 
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(PillarModuleTest)
