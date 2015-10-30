@@ -163,11 +163,11 @@ def start(vm=None, options=None, key='uuid'):
     Start a vm
 
     vm : string
-        Specifies the vm to be started
+        vm to be started
     options : string
-        Specifies additional options
-    key : string
-        Specifies if 'vm' is a uuid, alias or hostname.
+        optional additional options
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -208,11 +208,11 @@ def stop(vm=None, force=False, key='uuid'):
     Stop a vm
 
     vm : string
-        Specifies the vm to be stopped
+        vm to be stopped
     force : boolean
-        Specifies if the vm should be force stopped
-    key : string
-        Specifies if 'vm' is a uuid, alias or hostname.
+        force stop of vm if true
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -253,11 +253,11 @@ def reboot(vm=None, force=False, key='uuid'):
     Reboot a vm
 
     vm : string
-        Specifies the vm to be rebooted
+        vm to be rebooted
     force : boolean
-        Specifies if the vm should be force rebooted
-    key : string
-        Specifies if 'vm' is a uuid, alias or hostname.
+        force reboot of vm if true
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -298,16 +298,15 @@ def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias', keyed=Fa
     Return a list of VMs
 
     search : string
-        Specifies the vmadm filter property
+        vmadm filter property
     sort : string
-        Specifies the vmadm sort (-s) property
+        vmadm sort (-s) property
     order : string
-        Specifies the vmadm order (-o) property
-        Default: uuid,type,ram,state,alias
+        vmadm order (-o) property -- Default: uuid,type,ram,state,alias
     keyed : boolean
-        Specified if the output should be an array (False) or dict (True)
-          Dict key is first field from order parameter
-          Note: if key is not unique last vm wins.
+        specified if the output should be an array (False) or dict (True)
+            For a dict the key is the first ietem from the order parameter.
+            Note: If key is not unique last vm wins.
 
     CLI Example:
 
@@ -359,12 +358,11 @@ def lookup(search=None, order=None, one=False):
     Return a list of VMs using lookup
 
     search : string
-        Specifies the vmadm filter property
+        vmadm filter property
     order : string
-        Specifies the vmadm order (-o) property
-        Default: uuid,type,ram,state,alias
+        vmadm order (-o) property -- Default: uuid,type,ram,state,alias
     one : boolean
-        Specifies if you to one result only (-1)
+        return only one result (vmadm's -1)
 
     CLI Example:
 
@@ -404,11 +402,11 @@ def sysrq(vm=None, action='nmi', key='uuid'):
     Send non-maskable interupt to vm or capture a screenshot
 
     vm : string
-        Specifies the vm
+        vm to be targetted
     action : string
-        Specifies the action nmi or screenshot
-    key : string
-        Specifies what 'vm' is. Value = uuid|alias|hostname
+        nmi or screenshot
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -451,9 +449,9 @@ def delete(vm=None, key='uuid'):
     Delete a vm
 
     vm : string
-        Specifies the vm
-    key : string
-        Specifies what 'vm' is. Value = uuid|alias|hostname
+        vm to be deleted
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -491,9 +489,9 @@ def get(vm=None, key='uuid'):
     Output the JSON object describing a VM
 
     vm : string
-        Specifies the vm
-    key : string
-        Specifies what 'vm' is. Value = uuid|alias|hostname
+        vm to be targetted
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -531,12 +529,11 @@ def info(vm=None, info_type='all', key='uuid'):
     Lookup info on running kvm
 
     vm : string
-        Specifies the vm
-    info_type : string
-        Specifies what info to return.
-        Value = all|block|blockstats|chardev|cpus|kvm|pci|spice|version|vnc
-    key : string
-        Specifies what 'vm' is. Value = uuid|alias|hostname
+        vm to be targetted
+    info_type : string [all|block|blockstats|chardev|cpus|kvm|pci|spice|version|vnc]
+        info type to return
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -580,14 +577,14 @@ def create_snapshot(vm=None, name=None, key='uuid'):
     Create snapshot of a vm
 
     vm : string
-        Specifies the vm
+        vm to be targetted
     name : string
-        Name of snapshot.
-        The snapname must be 64 characters or less
-        and must only contain alphanumeric characters and
-        characters in the set [-_.:%] to comply with ZFS restrictions.
-    key : string
-        Specifies what 'vm' is. Value = uuid|alias|hostname
+        snapshot name
+            The snapname must be 64 characters or less
+            and must only contain alphanumeric characters and
+            characters in the set [-_.:%] to comply with ZFS restrictions.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -639,14 +636,14 @@ def delete_snapshot(vm=None, name=None, key='uuid'):
     Delete snapshot of a vm
 
     vm : string
-        Specifies the vm
+        vm to be targetted
     name : string
-        Name of snapshot.
-        The snapname must be 64 characters or less
-        and must only contain alphanumeric characters and
-        characters in the set [-_.:%] to comply with ZFS restrictions.
-    key : string
-        Specifies what 'vm' is. Value = uuid|alias|hostname
+        snapshot name
+            The snapname must be 64 characters or less
+            and must only contain alphanumeric characters and
+            characters in the set [-_.:%] to comply with ZFS restrictions.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -695,15 +692,14 @@ def rollback_snapshot(vm=None, name=None, key='uuid'):
     Rollback snapshot of a vm
 
     vm : string
-        Specifies the vm
+        vm to be targetted
     name : string
-        Name of snapshot.
-        The snapname must be 64 characters or less
-        and must only contain alphanumeric characters and
-        characters in the set [-_.:%] to comply with ZFS restrictions.
-
-    key : string
-        Specifies what 'vm' is. Value = uuid|alias|hostname
+        snapshot name
+            The snapname must be 64 characters or less
+            and must only contain alphanumeric characters and
+            characters in the set [-_.:%] to comply with ZFS restrictions.
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -752,11 +748,11 @@ def reprovision(vm=None, image=None, key='uuid'):
     Reprovision a vm
 
     vm : string
-        Specifies the vm
+        vm to be reprovisioned
     image : string
         uuid of new image
-    key : string
-        Specifies what 'vm' is. Value = uuid|alias|hostname
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -801,12 +797,9 @@ def create(**kwargs):
     Create a new vm
 
     from_file : string
-        Specifies the json file to create the vm from.
-        Note: when this is present all other options will be ignored.
-    * : string|int|...
-        Specifies options to set for the vm.
-        Example: image_uuid=UUID, will specify the image_uuid for the vm to be created.
-                 nics='[{"nic_tag": "admin", "ip": "198.51.100.123", "netmask": "255.255.255.0"}]', adds 1 nic over the admin tag
+        json file to create the vm from -- if present, all other options will be ignored
+    kwargs : string|int|...
+        options to set for the vm
 
     CLI Example:
 
@@ -835,17 +828,13 @@ def update(**kwargs):
     Update a new vm
 
     vm : string
-        Specifies the vm to be updated
-    key : string
-        Specifies if 'vm' is a uuid, alias or hostname.
+        vm to be updated
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
     from_file : string
-        Specifies the json file to update the vm with.
-        Note: when this is present all other options except 'vm' and 'key' will be ignored.
-    * : string|int|...
-        Specifies options to updte for the vm.
-        Example: image_uuid=UUID, will specify the image_uuid for the vm to be created.
-                 add_nics='[{"nic_tag": "admin", "ip": "198.51.100.123", "netmask": "255.255.255.0"}]', adds 1 nic over the admin tag
-                 remove_nics='[ "12:ae:d3:28:98:b8" ], remove nics with mac 12:ae:d3:28:98:b8
+        json file to update the vm with -- if present, all other options will be ignored
+    kwargs : string|int|...
+        options to update for the vm
 
     CLI Example:
 
@@ -890,11 +879,11 @@ def send(vm=None, target=None, key='uuid'):
     Send a vm to a directory
 
     vm : string
-        Specifies the vm to be started
+        vm to be sent
     target : string
-        Specifies the target. Can be a directory path.
-    key : string
-        Specifies if 'vm' is a uuid, alias or hostname.
+        target directory
+    key : string [uuid|alias|hostname]
+        value type of 'vm' parameter
 
     CLI Example:
 
@@ -958,9 +947,9 @@ def receive(uuid=None, source=None):
     Receive a vm from a directory
 
     uuid : string
-        Specifies uuid of vm to receive
+        uuid of vm to be received
     source : string
-        Specifies the target. Can be a directory path.
+        source directory
 
     CLI Example:
 
