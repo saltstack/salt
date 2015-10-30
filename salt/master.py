@@ -5,7 +5,7 @@ involves preparing the three listeners and the workers needed by the master.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
 import copy
 import os
 import re
@@ -68,7 +68,7 @@ from salt.utils.debug import (
 )
 from salt.utils.event import tagify
 from salt.utils.master import ConnectedCache
-from salt.utils.process import MultiprocessingProcess
+from salt.utils.process import default_signals, MultiprocessingProcess
 
 try:
     import resource
@@ -462,85 +462,77 @@ class Master(SMaster):
 
         self.__set_max_open_files()
 
-        # Before creating and adding processes to the process manager, store
-        # references to the SIGTERM/SIGINT signal handlers and restore the
-        # default handlers. We don't want the processes being started to
-        # inherit those signal handlers
-        old_sigint_handler = signal.getsignal(signal.SIGINT)
-        old_sigterm_handler = signal.getsignal(signal.SIGTERM)
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
-        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        # Reset signals to default ones before adding processes to the process
+        # manager. We don't want the processes being started to inherit those
+        # signal handlers
+        with default_signals(signal.SIGINT, signal.SIGTERM):
 
-        log.info('Creating master process manager')
-        self.process_manager = salt.utils.process.ProcessManager()
-        log.info('Creating master maintenance process')
-        pub_channels = []
-        for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.transport.server.PubServerChannel.factory(opts)
-            chan.pre_fork(self.process_manager)
-            pub_channels.append(chan)
+            log.info('Creating master process manager')
+            self.process_manager = salt.utils.process.ProcessManager()
+            log.info('Creating master maintenance process')
+            pub_channels = []
+            for transport, opts in iter_transport_opts(self.opts):
+                chan = salt.transport.server.PubServerChannel.factory(opts)
+                chan.pre_fork(self.process_manager)
+                pub_channels.append(chan)
 
-        log.info('Creating master event publisher process')
-        self.process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
-        salt.engines.start_engines(self.opts, self.process_manager)
+            log.info('Creating master event publisher process')
+            self.process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
+            salt.engines.start_engines(self.opts, self.process_manager)
 
-        # must be after channels
-        self.process_manager.add_process(Maintenance, args=(self.opts,))
-        log.info('Creating master publisher process')
+            # must be after channels
+            self.process_manager.add_process(Maintenance, args=(self.opts,))
+            log.info('Creating master publisher process')
 
-        if 'reactor' in self.opts:
-            log.info('Creating master reactor process')
-            self.process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
+            if 'reactor' in self.opts:
+                log.info('Creating master reactor process')
+                self.process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
 
-        if self.opts.get('event_return'):
-            log.info('Creating master event return process')
-            self.process_manager.add_process(salt.utils.event.EventReturn, args=(self.opts,))
+            if self.opts.get('event_return'):
+                log.info('Creating master event return process')
+                self.process_manager.add_process(salt.utils.event.EventReturn, args=(self.opts,))
 
-        ext_procs = self.opts.get('ext_processes', [])
-        for proc in ext_procs:
-            log.info('Creating ext_processes process: {0}'.format(proc))
-            try:
-                mod = '.'.join(proc.split('.')[:-1])
-                cls = proc.split('.')[-1]
-                _tmp = __import__(mod, globals(), locals(), [cls], -1)
-                cls = _tmp.__getattribute__(cls)
-                self.process_manager.add_process(cls, args=(self.opts,))
-            except Exception:
-                log.error(('Error creating ext_processes '
-                           'process: {0}').format(proc))
+            ext_procs = self.opts.get('ext_processes', [])
+            for proc in ext_procs:
+                log.info('Creating ext_processes process: {0}'.format(proc))
+                try:
+                    mod = '.'.join(proc.split('.')[:-1])
+                    cls = proc.split('.')[-1]
+                    _tmp = __import__(mod, globals(), locals(), [cls], -1)
+                    cls = _tmp.__getattribute__(cls)
+                    self.process_manager.add_process(cls, args=(self.opts,))
+                except Exception:
+                    log.error(('Error creating ext_processes '
+                            'process: {0}').format(proc))
 
-        if HAS_HALITE and 'halite' in self.opts:
-            log.info('Creating master halite process')
-            self.process_manager.add_process(Halite, args=(self.opts['halite'],))
+            if HAS_HALITE and 'halite' in self.opts:
+                log.info('Creating master halite process')
+                self.process_manager.add_process(Halite, args=(self.opts['halite'],))
 
-        # TODO: remove, or at least push into the transport stuff (pre-fork probably makes sense there)
-        if self.opts['con_cache']:
-            log.info('Creating master concache process')
-            self.process_manager.add_process(ConnectedCache, args=(self.opts,))
-            # workaround for issue #16315, race condition
-            log.debug('Sleeping for two seconds to let concache rest')
-            time.sleep(2)
+            # TODO: remove, or at least push into the transport stuff (pre-fork probably makes sense there)
+            if self.opts['con_cache']:
+                log.info('Creating master concache process')
+                self.process_manager.add_process(ConnectedCache, args=(self.opts,))
+                # workaround for issue #16315, race condition
+                log.debug('Sleeping for two seconds to let concache rest')
+                time.sleep(2)
 
-        log.info('Creating master request server process')
-        kwargs = {}
-        if salt.utils.is_windows():
-            kwargs['log_queue'] = (
-                    salt.log.setup.get_multiprocessing_logging_queue())
-        self.process_manager.add_process(self.run_reqserver, kwargs=kwargs)
+            log.info('Creating master request server process')
+            kwargs = {}
+            if salt.utils.is_windows():
+                kwargs['log_queue'] = (
+                        salt.log.setup.get_multiprocessing_logging_queue())
+            self.process_manager.add_process(self.run_reqserver, kwargs=kwargs)
 
         # Restore the old SIGTERM/SIGINT handler now that all processes have
         # been added to the process manager
-        if old_sigint_handler is signal.SIG_DFL:
+        if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGINT, self._handle_signals)
-        else:
-            signal.signal(signal.SIGINT, old_sigint_handler)
 
-        if old_sigterm_handler is signal.SIG_DFL:
+        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGINT, self._handle_signals)
-        else:
-            signal.signal(signal.SIGTERM, old_sigterm_handler)
 
         self.process_manager.run()
 
