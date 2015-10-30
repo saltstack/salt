@@ -4,7 +4,8 @@ A collection of mixins useful for the various *Client interfaces
 '''
 
 # Import Python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, with_statement
+import signal
 import logging
 import weakref
 import traceback
@@ -18,11 +19,12 @@ import salt.utils.event
 import salt.utils.jid
 import salt.utils.job
 import salt.transport
+import salt.log.setup
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
 from salt.utils.doc import strip_rst as _strip_rst
 from salt.utils.lazy import verify_fun
-from salt.utils.process import MultiprocessingProcess
+from salt.utils.process import default_signals, SignalHandlingMultiprocessingProcess
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -399,7 +401,13 @@ class AsyncClientMixin(object):
         multiprocess and fire the return data on the event bus
         '''
         if daemonize:
+            # Shutdown the multiprocessing before daemonizing
+            salt.log.setup.shutdown_multiprocessing_logging()
+
             salt.utils.daemonize()
+
+            # Reconfigure multiprocessing logging after daemonizing
+            salt.log.setup.setup_multiprocessing_logging()
 
         # pack a few things into low
         low['__jid__'] = jid
@@ -441,10 +449,13 @@ class AsyncClientMixin(object):
         '''
         async_pub = self._gen_async_pub()
 
-        proc = MultiprocessingProcess(
+        proc = SignalHandlingMultiprocessingProcess(
                 target=self._proc_function,
                 args=(fun, low, user, async_pub['tag'], async_pub['jid']))
-        proc.start()
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            # Reset current signals before starting the process in
+            # order not to inherit the current signal handlers
+            proc.start()
         proc.join()  # MUST join, otherwise we leave zombies all over
         return async_pub
 
