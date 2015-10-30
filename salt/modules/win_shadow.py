@@ -34,7 +34,7 @@ def info(name):
     '''
     info = __salt__['user.info'](name=name)
 
-    ret = {'name': '',
+    ret = {'name': name,
            'passwd': '',
            'lstchg': '',
            'min': '',
