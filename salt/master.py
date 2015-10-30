@@ -68,7 +68,7 @@ from salt.utils.debug import (
 )
 from salt.utils.event import tagify
 from salt.utils.master import ConnectedCache
-from salt.utils.process import default_signals, MultiprocessingProcess
+from salt.utils.process import default_signals, SignalHandlingMultiprocessingProcess
 
 try:
     import resource
@@ -129,7 +129,7 @@ class SMaster(object):
         return salt.daemons.masterapi.access_keys(self.opts)
 
 
-class Maintenance(MultiprocessingProcess):
+class Maintenance(SignalHandlingMultiprocessingProcess):
     '''
     A generalized maintenance process which performances maintenance
     routines.
@@ -209,10 +209,7 @@ class Maintenance(MultiprocessingProcess):
             salt.daemons.masterapi.fileserver_update(self.fileserver)
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
-            try:
-                time.sleep(self.loop_interval)
-            except KeyboardInterrupt:
-                break
+            time.sleep(self.loop_interval)
 
     def handle_search(self, now, last):
         '''
@@ -524,8 +521,7 @@ class Master(SMaster):
                         salt.log.setup.get_multiprocessing_logging_queue())
             self.process_manager.add_process(self.run_reqserver, kwargs=kwargs)
 
-        # Restore the old SIGTERM/SIGINT handler now that all processes have
-        # been added to the process manager
+        # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGINT, self._handle_signals)
@@ -544,7 +540,7 @@ class Master(SMaster):
         self.process_manager.kill_children()
 
 
-class Halite(MultiprocessingProcess):
+class Halite(SignalHandlingMultiprocessingProcess):
     '''
     Manage the Halite server
     '''
@@ -645,7 +641,13 @@ class ReqServer(object):
                                              )
         try:
             self.process_manager.run()
-        except (KeyboardInterrupt, SystemExit):
+        except (KeyboardInterrupt, SystemExit) as exc:
+            self.process_manager.stop_restarting()
+            if isinstance(exc, KeyboardInterrupt):
+                self.process_manager.send_signal_to_processes(signal.SIGINT)
+            else:
+                self.process_manager.send_signal_to_processes(signal.SIGTERM)
+            # kill any remaining processes
             self.process_manager.kill_children()
 
     def run(self):
@@ -675,7 +677,7 @@ class ReqServer(object):
         self.destroy()
 
 
-class MWorker(MultiprocessingProcess):
+class MWorker(SignalHandlingMultiprocessingProcess):
     '''
     The worker multiprocess instance to manage the backend operations for the
     salt master.
@@ -696,7 +698,7 @@ class MWorker(MultiprocessingProcess):
         :rtype: MWorker
         :return: Master worker
         '''
-        MultiprocessingProcess.__init__(self, **kwargs)
+        SignalHandlingMultiprocessingProcess.__init__(self, **kwargs)
         self.opts = opts
         self.req_channels = req_channels
 
@@ -710,7 +712,7 @@ class MWorker(MultiprocessingProcess):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        MultiprocessingProcess.__init__(self, log_queue=state['log_queue'])
+        SignalHandlingMultiprocessingProcess.__init__(self, log_queue=state['log_queue'])
         self.opts = state['opts']
         self.req_channels = state['req_channels']
         self.mkey = state['mkey']
@@ -727,6 +729,10 @@ class MWorker(MultiprocessingProcess):
                 'log_queue': self.log_queue,
                 'secrets': SMaster.secrets}
 
+    def _handle_signals(self, signum, sigframe):
+        self.io_loop.add_callback(self.io_loop.stop)
+        super(MWorker, self)._handle_signals(signum, sigframe)
+
     def __bind(self):
         '''
         Bind to the local port
@@ -736,10 +742,7 @@ class MWorker(MultiprocessingProcess):
         self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
-        try:
-            self.io_loop.start()
-        except KeyboardInterrupt:
-            self.io_loop.add_callback(self.io_loop.stop)
+        self.io_loop.start()
 
     @tornado.gen.coroutine
     def _handle_payload(self, payload):
