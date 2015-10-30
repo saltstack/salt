@@ -383,6 +383,10 @@ class Resolver(object):
             else:
                 ret[kwarg] = input('{0} [{1}]: '.format(kwarg, default))
 
+        # Use current user if empty
+        if 'username' in ret and not ret['username']:
+            ret['username'] = salt.utils.get_user()
+
         return ret
 
     def token_cli(self, eauth, load):
