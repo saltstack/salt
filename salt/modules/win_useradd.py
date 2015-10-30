@@ -741,6 +741,14 @@ def info(name):
             - home
             - homedrive
             - groups
+            - password_changed
+            - successful_logon_attempts
+            - failed_logon_attempts
+            - last_logon
+            - account_disabled
+            - account_locked
+            - password_never_expires
+            - disallow_change_password
             - gid
     :rtype: dict
 
@@ -775,6 +783,9 @@ def info(name):
         ret['profile'] = items['profile']
         ret['failed_logon_attempts'] = items['bad_pw_count']
         ret['successful_logon_attempts'] = items['num_logons']
+        secs = time.mktime(datetime.now().timetuple()) - items['password_age']
+        ret['password_changed'] = datetime.fromtimestamp(secs). \
+            strftime('%Y-%m-%d %H:%M:%S')
         if items['last_logon'] == 0:
             ret['last_logon'] = 'Never'
         else:
@@ -809,7 +820,11 @@ def info(name):
 
         ret['gid'] = ''
 
-    return ret
+        return ret
+
+    else:
+
+        return False
 
 
 def _get_userprofile_from_registry(user, sid):
