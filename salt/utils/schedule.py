@@ -256,7 +256,6 @@ dictionary, othewise it will be ignored.
 # Import python libs
 from __future__ import absolute_import, with_statement
 import os
-import sys
 import time
 import signal
 import datetime
