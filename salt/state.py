@@ -2157,7 +2157,6 @@ class State(object):
             return errors
         # Compile and verify the raw chunks
         chunks = self.compile_high_data(high)
-        log.critical("CHUNKS: {0}".format(chunks))
 
         # Check for any disabled states
         disabled = {}

@@ -1111,7 +1111,7 @@ def _is_reparse_point(path):
 
 def is_link(path):
     '''
-    Return the path that a symlink points to
+    Check if the path is a symlink
 
     This is only supported on Windows Vista or later.
 
