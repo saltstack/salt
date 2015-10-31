@@ -1826,6 +1826,8 @@ class Minion(MinionBase):
         Tear down the minion
         '''
         self._running = False
+        if hasattr(self, 'schedule'):
+            del self.schedule
         if hasattr(self, 'pub_channel'):
             self.pub_channel.on_recv(None)
             del self.pub_channel
