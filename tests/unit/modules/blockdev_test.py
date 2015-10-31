@@ -11,6 +11,7 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 import salt.modules.blockdev as blockdev
+import salt.utils
 
 blockdev.__salt__ = {
     'cmd.has_exec': MagicMock(return_value=True),
@@ -41,6 +42,7 @@ class TestBlockdevModule(TestCase):
             blockdev.dump(device)
             mock.assert_called_once_with(cmd, python_shell=False)
 
+    @skipIf(not salt.utils.which('wipefs'), 'Wipefs not found')
     def test_wipe(self):
         device = '/dev/sdX'
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
