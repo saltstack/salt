@@ -80,12 +80,15 @@ def beacon(config):
     found_devices = []
 
     for line in lines:
-        device, state = line.split("\t")
-        found_devices.append(device)
-        if device not in last_state_devices or last_state[device] != state:
-            if state in config["states"]:
-                ret.append({"device": device, "state": state, 'tag': state})
-                last_state[device] = state
+        try:
+            device, state = line.split("\t")
+            found_devices.append(device)
+            if device not in last_state_devices or last_state[device] != state:
+                if state in config["states"]:
+                    ret.append({"device": device, "state": state, 'tag': state})
+                    last_state[device] = state
+        except ValueError:
+            continue
 
     # Find missing devices and remove them / send an event
     for device in last_state_devices:
