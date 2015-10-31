@@ -37,7 +37,8 @@ def post_message(name,
                  channel,
                  from_name,
                  message,
-                 api_key=None):
+                 api_key=None,
+                 icon=None):
     '''
     Send a message to a Slack channel.
 
@@ -69,6 +70,9 @@ def post_message(name,
     api_key
         The api key for Slack to use for authentication,
         if not specified in the configuration options of master or minion.
+
+    icon
+        URL to an image to use as the icon for this message
     '''
     ret = {'name': name,
            'changes': {},
@@ -97,6 +101,7 @@ def post_message(name,
         message=message,
         from_name=from_name,
         api_key=api_key,
+        icon=icon,
     )
 
     if result:
