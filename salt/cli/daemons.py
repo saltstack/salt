@@ -337,6 +337,8 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
         If sub-classed, run any shutdown operations on this method.
         '''
         logger.info('The salt minion is shutting down..')
+        if hasattr(self, 'minion'):
+            self.minion.destroy()
         msg = 'The salt minion is shutdown. '
         if exitmsg is not None:
             exitmsg = msg + exitmsg
