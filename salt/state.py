@@ -41,7 +41,7 @@ from salt.utils.odict import OrderedDict, DefaultOrderedDict
 # Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
-from salt.ext.six.moves import range
+from salt.ext.six.moves import map, range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -536,7 +536,7 @@ class Compiler(object):
                         if isinstance(entry, dict):
                             low_name = next(six.iterkeys(entry))
                             live['name'] = low_name
-                            live.update(entry[low_name][0])
+                            list(map(live.update, entry[low_name]))
                         else:
                             live['name'] = entry
                         live['name_order'] = name_order
@@ -1167,7 +1167,7 @@ class State(object):
                         if isinstance(entry, dict):
                             low_name = next(six.iterkeys(entry))
                             live['name'] = low_name
-                            live.update(entry[low_name][0])
+                            list(map(live.update, entry[low_name]))
                         else:
                             live['name'] = entry
                         live['name_order'] = name_order
