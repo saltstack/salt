@@ -4569,10 +4569,18 @@ def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
 
     log.debug('running our check_cmd')
     _cmd = '{0} {1}'.format(cmd, filename)
-    if __salt__['cmd.retcode'](_cmd, **check_cmd_opts) != 0:
-        return {'comment': 'check_cmd execution failed',
-                'skip_watch': True,
-                'result': False}
+    cret = __salt__['cmd.run_all'](_cmd, **check_cmd_opts)
+    if cret['retcode'] != 0:
+        ret = {'comment': 'check_cmd execution failed',
+               'skip_watch': True,
+               'result': False}
+
+        if cret.get('stdout'):
+            ret['comment'] += '\n' + cret['stdout']
+        if cret.get('stderr'):
+            ret['comment'] += '\n' + cret['stderr']
+
+        return ret
 
     # No reason to stop, return True
     return True
