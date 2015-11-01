@@ -73,7 +73,7 @@ def beacon(config):
     if not validate(config):
         return ret
 
-    out = __salt__['cmd.run']('adb devices', user=config.get("user", None))
+    out = __salt__['cmd.run']('adb devices', runas=config.get("user", None))
 
     lines = out.split("\n")[1:]
     last_state_devices = last_state.keys()

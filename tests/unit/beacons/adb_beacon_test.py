@@ -190,5 +190,5 @@ class ADBBeaconTestCase(TestCase):
         mock = Mock(return_value="* daemon started successfully *\nList of devices attached\nHTC\tdevice",)
         with patch.dict(adb.__salt__, {"cmd.run": mock}):
             ret = adb.beacon(config)
-            mock.assert_called_once_with("adb devices", user="fred")
+            mock.assert_called_once_with("adb devices", runas="fred")
             self.assertEqual(ret, [{"device": "HTC", "state": "device", "tag": "device"}])
