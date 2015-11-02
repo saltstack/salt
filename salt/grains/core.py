@@ -1888,7 +1888,7 @@ def _smartos_computenode_data():
     sysinfo = json.loads(__salt__['cmd.run']('sysinfo'))
     grains['computenode_sdc_version'] = sysinfo['SDC Version']
     grains['computenode_vm_capable'] = sysinfo['VM Capable']
-    if sysinfo['VM Capable'] == True:
+    if sysinfo['VM Capable']:
         grains['computenode_vm_hw_virt'] = sysinfo['CPU Virtualization']
 
     # sysinfo derived smbios grains
