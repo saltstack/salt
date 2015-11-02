@@ -104,6 +104,7 @@ import inspect
 import logging
 import os
 import re
+import salt.utils
 
 from operator import attrgetter
 try:
@@ -171,7 +172,7 @@ def __read_docker_compose(path):
         return __standardize_result(False,
                                     'Path does not exist or docker-compose.yml is not present',
                                     None, None)
-    f = open(os.path.join(path, dc_filename), 'r')
+    f = salt.utils.fopen(os.path.join(path, dc_filename), 'r')
     result = {'docker-compose.yml': ''}
     if f:
         for line in f:
@@ -199,7 +200,7 @@ def __write_docker_compose(path, docker_compose):
 
     if os.path.isdir(path) is False:
         os.mkdir(path)
-    f = open(os.path.join(path, dc_filename), 'w')
+    f = salt.utils.fopen(os.path.join(path, dc_filename), 'w')
     if f:
         f.write(docker_compose)
         f.close()
