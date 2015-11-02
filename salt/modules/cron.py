@@ -189,6 +189,7 @@ def _write_cron_lines(user, lines):
     Takes a list of lines to be committed to a user's crontab and writes it
     '''
     path = salt.utils.mkstemp()
+    lines += '\n'
     with salt.utils.fopen(path, 'w+') as fp_:
         fp_.writelines(lines)
     ret = __salt__['cmd.run_all'](_get_cron_cmdstr(path, user),
