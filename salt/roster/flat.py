@@ -63,7 +63,6 @@ class RosterMatcher(object):
                 data = self.get_data(minion)
                 if data:
                     minions[minion] = data
-        log.info('minions list: {0}'.format(minions))
         return minions
 
     def ret_pcre_minions(self):
@@ -76,7 +75,6 @@ class RosterMatcher(object):
                 data = self.get_data(minion)
                 if data:
                     minions[minion] = data
-        log.info('minions list: {0}'.format(minions))
         return minions
 
     def ret_list_minions(self):
