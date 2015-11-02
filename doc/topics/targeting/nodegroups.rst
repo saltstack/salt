@@ -71,7 +71,7 @@ nodegroup`` on the line directly following the nodegroup name.
 Using Nodegroups in SLS files
 =============================
 
-To use Nodegroups in Jinja logic for SLS files, the :conf_master:'pillar_opts' option in 
+To use Nodegroups in Jinja logic for SLS files, the :conf_master:`pillar_opts` option in 
 ``/etc/salt/master`` must be set to "True". This will pass the master's configuration as 
 Pillar data to each minion.
 
