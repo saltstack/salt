@@ -31,7 +31,7 @@ SaltStack repo
 ==============
 
 SaltStack also hosts internal binary builds of the Salt package, available from
-http://repo.saltstack.org/freebsd/. To make use of this repository, add the
+https://repo.saltstack.com/freebsd/. To make use of this repository, add the
 following file to your system:
 
 **/usr/local/etc/pkg/repos/saltstack.conf:**
@@ -39,7 +39,7 @@ following file to your system:
 .. code-block:: json 
 
     saltstack: {
-      url: "http://repo.saltstack.com/freebsd/${ABI}/",
+      url: "https://repo.saltstack.com/freebsd/${ABI}/",
       mirror_type: "http",
       enabled: yes
       priority: 10
