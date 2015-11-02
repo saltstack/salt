@@ -64,7 +64,6 @@ try:
     from salt.utils.msazure import object_to_dict
     HAS_LIBS = True
 except ImportError, e:
-    print e
     pass
 
 __virtualname__ = 'azure'
@@ -97,6 +96,7 @@ def get_configured_provider():
         __active_provider_name__ or __virtualname__,
         ('subscription_id', 'certificate_path')
     )
+
 
 def get_dependencies():
     '''
@@ -497,7 +497,6 @@ def create(vm_):
         # Domain and WinRM configuration not yet supported by Salt Cloud
         system_config.domain_join = None
         system_config.win_rm = None
-
 
     else:
         system_config = azure.servicemanagement.LinuxConfigurationSet(
