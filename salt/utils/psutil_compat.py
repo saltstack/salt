@@ -41,7 +41,11 @@ else:
 
     # Alias renamed module functions
     pids = psutil.get_pid_list
-    users = psutil.get_users
+    try:
+        users = psutil.get_users
+    except AttributeError:
+        users = lambda: (_ for _ in ()).throw(NotImplementedError('Your '
+                                              'psutil version is too old'))
 
     # Deprecated in 1.0.1, but not mentioned in blog post
     if psutil.version_info < (1, 0, 1):
