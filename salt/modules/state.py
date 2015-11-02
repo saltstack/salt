@@ -449,12 +449,13 @@ def sls(mods,
             )
 
     st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
-
+    umask = os.umask(0o77)
     if kwargs.get('cache'):
         if os.path.isfile(cfn):
             with salt.utils.fopen(cfn, 'rb') as fp_:
                 high_ = serial.load(fp_)
                 return st_.state.call_high(high_)
+    os.umask(umask)
 
     if isinstance(mods, string_types):
         mods = mods.split(',')
@@ -491,11 +492,11 @@ def sls(mods,
         msg = 'Unable to write to SLS cache file {0}. Check permission.'
         log.error(msg.format(cache_file))
 
-    os.umask(cumask)
     _set_retcode(ret)
     # Work around Windows multiprocessing bug, set __opts__['test'] back to
     # value from before this function was run.
     __opts__['test'] = orig_test
+
     try:
         with salt.utils.fopen(cfn, 'w+b') as fp_:
             try:
@@ -506,6 +507,7 @@ def sls(mods,
     except (IOError, OSError):
         msg = 'Unable to write to highstate cache file {0}. Do you have permissions?'
         log.error(msg.format(cfn))
+    os.umask(cumask)
     return ret
 
 
