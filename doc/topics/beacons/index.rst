@@ -70,6 +70,28 @@ provide an ``interval`` argument to a beacon. The following beacons run on
           - 1.0
         - interval: 10
 
+Avoiding Event Loops
+--------------------
+
+It is important to carefully consider the possibility of creating a loop
+between a reactor and a beacon. For example, one might set up a beacon
+which monitors whether a file is read which in turn fires a reactor to
+run a state which in turn reads the file and re-fires the beacon.
+
+To avoid these types of scenarios, the ``disable_during_state_run``
+argument may be set. If a state run is in progress, the beacon will
+not be run on its regular interval until the minion detects that the
+state run has completed, at which point the normal beacon interval
+will resume.
+
+.. code-block:: yaml
+
+    beacons:
+      inotify:
+        /etc/passwd: {}
+        disable_during_state_run: True
+
+
 Beacon Example
 ==============
 
