@@ -381,7 +381,6 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
         else:
             pw_result = False
 
-
     if datacenter:
         datacenter_result = __salt__[chassis_cmd]('set_chassis_datacenter',
                                                   datacenter)
