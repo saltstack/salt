@@ -116,32 +116,66 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 # 1. Identify a suitable python
 # 2. Jump to python
 
-SSH_SH_SHIM = r'''/bin/sh << 'EOF'
+# Note the list-comprehension syntax to define SSH_SH_SHIM is needed
+# to be able to define the string with indentation for readability but
+# still strip the white space for compactness and to avoid issues with
+# some multi-line embedded python code having indentation errors
+SSH_SH_SHIM = \
+    '\n'.join(
+        [s.strip() for s in r'''/bin/sh << 'EOF'
 set -e
 set -u
 DEBUG="{{DEBUG}}"
 if [ -n "$DEBUG" ]
-then set -x
+    then set -x
 fi
 SUDO=""
 if [ -n "{{SUDO}}" ]
-then SUDO="sudo "
+    then SUDO="sudo "
 fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
-do if "$py_cmd" -c "import sys; sys.exit(not (sys.version_info >= (2, 6) and sys.version_info[0] == {{HOST_PY_MAJOR}}));"
-then py_cmd_path=`"$py_cmd" -c 'from __future__ import print_function; import sys; print(sys.executable);'`
-exec $SUDO "$py_cmd_path" -c 'import base64; exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
-exit 0
-else continue
-fi
+do
+    if "$py_cmd" -c \
+        "import sys; sys.exit(not (sys.version_info >= (2, 6)
+                              and sys.version_info[0] == {{HOST_PY_MAJOR}}));"
+    then
+        py_cmd_path=`"$py_cmd" -c \
+                   'from __future__ import print_function;
+                   import sys; print(sys.executable);'`
+        cmdpath=$(which $py_cmd 2>&1)
+        if [[ "$(file $cmdpath)" == *"shell script"* ]]
+        then
+            ex_vars="'PATH', 'LD_LIBRARY_PATH', 'MANPATH', \
+                   'XDG_DATA_DIRS', 'PKG_CONFIG_PATH'"
+            export $($py_cmd -c \
+                  "from __future__ import print_function;
+                  import sys;
+                  import os;
+                  map(sys.stdout.write, ['{{{{0}}}}={{{{1}}}} ' \
+                  .format(x, os.environ[x]) for x in [$ex_vars]])")
+            exec $SUDO PATH=$PATH LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
+                     MANPATH=$MANPATH XDG_DATA_DIRS=$XDG_DATA_DIRS \
+                     PKG_CONFIG_PATH=$PKG_CONFIG_PATH \
+                     "$py_cmd_path" -c \
+                   'import base64;
+                   exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
+        else
+            exec $SUDO "$py_cmd_path" -c \
+                   'import base64;
+                   exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
+        fi
+        exit 0
+    else
+        continue
+    fi
 done
 echo "ERROR: Unable to locate appropriate python command" >&2
 exit $EX_PYTHON_INVALID
 EOF'''.format(
-    EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
-)
+            EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
+            ).split('\n')])
 
 if not is_windows():
     shim_file = os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')
