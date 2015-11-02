@@ -23,6 +23,7 @@ import yaml
 import salt.states.file as filestate
 from salt.exceptions import CommandExecutionError
 import salt
+import salt.utils
 import os
 import shutil
 
@@ -139,7 +140,10 @@ class FileTestCase(TestCase):
         name = '/etc/grub.conf'
         target = '/boot/grub/grub.conf'
         user = 'salt'
-        group = 'saltstack'
+        if salt.utils.is_windows():
+            group = 'salt'
+        else:
+            group = 'saltstack'
 
         ret = {'name': name,
                'result': False,
@@ -167,12 +171,14 @@ class FileTestCase(TestCase):
                                              'file.readlink': mock_ret,
                                              'file.get_user': mock_user,
                                              'file.get_group': mock_grp,
-                                             'file.symlink': mock_file}):
+                                             'file.symlink': mock_file,
+                                             'user.info': mock_t,
+                                             'file.lchown': mock_f}):
             comt = ('Must provide name to file.symlink')
             ret.update({'comment': comt, 'name': ''})
             self.assertDictEqual(filestate.symlink('', target), ret)
 
-            comt = ('User salt does not exist. Group saltstack does not exist.')
+            comt = ('User {0} does not exist. Group {0} does not exist.'.format(user, group))
             ret.update({'comment': comt, 'name': name})
             self.assertDictEqual(filestate.symlink(name, target, user=user,
                                                    group=group), ret)
@@ -195,12 +201,13 @@ class FileTestCase(TestCase):
                                                            group=group), ret)
 
                 with patch.object(os.path, 'isdir', mock_t):
-                    comt = ('Symlink {0} is present and owned by '
-                            '{1}:{2}'.format(name, user, group))
-                    ret.update({'comment': comt, 'result': True})
-                    self.assertDictEqual(filestate.symlink(name, target,
-                                                           user=user,
-                                                           group=group), ret)
+                    with patch.object(salt.states.file, '_check_symlink_ownership', mock_t):
+                        comt = ('Symlink {0} is present and owned by '
+                                '{1}:{2}'.format(name, user, group))
+                        ret.update({'comment': comt, 'result': True})
+                        self.assertDictEqual(filestate.symlink(name, target,
+                                                               user=user,
+                                                               group=group), ret)
 
                 with patch.object(os.path, 'isdir', mock_dir):
                     with patch.object(os.path, 'lexists', mock_t):
@@ -211,14 +218,6 @@ class FileTestCase(TestCase):
                                              (name, target, user=user,
                                               group=group, backupname='SALT'),
                                              ret)
-
-                        comt = ('Something exists where the backup target'
-                                ' SALTshould go')
-                        ret.update({'comment': comt, 'result': False})
-                        self.assertDictEqual(filestate.symlink
-                                             (name, target, user=user,
-                                              group=group, backupname='SALT',
-                                              force=True), ret)
 
                     with patch.object(os.path, 'isfile', mock_t):
                         comt = ('File exists where the symlink {0} should be'
@@ -601,8 +600,12 @@ class FileTestCase(TestCase):
                                              'file.group_to_gid': mock_gid,
                                              'file.stats': mock_f,
                                              'file.check_perms': mock_perms}):
-            comt = ('User salt is not available Group saltstack'
-                    ' is not available')
+            if salt.utils.is_windows():
+                comt = ('User salt is not available Group salt'
+                        ' is not available')
+            else:
+                comt = ('User salt is not available Group saltstack'
+                        ' is not available')
             ret.update({'comment': comt, 'name': name})
             self.assertDictEqual(filestate.directory(name, user=user,
                                                      group=group), ret)
@@ -620,30 +623,20 @@ class FileTestCase(TestCase):
                                                          True, True, True,
                                                          False])):
                     with patch.object(os.path, 'lexists', mock_t):
-                        with patch.dict(filestate.__salt__,
-                                        {'file.is_link': mock_f}):
-                            with patch.object(os.path, 'isdir', mock_f):
-                                comt = ('File exists where the backup target'
-                                        ' A should go')
-                                ret.update({'comment': comt})
-                                self.assertDictEqual(filestate.directory
-                                                     (name, user=user,
-                                                      group=group,
-                                                      backupname='A'), ret)
+                        comt = ('File exists where the backup target'
+                                ' A should go')
+                        ret.update({'comment': comt})
+                        self.assertDictEqual(filestate.directory
+                                             (name, user=user,
+                                              group=group,
+                                              backupname='A'), ret)
 
-                                comt = ('Something exists where the backup'
-                                        ' target Ashould go')
-                                ret.update({'comment': comt})
-                                self.assertDictEqual(filestate.directory
-                                                     (name, user=user,
-                                                      group=group, force=True,
-                                                      backupname='A'), ret)
-
-                    comt = ('Specified location {0} exists and is a file'
-                            .format(name))
-                    ret.update({'comment': comt})
-                    self.assertDictEqual(filestate.directory(name, user=user,
-                                                             group=group), ret)
+                    with patch.object(os.path, 'isfile', mock_t):
+                        comt = ('Specified location {0} exists and is a file'
+                                .format(name))
+                        ret.update({'comment': comt})
+                        self.assertDictEqual(filestate.directory(name, user=user,
+                                                                 group=group), ret)
 
                     with patch.object(os.path, 'islink', mock_t):
                         comt = ('Specified location {0} exists and is a symlink'
