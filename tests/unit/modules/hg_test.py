@@ -79,6 +79,20 @@ class HgTestCase(TestCase):
                                         MagicMock(return_value='A')}):
             self.assertEqual(hg.clone('cwd', 'repository'), 'A')
 
+    def test_status(self):
+        '''
+        Test for Status to a given repository
+        '''
+        with patch.dict(hg.__salt__, {'cmd.run':
+                                        MagicMock(return_value=(
+                                            'A added 0\n'
+                                            'A added 1\n'
+                                            'M modified'))}):
+            self.assertEqual(hg.status('cwd'), {
+                'added': ['added 0', 'added 1'],
+                'modified': ['modified'],
+            })
+
 
 if __name__ == '__main__':
     from integration import run_tests
