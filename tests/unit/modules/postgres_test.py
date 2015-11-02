@@ -192,7 +192,7 @@ class PostgresTestCase(TestCase):
             ['/usr/bin/pgsql', '--no-align', '--no-readline',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'maint_db',
-             '-c', 'DROP DATABASE test_db'],
+             '-c', 'DROP DATABASE "test_db"'],
             host='testhost', user='testuser',
             password='foo', runas='foo', port='testport')
 
@@ -241,7 +241,7 @@ class PostgresTestCase(TestCase):
             ['/usr/bin/pgsql', '--no-align', '--no-readline',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'maint_db',
-             '-c', 'DROP ROLE testgroup'],
+             '-c', 'DROP ROLE "testgroup"'],
             host='testhost', user='testuser',
             password='foo', runas='foo', port='testport')
 
@@ -401,7 +401,7 @@ class PostgresTestCase(TestCase):
             ['/usr/bin/pgsql', '--no-align', '--no-readline',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'maint_db',
-             '-c', 'DROP ROLE testuser'],
+             '-c', 'DROP ROLE "testuser"'],
             host='testhost', port='testport', user='testuser',
             password='testpassword', runas='foo')
 
@@ -697,19 +697,19 @@ class PostgresTestCase(TestCase):
             'foo', schema='a', ext_version='b', from_version='c'))
         self.assertTrue(re.match(
             'CREATE EXTENSION IF NOT EXISTS "foo" '
-            'WITH SCHEMA a VERSION b FROM c ;',
+            'WITH SCHEMA "a" VERSION b FROM c ;',
             postgres._psql_prepare_and_run.call_args[0][0][1]))
         self.assertFalse(postgres.create_extension('foo'))
         ret = postgres.create_extension('foo', ext_version='a', schema='b')
         self.assertTrue(ret)
         self.assertTrue(re.match(
-            'ALTER EXTENSION "foo" SET SCHEMA b;'
+            'ALTER EXTENSION "foo" SET SCHEMA "b";'
             ' ALTER EXTENSION "foo" UPDATE TO a;',
             postgres._psql_prepare_and_run.call_args[0][0][1]))
         ret = postgres.create_extension('foo', ext_version='a', schema='b')
         self.assertTrue(ret)
         self.assertTrue(re.match(
-            'ALTER EXTENSION "foo" SET SCHEMA b;',
+            'ALTER EXTENSION "foo" SET SCHEMA "b";',
             postgres._psql_prepare_and_run.call_args[0][0][1]))
         ret = postgres.create_extension('foo', ext_version='a', schema='b')
         self.assertTrue(ret)
@@ -813,7 +813,7 @@ class PostgresTestCase(TestCase):
             ['/usr/bin/pgsql', '--no-align', '--no-readline',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'maint_db',
-             '-c', 'CREATE SCHEMA testschema'],
+             '-c', 'CREATE SCHEMA "testschema"'],
             host='testhost', port='testport',
             password='testpassword', user='testuser', runas='user')
 
@@ -846,7 +846,7 @@ class PostgresTestCase(TestCase):
             ['/usr/bin/pgsql', '--no-align', '--no-readline',
              '--no-password', '--username', 'testuser', '--host',
              'testhost', '--port', 'testport', '--dbname', 'maint_db',
-             '-c', 'DROP SCHEMA testschema'],
+             '-c', 'DROP SCHEMA "testschema"'],
             host='testhost', port='testport',
             password='testpassword', user='testuser', runas='user')
 
