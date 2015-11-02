@@ -509,7 +509,7 @@ def put_group_policy(group_name, policy_name, policy_json, region=None, key=None
     if not group:
         log.error('Group {0} does not exist'.format(group_name))
         return False
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         if not isinstance(policy_json, string_types):
             policy_json = json.dumps(policy_json)
@@ -538,7 +538,7 @@ def delete_group_policy(group_name, policy_name, region=None, key=None,
 
         salt myminion boto_iam.delete_group_policy mygroup mypolicy
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return False
     _policy = get_group_policy(
@@ -599,7 +599,7 @@ def get_all_group_policies(group_name, region=None, key=None, keyid=None,
 
         salt myminion boto_iam.get_all_group_policies mygroup
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return False
     try:
@@ -1144,7 +1144,7 @@ def put_user_policy(user_name, policy_name, policy_json, region=None, key=None, 
     if not user:
         log.error('User {0} does not exist'.format(user_name))
         return False
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         if not isinstance(policy_json, string_types):
             policy_json = json.dumps(policy_json)
@@ -1172,7 +1172,7 @@ def delete_user_policy(user_name, policy_name, region=None, key=None, keyid=None
 
         salt myminion boto_iam.delete_user_policy myuser mypolicy
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return False
     _policy = get_user_policy(
