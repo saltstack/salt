@@ -1055,13 +1055,20 @@ def remove(path, force=False):
     # This must be a recursive function in windows to properly deal with
     # Symlinks. The shutil.rmtree function will remove the contents of
     # the Symlink source in windows.
+
     path = os.path.expanduser(path)
+
+    # Does the file/folder exists
+    if not os.path.exists(path):
+        return 'File/Folder not found: {0}'.format(path)
 
     if not os.path.isabs(path):
         raise SaltInvocationError('File path must be absolute.')
 
     # Remove ReadOnly Attribute
     if force:
+        # Get current file attributes
+        file_attributes = win32api.GetFileAttributes(path)
         win32api.SetFileAttributes(path, win32con.FILE_ATTRIBUTE_NORMAL)
 
     try:
@@ -1075,11 +1082,14 @@ def remove(path, force=False):
             for name in os.listdir(path):
                 item = '{0}\\{1}'.format(path, name)
                 # If it's a normal directory, recurse to remove it's contents
-                remove(item)
+                remove(item, force)
 
             # rmdir will work now because the directory is empty
             os.rmdir(path)
     except (OSError, IOError) as exc:
+        if force:
+            # Reset attributes to the original if delete fails.
+            win32api.SetFileAttributes(path, file_attributes)
         raise CommandExecutionError(
             'Could not remove {0!r}: {1}'.format(path, exc)
         )
