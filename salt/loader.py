@@ -541,7 +541,7 @@ def grain_funcs(opts):
                       )
 
 
-def grains(opts, force_refresh=False):
+def grains(opts, force_refresh=False, proxy=None):
     '''
     Return the functions for the dynamic grains and the values for the static
     grains.
