@@ -929,15 +929,8 @@ def symlink(
                     return _error(ret, ((
                                             'File exists where the backup target {0} should go'
                                         ).format(backupname)))
-                elif os.path.isfile(backupname)\
-                        or __salt__['file.is_link'](backupname)\
-                        or os.path.isdir(backupname):
-                    __salt__['file.remove'](backupname)
                 else:
-                    return _error(ret, ((
-                                            'Something exists where the backup target {0}'
-                                            'should go'
-                                        ).format(backupname)))
+                    __salt__['file.remove'](backupname)
             os.rename(name, backupname)
         elif force:
             # Remove whatever is in the way
@@ -1781,17 +1774,8 @@ def directory(name,
                     return _error(ret, ((
                                             'File exists where the backup target {0} should go'
                                         ).format(backupname)))
-
-                elif os.path.isfile(backupname) \
-                        or __salt__['file.is_link'](backupname) \
-                        or os.path.isdir(backupname):
-                    __salt__['file.remove'](backupname)
-
                 else:
-                    return _error(ret, ((
-                                            'Something exists where the backup target {0}'
-                                            'should go'
-                                        ).format(backupname)))
+                    __salt__['file.remove'](backupname)
             os.rename(name, backupname)
         elif force:
             # Remove whatever is in the way
