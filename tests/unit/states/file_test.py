@@ -178,7 +178,7 @@ class FileTestCase(TestCase):
             ret.update({'comment': comt, 'name': ''})
             self.assertDictEqual(filestate.symlink('', target), ret)
 
-            comt = ('User {0} does not exist. Group {0} does not exist.'.format(user, group))
+            comt = ('User {0} does not exist. Group {1} does not exist.'.format(user, group))
             ret.update({'comment': comt, 'name': name})
             self.assertDictEqual(filestate.symlink(name, target, user=user,
                                                    group=group), ret)
