@@ -416,6 +416,7 @@ class FileTestCase(TestCase):
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
+        mock_cmd_fail = MagicMock(return_value={'retcode': 1})
         mock_uid = MagicMock(side_effect=['', 'U12', 'U12', 'U12', 'U12', 'U12',
                                           'U12', 'U12', 'U12', 'U12', 'U12',
                                           'U12', 'U12', 'U12', 'U12', 'U12'])
@@ -447,7 +448,7 @@ class FileTestCase(TestCase):
                          'file.source_list': mock_file,
                          'file.copy': mock_cp,
                          'file.manage_file': mock_ex,
-                         'cmd.retcode': mock_t}):
+                         'cmd.run_all': mock_cmd_fail}):
             comt = ('Must provide name to file.exists')
             ret.update({'comment': comt, 'name': ''})
             self.assertDictEqual(filestate.managed(''), ret)
@@ -1580,8 +1581,8 @@ class FileTestCase(TestCase):
         ret = {'comment': 'check_cmd execution failed',
                'result': False, 'skip_watch': True}
 
-        mock = MagicMock(side_effect=[1, 0])
-        with patch.dict(filestate.__salt__, {'cmd.retcode': mock}):
+        mock = MagicMock(side_effect=[{'retcode': 1}, {'retcode': 0}])
+        with patch.dict(filestate.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(filestate.mod_run_check_cmd(cmd, filename),
                                  ret)
 
