@@ -144,6 +144,7 @@ def __virtual__():
 
 def blade_idrac(idrac_password=None, idrac_ipmi=None,
                 idrac_ip=None, idrac_netmask=None, idrac_gateway=None,
+                idrac_dnsname=None,
                 drac_dhcp=None):
     '''
     Set parameters for iDRAC in a blade.
@@ -158,8 +159,7 @@ def blade_idrac(idrac_password=None, idrac_ipmi=None,
     :return: A standard Salt changes dictionary
     '''
 
-    ret = {'chassis_name': chassis_name,
-           'result': True,
+    ret = {'result': True,
            'changes': {},
            'comment': ''}
 
@@ -168,30 +168,29 @@ def blade_idrac(idrac_password=None, idrac_ipmi=None,
     else:
         password = idrac_password
 
-
     if idrac_ipmi:
-        if idrac_ipmi == True:
+        if idrac_ipmi is True:
             idrac_ipmi = '1'
-        if idrac_ipmi == False:
+        if idrac_ipmi is False:
             idrac_ipmi = '0'
         current_ipmi = __salt__['dracr.get_general']('cfgIpmiLan', 'cfgIpmiLanEnable',
                                                      host=idrac_ip, admin_username='root',
                                                      admin_password=password)
 
         if current_ipmi != idrac_ipmi:
-            ch = { 'Old': current_ipmi, 'New': idrac_ipmi }
-            changes['IPMI'] = ch
+            ch = {'Old': current_ipmi, 'New': idrac_ipmi}
+            ret['changes']['IPMI'] = ch
 
     if idrac_dnsname:
         dnsret = __salt__['dracr.get_dns_dracname'](host=idrac_ip, admin_username='root',
                                                     admin_password=password)
         current_dnsname = dnsret['Key=iDRAC.Embedded.1#NIC.1']['DNSRacName']
         if current_dnsname != idrac_dnsname:
-            ch = { 'Old': current_dnsname,
-                   'New': idrac_dnsname }
-            changes['DNSRacName'] = ch
+            ch = {'Old': current_dnsname,
+                  'New': idrac_dnsname}
+            ret['changes']['DNSRacName'] = ch
 
-    return changes
+    return ret
 
 
 def chassis(name, chassis_name=None, password=None, datacenter=None,
@@ -345,14 +344,14 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
                 if current_power_states[key] != -1 and current_power_states[key]:
                     target_power_states[key] = 'powercycle'
         for k, v in target_power_states.iteritems():
-                old = {k: current_power_states[k]}
-                new = {k: v}
-                if ret['changes'].get('Blade Power States') is None:
-                    ret['changes'].update({'Blade Power States':
-                                          {'Old': {},
-                                           'New': {}}})
-                ret['changes']['Blade Power States']['Old'].update(old)
-                ret['changes']['Blade Power States']['New'].update(new)
+            old = {k: current_power_states[k]}
+            new = {k: v}
+            if ret['changes'].get('Blade Power States') is None:
+                ret['changes'].update({'Blade Power States':
+                                      {'Old': {},
+                                       'New': {}}})
+            ret['changes']['Blade Power States']['Old'].update(old)
+            ret['changes']['Blade Power States']['New'].update(new)
 
     if ret['changes'] == {}:
         ret['comment'] = 'Dell chassis is already in the desired state.'
@@ -368,8 +367,6 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
     if location:
         location = __salt__[chassis_cmd]('set_chassis_location', location)
     pw_result = True
-    import pydevd
-    pydevd.settrace('172.16.207.1', port=65500, stdoutToServer=True, stderrToServer=True)
     if password:
         pw_single = True
         if __salt__[chassis_cmd]('change_password', username='root', uid=1,
