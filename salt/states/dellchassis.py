@@ -284,7 +284,7 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
 
     if password:
         ret['changes'].update({'Password':
-                                   { 'Old': '******',
+                                   {'Old': '******',
                                      'New': '******'}})
     if location:
         current_location = __salt__[chassis_cmd]('get_chassis_location')

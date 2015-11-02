@@ -1208,8 +1208,7 @@ def get_chassis_location(host=None,
     '''
     return system_info(host=host,
                        admin_username=admin_username,
-                       admin_password=admin_password)['Chassis Information']\
-                           ['Chassis Location']
+                       admin_password=admin_password)['Chassis Information']['Chassis Location']
 
 
 def set_chassis_datacenter(location,
