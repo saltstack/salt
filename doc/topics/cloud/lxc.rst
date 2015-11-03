@@ -85,7 +85,7 @@ Here are the options to configure your containers:
         Name of the profile or inline options for the LXC vm network settings,
         please see :ref:`tutorial-lxc-profiles-network`.
     nic_opts
-        Totally optionnal.
+        Totally optional.
         Per interface new-style configuration options mappings which will
         override any profile default option::
 
