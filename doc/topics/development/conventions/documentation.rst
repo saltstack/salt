@@ -307,10 +307,15 @@ Documentation changes and fixes should be made against the earliest supported
 release branch that the update applies to. The practice of updating a release
 branch instead of making all documentation changes against Salt's main, default
 branch, ``develop``, is necessary in order for the docs to be as up-to-date as
-possible when the docs are built. This workflow is also inline with the
-recommendations outlined in Salt's :ref:`contributing` page. You can read more
-about how to choose where to submit documentation fixes by reading the
-:ref:`which-salt-branch` section.
+possible when the docs are built.
+
+The workflow mentioned above is also inline with the recommendations outlined
+in Salt's :ref:`contributing` page. You can read more about how to choose where
+to submit documentation fixes by reading the :ref:`which-salt-branch` section.
+
+For an explanation of how to submit changes against various branches, see the
+:ref:`github-pull-request` section. Specifically, see the section describing
+how to``Create a new branch`` and the steps that follow.
 
 
 .. _docs-building:

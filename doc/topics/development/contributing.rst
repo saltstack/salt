@@ -44,8 +44,9 @@ Fork a Repo Guide_>`_ and is well worth reading.
         feature Y".  Multiple unrelated fixes and/or features should be
         isolated into separate branches.
 
-    If you're working on a fix, create your branch from the oldest release
-    branch having the bug.  See :ref:`Which Salt Branch? <which-salt-branch>`.
+    If you're working on a bug or documentation fix, create your branch from
+    the oldest release branch that contains the bug or requires the documentation
+    update. See :ref:`Which Salt Branch? <which-salt-branch>`.
 
     .. code-block:: bash
 
