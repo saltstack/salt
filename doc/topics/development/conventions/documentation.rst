@@ -298,6 +298,21 @@ cross-referenced using two custom roles, ``conf_master``, and ``conf_minion``.
     single minion.
 
 
+.. _docs-ref-fixes:
+
+Documentation Changes and Fixes
+===============================
+
+Documentation changes and fixes should be made against the earliest supported
+release branch that the update applies to. The practice of updating a release
+branch instead of making all documentation changes against Salt's main, default
+branch, ``develop``, is necessary in order for the docs to be as up-to-date as
+possible when the docs are built. This workflow is also inline with the
+recommendations outlined in Salt's :ref:`contributing` page. You can read more
+about how to choose where to submit documentation fixes by reading the
+:ref:`which-salt-branch` section.
+
+
 .. _docs-building:
 
 Building the documentation
