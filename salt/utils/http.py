@@ -187,10 +187,11 @@ def query(url,
         # Make sure no secret fields show up in logs
         if isinstance(data, dict):
             log_data = data.copy()
-            for item in data:
-                for field in hide_fields:
-                    if item == field:
-                        log_data[item] = 'XXXXXXXXXX'
+            if isinstance(hide_fields, list):
+                for item in data:
+                    for field in hide_fields:
+                        if item == field:
+                            log_data[item] = 'XXXXXXXXXX'
             log.trace('Request POST Data: {0}'.format(pprint.pformat(log_data)))
         else:
             log.trace('Request POST Data: {0}'.format(pprint.pformat(data)))

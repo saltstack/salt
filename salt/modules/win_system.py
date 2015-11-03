@@ -401,7 +401,7 @@ def set_computer_desc(desc=None):
     return {'Computer Description': get_computer_desc()}
 
 
-set_computer_description = set_computer_desc
+set_computer_description = salt.utils.alias_function(set_computer_desc, 'set_computer_description')
 
 
 def get_system_info():
@@ -434,7 +434,7 @@ def get_computer_desc():
     return desc if desc else False
 
 
-get_computer_description = get_computer_desc
+get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')
 
 
 def get_hostname():

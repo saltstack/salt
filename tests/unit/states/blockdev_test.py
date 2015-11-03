@@ -76,8 +76,12 @@ class BlockdevTestCase(TestCase):
             ret.update({'comment': comt})
             self.assertDictEqual(blockdev.formatted(name), ret)
 
-            mock = MagicMock(return_value='ext4')
-            with patch.dict(blockdev.__salt__, {'cmd.run': mock}):
+            mock_ext4 = MagicMock(return_value='ext4')
+            mock_t = MagicMock(return_value=True)
+            mock_e = MagicMock(return_value='')
+            with patch.dict(blockdev.__salt__, {'cmd.run': mock_ext4,
+                                                'blockdev.format': mock_t,
+                                                'blockdev.fstype': mock_e}):
                 comt = ('{0} already formatted with '.format(name))
                 ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(blockdev.formatted(name, fs_type=''), ret)

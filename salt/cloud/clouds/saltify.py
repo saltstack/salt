@@ -2,6 +2,7 @@
 '''
 Saltify Module
 ==============
+
 The Saltify module is designed to install Salt on a remote machine, virtual or
 bare metal, using SSH. This module is useful for provisioning machines which
 are already installed, but not Salted.

@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 '''
+Provides access to randomness generators.
+=========================================
+
 .. versionadded:: 2014.7.0
 
-Provides access to randomness generators.
 '''
 from __future__ import absolute_import
 # Import python libs

@@ -21,6 +21,7 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import rabbitmq
+from salt.exceptions import CommandExecutionError
 
 # Globals
 rabbitmq.__salt__ = {}
@@ -114,9 +115,7 @@ class RabbitmqTestCase(TestCase):
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
             with patch.object(rabbitmq, 'clear_password',
                               return_value={'Error': 'Error', 'retcode': 1}):
-                self.assertDictEqual(rabbitmq.add_user('saltstack'),
-                                     {'Error': {'Error': 'Error',
-                                                'retcode': 1}})
+                self.assertRaises(CommandExecutionError, rabbitmq.add_user, 'saltstack')
 
     # 'delete_user' function tests: 1
 
@@ -352,9 +351,9 @@ class RabbitmqTestCase(TestCase):
         '''
         Test if it return whether the plugin is enabled.
         '''
-        mock_run = MagicMock(return_value='saltstack')
+        mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack'})
         mock_pkg = MagicMock(return_value='')
-        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run,
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
                                             'pkg.version': mock_pkg}):
             self.assertTrue(rabbitmq.plugin_is_enabled('salt'))
 

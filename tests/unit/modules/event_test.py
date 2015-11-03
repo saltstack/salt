@@ -50,7 +50,8 @@ class EventTestCase(TestCase):
                 self.assertTrue(event.fire_master('data', 'tag'))
 
         with patch.dict(event.__opts__, {'transport': 'A',
-                                         'id': 'id'}):
+                                         'id': 'id',
+                                         'master_uri': 'localhost'}):
             with patch.object(salt_crypt_sauth, 'gen_token',
                               return_value='tok'):
                 with patch.object(salt_transport_channel_factory, 'send',

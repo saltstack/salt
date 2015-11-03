@@ -18,6 +18,7 @@ import salt.utils.itertools
 import salt.ext.six as six
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -30,14 +31,15 @@ def __virtual__():
 
 
 def _format_response(response, msg):
+    error = 'RabbitMQ command failed: {0}'.format(response)
     if isinstance(response, dict):
         if response['retcode'] != 0:
-            msg = 'Error'
+            raise CommandExecutionError(error)
         else:
             msg = response['stdout']
     else:
         if 'Error' in response:
-            msg = 'Error'
+            raise CommandExecutionError(error)
     return {
         msg: response
     }
@@ -703,8 +705,12 @@ def plugin_is_enabled(name, runas=None):
     if runas is None:
         runas = salt.utils.get_user()
     cmd = [_get_rabbitmq_plugin(), 'list', '-m', '-e']
-    ret = __salt__['cmd.run'](cmd, runas=runas, python_shell=False)
-    return bool(name in ret)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(
+            'RabbitMQ command failed: {0}'.format(ret['stderr'])
+        )
+    return bool(name in ret['stdout'])
 
 
 def enable_plugin(name, runas=None):
