@@ -126,6 +126,8 @@ def present(
     vpc_name
         The name of the VPC wherein to create the security group, if any. Exclusive with vpc_id.
 
+        .. versionadded:: 2015.8.2
+
     rules
         A list of ingress rule dicts. If not specified, ``rules=None``,
         the ingress rules will be unmanaged. If set to an empty list, ``[]``,
