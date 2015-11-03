@@ -3,7 +3,7 @@
 The acl module handles client_acl operations
 
 Additional information on client_acl can be
-found by reading the salt documention:
+found by reading the salt documentation:
 
     http://docs.saltstack.com/en/latest/ref/clientacl.html
 '''
