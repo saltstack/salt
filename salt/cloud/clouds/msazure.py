@@ -63,7 +63,7 @@ try:
     import salt.utils.msazure
     from salt.utils.msazure import object_to_dict
     HAS_LIBS = True
-except ImportError, e:
+except ImportError:
     pass
 
 __virtualname__ = 'azure'
@@ -674,9 +674,9 @@ def create(vm_):
         ret['Attached Volumes'] = created
 
     data = show_instance(vm_['name'], call='action')
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data)
         )
     )
