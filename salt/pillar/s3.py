@@ -52,7 +52,7 @@ base url to use for accessing S3.
 The ``s3_cache_expire`` parameter defaults to 30s. It specifies expiration
 time of S3 metadata cache file.
 
-The ``s3_sync_on_update`` paramater defaults to True. It specifies if cache
+The ``s3_sync_on_update`` parameter defaults to True. It specifies if cache
 is synced on update rather than jit.
 
 This pillar can operate in two modes, single environment per bucket or multiple
