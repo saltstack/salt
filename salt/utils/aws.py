@@ -85,7 +85,7 @@ def creds(provider):
             )
             result.raise_for_status()
             role = result.text
-        except:
+        except requests.exceptions.HTTPError:
             return provider['id'], provider['key'], ''
 
         try:
@@ -94,7 +94,7 @@ def creds(provider):
                 proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
             )
             result.raise_for_status()
-        except:
+        except requests.exceptions.HTTPError:
             return provider['id'], provider['key'], ''
 
         data = result.json()
