@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Management of Open vSwitch ports.
-"""
+'''
 
 
 def __virtual__():
@@ -12,14 +12,14 @@ def __virtual__():
 
 
 def present(name, bridge):
-    """
+    '''
     Ensures that the named port exists on bridge, eventually creates it.
 
     Args:
         name: The name of the port.
         bridge: The name of the bridge.
 
-    """
+    '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     bridge_exists = __salt__['openvswitch.bridge_exists'](bridge)
@@ -27,7 +27,7 @@ def present(name, bridge):
     if bridge_exists:
         port_list = __salt__['openvswitch.port_list'](bridge)
 
-    #Comment and change messages
+    # Comment and change messages
     comment_bridge_notexists = 'Bridge {0} does not exist.'.format(bridge)
     comment_port_exists = 'Port {0} already exists.'.format(name)
     comment_port_created = 'Port {0} created on bridge {1}.'.format(name, bridge)
@@ -75,7 +75,7 @@ def present(name, bridge):
 
 
 def absent(name, bridge=None):
-    """
+    '''
     Ensures that the named port exists on bridge, eventually deletes it.
     If bridge is not set, port is removed from  whatever bridge contains it.
 
@@ -83,7 +83,7 @@ def absent(name, bridge=None):
         name: The name of the port.
         bridge: The name of the bridge.
 
-    """
+    '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
     if bridge:
@@ -95,7 +95,7 @@ def absent(name, bridge=None):
     else:
         port_list = [name]
 
-    #Comment and change messages
+    # Comment and change messages
     comment_bridge_notexists = 'Bridge {0} does not exist.'.format(bridge)
     comment_port_notexists = 'Port {0} does not exist on bridge {1}.'.format(name, bridge)
     comment_port_deleted = 'Port {0} deleted.'.format(name)
@@ -129,7 +129,7 @@ def absent(name, bridge=None):
         if bridge:
             port_remove = __salt__['openvswitch.port_remove'](br=bridge, port=name)
         else:
-            port_remove = __salt__['openvswitch.port_remove'](port=name)
+            port_remove = __salt__['openvswitch.port_remove'](br=None, port=name)
 
         if port_remove:
             ret['result'] = True
