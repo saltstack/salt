@@ -691,7 +691,7 @@ def create_crl(path=None, text=False, signing_private_key=None,
         the serial number to revoke, or ``certificate`` with either the PEM encoded text of
         the certificate, or a path ot the certificate to revoke.
 
-        The dict can optionally contain the ``revocation_date`` key. If this key is ommitted
+        The dict can optionally contain the ``revocation_date`` key. If this key is omitted
         the revocation date will be set to now. If should be a string in the format "%Y-%m-%d %H:%M:%S".
 
         The dict can also optionally contain the ``not_after`` key. This is redundant if the
@@ -1018,7 +1018,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
         version value, so ``version=3`` sets the certificate version field to 0x2.
 
     serial_number:
-        The serial number to assign to this certificate. If ommited a random serial number of size
+        The serial number to assign to this certificate. If omitted a random serial number of size
         ``serial_bits`` is generated.
 
     serial_bits:
