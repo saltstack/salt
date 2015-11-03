@@ -1454,7 +1454,7 @@ Required if the blob has an active lease.
 progress_callback
 `````````````````
 callback for progress with signature function(current, total) where
-current is the number of bytes transfered so far, and total is the
+current is the number of bytes transferred so far, and total is the
 size of the blob.
 
 max_connections
