@@ -853,10 +853,10 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
   - **PR** `#23530`_: (*dr4Ke*) salt-ssh state: fix including all salt:// references
   - **PR** `#23496`_: (*martinhoefling*) Fix for issue `#23110`_
     | refs: `#23594`_
-  - **PR** `#23474`_: (*dr4Ke*) Fix grains.append in nested dictionnary grains `#23411`_
+  - **PR** `#23474`_: (*dr4Ke*) Fix grains.append in nested dictionary grains `#23411`_
   - **PR** `#23442`_: (*clan*) add directory itself to keep list
     | refs: `#23593`_
-  - **PR** `#23440`_: (*dr4Ke*) fix grains.append in nested dictionnary grains `#23411`_
+  - **PR** `#23440`_: (*dr4Ke*) fix grains.append in nested dictionary grains `#23411`_
     | refs: `#23474`_
   - **PR** `#23433`_: (*twangboy*) Obtain all software from the registry
   - **PR** `#23389`_: (*cachedout*) Correct fail_hard typo
@@ -952,7 +952,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
       * b39f504 remove debugging output
 
-      * b6e15e2 fix grains.append in nested dictionnary grains `#23411`_
+      * b6e15e2 fix grains.append in nested dictionary grains `#23411`_
 
     * ab7e1ae Merge pull request `#23537`_ from t0rrant/patch-1
 

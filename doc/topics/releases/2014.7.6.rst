@@ -290,19 +290,19 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
   * c838a22 unit tests for grains.append module function
 
-- **PR** `#23474`_: (*dr4Ke*) Fix grains.append in nested dictionnary grains `#23411`_
+- **PR** `#23474`_: (*dr4Ke*) Fix grains.append in nested dictionary grains `#23411`_
   @ *2015-05-11T18:00:21Z*
 
   - **ISSUE** `#23411`_: (*dr4Ke*) grains.append should work at any level of a grain
     | refs: `#23440`_
-  - **PR** `#23440`_: (*dr4Ke*) fix grains.append in nested dictionnary grains `#23411`_
+  - **PR** `#23440`_: (*dr4Ke*) fix grains.append in nested dictionary grains `#23411`_
     | refs: `#23474`_
   * e96c5c5 Merge pull request `#23474`_ from dr4Ke/fix_grains.append_nested
   * a01a5bb grains.get, parameter delimititer, versionadded: 2014.7.6
 
   * b39f504 remove debugging output
 
-  * b6e15e2 fix grains.append in nested dictionnary grains `#23411`_
+  * b6e15e2 fix grains.append in nested dictionary grains `#23411`_
 
 - **PR** `#23537`_: (*t0rrant*) Update changelog
   @ *2015-05-11T17:02:16Z*
