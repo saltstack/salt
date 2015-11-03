@@ -2,7 +2,7 @@
 '''
 Manage Elasticache
 ==================
-replication_group_description
+
 .. versionadded:: 2014.7.0
 
 Create, destroy and update Elasticache clusters. Be aware that this interacts
