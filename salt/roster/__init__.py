@@ -89,4 +89,5 @@ class Roster(object):
                         tgt_type)
                     )
 
+        log.debug('Matched minions: {0}'.format(targets))
         return targets
