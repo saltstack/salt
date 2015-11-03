@@ -256,7 +256,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         return self.run_suite(path, display_name)
 
     def start_daemons_only(self):
-        if salt.utils.is_windows():
+        if not salt.utils.is_windows():
             self.prep_filehandles()
         try:
             print_header(
