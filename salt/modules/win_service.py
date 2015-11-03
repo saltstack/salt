@@ -409,7 +409,7 @@ def create(name,
     group: Specifies the name of the group of which this service is a member
     tag: Specifies whether or not to obtain a TagID from the CreateService call. For boot-start and system-start drivers
       - yes/no
-    depend: Specifies the names of services or groups that myust start before this service. The names are seperated by forward slashes.
+    depend: Specifies the names of services or groups that myust start before this service. The names are separated by forward slashes.
     obj: Specifies th ename of an account in which a service will run. Default is LocalSystem
     password: Specifies a password. Required if other than LocalSystem account is used.
 
