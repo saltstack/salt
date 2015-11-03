@@ -244,7 +244,7 @@ def post_message(user=None,
             raise SaltInvocationError('Pushover user key is unavailable.')
 
     if not message:
-        raise SaltInvocationError('Required paramter "message" is missing.')
+        raise SaltInvocationError('Required parameter "message" is missing.')
 
     user_validate = _validate_user(user, device, token)
     if not user_validate['result']:
