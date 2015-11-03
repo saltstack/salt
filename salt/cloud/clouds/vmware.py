@@ -399,13 +399,36 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     return scsi_spec
 
 
+def _set_cd_or_dvd_backing_type(drive, device_type, mode, iso_path):
+    if device_type == "datastore_iso_file":
+        drive.backing = vim.vm.device.VirtualCdrom.IsoBackingInfo()
+        drive.backing.fileName = iso_path
+
+        datastore = iso_path.partition('[')[-1].rpartition(']')[0]
+        datastore_ref = vmware.get_mor_by_property(_get_si(), vim.Datastore, datastore)
+        if datastore_ref:
+            drive.backing.datastore = datastore_ref
+
+        drive.deviceInfo.summary = 'ISO {0}'.format(iso_path)
+
+    elif device_type == "client_device":
+        if mode == 'passthrough':
+            drive.backing = vim.vm.device.VirtualCdrom.RemotePassthroughBackingInfo()
+            drive.deviceInfo.summary = 'Remote Device'
+        elif mode == 'atapi':
+            drive.backing = vim.vm.device.VirtualCdrom.RemoteAtapiBackingInfo()
+            drive.deviceInfo.summary = 'Remote ATAPI'
+
+    return drive
+
+
 def _edit_existing_cd_or_dvd_drive(drive, device_type, mode, iso_path):
     device_type.strip().lower()
     mode.strip().lower()
 
     drive_spec = vim.vm.device.VirtualDeviceSpec()
     drive_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
-    drive_spec.device = vmware.set_cd_or_dvd_backing_type(_get_si(), drive, device_type, mode, iso_path)
+    drive_spec.device = _set_cd_or_dvd_backing_type(drive, device_type, mode, iso_path)
 
     return drive_spec
 
@@ -422,7 +445,7 @@ def _add_new_cd_or_dvd_drive_helper(drive_label, controller_key, device_type, mo
     drive_spec.device.deviceInfo = vim.Description()
 
     if device_type in ['datastore_iso_file', 'client_device']:
-        drive_spec.device = vmware.set_cd_or_dvd_backing_type(_get_si(), drive_spec.device, device_type, mode, iso_path)
+        drive_spec.device = _set_cd_or_dvd_backing_type(drive_spec.device, device_type, mode, iso_path)
     else:
         # If device_type not specified or does not match, create drive of Client type with Passthough mode
         if not device_type:
