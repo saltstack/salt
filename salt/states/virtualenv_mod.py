@@ -86,7 +86,8 @@ def managed(name,
         Pass `--upgrade` to `pip install`.
 
 
-    Also accepts any kwargs that the virtualenv module will.
+     Also accepts any kwargs that the virtualenv module will.
+     However, some kwargs require `- distribute: True`
 
     .. code-block:: yaml
 
@@ -249,4 +250,4 @@ def managed(name,
                 'old': old if old else ''}
     return ret
 
-manage = managed  # pylint: disable=C0103
+manage = salt.utils.alias_function(managed, 'manage')

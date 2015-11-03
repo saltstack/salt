@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-======
-fx2.py
-======
+Dell FX2 chassis
+================
 
 .. versionadded:: 2015.8.2
 
@@ -218,6 +217,13 @@ def chconfig(cmd, *args, **kwargs):
     for k in kwargs.keys():
         if k.startswith('__pub_'):
             kwargs.pop(k)
+
+    # Catch password reset
+    if cmd == 'change_password':
+        if 'username' in kwargs:
+            DETAILS['admin_username'] = kwargs['username']
+        if 'password' in kwargs:
+            DETAILS['admin_password'] = kwargs['password']
     if 'dracr.'+cmd not in __salt__:
         return {'retcode': -1, 'message': 'dracr.' + cmd + ' is not available'}
     else:

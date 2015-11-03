@@ -4,23 +4,130 @@ Manage chassis via Salt Proxies.
 
 .. versionadded:: 2015.8.2
 
-Example managing a Dell chassis:
+Below is an example state that sets parameters just to show the basics.
 
 .. code-block:: yaml
 
     my-dell-chassis:
-      chassis.dell:
-        - name: my-dell-chassis
+      dellchassis.chassis:
+        - chassis_name: my-dell-chassis
+        - datacenter: dc-1-us
         - location: my-location
         - mode: 2
         - idrac_launch: 1
         - slot_names:
-          - 1: my-slot-name
-          - 2: my-other-slot-name
+          - server-1: my-slot-name
+          - server-2: my-other-slot-name
         - blade_power_states:
           - server-1: on
           - server-2: off
           - server-3: powercycle
+
+However, it is possible to place the entire set of chassis configuration
+data in pillar. Here's an example pillar
+structure:
+
+.. code-block:: yaml
+
+    proxy:
+      host: 10.27.20.18
+      admin_username: root
+      admin_password: saltstack
+      proxytype: fx2
+
+      chassis:
+        name: fx2-1
+        username: root
+        password: saltstack1
+        datacenter: london
+        location: rack-1-shelf-3
+        management_mode: 2
+        idrac_launch: 0
+        slot_names:
+          - 'server-1': blade1
+          - 'server-2': blade2
+
+        blades:
+           blade1:
+             idrac_password: saltstack1
+             ipmi_over_lan: True
+             ip: 172.17.17.1
+             subnet: 255.255.0.0
+             netmask: 172.17.255.255
+          blade2:
+             idrac_password: saltstack1
+             ipmi_over_lan: True
+             ip: 172.17.17.2
+             subnet: 255.255.0.0
+             netmask: 172.17.255.255
+          blade3:
+             idrac_password: saltstack1
+             ipmi_over_lan: True
+             ip: 172.17.17.2
+             subnet: 255.255.0.0
+             netmask: 172.17.255.255
+          blade4:
+             idrac_password: saltstack1
+             ipmi_over_lan: True
+             ip: 172.17.17.2
+             subnet: 255.255.0.0
+             netmask: 172.17.255.255
+
+        switches:
+          switch-1:
+            ip: 192.168.1.2
+            netmask: 255.255.255.0
+            broadcast: 192.168.1.255
+            snmp: nonpublic
+            password: saltstack1
+          switch-2:
+            ip: 192.168.1.3
+            netmask: 255.255.255.0
+            broadcast: 192.168.1.255
+            snmp: nonpublic
+            password: saltstack1
+
+And to go with it, here's an example state that pulls the data from pillar
+
+.. code-block:: yaml
+
+    {% set details = pillar['chassis'] with context %}
+    standup-step1:
+      dellchassis.chassis:
+        - name: {{ details['name'] }}
+        - location: {{ details['location'] }}
+        - mode: {{ details['management_mode'] }}
+        - idrac_launch: {{ details['idrac_launch'] }}
+        - slot_names
+          {% for k, v in details['chassis']['slot_names'].iteritems() %}
+          - {{ k }}: {{ v }}
+          {% endfor %}
+
+
+    {% for k, v in details['chassis']['switches'].iteritems() %}
+    standup-switches-{{ k }}:
+      dellchassis.dell_switch:
+        - name: {{ k }}
+        - ip: {{ v['ip'] }}
+        - netmask: {{ v['netmask'] }}
+        - gateway: {{ v['gateway'] }}
+        - password: {{ v['password'] }}
+        - snmp: {{ v['snmp'] }}
+    {% endfor %}
+
+    dellchassis
+    {% for k, v in details['chassis']['slot_names'].iteritems() %}
+
+          - {{ k }}: {{ v }}
+          {% endfor %}
+
+    blade_powercycle:
+      chassis.dell_chassis:
+        - blade_power_states:
+          - server-1: powercycle
+          - server-2: powercycle
+          - server-3: powercycle
+          - server-4: powercycle
 
 '''
 
@@ -35,13 +142,13 @@ def __virtual__():
     return 'chassis.cmd' in __salt__
 
 
-def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
+def blade_idrac(idrac_password=None, idrac_ipmi=None,
                 idrac_ip=None, idrac_netmask=None, idrac_gateway=None,
+                idrac_dnsname=None,
                 drac_dhcp=None):
     '''
     Set parameters for iDRAC in a blade.
 
-    :param name: The name of the blade to address
     :param idrac_password: Password to establish for the iDRAC interface
     :param idrac_ipmi: Enable/Disable IPMI over LAN
     :param idrac_ip: Set IP address for iDRAC
@@ -52,19 +159,57 @@ def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
     :return: A standard Salt changes dictionary
     '''
 
-    pass
+    ret = {'result': True,
+           'changes': {},
+           'comment': ''}
+
+    if not idrac_password:
+        password = __pillar__['proxy']['admin_password']
+    else:
+        password = idrac_password
+
+    if idrac_ipmi:
+        if idrac_ipmi is True:
+            idrac_ipmi = '1'
+        if idrac_ipmi is False:
+            idrac_ipmi = '0'
+        current_ipmi = __salt__['dracr.get_general']('cfgIpmiLan', 'cfgIpmiLanEnable',
+                                                     host=idrac_ip, admin_username='root',
+                                                     admin_password=password)
+
+        if current_ipmi != idrac_ipmi:
+            ch = {'Old': current_ipmi, 'New': idrac_ipmi}
+            ret['changes']['IPMI'] = ch
+
+    if idrac_dnsname:
+        dnsret = __salt__['dracr.get_dns_dracname'](host=idrac_ip, admin_username='root',
+                                                    admin_password=password)
+        current_dnsname = dnsret['Key=iDRAC.Embedded.1#NIC.1']['DNSRacName']
+        if current_dnsname != idrac_dnsname:
+            ch = {'Old': current_dnsname,
+                  'New': idrac_dnsname}
+            ret['changes']['DNSRacName'] = ch
+
+    return ret
 
 
-def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
-         blade_power_states=None):
+def chassis(name, chassis_name=None, password=None, datacenter=None,
+            location=None, mode=None, idrac_launch=None, slot_names=None,
+            blade_power_states=None):
     '''
     Manage a Dell Chassis.
 
-    name
+    chassis_name
         The name of the chassis.
+
+    datacenter
+        The datacenter in which the chassis is located
 
     location
         The location of the chassis.
+
+    password
+        Password for the chassis
 
     mode
         The management mode of the chassis. Viable options are:
@@ -96,9 +241,10 @@ def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
     .. code-block:: yaml
 
         my-dell-chassis:
-          chassis.dell:
+          dellchassis.chassis:
             - name: my-dell-chassis
             - location: my-location
+            - datacenter: london
             - mode: 2
             - idrac_launch: 1
             - slot_names:
@@ -109,7 +255,7 @@ def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
               - server-2: off
               - server-3: powercycle
     '''
-    ret = {'name': name,
+    ret = {'chassis_name': chassis_name,
            'result': True,
            'changes': {},
            'comment': ''}
@@ -119,12 +265,27 @@ def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
     mode_cmd = 'cfgRacTuneChassisMgmtAtServer'
     launch_cmd = 'cfgRacTuneIdracDNSLaunchEnable'
 
+    inventory = __salt__[chassis_cmd]('inventory')
+
+    if idrac_launch:
+        idrac_launch = str(idrac_launch)
+
     current_name = __salt__[chassis_cmd]('get_chassis_name')
-    if name != current_name:
+    if chassis_name != current_name:
         ret['changes'].update({'Name':
                               {'Old': current_name,
-                               'New': name}})
+                               'New': chassis_name}})
 
+    current_dc = __salt__[chassis_cmd]('get_chassis_datacenter')
+    if datacenter and datacenter != current_dc:
+        ret['changes'].update({'Datacenter':
+                                   {'Old': current_dc,
+                                    'New': datacenter}})
+
+    if password:
+        ret['changes'].update({'Password':
+                                   {'Old': '******',
+                                     'New': '******'}})
     if location:
         current_location = __salt__[chassis_cmd]('get_chassis_location')
         if location != current_location:
@@ -147,11 +308,16 @@ def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
 
     if slot_names:
         current_slot_names = __salt__[chassis_cmd]('list_slotnames')
-        for key, val in slot_names:
+        for s in slot_names:
+            key = s.keys()[0]
+            new_name = s[key]
+            if key.startswith('slot-'):
+                key = key[5:]
+
             current_slot_name = current_slot_names.get(key).get('slotname')
-            if current_slot_name != val['name']:
+            if current_slot_name != new_name:
                 old = {key: current_slot_name}
-                new = {key: val}
+                new = {key: new_name}
                 if ret['changes'].get('Slot Names') is None:
                     ret['changes'].update({'Slot Names':
                                           {'Old': {},
@@ -159,23 +325,33 @@ def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
                 ret['changes']['Slot Names']['Old'].update(old)
                 ret['changes']['Slot Names']['New'].update(new)
 
-    # TODO: Refactor this and make DRY - can probable farm this out to a new funciton
+    current_power_states = {}
+    target_power_states = {}
     if blade_power_states:
-        # TODO: Get the power state list working
-        current_power_states = 'get a list of current power states'
-        for key, val in blade_power_states:
-            # TODO: Get the correct state infos
-            current_power_state = current_power_states.get(key).get('state')
-            # TODO: Don't just compare values, check if True should be "on" or "off" etc
-            if current_power_state != val:
-                old = {key: current_power_state}
-                new = {key: val}
-                if ret['changes'].get('Blade Power States') is None:
-                    ret['changes'].update({'Blade Power States':
-                                          {'Old': {},
-                                           'New': {}}})
-                ret['changes']['Blade Power States']['Old'].update(old)
-                ret['changes']['Blade Power States']['New'].update(new)
+        for b in blade_power_states:
+            key = b.keys()[0]
+            status = __salt__[chassis_cmd]('server_powerstatus', module=key)
+            current_power_states[key] = status.get('status', -1)
+            if b[key] == 'powerdown':
+                if current_power_states[key] != -1 and current_power_states[key]:
+                    target_power_states[key] = 'powerdown'
+            if b[key] == 'powerup':
+                if current_power_states[key] != -1 and not current_power_states[key]:
+                    target_power_states[key] = 'powerup'
+            if b[key] == 'powercycle':
+                if current_power_states[key] != -1 and not current_power_states[key]:
+                    target_power_states[key] = 'powerup'
+                if current_power_states[key] != -1 and current_power_states[key]:
+                    target_power_states[key] = 'powercycle'
+        for k, v in target_power_states.iteritems():
+            old = {k: current_power_states[k]}
+            new = {k: v}
+            if ret['changes'].get('Blade Power States') is None:
+                ret['changes'].update({'Blade Power States':
+                                      {'Old': {},
+                                       'New': {}}})
+            ret['changes']['Blade Power States']['Old'].update(old)
+            ret['changes']['Blade Power States']['New'].update(new)
 
     if ret['changes'] == {}:
         ret['comment'] = 'Dell chassis is already in the desired state.'
@@ -190,21 +366,50 @@ def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
     name = __salt__[chassis_cmd]('set_chassis_name', name)
     if location:
         location = __salt__[chassis_cmd]('set_chassis_location', location)
+    pw_result = True
+    if password:
+        pw_single = True
+        if __salt__[chassis_cmd]('change_password', username='root', uid=1,
+                                   password=password):
+            for blade in inventory['server'].keys():
+                pw_single = __salt__[chassis_cmd]('deploy_password',
+                                                  username='root',
+                                                  password=password,
+                                                  module=blade)
+                if not pw_single:
+                    pw_result = False
+        else:
+            pw_result = False
+
+    if datacenter:
+        datacenter_result = __salt__[chassis_cmd]('set_chassis_datacenter',
+                                                  datacenter)
     if mode:
         mode = __salt__[chassis_cmd]('set_general', cfg_tuning, mode_cmd, mode)
     if idrac_launch:
         idrac_launch = __salt__[chassis_cmd]('set_general', cfg_tuning, launch_cmd, idrac_launch)
-    if slot_names:
+    if ret['changes'].get('Slot Names') is not None:
         slot_rets = []
-        for key, val in slot_names.iteritems():
-            slot_name = val.get('slotname')
-            slot_rets.append(__salt__[chassis_cmd]('set_slotname', key, slot_name))
+        for s in slot_names:
+            key = s.keys()[0]
+            new_name = s[key]
+            if key.startswith('slot-'):
+                key = key[5:]
+            slot_rets.append(__salt__[chassis_cmd]('set_slotname', key, new_name))
+
         if any(slot_rets) is False:
             slot_names = False
         else:
             slot_names = True
 
-    if any([name, location, mode, idrac_launch, slot_names]) is False:
+    powerchange_all_ok = True
+    for k, v in target_power_states.iteritems():
+        powerchange_ok = __salt__[chassis_cmd]('server_power', v, module=k)
+        if not powerchange_ok:
+            powerchange_all_ok = False
+
+    if any([name, location, mode, idrac_launch,
+            slot_names, powerchange_all_ok]) is False:
         ret['result'] = False
         ret['comment'] = 'There was an error setting the Dell chassis.'
 
@@ -212,7 +417,7 @@ def chassis(name, location=None, mode=None, idrac_launch=None, slot_names=None,
     return ret
 
 
-def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
+def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
                 password=None, snmp=None):
     '''
     Manage switches in a Dell Chassis.
@@ -245,7 +450,7 @@ def dell_switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
     .. code-block:: yaml
 
         my-dell-chassis:
-          chassis.dell_switch:
+          dellchassis.dell_switch:
             - switch: switch-1
             - ip: 192.168.1.1
             - netmask: 255.255.255.0
