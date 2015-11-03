@@ -80,8 +80,7 @@ import salt.config as config
 
 # Attempt to import pyVim and pyVmomi libs
 try:
-    from pyVim.connect import SmartConnect, Disconnect
-    from pyVmomi import vim, vmodl
+    from pyVmomi import vim
     HAS_PYVMOMI = True
 except Exception:
     HAS_PYVMOMI = False
@@ -3192,7 +3191,7 @@ def remove_all_snapshots(name, kwargs=None, call=None):
             'The remove_all_snapshots action must be called with '
             '-a or --action.'
         )
-    _str_to_bool(kwargs.get('merge_snapshots')) if kwargs and 'merge_snapshots' in kwargs else True
+    connection = _str_to_bool(kwargs.get('merge_snapshots')) if kwargs and 'merge_snapshots' in kwargs else True
 
     vm_ref = vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
