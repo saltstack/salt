@@ -127,7 +127,7 @@ The following configuration is an example, how a complete syslog-ng configuratio
             # Multi line
             # comment
 
-    # An other mode to use comments or existing configuration snippets
+    # Another mode to use comments or existing configuration snippets
     config.other_comment_form:
       syslog_ng.config:
         - config: |
