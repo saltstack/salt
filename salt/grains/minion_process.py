@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 '''
 Set grains describing the minion process.
 '''
 
+from __future__ import absolute_import
 
 import os
 
@@ -53,9 +55,9 @@ def _pid():
 
 def grains():
     return {
-        'uid'       : _uid(),
-        'username'  : _username(),
-        'gid'       : _gid(),
-        'groupname' : _groupname(),
-        'pid'       : _pid(),
+        'uid': _uid(),
+        'username': _username(),
+        'gid': _gid(),
+        'groupname': _groupname(),
+        'pid': _pid(),
     }
