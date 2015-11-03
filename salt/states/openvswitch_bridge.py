@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Management of Open vSwitch bridges.
-"""
+'''
 
 
 def __virtual__():
@@ -12,16 +12,16 @@ def __virtual__():
 
 
 def present(name):
-    """
+    '''
     Ensures that the named bridge exists, eventually creates it.
 
     Args:
         name: The name of the bridge.
 
-    """
+    '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
-    #Comment and change messages
+    # Comment and change messages
     comment_bridge_created = 'Bridge {0} created.'.format(name)
     comment_bridge_notcreated = 'Unable to create bridge: {0}.'.format(name)
     comment_bridge_exists = 'Bridge {0} already exists.'.format(name)
@@ -61,17 +61,17 @@ def present(name):
 
 
 def absent(name):
-    """
+    '''
     Ensures that the named bridge does not exist, eventually deletes it.
 
     Args:
         name: The name of the bridge.
 
-    """
+    '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
-    #Comment and change messages
+    # Comment and change messages
     comment_bridge_deleted = 'Bridge {0} deleted.'.format(name)
     comment_bridge_notdeleted = 'Unable to delete bridge: {0}.'.format(name)
     comment_bridge_notexists = 'Bridge {0} does not exist.'.format(name)
