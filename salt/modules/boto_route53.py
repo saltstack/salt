@@ -27,9 +27,9 @@ Connection module for Amazon Route53
     as a passed in dict, or as a string to pull from pillars or minion config:
 
         myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+          keyid: GKTADJGHEIQSXMKKRBJ08H
+          key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+          region: us-east-1
 
 :depends: boto
 '''
