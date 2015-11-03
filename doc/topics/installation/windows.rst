@@ -234,7 +234,7 @@ SaltStack download site:
 * `Salt32.zip <http://repo.saltstack.com/windows/dependencies/Salt32.zip/>`_
 * `Salt64.zip <http://repo.saltstack.com/windows/dependencies/Salt64.zip/>`_
 
-These files contain all sofware required to build and develop salt. Unzip the
+These files contain all software required to build and develop salt. Unzip the
 contents of the file to ``C:\Salt-Dev\temp``.
 
 Create the Build Environment
