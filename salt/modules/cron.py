@@ -316,7 +316,7 @@ def list_tab(user):
     return ret
 
 # For consistency's sake
-ls = list_tab  # pylint: disable=C0103
+ls = salt.utils.alias_function(list_tab, 'ls')
 
 
 def set_special(user, special, cmd):
@@ -526,7 +526,7 @@ def rm_job(user,
         return comdat['stderr']
     return ret
 
-rm = rm_job  # pylint: disable=C0103
+rm = salt.utils.alias_function(rm_job, 'rm')
 
 
 def set_env(user, name, value=None):

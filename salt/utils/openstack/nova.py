@@ -681,17 +681,20 @@ class SaltNova(OpenStackComputeShell):
         nt_ks = self.compute_conn
         ret = {}
         for item in nt_ks.servers.list():
-            ret[item.name] = {
-                'id': item.id,
-                'name': item.name,
-                'state': item.status,
-                'accessIPv4': item.accessIPv4,
-                'accessIPv6': item.accessIPv6,
-                'flavor': {'id': item.flavor['id'],
-                           'links': item.flavor['links']},
-                'image': {'id': item.image['id'],
-                          'links': item.image['links']},
-                }
+            try:
+                ret[item.name] = {
+                    'id': item.id,
+                    'name': item.name,
+                    'state': item.status,
+                    'accessIPv4': item.accessIPv4,
+                    'accessIPv6': item.accessIPv6,
+                    'flavor': {'id': item.flavor['id'],
+                               'links': item.flavor['links']},
+                    'image': {'id': item.image['id'],
+                              'links': item.image['links']},
+                    }
+            except TypeError:
+                pass
         return ret
 
     def server_list_detailed(self):
@@ -701,28 +704,31 @@ class SaltNova(OpenStackComputeShell):
         nt_ks = self.compute_conn
         ret = {}
         for item in nt_ks.servers.list():
-            ret[item.name] = {
-                'OS-EXT-SRV-ATTR': {},
-                'OS-EXT-STS': {},
-                'accessIPv4': item.accessIPv4,
-                'accessIPv6': item.accessIPv6,
-                'addresses': item.addresses,
-                'created': item.created,
-                'flavor': {'id': item.flavor['id'],
-                           'links': item.flavor['links']},
-                'hostId': item.hostId,
-                'id': item.id,
-                'image': {'id': item.image['id'],
-                          'links': item.image['links']},
-                'key_name': item.key_name,
-                'links': item.links,
-                'metadata': item.metadata,
-                'name': item.name,
-                'state': item.status,
-                'tenant_id': item.tenant_id,
-                'updated': item.updated,
-                'user_id': item.user_id,
-            }
+            try:
+                ret[item.name] = {
+                    'OS-EXT-SRV-ATTR': {},
+                    'OS-EXT-STS': {},
+                    'accessIPv4': item.accessIPv4,
+                    'accessIPv6': item.accessIPv6,
+                    'addresses': item.addresses,
+                    'created': item.created,
+                    'flavor': {'id': item.flavor['id'],
+                               'links': item.flavor['links']},
+                    'hostId': item.hostId,
+                    'id': item.id,
+                    'image': {'id': item.image['id'],
+                              'links': item.image['links']},
+                    'key_name': item.key_name,
+                    'links': item.links,
+                    'metadata': item.metadata,
+                    'name': item.name,
+                    'state': item.status,
+                    'tenant_id': item.tenant_id,
+                    'updated': item.updated,
+                    'user_id': item.user_id,
+                }
+            except TypeError:
+                continue
 
             ret[item.name]['progress'] = getattr(item, 'progress', '0')
 

@@ -581,7 +581,7 @@ def grain_funcs(opts):
     )
 
 
-def grains(opts, force_refresh=False):
+def grains(opts, force_refresh=False, proxy=None):
     '''
     Return the functions for the dynamic grains and the values for the static
     grains.
@@ -1095,7 +1095,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             log.error('Module/package collision: {0!r} and {1!r}'.format(
                                 fpath, self.file_mapping[f_noext][0]
                             ))
-                        if suffix_order.index(ext) >= suffix_order.index(curr_ext):
+                        if not curr_ext or suffix_order.index(ext) >= suffix_order.index(curr_ext):
                             continue  # Next filename
 
                     # Made it this far - add it

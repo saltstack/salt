@@ -83,9 +83,9 @@ def present(name, timespec, tag=None, user=None, job=None):
             ret['comment'] = 'User: {0} is not exists'.format(user)
             ret['result'] = False
             return ret
-        ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd), runas=user)
+        ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd), runas=user, python_shell=True)
     else:
-        ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd))
+        ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd), python_shell=True)
 
     return ret
 

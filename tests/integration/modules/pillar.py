@@ -113,20 +113,6 @@ class PillarModuleTest(integration.ModuleCase):
 
         self.assertEqual(grepo.rp_location, repo.remotes.origin.url)
 
-    @skipIf(HAS_GIT_PYTHON is False,
-            'GitPython must be installed and >= version {0}'.format(GIT_PYTHON))
-    def test_ext_pillar_env_mapping(self):
-        import os
-        from salt.pillar import git_pillar
-
-        repo_url = 'https://github.com/saltstack/pillar1.git'
-        pillar = self.run_function('pillar.data')
-
-        for branch, env in [('dev', 'testing')]:
-            repo = git_pillar._LegacyGitPillar(branch, repo_url, self.master_opts)
-
-            self.assertIn(repo.working_dir,
-                    pillar['test_ext_pillar_opts']['pillar_roots'][env])
 
 if __name__ == '__main__':
     from integration import run_tests
