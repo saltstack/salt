@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Create virtualenv environments
+Create virtualenv environments.
+
+.. versionadded:: 0.17.0
 '''
 from __future__ import absolute_import
 
@@ -88,8 +90,16 @@ def create(path,
         Set ownership for the virtualenv
     runas : None
         Set ownership for the virtualenv
-    use_vt
+
+    use_vt : False
         Use VT terminal emulation (see ouptut while installing)
+
+        .. versionadded:: 2015.5.0
+
+    saltenv : 'base'
+        Specify a different environment. The default environment is ``base``.
+
+        .. versionadded:: 2014.1.0
 
     .. note::
         The ``runas`` argument is deprecated as of 2014.1.0. ``user`` should be
@@ -303,6 +313,8 @@ def get_resource_path(venv, package_or_requirement, resource_name):
     '''
     Returns the path to a resource of a package or a distribution inside a virtualenv
 
+    .. versionadded:: 2015.5.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -329,6 +341,8 @@ def get_resource_path(venv, package_or_requirement, resource_name):
 def get_resource_content(venv, package_or_requirement, resource_name):
     '''
     Returns the content of a resource of a package or a distribution inside a virtualenv
+
+    .. versionadded:: 2015.5.0
 
     CLI Example:
 
