@@ -63,7 +63,7 @@ class TestFileState(TestCase):
         self.assertEqual(json.loads(returner.returned), dataset)
 
         filestate.serialize('/tmp', dataset, formatter="python")
-        self.assertEqual(returner.returned, pprint.pformat(dataset))
+        self.assertEqual(returner.returned, pprint.pformat(dataset) + '\n')
 
     def test_contents_and_contents_pillar(self):
         def returner(contents, *args, **kwargs):
@@ -420,6 +420,7 @@ class FileTestCase(TestCase):
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
+        mock_cmd_fail = MagicMock(return_value={'retcode': 1})
         mock_uid = MagicMock(side_effect=['', 'U12', 'U12', 'U12', 'U12', 'U12',
                                           'U12', 'U12', 'U12', 'U12', 'U12',
                                           'U12', 'U12', 'U12', 'U12', 'U12'])
@@ -451,7 +452,7 @@ class FileTestCase(TestCase):
                          'file.source_list': mock_file,
                          'file.copy': mock_cp,
                          'file.manage_file': mock_ex,
-                         'cmd.retcode': mock_t}):
+                         'cmd.run_all': mock_cmd_fail}):
             comt = ('Must provide name to file.exists')
             ret.update({'comment': comt, 'name': '', 'pchanges': {}})
             self.assertDictEqual(filestate.managed(''), ret)
@@ -1595,8 +1596,8 @@ class FileTestCase(TestCase):
         ret = {'comment': 'check_cmd execution failed',
                'result': False, 'skip_watch': True}
 
-        mock = MagicMock(side_effect=[1, 0])
-        with patch.dict(filestate.__salt__, {'cmd.retcode': mock}):
+        mock = MagicMock(side_effect=[{'retcode': 1}, {'retcode': 0}])
+        with patch.dict(filestate.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(filestate.mod_run_check_cmd(cmd, filename),
                                  ret)
 

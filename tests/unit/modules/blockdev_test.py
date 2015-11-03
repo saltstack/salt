@@ -11,6 +11,7 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 import salt.modules.blockdev as blockdev
+import salt.utils
 
 blockdev.__salt__ = {
     'cmd.has_exec': MagicMock(return_value=True),
@@ -24,6 +25,7 @@ class TestBlockdevModule(TestCase):
         with patch.dict(blockdev.__salt__, {'disk.dump': MagicMock(return_value=True)}):
             self.assertTrue(blockdev.dump('/dev/sda'))
 
+    @skipIf(not salt.utils.which('wipefs'), 'Wipefs not found')
     def test_wipe(self):
         with patch.dict(blockdev.__salt__, {'disk.wipe': MagicMock(return_value=True)}):
             self.assertTrue(blockdev.wipe('/dev/sda'))
@@ -34,6 +36,36 @@ class TestBlockdevModule(TestCase):
             kwargs = {'read-ahead': 512, 'filesystem-read-ahead': 512}
             ret = blockdev.tune('/dev/sda', **kwargs)
             self.assertTrue(ret)
+
+    def test_format(self):
+        '''
+        unit tests for blockdev.format
+        '''
+        device = '/dev/sdX1'
+        fs_type = 'ext4'
+        mock = MagicMock(return_value=0)
+        with patch.dict(blockdev.__salt__, {'cmd.retcode': mock}):
+            self.assertEqual(blockdev.format_(device), True)
+
+    def test_fstype(self):
+        '''
+        unit tests for blockdev.fstype
+        '''
+        device = '/dev/sdX1'
+        fs_type = 'ext4'
+        mock = MagicMock(return_value='FSTYPE\n{0}'.format(fs_type))
+        with patch.dict(blockdev.__salt__, {'cmd.run': mock}):
+            self.assertEqual(blockdev.fstype(device), fs_type)
+
+    def test_resize2fs(self):
+        '''
+        unit tests for blockdev.resize2fs
+        '''
+        device = '/dev/sdX1'
+        mock = MagicMock()
+        with patch.dict(blockdev.__salt__, {'cmd.run_all': mock}):
+            blockdev.resize2fs(device)
+            mock.assert_called_once_with('resize2fs {0}'.format(device), python_shell=False)
 
 
 if __name__ == '__main__':

@@ -95,7 +95,7 @@ def list_upgrades(refresh=True):
     return ret
 
 # Provide a list_updates function for those used to using zypper list-updates
-list_updates = list_upgrades
+list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
 
 
 def info_installed(*names):
@@ -175,10 +175,10 @@ def info_available(*names, **kwargs):
         if nfo.get('name'):
             name = nfo.pop('name')
             ret[name] = nfo
-        if nfo.get("status"):
-            nfo['status'] = nfo.get("status").split(" ")[0]
-        if nfo.get("installed"):
-            nfo['installed'] = nfo.get("installed").lower() == "yes" and True or False
+        if nfo.get('status'):
+            nfo['status'] = nfo.get('status')
+        if nfo.get('installed'):
+            nfo['installed'] = nfo.get('installed').lower() == 'yes' and True or False
 
     return ret
 
@@ -227,13 +227,17 @@ def latest_version(*names, **kwargs):
     for name in names:
         pkg_info = package_info.get(name, {})
         if pkg_info.get('status', '').lower() in ['not installed', 'out-of-date']:
-            ret[name] = pkg_info
+            ret[name] = pkg_info.get('version')
+
+    # Return a string if only one package name passed
+    if len(names) == 1 and len(ret):
+        return ret[names[0]]
 
     return ret
 
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def upgrade_available(name):

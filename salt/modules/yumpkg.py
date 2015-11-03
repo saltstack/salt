@@ -439,7 +439,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def upgrade_available(name):
@@ -1808,7 +1808,7 @@ def group_install(name,
 
     return install(pkgs=pkgs, **kwargs)
 
-groupinstall = group_install
+groupinstall = salt.utils.alias_function(group_install, 'groupinstall')
 
 
 def list_repos(basedir=None):
@@ -1977,6 +1977,14 @@ def mod_repo(repo, basedir=None, **kwargs):
         if repo_opts[key] != 0 and not repo_opts[key]:
             del repo_opts[key]
             todelete.append(key)
+
+    # convert disabled=True to enabled=0 from pkgrepo state
+    if 'disabled' in repo_opts:
+        kw_disabled = repo_opts['disabled']
+        if kw_disabled is True or str(kw_disabled).lower() == 'true':
+            repo_opts['enabled'] = 0
+        del repo_opts['disabled']
+        todelete.append('disabled')
 
     # Add baseurl or mirrorlist to the 'todelete' list if the other was
     # specified in the repo_opts

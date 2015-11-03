@@ -42,10 +42,10 @@ def __parse_drac(output):
                 drac[section].update(dict(
                     [[prop.strip() for prop in i.split('=')]]
                 ))
-        else:
-            section = i.strip()[:-1]
-            if section not in drac and section:
-                drac[section] = {}
+            else:
+                section = i.strip()[1:-1]
+                if section not in drac and section:
+                    drac[section] = {}
 
     return drac
 
@@ -125,9 +125,35 @@ def __execute_ret(command, host=None,
             if len(l.strip()) == 0:
                 continue
             fmtlines.append(l)
+            if '=' in l:
+                continue
+            break
         cmd['stdout'] = '\n'.join(fmtlines)
 
     return cmd
+
+
+def get_dns_dracname(host=None,
+                     admin_username=None, admin_password=None):
+    import pydevd
+    pydevd.settrace('172.16.207.1', port=65500, stdoutToServer=True, stderrToServer=True)
+
+    ret = __execute_ret('get iDRAC.NIC.DNSRacName', host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
+    parsed = __parse_drac(ret['stdout'])
+    return parsed
+
+
+def set_dns_dracname(name,
+                     host=None,
+                     admin_username=None, admin_password=None):
+
+    ret = __execute_ret('set iDRAC.NIC.DNSRacName {0}'.format(name),
+                        host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
+    return ret
 
 
 def system_info(host=None,
@@ -645,6 +671,41 @@ def set_network(ip, netmask, gateway, host=None,
     ))
 
 
+def server_power(status, host=None,
+                  admin_username=None,
+                  admin_password=None,
+                  module=None):
+    '''
+    status
+        One of 'powerup', 'powerdown', 'powercycle', 'hardreset',
+        'graceshutdown'
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    module
+        The element to reboot on the chassis such as a blade. If not provided,
+        the chassis will be rebooted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt dell dracr.server_reboot
+        salt dell dracr.server_reboot module=server-1
+
+    '''
+    return __execute_cmd('serveraction {0}'.format(status),
+                         host=host, admin_username=admin_username,
+                         admin_password=admin_password, module=module)
+
+
 def server_reboot(host=None,
                   admin_username=None,
                   admin_password=None,
@@ -946,10 +1007,9 @@ def set_slotname(slot, name, host=None,
             admin_username=root admin_password=secret
 
     '''
-    return __execute_cmd('setslotname -i {0} {1}'.format(
-        slot, name[0:14], host=host,
-        admin_username=admin_username,
-        admin_password=admin_password))
+    return __execute_cmd('config -g cfgServerInfo -o cfgServerName -i {0} {1}'.format(slot, name),
+                         host=host, admin_username=admin_username,
+                         admin_password=admin_password)
 
 
 def set_chassis_name(name,
@@ -1147,8 +1207,67 @@ def get_chassis_location(host=None,
 
     '''
     return system_info(host=host,
-                        admin_username=admin_username,
-                        admin_password=admin_password)['Chassis Information']['Chassis Location']
+                       admin_username=admin_username,
+                       admin_password=admin_password)['Chassis Information']['Chassis Location']
+
+
+def set_chassis_datacenter(location,
+                         host=None,
+                         admin_username=None,
+                         admin_password=None):
+    '''
+    Set the location of the chassis.
+
+    location
+        The name of the datacenter to be set on the chassis.
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dracr.set_chassis_datacenter datacenter-name host=111.222.333.444
+            admin_username=root admin_password=secret
+
+    '''
+    return set_general('cfgLocation', 'cfgLocationDatacenter', location,
+                         host=host, admin_username=admin_username,
+                         admin_password=admin_password)
+
+
+def get_chassis_datacenter(host=None,
+                         admin_username=None,
+                         admin_password=None):
+    '''
+    Get the datacenter of the chassis.
+
+    host
+        The chassis host.
+
+    admin_username
+        The username used to access the chassis.
+
+    admin_password
+        The password used to access the chassis.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dracr.set_chassis_location host=111.222.333.444
+           admin_username=root admin_password=secret
+
+    '''
+    return get_general('cfgLocation', 'cfgLocationDatacenter', host=host,
+                       admin_username=admin_username, admin_password=admin_password)
 
 
 def set_general(cfg_sec, cfg_var, val, host=None,

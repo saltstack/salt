@@ -190,7 +190,7 @@ def versions_report():
     return '\n'.join(salt.version.versions_report())
 
 
-versions = versions_report
+versions = salt.utils.alias_function(versions_report, 'versions')
 
 
 def conf_test():

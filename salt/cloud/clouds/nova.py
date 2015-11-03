@@ -645,7 +645,7 @@ def create(vm_):
             return
 
         rackconnectv3 = config.get_cloud_config_value(
-            'rackconnectv3', vm_, __opts__, default='False',
+            'rackconnectv3', vm_, __opts__, default=False,
             search_global=False
         )
 
@@ -721,19 +721,27 @@ def create(vm_):
             data.public_ips = access_ip
             return data
 
+        # populate return data with private_ips
+        # when ssh_interface is set to private_ips and public_ips exist
+        if not result and ssh_interface(vm_) == 'private_ips':
+            for private_ip in private:
+                ignore_ip = ignore_cidr(vm_, private_ip)
+                if private_ip not in data.private_ips and not ignore_ip:
+                    result.append(private_ip)
+
         if cloudnetwork(vm_) is True:
             data.public_ips = access_ip
             return data
+
+        if public:
+            data.public_ips = public
+            if ssh_interface(vm_) != 'private_ips':
+                return data
 
         if result:
             log.debug('result = {0}'.format(result))
             data.private_ips = result
             if ssh_interface(vm_) == 'private_ips':
-                return data
-
-        if public:
-            data.public_ips = public
-            if ssh_interface(vm_) != 'private_ips':
                 return data
 
     try:

@@ -46,6 +46,9 @@ automatically
 from __future__ import absolute_import, print_function
 import os
 
+# Import salt libs
+import salt.utils
+
 
 def built(
         name,
@@ -53,12 +56,13 @@ def built(
         dest_dir,
         spec,
         sources,
-        template,
         tgt,
+        template=None,
         deps=None,
         env=None,
         results=None,
-        always=False,
+        force=False,
+        always=None,
         saltenv='base'):
     '''
     Ensure that the named package is built and exists in the named directory
@@ -78,11 +82,15 @@ def built(
     sources
         The list of package sources
 
-    template
-        Set to run the spec file through a templating engine
-
     tgt
         The target platform to run the build on
+
+    template
+        Run the spec file through a templating engine
+
+        .. versionchanged:: 2015.8.2
+            This argument is now optional, allowing for no templating engine to
+            be used if none is desired.
 
     deps
         Packages required to ensure that the named package is built
@@ -112,9 +120,20 @@ def built(
     results
         The names of the expected rpms that will be built
 
+    force : False
+        If ``True``, packages will be built even if they already exist in the
+        ``dest_dir``. This is useful when building a package for continuous or
+        nightly package builds.
+
+        .. versionadded:: 2015.8.2
+
     always
-        Build with every run (good if the package is for continuous or
-        nightly package builds)
+        If ``True``, packages will be built even if they already exist in the
+        ``dest_dir``. This is useful when building a package for continuous or
+        nightly package builds.
+
+        .. deprecated:: 2015.8.2
+            Use ``force`` instead.
 
     saltenv
         The saltenv to use for files downloaded from the salt filesever
@@ -123,7 +142,16 @@ def built(
            'changes': {},
            'comment': '',
            'result': True}
-    if not always:
+
+    if always is not None:
+        salt.utils.warn_until(
+            'Carbon',
+            'The \'always\' argument to the pkgbuild.built state has been '
+            'deprecated, please use \'force\' instead.'
+        )
+        force = always
+
+    if not force:
         if isinstance(results, str):
             results = results.split(',')
         results = set(results)

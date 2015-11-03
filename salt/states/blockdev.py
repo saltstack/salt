@@ -29,14 +29,17 @@ import os.path
 # Import salt libs
 import salt.utils
 
+__virtualname__ = 'blockdev'
+
 
 def __virtual__():
     '''
-    Only work on POSIX-like systems
+    Only load this module if the blockdev execution module is available
     '''
-    if salt.utils.is_windows():
-        return False
-    return True
+    if 'blockdev.tune' in __salt__:
+        return __virtualname__
+    return (False, ('Cannot load the {0} state module: '
+                    'blockdev execution module not found'.format(__virtualname__)))
 
 
 def tuned(name, **kwargs):
@@ -146,25 +149,8 @@ def formatted(name, fs_type='ext4', **kwargs):
         ret['result'] = None
         return ret
 
-    cmd = 'mkfs -t {0} '.format(fs_type)
-    if 'inode_size' in kwargs:
-        if fs_type[:3] == 'ext':
-            cmd += '-i {0} '.format(kwargs['inode_size'])
-        elif fs_type == 'xfs':
-            cmd += '-i size={0} '.format(kwargs['inode_size'])
-    if 'lazy_itable_init' in kwargs:
-        if fs_type[:3] == 'ext':
-            cmd += '-E lazy_itable_init={0} '.format(kwargs['lazy_itable_init'])
-
-    cmd += name
-    __salt__['cmd.run'](cmd).splitlines()
-    __salt__['cmd.run']('sync').splitlines()
-    blk = __salt__['cmd.run']('lsblk -o fstype {0}'.format(name)).splitlines()
-
-    if len(blk) == 1:
-        current_fs = ''
-    else:
-        current_fs = blk[1]
+    __salt__['blockdev.format'](name, fs_type, **kwargs)
+    current_fs = __salt__['blockdev.fstype'](name)
 
     if current_fs == fs_type:
         ret['comment'] = ('{0} has been formatted '
