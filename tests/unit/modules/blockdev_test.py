@@ -57,16 +57,6 @@ class TestBlockdevModule(TestCase):
         with patch.dict(blockdev.__salt__, {'cmd.run': mock}):
             self.assertEqual(blockdev.fstype(device), fs_type)
 
-    def test_resize2fs(self):
-        '''
-        unit tests for blockdev.resize2fs
-        '''
-        device = '/dev/sdX1'
-        mock = MagicMock()
-        with patch.dict(blockdev.__salt__, {'cmd.run_all': mock}):
-            blockdev.resize2fs(device)
-            mock.assert_called_once_with('resize2fs {0}'.format(device), python_shell=False)
-
 
 if __name__ == '__main__':
     from integration import run_tests
