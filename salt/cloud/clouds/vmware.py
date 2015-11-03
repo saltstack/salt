@@ -378,7 +378,7 @@ def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_ty
         else:
             log.debug("Changing type of '{0}' from '{1}' to '{2}'".format(network_adapter.deviceInfo.label, type(network_adapter).__name__.rsplit(".", 1)[1][7:].lower(), adapter_type))
     else:
-        # If type not specified or does not match, dont change adapter type
+        # If type not specified or does not match, don't change adapter type
         if adapter_type:
             log.error("Cannot change type of '{0}' to '{1}'. Not changing type".format(network_adapter.deviceInfo.label, adapter_type))
         edited_network_adapter = network_adapter

@@ -1049,7 +1049,7 @@ Changes:
 - **PR** `#25392`_: (*rallytime*) Back-port `#25256`_ to 2015.5
   @ *2015-07-14T03:25:13Z*
 
-  - **PR** `#25256`_: (*yanatan16*) Dont assume source_hash exists
+  - **PR** `#25256`_: (*yanatan16*) Don't assume source_hash exists
     | refs: `#25392`_
 
 - **PR** `#25398`_: (*twangboy*) Fix date

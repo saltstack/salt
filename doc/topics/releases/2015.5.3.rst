@@ -956,7 +956,7 @@ Changes:
   * a570d7f Merge pull request `#24566`_ from jayeshka/rdp_states-unit-test
   * 273b994 adding states/rdp unit test case.
 
-- **PR** `#24551`_: (*joejulian*) 2015.5 dont pollute environment
+- **PR** `#24551`_: (*joejulian*) 2015.5 don't pollute environment
   @ *2015-06-11T02:13:06Z*
 
   - **ISSUE** `#24480`_: (*kiorky*) [CRITICAL] [2015.5] tls breaks tzinfo
