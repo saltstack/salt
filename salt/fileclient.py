@@ -617,12 +617,20 @@ class Client(object):
             )
             if 'handle' not in query:
                 raise MinionError('Error: {0}'.format(query['error']))
+
+            if 'text' in query:
+                text = query['text']
+            elif hasattr(query['handle'], 'body'):
+                text = query['handle'].body
+            else:
+                raise MinionError('Could not retrieve HTTP response body')
+
             if no_cache:
-                return query['text']
+                return text
             else:
                 dest_tmp = "{0}.part".format(dest)
                 with salt.utils.fopen(dest_tmp, 'wb') as destfp:
-                    destfp.write(query['text'])
+                    destfp.write(text)
                 salt.utils.files.rename(dest_tmp, dest)
                 return dest
         except HTTPError as exc:
