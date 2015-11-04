@@ -782,11 +782,11 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
   * 07e987e Merge pull request `#23702`_ from jayeshka/fix_lvs_service
   * ecff218 fix lvs_service
 
-- **PR** `#23686`_: (*jfindlay*) remove superflous return statement
+- **PR** `#23686`_: (*jfindlay*) remove superfluous return statement
   @ *2015-05-14T14:20:18Z*
 
   * 39973d4 Merge pull request `#23686`_ from jfindlay/fix_lvs_server
-  * 5aaeb73 remove superflous return statement
+  * 5aaeb73 remove superfluous return statement
 
 - **PR** `#23690`_: (*rallytime*) Backport `#23424`_ to 2015.5
   @ *2015-05-13T23:04:36Z*
