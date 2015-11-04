@@ -456,7 +456,7 @@ def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
     '''
 
     # db doesn't exist, proceed
-    query = 'DROP DATABASE {0}'.format(name)
+    query = 'DROP DATABASE "{0}"'.format(name)
     ret = _psql_prepare_and_run(['-c', query],
                                 user=user,
                                 host=host,
@@ -540,13 +540,13 @@ def tablespace_create(name, location, options=None, owner=None, user=None,
     owner_query = ''
     options_query = ''
     if owner:
-        owner_query = 'OWNER {0}'.format(owner)
+        owner_query = 'OWNER "{0}"'.format(owner)
         # should come out looking like: 'OWNER postgres'
     if options:
         optionstext = ['{0} = {1}'.format(k, v) for k, v in options.items()]
         options_query = 'WITH ( {0} )'.format(', '.join(optionstext))
         # should come out looking like: 'WITH ( opt1 = 1.0, opt2 = 4.0 )'
-    query = 'CREATE TABLESPACE {0} {1} LOCATION \'{2}\' {3}'.format(name,
+    query = 'CREATE TABLESPACE "{0}" {1} LOCATION \'{2}\' {3}'.format(name,
                                                                 owner_query,
                                                                 location,
                                                                 options_query)
@@ -582,16 +582,16 @@ def tablespace_alter(name, user=None, host=None, port=None, maintenance_db=None,
     queries = []
 
     if new_name:
-        queries.append('ALTER TABLESPACE {0} RENAME TO {1}'.format(
+        queries.append('ALTER TABLESPACE "{0}" RENAME TO "{1}"'.format(
                        name, new_name))
     if new_owner:
-        queries.append('ALTER TABLESPACE {0} OWNER TO {1}'.format(
+        queries.append('ALTER TABLESPACE "{0}" OWNER TO "{1}"'.format(
                        name, new_owner))
     if set_option:
-        queries.append('ALTER TABLESPACE {0} SET ({1} = {2})'.format(
+        queries.append('ALTER TABLESPACE "{0}" SET ({1} = {2})'.format(
                        name, set_option.keys()[0], set_option.values()[0]))
     if reset_option:
-        queries.append('ALTER TABLESPACE {0} RESET ({1})'.format(
+        queries.append('ALTER TABLESPACE "{0}" RESET ({1})'.format(
                        name, reset_option))
 
     for query in queries:
@@ -618,7 +618,7 @@ def tablespace_remove(name, user=None, host=None, port=None,
 
     .. versionadded:: 2015.8.0
     '''
-    query = 'DROP TABLESPACE {0}'.format(name)
+    query = 'DROP TABLESPACE "{0}"'.format(name)
     ret = _psql_prepare_and_run(['-c', query],
                                 user=user,
                                 host=host,
@@ -1147,7 +1147,7 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
         return False
 
     # user exists, proceed
-    sub_cmd = 'DROP ROLE {0}'.format(name)
+    sub_cmd = 'DROP ROLE "{0}"'.format(name)
     _psql_prepare_and_run(
         ['-c', sub_cmd],
         runas=runas, host=host, user=user, port=port,
@@ -1494,7 +1494,7 @@ def create_extension(name,
             args.append('"{0}"'.format(name))
             sargs = []
             if schema:
-                sargs.append('SCHEMA {0}'.format(schema))
+                sargs.append('SCHEMA "{0}"'.format(schema))
             if ext_version:
                 sargs.append('VERSION {0}'.format(ext_version))
             if from_version:
@@ -1507,7 +1507,7 @@ def create_extension(name,
         else:
             args = []
             if schema and _EXTENSION_TO_MOVE in mtdata:
-                args.append('ALTER EXTENSION "{0}" SET SCHEMA {1};'.format(
+                args.append('ALTER EXTENSION "{0}" SET SCHEMA "{1}";'.format(
                     name, schema))
             if ext_version and _EXTENSION_TO_UPGRADE in mtdata:
                 args.append('ALTER EXTENSION "{0}" UPDATE TO {1};'.format(
@@ -1706,7 +1706,7 @@ def owner_to(dbname,
     sqlfile = tempfile.NamedTemporaryFile()
     sqlfile.write('begin;\n')
     sqlfile.write(
-        'alter database {0} owner to {1};\n'.format(
+        'alter database "{0}" owner to "{1}";\n'.format(
             dbname, ownername
         )
     )
@@ -1786,9 +1786,9 @@ def schema_create(dbname, name, owner=None,
         log.info('\'{0}\' already exists in \'{1}\''.format(name, dbname))
         return False
 
-    sub_cmd = 'CREATE SCHEMA {0}'.format(name)
+    sub_cmd = 'CREATE SCHEMA "{0}"'.format(name)
     if owner is not None:
-        sub_cmd = '{0} AUTHORIZATION {1}'.format(sub_cmd, owner)
+        sub_cmd = '{0} AUTHORIZATION "{1}"'.format(sub_cmd, owner)
 
     ret = _psql_prepare_and_run(['-c', sub_cmd],
                                 user=db_user, password=db_password,
@@ -1842,7 +1842,7 @@ def schema_remove(dbname, name,
         return False
 
     # schema exists, proceed
-    sub_cmd = 'DROP SCHEMA {0}'.format(name)
+    sub_cmd = 'DROP SCHEMA "{0}"'.format(name)
     _psql_prepare_and_run(
         ['-c', sub_cmd],
         runas=user,
