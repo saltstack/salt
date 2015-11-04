@@ -763,7 +763,7 @@ def _wait_for_vmware_tools(vm_ref, max_wait):
         if time_counter % 5 == 0:
             log.info("[ {0} ] Waiting for VMware tools to be running [{1} s]".format(vm_ref.name, time_counter))
         if str(vm_ref.summary.guest.toolsRunningStatus) == "guestToolsRunning":
-            log.info("[ {0} ] Succesfully got VMware tools running on the guest in {1} seconds".format(vm_ref.name, time_counter))
+            log.info("[ {0} ] Successfully got VMware tools running on the guest in {1} seconds".format(vm_ref.name, time_counter))
             return True
 
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
