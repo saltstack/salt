@@ -229,7 +229,7 @@ def create(name, allocated_storage, db_instance_class, engine,
                                       option_group_name, character_set_name,
                                       publicly_accessible, tags)
         if not rds:
-            msg = 'Failed to create RDS {0}, reason: {1}'.format(name, e.body)
+            msg = 'Failed to create RDS {0}'.format(name)
             log.error(msg)
             return False
         if not wait_status:
