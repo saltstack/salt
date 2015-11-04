@@ -944,7 +944,7 @@ def destroy(name, conn=None, call=None, kwargs=None):
             result = conn.delete_deployment(service_name, service_name)
         except AzureConflictHttpError as exc:
             log.error(exc.message)
-            return {'Error': exc.message}
+            raise SaltCloudSystemExit('{0}: {1}'.format(name, exc.message))
         delete_type = 'delete_deployment'
     _wait_for_async(conn, result.request_id)
     ret[name] = {
@@ -1187,9 +1187,9 @@ def show_storage_keys(kwargs=None, conn=None, call=None):
     except AzureMissingResourceHttpError as exc:
         storage_data = show_storage(kwargs={'name': kwargs['name']}, call='function')
         if storage_data['storage_service_properties']['status'] == 'Creating':
-            return {'Error': 'The storage account keys have not yet been created'}
+            raise SaltCloudSystemExit('The storage account keys have not yet been created.')
         else:
-            return {'Error': exc.message}
+            raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['name'], exc.message))
     return object_to_dict(data)
 
 
@@ -1245,8 +1245,8 @@ def create_storage(kwargs=None, conn=None, call=None):
             account_type=kwargs.get('account_type', 'Standard_GRS'),
         )
         return {'Success': 'The storage account was successfully created'}
-    except AzureConflictHttpError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the storage account already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. This usually means that the storage account already exists.')
 
 
 def update_storage(kwargs=None, conn=None, call=None):
@@ -1322,8 +1322,8 @@ def regenerate_storage_keys(kwargs=None, conn=None, call=None):
             key_type=kwargs['key_type'],
         )
         return show_storage_keys(kwargs={'name': kwargs['name']}, call='function')
-    except AzureConflictHttpError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the storage account already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. This usually means that the storage account already exists.')
 
 
 def delete_storage(kwargs=None, conn=None, call=None):
@@ -1356,7 +1356,7 @@ def delete_storage(kwargs=None, conn=None, call=None):
         data = conn.delete_storage_account(kwargs['name'])
         return {'Success': 'The storage account was successfully deleted'}
     except AzureMissingResourceHttpError as exc:
-        return {'Error': exc.message}
+        raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['name'], exc.message))
 
 
 def list_services(kwargs=None, conn=None, call=None):
@@ -1464,8 +1464,8 @@ def create_service(kwargs=None, conn=None, call=None):
             kwargs.get('extended_properties', None),
         )
         return {'Success': 'The service was successfully created'}
-    except AzureConflictHttpError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the service already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. This usually means that the service already exists.')
 
 
 def delete_service(kwargs=None, conn=None, call=None):
@@ -1495,10 +1495,10 @@ def delete_service(kwargs=None, conn=None, call=None):
         conn = get_conn()
 
     try:
-        data = conn.delete_hosted_service(kwargs['name'])
+        conn.delete_hosted_service(kwargs['name'])
         return {'Success': 'The service was successfully deleted'}
     except AzureMissingResourceHttpError as exc:
-        return {'Error': exc.message}
+        raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['name'], exc.message))
 
 
 def list_disks(kwargs=None, conn=None, call=None):
@@ -1628,7 +1628,7 @@ def delete_disk(kwargs=None, conn=None, call=None):
         data = conn.delete_disk(kwargs['name'], kwargs.get('delete_vhd', False))
         return {'Success': 'The disk was successfully deleted'}
     except AzureMissingResourceHttpError as exc:
-        return {'Error': exc.message}
+        raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['name'], exc.message))
 
 
 def update_disk(kwargs=None, conn=None, call=None):
@@ -1792,8 +1792,9 @@ def add_service_certificate(kwargs=None, conn=None, call=None):
             kwargs['password'],
         )
         return {'Success': 'The service certificate was successfully added'}
-    except AzureConflictHttpError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the service certificate already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. This usually means that the '
+                                  'service certificate already exists.')
 
 
 def delete_service_certificate(kwargs=None, conn=None, call=None):
@@ -1837,7 +1838,7 @@ def delete_service_certificate(kwargs=None, conn=None, call=None):
         )
         return {'Success': 'The service certificate was successfully deleted'}
     except AzureMissingResourceHttpError as exc:
-        return {'Error': exc.message}
+        raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['name'], exc.message))
 
 
 def list_management_certificates(kwargs=None, conn=None, call=None):
@@ -1936,14 +1937,15 @@ def add_management_certificate(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit('Certificate data must be specified as "data"')
 
     try:
-        data = conn.add_management_certificate(
+        conn.add_management_certificate(
             kwargs['name'],
             kwargs['thumbprint'],
             kwargs['data'],
         )
         return {'Success': 'The management certificate was successfully added'}
-    except AzureConflictHttpError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the management certificate already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. '
+                                  'This usually means that the management certificate already exists.')
 
 
 def delete_management_certificate(kwargs=None, conn=None, call=None):
@@ -1974,10 +1976,10 @@ def delete_management_certificate(kwargs=None, conn=None, call=None):
         conn = get_conn()
 
     try:
-        data = conn.delete_management_certificate(kwargs['thumbprint'])
+        conn.delete_management_certificate(kwargs['thumbprint'])
         return {'Success': 'The management certificate was successfully deleted'}
     except AzureMissingResourceHttpError as exc:
-        return {'Error': exc.message}
+        raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['thumbprint'], exc.message))
 
 
 def list_virtual_networks(kwargs=None, conn=None, call=None):
@@ -2381,15 +2383,15 @@ def create_affinity_group(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit('A location must be specified as "location"')
 
     try:
-        data = conn.create_affinity_group(
+        conn.create_affinity_group(
             kwargs['name'],
             kwargs['label'],
             kwargs['location'],
             kwargs.get('description', None),
         )
         return {'Success': 'The affinity group was successfully created'}
-    except AzureConflictHttpError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the affinity group already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. This usually means that the affinity group already exists.')
 
 
 def update_affinity_group(kwargs=None, conn=None, call=None):
@@ -2421,7 +2423,7 @@ def update_affinity_group(kwargs=None, conn=None, call=None):
     if 'label' not in kwargs:
         raise SaltCloudSystemExit('A label must be specified as "label"')
 
-    data = conn.update_affinity_group(
+    conn.update_affinity_group(
         affinity_group_name=kwargs['name'],
         label=kwargs['label'],
         description=kwargs.get('description', None),
@@ -2456,10 +2458,10 @@ def delete_affinity_group(kwargs=None, conn=None, call=None):
         conn = get_conn()
 
     try:
-        data = conn.delete_affinity_group(kwargs['name'])
+        conn.delete_affinity_group(kwargs['name'])
         return {'Success': 'The affinity group was successfully deleted'}
     except AzureMissingResourceHttpError as exc:
-        return {'Error': exc.message}
+        raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['name'], exc.message))
 
 
 def get_storage_conn(storage_account=None, storage_key=None, conn_kwargs=None):
@@ -2600,15 +2602,15 @@ def create_storage_container(kwargs=None, storage_conn=None, call=None):
         storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     try:
-        data = storage_conn.create_container(
+        storage_conn.create_container(
             container_name=kwargs['name'],
             x_ms_meta_name_values=kwargs.get('meta_name_values', None),
             x_ms_blob_public_access=kwargs.get('blob_public_access', None),
             fail_on_exist=kwargs.get('fail_on_exist', False),
         )
         return {'Success': 'The storage container was successfully created'}
-    except AzureConflictHttpError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the storage container already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. This usually means that the storage container already exists.')
 
 
 def show_storage_container(kwargs=None, storage_conn=None, call=None):
@@ -2741,8 +2743,8 @@ def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
             x_ms_lease_id=kwargs.get('lease_id', None),
         )
         return {'Success': 'The storage container was successfully updated'}
-    except AzureConflictHttpError as exc:
-        return {'Error': 'There was a Conflict.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict.')
 
 
 def show_storage_container_acl(kwargs=None, storage_conn=None, call=None):
@@ -2826,8 +2828,8 @@ def set_storage_container_acl(kwargs=None, storage_conn=None, call=None):
             x_ms_lease_id=kwargs.get('lease_id', None),
         )
         return {'Success': 'The storage container was successfully updated'}
-    except AzureConflictHttpError as exc:
-        return {'Error': 'There was a Conflict.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict.')
 
 
 def delete_storage_container(kwargs=None, storage_conn=None, call=None):
@@ -3138,8 +3140,8 @@ def show_blob_properties(kwargs=None, storage_conn=None, call=None):
             blob_name=kwargs['blob'],
             x_ms_lease_id=kwargs.get('lease_id', None),
         )
-    except AzureMissingResourceHttpError as exc:
-        return {'Error': 'The specified blob does not exist.'}
+    except AzureMissingResourceHttpError:
+        raise SaltCloudSystemExit('The specified blob does not exist.')
 
     return data
 
