@@ -238,11 +238,15 @@ def setvals(grains, destructive=False):
             grains[key] = val
             __grains__[key] = val
     # Cast defaultdict to dict; is there a more central place to put this?
+    yaml_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_representers)
+    yaml_multi_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_multi_representers)
     yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
             yaml.representer.SafeRepresenter.represent_dict)
     yaml.representer.SafeRepresenter.add_representer(OrderedDict,
             yaml.representer.SafeRepresenter.represent_dict)
     cstr = yaml.safe_dump(grains, default_flow_style=False)
+    yaml.representer.SafeRepresenter.yaml_representers = yaml_reps
+    yaml.representer.SafeRepresenter.yaml_multi_representers = yaml_multi_reps
     try:
         with salt.utils.fopen(gfn, 'w+') as fp_:
             fp_.write(cstr)
