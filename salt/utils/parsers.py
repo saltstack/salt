@@ -2719,6 +2719,13 @@ class SaltSSHOptionParser(six.with_metaclass(OptionParserMeta,
             help='Use the only authentication identity files configured in the '
                  'ssh_config files. See IdentitiesOnly flag in man ssh_config'
         )
+        auth_group.add_option(
+            '--sudo',
+            dest='ssh_sudo',
+            default=False,
+            action='store_true',
+            help='Run command via sudo.'
+        )
         self.add_option_group(auth_group)
 
         scan_group = optparse.OptionGroup(
