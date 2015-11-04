@@ -848,12 +848,13 @@ class AsyncReqMessageClient(object):
         '''
         Return a future which will be completed when the message has a response
         '''
-        message = self.serial.dumps(message)
         if future is None:
             future = tornado.concurrent.Future()
             future.tries = tries
             future.attempts = 0
             future.timeout = timeout
+            # if a future wasn't passed in, we need to serialize the message
+            message = self.serial.dumps(message)
         if callback is not None:
             def handle_future(future):
                 response = future.result()
