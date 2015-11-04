@@ -1293,9 +1293,10 @@ def _create_eni_if_necessary(interface):
     if isinstance(associate_public_ip, str):
         # Assume id of EIP as value
         _associate_eip_with_interface(eni_id, associate_public_ip)
-    elif interface.get('associate_eip'):
+
+    if interface.get('associate_eip'):
         _associate_eip_with_interface(eni_id, interface.get('associate_eip'))
-    elif interface.get('allocate_new_eip') or associate_public_ip:
+    elif interface.get('allocate_new_eip'):
         _new_eip = _request_eip(interface)
         _associate_eip_with_interface(eni_id, _new_eip)
     elif interface.get('allocate_new_eips'):
