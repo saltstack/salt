@@ -290,20 +290,6 @@ def _get_jinja_error(trace, context=None):
     return line, out
 
 
-def _decode_recursively(object_):
-    if isinstance(object_, list):
-        return [_decode_recursively(o) for o in object_]
-    if isinstance(object_, tuple):
-        return tuple([_decode_recursively(o) for o in object_])
-    if isinstance(object_, dict):
-        return dict([(_decode_recursively(key), _decode_recursively(value))
-                     for key, value in six.iteritems(object_)])
-    elif isinstance(object_, string_types):
-        return salt.utils.locales.sdecode(object_)
-    else:
-        return object_
-
-
 def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     opts = context['opts']
     saltenv = context['saltenv']
@@ -368,7 +354,13 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
     jinja_env.tests['list'] = salt.utils.is_list
 
-    decoded_context = _decode_recursively(context)
+    decoded_context = {}
+    for key, value in six.iteritems(context):
+        if not isinstance(value, string_types):
+            decoded_context[key] = value
+            continue
+
+        decoded_context[key] = salt.utils.locales.sdecode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)
