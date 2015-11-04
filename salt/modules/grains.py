@@ -299,7 +299,7 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
 
     :param delimiter: The key can be a nested dict key. Use this parameter to
         specify the delimiter you use, instead of the default ``:``.
-        You can now append values to a list in nested dictionnary grains. If the
+        You can now append values to a list in nested dictionary grains. If the
         list doesn't exist at this level, it will be created.
 
         .. versionadded:: 2014.7.6
@@ -341,7 +341,7 @@ def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
 
     :param delimiter: The key can be a nested dict key. Use this parameter to
         specify the delimiter you use, instead of the default ``:``.
-        You can now append values to a list in nested dictionnary grains. If the
+        You can now append values to a list in nested dictionary grains. If the
         list doesn't exist at this level, it will be created.
 
         .. versionadded:: Boron

@@ -166,7 +166,7 @@ def _set_value(value):
     '''
 
     logger.error(value)
-    #dont continue if already an acceptable data-type
+    #don't continue if already an acceptable data-type
     if isinstance(value, bool) or isinstance(value, dict) or isinstance(value, list):
         return value
 

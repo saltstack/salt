@@ -51,7 +51,7 @@ Changes:
   - **ISSUE** `#25192`_: (*deuscapturus*) 2015.5.2 boto_cloudwatch_alarm.present not working.
     | refs: `#26290`_
 
-- **PR** `#26288`_: (*bbinet*) allow to delete grains which value is False
+- **PR** `#26288`_: (*bbinet*) allow deleting grains which value is False
   @ *2015-08-13T18:24:36Z*
 
 - **PR** `#26263`_: (*rallytime*) Don't make changes when test=True for openstack present/absent funcs
@@ -547,7 +547,7 @@ Changes:
 - **PR** `#25807`_: (*rallytime*) Provide helpful error when using actions with a mapfile
   @ *2015-07-29T15:30:15Z*
 
-  - **ISSUE** `#22699`_: (*arthurlogilab*) salt-cloud fails on KeyError when given a nonexistant action
+  - **ISSUE** `#22699`_: (*arthurlogilab*) salt-cloud fails on KeyError when given a nonexistent action
     | refs: `#25807`_
 
 - **PR** `#25818`_: (*jfindlay*) fix autoruns list
@@ -1051,7 +1051,7 @@ Changes:
 - **PR** `#25392`_: (*rallytime*) Back-port `#25256`_ to 2015.5
   @ *2015-07-14T03:25:13Z*
 
-  - **PR** `#25256`_: (*yanatan16*) Dont assume source_hash exists
+  - **PR** `#25256`_: (*yanatan16*) Don't assume source_hash exists
     | refs: `#25392`_
 
 - **PR** `#25398`_: (*twangboy*) Fix date

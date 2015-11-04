@@ -2148,7 +2148,7 @@ class MultiSyndic(MinionBase):
                 # Not a job return
                 return
             if self.syndic_mode == 'cluster' and event['data'].get('master_id', 0) == self.opts.get('master_id', 1):
-                log.debug('Return recieved with matching master_id, not forwarding')
+                log.debug('Return received with matching master_id, not forwarding')
                 return
 
             jdict = self.jids.setdefault(event['tag'], {})

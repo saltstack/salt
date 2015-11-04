@@ -579,7 +579,7 @@ def get_ca_bundle(opts=None):
         # RedHat is also very common
         '/etc/pki/tls/certs/ca-bundle.crt',
         '/etc/pki/tls/certs/ca-bundle.trust.crt',
-        # RedHat's link for Debian compatability
+        # RedHat's link for Debian compatibility
         '/etc/ssl/certs/ca-bundle.crt',
         # Suse has an unusual path
         '/var/lib/ca-certificates/ca-bundle.pem',
