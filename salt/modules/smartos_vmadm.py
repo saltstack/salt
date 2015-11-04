@@ -403,8 +403,8 @@ def sysrq(vm=None, action='nmi', key='uuid'):
 
     vm : string
         vm to be targetted
-    action : string
-        nmi or screenshot
+    action : string 
+        nmi or screenshot -- Default: nmi
     key : string [uuid|alias|hostname]
         value type of 'vm' parameter
 
