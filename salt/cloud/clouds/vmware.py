@@ -2198,7 +2198,7 @@ def create(vm_):
             log.error("Specified cluster: '{0}' does not exist".format(cluster))
             if not clone_type or clone_type == "template":
                 raise SaltCloudSystemExit('You must specify a cluster that exists.')
-         else:
+        else:
             resourcepool_ref = cluster_ref.resourcePool
     elif clone_type == "template":
         raise SaltCloudSystemExit(
@@ -2214,13 +2214,13 @@ def create(vm_):
     # Either a datacenter or a folder can be optionally specified when cloning, required when creating.
     # If not specified when cloning, the existing VM/template\'s parent folder is used.
     if folder:
-        folder_ref = _get_mor_by_property(vim.Folder, folder)
+        folder_ref = vmware.get_mor_by_property(_get_si(), vim.Folder, folder)
         if not folder_ref:
             log.error("Specified folder: '{0}' does not exist".format(folder))
             log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
             folder_ref = object_ref.parent
     elif datacenter:
-        datacenter_ref = _get_mor_by_property(vim.Datacenter, datacenter)
+        datacenter_ref = vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
         if not datacenter_ref:
             log.error("Specified datacenter: '{0}' does not exist".format(datacenter))
             log.debug("Using datacenter folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
@@ -2270,7 +2270,7 @@ def create(vm_):
                 'You must specify a datastore when creating not cloning.'
             )
         else:
-            datastore_ref = _get_mor_by_property(vim.Datastore, datastore)
+            datastore_ref = vmware.get_mor_by_property(_get_si(), vim.Datastore, datastore)
             if not datastore_ref:
                 raise SaltCloudSystemExit("Specified datastore: '{0}' does not exist".format(datastore))
 
@@ -2414,7 +2414,7 @@ def create(vm_):
         )
         return {'Error': err_msg}
 
-    new_vm_ref = _get_mor_by_property(vim.VirtualMachine, vm_name)
+    new_vm_ref = vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_name)
 
     # Find how to power on in CreateVM_Task (if possible), for now this will do
     if not clone_type and power:
