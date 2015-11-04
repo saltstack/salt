@@ -305,7 +305,7 @@ def list_vms(search=None, sort=None, order='uuid,type,ram,state,alias', keyed=Fa
         vmadm order (-o) property -- Default: uuid,type,ram,state,alias
     keyed : boolean
         specified if the output should be an array (False) or dict (True)
-            For a dict the key is the first ietem from the order parameter.
+            For a dict the key is the first item from the order parameter.
             Note: If key is not unique last vm wins.
 
     CLI Example:
