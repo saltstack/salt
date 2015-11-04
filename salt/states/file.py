@@ -2372,7 +2372,7 @@ def recurse(name,
             manage_directory(dirname)
             vdir.add(dirname)
 
-        src = u'salt://{0}'.format(fn_)
+        src = u'salt://{0}'.format(salt.utils.sdecode(fn_))
         manage_file(dest, src)
 
     if include_empty:
