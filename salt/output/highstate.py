@@ -71,6 +71,7 @@ import textwrap
 import salt.utils
 import salt.utils.locales
 import salt.output
+from salt.utils.locales import sdecode
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -111,7 +112,7 @@ def _format_host(host, data):
                       .format(hcolor, colors)))
         for err in data:
             if strip_colors:
-                err = salt.output.strip_esc_sequence(err)
+                err = salt.output.strip_esc_sequence(sdecode(err))
             hstrs.append((u'{0}----------\n    {1}{2[ENDC]}'
                           .format(hcolor, err, colors)))
     if isinstance(data, dict):
