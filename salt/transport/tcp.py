@@ -337,7 +337,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
 
 class SaltMessageServer(tornado.tcpserver.TCPServer, object):
     '''
-    Raw TCP server which will recieve all of the TCP streams and re-assemble
+    Raw TCP server which will receive all of the TCP streams and re-assemble
     messages that are sent through to us
     '''
     def __init__(self, message_handler, *args, **kwargs):
@@ -550,7 +550,7 @@ class SaltMessageClient(object):
     # TODO: return a message object which takes care of multiplexing?
     def on_recv(self, callback):
         '''
-        Register a callback for recieved messages (that we didn't initiate)
+        Register a callback for received messages (that we didn't initiate)
         '''
         if callback is None:
             self._on_recv = callback

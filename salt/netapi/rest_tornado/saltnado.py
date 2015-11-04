@@ -542,7 +542,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
             'application/json': json.loads,
             'application/x-yaml': yaml.safe_load,
             'text/yaml': yaml.safe_load,
-            # because people are terrible and dont mean what they say
+            # because people are terrible and don't mean what they say
             'text/plain': json.loads
         }
 

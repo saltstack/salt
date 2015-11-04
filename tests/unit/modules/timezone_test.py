@@ -107,8 +107,8 @@ class TimezoneTestCase(TestCase):
         '''
         def zone_checking_and_unlinking():
             ret = ('Zone does not exist: /usr/share/lib/zoneinfo/timezone')
-            mock = MagicMock(side_effect=[False, True, True])
-            with patch.object(os.path, 'exists', mock):
+            mock_exists = MagicMock(side_effect=[False, True, True])
+            with patch.object(os.path, 'exists', mock_exists):
                 self.assertEqual(timezone.set_zone('timezone'), ret)
 
                 with patch.object(os, 'unlink', return_value=None):
@@ -168,20 +168,20 @@ class TimezoneTestCase(TestCase):
         '''
         Test to get current hardware clock setting (UTC or localtime)
         '''
+        mock_t = MagicMock(return_value=True)
+        mock_f = MagicMock(return_value=False)
+
         with patch.object(salt.utils, 'which', return_value=True):
-            with patch.dict(timezone.__salt__,
-                            {'cmd.run':
-                             MagicMock(return_value='rtc in local tz:yes\n')}):
+            with patch.object(timezone, '_timedatectl',
+                             MagicMock(return_value={'stdout': 'rtc in local tz:yes\n'})):
                 self.assertEqual(timezone.get_hwclock(), 'localtime')
 
-            with patch.dict(timezone.__salt__,
-                            {'cmd.run':
-                             MagicMock(return_value='rtc in local tz:No\n')}):
+            with patch.object(timezone, '_timedatectl',
+                             MagicMock(return_value={'stdout': 'rtc in local tz:No\n'})):
                 self.assertEqual(timezone.get_hwclock(), 'UTC')
 
-            with patch.dict(timezone.__salt__,
-                            {'cmd.run':
-                             MagicMock(return_value='rtc')}):
+            with patch.object(timezone, '_timedatectl',
+                              MagicMock(return_value={'stdout': 'rtc'})):
                 self.assertRaises(CommandExecutionError, timezone.get_hwclock)
 
         with patch.object(salt.utils, 'which', return_value=False):
@@ -217,8 +217,7 @@ class TimezoneTestCase(TestCase):
                     mfile.return_value.__iter__.return_value = [fl_data]
                     self.assertEqual(timezone.get_hwclock(), 'UTC')
 
-        mock = MagicMock(return_value=True)
-        with patch.object(os.path, 'isfile', mock):
+        with patch.object(os.path, 'isfile', mock_t):
             fl_data = 'zone_info=GMT'
             with patch('salt.utils.fopen',
                        mock_open(read_data=fl_data),
@@ -229,8 +228,7 @@ class TimezoneTestCase(TestCase):
                                     {'os_family': 'Solaris'}):
                         self.assertEqual(timezone.get_hwclock(), 'UTC')
 
-        mock = MagicMock(return_value=True)
-        with patch.object(os.path, 'isfile', mock):
+        with patch.object(os.path, 'isfile', mock_t):
             fl_data = 'A=GMT'
             with patch('salt.utils.fopen',
                        mock_open(read_data=fl_data),
@@ -243,8 +241,7 @@ class TimezoneTestCase(TestCase):
 
         with patch.object(salt.utils, 'which', return_value=False):
             with patch.dict(timezone.__grains__, {'os_family': 'Solaris'}):
-                mock = MagicMock(return_value=False)
-                with patch.object(os.path, 'isfile', mock):
+                with patch.object(os.path, 'isfile', mock_f):
                     self.assertEqual(timezone.get_hwclock(), 'UTC')
 
     def test_set_hwclock(self):
@@ -252,8 +249,8 @@ class TimezoneTestCase(TestCase):
         Test to sets the hardware clock to be either UTC or localtime
         '''
         zone = 'America/Denver'
-        with patch.object(timezone, 'get_zone', return_value=zone):
 
+        with patch.object(timezone, 'get_zone', return_value=zone):
             with patch.dict(timezone.__grains__, {'os_family': 'Solaris',
                                                   'cpuarch': 'sparc'}):
                 self.assertRaises(

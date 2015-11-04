@@ -618,11 +618,11 @@ class Client(object):
             if 'text' not in query:
                 raise MinionError('Error: {0}'.format(query['error']))
             if no_cache:
-                return query['text']
+                return query['body']
             else:
                 dest_tmp = "{0}.part".format(dest)
                 with salt.utils.fopen(dest_tmp, 'wb') as destfp:
-                    destfp.write(query['text'])
+                    destfp.write(query['body'])
                 salt.utils.files.rename(dest_tmp, dest)
                 return dest
         except HTTPError as exc:

@@ -289,7 +289,7 @@ def latest(name,
 
     depth
         Defines depth in history when git a clone is needed in order to ensure
-        latest. E.g. ``depth: 1`` is usefull when deploying from a repository
+        latest. E.g. ``depth: 1`` is useful when deploying from a repository
         with a long history. Use rev to specify branch. This is not compatible
         with tags or revision IDs.
 

@@ -245,7 +245,7 @@ class Maintenance(MultiprocessingProcess):
         if to_rotate:
             log.info('Rotating master AES key')
             for secret_key, secret_map in six.iteritems(SMaster.secrets):
-                # should be unecessary-- since no one else should be modifying
+                # should be unnecessary-- since no one else should be modifying
                 with secret_map['secret'].get_lock():
                     secret_map['secret'].value = secret_map['reload']()
                 self.event.fire_event({'rotate_{0}_key'.format(secret_key): True}, tag='key')

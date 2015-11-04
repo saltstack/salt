@@ -46,7 +46,7 @@ As this returner creates a couchdb document whith the salt job id as document id
 and as only one document with a given id can exist in a given couchdb database,
 it is advised for most setups that every minion be configured to write to it own
 database (the value of ``couchdb.db`` may be suffixed with the minion id),
-otherwise multi-minion targetting can lead to losing output:
+otherwise multi-minion targeting can lead to losing output:
 
 * the first returning minion is able to create a document in the database
 * other minions fail with ``{'error': 'HTTP Error 409: Conflict'}``

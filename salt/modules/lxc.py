@@ -4395,7 +4395,7 @@ def edit_conf(conf_file,
     they already exist in the file.
 
     out_format:
-        Set to simple if you need backward compatbility (multiple items for a
+        Set to simple if you need backward compatibility (multiple items for a
         simple key is not supported)
     read_only:
         return only the edited configuration without applying it

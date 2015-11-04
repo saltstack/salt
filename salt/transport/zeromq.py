@@ -368,7 +368,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         # 2 includes a header which says who should do it
         elif messages_len == 2:
             if messages[0] not in ('broadcast', self.hexid):
-                log.debug('Publish recieved for not this minion: {0}'.format(messages[0]))
+                log.debug('Publish received for not this minion: {0}'.format(messages[0]))
                 raise tornado.gen.Return(None)
             payload = self.serial.loads(messages[1])
         else:
@@ -390,7 +390,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
 
     def on_recv(self, callback):
         '''
-        Register a callback for recieved messages (that we didn't initiate)
+        Register a callback for received messages (that we didn't initiate)
 
         :param func callback: A function which should be called when data is received
         '''
@@ -859,12 +859,13 @@ class AsyncReqMessageClient(object):
         '''
         Return a future which will be completed when the message has a response
         '''
-        message = self.serial.dumps(message)
         if future is None:
             future = tornado.concurrent.Future()
             future.tries = tries
             future.attempts = 0
             future.timeout = timeout
+            # if a future wasn't passed in, we need to serialize the message
+            message = self.serial.dumps(message)
         if callback is not None:
             def handle_future(future):
                 response = future.result()

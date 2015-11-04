@@ -234,7 +234,7 @@ SaltStack download site:
 * `Salt32.zip <http://repo.saltstack.com/windows/dependencies/Salt32.zip/>`_
 * `Salt64.zip <http://repo.saltstack.com/windows/dependencies/Salt64.zip/>`_
 
-These files contain all sofware required to build and develop salt. Unzip the
+These files contain all software required to build and develop salt. Unzip the
 contents of the file to ``C:\Salt-Dev\temp``.
 
 Create the Build Environment
@@ -528,7 +528,7 @@ Packages management under Windows 2003
 
 On windows Server 2003, you need to install optional component "wmi windows
 installer provider" to have full list of installed packages. If you don't have
-this, salt-minion can't report some installed softwares.
+this, salt-minion can't report some installed software.
 
 
 .. _http://csa-net.dk/salt: http://csa-net.dk/salt

@@ -2,8 +2,8 @@
 '''
 The acl module handles publisher_acl operations
 
-Additional information on publisher_acl can be
-found by reading the salt documention:
+Additional information on client_acl can be
+found by reading the salt documentation:
 
     http://docs.saltstack.com/en/latest/ref/publisheracl.html
 '''

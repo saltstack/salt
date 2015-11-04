@@ -348,7 +348,7 @@ VALID_OPTS = {
     # The grains dictionary for a minion, containing specific "facts" about the minion
     'grains': dict,
 
-    # Allow a deamon to function even if the key directories are not secured
+    # Allow a daemon to function even if the key directories are not secured
     'permissive_pki_access': bool,
 
     # The path to a directory to pull in configuration file includes
@@ -397,7 +397,7 @@ VALID_OPTS = {
     # default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
     'event_match_type': str,
 
-    # This pidfile to write out to when a deamon starts
+    # This pidfile to write out to when a daemon starts
     'pidfile': str,
 
     # Used with the SECO range master tops system
@@ -657,7 +657,7 @@ VALID_OPTS = {
     # The size of key that should be generated when creating new keys
     'keysize': int,
 
-    # The transport system for this deamon. (i.e. zeromq, raet, etc)
+    # The transport system for this daemon. (i.e. zeromq, raet, etc)
     'transport': str,
 
     # FIXME Appears to be unused
@@ -732,8 +732,8 @@ VALID_OPTS = {
     # Instructs the salt CLI to print a summary of a minion reponses before returning
     'cli_summary': bool,
 
-    # The number of minions the master should allow to connect. Can have performance implications
-    # in large setups.
+    # The maximum number of minion connections allowed by the master. Can have performance
+    # implications in large setups.
     'max_minions': int,
 
 

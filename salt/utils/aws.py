@@ -76,21 +76,27 @@ def creds(provider):
                 # Current timestamp less than expiration fo cached credentials
                 return __AccessKeyId__, __SecretAccessKey__, __Token__
         # We don't have any cached credentials, or they are expired, get them
-        # TODO: Wrap this with a try and handle exceptions gracefully
 
         # Connections to instance meta-data must fail fast and never be proxied
-        result = requests.get(
-            "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
-            proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
-        )
-        result.raise_for_status()
-        role = result.text
-        # TODO: Wrap this with a try and handle exceptions gracefully
-        result = requests.get(
-            "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role),
-            proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
-        )
-        result.raise_for_status()
+        try:
+            result = requests.get(
+                "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
+                proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
+            )
+            result.raise_for_status()
+            role = result.text
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectTimeout):
+            return provider['id'], provider['key'], ''
+
+        try:
+            result = requests.get(
+                "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role),
+                proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
+            )
+            result.raise_for_status()
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectTimeout):
+            return provider['id'], provider['key'], ''
+
         data = result.json()
         __AccessKeyId__ = data['AccessKeyId']
         __SecretAccessKey__ = data['SecretAccessKey']

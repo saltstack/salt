@@ -134,7 +134,7 @@ class IPCServer(object):
     def close(self):
         '''
         Routines to handle any cleanup before the instance shuts down.
-        Sockets and filehandles should be closed explicitely, to prevent
+        Sockets and filehandles should be closed explicitly, to prevent
         leaks.
         '''
         if hasattr(self.stream, 'close'):
@@ -257,7 +257,7 @@ class IPCClient(object):
     def close(self):
         '''
         Routines to handle any cleanup before the instance shuts down.
-        Sockets and filehandles should be closed explicitely, to prevent
+        Sockets and filehandles should be closed explicitly, to prevent
         leaks.
         '''
         self._closing = True
