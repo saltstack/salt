@@ -341,7 +341,7 @@ VALID_OPTS = {
     # The grains dictionary for a minion, containing specific "facts" about the minion
     'grains': dict,
 
-    # Allow a deamon to function even if the key directories are not secured
+    # Allow a daemon to function even if the key directories are not secured
     'permissive_pki_access': bool,
 
     # The path to a directory to pull in configuration file includes
@@ -387,7 +387,7 @@ VALID_OPTS = {
     # Events matching a tag in this list should never be sent to an event returner.
     'event_return_blacklist': list,
 
-    # This pidfile to write out to when a deamon starts
+    # This pidfile to write out to when a daemon starts
     'pidfile': str,
 
     # Used with the SECO range master tops system
@@ -639,7 +639,7 @@ VALID_OPTS = {
     # The size of key that should be generated when creating new keys
     'keysize': int,
 
-    # The transport system for this deamon. (i.e. zeromq, raet, etc)
+    # The transport system for this daemon. (i.e. zeromq, raet, etc)
     'transport': str,
 
     # FIXME Appears to be unused
