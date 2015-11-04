@@ -451,10 +451,11 @@ only the cache for the mine system.
 
 Default: 0
 
-The number of minions the master should allow to connect. Use this to accommodate
-the number of minions per master if you have different types of hardware serving
-your minions. The default of ``0`` means unlimited connections. Please note, that
-this can slow down the authentication process a bit in large setups.
+The maximum number of minion connections allowed by the master. Use this to
+accommodate the number of minions per master if you have different types of
+hardware serving your minions. The default of ``0`` means unlimited connections.
+Please note, that this can slow down the authentication process a bit in large
+setups.
 
 .. code-block:: yaml
 

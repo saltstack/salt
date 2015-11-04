@@ -714,8 +714,8 @@ VALID_OPTS = {
     # Instructs the salt CLI to print a summary of a minion reponses before returning
     'cli_summary': bool,
 
-    # The number of minions the master should allow to connect. Can have performance implications
-    # in large setups.
+    # The maximum number of minion connections allowed by the master. Can have performance
+    # implications in large setups.
     'max_minions': int,
 
 

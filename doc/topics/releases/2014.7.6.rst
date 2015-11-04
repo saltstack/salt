@@ -77,7 +77,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
   * 2d9aa2b Avoid shadowing variables in lxc module
 
-  * 792e102 Allow to override profile options in lxc.cloud_init_interface
+  * 792e102 Allow overriding profile options in lxc.cloud_init_interface
 
   * 42bd64b Return changes on successful lxc.create from salt-cloud
 
