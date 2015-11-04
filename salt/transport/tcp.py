@@ -435,6 +435,7 @@ class SaltMessageClient(object):
                 # the next message and the associated read future is marked
                 # 'StreamClosedError' when the stream is closed.
                 self._read_until_future.exc_info()
+        self._tcp_client.close()
 
     def __del__(self):
         self.destroy()
