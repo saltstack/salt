@@ -960,7 +960,7 @@ purge = salt.utils.alias_function(remove, 'purge')
 def upgrade(*names, **kwargs):
     '''
     Upgrade named or all packages (run a ``pkg upgrade``). If <package name> is
-    ommitted, the operation is executed on all packages.
+    omitted, the operation is executed on all packages.
 
     CLI Example:
 

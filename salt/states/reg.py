@@ -115,7 +115,7 @@ def present(name,
     - HKEY_USERS or HKU
 
     :param str value: Deprecated. Use vname and vdata instead. Included here for
-    backwards compatability.
+    backwards compatibility.
 
     :param str vname: The name of the value you'd like to create beneath the
     Key. If this parameter is not passed it will assume you want to set the
