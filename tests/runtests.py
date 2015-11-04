@@ -8,12 +8,15 @@ Discover all instances of unittest.TestCase in this directory.
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
-import resource
 import tempfile
 import time
 
 # Import salt libs
 from integration import TestDaemon, TMP  # pylint: disable=W0403
+import salt.utils
+
+if not salt.utils.is_windows():
+    import resource
 
 # Import Salt Testing libs
 from salttesting.parser import PNUM, print_header
@@ -255,7 +258,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         return self.run_suite(path, display_name)
 
     def start_daemons_only(self):
-        self.prep_filehandles()
+        if not salt.utils.is_windows():
+            self.prep_filehandles()
         try:
             print_header(
                 ' * Setting up Salt daemons for interactive use',
@@ -360,7 +364,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             # passing only `unit.<whatever>` to --name.
             # We don't need the tests daemon running
             return [True]
-        self.prep_filehandles()
+        if not salt.utils.is_windows():
+            self.prep_filehandles()
 
         try:
             print_header(

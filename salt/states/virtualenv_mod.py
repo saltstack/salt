@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Setup of Python virtualenv sandboxes
-====================================
+Setup of Python virtualenv sandboxes.
 
+.. versionadded:: 0.17.0
 '''
 from __future__ import absolute_import
 
