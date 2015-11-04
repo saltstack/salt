@@ -501,7 +501,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
   * 558798d Fix net_io_counters deprecation issue
 
-  * 8140f92 Override unecessary pylint errors
+  * 8140f92 Override unnecessary pylint errors
 
   * 7d02ad4 Fix some of the mock names for the new API
 

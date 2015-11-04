@@ -1388,7 +1388,7 @@ Changes:
 - **PR** `#26496`_: (*jfindlay*) add dateutil dependency reporting
   @ *2015-08-19T22:46:31Z*
 
-- **PR** `#26494`_: (*cachedout*) Remove unecessary debug statements
+- **PR** `#26494`_: (*cachedout*) Remove unnecessary debug statements
   @ *2015-08-19T20:46:00Z*
 
 - **PR** `#26465`_: (*rallytime*) Back-port `#26457`_ to 2015.5
