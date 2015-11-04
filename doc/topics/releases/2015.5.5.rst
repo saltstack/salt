@@ -547,7 +547,7 @@ Changes:
 - **PR** `#25807`_: (*rallytime*) Provide helpful error when using actions with a mapfile
   @ *2015-07-29T15:30:15Z*
 
-  - **ISSUE** `#22699`_: (*arthurlogilab*) salt-cloud fails on KeyError when given a nonexistant action
+  - **ISSUE** `#22699`_: (*arthurlogilab*) salt-cloud fails on KeyError when given a nonexistent action
     | refs: `#25807`_
 
 - **PR** `#25818`_: (*jfindlay*) fix autoruns list
