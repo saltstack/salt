@@ -165,19 +165,16 @@ class TimezoneTestCase(TestCase):
         Test to get current hardware clock setting (UTC or localtime)
         '''
         with patch.object(salt.utils, 'which', return_value=True):
-            with patch.dict(timezone.__salt__,
-                            {'cmd.run':
-                             MagicMock(return_value='rtc in local tz:yes\n')}):
+            with patch.object(timezone, '_timedatectl',
+                             MagicMock(return_value={'stdout': 'rtc in local tz:yes\n'})):
                 self.assertEqual(timezone.get_hwclock(), 'localtime')
 
-            with patch.dict(timezone.__salt__,
-                            {'cmd.run':
-                             MagicMock(return_value='rtc in local tz:No\n')}):
+            with patch.object(timezone, '_timedatectl',
+                             MagicMock(return_value={'stdout': 'rtc in local tz:No\n'})):
                 self.assertEqual(timezone.get_hwclock(), 'UTC')
 
-            with patch.dict(timezone.__salt__,
-                            {'cmd.run':
-                             MagicMock(return_value='rtc')}):
+            with patch.object(timezone, '_timedatectl',
+                              MagicMock(return_value={'stdout': 'rtc'})):
                 self.assertRaises(CommandExecutionError, timezone.get_hwclock)
 
         with patch.object(salt.utils, 'which', return_value=False):
