@@ -75,9 +75,9 @@ def _get_users(token):
 
 
 def start(token,
-          aliases,
-          valid_users,
-          valid_commands,
+          aliases=None,
+          valid_users=None,
+          valid_commands=None,
           control=False,
           tag='salt/engines/slack'):
     '''
