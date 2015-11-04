@@ -421,7 +421,7 @@ def read_certificate(certificate):
     cert = _get_certificate_obj(certificate)
 
     ret = {
-        # X509 Verison 3 has a value of 2 in the field.
+        # X509 Version 3 has a value of 2 in the field.
         # Version 2 has a value of 1.
         # https://tools.ietf.org/html/rfc5280#section-4.1.2.1
         'Version': cert.get_version()+1,
@@ -497,7 +497,7 @@ def read_csr(csr):
     '''
     csr = _get_request_obj(csr)
     ret = {
-           # X509 Verison 3 has a value of 2 in the field.
+           # X509 Version 3 has a value of 2 in the field.
            # Version 2 has a value of 1.
            # https://tools.ietf.org/html/rfc5280#section-4.1.2.1
            'Version': csr.get_version()+1,
@@ -1116,7 +1116,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     cert = M2Crypto.X509.X509()
     subject = cert.get_subject()
 
-    # X509 Verison 3 has a value of 2 in the field.
+    # X509 Version 3 has a value of 2 in the field.
     # Version 2 has a value of 1.
     # https://tools.ietf.org/html/rfc5280#section-4.1.2.1
     cert.set_version(kwargs['version'] - 1)
@@ -1220,7 +1220,7 @@ def create_csr(path=None, text=False, **kwargs):
         If ``True``, return the PEM text without writing to a file. Default ``False``.
 
     kwargs:
-        The subject, extension and verison arguments from
+        The subject, extension and version arguments from
         :mod:`x509.create_certificate <salt.modules.x509.create_certificate>` can be used.
 
     CLI Example:
