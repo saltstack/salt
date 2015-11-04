@@ -299,7 +299,10 @@ def query(url,
         )
         result.raise_for_status()
         if stream is True or handle is True:
-            return {'handle': result}
+            return {
+                'handle': result,
+                'body': result.content,
+            }
 
         log.debug('Final URL location of Response: {0}'.format(sanitize_url(result.url, hide_fields)))
 
@@ -307,6 +310,7 @@ def query(url,
         result_headers = result.headers
         result_text = result.text
         result_cookies = result.cookies
+        ret['body'] = result.content
     elif backend == 'urllib2':
         request = urllib_request.Request(url_full, data)
         handlers = [
@@ -383,11 +387,15 @@ def query(url,
         except URLError as exc:
             return {'Error': str(exc)}
         if stream is True or handle is True:
-            return {'handle': result}
+            return {
+                'handle': result,
+                'body': result.content,
+            }
 
         result_status_code = result.code
         result_headers = result.headers.headers
         result_text = result.read()
+        ret['body'] = result_text
     else:
         # Tornado
         req_kwargs = {}
@@ -449,11 +457,15 @@ def query(url,
             return ret
 
         if stream is True or handle is True:
-            return {'handle': result}
+            return {
+                'handle': result,
+                'body': result.body,
+            }
 
         result_status_code = result.code
         result_headers = result.headers
         result_text = result.body
+        ret['body'] = result.body
         if 'Set-Cookie' in result_headers.keys() and cookies is not None:
             result_cookies = parse_cookie_header(result_headers['Set-Cookie'])
             for item in result_cookies:
