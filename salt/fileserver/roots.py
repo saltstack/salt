@@ -19,6 +19,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import errno
 import logging
 
 # Import salt libs
@@ -232,8 +233,13 @@ def file_hash(load, fnd):
     if not os.path.exists(cache_dir):
         try:
             os.makedirs(cache_dir)
-        except OSError:
-            pass
+        except OSError as err:
+            if err.errno == errno.EEXIST:
+                # rarely, the directory can be already concurrently created between
+                # the os.path.exists and the os.makedirs lines above
+                pass
+            else:
+                raise
     # save the cache object "hash:mtime"
     cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
     with salt.utils.flopen(cache_path, 'w') as fp_:
