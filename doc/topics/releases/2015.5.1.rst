@@ -513,7 +513,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
   * e48982f Fix version checking in psutil_compat
 
-  * 93ee411 Create compatability psutil. psutil 3.0 drops 1.0 API, but we still support old psutil versions.
+  * 93ee411 Create compatibility psutil. psutil 3.0 drops 1.0 API, but we still support old psutil versions.
 
 - **PR** `#23782`_: (*terminalmage*) Replace "command -v" with "which" and get rid of spurious log messages
   @ *2015-05-16T04:03:10Z*
@@ -968,7 +968,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
   * 73cfda7 Remove unused import
 
-  * 52b68d6 Use the zip_longest from six module for python 3 compatiblity
+  * 52b68d6 Use the zip_longest from six module for python 3 compatibility
 
   * 18d5ff9 Fix salt.state.file._unify_sources_and_hashes when sources is used without sources_hashes
 
