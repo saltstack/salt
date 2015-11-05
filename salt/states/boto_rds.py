@@ -41,7 +41,6 @@ config:
         boto_rds.present:
             - name: myrds
             - allocated_storage: 5
-            - storage_type: gp2
             - db_instance_class: db.t2.micro
             - engine: MySQL
             - master_username: myuser
@@ -59,17 +58,36 @@ def __virtual__():
     return 'boto_rds' if 'boto_rds.exists' in __salt__ else False
 
 
-def present(name, allocated_storage, storage_type, db_instance_class, engine,
-            master_username, master_user_password, db_name=None,
-            db_security_groups=None, vpc_security_group_ids=None,
-            availability_zone=None, db_subnet_group_name=None,
-            preferred_maintenance_window=None, db_parameter_group_name=None,
-            backup_retention_period=None, preferred_backup_window=None,
-            port=None, multi_az=None, engine_version=None,
-            auto_minor_version_upgrade=None, license_model=None, iops=None,
-            option_group_name=None, character_set_name=None,
-            publicly_accessible=None, wait_status=None, tags=None, region=None,
-            key=None, keyid=None, profile=None):
+def present(name,
+            allocated_storage,
+            db_instance_class,
+            engine,
+            master_username,
+            master_user_password,
+            db_name=None,
+            db_security_groups=None,
+            vpc_security_group_ids=None,
+            availability_zone=None,
+            db_subnet_group_name=None,
+            preferred_maintenance_window=None,
+            db_parameter_group_name=None,
+            backup_retention_period=None,
+            preferred_backup_window=None,
+            port=None,
+            multi_az=None,
+            engine_version=None,
+            auto_minor_version_upgrade=None,
+            license_model=None,
+            iops=None,
+            option_group_name=None,
+            character_set_name=None,
+            publicly_accessible=None,
+            wait_status=None,
+            tags=None,
+            region=None,
+            key=None,
+            keyid=None,
+            profile=None):
     '''
     Ensure RDS instance exists.
 
@@ -79,9 +97,6 @@ def present(name, allocated_storage, storage_type, db_instance_class, engine,
     allocated_storage
         The amount of storage (in gigabytes) to be initially allocated for the
         database instance.
-
-    storage_type
-        The storage type you want to use, available: standard, gp2 and io1
 
     db_instance_class
         The compute and memory capacity of the Amazon RDS DB instance.
@@ -184,7 +199,7 @@ def present(name, allocated_storage, storage_type, db_instance_class, engine,
            'comment': '',
            'changes': {}
            }
-    _ret = _rds_present(name, allocated_storage, storage_type,
+    _ret = _rds_present(name, allocated_storage,
                         db_instance_class, engine,
                         master_username, master_user_password, db_name,
                         db_security_groups, vpc_security_group_ids,
@@ -204,7 +219,7 @@ def present(name, allocated_storage, storage_type, db_instance_class, engine,
     return ret
 
 
-def _rds_present(name, allocated_storage, storage_type, db_instance_class,
+def _rds_present(name, allocated_storage, db_instance_class,
                  engine, master_username, master_user_password, db_name=None,
                  db_security_groups=None, vpc_security_group_ids=None,
                  availability_zone=None, db_subnet_group_name=None,
@@ -228,7 +243,7 @@ def _rds_present(name, allocated_storage, storage_type, db_instance_class,
             ret['result'] = None
             return ret
         created = __salt__['boto_rds.create'](name, allocated_storage,
-                                              storage_type, db_instance_class,
+                                              db_instance_class,
                                               engine, master_username,
                                               master_user_password, db_name,
                                               db_security_groups,
