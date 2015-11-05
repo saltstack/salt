@@ -6,6 +6,7 @@ Set up the Salt integration test suite
 
 # Import Python libs
 from __future__ import absolute_import, print_function
+import platform
 import os
 import re
 import sys
@@ -71,7 +72,11 @@ except ImportError:
 import yaml
 import salt.ext.six as six
 
-if os.uname()[0] == 'Darwin':
+if salt.utils.is_windows():
+    import win32api
+
+
+if platform.uname()[0] == 'Darwin':
     SYS_TMP_DIR = '/tmp'
 else:
     SYS_TMP_DIR = os.environ.get('TMPDIR', tempfile.gettempdir())
@@ -440,9 +445,14 @@ class TestDaemon(object):
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
         roster_path = os.path.join(FILES, 'conf/_ssh/roster')
         shutil.copy(roster_path, TMP_CONF_DIR)
-        with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
-            roster.write('  user: {0}\n'.format(pwd.getpwuid(os.getuid()).pw_name))
-            roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
+        if salt.utils.is_windows():
+            with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
+                roster.write('  user: {0}\n'.format(win32api.GetUserName()))
+                roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
+        else:
+            with salt.utils.fopen(os.path.join(TMP_CONF_DIR, 'roster'), 'a') as roster:
+                roster.write('  user: {0}\n'.format(pwd.getpwuid(os.getuid()).pw_name))
+                roster.write('  priv: {0}/{1}'.format(TMP_CONF_DIR, 'key_test'))
 
     @classmethod
     def config(cls, role):
@@ -484,7 +494,10 @@ class TestDaemon(object):
             shutil.rmtree(TMP_CONF_DIR)
         os.makedirs(TMP_CONF_DIR)
         print(' * Transplanting configuration files to {0!r}'.format(TMP_CONF_DIR))
-        running_tests_user = pwd.getpwuid(os.getuid()).pw_name
+        if salt.utils.is_windows():
+            running_tests_user = win32api.GetUserName()
+        else:
+            running_tests_user = pwd.getpwuid(os.getuid()).pw_name
         master_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'master'))
         master_opts['user'] = running_tests_user
         tests_know_hosts_file = os.path.join(TMP_CONF_DIR, 'salt_ssh_known_hosts')
