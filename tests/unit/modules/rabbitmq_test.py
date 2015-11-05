@@ -42,6 +42,14 @@ class RabbitmqTestCase(TestCase):
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
             self.assertDictEqual(rabbitmq.list_users(), {'guest': set(['administrator'])})
 
+    def test_list_users_with_warning(self):
+        '''
+        Test if having a leading WARNING returns the user_list anyway.
+        '''
+        mock_run = MagicMock(return_value='WARNING: ignoring /etc/rabbitmq/rabbitmq.conf -- location has moved to /etc/rabbitmq/rabbitmq-env.conf\nListing users ...\nguest\t[administrator]\n')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
+            self.assertDictEqual(rabbitmq.list_users(), {'guest': set(['administrator'])})
+
     # 'list_vhosts' function tests: 3
 
     def test_list_vhosts(self):
