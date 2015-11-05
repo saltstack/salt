@@ -1003,7 +1003,7 @@ class VMwareTestCase(ExtendedTestCase):
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
     @patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None))
-    @patch('salt.utils.get_mor_by_property', MagicMock(return_value=None))
+    @patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None))
     def test_disconnect_host_not_exists(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the specified host present
