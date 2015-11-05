@@ -467,7 +467,7 @@ def _rehash():
     '''
     shell = __salt__['environ.get']('SHELL')
     if shell.split('/')[-1] in ('csh', 'tcsh'):
-        __salt__['cmd.run']('rehash', output_loglevel='trace')
+        __salt__['cmd.shell']('rehash', output_loglevel='trace')
 
 
 def file_list(*packages):
