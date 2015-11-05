@@ -146,12 +146,7 @@ def check_mod_enabled(mod):
         salt '*' apache.check_mod_enabled status.conf
         salt '*' apache.check_mod_enabled status.load
     '''
-    if os.path.islink('/etc/apache2/mods-enabled/{0}'.format(mod)):
-        return True
-    elif mod == 'default' and os.path.islink('/etc/apache2/mods-enabled/000-{0}'.format(mod)):
-        return True
-    else:
-        return False
+    return os.path.islink('/etc/apache2/mods-enabled/{0}'.format(mod))
 
 
 def a2enmod(mod):
@@ -216,6 +211,99 @@ def a2dismod(mod):
         ret['Status'] = 'Mod {0} Not found'.format(mod)
     elif status == 0:
         ret['Status'] = 'Mod {0} disabled'.format(mod)
+    else:
+        ret['Status'] = status
+
+    return ret
+
+
+def check_conf_enabled(conf):
+    '''
+    .. versionadded:: Boron
+
+    Checks to see if the specific conf symlink is in /etc/apache2/conf-enabled.
+
+    This will only be functional on Debian-based operating systems (Ubuntu,
+    Mint, etc).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' apache.check_conf_enabled security.conf
+        salt '*' apache.check_conf_enabled status.load
+    '''
+    return os.path.islink('/etc/apache2/conf-enabled/{0}'.format(conf))
+
+
+@salt.utils.decorators.which('a2enconf')
+def a2enconf(conf):
+    '''
+    .. versionadded:: Boron
+
+    Runs a2enconf for the given conf.
+
+    This will only be functional on Debian-based operating systems (Ubuntu,
+    Mint, etc).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' apache.a2enconf security
+    '''
+    ret = {}
+    command = ['a2enconf', conf]
+
+    try:
+        status = __salt__['cmd.retcode'](command, python_shell=False)
+    except Exception as e:
+        return e
+
+    ret['Name'] = 'Apache2 Enable Conf'
+    ret['Conf'] = conf
+
+    if status == 1:
+        ret['Status'] = 'Conf {0} Not found'.format(conf)
+    elif status == 0:
+        ret['Status'] = 'Conf {0} enabled'.format(conf)
+    else:
+        ret['Status'] = status
+
+    return ret
+
+
+@salt.utils.decorators.which('a2disconf')
+def a2disconf(conf):
+    '''
+    .. versionadded:: Boron
+
+    Runs a2disconf for the given conf.
+
+    This will only be functional on Debian-based operating systems (Ubuntu,
+    Mint, etc).
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' apache.a2disconf security
+    '''
+    ret = {}
+    command = ['a2disconf', conf]
+
+    try:
+        status = __salt__['cmd.retcode'](command, python_shell=False)
+    except Exception as e:
+        return e
+
+    ret['Name'] = 'Apache2 Disable Conf'
+    ret['Conf'] = conf
+
+    if status == 256:
+        ret['Status'] = 'Conf {0} Not found'.format(conf)
+    elif status == 0:
+        ret['Status'] = 'Conf {0} disabled'.format(conf)
     else:
         ret['Status'] = status
 
