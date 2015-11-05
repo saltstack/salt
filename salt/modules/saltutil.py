@@ -92,6 +92,7 @@ def _sync(form, saltenv=None):
     remote = set()
     source = os.path.join('salt://_{0}'.format(form))
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
+    cumask = os.umask(0o77)
     if not os.path.isdir(mod_dir):
         log.info('Creating module dir {0!r}'.format(mod_dir))
         try:
@@ -159,6 +160,7 @@ def _sync(form, saltenv=None):
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
         with salt.utils.fopen(mod_file, 'a+') as ofile:
             ofile.write('')
+    os.umask(cumask)
     return ret
 
 
