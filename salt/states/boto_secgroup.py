@@ -132,6 +132,8 @@ def present(
 
         .. versionadded:: Boron
 
+        .. versionadded:: 2015.8.2
+
     rules
         A list of ingress rule dicts. If not specified, ``rules=None``,
         the ingress rules will be unmanaged. If set to an empty list, ``[]``,

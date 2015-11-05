@@ -194,6 +194,14 @@ def save_load(jid, clear_load):
     try:
         if not os.path.exists(jid_dir):
             os.makedirs(jid_dir)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST:
+            # rarely, the directory can be already concurrently created between
+            # the os.path.exists and the os.makedirs lines above
+            pass
+        else:
+            raise
+    try:
         serial.dump(
             clear_load,
             salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
