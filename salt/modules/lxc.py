@@ -1142,6 +1142,7 @@ def init(name,
          bootstrap_args=None,
          bootstrap_shell=None,
          bootstrap_url=None,
+         uses_systemd=True,
          **kwargs):
     '''
     Initialize a new container.
@@ -1294,6 +1295,9 @@ def init(name,
 
     unconditional_install
         Run the script even if the container seems seeded
+
+    uses_systemd
+        Set to true if the lxc template has systemd installed
 
     CLI Example:
 
@@ -1615,7 +1619,8 @@ def init(name,
                     bootstrap_delay=bootstrap_delay,
                     bootstrap_url=bootstrap_url,
                     bootstrap_shell=bootstrap_shell,
-                    bootstrap_args=bootstrap_args)
+                    bootstrap_args=bootstrap_args,
+                    uses_systemd=uses_systemd)
             except (SaltInvocationError, CommandExecutionError) as exc:
                 ret['comment'] = 'Bootstrap failed: ' + exc.strerror
                 ret['result'] = False
