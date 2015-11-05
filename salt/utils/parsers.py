@@ -827,59 +827,6 @@ class RunUserMixin(six.with_metaclass(MixInMeta, object)):
         )
 
 
-class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
-    _mixin_prio_ = 30
-
-    def _mixin_setup(self):
-        self.add_option(
-            '-d', '--daemon',
-            default=False,
-            action='store_true',
-            help='Run the {0} as a daemon'.format(self.get_prog_name())
-        )
-
-    def daemonize_if_required(self):
-        if self.options.daemon:
-            if self._setup_mp_logging_listener_ is True:
-                # Stop the logging queue listener for the current process
-                # We'll restart it once forked
-                log.shutdown_multiprocessing_logging_listener()
-
-            # Late import so logging works correctly
-            import salt.utils
-            salt.utils.daemonize()
-
-        # Setup the multiprocessing log queue listener if enabled
-        self._setup_mp_logging_listener()
-
-    def is_daemonized(self, pid):
-        import salt.utils.process
-        return salt.utils.process.os_is_running(pid)
-
-    # Common methods for scripts which can daemonize
-    def _install_signal_handlers(self):
-        signal.signal(signal.SIGTERM, self._handle_signals)
-        signal.signal(signal.SIGINT, self._handle_signals)
-
-    def prepare(self):
-        self.parse_args()
-
-    def start(self):
-        self.prepare()
-        self._install_signal_handlers()
-
-    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
-        if signum == signal.SIGINT:
-            msg = 'Received a SIGINT.'
-        elif signum == signal.SIGTERM:
-            msg = 'Received a SIGTERM.'
-        logging.getLogger(__name__).warning('{0} Exiting.'.format(msg))
-        self.shutdown(exitmsg='{0} Exited.'.format(msg))
-
-    def shutdown(self, exitcode=0, exitmsg=None):
-        self.exit(exitcode, exitmsg)
-
-
 class PidfileMixin(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 40
 
@@ -909,6 +856,70 @@ class PidfileMixin(six.with_metaclass(MixInMeta, object)):
         '''
         from salt.utils.process import get_pidfile
         return get_pidfile(self.config['pidfile'])
+
+
+class DaemonMixIn(PidfileMixin):
+    _mixin_prio_ = 30
+
+    def _mixin_setup(self):
+        self.add_option(
+            '-d', '--daemon',
+            default=False,
+            action='store_true',
+            help='Run the {0} as a daemon'.format(self.get_prog_name())
+        )
+
+    def daemonize_if_required(self):
+        if self.options.daemon:
+            if self._setup_mp_logging_listener_ is True:
+                # Stop the logging queue listener for the current process
+                # We'll restart it once forked
+                log.shutdown_multiprocessing_logging_listener()
+
+            # Late import so logging works correctly
+            import salt.utils
+            salt.utils.daemonize()
+
+        # Setup the multiprocessing log queue listener if enabled
+        self._setup_mp_logging_listener()
+
+    def check_running(self):
+        '''
+        Check if a pid file exists and if it is associated with
+        a running process.
+        '''
+        if self.check_pidfile():
+            pid = self.get_pidfile()
+            if self.check_pidfile() and self.is_daemonized(pid) and not os.getppid() == pid:
+                return True
+        return False
+
+    def is_daemonized(self, pid):
+        import salt.utils.process
+        return salt.utils.process.os_is_running(pid)
+
+    # Common methods for scripts which can daemonize
+    def _install_signal_handlers(self):
+        signal.signal(signal.SIGTERM, self._handle_signals)
+        signal.signal(signal.SIGINT, self._handle_signals)
+
+    def prepare(self):
+        self.parse_args()
+
+    def start(self):
+        self.prepare()
+        self._install_signal_handlers()
+
+    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+        if signum == signal.SIGINT:
+            msg = 'Received a SIGINT.'
+        elif signum == signal.SIGTERM:
+            msg = 'Received a SIGTERM.'
+        logging.getLogger(__name__).warning('{0} Exiting.'.format(msg))
+        self.shutdown(exitmsg='{0} Exited.'.format(msg))
+
+    def shutdown(self, exitcode=0, exitmsg=None):
+        self.exit(exitcode, exitmsg)
 
 
 class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
@@ -1570,7 +1581,6 @@ class MasterOptionParser(six.with_metaclass(OptionParserMeta,
                                             LogLevelMixIn,
                                             RunUserMixin,
                                             DaemonMixIn,
-                                            PidfileMixin,
                                             SaltfileMixIn)):
 
     description = 'The Salt master, used to control the Salt minions.'
@@ -1583,15 +1593,6 @@ class MasterOptionParser(six.with_metaclass(OptionParserMeta,
 
     def setup_config(self):
         return config.master_config(self.get_config_file_path())
-
-    def check_running(self):
-        '''
-        Check if a pid file exists and if it is associated with
-        a running process.
-        '''
-        pid = self.get_pidfile()
-        if self.check_pidfile() and self.is_daemonized(pid) and not os.getppid() == pid:
-            return True
 
 
 class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser)):  # pylint: disable=no-init
@@ -1618,7 +1619,6 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
                                                  LogLevelMixIn,
                                                  RunUserMixin,
                                                  DaemonMixIn,
-                                                 PidfileMixin,
                                                  SaltfileMixIn,
                                                  ProxyIdMixIn)):  # pylint: disable=no-init
 
@@ -1643,7 +1643,6 @@ class SyndicOptionParser(six.with_metaclass(OptionParserMeta,
                                             LogLevelMixIn,
                                             RunUserMixin,
                                             DaemonMixIn,
-                                            PidfileMixin,
                                             SaltfileMixIn)):
 
     description = (
