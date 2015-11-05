@@ -228,25 +228,23 @@ class FileTestCase(TestCase):
                                               group=group), ret)
 
                     with patch.object(os.path, 'isfile', mock_f):
-                        comt = ('Directory exists where the symlink {0}'
-                                ' should be'.format(name))
+                        comt = ('Unable to create new symlink {0} -> '
+                                '{1}: '.format(name, target))
                         ret.update({'comment': comt, 'result': False})
                         self.assertDictEqual(filestate.symlink
                                              (name, target, user=user,
                                               group=group), ret)
 
                         with patch.object(os.path, 'exists', mock_f):
-                            comt = ('Unable to create new symlink {0} -> '
-                                    '{1}: '.format(name, target))
+                            comt = ('Directory exists where the symlink {0} should be'.format(name))
                             ret.update({'comment': comt, 'result': False})
                             self.assertDictEqual(filestate.symlink
                                                  (name, target, user=user,
                                                   group=group), ret)
 
-                            comt = ('Created new symlink {0} -> '
-                                    '{1}'.format(name, target))
-                            ret.update({'comment': comt, 'result': True,
-                                        'changes': {'new': name}})
+                            comt = ('Directory exists where the symlink {0} should be'.format(name))
+                            ret.update({'comment': comt, 'result': False,
+                                        'changes': {}})
                             self.assertDictEqual(filestate.symlink
                                                  (name, target, user=user,
                                                   group=group), ret)
