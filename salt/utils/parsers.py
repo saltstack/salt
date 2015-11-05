@@ -74,6 +74,8 @@ class OptionParserMeta(MixInMeta):
             instance._mixin_process_funcs = []
         if not hasattr(instance, '_mixin_after_parsed_funcs'):
             instance._mixin_after_parsed_funcs = []
+        if not hasattr(instance, '_mixin_before_exit_funcs'):
+            instance._mixin_before_exit_funcs = []
 
         for base in _sorted(bases + (instance,)):
             func = getattr(base, '_mixin_setup', None)
@@ -84,6 +86,11 @@ class OptionParserMeta(MixInMeta):
             if func is not None and func not in \
                     instance._mixin_after_parsed_funcs:
                 instance._mixin_after_parsed_funcs.append(func)
+
+            func = getattr(base, '_mixin_before_exit', None)
+            if func is not None and func not in \
+                    instance._mixin_before_exit_funcs:
+                instance._mixin_before_exit_funcs.append(func)
 
             # Mark process_<opt> functions with the base priority for sorting
             for func in dir(base):
@@ -234,6 +241,17 @@ class OptionParser(optparse.OptionParser, object):
         self.exit(salt.defaults.exitcodes.EX_OK)
 
     def exit(self, status=0, msg=None):
+        # Run the functions on self._mixin_after_parsed_funcs
+        for mixin_before_exit_func in self._mixin_before_exit_funcs:
+            try:
+                mixin_before_exit_func(self)
+            except Exception as err:
+                logging.getLogger(__name__).exception(err)
+                self.error(
+                    'Error while processing {0}: {1}'.format(
+                        mixin_after_parsed_func, traceback.format_exc(err)
+                    )
+                )
         if self._setup_mp_logging_listener_ is True:
             # Stop the logging queue listener process
             log.shutdown_multiprocessing_logging_listener()
@@ -868,6 +886,10 @@ class DaemonMixIn(PidfileMixin):
             action='store_true',
             help='Run the {0} as a daemon'.format(self.get_prog_name())
         )
+
+    def _mixin_before_exit(self):
+        if self.check_pidfile():
+            os.unlink(self.config['pidfile'])
 
     def daemonize_if_required(self):
         if self.options.daemon:
