@@ -7,12 +7,12 @@ import sys
 import time
 import types
 import signal
-import subprocess
 import logging
+import threading
+import subprocess
 import multiprocessing
 import multiprocessing.util
 
-import threading
 
 # Import salt libs
 import salt.defaults.exitcodes
