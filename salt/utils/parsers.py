@@ -849,6 +849,12 @@ class PidfileMixin(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 40
 
     def _mixin_setup(self):
+        salt.utils.warn_until(
+            'Nitrogen',
+            'Please stop sub-classing PidfileMix and instead subclass '
+            'DaemonMixIn which contains the same behavior. PidfileMixin '
+            'will be supported until Salt {version}.'
+        )
         self.add_option(
             '--pid-file', dest='pidfile',
             default=os.path.join(
@@ -876,7 +882,7 @@ class PidfileMixin(six.with_metaclass(MixInMeta, object)):
         return get_pidfile(self.config['pidfile'])
 
 
-class DaemonMixIn(PidfileMixin):
+class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
     _mixin_prio_ = 30
 
     def _mixin_setup(self):
@@ -886,10 +892,35 @@ class DaemonMixIn(PidfileMixin):
             action='store_true',
             help='Run the {0} as a daemon'.format(self.get_prog_name())
         )
+        self.add_option(
+            '--pid-file', dest='pidfile',
+            default=os.path.join(
+                syspaths.PIDFILE_DIR, '{0}.pid'.format(self.get_prog_name())
+            ),
+            help=('Specify the location of the pidfile. Default: %default')
+        )
 
     def _mixin_before_exit(self):
         if self.check_pidfile():
             os.unlink(self.config['pidfile'])
+
+    def set_pidfile(self):
+        from salt.utils.process import set_pidfile
+        set_pidfile(self.config['pidfile'], self.config['user'])
+
+    def check_pidfile(self):
+        '''
+        Report whether a pidfile exists
+        '''
+        from salt.utils.process import check_pidfile
+        return check_pidfile(self.config['pidfile'])
+
+    def get_pidfile(self):
+        '''
+        Return a pid contained in a pidfile
+        '''
+        from salt.utils.process import get_pidfile
+        return get_pidfile(self.config['pidfile'])
 
     def daemonize_if_required(self):
         if self.options.daemon:
