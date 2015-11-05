@@ -245,7 +245,7 @@ def setvals(grains, destructive=False):
     except (TypeError, NameError):
         # This likely means we are running under Python 2.6 which cannot deepcopy
         # bound methods. Fallback to a modification of deepcopy which can support
-        # this behavoir.
+        # this behavior.
         yaml_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_representers)
         yaml_multi_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_multi_representers)
     yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,

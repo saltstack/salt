@@ -34,7 +34,7 @@ def deepcopy_bound(name):
         - This method will mutate the global deepcopy dispatcher, which means that
         this function is NOT threadsafe!
 
-        - Not Py3 compatable. The intended use case is deepcopy compat for Py2.6
+        - Not Py3 compatible. The intended use case is deepcopy compat for Py2.6
 
     '''
     def _deepcopy_method(x, memo):
