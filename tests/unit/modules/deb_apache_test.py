@@ -139,7 +139,7 @@ class DebApacheTestCase(TestCase):
             self.assertEqual(str(deb_apache.a2dissite('saltstack.com')),
                              'error')
 
-    # 'check_mod_enabled' function tests: 3
+    # 'check_mod_enabled' function tests: 2
 
     @patch('os.path.islink', MagicMock(return_value=True))
     def test_check_mod_enabled(self):
@@ -147,13 +147,6 @@ class DebApacheTestCase(TestCase):
         Test if the specific mod symlink is enabled.
         '''
         self.assertTrue(deb_apache.check_mod_enabled('status.conf'))
-
-    @patch('os.path.islink', MagicMock(side_effect=[False, True]))
-    def test_check_mod_enabled_default(self):
-        '''
-        Test if the specific mod symlink is enabled.
-        '''
-        self.assertTrue(deb_apache.check_mod_enabled('default'))
 
     @patch('os.path.islink', MagicMock(return_value=False))
     def test_check_mod_enabled_false(self):
@@ -166,7 +159,7 @@ class DebApacheTestCase(TestCase):
 
     def test_a2enmod_notfound(self):
         '''
-        Test if it runs a2enmod for the given site.
+        Test if it runs a2enmod for the given module.
         '''
         mock = MagicMock(return_value=1)
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
@@ -177,7 +170,7 @@ class DebApacheTestCase(TestCase):
 
     def test_a2enmod_enabled(self):
         '''
-        Test if it runs a2enmod for the given site.
+        Test if it runs a2enmod for the given module.
         '''
         mock = MagicMock(return_value=0)
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
@@ -188,7 +181,7 @@ class DebApacheTestCase(TestCase):
 
     def test_a2enmod(self):
         '''
-        Test if it runs a2enmod for the given site.
+        Test if it runs a2enmod for the given module.
         '''
         mock = MagicMock(return_value=2)
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
@@ -199,7 +192,7 @@ class DebApacheTestCase(TestCase):
 
     def test_a2enmod_exception(self):
         '''
-        Test if it runs a2enmod for the given site.
+        Test if it runs a2enmod for the given module.
         '''
         mock = MagicMock(side_effect=Exception('error'))
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
@@ -210,7 +203,7 @@ class DebApacheTestCase(TestCase):
 
     def test_a2dismod_notfound(self):
         '''
-        Test if it runs a2dismod for the given site.
+        Test if it runs a2dismod for the given module.
         '''
         mock = MagicMock(return_value=256)
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
@@ -221,7 +214,7 @@ class DebApacheTestCase(TestCase):
 
     def test_a2dismod_disabled(self):
         '''
-        Test if it runs a2dismod for the given site.
+        Test if it runs a2dismod for the given module.
         '''
         mock = MagicMock(return_value=0)
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
@@ -232,7 +225,7 @@ class DebApacheTestCase(TestCase):
 
     def test_a2dismod(self):
         '''
-        Test if it runs a2dismod for the given site.
+        Test if it runs a2dismod for the given module.
         '''
         mock = MagicMock(return_value=2)
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
@@ -243,7 +236,7 @@ class DebApacheTestCase(TestCase):
 
     def test_a2dismod_exception(self):
         '''
-        Test if it runs a2dismod for the given site.
+        Test if it runs a2dismod for the given module.
         '''
         mock = MagicMock(side_effect=Exception('error'))
         with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
