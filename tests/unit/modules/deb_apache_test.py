@@ -243,6 +243,117 @@ class DebApacheTestCase(TestCase):
             self.assertEqual(str(deb_apache.a2dismod('vhost_alias')),
                              'error')
 
+    # 'check_conf_enabled' function tests: 2
+
+    @patch('os.path.islink', MagicMock(return_value=True))
+    def test_check_conf_enabled(self):
+        '''
+        Test if the specific conf symlink is enabled.
+        '''
+        self.assertTrue(deb_apache.check_conf_enabled('security.conf'))
+
+    @patch('os.path.islink', MagicMock(return_value=False))
+    def test_check_conf_enabled_false(self):
+        '''
+        Test if the specific conf symlink is enabled.
+        '''
+        self.assertFalse(deb_apache.check_conf_enabled('security.conf'))
+
+    # 'a2enconf' function tests: 4
+
+    @patch('salt.utils.which', MagicMock(return_value='a2enconf'))
+    def test_a2enconf_notfound(self):
+        '''
+        Test if it runs a2enconf for the given conf.
+        '''
+        mock = MagicMock(return_value=1)
+        with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
+            self.assertEqual(deb_apache.a2enconf('security'),
+                {'Name': 'Apache2 Enable Conf',
+                'Conf': 'security',
+                'Status': 'Conf security Not found'})
+
+    @patch('salt.utils.which', MagicMock(return_value='a2enconf'))
+    def test_a2enconf_enabled(self):
+        '''
+        Test if it runs a2enconf for the given conf.
+        '''
+        mock = MagicMock(return_value=0)
+        with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
+            self.assertEqual(deb_apache.a2enconf('security'),
+                {'Name': 'Apache2 Enable Conf',
+                'Conf': 'security',
+                'Status': 'Conf security enabled'})
+
+    @patch('salt.utils.which', MagicMock(return_value='a2enconf'))
+    def test_a2enconf(self):
+        '''
+        Test if it runs a2enconf for the given conf.
+        '''
+        mock = MagicMock(return_value=2)
+        with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
+            self.assertEqual(deb_apache.a2enconf('security'),
+                {'Name': 'Apache2 Enable Conf',
+                'Conf': 'security',
+                'Status': 2})
+
+    @patch('salt.utils.which', MagicMock(return_value='a2enconf'))
+    def test_a2enconf_exception(self):
+        '''
+        Test if it runs a2enconf for the given conf.
+        '''
+        mock = MagicMock(side_effect=Exception('error'))
+        with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
+            self.assertEqual(str(deb_apache.a2enconf('security')),
+                'error')
+
+    # 'a2disconf' function tests: 4
+
+    @patch('salt.utils.which', MagicMock(return_value='a2disconf'))
+    def test_a2disconf_notfound(self):
+        '''
+        Test if it runs a2disconf for the given conf.
+        '''
+        mock = MagicMock(return_value=256)
+        with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
+            self.assertEqual(deb_apache.a2disconf('security'),
+                {'Name': 'Apache2 Disable Conf',
+                'Conf': 'security',
+                'Status': 'Conf security Not found'})
+
+    @patch('salt.utils.which', MagicMock(return_value='a2disconf'))
+    def test_a2disconf_disabled(self):
+        '''
+        Test if it runs a2disconf for the given conf.
+        '''
+        mock = MagicMock(return_value=0)
+        with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
+            self.assertEqual(deb_apache.a2disconf('security'),
+                {'Name': 'Apache2 Disable Conf',
+                'Conf': 'security',
+                'Status': 'Conf security disabled'})
+
+    @patch('salt.utils.which', MagicMock(return_value='a2disconf'))
+    def test_a2disconf(self):
+        '''
+        Test if it runs a2disconf for the given conf.
+        '''
+        mock = MagicMock(return_value=2)
+        with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
+            self.assertEqual(deb_apache.a2disconf('security'),
+                {'Name': 'Apache2 Disable Conf',
+                'Conf': 'security',
+                'Status': 2})
+
+    @patch('salt.utils.which', MagicMock(return_value='a2disconf'))
+    def test_a2disconf_exception(self):
+        '''
+        Test if it runs a2disconf for the given conf.
+        '''
+        mock = MagicMock(side_effect=Exception('error'))
+        with patch.dict(deb_apache.__salt__, {'cmd.retcode': mock}):
+            self.assertEqual(str(deb_apache.a2disconf('security')),
+                'error')
 
 if __name__ == '__main__':
     from integration import run_tests
