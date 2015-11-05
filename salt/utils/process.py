@@ -223,9 +223,15 @@ class ThreadPool(object):
         while True:
             # 1s timeout so that if the parent dies this thread will die within 1s
             try:
-                func, args, kwargs = self._job_queue.get(timeout=1)
-                self._job_queue.task_done()  # Mark the task as done once we get it
-            except queue.Empty:
+                try:
+                    func, args, kwargs = self._job_queue.get(timeout=1)
+                    self._job_queue.task_done()  # Mark the task as done once we get it
+                except queue.Empty:
+                    continue
+            except AttributeError:
+                # During shutdown, `queue` may not have an `Empty` atttribute. Thusly,
+                # we have to catch a possible exception from our exception handler in
+                # order to avoid an unclean shutdown. Le sigh.
                 continue
             try:
                 log.debug('ThreadPool executing func: {0} with args:{1}'
