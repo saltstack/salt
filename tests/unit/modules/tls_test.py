@@ -655,8 +655,8 @@ class TLSAddTestCase(TestCase):
                         'OpenSSL_version': LooseVersion('0.1.1'),
                         'X509_EXT_ENABLED': False}):
             self.assertEqual(tls.__virtual__(),
-                             (False, ['PyOpenSSL version 0.10 or later must be installed '
-                                      'before this module can be used.']))
+                             (False, 'PyOpenSSL version 0.10 or later must be installed '
+                                     'before this module can be used.'))
             with patch.dict(tls.__salt__, {'pillar.get': mock_pgt}):
                 self.assertRaises(AssertionError, tls.get_extensions, 'server')
                 self.assertRaises(AssertionError, tls.get_extensions, 'client')

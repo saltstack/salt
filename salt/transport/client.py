@@ -176,7 +176,7 @@ class AsyncPubChannel(AsyncChannel):
 
     def on_recv(self, callback):
         '''
-        When jobs are recieved pass them (decoded) to callback
+        When jobs are received pass them (decoded) to callback
         '''
         raise NotImplementedError()
 

@@ -86,8 +86,10 @@ def query(key, keyid, method='GET', params=None, headers=None,
         endpoint = service_url
 
     # Try grabbing the credentials from the EC2 instance IAM metadata if available
-    if not key or not keyid:
+    if not key:
         key = salt.utils.aws.IROLE_CODE
+
+    if not keyid:
         keyid = salt.utils.aws.IROLE_CODE
 
     if kms_keyid is not None and method in ('PUT', 'POST'):

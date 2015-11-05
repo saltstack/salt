@@ -257,7 +257,7 @@ single one which will trigger the other two:
         -e ./salt   # the path to the salt git clone from above
 
 
-This last one will grant you an edditable salt installation with hardcoded
+This last one will grant you an editable salt installation with hardcoded
 system paths and version information.
 
 

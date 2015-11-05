@@ -22,7 +22,7 @@ Salt copy copies a local file out to all of the Salt minions matched by the
 given target.
 
 Note: salt-cp uses salt's publishing mechanism. This means the privacy of the
-contents of the file on the wire are completely dependant upon the transport
+contents of the file on the wire is completely dependent upon the transport
 in use. In addition, if the salt-master is running with debug logging it is
 possible that the contents of the file will be logged to disk.
 

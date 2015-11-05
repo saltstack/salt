@@ -1192,7 +1192,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 mod = zipimporter(fpath).load_module(name)
             else:
                 desc = self.suffix_map[suffix]
-                # if it is a directory, we dont open a file
+                # if it is a directory, we don't open a file
                 if suffix == '':
                     mod = imp.load_module(
                         '{0}.{1}.{2}.{3}'.format(

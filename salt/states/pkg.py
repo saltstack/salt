@@ -1810,8 +1810,8 @@ def uptodate(name, refresh=False, **kwargs):
     if updated.get('result') is False:
         ret.update(updated)
     else:
-        ret['changes'] = updated
-        ret['comment'] = 'Upgrade successful.'
+        ret['changes'] = updated.get('changes', {})
+        ret['comment'] = 'Upgrade ran successfully.'
         ret['result'] = True
 
     return ret

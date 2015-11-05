@@ -151,7 +151,7 @@ def list_nodes_full(call=None):
 
     items = query(method='servers')
 
-    # For each server, iterate on its paramters.
+    # For each server, iterate on its parameters.
     ret = {}
     for node in items['servers']:
         ret[node['name']] = {}

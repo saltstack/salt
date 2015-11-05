@@ -311,34 +311,6 @@ FunctionEnd
 
 Function .onInit
 
-  ; Check for existing installation
-  ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" "UninstallString"
-  StrCmp $R0 "" confFind
-
-  ; Found existing installation, prompt to uninstall
-  MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "${PRODUCT_NAME} is already installed. $\n$\nClick `OK` to remove the existing installation." /SD IDOK IDOK uninst
-  Abort
-
-  uninst:
-    ; Make sure we're in the right directory
-    ${If} $INSTDIR == "c:\salt\bin\Scripts"
-      StrCpy $INSTDIR "C:\salt"
-    ${EndIf}
-
-    ; Stop and remove the salt-minion service
-    ExecWait "net stop salt-minion"
-    ExecWait "sc delete salt-minion"
-
-    ; Remove salt binaries and batch files
-    Delete "$INSTDIR\uninst.exe"
-    Delete "$INSTDIR\nssm.exe"
-    Delete "$INSTDIR\salt*"
-    RMDir /r "$INSTDIR\bin"
-
-    ; Remove registry entries
-    DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
-    DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"
-
   Call getMinionConfig
 
   ; Check for existing installation
