@@ -86,6 +86,15 @@ class SyncWrapper(object):
         '''
         On deletion of the async wrapper, make sure to clean up the async stuff
         '''
-        self.io_loop.close()
         if hasattr(self, 'async'):
+            if hasattr(self.async, 'close'):
+                # Certain things such as streams should be closed before
+                # their associated io_loop is closed to allow for proper
+                # cleanup.
+                self.async.close()
+            self.io_loop.close()
+            # Other things should be deallocated after the io_loop closes.
+            # See Issue #26889.
             del self.async
+        else:
+            self.io_loop.close()

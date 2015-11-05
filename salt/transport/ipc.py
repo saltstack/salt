@@ -43,9 +43,9 @@ class IPCServer(object):
         self.payload_handler = payload_handler
 
         # Placeholders for attributes to be populated by method calls
-        self.stream = None
         self.sock = None
         self.io_loop = io_loop or IOLoop.current()
+        self._closing = False
 
     def start(self):
         '''
@@ -137,8 +137,9 @@ class IPCServer(object):
         Sockets and filehandles should be closed explicitely, to prevent
         leaks.
         '''
-        if hasattr(self.stream, 'close'):
-            self.stream.close()
+        if self._closing:
+            return
+        self._closing = True
         if hasattr(self.sock, 'close'):
             self.sock.close()
 
@@ -260,6 +261,8 @@ class IPCClient(object):
         Sockets and filehandles should be closed explicitely, to prevent
         leaks.
         '''
+        if self._closing:
+            return
         self._closing = True
         if hasattr(self, 'stream'):
             self.stream.close()
