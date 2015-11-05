@@ -3319,7 +3319,7 @@ def test_bare_started_state(name, path=None):
     return ret
 
 
-def wait_started(name, path=None, timeout=300):
+def wait_started(name, path=None, timeout=300, uses_systemd=True):
     '''
     Check that the system has fully inited
 
@@ -3347,7 +3347,7 @@ def wait_started(name, path=None, timeout=300):
         raise CommandExecutionError(
             'Container {0} is not running'.format(name))
     ret = False
-    if running_systemd(name, path=path):
+    if uses_systemd and running_systemd(name, path=path):
         test_started = test_sd_started_state
         logger = log.error
     else:
@@ -3403,7 +3403,8 @@ def bootstrap(name,
               path=None,
               bootstrap_delay=None,
               bootstrap_args=None,
-              bootstrap_shell=None):
+              bootstrap_shell=None,
+              uses_systemd=True):
     '''
     Install and configure salt in a container.
 
@@ -3464,7 +3465,7 @@ def bootstrap(name,
                 [approve_key=(True|False)] [install=(True|False)]
 
     '''
-    wait_started(name, path=path)
+    wait_started(name, path=path, uses_systemd=uses_systemd)
     if bootstrap_delay is not None:
         try:
             time.sleep(bootstrap_delay)
