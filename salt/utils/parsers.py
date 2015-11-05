@@ -8,6 +8,8 @@
 
     This is where all the black magic happens on all of salt's CLI tools.
 '''
+# pylint: disable=missing-docstring,protected-access,too-many-ancestors,too-few-public-methods
+# pylint: disable=attribute-defined-outside-init,no-self-use
 
 # Import python libs
 from __future__ import absolute_import, print_function
@@ -20,8 +22,6 @@ import optparse
 import traceback
 from functools import partial
 
-# Import 3rd-party libs
-import salt.ext.six as six
 
 # Import salt libs
 import salt.config as config
@@ -29,15 +29,18 @@ import salt.defaults.exitcodes
 import salt.loader as loader
 import salt.log.setup as log
 import salt.syspaths as syspaths
-import salt.utils as utils
 import salt.version as version
+import salt.utils
 import salt.utils.args
 import salt.utils.xdg
 import salt.utils.jid
 from salt.utils import kinds
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
-from salt.ext.six.moves import range
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
 def _sorted(mixins_or_funcs):
@@ -193,7 +196,7 @@ class OptionParser(optparse.OptionParser, object):
         for process_option_func in _sorted(process_option_funcs):
             try:
                 process_option_func()
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 logging.getLogger(__name__).exception(err)
                 self.error(
                     'Error while processing {0}: {1}'.format(
@@ -202,10 +205,10 @@ class OptionParser(optparse.OptionParser, object):
                 )
 
         # Run the functions on self._mixin_after_parsed_funcs
-        for mixin_after_parsed_func in self._mixin_after_parsed_funcs:
+        for mixin_after_parsed_func in self._mixin_after_parsed_funcs:  # pylint: disable=no-member
             try:
                 mixin_after_parsed_func(self)
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 logging.getLogger(__name__).exception(err)
                 self.error(
                     'Error while processing {0}: {1}'.format(
@@ -213,10 +216,10 @@ class OptionParser(optparse.OptionParser, object):
                     )
                 )
 
-        if self.config.get('conf_file', None) is not None:
+        if self.config.get('conf_file', None) is not None:  # pylint: disable=no-member
             logging.getLogger(__name__).debug(
                 'Configuration file path: {0}'.format(
-                    self.config['conf_file']
+                    self.config['conf_file']  # pylint: disable=no-member
                 )
             )
         # Retain the standard behavior of optparse to return options and args
@@ -226,7 +229,7 @@ class OptionParser(optparse.OptionParser, object):
         optparse.OptionParser._populate_option_list(
             self, option_list, add_help=add_help
         )
-        for mixin_setup_func in self._mixin_setup_funcs:
+        for mixin_setup_func in self._mixin_setup_funcs:  # pylint: disable=no-member
             mixin_setup_func(self)
 
     def _add_version_option(self):
@@ -236,20 +239,20 @@ class OptionParser(optparse.OptionParser, object):
             help='show program\'s dependencies version number and exit'
         )
 
-    def print_versions_report(self, file=sys.stdout):
+    def print_versions_report(self, file=sys.stdout):  # pylint: disable=redefined-builtin
         print('\n'.join(version.versions_report()), file=file)
         self.exit(salt.defaults.exitcodes.EX_OK)
 
     def exit(self, status=0, msg=None):
         # Run the functions on self._mixin_after_parsed_funcs
-        for mixin_before_exit_func in self._mixin_before_exit_funcs:
+        for mixin_before_exit_func in self._mixin_before_exit_funcs:  # pylint: disable=no-member
             try:
                 mixin_before_exit_func(self)
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 logging.getLogger(__name__).exception(err)
                 self.error(
                     'Error while processing {0}: {1}'.format(
-                        mixin_after_parsed_func, traceback.format_exc(err)
+                        mixin_before_exit_func, traceback.format_exc(err)
                     )
                 )
         if self._setup_mp_logging_listener_ is True:
@@ -277,7 +280,7 @@ class MergeConfigMixIn(six.with_metaclass(MixInMeta, object)):
         # the config options and if needed override them
         self._mixin_after_parsed_funcs.append(self.__merge_config_with_cli)
 
-    def __merge_config_with_cli(self, *args):
+    def __merge_config_with_cli(self, *args):  # pylint: disable=unused-argument
         # Merge parser options
         for option in self.option_list:
             if option.dest is None:
@@ -451,9 +454,9 @@ class HardCrashMixin(six.with_metaclass(MixInMeta, object)):
     _config_filename_ = None
 
     def _mixin_setup(self):
-        hc = os.environ.get('SALT_HARD_CRASH', False)
+        hard_crash = os.environ.get('SALT_HARD_CRASH', False)
         self.add_option(
-            '--hard-crash', action='store_true', default=hc,
+            '--hard-crash', action='store_true', default=hard_crash,
             help=('Raise any original exception rather than exiting gracefully'
                   ' Default: %default')
         )
@@ -510,7 +513,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
     _default_logging_logfile_ = None
     _logfile_config_setting_name_ = 'log_file'
     _loglevel_config_setting_name_ = 'log_level'
-    _logfile_loglevel_config_setting_name_ = 'log_level_logfile'
+    _logfile_loglevel_config_setting_name_ = 'log_level_logfile'  # pylint: disable=invalid-name
     _skip_console_logging_config_ = False
 
     def _mixin_setup(self):
@@ -771,19 +774,19 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         for name, level in six.iteritems(self.config['log_granular_levels']):
             log.set_logger_level(name, level)
 
-    def __setup_extended_logging(self, *args):
+    def __setup_extended_logging(self, *args):  # pylint: disable=unused-argument
         log.setup_extended_logging(self.config)
 
     def _get_mp_logging_listener_queue(self):
         return log.get_multiprocessing_logging_queue()
 
-    def _setup_mp_logging_listener(self, *args):
+    def _setup_mp_logging_listener(self, *args):  # pylint: disable=unused-argument
         if self._setup_mp_logging_listener_:
             log.setup_multiprocessing_logging_listener(
                 self._get_mp_logging_listener_queue()
             )
 
-    def __setup_console_logger(self, *args):
+    def __setup_console_logger(self, *args):  # pylint: disable=unused-argument
         # If daemon is set force console logger to quiet
         if getattr(self.options, 'daemon', False) is True:
             return
@@ -930,7 +933,6 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
                 log.shutdown_multiprocessing_logging_listener()
 
             # Late import so logging works correctly
-            import salt.utils
             salt.utils.daemonize()
 
         # Setup the multiprocessing log queue listener if enabled
@@ -948,8 +950,8 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         return False
 
     def is_daemonized(self, pid):
-        import salt.utils.process
-        return salt.utils.process.os_is_running(pid)
+        from salt.utils.process import os_is_running
+        return os_is_running(pid)
 
     # Common methods for scripts which can daemonize
     def _install_signal_handlers(self):
@@ -1263,7 +1265,7 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
         if self.options.output_file is not None and self.options.output_file_append is False:
             if os.path.isfile(self.options.output_file):
                 try:
-                    with utils.fopen(self.options.output_file, 'w') as ofh:
+                    with salt.utils.fopen(self.options.output_file, 'w') as ofh:
                         # Make this a zero length filename instead of removing
                         # it. This way we keep the file permissions.
                         ofh.write('')
@@ -1661,7 +1663,7 @@ class MinionOptionParser(six.with_metaclass(OptionParserMeta, MasterOptionParser
     _setup_mp_logging_listener_ = True
 
     def setup_config(self):
-        return config.minion_config(self.get_config_file_path(),
+        return config.minion_config(self.get_config_file_path(),  # pylint: disable=no-member
                                     cache_minion_id=True)
 
 
@@ -1676,7 +1678,8 @@ class ProxyMinionOptionParser(six.with_metaclass(OptionParserMeta,
                                                  ProxyIdMixIn)):  # pylint: disable=no-init
 
     description = (
-        'The Salt proxy minion, connects to and controls devices not able to run a minion.  Receives commands from a remote Salt master.'
+        'The Salt proxy minion, connects to and controls devices not able to run a minion.  '
+        'Receives commands from a remote Salt master.'
     )
 
     # ConfigDirMixIn config filename attribute
@@ -1908,7 +1911,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
         if len(self.args) <= 1 and not self.options.doc:
             try:
                 self.print_help()
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 # We get an argument that Python's optparser just can't deal
                 # with. Perhaps stdout was redirected, or a file glob was
                 # passed in. Regardless, we're in an unknown state here.
@@ -2303,14 +2306,14 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
     def process_gen_keys_dir(self):
         # Schedule __create_keys_dir() to run if there's a value for
         # --create-keys-dir
-        self._mixin_after_parsed_funcs.append(self.__create_keys_dir)
+        self._mixin_after_parsed_funcs.append(self.__create_keys_dir)  # pylint: disable=no-member
 
     def _mixin_after_parsed(self):
         # It was decided to always set this to info, since it really all is
         # info or error.
         self.config['loglevel'] = 'info'
 
-    def __create_keys_dir(self, *args):
+    def __create_keys_dir(self, *args):  # pylint: disable=unused-argument
         if not os.path.isdir(self.config['gen_keys_dir']):
             os.makedirs(self.config['gen_keys_dir'])
 
@@ -2504,7 +2507,7 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
 
         if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.minion]:  # minion check
             from raet.lane.yarding import Yard
-            ha, dirpath = Yard.computeHa(dirpath, lanename, yardname)
+            ha, dirpath = Yard.computeHa(dirpath, lanename, yardname)  # pylint: disable=invalid-name
             if (os.path.exists(ha) and
                     not os.path.isfile(ha) and
                     not os.path.isdir(ha)):  # minion manor yard
@@ -2843,7 +2846,7 @@ class SaltCloudParser(six.with_metaclass(OptionParserMeta,
     _loglevel_config_setting_name_ = 'log_level_logfile'
     _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'cloud')
 
-    def print_versions_report(self, file=sys.stdout):
+    def print_versions_report(self, file=sys.stdout):  # pylint: disable=redefined-builtin
         print('\n'.join(version.versions_report(include_salt_cloud=True)),
               file=file)
         self.exit(salt.defaults.exitcodes.EX_OK)
