@@ -610,7 +610,8 @@ def _alarms_present(name, alarms, alarms_from_pillar, region, key, keyid, profil
         info['name'] = name + ' ' + info['name']
         info['attributes']['description'] = name + ' ' + info['attributes']['description']
         # add dimension attribute
-        info['attributes']['dimensions'] = {'AutoScalingGroupName': [name]}
+        if 'dimensions' not in info['attributes']:
+            info['attributes']['dimensions'] = {'AutoScalingGroupName': [name]}
         # set alarm
         kwargs = {
             'name': info['name'],
