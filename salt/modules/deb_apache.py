@@ -146,12 +146,7 @@ def check_mod_enabled(mod):
         salt '*' apache.check_mod_enabled status.conf
         salt '*' apache.check_mod_enabled status.load
     '''
-    if os.path.islink('/etc/apache2/mods-enabled/{0}'.format(mod)):
-        return True
-    elif mod == 'default' and os.path.islink('/etc/apache2/mods-enabled/000-{0}'.format(mod)):
-        return True
-    else:
-        return False
+    return os.path.islink('/etc/apache2/mods-enabled/{0}'.format(mod))
 
 
 def a2enmod(mod):
