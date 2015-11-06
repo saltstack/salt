@@ -749,7 +749,6 @@ def get_multiprocessing_logging_queue():
 
     global __MP_LOGGING_QUEUE
     if __MP_LOGGING_QUEUE is None:
-        # We only instantiate a new multiprocessing Queue if we're in the main process
         __MP_LOGGING_QUEUE = multiprocessing.Queue()
     return __MP_LOGGING_QUEUE
 
@@ -781,7 +780,7 @@ def setup_multiprocessing_logging(queue=None):
         return
 
     try:
-        logging._acquireLock()
+        logging._acquireLock()  # pylint: disable=protected-access
 
         global __MP_LOGGING_CONFIGURED
         global __MP_LOGGING_QUEUE_HANDLER
@@ -804,9 +803,11 @@ def setup_multiprocessing_logging(queue=None):
             'Multiprocessing queue logging configured for the process running '
             'under PID: {0}'.format(os.getpid())
         )
+        # As incredible as it may seem, we need to sleep after setting up multiprocessing logging
+        # for the new process or we'll end up in some kind of futex wait lock
         time.sleep(0.0001)
     finally:
-        logging._releaseLock()
+        logging._releaseLock()  # pylint: disable=protected-access
 
 
 def shutdown_multiprocessing_logging():
