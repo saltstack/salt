@@ -206,9 +206,7 @@ def sig4(method, endpoint, params, prov_dict,
     ))
 
     # Create the string to sign
-    credential_scope = '/'.join((
-        datestamp, location, product, 'aws4_request'
-    ))
+    credential_scope = '/'.join((datestamp, location, product, 'aws4_request'))
     string_to_sign = '\n'.join((
         algorithm,
         amzdate,
@@ -271,8 +269,11 @@ def _sig_key(key, date_stamp, regionName, serviceName):
     http://docs.aws.amazon.com/general/latest/gr/signature-v4-examples.html#signature-v4-examples-python
     '''
     kDate = _sign(('AWS4' + key).encode('utf-8'), date_stamp)
-    kRegion = _sign(kDate, regionName)
-    kService = _sign(kRegion, serviceName)
+    if regionName:
+        kRegion = _sign(kDate, regionName)
+        kService = _sign(kRegion, serviceName)
+    else:
+        kService = _sign(kDate, serviceName)
     kSigning = _sign(kService, 'aws4_request')
     return kSigning
 
