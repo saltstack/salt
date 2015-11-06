@@ -347,9 +347,9 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    query = '''SELECT DISTINCT jid FROM salt.jids;'''
+    query = '''SELECT DISTINCT jid, load FROM salt.jids;'''
 
-    ret = []
+    ret = {}
 
     # cassandra_cql.cql_query may raise a CommandExecutionError
     try:
@@ -357,8 +357,9 @@ def get_jids():
         if data:
             for row in data:
                 jid = row.get('jid')
-                if jid:
-                    ret.append(jid)
+                load = row.get('load')
+                if jid and load:
+                    ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
     except CommandExecutionError:
         log.critical('Could not get a list of all job ids.')
         raise
