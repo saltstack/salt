@@ -188,11 +188,11 @@ def init(opts):
 
     first_user = opts['proxy']['admin_username']
     first_password = opts['proxy']['admin_password']
-    if 'fallback_admin_user' in opts['proxy'] \
+    if 'fallback_admin_username' in opts['proxy'] \
         and 'fallback_admin_password' in opts['proxy']:
         fallback_available = True
-        fallback_user = opts['proxy']['fallback_username']
-        fallback_password = opts['proxy']['fallback_password']
+        fallback_user = opts['proxy']['fallback_admin_username']
+        fallback_password = opts['proxy']['fallback_admin_password']
     else:
         fallback_available = False
 
@@ -204,8 +204,8 @@ def init(opts):
     elif fallback_available and _grains(DETAILS['host'], fallback_user, fallback_password).get('retcode', 0) == 0:
         log.info('Fallback credentials used'
                  ' to access chassis {0}'.format(opts['proxy']['host']))
-        DETAILS['admin_username'] = opts['proxy']['admin_fallback_username']
-        DETAILS['admin_password'] = opts['proxy']['admin_fallback_password']
+        DETAILS['admin_username'] = opts['proxy']['fallback_admin_username']
+        DETAILS['admin_password'] = opts['proxy']['fallback_admin_password']
         return True
     else:
         log.critical('Neither the primary nor the fallback credentials'
