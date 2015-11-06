@@ -2206,13 +2206,9 @@ def mod_repo(repo, basedir=None, **kwargs):
             del repo_opts[key]
             todelete.append(key)
 
-    # convert disabled=True to enabled=0 from pkgrepo state
-    if 'disabled' in repo_opts:
-        kw_disabled = repo_opts['disabled']
-        if kw_disabled is True or str(kw_disabled).lower() == 'true':
-            repo_opts['enabled'] = 0
-        del repo_opts['disabled']
-        todelete.append('disabled')
+    # convert disabled to enabled respectively from pkgrepo state
+    if 'enabled' not in repo_opts:
+        repo_opts['enabled'] = int(str(repo_opts.pop('disabled', False)).lower() != 'true')
 
     # Add baseurl or mirrorlist to the 'todelete' list if the other was
     # specified in the repo_opts
