@@ -3771,7 +3771,7 @@ def copy(
         .. versionadded:: 2015.5.0
 
         Set ``preserve: True`` to preserve user/group ownership and mode
-        after copying. Default is ``False``. If ``preseve`` is set to ``True``,
+        after copying. Default is ``False``. If ``preserve`` is set to ``True``,
         then user/group/mode attributes will be ignored.
 
     user

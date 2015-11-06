@@ -15,6 +15,7 @@ import collections
 from functools import reduce
 
 # Import 3rd-party libs
+import salt.utils.compat
 from salt.utils.odict import OrderedDict
 import yaml
 import salt.ext.six as six
@@ -238,8 +239,15 @@ def setvals(grains, destructive=False):
             grains[key] = val
             __grains__[key] = val
     # Cast defaultdict to dict; is there a more central place to put this?
-    yaml_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_representers)
-    yaml_multi_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_multi_representers)
+    try:
+        yaml_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_representers)
+        yaml_multi_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_multi_representers)
+    except (TypeError, NameError):
+        # This likely means we are running under Python 2.6 which cannot deepcopy
+        # bound methods. Fallback to a modification of deepcopy which can support
+        # this behavior.
+        yaml_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_representers)
+        yaml_multi_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_multi_representers)
     yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
             yaml.representer.SafeRepresenter.represent_dict)
     yaml.representer.SafeRepresenter.add_representer(OrderedDict,

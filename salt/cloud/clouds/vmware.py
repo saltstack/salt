@@ -333,7 +333,8 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
         if not switch_type:
             err_msg = "The switch type to be used by '{0}' has not been specified".format(network_adapter_label)
         else:
-            err_msg = "Cannot create '{0}'. Invalid/unsupported switch type '{1}'".format(network_adapter_label, switch_type)
+            err_msg = "Cannot create '{0}'. Invalid/unsupported switch type '{1}'".format(network_adapter_label,
+                                                                                          switch_type)
         raise SaltCloudSystemExit(err_msg)
 
     network_spec.device.key = random_key
@@ -1266,11 +1267,9 @@ def list_hosts(kwargs=None, call=None):
 
     hosts = []
     host_properties = ["name"]
-
     host_list = salt.utils.vmware.get_mors_with_properties(_get_si(),
                                                            vim.HostSystem,
                                                            host_properties)
-
     for host in host_list:
         hosts.append(host["name"])
 
