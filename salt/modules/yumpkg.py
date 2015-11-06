@@ -745,10 +745,11 @@ def check_db(*names, **kwargs):
         __context__['pkg._avail'] = avail
 
     ret = {}
-    repoquery_cmd = repoquery_base + ' {0}'.format(" ".join(names))
-    provides = sorted(
-        set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
-    )
+    if names:
+        repoquery_cmd = repoquery_base + ' {0}'.format(" ".join(names))
+        provides = sorted(
+            set(x.name for x in _repoquery_pkginfo(repoquery_cmd))
+        )
     for name in names:
         ret.setdefault(name, {})['found'] = name in avail
         if not ret[name]['found']:
