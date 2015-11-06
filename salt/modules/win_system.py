@@ -133,18 +133,15 @@ def reboot(timeout=5, in_seconds=False):
 
     :param int timeout:
         Number of seconds before rebooting the system.
-        Default is 5 seconds.
+        Default is 5 minutes.
 
-    :return: True if successful
-    :rtype: bool
-
-    timeout
-        The wait time before the system will be shutdown.
-
-    in_seconds
+    :param bool in_seconds:
         Whether to treat timeout as seconds or minutes.
 
         .. versionadded:: 2015.8.0
+
+    :return: True if successful
+    :rtype: bool
 
     CLI Example:
 
@@ -167,18 +164,18 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False, in_seconds
         seconds. While this dialog box is displayed, the shutdown can be stopped
         by the shutdown_abort function.
 
-        If dwTimeout is not zero, InitiateSystemShutdown displays a dialog box
-        on the specified computer. The dialog box displays the name of the user
-        who called the function, displays the message specified by the lpMessage
-        parameter, and prompts the user to log off. The dialog box beeps when it
-        is created and remains on top of other windows in the system. The dialog
-        box can be moved but not closed. A timer counts down the remaining time
-        before a forced shutdown.
+        If timeout is not zero, InitiateSystemShutdown displays a dialog box on
+        the specified computer. The dialog box displays the name of the user
+        who called the function, displays the message specified by the
+        lpMessage parameter, and prompts the user to log off. The dialog box
+        beeps when it is created and remains on top of other windows in the
+        system. The dialog box can be moved but not closed. A timer counts down
+        the remaining time before a forced shutdown.
 
-        If dwTimeout is zero, the computer shuts down without displaying the
+        If timeout is zero, the computer shuts down without displaying the
         dialog box, and the shutdown cannot be stopped by shutdown_abort.
 
-        Default is 5
+        Default is 5 minutes
 
     :param bool in_seconds:
         Whether to treat timeout as seconds or minutes.
@@ -222,10 +219,6 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False, in_seconds
 def shutdown_hard():
     '''
     Shutdown a running system with no timeout or warning.
-
-    :param int timeout:
-        Number of seconds before shutting down the system.
-        Default is 5 seconds.
 
     :return: True if successful
     :rtype: bool
