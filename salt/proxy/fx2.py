@@ -196,8 +196,8 @@ def init(opts):
     else:
         fallback_available = False
 
-    grains = _grains(DETAILS['host'], first_user, first_password)
-    if grains.get('retcode', 0) == 0:
+    check_grains = _grains(DETAILS['host'], first_user, first_password)
+    if check_grains.get('retcode', 0) == 0:
         DETAILS['admin_username'] = opts['proxy']['admin_username']
         DETAILS['admin_password'] = opts['proxy']['admin_password']
         return True
