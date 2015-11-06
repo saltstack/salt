@@ -808,8 +808,10 @@ def setup_multiprocessing_logging(queue=None):
             'Multiprocessing queue logging configured for the process running '
             'under PID: {0}'.format(os.getpid())
         )
-        # As incredible as it may seem, we need to sleep after setting up multiprocessing logging
-        # for the new process or we'll end up in some kind of futex wait lock
+        # The above logging call will create, in some situations, a futex wait
+        # lock condition, probably due to the multiprocessing Queue's internal
+        # lock and semaphore mechanisms.
+        # A small sleep will allow us not to hit that futex wait lock condition.
         time.sleep(0.0001)
     finally:
         logging._releaseLock()  # pylint: disable=protected-access
