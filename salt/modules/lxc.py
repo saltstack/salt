@@ -876,6 +876,10 @@ def _network_conf(conf_tuples=None, **kwargs):
 def _get_lxc_default_data(**kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = {}
+    for k in ['utsname', 'rootfs']:
+        val = kwargs.get(k, None)
+        if val is not None:
+            ret['lxc.{0}'.format(k)] = val
     autostart = kwargs.get('autostart')
     # autostart can have made in kwargs, but with the None
     # value which is invalid, we need an explicit boolean
@@ -4547,6 +4551,8 @@ def reconfigure(name,
                 bridge=None,
                 gateway=None,
                 autostart=None,
+                utsname=None,
+                rootfs=None,
                 path=None,
                 **kwargs):
     '''
@@ -4556,6 +4562,16 @@ def reconfigure(name,
 
     name
         Name of the container.
+    utsname
+        utsname of the container.
+
+        .. versionadded:: Boron
+
+    rootfs
+        rootfs of the container.
+
+        .. versionadded:: Boron
+
     cpu
         Select a random number of cpu cores and assign it to the cpuset, if the
         cpuset option is set then this option will be ignored
@@ -4622,9 +4638,13 @@ def reconfigure(name,
         autostart = select('autostart', autostart)
     else:
         autostart = 'keep'
+    if not utsname:
+        utsname = select('utsname', utsname)
     if os.path.exists(path):
         old_chunks = read_conf(path, out_format='commented')
         make_kw = salt.utils.odict.OrderedDict([
+            ('utsname', utsname),
+            ('rootfs', rootfs),
             ('autostart', autostart),
             ('cpu', cpu),
             ('gateway', gateway),
