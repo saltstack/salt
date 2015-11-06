@@ -399,6 +399,11 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
 
 
 class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.transport.server.ReqServerChannel):
+
+    def __init__(self, opts):
+        salt.transport.server.ReqServerChannel.__init__(self, opts)
+        self._closing = False
+
     def zmq_device(self):
         '''
         Multiprocessing target for the zmq queue device
@@ -446,6 +451,9 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         '''
         Cleanly shutdown the router socket
         '''
+        if self._closing:
+            return
+        self._closing = True
         if hasattr(self, '_monitor') and self._monitor is not None:
             self._monitor.stop()
             self._monitor = None
