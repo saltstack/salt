@@ -1011,6 +1011,31 @@ def _get_interfaces():
     return _INTERFACES
 
 
+def _parse_os_release():
+    '''
+    Parse /etc/os-release and return a parameter dictionary
+
+    See http://www.freedesktop.org/software/systemd/man/os-release.html
+    for specification of the file format.
+    '''
+
+    filename = '/etc/os-release'
+    if not os.path.isfile(filename):
+        filename = '/usr/lib/os-release'
+
+    data = dict()
+    with salt.utils.fopen(filename) as ifile:
+        regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?$')
+        for line in ifile:
+            match = regex.match(line.strip('\n'))
+            if match:
+                # Shell special characters ("$", quotes, backslash, backtick)
+                # are escaped with backslashes
+                data[match.group(1)] = re.sub(r'\\([$"\'\\`])', r'\1', match.group(2))
+
+    return data
+
+
 def os_data():
     '''
     Return grains pertaining to the operating system
@@ -1141,32 +1166,14 @@ def os_data():
                                 'lsb_{0}'.format(match.groups()[0].lower())
                             ] = match.groups()[1].rstrip()
             if 'lsb_distrib_id' not in grains:
-                if os.path.isfile('/etc/os-release'):
-                    # Arch ARM Linux - SUSE 12+ - openSUSE 13+
-                    with salt.utils.fopen('/etc/os-release') as ifile:
-                        # Imitate lsb-release
-                        for line in ifile:
-                            # NAME="Arch Linux ARM"
-                            # ID=archarm
-                            # ID_LIKE=arch
-                            # PRETTY_NAME="Arch Linux ARM"
-                            # ANSI_COLOR="0;36"
-                            # HOME_URL="http://archlinuxarm.org/"
-                            # SUPPORT_URL="https://archlinuxarm.org/forum"
-                            # BUG_REPORT_URL=
-                            #   "https://github.com/archlinuxarm/PKGBUILDs/issues"
-                            regex = re.compile(
-                                '^([\\w]+)=(?:\'|")?([\\w\\s\\.\\-_]+)(?:\'|")?'
-                            )
-                            match = regex.match(line.rstrip('\n'))
-                            if match:
-                                name, value = match.groups()
-                                if name.lower() == 'name':
-                                    grains['lsb_distrib_id'] = value.strip()
-                                elif name.lower() == 'version_id':
-                                    grains['lsb_distrib_release'] = value
-                                elif name.lower() == 'pretty_name':
-                                    grains['lsb_distrib_codename'] = value
+                if os.path.isfile('/etc/os-release') or os.path.isfile('/usr/lib/os-release'):
+                    os_release = _parse_os_release()
+                    if 'NAME' in os_release:
+                        grains['lsb_distrib_id'] = os_release['NAME'].strip()
+                    if 'VERSION_ID' in os_release:
+                        grains['lsb_distrib_release'] = os_release['VERSION_ID']
+                    if 'PRETTY_NAME' in os_release:
+                        grains['lsb_distrib_codename'] = os_release['PRETTY_NAME']
                 elif os.path.isfile('/etc/SuSE-release'):
                     grains['lsb_distrib_id'] = 'SUSE'
                     with salt.utils.fopen('/etc/SuSE-release') as fhr:
