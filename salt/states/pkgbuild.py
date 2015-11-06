@@ -45,11 +45,14 @@ automatically
 # Import python libs
 from __future__ import absolute_import, print_function
 import errno
+import logging
 import os
 
 # Import salt libs
 import salt.utils
 from salt.ext import six
+
+log = logging.getLogger(__name__)
 
 
 def _get_missing_results(results, dest_dir):
