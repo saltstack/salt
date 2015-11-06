@@ -3,7 +3,7 @@
 Routines to set up a minion
 '''
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, with_statement
 import os
 import re
 import sys
