@@ -18,6 +18,7 @@ from datetime import datetime
 try:
     import win32net
     import win32api
+    import win32con
     import pywintypes
     from ctypes import windll
     HAS_WIN32NET_MODS = True
@@ -309,7 +310,8 @@ def set_computer_name(name):
     if name:
         name = name.decode('utf-8')
 
-    if windll.kernel32.SetComputerNameW(name):
+    if windll.kernel32.SetComputerNameExW(win32con.ComputerNamePhysicalDnsHostname,
+                                          name):
         ret = {'Computer Name': {'Current': get_system_info()['name']}}
         pending = get_pending_computer_name()
         if pending not in (None, False):
