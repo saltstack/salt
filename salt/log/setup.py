@@ -743,24 +743,28 @@ def setup_extended_logging(opts):
 
 
 def get_multiprocessing_logging_queue():
+    global __MP_LOGGING_QUEUE
+
     if __MP_IN_MAINPROCESS is False:
         # We're not in the MainProcess, return! No Queue shall be instantiated
         return __MP_LOGGING_QUEUE
 
-    global __MP_LOGGING_QUEUE
     if __MP_LOGGING_QUEUE is None:
         __MP_LOGGING_QUEUE = multiprocessing.Queue()
     return __MP_LOGGING_QUEUE
 
 
 def setup_multiprocessing_logging_listener(queue=None):
+    global __MP_LOGGING_QUEUE_PROCESS
+    global __MP_LOGGING_LISTENER_CONFIGURED
+
     if __MP_IN_MAINPROCESS is False:
         # We're not in the MainProcess, return! No logging listener setup shall happen
         return
-    global __MP_LOGGING_QUEUE_PROCESS
-    global __MP_LOGGING_LISTENER_CONFIGURED
+
     if __MP_LOGGING_LISTENER_CONFIGURED is True:
         return
+
     __MP_LOGGING_QUEUE_PROCESS = multiprocessing.Process(
         target=__process_multiprocessing_logging_queue,
         args=(queue or get_multiprocessing_logging_queue(),)
@@ -775,15 +779,15 @@ def setup_multiprocessing_logging(queue=None):
     This code should be called from within a running multiprocessing
     process instance.
     '''
+    global __MP_LOGGING_CONFIGURED
+    global __MP_LOGGING_QUEUE_HANDLER
+
     if __MP_IN_MAINPROCESS is True:
         # We're in the MainProcess, return! No multiprocessing logging setup shall happen
         return
 
     try:
         logging._acquireLock()  # pylint: disable=protected-access
-
-        global __MP_LOGGING_CONFIGURED
-        global __MP_LOGGING_QUEUE_HANDLER
 
         if __MP_LOGGING_CONFIGURED is True:
             return
@@ -811,14 +815,15 @@ def setup_multiprocessing_logging(queue=None):
 
 
 def shutdown_multiprocessing_logging():
+    global __MP_LOGGING_CONFIGURED
+    global __MP_LOGGING_QUEUE_HANDLER
+
     if __MP_IN_MAINPROCESS is True:
         # We're in the MainProcess, return! No multiprocessing logging shutdown shall happen
         return
 
     try:
         logging._acquireLock()
-        global __MP_LOGGING_CONFIGURED
-        global __MP_LOGGING_QUEUE_HANDLER
         if __MP_LOGGING_CONFIGURED is True:
             # Let's remove the queue handler from the logging root handlers
             logging.root.removeHandler(__MP_LOGGING_QUEUE_HANDLER)
@@ -829,12 +834,13 @@ def shutdown_multiprocessing_logging():
 
 
 def shutdown_multiprocessing_logging_listener():
-    if __MP_IN_MAINPROCESS is True:
-        # We're in the MainProcess, return! No multiprocessing logging listener shutdown shall happen
-        return
     global __MP_LOGGING_QUEUE
     global __MP_LOGGING_QUEUE_PROCESS
     global __MP_LOGGING_LISTENER_CONFIGURED
+
+    if __MP_IN_MAINPROCESS is True:
+        # We're in the MainProcess, return! No multiprocessing logging listener shutdown shall happen
+        return
     if __MP_LOGGING_QUEUE_PROCESS is None:
         return
     if __MP_LOGGING_QUEUE_PROCESS.is_alive():
