@@ -98,7 +98,7 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.executors import FUNCTION_EXECUTORS
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
-from salt.utils.process import MultiprocessingProcess
+from salt.utils.process import default_signals, SignalHandlingMultiprocessingProcess
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -972,12 +972,13 @@ class Minion(MinionBase):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
-        if self.opts['multiprocessing']:
+        multiprocessing_enabled = self.opts.get('multiprocessing', True)
+        if multiprocessing_enabled:
             if sys.platform.startswith('win'):
                 # let python reconstruct the minion on the other side if we're
                 # running on windows
                 instance = None
-            process = MultiprocessingProcess(
+            process = SignalHandlingMultiprocessingProcess(
                 target=self._target, args=(instance, self.opts, data)
             )
         else:
@@ -986,9 +987,17 @@ class Minion(MinionBase):
                 args=(instance, self.opts, data),
                 name=data['jid']
             )
-        process.start()
+
+        if multiprocessing_enabled:
+            with default_signals(signal.SIGINT, signal.SIGTERM):
+                # Reset current signals before starting the process in
+                # order not to inherit the current signal handlers
+                process.start()
+        else:
+            process.start()
+
         # TODO: remove the windows specific check?
-        if self.opts['multiprocessing'] and not salt.utils.is_windows():
+        if multiprocessing_enabled and not salt.utils.is_windows():
             # we only want to join() immediately if we are daemonizing a process
             process.join()
         else:
