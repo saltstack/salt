@@ -867,8 +867,11 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
     def _mixin_before_exit(self):
-        if self.check_pidfile():
-            os.unlink(self.config['pidfile'])
+        if hasattr(self, 'config'):
+            # We've loaded and merged options into the configuration, it's safe
+            # to query about the pidfile
+            if self.check_pidfile():
+                os.unlink(self.config['pidfile'])
 
     def set_pidfile(self):
         from salt.utils.process import set_pidfile
