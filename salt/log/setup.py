@@ -111,7 +111,7 @@ __MP_LOGGING_CONFIGURED = False
 __MP_LOGGING_QUEUE = None
 __MP_LOGGING_QUEUE_PROCESS = None
 __MP_LOGGING_QUEUE_HANDLER = None
-
+__MP_IN_MAINPROCESS = multiprocessing.current_process().name == 'MainProcess'
 
 def is_console_configured():
     return __CONSOLE_CONFIGURED
@@ -743,13 +743,21 @@ def setup_extended_logging(opts):
 
 
 def get_multiprocessing_logging_queue():
+    if __MP_IN_MAINPROCESS is False:
+        # We're not in the MainProcess, return! No Queue shall be instantiated
+        return __MP_LOGGING_QUEUE
+
     global __MP_LOGGING_QUEUE
     if __MP_LOGGING_QUEUE is None:
+        # We only instantiate a new multiprocessing Queue if we're in the main process
         __MP_LOGGING_QUEUE = multiprocessing.Queue()
     return __MP_LOGGING_QUEUE
 
 
 def setup_multiprocessing_logging_listener(queue=None):
+    if __MP_IN_MAINPROCESS is False:
+        # We're not in the MainProcess, return! No logging listener setup shall happen
+        return
     global __MP_LOGGING_QUEUE_PROCESS
     global __MP_LOGGING_LISTENER_CONFIGURED
     if __MP_LOGGING_LISTENER_CONFIGURED is True:
@@ -768,40 +776,61 @@ def setup_multiprocessing_logging(queue=None):
     This code should be called from within a running multiprocessing
     process instance.
     '''
-    global __MP_LOGGING_CONFIGURED
-    global __MP_LOGGING_QUEUE_HANDLER
-
-    if __MP_LOGGING_CONFIGURED is True:
+    if __MP_IN_MAINPROCESS is True:
+        # We're in the MainProcess, return! No multiprocessing logging setup shall happen
         return
 
-    # Let's set it to true as fast as possible
-    __MP_LOGGING_CONFIGURED = True
+    try:
+        logging._acquireLock()
 
-    if __MP_LOGGING_QUEUE_HANDLER is not None:
-        return
+        global __MP_LOGGING_CONFIGURED
+        global __MP_LOGGING_QUEUE_HANDLER
 
-    # Let's add a queue handler to the logging root handlers
-    __MP_LOGGING_QUEUE_HANDLER = SaltLogQueueHandler(queue or get_multiprocessing_logging_queue())
-    logging.root.addHandler(__MP_LOGGING_QUEUE_HANDLER)
-    # Set the logging root level to the lowest to get all messages
-    logging.root.setLevel(logging.GARBAGE)
-    logging.getLogger(__name__).debug(
-        'Multiprocessing queue logging configured for the process running '
-        'under PID: {0}'.format(os.getpid())
-    )
+        if __MP_LOGGING_CONFIGURED is True:
+            return
+
+        # Let's set it to true as fast as possible
+        __MP_LOGGING_CONFIGURED = True
+
+        if __MP_LOGGING_QUEUE_HANDLER is not None:
+            return
+
+        # Let's add a queue handler to the logging root handlers
+        __MP_LOGGING_QUEUE_HANDLER = SaltLogQueueHandler(queue or get_multiprocessing_logging_queue())
+        logging.root.addHandler(__MP_LOGGING_QUEUE_HANDLER)
+        # Set the logging root level to the lowest to get all messages
+        logging.root.setLevel(logging.GARBAGE)
+        logging.getLogger(__name__).debug(
+            'Multiprocessing queue logging configured for the process running '
+            'under PID: {0}'.format(os.getpid())
+        )
+        time.sleep(0.0001)
+    finally:
+        logging._releaseLock()
 
 
 def shutdown_multiprocessing_logging():
-    global __MP_LOGGING_CONFIGURED
-    global __MP_LOGGING_QUEUE_HANDLER
-    if __MP_LOGGING_CONFIGURED is True:
-        # Let's remove the queue handler from the logging root handlers
-        logging.root.removeHandler(__MP_LOGGING_QUEUE_HANDLER)
-        __MP_LOGGING_QUEUE_HANDLER = None
-        __MP_LOGGING_CONFIGURED = False
+    if __MP_IN_MAINPROCESS is True:
+        # We're in the MainProcess, return! No multiprocessing logging shutdown shall happen
+        return
+
+    try:
+        logging._acquireLock()
+        global __MP_LOGGING_CONFIGURED
+        global __MP_LOGGING_QUEUE_HANDLER
+        if __MP_LOGGING_CONFIGURED is True:
+            # Let's remove the queue handler from the logging root handlers
+            logging.root.removeHandler(__MP_LOGGING_QUEUE_HANDLER)
+            __MP_LOGGING_QUEUE_HANDLER = None
+            __MP_LOGGING_CONFIGURED = False
+    finally:
+        logging._releaseLock()
 
 
 def shutdown_multiprocessing_logging_listener():
+    if __MP_IN_MAINPROCESS is True:
+        # We're in the MainProcess, return! No multiprocessing logging listener shutdown shall happen
+        return
     global __MP_LOGGING_QUEUE
     global __MP_LOGGING_QUEUE_PROCESS
     global __MP_LOGGING_LISTENER_CONFIGURED
