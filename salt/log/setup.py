@@ -113,6 +113,7 @@ __MP_LOGGING_QUEUE_PROCESS = None
 __MP_LOGGING_QUEUE_HANDLER = None
 __MP_IN_MAINPROCESS = multiprocessing.current_process().name == 'MainProcess'
 
+
 def is_console_configured():
     return __CONSOLE_CONFIGURED
 
