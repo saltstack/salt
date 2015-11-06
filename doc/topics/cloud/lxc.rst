@@ -191,3 +191,53 @@ Driver Support
 - Container creation
 - Image listing (LXC templates)
 - Running container information (IP addresses, etc.)
+
+Systemd Check
+-------------
+
+.. versionadded:: 2015.8.2
+
+Some container templates might not have systemd installed resulting in errors during
+container creation time. To prevent this please set the ``uses_systemd`` option to ``False``.
+Option `uses_systemd` defaults to `True`.
+
+.. code-block:: yaml
+
+    ubuntu-lxc:
+      provider: dev-lxc
+      lxc_profile:
+        template: download
+        options:
+          release: trusty
+          arch: amd64
+      image: ubuntu
+      script_args: -P
+      uses_systemd: False
+      network_profile: ubuntu
+      minion:
+        master: localhost
+
+Bootstrap Delay
+---------------
+
+.. versionchanged:: 2015.8.0
+
+The ``bootstrap_delay`` config option lets you specify the time to wait (in seconds) between container creation
+and salt bootstrap execution. It is useful to ensure that all essential services have started before the
+bootstrap script is executed. By default there's no wait time between container creation and bootstrap.
+
+.. code-block:: yaml
+
+    ubuntu-lxc:
+      provider: dev-lxc
+      lxc_profile:
+        template: download
+        options:
+          release: trusty
+          arch: amd64
+      image: ubuntu
+      script_args: -P
+      bootstrap_delay: 62
+      network_profile: ubuntu
+      minion:
+        master: localhost
