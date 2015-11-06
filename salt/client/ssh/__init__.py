@@ -544,6 +544,10 @@ class SSH(object):
 
             self.cache_job(jid, host, ret[host], fun)
             ret = self.key_deploy(host, ret)
+
+            if ret[host].get('stderr', '').startswith('ssh:'):
+                ret[host] = ret[host]['stderr']
+
             if not isinstance(ret[host], dict):
                 p_data = {host: ret[host]}
             elif 'return' not in ret[host]:
