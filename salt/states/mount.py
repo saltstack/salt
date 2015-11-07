@@ -37,7 +37,6 @@ from salt.ext.six import string_types
 import logging
 import salt.ext.six as six
 log = logging.getLogger(__name__)
-from salt._compat import string_types
 
 
 def mounted(name,
@@ -169,13 +168,11 @@ def mounted(name,
         if os.path.exists(mapper_device):
             real_device = mapper_device
 
-    # When included in a Salt state file, FUSE
-    # devices are prefaced by the filesystem type
-    # and a hash, e.g. sshfs#.  In the mount list
-    # only the hostname is included.  So if we detect
-    # that the device is a FUSE device then we
-    # remove the prefaced string so that the device in
-    # state matches the device in the mount list.
+    # When included in a Salt state file, FUSE devices are prefaced by the
+    # filesystem type and a hash, e.g. sshfs.  In the mount list only the
+    # hostname is included.  So if we detect that the device is a FUSE device
+    # then we remove the prefaced string so that the device in state matches
+    # the device in the mount list.
     fuse_match = re.match(r'^\w+\#(?P<device_name>.+)', device)
     if fuse_match:
         if 'device_name' in fuse_match.groupdict():
@@ -234,7 +231,7 @@ def mounted(name,
                 ]
                 # Some filesystems have options which should not force a remount.
                 mount_ignore_fs_keys = {
-                        'ramfs': ['size']
+                    'ramfs': ['size']
                 }
 
                 # Some options are translated once mounted
@@ -264,8 +261,7 @@ def mounted(name,
                         opt = "username={0}".format(opt.split('=')[1])
 
                     if opt not in active[real_name]['opts'] \
-                    and ('superopts' in active[real_name]
-                         and opt not in active[real_name]['superopts']) \
+                    and opt not in active[real_name].get('superopts', []) \
                     and opt not in mount_invisible_options \
                     and opt not in mount_ignore_fs_keys.get(fstype, []):
                         if __opts__['test']:
