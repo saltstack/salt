@@ -135,7 +135,7 @@ def present(name, persist=False, mods=None):
     return ret
 
 
-def absent(name, persist=False, comment=True):
+def absent(name, persist=False, comment=True, mods=None):
     '''
     Verify that the named kernel module is not loaded
 
@@ -143,35 +143,79 @@ def absent(name, persist=False, comment=True):
         The name of the kernel module to verify is not loaded
 
     persist
-        Delete module from ``/etc/modules``
+        Remove module from ``/etc/modules``
 
     comment
-        Don't remove module from ``/etc/modules``, only comment it
+        Comment out module in ``/etc/modules`` rather than remove it
+
+    mods
+        A list of modules to verify are unloaded.  If this argument is used,
+        the ``name`` argument, although still required, is not used, and
+        becomes a placeholder
+
+        .. versionadded:: Boron
     '''
+    if not isinstance(mods, (list, tuple)):
+        mods = [name]
     ret = {'name': name,
            'result': True,
            'changes': {},
            'comment': ''}
-    mods = __salt__['kmod.mod_list']()
+
+    loaded_mods = __salt__['kmod.mod_list']()
     if persist:
         persist_mods = __salt__['kmod.mod_list'](True)
-        mods = list(set(mods) | set(persist_mods))
-    if name in mods:
-        # Found the module, unload it!
+        # Union of loaded modules and persistent modules
+        loaded_mods = list(set(loaded_mods) | set(persist_mods))
+
+    # Intersection of proposed modules and loaded modules
+    to_unload = list(set(mods) & set(loaded_mods))
+    if to_unload:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Module {0} is set to be unloaded'.format(name)
+            if len(to_unload) == 1:
+                _append_comment(ret, 'Kernel module {0} is set to be removed'.format(to_unload[0]))
+            elif len(to_unload) > 1:
+                _append_comment(ret, 'Kernel modules {0} are set to be removed'.format(', '.join(to_unload)))
             return ret
-        for mod in __salt__['kmod.remove'](name, persist, comment):
-            ret['changes'][mod] = 'removed'
-        for change in ret['changes']:
-            if name in change:
-                ret['comment'] = 'Removed kernel module {0}'.format(name)
-                return ret
-        ret['result'] = False
-        ret['comment'] = ('Module {0} is present but failed to remove'
-                          .format(name))
+
+        # Unload modules and collect results
+        unloaded = {'yes': [], 'no': [], 'failed': []}
+        for mod in to_unload:
+            unload_result = __salt__['kmod.remove'](mod, persist, comment)
+            if isinstance(unload_result, (list, tuple)):
+                if len(unload_result) > 0:
+                    for module in unload_result:
+                        ret['changes'][module] = 'removed'
+                    unloaded['yes'].append(mod)
+                else:
+                    ret['result'] = False
+                    unloaded['no'].append(mod)
+            else:
+                ret['result'] = False
+                unloaded['failed'].append([mod, unload_result])
+
+        # Update comment with results
+        if len(unloaded['yes']) == 1:
+            _append_comment(ret, 'Removed kernel module {0}'.format(unloaded['yes'][0]))
+        elif len(unloaded['yes']) > 1:
+            _append_comment(ret, 'Removed kernel modules {0}'.format(', '.join(unloaded['yes'])))
+
+        if len(unloaded['no']) == 1:
+            _append_comment(ret, 'Failed to remove kernel module {0}'.format(unloaded['no'][0]))
+        if len(unloaded['no']) > 1:
+            _append_comment(ret, 'Failed to remove kernel modules {0}'.format(', '.join(unloaded['no'])))
+
+        if len(unloaded['failed']):
+            for mod, msg in unloaded['failed']:
+                _append_comment(ret, 'Failed to remove kernel module {0}: {1}'.format(mod, msg))
+
         return ret
+
     else:
-        ret['comment'] = 'Kernel module {0} is already absent'.format(name)
+        if len(mods) == 1:
+            ret['comment'] = 'Kernel module {0} is already removed'.format(mods[0])
+        else:
+            ret['comment'] = 'Kernel modules {0} are already removed'.format(', '.join(mods))
+
         return ret
