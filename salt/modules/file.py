@@ -1427,6 +1427,7 @@ def replace(path,
     if filesize is not 0:
         # First check the whole file, determine whether to make the replacement
         # Searching first avoids modifying the time stamp if there are no changes
+        r_data = None
         try:
             # Use a read-only handle to open the file
             with salt.utils.fopen(path,
@@ -1486,6 +1487,7 @@ def replace(path,
         except (OSError, IOError) as exc:
             raise CommandExecutionError("Exception: {0}".format(exc))
 
+        r_data = None
         try:
             # Open the file in write mode
             with salt.utils.fopen(path,
