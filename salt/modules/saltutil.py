@@ -515,6 +515,7 @@ def sync_all(saltenv=None, refresh=True):
     ret['output'] = sync_output(saltenv, False)
     ret['utils'] = sync_utils(saltenv, False)
     ret['log_handlers'] = sync_log_handlers(saltenv, False)
+    ret['proxymodules'] = sync_proxymodules(saltenv, False)
     if refresh:
         refresh_modules()
     return ret
