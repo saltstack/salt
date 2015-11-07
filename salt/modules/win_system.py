@@ -379,6 +379,8 @@ get_computer_description = get_computer_desc
 def _lookup_error(number):
     '''
     Lookup the error based on the passed number
+    .. versionadded:: 2015.5.7
+    .. versionadded:: 2015.8.2
 
     :param int number: Number code to lookup
 
@@ -431,6 +433,8 @@ def join_domain(domain,
         Needs to be set to ``True`` to allow re-using an existing account
 
     :param bool restart: Restarts the computer after a successful join
+    .. versionadded:: 2015.5.7
+    .. versionadded:: 2015.8.2
 
     :returns: Returns a dictionary if successful. False if unsuccessful.
     :rtype: dict, bool
@@ -515,10 +519,16 @@ def unjoin_domain(username=None,
     :param str workgroup: The workgroup to join the computer to. Default is
     ``WORKGROUP``
 
+    .. versionadded:: 2015.5.7
+    .. versionadded:: 2015.8.2
+
     :param bool disable:
         Disable the user account in Active Directory. True to disable.
 
     :param bool restart: Restart the computer after successful unjoin
+
+    .. versionadded:: 2015.5.7
+    .. versionadded:: 2015.8.2
 
     :returns: Returns a dictionary if successful. False if unsuccessful.
     :rtype: dict, bool
@@ -584,6 +594,9 @@ def unjoin_domain(username=None,
 def get_domain_workgroup():
     '''
     Get the domain or workgroup the computer belongs to.
+
+    .. versionadded:: 2015.5.7
+    .. versionadded:: 2015.8.2
 
     :return: The name of the domain or workgroup
     :rtype: str
