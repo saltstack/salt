@@ -502,7 +502,7 @@ def unjoin_domain(username=None,
                   workgroup='WORKGROUP',
                   disable=False,
                   restart=False):
-    '''
+    r'''
     Unjoin a computer from an Active Directory Domain. Requires restart.
 
     :param username:
@@ -578,7 +578,7 @@ def unjoin_domain(username=None,
             ret = {'Workgroup': workgroup,
                    'Restart': False}
             if restart:
-               ret['Restart'] = reboot()
+                ret['Restart'] = reboot()
 
             return ret
         else:
