@@ -8,10 +8,27 @@ module:
 
 .. code-block:: yaml
 
-  kvm_amd:
-    kmod.present
-  pcspkr:
-    kmod.absent
+    add_kvm:
+      kmod.present:
+        - name: kvm_amd
+    remove_beep:
+      kmod.absent:
+        - name: pcspkr
+
+Mutiple modules can be specified for both kmod.present and kmod.absent.
+
+.. code-block:: yaml
+
+    add_sound:
+      kmod.present:
+        - mods:
+          - snd_hda_codec_hdmi
+          - snd_hda_codec
+          - snd_hwdep
+          - snd_hda_core
+          - snd_pcm
+          - snd_timer
+          - snd
 '''
 
 
