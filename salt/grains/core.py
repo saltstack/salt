@@ -962,6 +962,8 @@ _OS_FAMILY_MAP = {
     'SLED': 'Suse',
     'openSUSE': 'Suse',
     'SUSE': 'Suse',
+    'SUSE Leap': 'Suse',
+    'openSUSE Leap': 'Suse',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
     'OpenIndiana Development': 'Solaris',
