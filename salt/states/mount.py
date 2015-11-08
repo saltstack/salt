@@ -37,7 +37,6 @@ from salt.ext.six import string_types
 import logging
 import salt.ext.six as six
 log = logging.getLogger(__name__)
-from salt._compat import string_types
 
 
 def mounted(name,
@@ -51,7 +50,8 @@ def mounted(name,
             persist=True,
             mount=True,
             user=None,
-            match_on='auto'):
+            match_on='auto',
+            hidden_opts=None):
     '''
     Verify that a device is mounted
 
@@ -97,6 +97,12 @@ def mounted(name,
         Default is ``auto``, a special value indicating to guess based on fstype.
         In general, ``auto`` matches on name for recognized special devices and
         device otherwise.
+
+    hidden_opts
+        A list of mount options that will be ignored when considering a remount
+        as part of the state application
+
+        .. versionadded:: 2015.8.2
     '''
     ret = {'name': name,
            'changes': {},
@@ -111,6 +117,9 @@ def mounted(name,
     # string
     if isinstance(opts, string_types):
         opts = opts.split(',')
+
+    if isinstance(hidden_opts, string_types):
+        hidden_opts = hidden_opts.split(',')
 
     # remove possible trailing slash
     if not name == '/':
@@ -169,13 +178,11 @@ def mounted(name,
         if os.path.exists(mapper_device):
             real_device = mapper_device
 
-    # When included in a Salt state file, FUSE
-    # devices are prefaced by the filesystem type
-    # and a hash, e.g. sshfs#.  In the mount list
-    # only the hostname is included.  So if we detect
-    # that the device is a FUSE device then we
-    # remove the prefaced string so that the device in
-    # state matches the device in the mount list.
+    # When included in a Salt state file, FUSE devices are prefaced by the
+    # filesystem type and a hash, e.g. sshfs.  In the mount list only the
+    # hostname is included.  So if we detect that the device is a FUSE device
+    # then we remove the prefaced string so that the device in state matches
+    # the device in the mount list.
     fuse_match = re.match(r'^\w+\#(?P<device_name>.+)', device)
     if fuse_match:
         if 'device_name' in fuse_match.groupdict():
@@ -223,6 +230,8 @@ def mounted(name,
                     'port',
                     'backup-volfile-servers',
                 ]
+                if hidden_opts:
+                    mount_invisible_options = list(set(mount_invisible_options) | set(hidden_opts))
                 # options which are provided as key=value (e.g. password=Zohp5ohb)
                 mount_invisible_keys = [
                     'actimeo',
@@ -234,7 +243,7 @@ def mounted(name,
                 ]
                 # Some filesystems have options which should not force a remount.
                 mount_ignore_fs_keys = {
-                        'ramfs': ['size']
+                    'ramfs': ['size']
                 }
 
                 # Some options are translated once mounted
@@ -264,8 +273,7 @@ def mounted(name,
                         opt = "username={0}".format(opt.split('=')[1])
 
                     if opt not in active[real_name]['opts'] \
-                    and ('superopts' in active[real_name]
-                         and opt not in active[real_name]['superopts']) \
+                    and opt not in active[real_name].get('superopts', []) \
                     and opt not in mount_invisible_options \
                     and opt not in mount_ignore_fs_keys.get(fstype, []):
                         if __opts__['test']:
