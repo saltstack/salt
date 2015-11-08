@@ -55,7 +55,14 @@ def list_sites():
     return _srvmgr(command)
 
 
-def create_site(name, protocol, sourcepath, port, apppool='', hostheader='', ipaddress=''):
+def create_site(
+        name,
+        protocol,
+        sourcepath,
+        port,
+        apppool='',
+        hostheader='',
+        ipaddress=''):
     '''
     Create a basic website in IIS
 
@@ -105,7 +112,7 @@ def remove_site(name):
 def list_apppools():
     '''
     List all configured IIS Application pools
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -117,7 +124,7 @@ def list_apppools():
     pscmd.append(" | foreach {")
     pscmd.append(" $_.Name")
     pscmd.append("};")
-    
+
     command = ''.join(pscmd)
     return _srvmgr(command)
 
@@ -125,7 +132,7 @@ def list_apppools():
 def create_apppool(name):
     '''
     Create IIS Application pools
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -134,7 +141,7 @@ def create_apppool(name):
     '''
     pscmd = []
     pscmd.append("New-Item 'IIS:\AppPools\{0}'".format(name))
-        
+
     command = ''.join(pscmd)
     return _srvmgr(command)
 
@@ -142,7 +149,7 @@ def create_apppool(name):
 def remove_apppool(name):
     '''
     Removes IIS Application pools
-    
+
     CLI Example:
 
     .. code-block:: bash

@@ -2,8 +2,8 @@
 '''
 Microsoft IIS site management
 
-This module provides the ability to add/remove websites and application pools from
-Microsoft IIS.
+This module provides the ability to add/remove websites and application pools
+from Microsoft IIS.
 
 '''
 
@@ -39,9 +39,10 @@ def deployed(
         hostheader='',
         ipaddress=''):
     '''
-    Ensure the website has been deployed. This only validates against the website name
-    and will not update information on existing websites with the same name. If the 
-    website name doesn't exist it will create with the provided parameters.
+    Ensure the website has been deployed. This only validates against the
+    website name and will not update information on existing websites with the
+    same name. If the website name doesn't exist it will create with the
+    provided parameters.
 
     name
         Name of the website in IIS.
