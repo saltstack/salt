@@ -7,12 +7,15 @@ from Microsoft IIS.
 
 '''
 
+
+from __future__ import absolute_import
+
 # Import python libs
 import logging
 
 # Import salt libs
 import salt.utils
-from __future__ import absolute_import
+
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +55,7 @@ def deployed(
 
     sourcepath
         The directory path on the IIS server to use as a root file store.
-        example: c:\websites\website1
+        example: c:\\websites\\website1
 
     port
         The network port to listen for traffic.
