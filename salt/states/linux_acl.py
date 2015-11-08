@@ -100,6 +100,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
         if octal == sum([_octal.get(i, i) for i in perms]):
             ret['comment'] = 'Permissions are in the desired state'
         else:
+            ret['changes']['perm changes'] = "from %s to %s" %  (octal, sum([_octal.get(i, i) for i in perms]))
             ret['comment'] = 'Permissions have been updated'
 
             if __opts__['test']:
@@ -115,7 +116,7 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
                 __salt__['acl.modfacl'](acl_type, acl_name, perms, name)
     else:
         ret['comment'] = 'Permissions will be applied'
-        ret['result'] = 'None'
+        ret['changes']['type added'] = "add %s:%s, the mode is %s" %  (acl_type, acl_name, sum([_octal.get(i, i) for i in perms]))
 
         if __opts__['test']:
             ret['result'] = None
