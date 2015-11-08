@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Microsoft IIS site management
 
@@ -8,16 +9,17 @@ Microsoft IIS.
 
 # Import python libs
 import logging
-import re
 
 # Import salt libs
 import salt.utils
+from __future__ import absolute_import
 
 log = logging.getLogger(__name__)
 
 
 # Define the module's virtual name
 __virtualname__ = 'win_iis'
+
 
 def __virtual__():
     '''
@@ -26,6 +28,7 @@ def __virtual__():
     if salt.utils.is_windows():
         return __virtualname__
     return False
+
 
 def deployed(
         name,
@@ -79,15 +82,15 @@ def deployed(
         if name in sitelist:
             # Site already exist
             # ret['changes'] = {'results': '{0} already exist'.format(name)}
-            ret['result'] =  True
+            ret['result'] = True
             ret['comment'] = 'Site already exist'
         else:
             # Site doesn exist create site
 
-            sitecreated  = __salt__['win_iis.create_site'](
-                    name, 
-                    protocol, 
-                    sourcepath, 
+            sitecreated = __salt__['win_iis.create_site'](
+                    name,
+                    protocol,
+                    sourcepath,
                     port,
                     apppool,
                     hostheader,
@@ -97,6 +100,7 @@ def deployed(
             ret['comment'] = 'Site created'
 
     return ret
+
 
 def remove_site(name):
     # Remove IIS website
@@ -134,6 +138,7 @@ def remove_site(name):
 
     return ret
 
+
 def create_apppool(name):
     # Confirm IIS Application is deployed
 
@@ -160,18 +165,19 @@ def create_apppool(name):
         if name in apppoollist:
             # AppPool already exist
             # ret['changes'] = {'results': '{0} already exist'.format(name)}
-            ret['result'] =  True
+            ret['result'] = True
             ret['comment'] = 'Application Pool already exist'
         else:
             # AppPool doesn't exist create pool
 
-            poolcreated  = __salt__['win_iis.create_apppool'](
+            poolcreated = __salt__['win_iis.create_apppool'](
                     name)
             ret['changes'] = {'results': '{0} Application Pool created'.format(name)}
             ret['result'] = True
             ret['comment'] = 'Application Pool created'
 
     return ret
+
 
 def remove_apppool(name):
     # Remove IIS AppPool
@@ -207,5 +213,3 @@ def remove_apppool(name):
         ret['comment'] = apppool
 
     return ret
-
- 

@@ -9,8 +9,11 @@ Microsoft IIS site management via WebAdministration powershell module
 
 # Import salt libs
 import salt.utils
+from __future__ import absolute_import
+
 # Define the module's virtual name
 __virtualname__ = 'win_iis'
+
 
 def __virtual__():
     '''
@@ -19,6 +22,7 @@ def __virtual__():
     if salt.utils.is_windows():
         return __virtualname__
     return False
+
 
 def _srvmgr(func):
     '''
@@ -30,10 +34,11 @@ def _srvmgr(func):
         shell='powershell',
         python_shell=True)
 
+
 def list_sites():
     '''
     List all the currently deployed websites
-    
+
     CLI Example:
 
     .. code-block:: bash
@@ -46,9 +51,9 @@ def list_sites():
     pscmd.append(" $_.Name")
     pscmd.append("};")
 
-    
     command = ''.join(pscmd)
     return _srvmgr(command)
+
 
 def create_site(name, protocol, sourcepath, port, apppool='', hostheader='', ipaddress=''):
     '''
@@ -66,7 +71,7 @@ def create_site(name, protocol, sourcepath, port, apppool='', hostheader='', ipa
     pscmd.append("cd IIS:\Sites\;")
     pscmd.append("New-Item 'iis:\Sites\{0}'".format(name))
     pscmd.append(" -bindings @{{protocol='{0}';bindingInformation=':{1}:{2}'}}".format(
-        protocol, port, hostheader.replace(" ","")))
+        protocol, port, hostheader.replace(" ", "")))
     pscmd.append("-physicalPath {0};".format(sourcepath))
 
     if apppool:
@@ -75,6 +80,7 @@ def create_site(name, protocol, sourcepath, port, apppool='', hostheader='', ipa
 
     command = ''.join(pscmd)
     return _srvmgr(command)
+
 
 def remove_site(name):
     '''
@@ -111,7 +117,6 @@ def list_apppools():
     pscmd.append(" | foreach {")
     pscmd.append(" $_.Name")
     pscmd.append("};")
-
     
     command = ''.join(pscmd)
     return _srvmgr(command)
@@ -133,6 +138,7 @@ def create_apppool(name):
     command = ''.join(pscmd)
     return _srvmgr(command)
 
+
 def remove_apppool(name):
     '''
     Removes IIS Application pools
@@ -148,5 +154,3 @@ def remove_apppool(name):
 
     command = ''.join(pscmd)
     return _srvmgr(command)
-
-
