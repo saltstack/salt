@@ -71,7 +71,7 @@ def create_site(
 
     .. code-block:: bash
 
-        salt '*' win_iis.create_site name='My Test Site' protocol='http' sourcepath='c:\stage' port='80' apppool='TestPool'
+        salt '*' win_iis.create_site name='My Test Site' protocol='http' sourcepath='c:\\stage' port='80' apppool='TestPool'
 
     '''
 
