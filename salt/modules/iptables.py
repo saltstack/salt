@@ -932,7 +932,7 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
             ret[table][chain]['rules'] = []
             ret[table][chain]['rules_comment'] = {}
         elif line.startswith('-A'):
-            args = shlex.split(line)
+            args = salt.utils.shlex_split(line)
             index = 0
             while index + 1 < len(args):
                 swap = args[index] == '!' and args[index + 1].startswith('-')

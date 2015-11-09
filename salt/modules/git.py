@@ -117,7 +117,7 @@ def _format_opts(opts):
         if not isinstance(opts, six.string_types):
             opts = [str(opts)]
         else:
-            opts = shlex.split(opts)
+            opts = salt.utils.shlex_split(opts)
     try:
         if opts[-1] == '--':
             # Strip the '--' if it was passed at the end of the opts string,
@@ -2398,7 +2398,7 @@ def rebase(cwd, rev='master', opts='', user=None, ignore_retcode=False):
     command.extend(opts)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
-    command.extend(shlex.split(rev))
+    command.extend(salt.utils.shlex_split(rev))
     return _git_run(command,
                     cwd=cwd,
                     runas=user,

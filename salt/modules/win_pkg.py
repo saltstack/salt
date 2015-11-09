@@ -742,10 +742,10 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                 arguments = ['/i', cached_pkg]
                 if pkginfo['version_num'].get('allusers', True):
                     arguments.append('ALLUSERS="1"')
-                arguments.extend(shlex.split(install_flags))
+                arguments.extend(salt.utils.shlex_split(install_flags))
             else:
                 cmd = cached_pkg
-                arguments = shlex.split(install_flags)
+                arguments = salt.utils.shlex_split(install_flags)
 
             # Create Scheduled Task
             __salt__['task.create_task'](name='update-salt-software',
@@ -769,7 +769,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
                     cmd.append('ALLUSERS="1"')
             else:
                 cmd.append(cached_pkg)
-            cmd.extend(shlex.split(install_flags))
+            cmd.extend(salt.utils.shlex_split(install_flags))
             # Launch the command
             result = __salt__['cmd.run_stdout'](cmd,
                                                 cache_path,
@@ -963,10 +963,10 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
             if pkginfo[version_num].get('msiexec'):
                 cmd = 'msiexec.exe'
                 arguments = ['/x']
-                arguments.extend(shlex.split(uninstall_flags))
+                arguments.extend(salt.utils.shlex_split(uninstall_flags))
             else:
                 cmd = expanded_cached_pkg
-                arguments = shlex.split(uninstall_flags)
+                arguments = salt.utils.shlex_split(uninstall_flags)
 
             # Create Scheduled Task
             __salt__['task.create_task'](name='update-salt-software',
@@ -988,7 +988,7 @@ def remove(name=None, pkgs=None, version=None, **kwargs):
                 cmd.extend(['msiexec', '/x', expanded_cached_pkg])
             else:
                 cmd.append(expanded_cached_pkg)
-            cmd.extend(shlex.split(uninstall_flags))
+            cmd.extend(salt.utils.shlex_split(uninstall_flags))
             # Launch the command
             result = __salt__['cmd.run_stdout'](cmd,
                                                 output_loglevel='trace',

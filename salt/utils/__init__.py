@@ -2877,3 +2877,12 @@ def invalid_kwargs(invalid_kwargs, raise_exc=True):
         raise SaltInvocationError(msg)
     else:
         return msg
+
+def shlex_split(s, **kwargs):
+    '''
+    Only split if variable is a string
+    '''
+    if isinstance(s, basestring):
+        return shlex.split(s, **kwargs)
+    else:
+        return s

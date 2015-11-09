@@ -312,7 +312,7 @@ def _run(cmd,
             raise CommandExecutionError(msg)
 
         if not isinstance(cmd, list):
-            cmd = shlex.split(cmd, posix=False)
+            cmd = salt.utils.shlex_split(cmd, posix=False)
 
         cmd = ' '.join(cmd)
 
@@ -448,7 +448,7 @@ def _run(cmd,
         posix = True
         if salt.utils.is_windows():
             posix = False
-        cmd = shlex.split(cmd, posix=posix)
+        cmd = salt.utils.shlex_split(cmd, posix=posix)
     if not use_vt:
         # This is where the magic happens
         try:

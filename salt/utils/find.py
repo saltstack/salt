@@ -559,8 +559,8 @@ class ExecOption(Option):
     def execute(self, fullpath, fstat, test=False):
         try:
             command = self.command.replace('{}', fullpath)
-            print(shlex.split(command))
-            p = Popen(shlex.split(command),
+            print(salt.utils.shlex_split(command))
+            p = Popen(salt.utils.shlex_split(command),
                       stdout=PIPE,
                       stderr=PIPE)
             (out, err) = p.communicate()

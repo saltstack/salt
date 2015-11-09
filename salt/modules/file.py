@@ -780,7 +780,7 @@ def sed(path,
 
     cmd = ['sed']
     cmd.append('-i{0}'.format(backup) if backup else '-i')
-    cmd.extend(shlex.split(options))
+    cmd.extend(salt.utils.shlex_split(options))
     cmd.append(
         r'{limit}{negate_match}s/{before}/{after}/{flags}'.format(
             limit='/{0}/ '.format(limit) if limit else '',
@@ -827,7 +827,7 @@ def sed_contains(path,
         options = options.replace('-r', '-E')
 
     cmd = ['sed']
-    cmd.extend(shlex.split(options))
+    cmd.extend(salt.utils.shlex_split(options))
     cmd.append(
         r'{limit}s/{before}/$/{flags}'.format(
             limit='/{0}/ '.format(limit) if limit else '',
@@ -2252,7 +2252,7 @@ def patch(originalfile, patchfile, options='', dry_run=False):
         )
 
     cmd = [patchpath]
-    cmd.extend(shlex.split(options))
+    cmd.extend(salt.utils.shlex_split(options))
     if dry_run:
         if __grains__['kernel'] in ('FreeBSD', 'OpenBSD'):
             cmd.append('-C')
@@ -4937,9 +4937,9 @@ def grep(path,
     split_opts = []
     for opt in opts:
         try:
-            opt = shlex.split(opt)
+            opt = salt.utils.shlex_split(opt)
         except AttributeError:
-            opt = shlex.split(str(opt))
+            opt = salt.utils.shlex_split(str(opt))
         if len(opt) > 1:
             salt.utils.warn_until(
                 'Carbon',

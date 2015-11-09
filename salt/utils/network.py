@@ -1173,7 +1173,7 @@ def _freebsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        cmd = shlex.split('sockstat -4 -c -p {0}'.format(port))
+        cmd = salt.utils.shlex_split('sockstat -4 -c -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))

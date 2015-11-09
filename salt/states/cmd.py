@@ -253,7 +253,7 @@ def _reinterpreted_state(state):
             out = out[idx + 1:]
         data = {}
         try:
-            for item in shlex.split(out):
+            for item in salt.utils.shlex_split(out):
                 key, val = item.split('=')
                 data[key] = val
         except ValueError:
