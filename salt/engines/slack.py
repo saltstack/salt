@@ -42,6 +42,7 @@ except ImportError:
 import salt.client
 import salt.loader
 import salt.runner
+import salt.utils
 import salt.utils.event
 import salt.utils.http
 import salt.utils.slack
@@ -129,7 +130,7 @@ def start(token,
 
                                 # Trim the ! from the front
                                 # cmdline = _text[1:].split(' ', 1)
-                                cmdline = shlex.split(_text[1:])
+                                cmdline = salt.utils.shlex_split(_text[1:])
                                 cmd = cmdline[0]
                                 args = []
                                 kwargs = {}

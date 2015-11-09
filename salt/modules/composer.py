@@ -153,7 +153,7 @@ def _run_composer(action,
     cmd = [composer, action, '--no-interaction', '--no-ansi']
 
     if extra_flags is not None:
-        cmd.extend(shlex.split(extra_flags))
+        cmd.extend(salt.utils.shlex_split(extra_flags))
 
     # If php is set, prepend it
     if php is not None:
