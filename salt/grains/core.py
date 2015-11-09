@@ -981,6 +981,7 @@ _OS_FAMILY_MAP = {
     'SUSE  Enterprise Server': 'Suse',
     'SLED': 'Suse',
     'openSUSE': 'Suse',
+    'openSUSE Leap': 'Suse',
     'SUSE': 'Suse',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
