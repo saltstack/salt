@@ -799,20 +799,22 @@ class Minion(MinionBase):
         just return the value of the return_retry_timer.
         '''
         msg = 'Minion return retry timer set to {0} seconds'
-        if self.opts.get('return_retry_random'):
+        if self.opts.get('return_retry_timer_max'):
             try:
-                random_retry = randint(1, self.opts['return_retry_timer'])
+                random_retry = randint(self.opts['return_retry_timer'], self.opts['return_retry_timer_max'])
+                log.debug(msg.format(random_retry) + ' (randomized)')
+                return random_retry
             except ValueError:
                 # Catch wiseguys using negative integers here
                 log.error(
-                    'Invalid value ({0}) for return_retry_timer, must be a '
-                    'positive integer'.format(self.opts['return_retry_timer'])
+                    'Invalid value (return_retry_timer: {0} or return_retry_timer_max: {1})'
+                    'both must be a positive integers'.format(
+                        self.opts['return_retry_timer'],
+                        self.opts['return_retry_timer_max'],
+                    )
                 )
                 log.debug(msg.format(DEFAULT_MINION_OPTS['return_retry_timer']))
                 return DEFAULT_MINION_OPTS['return_retry_timer']
-            else:
-                log.debug(msg.format(random_retry) + ' (randomized)')
-                return random_retry
         else:
             log.debug(msg.format(self.opts.get('return_retry_timer')))
             return self.opts.get('return_retry_timer')
