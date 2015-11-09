@@ -417,6 +417,15 @@ class SaltMessageClient(object):
         self._closing = True
         if hasattr(self, '_stream') and not self._stream.closed():
             self._stream.close()
+            if self._read_until_future is not None:
+                # This will prevent this message from showing up:
+                # '[ERROR   ] Future exception was never retrieved:
+                # StreamClosedError'
+                # This happens because the logic is always waiting to read
+                # the next message and the associated read future is marked
+                # 'StreamClosedError' when the stream is closed.
+                self._read_until_future.exc_info()
+        self._tcp_client.close()
 
     def __del__(self):
         self.close()
