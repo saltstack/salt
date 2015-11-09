@@ -260,7 +260,7 @@ class ProcessManager(object):
         self._sigterm_handler = signal.getsignal(signal.SIGTERM)
         self._restart_processes = True
 
-    def add_process(self, tgt, args=None, kwargs=None):
+    def add_process(self, tgt, args=None, kwargs=None, name=None):
         '''
         Create a processes and args + kwargs
         This will deterimine if it is a Process class, otherwise it assumes
@@ -296,17 +296,18 @@ class ProcessManager(object):
         process.start()
 
         # create a nicer name for the debug log
-        if isinstance(tgt, types.FunctionType):
-            name = '{0}.{1}'.format(
-                tgt.__module__,
-                tgt.__name__,
-            )
-        else:
-            name = '{0}.{1}.{2}'.format(
-                tgt.__module__,
-                tgt.__class__,
-                tgt.__name__,
-            )
+        if name is None:
+            if isinstance(tgt, types.FunctionType):
+                name = '{0}.{1}'.format(
+                    tgt.__module__,
+                    tgt.__name__,
+                )
+            else:
+                name = '{0}{1}.{2}'.format(
+                    tgt.__module__,
+                    '.{0}'.format(tgt.__class__) if str(tgt.__class__) != "<type 'type'>" else '',
+                    tgt.__name__,
+                )
         log.debug("Started '{0}' with pid {1}".format(name, process.pid))
         self._process_map[process.pid] = {'tgt': tgt,
                                           'args': args,
