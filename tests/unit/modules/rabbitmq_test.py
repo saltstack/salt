@@ -42,7 +42,7 @@ class RabbitmqTestCase(TestCase):
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
             self.assertDictEqual(rabbitmq.list_users(), {'guest': set(['administrator'])})
 
-    # 'list_vhosts' function tests: 3
+    # 'list_vhosts' function tests: 1
 
     def test_list_vhosts(self):
         '''
@@ -51,22 +51,6 @@ class RabbitmqTestCase(TestCase):
         mock_run = MagicMock(return_value='...\nsaltstack\n...')
         with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
             self.assertListEqual(rabbitmq.list_vhosts(), ['...', 'saltstack', '...'])
-
-    def test_list_vhosts_trailing_done(self):
-        '''
-        Ensure any trailing '...done' line is stripped from output.
-        '''
-        mock_run = MagicMock(return_value='...\nsaltstack\n...done')
-        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
-            self.assertListEqual(rabbitmq.list_vhosts(), ['...', 'saltstack'])
-
-    def test_list_vhosts_succeeding_listing(self):
-        '''
-        Ensure succeeding 'Listing ...' line is stripped from output
-        '''
-        mock_run = MagicMock(return_value='Listing vhosts ...\nsaltstack\n...')
-        with patch.dict(rabbitmq.__salt__, {'cmd.run': mock_run}):
-            self.assertListEqual(rabbitmq.list_vhosts(), ['saltstack', '...'])
 
     # 'user_exists' function tests: 2
 
