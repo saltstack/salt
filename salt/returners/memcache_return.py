@@ -206,7 +206,7 @@ def get_jids():
     jids = _get_list(serv, 'jids')
     loads = serv.get_multi(jids)  # {jid: load, jid: load, ...}
     ret = {}
-    for jid, load in six.iteritems(loads)
+    for jid, load in six.iteritems(loads):
         ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
     return ret
 
