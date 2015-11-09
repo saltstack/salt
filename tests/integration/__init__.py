@@ -61,6 +61,7 @@ import salt.log.setup as salt_log_setup
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
+from salt.utils.process import MultiprocessingProcess
 from salt.exceptions import SaltClientError
 
 try:
@@ -243,6 +244,7 @@ class TestDaemon(object):
 
     def start_daemon(self, cls, opts, start_fun):
         def start(cls, opts, start_fun):
+            salt.utils.appendproctitle('{0}-{1}'.format(self.__class__.__name__, cls.__name__))
             daemon = cls(opts)
             getattr(daemon, start_fun)()
         process = multiprocessing.Process(target=start,
@@ -702,6 +704,7 @@ class TestDaemon(object):
         self._exit_mockbin()
         self._exit_ssh()
         # Shutdown the multiprocessing logging queue listener
+        salt_log_setup.shutdown_multiprocessing_logging()
         salt_log_setup.shutdown_multiprocessing_logging_listener()
 
     def pre_setup_minions(self):
@@ -711,7 +714,7 @@ class TestDaemon(object):
 
     def setup_minions(self):
         # Wait for minions to connect back
-        wait_minion_connections = multiprocessing.Process(
+        wait_minion_connections = MultiprocessingProcess(
             target=self.wait_for_minion_connections,
             args=(self.minion_targets, self.MINIONS_CONNECT_TIMEOUT)
         )
@@ -763,7 +766,7 @@ class TestDaemon(object):
             # Wait for minions to "sync_all"
             for target in [self.sync_minion_modules,
                            self.sync_minion_states]:
-                sync_minions = multiprocessing.Process(
+                sync_minions = MultiprocessingProcess(
                     target=target,
                     args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
                 )
@@ -868,6 +871,7 @@ class TestDaemon(object):
         ]
 
     def wait_for_minion_connections(self, targets, timeout):
+        salt.utils.appendproctitle('WaitForMinionConnections')
         sys.stdout.write(
             ' {LIGHT_BLUE}*{ENDC} Waiting at most {0} for minions({1}) to '
             'connect back\n'.format(
@@ -1010,9 +1014,11 @@ class TestDaemon(object):
         return True
 
     def sync_minion_states(self, targets, timeout=None):
+        salt.utils.appendproctitle('SyncMinionStates')
         self.sync_minion_modules_('states', targets, timeout=timeout)
 
     def sync_minion_modules(self, targets, timeout=None):
+        salt.utils.appendproctitle('SyncMinionModules')
         self.sync_minion_modules_('modules', targets, timeout=timeout)
 
 

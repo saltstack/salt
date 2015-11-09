@@ -3,7 +3,7 @@
 Routines to set up a minion
 '''
 # Import python libs
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, with_statement
 import os
 import re
 import sys
@@ -18,7 +18,6 @@ import traceback
 import contextlib
 import multiprocessing
 from random import randint, shuffle
-from salt.config import DEFAULT_MINION_OPTS
 from stat import S_IMODE
 
 # Import Salt Libs
@@ -92,11 +91,14 @@ import salt.utils.error
 import salt.utils.zeromq
 import salt.defaults.exitcodes
 import salt.cli.daemons
+import salt.log.setup
 
+from salt.config import DEFAULT_MINION_OPTS
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.executors import FUNCTION_EXECUTORS
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
+from salt.utils.process import default_signals, SignalHandlingMultiprocessingProcess
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -146,7 +148,7 @@ def resolve_dns(opts):
                     import salt.log
                     msg = ('Master hostname: \'{0}\' not found. Retrying in {1} '
                            'seconds').format(opts['master'], opts['retry_dns'])
-                    if salt.log.is_console_configured():
+                    if salt.log.setup.is_console_configured():
                         log.error(msg)
                     else:
                         print('WARNING: {0}'.format(msg))
@@ -360,7 +362,7 @@ class MinionBase(object):
         if 'config.merge' in functions:
             b_conf = functions['config.merge']('beacons')
             if b_conf:
-                return self.beacons.process(b_conf)
+                return self.beacons.process(b_conf)  # pylint: disable=no-member
         return []
 
     @tornado.gen.coroutine
@@ -451,7 +453,7 @@ class MinionBase(object):
         # (The channel factories will set a default if the kwarg isn't passed)
         factory_kwargs = {'timeout': timeout, 'safe': safe}
         if getattr(self, 'io_loop', None):
-            factory_kwargs['io_loop'] = self.io_loop
+            factory_kwargs['io_loop'] = self.io_loop  # pylint: disable=no-member
 
         # if we have a list of masters, loop through them and be
         # happy with the first one that allows us to connect
@@ -701,7 +703,7 @@ class Minion(MinionBase):
                 # PyZMQ <= 2.1.9 does not have zmq_version_info, fall back to
                 # using zmq.zmq_version() and build a version info tuple.
                 zmq_version_info = tuple(
-                    [int(x) for x in zmq.zmq_version().split('.')]
+                    [int(x) for x in zmq.zmq_version().split('.')]  # pylint: disable=no-member
                 )
             if zmq_version_info < (3, 2):
                 log.warning(
@@ -970,12 +972,13 @@ class Minion(MinionBase):
         # python needs to be able to reconstruct the reference on the other
         # side.
         instance = self
-        if self.opts['multiprocessing']:
+        multiprocessing_enabled = self.opts.get('multiprocessing', True)
+        if multiprocessing_enabled:
             if sys.platform.startswith('win'):
                 # let python reconstruct the minion on the other side if we're
                 # running on windows
                 instance = None
-            process = multiprocessing.Process(
+            process = SignalHandlingMultiprocessingProcess(
                 target=self._target, args=(instance, self.opts, data)
             )
         else:
@@ -984,9 +987,17 @@ class Minion(MinionBase):
                 args=(instance, self.opts, data),
                 name=data['jid']
             )
-        process.start()
+
+        if multiprocessing_enabled:
+            with default_signals(signal.SIGINT, signal.SIGTERM):
+                # Reset current signals before starting the process in
+                # order not to inherit the current signal handlers
+                process.start()
+        else:
+            process.start()
+
         # TODO: remove the windows specific check?
-        if not sys.platform.startswith('win') and self.opts['multiprocessing']:
+        if multiprocessing_enabled and not salt.utils.is_windows():
             # we only want to join() immediately if we are daemonizing a process
             process.join()
         else:
@@ -1019,11 +1030,11 @@ class Minion(MinionBase):
         # multiprocessing communication.
         if sys.platform.startswith('win') and \
                 opts['multiprocessing'] and \
-                not salt.log.is_logging_configured():
+                not salt.log.setup.is_logging_configured():
             # We have to re-init the logging system for Windows
-            salt.log.setup_console_logger(log_level=opts.get('log_level', 'info'))
+            salt.log.setup.setup_console_logger(log_level=opts.get('log_level', 'info'))
             if opts.get('log_file'):
-                salt.log.setup_logfile_logger(opts['log_file'], opts.get('log_level_logfile', 'info'))
+                salt.log.setup.setup_logfile_logger(opts['log_file'], opts.get('log_level_logfile', 'info'))
         if not minion_instance:
             minion_instance = cls(opts)
             if not hasattr(minion_instance, 'functions'):
@@ -1043,10 +1054,17 @@ class Minion(MinionBase):
                     )
 
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
-        if opts['multiprocessing']:
+
+        if opts['multiprocessing'] and not salt.utils.is_windows():
+            # Shutdown the multiprocessing before daemonizing
+            salt.log.setup.shutdown_multiprocessing_logging()
+
             salt.utils.daemonize_if(opts)
 
-        salt.utils.appendproctitle(data['jid'])
+            # Reconfigure multiprocessing logging after daemonizing
+            salt.log.setup.setup_multiprocessing_logging()
+
+        salt.utils.appendproctitle('{0}._thread_return {1}'.format(cls.__name__, data['jid']))
 
         sdata = {'pid': os.getpid()}
         sdata.update(data)
@@ -1075,7 +1093,7 @@ class Minion(MinionBase):
                         executors[-1] = 'sudo.get'  # replace
                     else:
                         executors.append('sudo.get')  # append
-                log.trace("Executors list {0}".format(executors))
+                log.trace('Executors list {0}'.format(executors))  # pylint: disable=no-member
 
                 # Get executors
                 def get_executor(name):
@@ -1203,7 +1221,7 @@ class Minion(MinionBase):
         This method should be used as a threading target, start the actual
         minion side execution.
         '''
-        salt.utils.appendproctitle(data['jid'])
+        salt.utils.appendproctitle('{0}._thread_multi_return {1}'.format(cls.__name__, data['jid']))
         # this seems awkward at first, but it's a workaround for Windows
         # multiprocessing communication.
         if sys.platform.startswith('win') and \
@@ -1338,7 +1356,7 @@ class Minion(MinionBase):
             log.warn(msg)
             return ''
 
-        log.trace('ret_val = {0}'.format(ret_val))
+        log.trace('ret_val = {0}'.format(ret_val))  # pylint: disable=no-member
         return ret_val
 
     def _state_run(self):
@@ -1400,7 +1418,9 @@ class Minion(MinionBase):
         '''
         log.debug('Refreshing modules. Notify={0}'.format(notify))
         if hasattr(self, 'proxy'):
-            self.functions, self.returners, _, self.executors = self._load_modules(force_refresh, notify=notify, proxy=self.proxy)
+            self.functions, self.returners, _, self.executors = self._load_modules(force_refresh,
+                                                                                   notify=notify,
+                                                                                   proxy=self.proxy)  # pylint: disable=no-member
         else:
             self.functions, self.returners, _, self.executors = self._load_modules(force_refresh, notify=notify)
 
@@ -1619,7 +1639,7 @@ class Minion(MinionBase):
                                  'master {0}'.format(self.opts['master']))
                         del self.pub_channel
                         self._connect_master_future = self.connect_master()
-                        self.block_until_connected()  # TODO: remove
+                        self.block_until_connected()  # TODO: remove  # pylint: disable=no-member
                         self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
                         self._fire_master_minion_start()
                         log.info('Minion is ready to receive requests!')
@@ -1818,6 +1838,8 @@ class Minion(MinionBase):
         Tear down the minion
         '''
         self._running = False
+        if hasattr(self, 'schedule'):
+            del self.schedule
         if hasattr(self, 'pub_channel'):
             self.pub_channel.on_recv(None)
             del self.pub_channel
@@ -1958,7 +1980,7 @@ class Syndic(Minion):
 
     def _process_cmd_socket(self, payload):
         if payload is not None:
-            log.trace('Handling payload')
+            log.trace('Handling payload')  # pylint: disable=no-member
             self._handle_decoded_payload(payload['load'])
 
     def _reset_event_aggregation(self):
@@ -1970,7 +1992,7 @@ class Syndic(Minion):
         raw = raw[0]
         mtag, data = self.local.event.unpack(raw, self.local.event.serial)
         event = {'data': data, 'tag': mtag}
-        log.trace('Got event {0}'.format(event['tag']))
+        log.trace('Got event {0}'.format(event['tag']))  # pylint: disable=no-member
         tag_parts = event['tag'].split('/')
         if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
             salt.utils.jid.is_jid(tag_parts[2]) and tag_parts[3] == 'ret' and \
@@ -2006,7 +2028,7 @@ class Syndic(Minion):
                 self.raw_events.append(event)
 
     def _forward_events(self):
-        log.trace('Forwarding events')
+        log.trace('Forwarding events')  # pylint: disable=no-member
         if self.raw_events:
             self._fire_master(events=self.raw_events,
                               pretag=tagify(self.opts['id'], base='syndic'),
@@ -2124,7 +2146,7 @@ class MultiSyndic(MinionBase):
         '''
         # if its connected, mark it dead
         if self._syndics[master].done():
-            syndic = self._syndics.result()
+            syndic = self._syndics.result()  # pylint: disable=no-member
             syndic.destroy()
             self._syndics[master] = self._connect_syndic(syndic.opts)
         else:
@@ -2204,7 +2226,7 @@ class MultiSyndic(MinionBase):
         raw = raw[0]
         mtag, data = self.local.event.unpack(raw, self.local.event.serial)
         event = {'data': data, 'tag': mtag}
-        log.trace('Got event {0}'.format(event['tag']))
+        log.trace('Got event {0}'.format(event['tag']))  # pylint: disable=no-member
 
         tag_parts = event['tag'].split('/')
         if len(tag_parts) >= 4 and tag_parts[1] == 'job' and \
@@ -2249,7 +2271,7 @@ class MultiSyndic(MinionBase):
                     self.raw_events.append(event)
 
     def _forward_events(self):
-        log.trace('Forwarding events')
+        log.trace('Forwarding events')  # pylint: disable=no-member
         if self.raw_events:
             self._call_syndic('_fire_master',
                               kwargs={'events': self.raw_events,
@@ -2608,7 +2630,7 @@ class ProxyMinion(Minion):
         self.proxy.pack['__ret__'] = self.returners
 
         if ('{0}.init'.format(fq_proxyname) not in self.proxy
-            or '{0}.shutdown'.format(fq_proxyname) not in self.proxy):
+                or '{0}.shutdown'.format(fq_proxyname) not in self.proxy):
             log.error('Proxymodule {0} is missing an init() or a shutdown() or both.'.format(fq_proxyname))
             log.error('Check your proxymodule.  Salt-proxy aborted.')
             self._running = False

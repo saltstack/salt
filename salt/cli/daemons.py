@@ -336,7 +336,14 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        logger.info('The salt minion is shut down')
+        logger.info('The salt minion is shutting down..')
+        if hasattr(self, 'minion'):
+            self.minion.destroy()
+        msg = 'The salt minion is shutdown. '
+        if exitmsg is not None:
+            exitmsg = msg + exitmsg
+        else:
+            exitmsg = msg.strip()
         super(Minion, self).shutdown(exitcode, exitmsg)
     # pylint: enable=no-member
 
@@ -478,7 +485,12 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
         if hasattr(self, 'minion') and 'proxymodule' in self.minion.opts:
             proxy_fn = self.minion.opts['proxymodule'].loaded_base_name + '.shutdown'
             self.minion.opts['proxymodule'][proxy_fn](self.minion.opts)
-        logger.info('The proxy minion is shut down')
+        logger.info('The proxy minion is shutting down..')
+        msg = 'The proxy minion is shutdown. '
+        if exitmsg is not None:
+            exitmsg = msg + exitmsg
+        else:
+            exitmsg = msg.strip()
         super(ProxyMinion, self).shutdown(exitcode, exitmsg)
     # pylint: enable=no-member
 
@@ -563,5 +575,10 @@ class Syndic(parsers.SyndicOptionParser):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        logger.info('The salt syndic is shut down')
+        logger.info('The salt syndic is shutting down..')
+        msg = 'The salt syndic is shutdown. '
+        if exitmsg is not None:
+            exitmsg = msg + exitmsg
+        else:
+            exitmsg = msg.strip()
         super(Syndic, self).shutdown(exitcode, exitmsg)

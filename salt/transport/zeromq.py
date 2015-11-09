@@ -870,20 +870,23 @@ class AsyncReqMessageClient(object):
 
         :raises: SaltReqTimeoutError
         '''
-        future = self.send_future_map.pop(message)
-        del self.send_timeout_map[message]
-        if future.attempts < future.tries:
-            future.attempts += 1
-            log.debug('SaltReqTimeoutError, retrying. ({0}/{1})'.format(future.attempts, future.tries))
-            self.send(
-                message,
-                timeout=future.timeout,
-                tries=future.tries,
-                future=future,
-            )
+        future = self.send_future_map.pop(message, None)
+        # In a race condition the message might have been sent by the time
+        # we're timing it out. Make sure the future is not None
+        if future is not None:
+            del self.send_timeout_map[message]
+            if future.attempts < future.tries:
+                future.attempts += 1
+                log.debug('SaltReqTimeoutError, retrying. ({0}/{1})'.format(future.attempts, future.tries))
+                self.send(
+                    message,
+                    timeout=future.timeout,
+                    tries=future.tries,
+                    future=future,
+                )
 
-        else:
-            future.set_exception(SaltReqTimeoutError('Message timed out'))
+            else:
+                future.set_exception(SaltReqTimeoutError('Message timed out'))
 
     def send(self, message, timeout=None, tries=3, future=None, callback=None):
         '''
