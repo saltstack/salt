@@ -21,7 +21,7 @@ def get_returner_options(virtualname=None,
 
     :param str virtualname: The returner virtualname (as returned
         by __virtual__()
-    :param ret: result of the module that ran. dit-like object
+    :param ret: result of the module that ran. dict-like object
 
         May contain a `ret_config` key pointing to a string
         If a `ret_config` is specified, config options are read from::
