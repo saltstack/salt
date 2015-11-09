@@ -339,7 +339,7 @@ def rehash(runas=None):
     return True
 
 
-def do(cmdline=None, runas=None):
+def do(cmdline=None, runas=None, env=None):
     '''
     Execute a ruby command with rbenv's shims from the user or the system.
 
@@ -351,12 +351,18 @@ def do(cmdline=None, runas=None):
         salt '*' rbenv.do 'gem list bundler' deploy
     '''
     path = _rbenv_path(runas)
-    environ = {'PATH': '{0}/shims:{1}'.format(path, os.environ['PATH'])}
+    if not env:
+        env = {}
+
+    env['PATH'] = '{0}/shims:{1}'.format(path, os.environ['PATH'])
     cmdline = ' '.join([_cmd_quote(cmd) for cmd in _shlex_split(cmdline)])
+
+
     result = __salt__['cmd.run_all'](
         cmdline,
         runas=runas,
-        env=environ
+        env=env,
+        python_shell=False
     )
 
     if result['retcode'] == 0:
@@ -377,9 +383,13 @@ def do_with_ruby(ruby, cmdline, runas=None):
         salt '*' rbenv.do_with_ruby 2.0.0-p0 'gem list bundler'
         salt '*' rbenv.do_with_ruby 2.0.0-p0 'gem list bundler' deploy
     '''
+    cmdline = ' '.join([_cmd_quote(cmd) for cmd in _shlex_split(cmdline)])
+
+    env = {}
     if ruby:
-        cmd = 'RBENV_VERSION={0} {1}'.format(ruby, cmdline)
+        env['RBENV_VERSION'] = ruby
+        cmd = cmdline
     else:
         cmd = cmdline
 
-    return do(cmd, runas=runas)
+    return do(cmd, runas=runas, env=env)
