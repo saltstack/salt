@@ -302,9 +302,9 @@ class ProcessManager(object):
                 tgt.__name__,
             )
         else:
-            name = '{0}.{1}.{2}'.format(
+            name = '{0}{1}.{2}'.format(
                 tgt.__module__,
-                tgt.__class__,
+                '.{0}'.format(tgt.__class__) if str(tgt.__class__) != "<type 'type'>" else '',
                 tgt.__name__,
             )
         log.debug("Started '{0}' with pid {1}".format(name, process.pid))
