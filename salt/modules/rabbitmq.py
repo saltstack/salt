@@ -130,11 +130,9 @@ def list_vhosts(runas=None):
     '''
     if runas is None:
         runas = salt.utils.get_user()
-    res = __salt__['cmd.run']('rabbitmqctl list_vhosts',
-                              runas=runas)
-
-    # remove first and last line: Listing ... - ...done
-    return _strip_listing_to_done(res.splitlines())
+    res = __salt__['cmd.run']('rabbitmqctl list_vhosts -q',
+                              runas=runas).splitlines()
+    return res
 
 
 def user_exists(name, runas=None):
