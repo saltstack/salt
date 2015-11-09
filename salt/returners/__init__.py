@@ -100,7 +100,7 @@ def get_returner_options(virtualname=None,
 
     # override some values with relevant options from
     # keyword arguments passed via return_kwargs
-    if 'ret_kwargs' in ret:
+    if ret and 'ret_kwargs' in ret:
         _options.update(ret['ret_kwargs'])
 
     return _options
