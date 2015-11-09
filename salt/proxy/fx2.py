@@ -197,11 +197,13 @@ def init(opts):
         fallback_available = False
 
     check_grains = _grains(DETAILS['host'], first_user, first_password)
-    if check_grains.get('retcode', 0) == 0:
+    if check_grains:
         DETAILS['admin_username'] = opts['proxy']['admin_username']
         DETAILS['admin_password'] = opts['proxy']['admin_password']
         return True
-    elif fallback_available and _grains(DETAILS['host'], fallback_user, fallback_password).get('retcode', 0) == 0:
+    elif fallback_available and _grains(DETAILS['host'],
+                                        fallback_user,
+                                        fallback_password):
         log.info('Fallback credentials used'
                  ' to access chassis {0}'.format(opts['proxy']['host']))
         DETAILS['admin_username'] = opts['proxy']['fallback_admin_username']
@@ -233,13 +235,10 @@ def grains():
     Get the grains from the proxied device
     '''
     if not GRAINS_CACHE:
-        r = _grains(DETAILS['host'],
-                    DETAILS['admin_username'],
-                    DETAILS['admin_password'])
-        if r.get('retcode', 0) == 0:
-            GRAINS_CACHE = r
-        else:
-            GRAINS_CACHE = {}
+        return _grains(DETAILS['host'],
+                       DETAILS['admin_username'],
+                       DETAILS['admin_password'])
+
     return GRAINS_CACHE
 
 
