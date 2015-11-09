@@ -17,7 +17,7 @@
 #       CREATED: 10/15/2012 09:49:37 PM WEST
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
-__ScriptVersion="2015.11.04"
+__ScriptVersion="2015.11.09"
 __ScriptName="bootstrap-salt.sh"
 
 #======================================================================================================================
@@ -1880,6 +1880,10 @@ install_ubuntu_stable_deps() {
             echo "deb http://repo.saltstack.com/apt/ubuntu/ubuntu$DISTRO_MAJOR_VERSION/$STABLE_REV $DISTRO_CODENAME main" >> \
                 /etc/apt/sources.list.d/saltstack.list
         fi
+
+
+        # Make sure wget is available
+        __apt_get_install_noinput wget
 
         # shellcheck disable=SC2086
         wget $_WGET_ARGS -q http://repo.saltstack.com/apt/ubuntu/ubuntu$DISTRO_MAJOR_VERSION/$STABLE_REV/SALTSTACK-GPG-KEY.pub -O - | apt-key add - || return 1
