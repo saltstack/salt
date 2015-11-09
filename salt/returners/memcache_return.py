@@ -115,10 +115,10 @@ def _get_serv(ret):
 
 
 def _get_list(serv, key):
-    try:
-        return serv.get(key).strip(',').split(',')
-    except AttributeError:
-        return []
+    value = serv.get(key)
+    if value:
+        return value.strip(',').split(',')
+    return []
 
 
 def _append_list(serv, key, value):
@@ -143,7 +143,10 @@ def returner(ret):
     serv = _get_serv(ret)
     minion = ret['id']
     jid = ret['jid']
-    serv.set('{0}:{1}'.format(minion, jid), json.dumps(ret))
+    fun = ret['fun']
+    rets = json.dumps(ret)
+    serv.set('{0}:{1}'.format(jid, minion), rets)  # cache for get_jid
+    serv.set('{0}:{1}'.format(fun, minion), rets)  # cache for get_fun
 
     # The following operations are neither efficient nor atomic.
     # If there is a way to make them so, this should be updated.
@@ -176,11 +179,10 @@ def get_jid(jid):
     Return the information returned when the specified job id was executed
     '''
     serv = _get_serv(ret=None)
-    ret = {}
-    for minion in _get_list(serv, 'minions'):
-        data = serv.get('{0}:{1}'.format(minion, jid))
-        if data:
-            ret[minion] = json.loads(data)
+    minions = _get_list(serv, 'minions')
+    returns = serv.get_multi(minions, key_prefix='{0}:'.format(jid))
+    # returns = {minion: return, minion: return, ...}
+    ret = {minion: json.loads(data) for minion, data in six.iteritems(returns)}
     return ret
 
 
@@ -189,16 +191,10 @@ def get_fun(fun):
     Return a dict of the last function called for all minions
     '''
     serv = _get_serv(ret=None)
-    ret = {}
-    for minion in serv.smembers('minions'):
-        ind_str = '{0}:{1}'.format(minion, fun)
-        try:
-            jid = serv.lindex(ind_str, 0)
-        except Exception:
-            continue
-        data = serv.get('{0}:{1}'.format(minion, jid))
-        if data:
-            ret[minion] = json.loads(data)
+    minions = _get_list(serv, 'minions')
+    returns = serv.get_multi(minions, key_prefix='{0}:'.format(fun))
+    # returns = {minion: return, minion: return, ...}
+    ret = {minion: json.loads(data) for minion, data in six.iteritems(returns)}
     return ret
 
 
@@ -207,14 +203,11 @@ def get_jids():
     Return a list of all job ids
     '''
     serv = _get_serv(ret=None)
+    jids = _get_list(serv, 'jids')
+    loads = serv.get_multi(jids)  # {jid: load, jid: load, ...}
     ret = {}
-    try:
-        jids = _get_list(serv, 'jids')
-        loads = serv.get_multi(jids)  # {jid: load, jid: load, ...}
-        for jid, load in six.iteritems(loads)
-            ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
-    except AttributeError:
-        pass
+    for jid, load in six.iteritems(loads)
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
     return ret
 
 def get_minions():
