@@ -4,6 +4,8 @@ Microsoft IIS site management via WebAdministration powershell module
 
 :platform:      Windows
 
+.. versionadded:: Boron
+
 '''
 
 
@@ -47,10 +49,10 @@ def list_sites():
         salt '*' win_iis.list_sites
     '''
     pscmd = []
-    pscmd.append(r"Get-WebSite -erroraction silentlycontinue -warningaction silentlycontinue")
-    pscmd.append(r" | foreach {")
-    pscmd.append(r" $_.Name")
-    pscmd.append(r"};")
+    pscmd.append(r'Get-WebSite -erroraction silentlycontinue -warningaction silentlycontinue')
+    pscmd.append(r' | foreach {')
+    pscmd.append(r' $_.Name')
+    pscmd.append(r'};')
 
     command = ''.join(pscmd)
     return _srvmgr(command)
@@ -76,15 +78,15 @@ def create_site(
     '''
 
     pscmd = []
-    pscmd.append(r"cd IIS:\Sites\;")
-    pscmd.append(r"New-Item 'iis:\Sites\{0}'".format(name))
-    pscmd.append(r" -bindings @{{protocol='{0}';bindingInformation=':{1}:{2}'}}".format(
-        protocol, port, hostheader.replace(" ", "")))
-    pscmd.append(r"-physicalPath {0};".format(sourcepath))
+    pscmd.append(r'cd IIS:\Sites\;')
+    pscmd.append(r'New-Item \'iis:\Sites\{0}\''.format(name))
+    pscmd.append(r' -bindings @{{protocol=\'{0}\';bindingInformation=\':{1}:{2}\'}}'.format(
+        protocol, port, hostheader.replace(' ', '')))
+    pscmd.append(r'-physicalPath {0};'.format(sourcepath))
 
     if apppool:
-        pscmd.append(r"Set-ItemProperty 'iis:\Sites\{0}'".format(name))
-        pscmd.append(r" -name applicationPool -value '{0}';".format(apppool))
+        pscmd.append(r'Set-ItemProperty \'iis:\Sites\{0}\''.format(name))
+        pscmd.append(r' -name applicationPool -value \'{0}\';'.format(apppool))
 
     command = ''.join(pscmd)
     return _srvmgr(command)
@@ -103,8 +105,8 @@ def remove_site(name):
     '''
 
     pscmd = []
-    pscmd.append(r"cd IIS:\Sites\;")
-    pscmd.append(r"Remove-WebSite -Name '{0}'".format(name))
+    pscmd.append(r'cd IIS:\Sites\;')
+    pscmd.append(r'Remove-WebSite -Name \'{0}\''.format(name))
 
     command = ''.join(pscmd)
     return _srvmgr(command)
@@ -121,10 +123,10 @@ def list_apppools():
         salt '*' win_iis.list_apppools
     '''
     pscmd = []
-    pscmd.append(r"Get-ChildItem IIS:\AppPools\ -erroraction silentlycontinue -warningaction silentlycontinue")
-    pscmd.append(r" | foreach {")
-    pscmd.append(r" $_.Name")
-    pscmd.append(r"};")
+    pscmd.append(r'Get-ChildItem IIS:\AppPools\ -erroraction silentlycontinue -warningaction silentlycontinue')
+    pscmd.append(r' | foreach {')
+    pscmd.append(r' $_.Name')
+    pscmd.append(r'};')
 
     command = ''.join(pscmd)
     return _srvmgr(command)
@@ -141,7 +143,7 @@ def create_apppool(name):
         salt '*' win_iis.create_apppool name='MyTestPool'
     '''
     pscmd = []
-    pscmd.append(r"New-Item 'IIS:\AppPools\{0}'".format(name))
+    pscmd.append(r'New-Item \'IIS:\AppPools\{0}\''.format(name))
 
     command = ''.join(pscmd)
     return _srvmgr(command)
@@ -158,7 +160,7 @@ def remove_apppool(name):
         salt '*' win_iis.remove_apppool name='MyTestPool'
     '''
     pscmd = []
-    pscmd.append(r"Remove-Item 'IIS:\AppPools\{0}' -recurse".format(name))
+    pscmd.append(r'Remove-Item \'IIS:\AppPools\{0}\' -recurse'.format(name))
 
     command = ''.join(pscmd)
     return _srvmgr(command)

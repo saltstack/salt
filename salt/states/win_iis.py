@@ -5,6 +5,8 @@ Microsoft IIS site management
 This module provides the ability to add/remove websites and application pools
 from Microsoft IIS.
 
+.. versionadded:: Boron
+
 '''
 
 
@@ -80,14 +82,14 @@ def deployed(
 
     if 'was not loaded' in sitelist:
         ret['result'] = False
-        ret['comment'] = 'Looks like IIS might not be installed. Please verify'
+        ret['comment'] = 'IIS is not installed. Please verify your installation of IIS.'
         return ret
     else:
         if name in sitelist:
             # Site already exist
             # ret['changes'] = {'results': '{0} already exist'.format(name)}
             ret['result'] = True
-            ret['comment'] = 'Site already exist'
+            ret['comment'] = 'The website you are trying to create already exists.'
         else:
             # Site doesn exist create site
 
@@ -101,7 +103,7 @@ def deployed(
                     ipaddress)
             ret['changes'] = {'results': '{0} site created'.format(name)}
             ret['result'] = True
-            ret['comment'] = 'Site created'
+            ret['comment'] = 'The website has been created.'
 
     return ret
 
@@ -126,15 +128,15 @@ def remove_site(name):
 
     if 'was not loaded' in siteremove:
         ret['result'] = False
-        ret['comment'] = 'Looks like IIS might not be installed. Please verify'
+        ret['comment'] = 'IIS is not installed. Please verify your installation of IIS.'
         return ret
     elif 'Cannot find path' in siteremove:
         ret['result'] = True
-        ret['comment'] = 'It looks as if the site has already been removed'
+        ret['comment'] = 'The website was not found.'
         return ret
     elif len(siteremove) == 0:
         ret['result'] = True
-        ret['comment'] = 'Site {0} has been removed'.format(name)
+        ret['comment'] = 'The website {0} has been removed'.format(name)
         return ret
     else:
         ret['result'] = 'Error'
@@ -163,14 +165,14 @@ def create_apppool(name):
 
     if 'was not loaded' in apppoollist:
         ret['result'] = False
-        ret['comment'] = 'Looks like IIS might not be installed. Please verify'
+        ret['comment'] = 'IIS is not installed. Please verify your installation of IIS'
         return ret
     else:
         if name in apppoollist:
             # AppPool already exist
             # ret['changes'] = {'results': '{0} already exist'.format(name)}
             ret['result'] = True
-            ret['comment'] = 'Application Pool already exist'
+            ret['comment'] = 'The application pool already exists.'
         else:
             # AppPool doesn't exist create pool
 
@@ -202,11 +204,11 @@ def remove_apppool(name):
 
     if 'was not loaded' in apppool:
         ret['result'] = False
-        ret['comment'] = 'Looks like IIS might not be installed. Please verify'
+        ret['comment'] = 'IIS is not installed. Please verify your installation of IIS.'
         return ret
     elif 'Cannot find path' in apppool:
         ret['result'] = True
-        ret['comment'] = 'It looks as if the application pool has already been removed'
+        ret['comment'] = 'The application pool has already been removed.'
         return ret
     elif len(apppool) == 0:
         ret['result'] = True
