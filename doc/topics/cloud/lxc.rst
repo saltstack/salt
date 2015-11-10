@@ -220,7 +220,7 @@ Option `uses_systemd` defaults to `True`.
 Bootstrap Delay
 ---------------
 
-.. versionchanged:: 2015.8.0
+.. versionchanged:: 2015.8.2
 
 The ``bootstrap_delay`` config option lets you specify the time to wait (in seconds) between container creation
 and salt bootstrap execution. It is useful to ensure that all essential services have started before the

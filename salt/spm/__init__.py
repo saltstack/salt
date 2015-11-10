@@ -270,7 +270,7 @@ class SPMClient(object):
         Return a list of packages which need to be installed, to resolve all
         dependencies
         '''
-        pkg_info = self._pkgdb_fun('info', formula_def['name'])
+        pkg_info = self.pkgdb['{0}.info'.format(self.db_prov)](formula_def['name'])
         if not isinstance(pkg_info, dict):
             pkg_info = {}
 
@@ -280,7 +280,7 @@ class SPMClient(object):
             dep = dep.strip()
             if not dep:
                 continue
-            if self._pkgdb_fun('info', dep):
+            if self.pkgdb['{0}.info'.format(self.db_prov)](dep):
                 continue
 
             if dep in self.avail_pkgs:

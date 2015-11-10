@@ -102,7 +102,11 @@ def present(name,
         The compute and memory capacity of the Amazon RDS DB instance.
 
     engine
-        The name of the database engine to be used for this instance.
+        The name of the database engine to be used for this instance. Supported
+        engine types are: MySQL, oracle-se1, oracle-se, oracle-ee, sqlserver-ee,
+        sqlserver-se, sqlserver-ex, sqlserver-web, and postgres. For more
+        information, please see the ``engine`` argument in the boto_rds
+        `create_dbinstance`_ documentation.
 
     master_username
         The name of master user for the client DB instance.
@@ -193,6 +197,8 @@ def present(name,
     profile
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
+
+    .. _create_dbinstance: http://boto.readthedocs.org/en/latest/ref/rds.html#boto.rds.RDSConnection.create_dbinstance
     '''
     ret = {'name': name,
            'result': True,

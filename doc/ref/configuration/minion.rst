@@ -481,6 +481,35 @@ behavior is to have time-frame within all minions try to reconnect.
 
     recon_randomize: True
 
+.. conf_minion:: return_retry_timer
+
+``return_retry_timer``
+-------------------
+
+Default: ``5``
+
+The default timeout for a minion return attempt.
+
+.. code-block:: yaml
+
+    return_retry_timer: 5
+
+
+.. conf_minion:: return_retry_timer_max
+
+``return_retry_timer_max``
+-------------------
+
+Default: ``10``
+
+The maximum timeout for a minion return attempt. If non-zero the minion return
+retry timeout will be a random int beween ``return_retry_timer`` and
+``return_retry_timer_max``
+
+.. code-block:: yaml
+
+    return_retry_timer_max: 10
+
 .. conf_minion:: cache_sreqs
 
 ``cache_sreqs``
