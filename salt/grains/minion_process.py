@@ -7,6 +7,9 @@ from __future__ import absolute_import
 
 import os
 
+# Import salt libs
+import salt.utils
+
 try:
     import pwd
 except ImportError:
@@ -21,6 +24,8 @@ except ImportError:
 
 def _uid():
     '''Grain for the minion User ID'''
+    if salt.utils.is_windows():
+        return None
     return os.getuid()
 
 
@@ -36,6 +41,8 @@ def _username():
 
 def _gid():
     '''Grain for the minion Group ID'''
+    if salt.utils.is_windows():
+        return None
     return os.getgid()
 
 
@@ -54,10 +61,14 @@ def _pid():
 
 
 def grains():
-    return {
-        'uid': _uid(),
+    ret = {
         'username': _username(),
-        'gid': _gid(),
         'groupname': _groupname(),
         'pid': _pid(),
     }
+
+    if not salt.utils.is_windows():
+        ret['gid'] = _gid()
+        ret['uid'] = _uid()
+
+    return ret
