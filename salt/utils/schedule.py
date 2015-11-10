@@ -694,17 +694,20 @@ class Schedule(object):
                             )
                         )
 
-            if 'return_job' in data and not data['return_job']:
-                pass
-            else:
-                # Send back to master so the job is included in the job list
-                mret = ret.copy()
-                mret['jid'] = 'req'
-                channel = salt.transport.Channel.factory(self.opts, usage='salt_schedule')
-                load = {'cmd': '_return', 'id': self.opts['id']}
-                for key, value in six.iteritems(mret):
-                    load[key] = value
-                channel.send(load)
+            # Only attempt to return data to the master
+            # if the scheduled job is running on a minion.
+            if '__role' in self.opts and self.opts['__role'] == 'minion':
+                if 'return_job' in data and not data['return_job']:
+                    pass
+                else:
+                    # Send back to master so the job is included in the job list
+                    mret = ret.copy()
+                    mret['jid'] = 'req'
+                    channel = salt.transport.Channel.factory(self.opts, usage='salt_schedule')
+                    load = {'cmd': '_return', 'id': self.opts['id']}
+                    for key, value in six.iteritems(mret):
+                        load[key] = value
+                    channel.send(load)
 
         except Exception:
             log.exception("Unhandled exception running {0}".format(ret['fun']))
