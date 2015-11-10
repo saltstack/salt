@@ -28,6 +28,7 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.gzip_util
 import salt.utils.http
+import salt.utils.s3
 from salt.utils.locales import sdecode
 from salt.utils.openstack.swift import SaltSwift
 
