@@ -116,7 +116,6 @@ from __future__ import absolute_import
 import logging
 import json
 import os
-import xml.etree.cElementTree as xml
 
 # Import Salt Libs
 import salt.utils
@@ -126,14 +125,29 @@ import salt.ext.six as six
 from salt.ext.six import string_types
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
+# Import 3rd party libs
+try:
+    from salt._compat import ElementTree as ET
+    HAS_ELEMENT_TREE = True
+except ImportError:
+    HAS_ELEMENT_TREE = False
+
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'boto_cfn'
 
 
 def __virtual__():
     '''
-    Only load if boto is available.
+    Only load if elementtree xml library and boto are available.
     '''
-    return 'boto_iam.get_user' in __salt__
+    if not HAS_ELEMENT_TREE:
+        return (False, 'Cannot load {0} state: ElementTree library unavailable'.format(__virtualname__))
+
+    if 'boto_iam.get_user' in __salt__:
+        return True
+    else:
+        return (False, 'Cannot load {0} state: boto_iam module unavailable'.format(__virtualname__))
 
 
 def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profile=None):
@@ -897,7 +911,7 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
 def _get_error(error):
     # Converts boto exception to string that can be used to output error.
     error = '\n'.join(error.split('\n')[1:])
-    error = xml.fromstring(error)
+    error = ET.fromstring(error)
     code = error[0][1].text
     message = error[0][2].text
     return code, message
