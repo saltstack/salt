@@ -182,7 +182,9 @@ def get_jid(jid):
     minions = _get_list(serv, 'minions')
     returns = serv.get_multi(minions, key_prefix='{0}:'.format(jid))
     # returns = {minion: return, minion: return, ...}
-    ret = {minion: json.loads(data) for minion, data in six.iteritems(returns)}
+    ret = {}
+    for minion, data in six.iteritems(returns):
+        ret[minion] = json.loads(data)
     return ret
 
 
@@ -194,7 +196,9 @@ def get_fun(fun):
     minions = _get_list(serv, 'minions')
     returns = serv.get_multi(minions, key_prefix='{0}:'.format(fun))
     # returns = {minion: return, minion: return, ...}
-    ret = {minion: json.loads(data) for minion, data in six.iteritems(returns)}
+    ret = {}
+    for minion, data in six.iteritems(returns):
+        ret[minion] = json.loads(data)
     return ret
 
 
@@ -209,6 +213,7 @@ def get_jids():
     for jid, load in six.iteritems(loads):
         ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
     return ret
+
 
 def get_minions():
     '''
