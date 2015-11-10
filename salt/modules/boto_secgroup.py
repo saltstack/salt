@@ -249,7 +249,7 @@ def get_group_id(name, vpc_id=None, vpc_name=None, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    group = _get_group(conn, name, vpc_id=vpc_id, vpc_name=vpc_name,
+    group = _get_group(conn=conn, name=name, vpc_id=vpc_id, vpc_name=vpc_name,
                        region=region, key=key, keyid=keyid, profile=profile)
     if group:
         return group.id
