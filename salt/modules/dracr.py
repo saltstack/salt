@@ -13,6 +13,7 @@ import os
 import re
 
 # Import Salt libs
+from salt.exceptions import CommandExecutionError
 import salt.utils
 
 # Import 3rd-party libs
@@ -1363,9 +1364,9 @@ def update_firmware(filename,
                                 admin_username=None,
                                 admin_password=None)
     else:
-        ret['return'] = False
-        ret['comment'] = 'Unable to find firmware file {0}'.format(filename)
-        return ret
+        raise CommandExecutionError('Unable to find firmware file {0}'
+                                    .format(filename))
+
 
 def update_firmware_nfs_or_cifs(filename, share,
                                 host=None,
@@ -1408,6 +1409,5 @@ def update_firmware_nfs_or_cifs(filename, share,
                                 admin_username=None,
                                 admin_password=None)
     else:
-        ret['return'] = False
-        ret['comment'] = 'Unable to find firmware file {0}'.format(filename)
-        return ret
+        raise CommandExecutionError('Unable to find firmware file {0}'
+                                    .format(filename))
