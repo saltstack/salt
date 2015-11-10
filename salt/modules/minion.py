@@ -11,8 +11,13 @@ import os
 import salt.utils
 import salt.key
 
+# Don't shadow built-ins.
+__func_alias__ = {
+    'list_': 'list'
+}
 
-def list():
+
+def list_():
     '''
     Return a list of accepted, denied, unaccepted and rejected keys.
     This is the same output as `salt-key -L`
