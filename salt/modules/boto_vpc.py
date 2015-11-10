@@ -2163,7 +2163,7 @@ def describe_route_table(route_table_id=None, route_table_name=None,
         route_tables = conn.get_all_route_tables(**filter_parameters)
 
         if not route_tables:
-            return False
+            return {}
 
         route_table = {}
         keys = ['id', 'vpc_id', 'tags', 'routes', 'associations']
