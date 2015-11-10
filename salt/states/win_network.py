@@ -68,6 +68,7 @@ import logging
 import salt.utils
 import salt.utils.validate.net
 from salt.ext.six.moves import range
+from salt.exceptions import CommandExecutionError
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -274,7 +275,10 @@ def managed(name,
             ret['comment'] += ' (already disabled)'
         return ret
     else:
-        currently_enabled = __salt__['ip.is_disabled'](name)
+        try:
+            currently_enabled = __salt__['ip.is_disabled'](name)
+        except CommandExecutionError:
+            currently_enabled = False
         if not currently_enabled:
             if __opts__['test']:
                 ret['result'] = None

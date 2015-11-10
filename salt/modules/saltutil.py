@@ -94,6 +94,7 @@ def _sync(form, saltenv=None):
     remote = set()
     source = salt.utils.url.create('_' + form)
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
+    cumask = os.umask(0o77)
     if not os.path.isdir(mod_dir):
         log.info('Creating module dir \'{0}\''.format(mod_dir))
         try:
@@ -168,6 +169,7 @@ def _sync(form, saltenv=None):
             os.remove(os.path.join(__opts__['cachedir'], 'grains.cache.p'))
         except OSError:
             log.error('Could not remove grains cache!')
+    os.umask(cumask)
     return ret
 
 
@@ -513,6 +515,7 @@ def sync_all(saltenv=None, refresh=True):
     ret['output'] = sync_output(saltenv, False)
     ret['utils'] = sync_utils(saltenv, False)
     ret['log_handlers'] = sync_log_handlers(saltenv, False)
+    ret['proxymodules'] = sync_proxymodules(saltenv, False)
     if refresh:
         refresh_modules()
         refresh_pillar()
