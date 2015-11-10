@@ -9,6 +9,7 @@ Manage Dell DRAC.
 # Import python libs
 from __future__ import absolute_import
 import logging
+import os
 import re
 
 # Import Salt libs
@@ -1356,11 +1357,15 @@ def update_firmware(filename,
          racadm update –f firmware.exe -u user –p pass
 
     '''
-    return _update_firmware('update -f {0}'.format(filename),
-                            host=None,
-                            admin_username=None,
-                            admin_password=None)
-
+    if os.path.exists(filename):
+        return _update_firmware('update -f {0}'.format(filename),
+                                host=None,
+                                admin_username=None,
+                                admin_password=None)
+    else:
+        ret['return'] = False
+        ret['comment'] = 'Unable to find firmware file {0}'.format(filename)
+        return ret
 
 def update_firmware_nfs_or_cifs(filename, share,
                                 host=None,
@@ -1397,7 +1402,12 @@ def update_firmware_nfs_or_cifs(filename, share,
          salt dell dracr.update_firmware_nfs_or_cifs \
          firmware.exe IP-address:/share
     '''
-    return _update_firmware('update -f {0} -l {1}'.format(filename, share),
-                            host=None,
-                            admin_username=None,
-                            admin_password=None)
+    if os.path.exists(filename):
+        return _update_firmware('update -f {0} -l {1}'.format(filename, share),
+                                host=None,
+                                admin_username=None,
+                                admin_password=None)
+    else:
+        ret['return'] = False
+        ret['comment'] = 'Unable to find firmware file {0}'.format(filename)
+        return ret
