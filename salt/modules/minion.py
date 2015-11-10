@@ -23,8 +23,8 @@ def list():
 
         salt 'master' minion.list
     '''
-    pki_dir = globals().get('__salt__')['config.get']('pki_dir', '')
-    transport = globals().get('__salt__')['config.get']('transport', '')
+    pki_dir = __salt__['config.get']('pki_dir', '')
+    transport = __salt__['config.get']('transport', '')
 
     # We have to replace the minion/master directoryies
     pki_dir = pki_dir.replace("minion", "master")
