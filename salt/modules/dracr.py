@@ -1320,3 +1320,84 @@ def bare_rac_cmd(cmd, host=None,
         return ret['stdout']
     else:
         return ret
+
+
+def _update_firmware(cmd,
+                     host=None,
+                     admin_username=None,
+                     admin_password=None):
+    ret = __execute_ret(cmd,
+                        host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
+
+    if ret['retcode'] == 0:
+        return ret['stdout']
+    else:
+        return ret
+
+
+def update_firmware(filename,
+                    host=None,
+                    admin_username=None,
+                    admin_password=None):
+    '''
+    Updates firmware using local firmware file
+
+    .. code-block:: bash
+
+         salt dell dracr.update_firmware firmware.exe
+
+    This executes the following command on your FX2
+    (using username and password stored in the pillar data)
+
+    .. code-block:: bash
+
+         racadm update –f firmware.exe -u user –p pass
+
+    '''
+    return _update_firmware('update -f {0}'.format(filename),
+                            host=None,
+                            admin_username=None,
+                            admin_password=None)
+
+
+def update_firmware_nfs_or_cifs(filename, share,
+                                host=None,
+                                admin_username=None,
+                                admin_password=None):
+    '''
+    Executes the following for CIFS
+    (using username and password stored in the pillar data)
+
+    .. code-block:: bash
+
+         racadm update -f <updatefile> -u user –p pass -l //IP-Address/share
+
+    Or for NFS
+    (using username and password stored in the pillar data)
+
+    .. code-block:: bash
+
+          racadm update -f <updatefile> -u user –p pass -l IP-address:/share
+
+
+    Salt command for CIFS:
+
+    .. code-block:: bash
+
+         salt dell dracr.update_firmware_nfs_or_cifs \
+         firmware.exe //IP-Address/share
+
+
+    Salt command for NFS:
+
+    .. code-block:: bash
+
+         salt dell dracr.update_firmware_nfs_or_cifs \
+         firmware.exe IP-address:/share
+    '''
+    return _update_firmware('update -f {0} -l {1}'.format(filename, share),
+                            host=None,
+                            admin_username=None,
+                            admin_password=None)
