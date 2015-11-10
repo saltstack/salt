@@ -27,6 +27,7 @@ import salt.utils.templates
 import salt.utils.gzip_util
 import salt.utils.http
 import salt.utils.url
+import salt.utils.s3
 from salt.utils.openstack.swift import SaltSwift
 
 # pylint: disable=no-name-in-module,import-error
