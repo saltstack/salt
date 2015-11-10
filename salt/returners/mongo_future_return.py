@@ -263,9 +263,13 @@ def get_jids():
     Return a list of job ids
     '''
     conn, mdb = _get_conn(ret=None)
-    ret = []
-    name = mdb.jobs.distinct('jid')
-    ret.append(name)
+    map = "function() { emit(this.jid, this); }"
+    reduce = "function (key, values) { return values[0]; }"
+    result = mdb.jobs.inline_map_reduce(map, reduce)
+    ret = {}
+    for r in result:
+        jid = r['_id']
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, r['value'])
     return ret
 
 
