@@ -7,7 +7,6 @@ Module for fetching artifacts from Artifactory
 from __future__ import absolute_import
 import os
 import base64
-import xml.etree.ElementTree as ET
 import logging
 
 # Import Salt libs
@@ -16,7 +15,26 @@ import salt.ext.six.moves.http_client  # pylint: disable=import-error,redefined-
 from salt.ext.six.moves import urllib  # pylint: disable=no-name-in-module
 from salt.ext.six.moves.urllib.error import HTTPError, URLError  # pylint: disable=no-name-in-module
 
+# Import 3rd party libs
+try:
+    from salt._compat import ElementTree as ET
+    HAS_ELEMENT_TREE = True
+except ImportError:
+    HAS_ELEMENT_TREE = False
+
 log = logging.getLogger(__name__)
+
+__virtualname__ = 'artifactory'
+
+
+def __virtual__():
+    '''
+    Only load if elementtree xml library is available.
+    '''
+    if not HAS_ELEMENT_TREE:
+        return (False, 'Cannot load {0} module: ElementTree library unavailable'.format(__virtualname__))
+    else:
+        return True
 
 
 def get_latest_snapshot(artifactory_url, repository, group_id, artifact_id, packaging, target_dir='/tmp', target_file=None, classifier=None, username=None, password=None):
