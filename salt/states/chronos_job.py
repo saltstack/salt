@@ -10,6 +10,7 @@ Configure Chronos jobs via a salt proxy.
             command: "echo 'hi'"
             owner: "me@mycompany.com"
 '''
+from __future__ import absolute_import
 import copy
 import logging
 

@@ -11,6 +11,7 @@ Configure Marathon apps via a salt proxy.
             mem: 10
             instances: 3
 '''
+from __future__ import absolute_import
 import copy
 import logging
 
