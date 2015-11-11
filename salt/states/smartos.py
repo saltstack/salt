@@ -319,7 +319,7 @@ def image_absent(name):
                 ret['result'] = True
             else:
                 __salt__['imgadm.delete'](name)
-                ret['result'] = (name not in __salt__['imgadm.list']())
+                ret['result'] = name not in __salt__['imgadm.list']()
             ret['comment'] = 'image {0} deleted'.format(name)
             ret['changes'][name] = None
 
