@@ -25,6 +25,12 @@ except ImportError:
     HAS_CERTIFI = False
 
 try:
+    import singledispatch
+    HAS_SINGLEDISPATCH = True
+except ImportError:
+    HAS_SINGLEDISPATCH = False
+
+try:
     import markupsafe
     HAS_MARKUPSAFE = True
 except ImportError:
@@ -117,6 +123,9 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods=''):
 
     if HAS_CERTIFI:
         tops.append(os.path.dirname(certifi.__file__))
+
+    if HAS_SINGLEDISPATCH:
+        tops.append(os.path.dirname(singledispatch.__file__))
 
     if HAS_SSL_MATCH_HOSTNAME:
         tops.append(os.path.dirname(os.path.dirname(ssl_match_hostname.__file__)))
