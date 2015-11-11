@@ -151,4 +151,128 @@ def config_absent(name):
 
     return ret
 
+
+def image_present(name):
+    '''
+    Ensure image is present on the computenode
+
+    name : string
+        uuid of image
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    if name in __salt__['imgadm.list']():
+        # we're good
+        ret['result'] = True
+        ret['comment'] = 'image {0} is present'.format(name)
+    else:
+        # add image
+        available_images = __salt__['imgadm.avail']()
+        if name in available_images:
+            if __opts__['test']:
+                ret['result'] = True
+            else:
+                __salt__['imgadm.import'](name)
+                ret['result'] = (name in __salt__['imgadm.list']())
+            ret['comment'] = 'image {0} installed'.format(name)
+            ret['changes'][name] = available_images[name]
+        else:
+            ret['result'] = False
+            ret['comment'] = 'image {0} does not exists'.format(name)
+
+    return ret
+
+
+def image_absent(name):
+    '''
+    Ensure image is absent on the computenode
+
+    name : string
+        uuid of image
+
+    .. note::
+
+        computenode.image_absent will only remove the image if
+         it is not used by a vm.
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    if name not in __salt__['imgadm.list']():
+        # we're good
+        ret['result'] = True
+        ret['comment'] = 'image {0} is absent'.format(name)
+    else:
+        # check if image in use by vm
+        if name in __salt__['vmadm.list'](order='image_uuid'):
+            ret['result'] = False
+            ret['comment'] = 'image {0} currently in use by a vm'.format(name)
+        else:
+            # delete image
+            if __opts__['test']:
+                ret['result'] = True
+            else:
+                __salt__['imgadm.delete'](name)
+                ret['result'] = (name not in __salt__['imgadm.list']())
+            ret['comment'] = 'image {0} deleted'.format(name)
+            ret['changes'][name] = None
+
+    return ret
+
+
+def image_vacuum(name):
+    '''
+    Delete images not in use or installed via image_present
+    '''
+    name = name.lower()
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    # list of images to keep
+    images = []
+
+    # retreive image_present state data for host
+    for state in __salt__['state.show_lowstate']():
+        # skip if not from this state module
+        if state['state'] != __virtualname__:
+            continue
+        # skip if not image_present
+        if state['fun'] not in ['image_present']:
+            continue
+        # keep images installed via image_present
+        if 'name' in state:
+            images.append(state['name'])
+
+    # retrieve images in use by vms
+    for image_uuid in __salt__['vmadm.list'](order='image_uuid'):
+        if image_uuid in images:
+            continue
+        images.append(image_uuid)
+
+    # purge unused images
+    ret['result'] = True
+    for image_uuid in __salt__['imgadm.list']():
+        if image_uuid in images:
+            continue
+        if image_uuid in __salt__['imgadm.delete'](image_uuid):
+            ret['changes'][image_uuid] = None
+        else:
+            ret['result'] = False
+            ret['comment'] = 'failed to delete images'
+
+    if ret['result'] and len(ret['changes']) == 0:
+        ret['comment'] = 'no images deleted'
+    elif ret['result'] and len(ret['changes']) > 0:
+        ret['comment'] = 'images deleted'
+
+    return ret
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
