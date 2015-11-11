@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-Manage IAM roles.
-=================
+Manage IAM objects
+==================
 
 .. versionadded:: 2015.8.0
 
@@ -100,7 +100,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
       boto_iam.server_cert_absent:
         - name: mycert
 
-. code-block:: yaml
+.. code-block:: yaml
     create keys for user:
       boto_iam.keys_present:
         - name: myusername
