@@ -51,7 +51,7 @@ def apps():
         salt marathon-minion-id marathon.apps
     '''
     response = salt.utils.http.query(
-        "{}/v2/apps".format(_base_url()),
+        "{0}/v2/apps".format(_base_url()),
         decode_type='json',
         decode=True,
     )
@@ -78,7 +78,7 @@ def app(id):
         salt marathon-minion-id marathon.app my-app
     '''
     response = salt.utils.http.query(
-        "{}/v2/apps/{}".format(_base_url(), id),
+        "{0}/v2/apps/{1}".format(_base_url(), id),
         decode_type='json',
         decode=True,
     )
@@ -95,7 +95,7 @@ def update_app(id, config):
     data = json.dumps(config)
     try:
         response = salt.utils.http.query(
-            "{}/v2/apps/{}?force=true".format(_base_url(), id),
+            "{0}/v2/apps/{1}?force=true".format(_base_url(), id),
             method='PUT',
             decode_type='json',
             decode=True,
@@ -125,7 +125,7 @@ def rm_app(id):
         salt marathon-minion-id marathon.rm_app my-app
     '''
     response = salt.utils.http.query(
-        "{}/v2/apps/{}".format(_base_url(), id),
+        "{0}/v2/apps/{1}".format(_base_url(), id),
         method='DELETE',
         decode_type='json',
         decode=True,
@@ -142,7 +142,7 @@ def info():
         salt marathon-minion-id marathon.info
     '''
     response = salt.utils.http.query(
-        "{}/v2/info".format(_base_url()),
+        "{0}/v2/info".format(_base_url()),
         decode_type='json',
         decode=True,
     )

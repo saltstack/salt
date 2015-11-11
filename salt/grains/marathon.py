@@ -36,7 +36,7 @@ def os_data():
 
 def marathon():
     response = salt.utils.http.query(
-        "{}/v2/info".format(__opts__['proxy'].get(
+        "{0}/v2/info".format(__opts__['proxy'].get(
             'base_url',
             "http://locahost:8080",
         )),
