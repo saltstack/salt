@@ -37,6 +37,7 @@ from salt.utils import immutabletypes
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import SaltRenderError, SaltReqTimeoutError, SaltException
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
+from salt.utils.locales import sdecode
 
 # Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -494,6 +495,7 @@ class Compiler(object):
                 chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
             if chunk['order'] < 0:
                 chunk['order'] = cap + 1000000 + chunk['order']
+            chunk['name'] = sdecode(chunk['name'])
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
