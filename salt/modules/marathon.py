@@ -4,7 +4,7 @@ Module providing a simple management interface to a marathon cluster.
 
 Currently this only works when run through a proxy minion.
 
-.. versionadded:: 2015.8.2
+.. versionadded:: Boron
 '''
 from __future__ import absolute_import
 
@@ -88,6 +88,10 @@ def app(id):
 def update_app(id, config):
     '''
     Update the specified app with the given configuration.
+
+    CLI Example:
+    .. code-block:: bash
+        salt marathon-minion-id marathon.update_app my-app '<config yaml>'
     '''
     if 'id' not in config:
         config['id'] = id
