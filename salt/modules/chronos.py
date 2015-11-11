@@ -4,7 +4,7 @@ Module providing a simple management interface to a chronos cluster.
 
 Currently this only works when run through a proxy minion.
 
-.. versionadded:: 2015.8.2
+.. versionadded:: Boron
 '''
 from __future__ import absolute_import
 
@@ -89,6 +89,10 @@ def job(name):
 def update_job(name, config):
     '''
     Update the specified job with the given configuration.
+
+    CLI Example:
+    .. code-block:: bash
+        salt chronos-minion-id chronos.update_job my-job '<config yaml>'
     '''
     if 'name' not in config:
         config['name'] = name
