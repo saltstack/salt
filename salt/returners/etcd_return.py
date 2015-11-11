@@ -147,13 +147,14 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    ret = []
+    ret = {}
     client, path = _get_conn(__opts__)
     items = client.get('/'.join((path, 'jobs')))
     for item in items.children:
         if item.dir is True:
-            comps = str(item.key).split('/')
-            ret.append(comps[-1])
+            jid = str(item.key).split('/')[-1]
+            load = client.get('/'.join((item.key, '.load.p'))).value
+            ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
     return ret
 
 
