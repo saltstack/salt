@@ -26,9 +26,13 @@ from __future__ import absolute_import
 import os
 import os.path
 import time
+import logging
 
 # Import salt libs
 import salt.utils
+
+# Init logger
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -155,6 +159,8 @@ def formatted(name, fs_type='ext4', **kwargs):
     # to avoid lsblk failing although mkfs has succeeded
     # see https://github.com/saltstack/salt/issues/25775
     for i in range(10):
+
+        log.info('Check blk fstype attempt %s of 10', str(i+1))
         current_fs = _checkblk(name)
 
         if current_fs == fs_type:
@@ -163,11 +169,17 @@ def formatted(name, fs_type='ext4', **kwargs):
             ret['changes'] = {'new': fs_type, 'old': current_fs}
             ret['result'] = True
             return ret
-        time.sleep(3)
+
+        if current_fs == '':
+            log.info('Waiting 3s before next check')
+            time.sleep(3)
+        else:
+            break
 
     ret['comment'] = 'Failed to format {0}'.format(name)
     ret['result'] = False
     return ret
+
 
 def _checkblk(name):
     '''
