@@ -9,6 +9,8 @@ Configure Chronos jobs via a salt proxy.
             schedule: "R//PT2S"
             command: "echo 'hi'"
             owner: "me@mycompany.com"
+
+.. versionadded:: Boron
 '''
 from __future__ import absolute_import
 import copy

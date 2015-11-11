@@ -10,6 +10,8 @@ Configure Marathon apps via a salt proxy.
             cpus: 0.1
             mem: 10
             instances: 3
+
+.. versionadded:: Boron
 '''
 from __future__ import absolute_import
 import copy
