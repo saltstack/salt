@@ -38,7 +38,7 @@ def _jobs():
     Return the currently configured jobs.
     '''
     response = salt.utils.http.query(
-        "{}/scheduler/jobs".format(_base_url()),
+        "{0}/scheduler/jobs".format(_base_url()),
         decode_type='json',
         decode=True,
     )
@@ -95,7 +95,7 @@ def update_job(name, config):
     data = json.dumps(config)
     try:
         response = salt.utils.http.query(
-            "{}/scheduler/iso8601".format(_base_url()),
+            "{0}/scheduler/iso8601".format(_base_url()),
             method='POST',
             data=data,
             header_dict={
@@ -122,7 +122,7 @@ def rm_job(name):
         salt chronos-minion-id chronos.rm_job my-job
     '''
     response = salt.utils.http.query(
-        "{}/scheduler/job/{}".format(_base_url(), name),
+        "{0}/scheduler/job/{1}".format(_base_url(), name),
         method='DELETE',
     )
     return True
