@@ -294,7 +294,7 @@ def eni_present(
         ret['result'] = _ret['result']
         return ret
     if allocate_eip:
-        if 'allocationId' not in r['result']: 
+        if 'allocationId' not in r['result']:
             eip_alloc = __salt__['boto_ec2.allocate_eip_address'](domain=None,
                                                                 region=region,
                                                                 key=key,
@@ -477,7 +477,7 @@ def eni_absent(
     else:
         if __opts__['test']:
             ret['comment'] = 'ENI is set to be deleted.'
-            if release_eip and allocationId in r['result']:
+            if release_eip and 'allocationId' in r['result']:
                 ret['comment'] = ' '.join([ret['comment'], 'Allocated/associated EIP is set to be released'])
             ret['result'] = None
             return ret
@@ -505,7 +505,7 @@ def eni_absent(
             return ret
         ret['comment'] = 'Deleted ENI {0}'.format(name)
         ret['changes']['id'] = None
-        if release_eip and allocationId in r['result']:
+        if release_eip and 'allocationId' in r['result']:
             _ret = __salt__['boto_ec2.release_eip_address'](public_ip=None,
                                                             allocation_id=r['result']['allocationId'],
                                                             region=region,
