@@ -56,12 +56,13 @@ def _check_perms_changes(name, newperms, runas=None, existing=None):
             return False
 
     perm_need_change = False
-    for vhost, perms in newperms.iteritems():
-        if vhost in existing:
-            if perms != existing[vhost]:
+    for vhost_perms in newperms:
+        for vhost, perms in vhost_perms.iteritems():
+            if vhost in existing:
+                if perms != existing[vhost]:
+                    perm_need_change = True
+            else:
                 perm_need_change = True
-        else:
-            perm_need_change = True
 
     return perm_need_change
 
@@ -170,7 +171,7 @@ def present(name,
                               {'old': tags,
                                'new': new_tags}})
     try:
-        existing_perms = __salt__['rabbitmq.list_user_permissions'](name, runas=runas)
+        existing_perms = __salt__['rabbitmq.list_user_permissions'](name, runas=runas)[0]
     except CommandExecutionError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         return ret

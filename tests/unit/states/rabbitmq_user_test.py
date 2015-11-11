@@ -39,7 +39,7 @@ class RabbitmqUserTestCase(TestCase):
         name = 'foo'
         passwd = 'password'
         tag = 'user'
-        perms = {'/': ['.*', '.*']}
+        perms = [{'/': ['.*', '.*']}]
 
         ret = {'name': name,
                'changes': {},
