@@ -2059,6 +2059,9 @@ def create(vm_):
     hardware_version = config.get_cloud_config_value(
         'hardware_version', vm_, __opts__, search_global=False, default=None
     )
+    customization = config.get_cloud_config_value(
+        'customization', vm_, __opts__, search_global=False, default=True
+    )
 
     if 'clonefrom' in vm_:
         # Clone VM/template from specified VM/template
@@ -2193,7 +2196,7 @@ def create(vm_):
             config=config_spec
         )
 
-        if devices and 'network' in list(devices.keys()) and 'Windows' not in object_ref.config.guestFullName:
+        if customization and (devices and 'network' in list(devices.keys())) and 'Windows' not in object_ref.config.guestFullName:
             global_ip = vim.vm.customization.GlobalIPSettings()
 
             if 'dns_servers' in list(vm_.keys()):
