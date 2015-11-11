@@ -56,11 +56,11 @@ def present(name, character_set=None, collate=None, **connection_args):
     if existing:
         alter = False
         if character_set and character_set != existing.get('character_set'):
-            LOG.debug('character set differes from {} : {}'.format(
+            LOG.debug('character set differes from {0} : {1}'.format(
                 character_set, existing.get('character_set')))
             alter = True
         if collate and collate != existing.get('collate'):
-            LOG.debug('collate set differes from {} : {}'.format(
+            LOG.debug('collate set differes from {0} : {1}'.format(
                 collate, existing.get('collate')))
             alter = True
         if alter:
