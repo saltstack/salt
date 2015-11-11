@@ -83,7 +83,7 @@ def _strip_listing_to_done(output_list):
     outputlist: rabbitmq command output split by newline
     return value: list, conditionally modified, may be empty.
     '''
-    return list(line for line in output_list if _safe_output(line))
+    return [line for line in output_list if _safe_output(line)]
 
 
 def _output_to_dict(cmdoutput, values_mapper=None):
