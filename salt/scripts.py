@@ -51,8 +51,11 @@ def minion_process():
     '''
     Start a minion process
     '''
+    import salt.utils
     import salt.cli.daemons
     # salt_minion spawns this function in a new process
+
+    salt.utils.appendproctitle('KeepAlive')
 
     def suicide_when_without_parent(parent_pid):
         '''

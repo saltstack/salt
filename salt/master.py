@@ -5,7 +5,7 @@ involves preparing the three listeners and the workers needed by the master.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
 import copy
 import os
 import re
@@ -68,7 +68,7 @@ from salt.utils.debug import (
 )
 from salt.utils.event import tagify
 from salt.utils.master import ConnectedCache
-from salt.utils.process import MultiprocessingProcess
+from salt.utils.process import default_signals, SignalHandlingMultiprocessingProcess
 
 try:
     import resource
@@ -129,7 +129,7 @@ class SMaster(object):
         return salt.daemons.masterapi.access_keys(self.opts)
 
 
-class Maintenance(MultiprocessingProcess):
+class Maintenance(SignalHandlingMultiprocessingProcess):
     '''
     A generalized maintenance process which performances maintenance
     routines.
@@ -209,10 +209,7 @@ class Maintenance(MultiprocessingProcess):
             salt.daemons.masterapi.fileserver_update(self.fileserver)
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
-            try:
-                time.sleep(self.loop_interval)
-            except KeyboardInterrupt:
-                break
+            time.sleep(self.loop_interval)
 
     def handle_search(self, now, last):
         '''
@@ -462,85 +459,76 @@ class Master(SMaster):
 
         self.__set_max_open_files()
 
-        # Before creating and adding processes to the process manager, store
-        # references to the SIGTERM/SIGINT signal handlers and restore the
-        # default handlers. We don't want the processes being started to
-        # inherit those signal handlers
-        old_sigint_handler = signal.getsignal(signal.SIGINT)
-        old_sigterm_handler = signal.getsignal(signal.SIGTERM)
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
-        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        # Reset signals to default ones before adding processes to the process
+        # manager. We don't want the processes being started to inherit those
+        # signal handlers
+        with default_signals(signal.SIGINT, signal.SIGTERM):
 
-        log.info('Creating master process manager')
-        self.process_manager = salt.utils.process.ProcessManager()
-        log.info('Creating master maintenance process')
-        pub_channels = []
-        for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.transport.server.PubServerChannel.factory(opts)
-            chan.pre_fork(self.process_manager)
-            pub_channels.append(chan)
+            log.info('Creating master process manager')
+            self.process_manager = salt.utils.process.ProcessManager()
+            log.info('Creating master maintenance process')
+            pub_channels = []
+            for transport, opts in iter_transport_opts(self.opts):
+                chan = salt.transport.server.PubServerChannel.factory(opts)
+                chan.pre_fork(self.process_manager)
+                pub_channels.append(chan)
 
-        log.info('Creating master event publisher process')
-        self.process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
-        salt.engines.start_engines(self.opts, self.process_manager)
+            log.info('Creating master event publisher process')
+            self.process_manager.add_process(salt.utils.event.EventPublisher, args=(self.opts,))
+            salt.engines.start_engines(self.opts, self.process_manager)
 
-        # must be after channels
-        self.process_manager.add_process(Maintenance, args=(self.opts,))
-        log.info('Creating master publisher process')
+            # must be after channels
+            self.process_manager.add_process(Maintenance, args=(self.opts,))
+            log.info('Creating master publisher process')
 
-        if 'reactor' in self.opts:
-            log.info('Creating master reactor process')
-            self.process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
+            if 'reactor' in self.opts:
+                log.info('Creating master reactor process')
+                self.process_manager.add_process(salt.utils.reactor.Reactor, args=(self.opts,))
 
-        if self.opts.get('event_return'):
-            log.info('Creating master event return process')
-            self.process_manager.add_process(salt.utils.event.EventReturn, args=(self.opts,))
+            if self.opts.get('event_return'):
+                log.info('Creating master event return process')
+                self.process_manager.add_process(salt.utils.event.EventReturn, args=(self.opts,))
 
-        ext_procs = self.opts.get('ext_processes', [])
-        for proc in ext_procs:
-            log.info('Creating ext_processes process: {0}'.format(proc))
-            try:
-                mod = '.'.join(proc.split('.')[:-1])
-                cls = proc.split('.')[-1]
-                _tmp = __import__(mod, globals(), locals(), [cls], -1)
-                cls = _tmp.__getattribute__(cls)
-                self.process_manager.add_process(cls, args=(self.opts,))
-            except Exception:
-                log.error(('Error creating ext_processes '
-                           'process: {0}').format(proc))
+            ext_procs = self.opts.get('ext_processes', [])
+            for proc in ext_procs:
+                log.info('Creating ext_processes process: {0}'.format(proc))
+                try:
+                    mod = '.'.join(proc.split('.')[:-1])
+                    cls = proc.split('.')[-1]
+                    _tmp = __import__(mod, globals(), locals(), [cls], -1)
+                    cls = _tmp.__getattribute__(cls)
+                    self.process_manager.add_process(cls, args=(self.opts,))
+                except Exception:
+                    log.error(('Error creating ext_processes '
+                            'process: {0}').format(proc))
 
-        if HAS_HALITE and 'halite' in self.opts:
-            log.info('Creating master halite process')
-            self.process_manager.add_process(Halite, args=(self.opts['halite'],))
+            if HAS_HALITE and 'halite' in self.opts:
+                log.info('Creating master halite process')
+                self.process_manager.add_process(Halite, args=(self.opts['halite'],))
 
-        # TODO: remove, or at least push into the transport stuff (pre-fork probably makes sense there)
-        if self.opts['con_cache']:
-            log.info('Creating master concache process')
-            self.process_manager.add_process(ConnectedCache, args=(self.opts,))
-            # workaround for issue #16315, race condition
-            log.debug('Sleeping for two seconds to let concache rest')
-            time.sleep(2)
+            # TODO: remove, or at least push into the transport stuff (pre-fork probably makes sense there)
+            if self.opts['con_cache']:
+                log.info('Creating master concache process')
+                self.process_manager.add_process(ConnectedCache, args=(self.opts,))
+                # workaround for issue #16315, race condition
+                log.debug('Sleeping for two seconds to let concache rest')
+                time.sleep(2)
 
-        log.info('Creating master request server process')
-        kwargs = {}
-        if salt.utils.is_windows():
-            kwargs['log_queue'] = (
-                    salt.log.setup.get_multiprocessing_logging_queue())
-        self.process_manager.add_process(self.run_reqserver, kwargs=kwargs)
+            log.info('Creating master request server process')
+            kwargs = {}
+            if salt.utils.is_windows():
+                kwargs['log_queue'] = (
+                        salt.log.setup.get_multiprocessing_logging_queue())
+            self.process_manager.add_process(self.run_reqserver, kwargs=kwargs)
 
-        # Restore the old SIGTERM/SIGINT handler now that all processes have
-        # been added to the process manager
-        if old_sigint_handler is signal.SIG_DFL:
+        # Install the SIGINT/SIGTERM handlers if not done so far
+        if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGINT, self._handle_signals)
-        else:
-            signal.signal(signal.SIGINT, old_sigint_handler)
 
-        if old_sigterm_handler is signal.SIG_DFL:
+        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGINT, self._handle_signals)
-        else:
-            signal.signal(signal.SIGTERM, old_sigterm_handler)
 
         self.process_manager.run()
 
@@ -552,7 +540,7 @@ class Master(SMaster):
         self.process_manager.kill_children()
 
 
-class Halite(MultiprocessingProcess):
+class Halite(SignalHandlingMultiprocessingProcess):
     '''
     Manage the Halite server
     '''
@@ -623,48 +611,55 @@ class ReqServer(object):
                 os.remove(dfn)
             except os.error:
                 pass
-        self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
-        req_channels = []
-        tcp_only = True
-        for transport, opts in iter_transport_opts(self.opts):
-            chan = salt.transport.server.ReqServerChannel.factory(opts)
-            chan.pre_fork(self.process_manager)
-            req_channels.append(chan)
-            if transport != 'tcp':
-                tcp_only = False
+        # Reset signals to default ones before adding processes to the process
+        # manager. We don't want the processes being started to inherit those
+        # signal handlers
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
-        kwargs = {}
-        if salt.utils.is_windows():
-            kwargs['log_queue'] = self.log_queue
-            # Use one worker thread if the only TCP transport is set up on Windows. See #27188.
-            if tcp_only:
-                log.warning("TCP transport is currently supporting the only 1 worker on Windows.")
-                self.opts['worker_threads'] = 1
+            req_channels = []
+            tcp_only = True
+            for transport, opts in iter_transport_opts(self.opts):
+                chan = salt.transport.server.ReqServerChannel.factory(opts)
+                chan.pre_fork(self.process_manager)
+                req_channels.append(chan)
+                if transport != 'tcp':
+                    tcp_only = False
 
-        for ind in range(int(self.opts['worker_threads'])):
-            self.process_manager.add_process(MWorker,
-                                             args=(self.opts,
-                                                   self.master_key,
-                                                   self.key,
-                                                   req_channels,
-                                                   ),
-                                             kwargs=kwargs
-                                             )
+            kwargs = {}
+            if salt.utils.is_windows():
+                kwargs['log_queue'] = self.log_queue
+                # Use one worker thread if the only TCP transport is set up on Windows. See #27188.
+                if tcp_only:
+                    log.warning("TCP transport is currently supporting the only 1 worker on Windows.")
+                    self.opts['worker_threads'] = 1
+
+            for ind in range(int(self.opts['worker_threads'])):
+                self.process_manager.add_process(MWorker,
+                                                args=(self.opts,
+                                                    self.master_key,
+                                                    self.key,
+                                                    req_channels,
+                                                    ),
+                                                kwargs=kwargs
+                                                )
         try:
             self.process_manager.run()
-        except (KeyboardInterrupt, SystemExit):
+        except (KeyboardInterrupt, SystemExit) as exc:
+            self.process_manager.stop_restarting()
+            if isinstance(exc, KeyboardInterrupt):
+                self.process_manager.send_signal_to_processes(signal.SIGINT)
+            else:
+                self.process_manager.send_signal_to_processes(signal.SIGTERM)
+            # kill any remaining processes
             self.process_manager.kill_children()
 
     def run(self):
         '''
         Start up the ReqServer
         '''
-        try:
-            self.__bind()
-        except KeyboardInterrupt:
-            log.warn('Stopping the Salt Maste ReqServer')
-            raise SystemExit('\nExiting on Ctrl-c')
+        self.__bind()
 
     def destroy(self):
         if hasattr(self, 'clients') and self.clients.closed is False:
@@ -677,13 +672,15 @@ class ReqServer(object):
             self.context.term()
         # Also stop the workers
         if hasattr(self, 'process_manager'):
+            self.process_manager.stop_restarting()
+            self.process_manager.send_signal_to_processes(signal.SIGTERM)
             self.process_manager.kill_children()
 
     def __del__(self):
         self.destroy()
 
 
-class MWorker(MultiprocessingProcess):
+class MWorker(SignalHandlingMultiprocessingProcess):
     '''
     The worker multiprocess instance to manage the backend operations for the
     salt master.
@@ -704,7 +701,7 @@ class MWorker(MultiprocessingProcess):
         :rtype: MWorker
         :return: Master worker
         '''
-        MultiprocessingProcess.__init__(self, **kwargs)
+        SignalHandlingMultiprocessingProcess.__init__(self, **kwargs)
         self.opts = opts
         self.req_channels = req_channels
 
@@ -718,7 +715,7 @@ class MWorker(MultiprocessingProcess):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        MultiprocessingProcess.__init__(self, log_queue=state['log_queue'])
+        SignalHandlingMultiprocessingProcess.__init__(self, log_queue=state['log_queue'])
         self.opts = state['opts']
         self.req_channels = state['req_channels']
         self.mkey = state['mkey']
@@ -744,10 +741,7 @@ class MWorker(MultiprocessingProcess):
         self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
         for req_channel in self.req_channels:
             req_channel.post_fork(self._handle_payload, io_loop=self.io_loop)  # TODO: cleaner? Maybe lazily?
-        try:
-            self.io_loop.start()
-        except KeyboardInterrupt:
-            self.io_loop.add_callback(self.io_loop.stop)
+        self.io_loop.start()
 
     @tornado.gen.coroutine
     def _handle_payload(self, payload):

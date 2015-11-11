@@ -876,6 +876,10 @@ def _network_conf(conf_tuples=None, **kwargs):
 def _get_lxc_default_data(**kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = {}
+    for k in ['utsname', 'rootfs']:
+        val = kwargs.get(k, None)
+        if val is not None:
+            ret['lxc.{0}'.format(k)] = val
     autostart = kwargs.get('autostart')
     # autostart can have made in kwargs, but with the None
     # value which is invalid, we need an explicit boolean
@@ -1142,6 +1146,7 @@ def init(name,
          bootstrap_args=None,
          bootstrap_shell=None,
          bootstrap_url=None,
+         uses_systemd=True,
          **kwargs):
     '''
     Initialize a new container.
@@ -1294,6 +1299,9 @@ def init(name,
 
     unconditional_install
         Run the script even if the container seems seeded
+
+    uses_systemd
+        Set to true if the lxc template has systemd installed
 
     CLI Example:
 
@@ -1615,7 +1623,8 @@ def init(name,
                     bootstrap_delay=bootstrap_delay,
                     bootstrap_url=bootstrap_url,
                     bootstrap_shell=bootstrap_shell,
-                    bootstrap_args=bootstrap_args)
+                    bootstrap_args=bootstrap_args,
+                    uses_systemd=uses_systemd)
             except (SaltInvocationError, CommandExecutionError) as exc:
                 ret['comment'] = 'Bootstrap failed: ' + exc.strerror
                 ret['result'] = False
@@ -3319,7 +3328,7 @@ def test_bare_started_state(name, path=None):
     return ret
 
 
-def wait_started(name, path=None, timeout=300):
+def wait_started(name, path=None, timeout=300, uses_systemd=True):
     '''
     Check that the system has fully inited
 
@@ -3347,7 +3356,7 @@ def wait_started(name, path=None, timeout=300):
         raise CommandExecutionError(
             'Container {0} is not running'.format(name))
     ret = False
-    if running_systemd(name, path=path):
+    if uses_systemd and running_systemd(name, path=path):
         test_started = test_sd_started_state
         logger = log.error
     else:
@@ -3403,7 +3412,8 @@ def bootstrap(name,
               path=None,
               bootstrap_delay=None,
               bootstrap_args=None,
-              bootstrap_shell=None):
+              bootstrap_shell=None,
+              uses_systemd=True):
     '''
     Install and configure salt in a container.
 
@@ -3464,7 +3474,7 @@ def bootstrap(name,
                 [approve_key=(True|False)] [install=(True|False)]
 
     '''
-    wait_started(name, path=path)
+    wait_started(name, path=path, uses_systemd=uses_systemd)
     if bootstrap_delay is not None:
         try:
             time.sleep(bootstrap_delay)
@@ -4547,6 +4557,8 @@ def reconfigure(name,
                 bridge=None,
                 gateway=None,
                 autostart=None,
+                utsname=None,
+                rootfs=None,
                 path=None,
                 **kwargs):
     '''
@@ -4556,6 +4568,16 @@ def reconfigure(name,
 
     name
         Name of the container.
+    utsname
+        utsname of the container.
+
+        .. versionadded:: Boron
+
+    rootfs
+        rootfs of the container.
+
+        .. versionadded:: Boron
+
     cpu
         Select a random number of cpu cores and assign it to the cpuset, if the
         cpuset option is set then this option will be ignored
@@ -4622,9 +4644,13 @@ def reconfigure(name,
         autostart = select('autostart', autostart)
     else:
         autostart = 'keep'
+    if not utsname:
+        utsname = select('utsname', utsname)
     if os.path.exists(path):
         old_chunks = read_conf(path, out_format='commented')
         make_kw = salt.utils.odict.OrderedDict([
+            ('utsname', utsname),
+            ('rootfs', rootfs),
             ('autostart', autostart),
             ('cpu', cpu),
             ('gateway', gateway),

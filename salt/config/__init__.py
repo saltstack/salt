@@ -378,7 +378,7 @@ VALID_OPTS = {
     'recon_randomize': float,  # FIXME This should really be a bool, according to the implementation
 
     'return_retry_timer': int,
-    'return_retry_random': bool,
+    'return_retry_timer_max': int,
 
     # Specify a returner in which all events will be sent to. Requires that the returner in question
     # have an event_return(event) function!
@@ -768,6 +768,12 @@ VALID_OPTS = {
 
     # HTTP request max file content size.
     'http_max_body': int,
+
+    # Delay in seconds before executing bootstrap (salt cloud)
+    'bootstrap_delay': int,
+
+    # Does this lxc template have systemd installed?
+    'uses_systemd': bool,
 }
 
 # default configurations
@@ -909,8 +915,8 @@ DEFAULT_MINION_OPTS = {
     'recon_max': 10000,
     'recon_default': 1000,
     'recon_randomize': True,
-    'return_retry_timer': 4,
-    'return_retry_random': True,
+    'return_retry_timer': 5,
+    'return_retry_timer_max': 10,
     'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
     'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'random_reauth_delay': 10,
@@ -1254,6 +1260,8 @@ CLOUD_CONFIG_DEFAULTS = {
     'log_fmt_console': _DFLT_LOG_FMT_CONSOLE,
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
+    'bootstrap_delay': None,
+    'uses_systemd': True,
 }
 
 DEFAULT_API_OPTS = {

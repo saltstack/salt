@@ -26,7 +26,7 @@ def func_globals_inject(func, **overrides):
     Override specific variables within a function's global context.
     '''
     # recognize methods
-    if hasattr(func, "im_func"):
+    if hasattr(func, 'im_func'):
         func = func.__func__
 
     # Get a reference to the function globals dictionary
@@ -58,12 +58,13 @@ def func_globals_inject(func, **overrides):
 
 
 class ContextDict(collections.MutableMapping):
-    """A context manager that saves some per-thread state globally.
+    '''
+    A context manager that saves some per-thread state globally.
     Intended for use with Tornado's StackContext.
 
     Provide arbitrary data as kwargs upon creation,
     then allow any children to override the values of the parent.
-    """
+    '''
 
     def __init__(self, **data):
         # state should be thread local, so this object can be threadsafe

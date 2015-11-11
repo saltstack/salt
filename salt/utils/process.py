@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
 import os
 import sys
 import time
@@ -9,6 +9,7 @@ import types
 import signal
 import logging
 import threading
+import contextlib
 import subprocess
 import multiprocessing
 import multiprocessing.util
@@ -260,7 +261,7 @@ class ProcessManager(object):
         self._sigterm_handler = signal.getsignal(signal.SIGTERM)
         self._restart_processes = True
 
-    def add_process(self, tgt, args=None, kwargs=None):
+    def add_process(self, tgt, args=None, kwargs=None, name=None):
         '''
         Create a processes and args + kwargs
         This will deterimine if it is a Process class, otherwise it assumes
@@ -293,20 +294,25 @@ class ProcessManager(object):
         else:
             process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
 
-        process.start()
+        if isinstance(process, SignalHandlingMultiprocessingProcess):
+            with default_signals(signal.SIGINT, signal.SIGTERM):
+                process.start()
+        else:
+            process.start()
 
         # create a nicer name for the debug log
-        if isinstance(tgt, types.FunctionType):
-            name = '{0}.{1}'.format(
-                tgt.__module__,
-                tgt.__name__,
-            )
-        else:
-            name = '{0}.{1}.{2}'.format(
-                tgt.__module__,
-                tgt.__class__,
-                tgt.__name__,
-            )
+        if name is None:
+            if isinstance(tgt, types.FunctionType):
+                name = '{0}.{1}'.format(
+                    tgt.__module__,
+                    tgt.__name__,
+                )
+            else:
+                name = '{0}{1}.{2}'.format(
+                    tgt.__module__,
+                    '.{0}'.format(tgt.__class__) if str(tgt.__class__) != "<type 'type'>" else '',
+                    tgt.__name__,
+                )
         log.debug("Started '{0}' with pid {1}".format(name, process.pid))
         self._process_map[process.pid] = {'tgt': tgt,
                                           'args': args,
@@ -444,3 +450,44 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
 
     def __setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+
+
+class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
+    def __init__(self, *args, **kwargs):
+        multiprocessing.util.register_after_fork(self, SignalHandlingMultiprocessingProcess.__setup_signals)
+        super(SignalHandlingMultiprocessingProcess, self).__init__(*args, **kwargs)
+
+    def __setup_signals(self):
+        signal.signal(signal.SIGINT, self._handle_signals)
+        signal.signal(signal.SIGTERM, self._handle_signals)
+
+    def _handle_signals(self, signum, sigframe):
+        msg = '{0} received a '.format(self.__class__.__name__)
+        if signum == signal.SIGINT:
+            msg += 'SIGINT'
+        elif signum == signal.SIGTERM:
+            msg += 'SIGTERM'
+        msg += '. Exiting'
+        log.debug(msg)
+        exit(0)
+
+    def start(self):
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            super(SignalHandlingMultiprocessingProcess, self).start()
+
+
+@contextlib.contextmanager
+def default_signals(*signals):
+    old_signals = {}
+    for signum in signals:
+        old_signals[signum] = signal.getsignal(signum)
+        signal.signal(signum, signal.SIG_DFL)
+
+    # Do whatever is needed with the reset signals
+    yield
+
+    # Restore signals
+    for signum in old_signals:
+        signal.signal(signum, old_signals[signum])
+
+    del old_signals

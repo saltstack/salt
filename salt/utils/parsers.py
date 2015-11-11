@@ -867,8 +867,11 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         )
 
     def _mixin_before_exit(self):
-        if self.check_pidfile():
-            os.unlink(self.config['pidfile'])
+        if hasattr(self, 'config'):
+            # We've loaded and merged options into the configuration, it's safe
+            # to query about the pidfile
+            if self.check_pidfile():
+                os.unlink(self.config['pidfile'])
 
     def set_pidfile(self):
         from salt.utils.process import set_pidfile
@@ -929,10 +932,11 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
         self._install_signal_handlers()
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+        msg = self.__class__.__name__
         if signum == signal.SIGINT:
-            msg = 'Received a SIGINT.'
+            msg += ' received a SIGINT.'
         elif signum == signal.SIGTERM:
-            msg = 'Received a SIGTERM.'
+            msg += ' received a SIGTERM.'
         logging.getLogger(__name__).warning('{0} Exiting.'.format(msg))
         self.shutdown(exitmsg='{0} Exited.'.format(msg))
 

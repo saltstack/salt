@@ -587,7 +587,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
             if allowed_origin:
                 self.set_header("Access-Control-Allow-Origin", allowed_origin)
 
-    def options(self):
+    def options(self, *args, **kwargs):
         '''
         Return CORS headers for preflight requests
         '''
@@ -1701,7 +1701,12 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         ret = self.event.fire_event({
             'post': self.raw_data,
-            'headers': self.request.headers,
+            # In Tornado >= v4.0.3, the headers come
+            # back as an HTTPHeaders instance, which
+            # is a dictionary. We must cast this as
+            # a dictionary in order for msgpack to
+            # serialize it.
+            'headers': dict(self.request.headers),
         }, tag)
 
         self.write(self.serialize({'success': ret}))

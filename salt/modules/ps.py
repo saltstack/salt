@@ -100,7 +100,7 @@ def _get_proc_username(proc):
     '''
     try:
         return proc.username() if PSUTIL2 else proc.username
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
+    except (psutil.NoSuchProcess, psutil.AccessDenied, KeyError):
         return None
 
 

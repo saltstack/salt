@@ -693,7 +693,7 @@ def lowdata_fmt():
     # if the data was sent as urlencoded, we need to make it a list.
     # this is a very forgiving implementation as different clients set different
     # headers for form encoded data (including charset or something similar)
-    if not isinstance(data, list):
+    if data and not isinstance(data, list):
         # Make the 'arg' param a list if not already
         if 'arg' in data and not isinstance(data['arg'], list):
             data['arg'] = [data['arg']]
@@ -2225,7 +2225,9 @@ class Webhook(object):
         '''
         tag = '/'.join(itertools.chain(self.tag_base, args))
         data = cherrypy.serving.request.unserialized_data
-        raw_body = cherrypy.serving.request.raw_body
+        if not data:
+            data = {}
+        raw_body = getattr(cherrypy.serving.request, 'raw_body', '')
         headers = dict(cherrypy.request.headers)
 
         ret = self.event.fire_event({

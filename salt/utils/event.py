@@ -56,12 +56,12 @@ from __future__ import absolute_import
 import os
 import time
 import errno
-import signal
 import fnmatch
 import hashlib
 import logging
 import datetime
 from collections import MutableMapping
+from multiprocessing.util import Finalize
 
 # Import third party libs
 import salt.ext.six as six
@@ -866,7 +866,7 @@ class AsyncEventPublisher(object):
         self.destroy()
 
 
-class EventPublisher(salt.utils.process.MultiprocessingProcess):
+class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -881,7 +881,6 @@ class EventPublisher(salt.utils.process.MultiprocessingProcess):
         Bind the pub and pull sockets for events
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
-        linger = 5000
         # Set up the context
         self.context = zmq.Context(1)
         # Prepare the master event publisher
@@ -931,29 +930,35 @@ class EventPublisher(salt.utils.process.MultiprocessingProcess):
                     self.opts['sock_dir'], 'master_event_pub.ipc'), 0o666)
         finally:
             os.umask(old_umask)
-        try:
-            while True:
-                # Catch and handle EINTR from when this process is sent
-                # SIGUSR1 gracefully so we don't choke and die horribly
-                try:
-                    package = self.epull_sock.recv()
-                    self.epub_sock.send(package)
-                except zmq.ZMQError as exc:
-                    if exc.errno == errno.EINTR:
-                        continue
-                    raise exc
-        except KeyboardInterrupt:
-            if self.epub_sock.closed is False:
-                self.epub_sock.setsockopt(zmq.LINGER, linger)
-                self.epub_sock.close()
-            if self.epull_sock.closed is False:
-                self.epull_sock.setsockopt(zmq.LINGER, linger)
-                self.epull_sock.close()
-            if self.context.closed is False:
-                self.context.term()
+
+        # Make sure the ZMQ context and respective sockets are closed and
+        # destroyed
+        Finalize(self, self.destroy_zmq_context, exitpriority=15)
+
+        while True:
+            # Catch and handle EINTR from when this process is sent
+            # SIGUSR1 gracefully so we don't choke and die horribly
+            try:
+                package = self.epull_sock.recv()
+                self.epub_sock.send(package)
+            except zmq.ZMQError as exc:
+                if exc.errno == errno.EINTR:
+                    continue
+                raise exc
+
+    def destroy_zmq_context(self):
+        linger = 5000
+        if self.epub_sock.closed is False:
+            self.epub_sock.setsockopt(zmq.LINGER, linger)
+            self.epub_sock.close()
+        if self.epull_sock.closed is False:
+            self.epull_sock.setsockopt(zmq.LINGER, linger)
+            self.epull_sock.close()
+        if self.context.closed is False:
+            self.context.term()
 
 
-class EventReturn(salt.utils.process.MultiprocessingProcess):
+class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     '''
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
@@ -964,7 +969,7 @@ class EventReturn(salt.utils.process.MultiprocessingProcess):
 
         Return an EventReturn instance
         '''
-        salt.utils.process.MultiprocessingProcess.__init__(self)
+        super(EventReturn, self).__init__()
 
         self.opts = opts
         self.event_return_queue = self.opts['event_return_queue']
@@ -974,12 +979,12 @@ class EventReturn(salt.utils.process.MultiprocessingProcess):
         self.event_queue = []
         self.stop = False
 
-    def sig_stop(self, signum, frame):
+    def _handle_signals(self, signum, sigframe):
         # Flush and terminate
         if self.event_queue:
             self.flush_events()
         self.stop = True
-        exit(salt.defaults.exitcodes.EX_GENERIC)
+        super(EventReturn, self)._handle_signals(signum, sigframe)
 
     def flush_events(self):
         event_return = '{0}.event_return'.format(
@@ -1004,10 +1009,6 @@ class EventReturn(salt.utils.process.MultiprocessingProcess):
         '''
         Spin up the multiprocess event returner
         '''
-        # Properly exit if a SIGTERM/SIGINT is signalled
-        signal.signal(signal.SIGTERM, self.sig_stop)
-        signal.signal(signal.SIGINT, self.sig_stop)
-
         salt.utils.appendproctitle(self.__class__.__name__)
         self.event = get_event('master', opts=self.opts, listen=True)
         events = self.event.iter_events(full=True)
