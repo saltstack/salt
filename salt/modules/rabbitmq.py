@@ -69,13 +69,11 @@ def _safe_output(line):
     intended to be parsed as output.
     Returns a boolean whether the line can be parsed as rabbitmqctl output.
     '''
-    if line.startswith('Listing') and line.endswith('...'):
-        return False
-    if '...done' in line:
-        return False
-    if line.startswith('WARNING:'):
-        return False
-    return '\t' in line
+    return not any([
+        line.startswith('Listing') and line.endswith('...'),
+        '...done' in line,
+        line.startswith('WARNING:')
+    ])
 
 
 def _strip_listing_to_done(output_list):
