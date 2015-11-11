@@ -275,4 +275,74 @@ def image_vacuum(name):
 
     return ret
 
+
+def vm_running(name):
+    '''
+    Ensure vm is in the running state on the computenode
+
+    name : string
+        hostname of vm
+
+    .. note::
+
+        State ID is used as hostname. Hostnames should be unique.
+
+    '''
+    name = name.lower()
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    if name in __salt__['vmadm.list'](order='hostname', search='state=running'):
+        # we're good
+        ret['result'] = True
+        ret['comment'] = 'vm {0} already running'.format(name)
+    else:
+        # start the vm
+        ret['result'] = True if __opts__['test'] else __salt__['vmadm.start'](name, key='hostname')
+        if not isinstance(ret['result'], (bool)) and 'Error' in ret['result']:
+            ret['result'] = False
+            ret['comment'] = 'failed to start {0}'.format(name)
+        else:
+            ret['changes'][name] = 'running'
+            ret['comment'] = 'vm {0} started'.format(name)
+
+    return ret
+
+
+def vm_stopped(name):
+    '''
+    Ensure vm is in the stopped state on the computenode
+
+    name : string
+        hostname of vm
+
+    .. note::
+
+        State ID is used as hostname. Hostnames should be unique.
+
+    '''
+    name = name.lower()
+    ret = {'name': name,
+           'changes': {},
+           'result': None,
+           'comment': ''}
+
+    if name in __salt__['vmadm.list'](order='hostname', search='state=stopped'):
+        # we're good
+        ret['result'] = True
+        ret['comment'] = 'vm {0} already stopped'.format(name)
+    else:
+        # stop the vm
+        ret['result'] = True if __opts__['test'] else __salt__['vmadm.stop'](name, key='hostname')
+        if not isinstance(ret['result'], (bool)) and 'Error' in ret['result']:
+            ret['result'] = False
+            ret['comment'] = 'failed to stop {0}'.format(name)
+        else:
+            ret['changes'][name] = 'stopped'
+            ret['comment'] = 'vm {0} stopped'.format(name)
+
+    return ret
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
