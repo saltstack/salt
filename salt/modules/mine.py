@@ -272,11 +272,11 @@ def get(tgt, fun, expr_form='glob', exclude_minion=False):
             'fun': fun,
             'expr_form': expr_form,
     }
-    ret = _mine_get(load, __opts__)                                                                                                                                                                                                                                                          
-    if exclude_minion:                                                                                                                                                                                                                                                                       
-        if __opts__['id'] in ret:                                                                                                                                                                                                                                                            
-            del ret[__opts__['id']]                                                                                                                                                                                                                                                          
-    return ret 
+    ret = _mine_get(load, __opts__)
+    if exclude_minion:
+        if __opts__['id'] in ret:
+            del ret[__opts__['id']]
+    return ret
 
 
 def delete(fun):
