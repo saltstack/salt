@@ -152,46 +152,45 @@ class FileTestCase(TestCase):
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
-        mock_uid = MagicMock(side_effect=['', 'U12', 'U12', 'U12', 'U12',
-                                          'U12', 'U12', 'U12', 'U12', 'U12'])
-        mock_gid = MagicMock(side_effect=['', 'G12', 'G12', 'G12', 'G12',
-                                          'G12', 'G12', 'G12', 'G12', 'G12'])
-        mock_if = MagicMock(side_effect=[False, True, False, False, False,
-                                         False, False, False, False])
-        mock_dir = MagicMock(side_effect=[True, True, True, True, False, True,
-                                          True, True, True, False, True, False])
-        mock_ret = MagicMock(return_value=target)
+        mock_empty = MagicMock(return_value='')
+        mock_uid = MagicMock(return_value='U1001')
+        mock_gid = MagicMock(return_value='g1001')
+        mock_target = MagicMock(return_value=target)
         mock_user = MagicMock(return_value=user)
         mock_grp = MagicMock(return_value=group)
-        mock_file = MagicMock(side_effect=[OSError, True])
-        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
-                                             'file.user_to_uid': mock_uid,
-                                             'file.group_to_gid': mock_gid,
-                                             'file.is_link': mock_if,
-                                             'file.readlink': mock_ret,
-                                             'file.get_user': mock_user,
-                                             'file.get_group': mock_grp,
-                                             'file.symlink': mock_file,
-                                             'user.info': mock_t,
-                                             'file.lchown': mock_f}):
+        mock_os_error = MagicMock(side_effect=OSError)
+
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t}):
             comt = ('Must provide name to file.symlink')
             ret.update({'comment': comt, 'name': ''})
             self.assertDictEqual(filestate.symlink('', target), ret)
 
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_empty,
+                                             'file.group_to_gid': mock_empty}):
             comt = ('User {0} does not exist. Group {1} does not exist.'.format(user, group))
             ret.update({'comment': comt, 'name': name})
             self.assertDictEqual(filestate.symlink(name, target, user=user,
                                                    group=group), ret)
 
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f}):
             with patch.dict(filestate.__opts__, {'test': True}):
                 with patch.object(os.path, 'exists', mock_f):
-                    comt = ('Symlink /etc/grub.conf to /boot/grub/grub.conf'
-                            ' is set for creation')
+                    comt = ('Symlink {0} to {1}'
+                            ' is set for creation').format(name, target)
                     ret.update({'comment': comt, 'result': None})
                     self.assertDictEqual(filestate.symlink(name, target,
                                                            user=user,
                                                            group=group), ret)
 
+
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f}):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_f):
                     comt = ('Directory /etc for symlink is not present')
@@ -200,6 +199,12 @@ class FileTestCase(TestCase):
                                                            user=user,
                                                            group=group), ret)
 
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_t,
+                                             'file.readlink': mock_target}):
+            with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_t):
                     with patch.object(salt.states.file, '_check_symlink_ownership', mock_t):
                         comt = ('Symlink {0} is present and owned by '
@@ -209,7 +214,14 @@ class FileTestCase(TestCase):
                                                                user=user,
                                                                group=group), ret)
 
-                with patch.object(os.path, 'isdir', mock_dir):
+
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target}):
+            with patch.dict(filestate.__opts__, {'test': False}):
+                with patch.object(os.path, 'isdir', mock_t):
                     with patch.object(os.path, 'lexists', mock_t):
                         comt = ('File exists where the backup target SALT'
                                 ' should go')
@@ -219,6 +231,13 @@ class FileTestCase(TestCase):
                                               group=group, backupname='SALT'),
                                              ret)
 
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target}):
+            with patch.dict(filestate.__opts__, {'test': False}):
+                with patch.object(os.path, 'isdir', mock_t):
                     with patch.object(os.path, 'isfile', mock_t):
                         comt = ('File exists where the symlink {0} should be'
                                 .format(name))
@@ -227,6 +246,52 @@ class FileTestCase(TestCase):
                                              (name, target, user=user,
                                               group=group), ret)
 
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'file.symlink': mock_t,
+                                             'user.info': mock_t,
+                                             'file.lchown': mock_f}):
+            with patch.dict(filestate.__opts__, {'test': False}):
+                with patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])):
+                    with patch.object(os.path, 'isfile', mock_t):
+                        with patch.object(os.path, 'exists', mock_f):
+                            comt = ('File exists where the symlink {0} should be'.format(name))
+                            ret.update({'comment': comt, 'result': False})
+                            self.assertDictEqual(filestate.symlink
+                                                 (name, target, user=user,
+                                                  group=group), ret)
+
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'file.symlink': mock_t,
+                                             'user.info': mock_t,
+                                             'file.lchown': mock_f}):
+            with patch.dict(filestate.__opts__, {'test': False}):
+                with patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])):
+                    with patch.object(os.path, 'isdir', mock_t):
+                        with patch.object(os.path, 'exists', mock_f):
+                            comt = ('Directory exists where the symlink {0} should be'.format(name))
+                            ret.update({'comment': comt, 'result': False})
+                            self.assertDictEqual(filestate.symlink
+                                                 (name, target, user=user,
+                                                  group=group), ret)
+
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'file.symlink': mock_os_error,
+                                             'user.info': mock_t,
+                                             'file.lchown': mock_f}):
+            with patch.dict(filestate.__opts__, {'test': False}):
+                with patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])):
                     with patch.object(os.path, 'isfile', mock_f):
                         comt = ('Unable to create new symlink {0} -> '
                                 '{1}: '.format(name, target))
@@ -235,16 +300,46 @@ class FileTestCase(TestCase):
                                              (name, target, user=user,
                                               group=group), ret)
 
-                        with patch.object(os.path, 'exists', mock_f):
-                            comt = ('Directory exists where the symlink {0} should be'.format(name))
-                            ret.update({'comment': comt, 'result': False})
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'file.symlink': mock_t,
+                                             'user.info': mock_t,
+                                             'file.lchown': mock_f,
+                                             'file.get_user': mock_user,
+                                             'file.get_group': mock_grp}):
+            with patch.dict(filestate.__opts__, {'test': False}):
+                with patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])):
+                    with patch.object(os.path, 'isfile', mock_f):
+                            comt = 'Created new symlink {0} -> {1}'.format(name, target)
+                            ret.update({'comment': comt,
+                                        'result': True,
+                                        'changes': {'new': name}})
                             self.assertDictEqual(filestate.symlink
                                                  (name, target, user=user,
                                                   group=group), ret)
 
-                            comt = ('Directory exists where the symlink {0} should be'.format(name))
-                            ret.update({'comment': comt, 'result': False,
-                                        'changes': {}})
+        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
+                                             'file.user_to_uid': mock_uid,
+                                             'file.group_to_gid': mock_gid,
+                                             'file.is_link': mock_f,
+                                             'file.readlink': mock_target,
+                                             'file.symlink': mock_t,
+                                             'user.info': mock_t,
+                                             'file.lchown': mock_f,
+                                             'file.get_user': mock_empty,
+                                             'file.get_group': mock_empty}):
+            with patch.dict(filestate.__opts__, {'test': False}):
+                with patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])):
+                    with patch.object(os.path, 'isfile', mock_f):
+                            comt = ('Created new symlink {0} -> {1}, '
+                                    'but was unable to set ownership to '
+                                    '{2}:{3}'.format(name, target, user, group))
+                            ret.update({'comment': comt,
+                                        'result': False,
+                                        'changes': {'new': name}})
                             self.assertDictEqual(filestate.symlink
                                                  (name, target, user=user,
                                                   group=group), ret)
