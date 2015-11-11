@@ -49,7 +49,7 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 from salt.exceptions import SaltInvocationError
-from time import sleep
+from time import time, sleep
 
 log = logging.getLogger(__name__)
 
@@ -475,7 +475,8 @@ def get_endpoint(name, tags=None, region=None, key=None, keyid=None,
 
 
 def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
-           region=None, key=None, keyid=None, profile=None):
+           region=None, key=None, keyid=None, profile=None,
+           wait_for_deletion=True, timeout=180):
     '''
     Delete an RDS instance.
 
@@ -484,6 +485,9 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
         salt myminion boto_rds.delete myrds skip_final_snapshot=True \
                 region=us-east-1
     '''
+    if timeout == 180 and not skip_final_snapshot:
+        timeout = 420
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     if not skip_final_snapshot or final_db_snapshot_identifier:
@@ -493,9 +497,21 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
     try:
         conn.delete_db_instance(name, skip_final_snapshot,
                                 final_db_snapshot_identifier)
-        msg = 'Deleted RDS instance {0}.'.format(name)
-        log.info(msg)
-        return True
+        if not wait_for_deletion:
+            log.info('Deleted RDS instance {0}.'.format(name))
+            return True
+        start_time = time()
+        while True:
+            if not __salt__['boto_rds.exists'](name=name, region=region,
+                                               key=key, keyid=keyid,
+                                               profile=profile):
+                log.info('Deleted RDS instance {0} completely.'.format(name))
+                return True
+            if time() - start_time > timeout:
+                raise SaltInvocationError('RDS instance {0} has not been '
+                                          'deleted completely after {1} '
+                                          'seconds'.format(name, timeout))
+            sleep(10)
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Failed to delete RDS instance {0}'.format(name)
