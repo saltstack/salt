@@ -63,7 +63,7 @@ class WheelClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         channel = salt.transport.Channel.factory(self.opts,
                                                  crypt='clear',
                                                  master_uri=master_uri)
-        ret = channel.send({})
+        ret = channel.send(load)
         if isinstance(ret, collections.Mapping):
             if 'error' in ret:
                 raise_error(**ret['error'])
