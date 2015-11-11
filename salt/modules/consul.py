@@ -26,6 +26,11 @@ log = logging.getLogger(__name__)
 
 from salt.exceptions import SaltInvocationError
 
+# Don't shadow built-ins.
+__func_alias__ = {
+    'list_': 'list'
+}
+
 __virtualname__ = 'consul'
 
 
@@ -92,7 +97,7 @@ def _query(function,
     return ret
 
 
-def list(consul_url=None, key=None, **kwargs):
+def list_(consul_url=None, key=None, **kwargs):
     '''
     List keys in Consul
 
