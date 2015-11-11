@@ -75,7 +75,7 @@ def _load_config():
                     continue
                 optval = optval.split('=')
                 config[optval[0].lower()] = optval[1].strip()
-    log.debug('smartos - read /usbkey/config: {0}'.format(config))
+    log.debug('smartos.config - read /usbkey/config: {0}'.format(config))
     return config
 
 
@@ -93,7 +93,7 @@ def _write_config(config):
             salt.utils.files.rename('/usbkey/config.salt', '/usbkey/config')
         except IOError:
             return False
-        log.debug('smartos - wrote /usbkey/config: {0}'.format(config))
+        log.debug('smartos.config - wrote /usbkey/config: {0}'.format(config))
         return True
     else:
         return False
@@ -109,9 +109,9 @@ def _parse_state_config(config, default_config):
                 if isinstance(cfg_item[k], (bool)):
                     default_config[k] = cfg_item[k]
                 else:
-                    log.warning('smartos.vm_present - config property {0} must be bool, using default: {1}'.format(k, default_config[k]))
+                    log.warning('smartos.vm_present::config - property {0} must be bool, using default: {1}'.format(k, default_config[k]))
             else:
-                log.warning('smartos.vm_present - config property {0} not one of {1}'.format(k, default_config.keys()))
+                log.warning('smartos.vm_present::config - property {0} not one of {1}'.format(k, default_config.keys()))
 
     return default_config
 
@@ -143,7 +143,7 @@ def _parse_vmconfig(config):
                         instance[k] = dataset[k]
                 vmconfig.append(instance)
     else:
-        log.error('smartos.vm_present - failed to parse vmconfig')
+        log.error('smartos.vm_present::parse_vmconfig - failed to parse')
 
     return vmconfig
 
@@ -425,7 +425,7 @@ def vm_present(name, vmconfig, config=None):
             'reprovision': False
         }
     )
-    log.debug('smartos.vm_present - config for {0} is {1}'.format(name, config))
+    log.debug('smartos.vm_present::{0}::config - {1}'.format(name, config))
 
     # map special vmconfig parameters
     #  collections have set/remove handlers
@@ -448,7 +448,7 @@ def vm_present(name, vmconfig, config=None):
 
     # parse vmconfig
     vmconfig = _parse_vmconfig(vmconfig)
-    log.debug('smartos.vm_present - vmconfig: {0}'.format(vmconfig))
+    log.debug('smartos.vm_present::{0}::vmconfig - {1}'.format(name, vmconfig))
 
     # set hostname if needed
     if 'hostname' not in vmconfig:
@@ -653,7 +653,9 @@ def vm_present(name, vmconfig, config=None):
                             ret['changes'][vmconfig['state']['hostname']] = {}
                         ret['changes'][vmconfig['state']['hostname']]['image_uuid'] = vmconfig['reprovision_uuid']
                 else:
-                    log.warning('smartos.vm_present - image_uuid in state does not match current, reprovision not allowed')
+                    log.warning('smartos.vm_present::{0}::reprovision - image_uuid in state does not match current, reprovision not allowed'.format(
+                        name
+                    ))
         else:
             ret['comment'] = 'vm {0} failed to be updated'.format(vmconfig['state']['hostname'])
     else:
