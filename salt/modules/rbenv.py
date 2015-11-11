@@ -15,7 +15,6 @@ from __future__ import absolute_import
 import os
 import re
 import logging
-import shlex
 
 # Import Salt libs
 import salt.utils
@@ -47,12 +46,12 @@ def __virtual__():
 
 
 def _shlex_split(s):
-    # from python:shlex.split: passing None for s will read
+    # from python:salt.utils.shlex_split: passing None for s will read
     # the string to split from standard input.
     if s is None:
-        ret = shlex.split('')
+        ret = salt.utils.shlex_split('')
     else:
-        ret = shlex.split(s)
+        ret = salt.utils.shlex_split(s)
 
     return ret
 
@@ -379,9 +378,9 @@ def do(cmdline, runas=None):
     environ = {'PATH': '{0}/shims:{1}'.format(path, os.environ['PATH'])}
 
     try:
-        cmdline = shlex.split(cmdline)
+        cmdline = salt.utils.shlex_split(cmdline)
     except AttributeError:
-        cmdline = shlex.split(str(cmdline))
+        cmdline = salt.utils.shlex_split(str(cmdline))
 
     result = __salt__['cmd.run_all'](
         cmdline,
@@ -415,9 +414,9 @@ def do_with_ruby(ruby, cmdline, runas=None):
         raise SaltInvocationError('Command must be specified')
 
     try:
-        cmdline = shlex.split(cmdline)
+        cmdline = salt.utils.shlex_split(cmdline)
     except AttributeError:
-        cmdline = shlex.split(str(cmdline))
+        cmdline = salt.utils.shlex_split(str(cmdline))
 
     if ruby:
         cmd = ['RBENV_VERSION={0}'.format(ruby)] + cmdline

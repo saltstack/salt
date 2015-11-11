@@ -206,7 +206,6 @@ from __future__ import absolute_import
 import os
 import copy
 import json
-import shlex
 import logging
 
 HAS_GRP = False
@@ -253,7 +252,7 @@ def _reinterpreted_state(state):
             out = out[idx + 1:]
         data = {}
         try:
-            for item in shlex.split(out):
+            for item in salt.utils.shlex_split(out):
                 key, val = item.split('=')
                 data[key] = val
         except ValueError:

@@ -1119,7 +1119,7 @@ def _validate_input(kwargs,
         if isinstance(kwargs['command'], six.string_types):
             # Translate command into a list of strings
             try:
-                kwargs['command'] = shlex.split(kwargs['command'])
+                kwargs['command'] = salt.utils.shlex_split(kwargs['command'])
             except AttributeError:
                 pass
         try:
@@ -1263,7 +1263,7 @@ def _validate_input(kwargs,
         if isinstance(kwargs['entrypoint'], six.string_types):
             # Translate entrypoint into a list of strings
             try:
-                kwargs['entrypoint'] = shlex.split(kwargs['entrypoint'])
+                kwargs['entrypoint'] = salt.utils.shlex_split(kwargs['entrypoint'])
             except AttributeError:
                 pass
         try:

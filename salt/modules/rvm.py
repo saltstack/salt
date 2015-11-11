@@ -8,9 +8,9 @@ from __future__ import absolute_import
 import re
 import os
 import logging
-import shlex
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -452,7 +452,7 @@ def do(ruby, command, runas=None, cwd=None):  # pylint: disable=C0103
         salt '*' rvm.do 2.0.0 <command>
     '''
     try:
-        command = shlex.split(command)
+        command = salt.utils.shlex_split(command)
     except AttributeError:
-        command = shlex.split(str(command))
+        command = salt.utils.shlex_split(str(command))
     return _rvm_do(ruby, command, runas=runas, cwd=cwd)
