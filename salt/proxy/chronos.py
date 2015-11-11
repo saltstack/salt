@@ -21,6 +21,8 @@ the chronos endpoint:
     proxy:
       proxytype: chronos
       base_url: http://my-chronos-master.mydomain.com:4400
+
+.. versionadded:: Boron
 '''
 from __future__ import absolute_import
 
