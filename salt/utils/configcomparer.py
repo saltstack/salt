@@ -34,7 +34,7 @@ def compare_and_update_config(config, update_config, changes, namespace=''):
             for key, value in config.iteritems():
                 _namespace = key
                 if namespace:
-                    _namespace = '{}.{}'.format(namespace, _namespace)
+                    _namespace = '{0}.{1}'.format(namespace, _namespace)
                 update_config[key] = compare_and_update_config(
                     value,
                     update_config.get(key, None),
@@ -63,9 +63,9 @@ def compare_and_update_config(config, update_config, changes, namespace=''):
             # iterate through config list, ensuring that each index in the
             # update_config list is the same
             for idx, item in enumerate(config):
-                _namespace = '[{}]'.format(idx)
+                _namespace = '[{0}]'.format(idx)
                 if namespace:
-                    _namespace = '{}{}'.format(namespace, _namespace)
+                    _namespace = '{0}{1}'.format(namespace, _namespace)
                 _update = None
                 if len(update_config) > idx:
                     _update = update_config[idx]
@@ -88,9 +88,9 @@ def compare_and_update_config(config, update_config, changes, namespace=''):
                 for idx, old_item in enumerate(update_config):
                     if idx < len(config):
                         continue
-                    _namespace = '[{}]'.format(idx)
+                    _namespace = '[{0}]'.format(idx)
                     if namespace:
-                        _namespace = '{}{}'.format(namespace, _namespace)
+                        _namespace = '{0}{1}'.format(namespace, _namespace)
                     changes[_namespace] = {
                         'new': None,
                         'old': old_item,

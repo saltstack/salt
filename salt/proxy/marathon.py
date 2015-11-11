@@ -55,7 +55,7 @@ def ping():
     '''
     try:
         response = salt.utils.http.query(
-            "{}/ping".format(CONFIG[CONFIG_BASE_URL]),
+            "{0}/ping".format(CONFIG[CONFIG_BASE_URL]),
             decode_type='plain',
             decode=True,
         )
