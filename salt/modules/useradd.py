@@ -152,12 +152,11 @@ def add(name,
                 # /etc/usermgmt.conf not present: defaults will be used
                 pass
 
-    if salt.utils.is_true(createhome):
-        if createhome:
-            cmd.append('-m')
-        elif (__grains__['kernel'] != 'NetBSD'
-                and __grains__['kernel'] != 'OpenBSD'):
-            cmd.append('-M')
+    if createhome:
+        cmd.append('-m')
+    elif (__grains__['kernel'] != 'NetBSD'
+            and __grains__['kernel'] != 'OpenBSD'):
+        cmd.append('-M')
 
     if home is not None:
         cmd.extend(['-d', home])
