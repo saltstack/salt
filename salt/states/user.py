@@ -345,20 +345,24 @@ def present(name,
         mapped to the specified drive. Must be a letter followed by a colon.
         Because of the colon, the value must be surrounded by single quotes. ie:
         - win_homedrive: 'U:
-    .. versionchanged:: 2015.8.0
+
+        .. versionchanged:: 2015.8.0
 
     win_profile (Windows Only)
         The custom profile directory of the user. Uses default value of
         underlying system if not set.
-    .. versionchanged:: 2015.8.0
+
+        .. versionchanged:: 2015.8.0
 
     win_logonscript (Windows Only)
         The full path to the logon script to run when the user logs in.
-    .. versionchanged:: 2015.8.0
+
+        .. versionchanged:: 2015.8.0
 
     win_description (Windows Only)
         A brief description of the purpose of the users account.
-    .. versionchanged:: 2015.8.0
+
+        .. versionchanged:: 2015.8.0
     '''
     if fullname is not None:
         fullname = salt.utils.locales.sdecode(fullname)
