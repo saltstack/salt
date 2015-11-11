@@ -118,7 +118,7 @@ def _changes(name,
     if _group_changes(lusr['groups'], wanted_groups, remove_groups):
         change['groups'] = wanted_groups
     if home:
-        if lusr['home'] != home:
+        if lusr['home'] != home and createhome:
             change['home'] = home
     if createhome:
         newhome = home if home else lusr['home']
@@ -345,20 +345,24 @@ def present(name,
         mapped to the specified drive. Must be a letter followed by a colon.
         Because of the colon, the value must be surrounded by single quotes. ie:
         - win_homedrive: 'U:
-    .. versionchanged:: 2015.8.0
+
+        .. versionchanged:: 2015.8.0
 
     win_profile (Windows Only)
         The custom profile directory of the user. Uses default value of
         underlying system if not set.
-    .. versionchanged:: 2015.8.0
+
+        .. versionchanged:: 2015.8.0
 
     win_logonscript (Windows Only)
         The full path to the logon script to run when the user logs in.
-    .. versionchanged:: 2015.8.0
+
+        .. versionchanged:: 2015.8.0
 
     win_description (Windows Only)
         A brief description of the purpose of the users account.
-    .. versionchanged:: 2015.8.0
+
+        .. versionchanged:: 2015.8.0
     '''
     if fullname is not None:
         fullname = salt.utils.locales.sdecode(fullname)
@@ -596,6 +600,9 @@ def present(name,
         if __salt__['user.add'](**params):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
+            if not createhome:
+                # pwd incorrectly reports presence of home
+                ret['changes']['home'] = ''
             if 'shadow.info' in __salt__ and not salt.utils.is_windows():
                 if password and not empty_password:
                     __salt__['shadow.set_password'](name, password)
