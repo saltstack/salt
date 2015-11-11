@@ -156,8 +156,8 @@ def run(*args, **kwargs):
     '''
     _check_puppet()
     puppet = _Puppet()
-    
-    # new args tuple to filter out agent/apply for _Puppet.arguments()     
+
+    # new args tuple to filter out agent/apply for _Puppet.arguments()
     buildargs = ()
     for arg in range(len(args)):
         # based on puppet documentation action must come first. making the same
