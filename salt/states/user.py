@@ -118,7 +118,7 @@ def _changes(name,
     if _group_changes(lusr['groups'], wanted_groups, remove_groups):
         change['groups'] = wanted_groups
     if home:
-        if lusr['home'] != home:
+        if lusr['home'] != home and createhome:
             change['home'] = home
     if createhome:
         newhome = home if home else lusr['home']
@@ -596,6 +596,9 @@ def present(name,
         if __salt__['user.add'](**params):
             ret['comment'] = 'New user {0} created'.format(name)
             ret['changes'] = __salt__['user.info'](name)
+            if not createhome:
+                # pwd incorrectly reports presence of home
+                ret['changes']['home'] = ''
             if 'shadow.info' in __salt__ and not salt.utils.is_windows():
                 if password and not empty_password:
                     __salt__['shadow.set_password'](name, password)
