@@ -2878,6 +2878,7 @@ def invalid_kwargs(invalid_kwargs, raise_exc=True):
     else:
         return msg
 
+
 def shlex_split(s, **kwargs):
     '''
     Only split if variable is a string

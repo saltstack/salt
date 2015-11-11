@@ -92,7 +92,6 @@ import stat
 import shutil
 import sys
 import time
-import shlex
 from subprocess import Popen, PIPE
 try:
     import grp

@@ -31,7 +31,6 @@ import re
 import logging
 from salt.ext.six.moves import zip
 import salt.ext.six as six
-import shlex
 
 # Make sure augeas python interface is installed
 HAS_AUGEAS = False

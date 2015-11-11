@@ -22,7 +22,6 @@ import logging
 import operator
 import os
 import re
-import shlex
 import shutil
 import stat
 import sys

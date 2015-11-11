@@ -206,7 +206,6 @@ from __future__ import absolute_import
 import os
 import copy
 import json
-import shlex
 import logging
 
 HAS_GRP = False

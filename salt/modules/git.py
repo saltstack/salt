@@ -9,7 +9,6 @@ import copy
 import errno
 import logging
 import os
-import shlex
 from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs

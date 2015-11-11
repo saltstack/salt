@@ -9,7 +9,6 @@ import os
 import re
 import sys
 import uuid
-import shlex
 import string
 
 # Import salt libs

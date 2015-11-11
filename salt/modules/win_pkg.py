@@ -24,7 +24,6 @@ try:
 except ImportError:
     import msgpack_pure as msgpack
 # pylint: enable=import-error
-import shlex
 
 # Import salt libs
 from salt.exceptions import CommandExecutionError, SaltRenderError
