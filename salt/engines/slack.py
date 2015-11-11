@@ -31,7 +31,6 @@ prefaced with a !.
 from __future__ import absolute_import
 import logging
 import pprint
-import shlex
 try:
     import slackclient
     HAS_SLACKCLIENT = True

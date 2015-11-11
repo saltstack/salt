@@ -96,7 +96,6 @@ from __future__ import absolute_import
 import os
 import re
 import fnmatch
-import shlex
 import json
 import subprocess
 

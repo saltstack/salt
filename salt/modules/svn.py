@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import re
-import shlex
 
 # Import salt libs
 import salt.utils
