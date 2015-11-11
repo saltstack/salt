@@ -186,7 +186,6 @@ class FileTestCase(TestCase):
                                                            user=user,
                                                            group=group), ret)
 
-
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
@@ -213,7 +212,6 @@ class FileTestCase(TestCase):
                         self.assertDictEqual(filestate.symlink(name, target,
                                                                user=user,
                                                                group=group), ret)
-
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -313,13 +311,13 @@ class FileTestCase(TestCase):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])):
                     with patch.object(os.path, 'isfile', mock_f):
-                            comt = 'Created new symlink {0} -> {1}'.format(name, target)
-                            ret.update({'comment': comt,
-                                        'result': True,
-                                        'changes': {'new': name}})
-                            self.assertDictEqual(filestate.symlink
-                                                 (name, target, user=user,
-                                                  group=group), ret)
+                        comt = 'Created new symlink {0} -> {1}'.format(name, target)
+                        ret.update({'comment': comt,
+                                    'result': True,
+                                    'changes': {'new': name}})
+                        self.assertDictEqual(filestate.symlink
+                                             (name, target, user=user,
+                                              group=group), ret)
 
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
@@ -334,15 +332,15 @@ class FileTestCase(TestCase):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])):
                     with patch.object(os.path, 'isfile', mock_f):
-                            comt = ('Created new symlink {0} -> {1}, '
-                                    'but was unable to set ownership to '
-                                    '{2}:{3}'.format(name, target, user, group))
-                            ret.update({'comment': comt,
-                                        'result': False,
-                                        'changes': {'new': name}})
-                            self.assertDictEqual(filestate.symlink
-                                                 (name, target, user=user,
-                                                  group=group), ret)
+                        comt = ('Created new symlink {0} -> {1}, '
+                                'but was unable to set ownership to '
+                                '{2}:{3}'.format(name, target, user, group))
+                        ret.update({'comment': comt,
+                                    'result': False,
+                                    'changes': {'new': name}})
+                        self.assertDictEqual(filestate.symlink
+                                             (name, target, user=user,
+                                              group=group), ret)
 
     # 'absent' function tests: 1
     def test_absent(self):
