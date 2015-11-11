@@ -63,25 +63,27 @@ def _get_rabbitmq_plugin():
     return rabbitmq
 
 
+def _safe_output(line):
+    '''
+    Looks for rabbitmqctl warning, or general formatting, strings that aren't
+    intended to be parsed as output.
+    Returns a boolean whether the line can be parsed as rabbitmqctl output.
+    '''
+    return not any([
+        line.startswith('Listing') and line.endswith('...'),
+        '...done' in line,
+        line.startswith('WARNING:')
+    ])
+
+
 def _strip_listing_to_done(output_list):
-    '''Conditionally remove non-relevant first and last line,
+    '''
+    Conditionally remove non-relevant first and last line,
     "Listing ..." - "...done".
     outputlist: rabbitmq command output split by newline
     return value: list, conditionally modified, may be empty.
     '''
-
-    # conditionally remove non-relevant first line
-    f_line = ''.join(output_list[:1])
-    if f_line.startswith('Listing') and f_line.endswith('...'):
-        output_list.pop(0)
-
-    # some versions of rabbitmq have no trailing '...done' line,
-    # which some versions do not output.
-    l_line = ''.join(output_list[-1:])
-    if '...done' in l_line:
-        output_list.pop()
-
-    return output_list
+    return [line for line in output_list if _safe_output(line)]
 
 
 def _output_to_dict(cmdoutput, values_mapper=None):
