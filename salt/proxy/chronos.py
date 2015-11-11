@@ -46,7 +46,7 @@ def init(opts):
         CONFIG[CONFIG_BASE_URL] = opts['proxy'][CONFIG_BASE_URL]
     else:
         log.error('missing proxy property %s', CONFIG_BASE_URL)
-    log.debug('CONFIG: %s' % CONFIG)
+    log.debug('CONFIG: %s', CONFIG)
 
 
 def ping():
@@ -55,7 +55,7 @@ def ping():
     '''
     try:
         response = salt.utils.http.query(
-            "%s/scheduler/jobs" % CONFIG[CONFIG_BASE_URL],
+            "{}/scheduler/jobs".format(CONFIG[CONFIG_BASE_URL]),
             decode_type='json',
             decode=True,
         )
@@ -65,7 +65,7 @@ def ping():
         )
         if 'dict' in response:
             return True
-    except Exception, ex:
+    except Exception as ex:
         log.error(
             'error pinging chronos with base_url %s: %s',
             CONFIG[CONFIG_BASE_URL],
