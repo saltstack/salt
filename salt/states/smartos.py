@@ -1,8 +1,40 @@
 # -*- coding: utf-8 -*-
 '''
 Management of SmartOS Standalone Compute Nodes
-TODO:
- - docs (mention set null to remove property (pidfal with vlan_id), mention hostname, mac and path ID's...)
+
+.. code-block:: yaml
+
+    test.example.org:
+      smartos.vm_present:
+        - vmconfig:
+          - image_uuid: c02a2044-c1bd-11e4-bd8c-dfc1db8b0182
+          - brand: joyent
+          - alias: test
+          - quota: 5
+          - max_physical_memory: 512
+          - nics:
+            -
+              - mac: "82:1b:8e:49:e9:12"
+              - nic_tag: trunk
+              - mtu: 1500
+              - ips: [ "dhcp" ]
+              - vlan_id: 10
+            -
+              - mac: "82:1b:8e:49:e9:13"
+              - nic_tag: trunk
+              - mtu: 1500
+              - ips: [ "dhcp" ]
+              - vlan_id: 30
+
+    cleanup_images:
+      smartos.image_vacuum
+
+    .. note::
+
+        Keep in mind that when removing entries from vmconfig they will not get removed from the vm's current configuration,
+         for nics, disk, tags, ... they get removed as via add_*, set_*, update_*, and remove_*. Other properties must be
+         manual reset to there default value just like when using vmadm update.
+
 '''
 from __future__ import absolute_import
 
