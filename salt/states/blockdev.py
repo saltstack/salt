@@ -25,9 +25,14 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import os.path
+import time
+import logging
 
 # Import salt libs
 import salt.utils
+
+# Init logger
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -127,12 +132,7 @@ def formatted(name, fs_type='ext4', **kwargs):
         ret['comment'] = '{0} does not exist'.format(name)
         return ret
 
-    blk = __salt__['cmd.run']('lsblk -o fstype {0}'.format(name)).splitlines()
-
-    if len(blk) == 1:
-        current_fs = ''
-    else:
-        current_fs = blk[1]
+    current_fs = _checkblk(name)
 
     if current_fs == fs_type:
         ret['result'] = True
@@ -154,20 +154,37 @@ def formatted(name, fs_type='ext4', **kwargs):
             cmd += '-i size={0} '.format(kwargs['inode_size'])
     cmd += name
     __salt__['cmd.run'](cmd).splitlines()
-    __salt__['cmd.run']('sync').splitlines()
-    blk = __salt__['cmd.run']('lsblk -o fstype {0}'.format(name)).splitlines()
 
-    if len(blk) == 1:
-        current_fs = ''
-    else:
-        current_fs = blk[1]
+    # Repeat lsblk check up to 10 times with 3s sleeping between each
+    # to avoid lsblk failing although mkfs has succeeded
+    # see https://github.com/saltstack/salt/issues/25775
+    for i in range(10):
 
-    if current_fs == fs_type:
-        ret['comment'] = ('{0} has been formatted '
-                          'with {1}').format(name, fs_type)
-        ret['changes'] = {'new': fs_type, 'old': current_fs}
-        ret['result'] = True
-    else:
-        ret['comment'] = 'Failed to format {0}'.format(name)
-        ret['result'] = False
+        log.info('Check blk fstype attempt %s of 10', str(i+1))
+        current_fs = _checkblk(name)
+
+        if current_fs == fs_type:
+            ret['comment'] = ('{0} has been formatted '
+                              'with {1}').format(name, fs_type)
+            ret['changes'] = {'new': fs_type, 'old': current_fs}
+            ret['result'] = True
+            return ret
+
+        if current_fs == '':
+            log.info('Waiting 3s before next check')
+            time.sleep(3)
+        else:
+            break
+
+    ret['comment'] = 'Failed to format {0}'.format(name)
+    ret['result'] = False
     return ret
+
+
+def _checkblk(name):
+    '''
+    Check if the blk exists and return its fstype if ok
+    '''
+
+    blk = __salt__['cmd.run']('lsblk -o fstype {0}'.format(name)).splitlines()
+    return '' if len(blk) == 1 else blk[1]
