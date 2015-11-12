@@ -11,7 +11,7 @@ Configure Marathon apps via a salt proxy.
             mem: 10
             instances: 3
 
-.. versionadded:: Boron
+.. versionadded:: 2015.8.2
 '''
 from __future__ import absolute_import
 import copy
