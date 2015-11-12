@@ -580,6 +580,9 @@ def vm_present(name, vmconfig, config=None):
 
                 # find instance with matching ids
                 for current_cfg in vmconfig['current'][instance]:
+                    if vmconfig_type['instance'][instance] not in state_cfg:
+                        continue
+
                     if state_cfg[vmconfig_type['instance'][instance]] == current_cfg[vmconfig_type['instance'][instance]]:
                         # ids have matched, disable add instance
                         add_instance = False
@@ -603,6 +606,7 @@ def vm_present(name, vmconfig, config=None):
                             if 'update_{0}'.format(instance) not in vmconfig['changed']:
                                 vmconfig['changed']['update_{0}'.format(instance)] = []
 
+                            update_cfg[vmconfig_type['instance'][instance]] = state_cfg[vmconfig_type['instance'][instance]]
                             vmconfig['changed']['update_{0}'.format(instance)].append(update_cfg)
 
                 if add_instance:
@@ -611,11 +615,10 @@ def vm_present(name, vmconfig, config=None):
                         vmconfig['changed']['add_{0}'.format(instance)] = []
 
                     # add instance
-                    update_cfg[vmconfig_type['instance'][instance]] = state_cfg[vmconfig_type['instance'][instance]]
                     vmconfig['changed']['add_{0}'.format(instance)].append(state_cfg)
 
             # skip remove instances if none in current
-            if prop not in vmconfig['current']:
+            if instance not in vmconfig['current']:
                 continue
 
             # remove instances
@@ -624,6 +627,9 @@ def vm_present(name, vmconfig, config=None):
 
                 # find instance with matching ids
                 for state_cfg in vmconfig['state'][instance]:
+                    if vmconfig_type['instance'][instance] not in state_cfg:
+                        continue
+
                     if state_cfg[vmconfig_type['instance'][instance]] == current_cfg[vmconfig_type['instance'][instance]]:
                         # keep instance if matched
                         remove_instance = False
