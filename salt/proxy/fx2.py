@@ -171,13 +171,75 @@ def __virtual__():
 
 def init(opts):
     '''
-    This function gets called when the proxy starts up.  For
-    FX2 devices we just cache the credentials and hostname.
+    This function gets called when the proxy starts up.
+    We check opts to see if a fallback user and password are supplied.
+    If they are present, and the primary credentials don't work, then
+    we try the backup before failing.
+
+    Whichever set of credentials works is placed in the persistent
+    DETAILS dictionary and will be used for further communication with the
+    chassis.
     '''
-    # Save the login details
-    DETAILS['admin_username'] = opts['proxy']['admin_username']
-    DETAILS['admin_password'] = opts['proxy']['admin_password']
+    if 'host' not in opts['proxy']:
+        log.critical('No "host" key found in pillar for this proxy')
+        return False
+
     DETAILS['host'] = opts['proxy']['host']
+
+    first_user = opts['proxy']['admin_username']
+    first_password = opts['proxy']['admin_password']
+    if 'fallback_admin_username' in opts['proxy'] \
+        and 'fallback_admin_password' in opts['proxy']:
+        fallback_available = True
+        fallback_user = opts['proxy']['fallback_admin_username']
+        fallback_password = opts['proxy']['fallback_admin_password']
+    else:
+        fallback_available = False
+
+    check_grains = _grains(DETAILS['host'], first_user, first_password)
+    if check_grains:
+        DETAILS['admin_username'] = opts['proxy']['admin_username']
+        DETAILS['admin_password'] = opts['proxy']['admin_password']
+        return True
+    elif fallback_available and _grains(DETAILS['host'],
+                                        fallback_user,
+                                        fallback_password):
+        log.info('Fallback credentials used'
+                 ' to access chassis {0}'.format(opts['proxy']['host']))
+        DETAILS['admin_username'] = opts['proxy']['fallback_admin_username']
+        DETAILS['admin_password'] = opts['proxy']['fallback_admin_password']
+        return True
+    else:
+        log.critical('Neither the primary nor the fallback credentials'
+                     ' were able to access the chassis '
+                     ' at {0}'.format(opts['proxy']['host']))
+        return False
+
+
+def admin_username():
+    return DETAILS['admin_username']
+
+
+def admin_password():
+    return DETAILS['admin_password']
+
+
+def host():
+    return DETAILS['host']
+
+
+def _grains(host, user, password):
+    '''
+    Get the grains from the proxied device
+    '''
+    r = __salt__['dracr.system_info'](host=host,
+                                      admin_username=user,
+                                      admin_password=password)
+    if r.get('retcode', 0) == 0:
+        GRAINS_CACHE = r
+    else:
+        GRAINS_CACHE = {}
+    return GRAINS_CACHE
 
 
 def grains():
@@ -185,10 +247,10 @@ def grains():
     Get the grains from the proxied device
     '''
     if not GRAINS_CACHE:
-        r = __salt__['dracr.system_info'](host=DETAILS['host'],
-                                          admin_username=DETAILS['admin_username'],
-                                          admin_password=DETAILS['admin_password'])
-        GRAINS_CACHE = r
+        return _grains(DETAILS['host'],
+                       DETAILS['admin_username'],
+                       DETAILS['admin_password'])
+
     return GRAINS_CACHE
 
 
