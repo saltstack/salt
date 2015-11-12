@@ -141,7 +141,7 @@ def wrap_tmpl_func(render_str):
                 tpldir = os.path.dirname(template).replace('\\', '/')
                 tpldata = {
                     'tplfile': template,
-                    'tpldir': tpldir,
+                    'tpldir': '.' if tpldir == '' else tpldir,
                     'tpldot': tpldir.replace('/', '.'),
                 }
                 context.update(tpldata)
