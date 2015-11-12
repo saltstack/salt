@@ -778,7 +778,16 @@ class Pygit2(GitProvider):
         else:
             # Repo cachedir exists, try to attach
             try:
-                self.repo = pygit2.Repository(self.cachedir)
+                try:
+                    self.repo = pygit2.Repository(self.cachedir)
+                except pygit2.GitError as exc:
+                    # https://github.com/libgit2/pygit2/issues/339
+                    # https://github.com/libgit2/libgit2/issues/2122
+                    if "Error stat'ing config file" not in str(exc):
+                        raise
+                    home = pwd.getpwnam(salt.utils.get_user).pw_dir
+                    pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
+                    self.repo = pygit2.Repository(self.cachedir)
             except KeyError:
                 log.error(_INVALID_REPO.format(self.cachedir, self.url))
                 return new
