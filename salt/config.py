@@ -1139,7 +1139,7 @@ DEFAULT_MASTER_OPTS = {
     'keysize': 2048,
     'transport': 'zeromq',
     'enumerate_proxy_minions': False,
-    'gather_job_timeout': 5,
+    'gather_job_timeout': 10,
     'syndic_event_forward_timeout': 0.5,
     'syndic_max_event_process_time': 0.5,
     'syndic_jid_forward_cache_hwm': 100,
