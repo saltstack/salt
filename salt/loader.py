@@ -1366,27 +1366,23 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         try:
             error_reason = None
             if hasattr(mod, '__virtual__') and inspect.isfunction(mod.__virtual__):
-                if self.opts.get('virtual_timer', False):
+                try:
                     start = time.time()
                     virtual = mod.__virtual__()
                     if isinstance(virtual, tuple):
                         error_reason = virtual[1]
                         virtual = virtual[0]
-                    end = time.time() - start
-                    msg = 'Virtual function took {0} seconds for {1}'.format(
-                            end, module_name)
-                    log.warning(msg)
-                else:
-                    try:
-                        virtual = mod.__virtual__()
-                        if isinstance(virtual, tuple):
-                            error_reason = virtual[1]
-                            virtual = virtual[0]
-                    except Exception as exc:
-                        log.error('Exception raised when processing __virtual__ function'
-                                  ' for {0}. Module will not be loaded {1}'.format(
-                                      module_name, exc))
-                        virtual = None
+                    if self.opts.get('virtual_timer', False):
+                        end = time.time() - start
+                        msg = 'Virtual function took {0} seconds for {1}'.format(
+                                end, module_name)
+                        log.warning(msg)
+                except Exception as exc:
+                    error_reason = ('Exception raised when processing __virtual__ function'
+                              ' for {0}. Module will not be loaded {1}'.format(
+                                  module_name, exc))
+                    log.error(error_reason)
+                    virtual = None
                 # Get the module's virtual name
                 virtualname = getattr(mod, '__virtualname__', virtual)
                 if not virtual:
