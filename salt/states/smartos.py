@@ -13,14 +13,12 @@ Management of SmartOS Standalone Compute Nodes
           - quota: 5
           - max_physical_memory: 512
           - nics:
-            -
-              - mac: "82:1b:8e:49:e9:12"
+            - "82:1b:8e:49:e9:12"
               - nic_tag: trunk
               - mtu: 1500
               - ips: [ "dhcp" ]
               - vlan_id: 10
-            -
-              - mac: "82:1b:8e:49:e9:13"
+            - "82:1b:8e:49:e9:13"
               - nic_tag: trunk
               - mtu: 1500
               - ips: [ "dhcp" ]
@@ -116,7 +114,7 @@ def _parse_state_config(config, default_config):
     return default_config
 
 
-def _parse_vmconfig(config):
+def _parse_vmconfig(config, instances):
     '''
     Parse vm_present vm config
     '''
@@ -130,18 +128,18 @@ def _parse_vmconfig(config):
                     vmconfig = {}
                 for k in prop:
                     if isinstance(prop[k], (list)):
-                        vmconfig[k] = _parse_vmconfig(prop[k])
+                        if k not in instances:
+                            continue
+                        if k not in vmconfig:
+                            vmconfig[k] = []
+                        for instance in prop[k]:
+                            instance_key = instance.keys()[0]
+                            instance = _parse_vmconfig(instance[instance_key], instances)
+                            if instances[k] not in instance:
+                                instance[instances[k]] = instance_key
+                            vmconfig[k].append(instance)
                     else:
                         vmconfig[k] = prop[k]
-            # instance
-            if len(prop) > 1 and isinstance(prop, (list)):
-                if not vmconfig:
-                    vmconfig = []
-                instance = {}
-                for dataset in prop:
-                    for k in dataset:
-                        instance[k] = dataset[k]
-                vmconfig.append(instance)
     else:
         log.error('smartos.vm_present::parse_vmconfig - failed to parse')
 
@@ -159,9 +157,9 @@ def _get_instance_changes(current, state):
     # compare configs
     changed = salt.utils.compare_dicts(current, state)
     for change in changed.keys():
-        if changed[change]['old'] == "":
+        if change in changed and changed[change]['old'] == "":
             del changed[change]
-        if changed[change]['new'] == "":
+        if change in changed and changed[change]['new'] == "":
             del changed[change]
 
     return changed
@@ -407,7 +405,10 @@ def vm_present(name, vmconfig, config=None):
 
         Instances for the follow properties should have unique ids.
           - nic : mac
-          - disk : path
+          - disk : path or diskN for zvols
+          - filesystem: target
+
+        e.g. disk0 will be the first disk added, disk1 the 2nd,...
 
     '''
     name = name.lower()
@@ -439,7 +440,8 @@ def vm_present(name, vmconfig, config=None):
         ],
         'instance': {
             'nics': 'mac',
-            'disk': 'path'
+            'disks': 'path',
+            'filesystems': 'target'
         },
         'create_only': [
             'filesystems'
@@ -447,7 +449,7 @@ def vm_present(name, vmconfig, config=None):
     }
 
     # parse vmconfig
-    vmconfig = _parse_vmconfig(vmconfig)
+    vmconfig = _parse_vmconfig(vmconfig, vmconfig_type['instance'])
     log.debug('smartos.vm_present::{0}::vmconfig - {1}'.format(name, vmconfig))
 
     # set hostname if needed
@@ -489,6 +491,23 @@ def vm_present(name, vmconfig, config=None):
             vmconfig['reprovision_uuid'] = vmconfig['state']['image_uuid']
             vmconfig['state']['image_uuid'] = vmconfig['current']['image_uuid']
 
+        # disks need some special care
+        if 'disks' in vmconfig['state']:
+            new_disks = []
+            for disk in vmconfig['state']['disks']:
+                path = False
+                if 'disks' in vmconfig['current']:
+                    for cdisk in vmconfig['current']['disks']:
+                        if cdisk['path'].endswith(disk['path']):
+                            path = cdisk['path']
+                            break
+                if not path:
+                    del disk['path']
+                else:
+                    disk['path'] = path
+                new_disks.append(disk)
+            vmconfig['state']['disks'] = new_disks
+
         # process properties
         for prop in vmconfig['state']:
             # skip special vmconfig_types
@@ -509,6 +528,10 @@ def vm_present(name, vmconfig, config=None):
         for collection in vmconfig_type['collection']:
             # skip if not present
             if collection not in vmconfig['state']:
+                continue
+
+            # skip create only collections
+            if collection in vmconfig_type['create_only']:
                 continue
 
             # process add and update for collection
@@ -544,33 +567,44 @@ def vm_present(name, vmconfig, config=None):
             if instance not in vmconfig['state']:
                 continue
 
+            # skip create only instances
+            if instance in vmconfig_type['create_only']:
+                continue
+
             # add or update instances
             for state_cfg in vmconfig['state'][instance]:
                 add_instance = True
 
                 # find instance with matching ids
                 for current_cfg in vmconfig['current'][instance]:
+                    if vmconfig_type['instance'][instance] not in state_cfg:
+                        continue
+
                     if state_cfg[vmconfig_type['instance'][instance]] == current_cfg[vmconfig_type['instance'][instance]]:
                         # ids have matched, disable add instance
                         add_instance = False
 
-                        # skip if value is unchanged
                         changed = _get_instance_changes(current_cfg, state_cfg)
-                        if len(changed) == 0:
-                            continue
-
-                        # create update_ array
-                        if 'remove_{0}'.format(instance) not in vmconfig['changed']:
-                            vmconfig['changed']['update_{0}'.format(instance)] = []
-
-                        # generate update
                         update_cfg = {}
-                        update_cfg[vmconfig_type['instance'][instance]] = state_cfg[vmconfig_type['instance'][instance]]
-                        for prop in changed:
-                            update_cfg[prop] = state_cfg[prop]
+
+                        # handle changes
+                        if len(changed) > 0:
+                            for prop in changed:
+                                update_cfg[prop] = state_cfg[prop]
+
+                        # handle new properties
+                        for prop in state_cfg:
+                            if prop not in current_cfg:
+                                update_cfg[prop] = state_cfg[prop]
 
                         # update instance
-                        vmconfig['changed']['update_{0}'.format(instance)].append(update_cfg)
+                        if len(update_cfg) > 0:
+                            # create update_ array
+                            if 'update_{0}'.format(instance) not in vmconfig['changed']:
+                                vmconfig['changed']['update_{0}'.format(instance)] = []
+
+                            update_cfg[vmconfig_type['instance'][instance]] = state_cfg[vmconfig_type['instance'][instance]]
+                            vmconfig['changed']['update_{0}'.format(instance)].append(update_cfg)
 
                 if add_instance:
                     # create add_ array
@@ -581,7 +615,7 @@ def vm_present(name, vmconfig, config=None):
                     vmconfig['changed']['add_{0}'.format(instance)].append(state_cfg)
 
             # skip remove instances if none in current
-            if prop not in vmconfig['current']:
+            if instance not in vmconfig['current']:
                 continue
 
             # remove instances
@@ -590,6 +624,9 @@ def vm_present(name, vmconfig, config=None):
 
                 # find instance with matching ids
                 for state_cfg in vmconfig['state'][instance]:
+                    if vmconfig_type['instance'][instance] not in state_cfg:
+                        continue
+
                     if state_cfg[vmconfig_type['instance'][instance]] == current_cfg[vmconfig_type['instance'][instance]]:
                         # keep instance if matched
                         remove_instance = False
@@ -606,20 +643,24 @@ def vm_present(name, vmconfig, config=None):
 
         # update vm if we have pending changes
         if not __opts__['test'] and len(vmconfig['changed']) > 0:
-            if __salt__['vmadm.update'](vm=vmconfig['state']['hostname'], key='hostname', **vmconfig['changed']):
-                ret['changes'][vmconfig['state']['hostname']] = vmconfig['changed']
-            else:
+            rret = __salt__['vmadm.update'](vm=vmconfig['state']['hostname'], key='hostname', **vmconfig['changed'])
+            if not isinstance(rret, (bool)) and 'Error' in rret:
                 ret['result'] = False
+                ret['comment'] = "{0}".format(rret['Error'])
+            else:
+                ret['result'] = True
+                ret['changes'][vmconfig['state']['hostname']] = vmconfig['changed']
 
         if ret['result']:
             if len(ret['changes']) > 0:
                 ret['comment'] = 'vm {0} updated'.format(vmconfig['state']['hostname'])
                 if config['kvm_reboot'] and vmconfig['current']['brand'] == 'kvm' and not __opts__['test']:
-                    __salt__['vmadm.reboot'](vm=vmconfig['state']['hostname'], key='hostname')
+                    if vmconfig['state']['hostname'] in __salt__['vmadm.list'](order='hostname', search='state=running'):
+                        __salt__['vmadm.reboot'](vm=vmconfig['state']['hostname'], key='hostname')
             else:
                 ret['comment'] = 'vm {0} is up to date'.format(vmconfig['state']['hostname'])
 
-            if vmconfig['reprovision_uuid'] != vmconfig['current']['image_uuid']:
+            if 'image_uuid' in vmconfig['current'] and vmconfig['reprovision_uuid'] != vmconfig['current']['image_uuid']:
                 if config['reprovision']:
                     # check required image installed
                     if vmconfig['reprovision_uuid'] not in __salt__['imgadm.list']():
@@ -658,6 +699,8 @@ def vm_present(name, vmconfig, config=None):
                     ))
         else:
             ret['comment'] = 'vm {0} failed to be updated'.format(vmconfig['state']['hostname'])
+            if not isinstance(rret, (bool)) and 'Error' in rret:
+                ret['comment'] = "{0}".format(rret['Error'])
     else:
         # check required image installed
         ret['result'] = True
@@ -675,6 +718,15 @@ def vm_present(name, vmconfig, config=None):
             else:
                 ret['result'] = False
                 ret['comment'] = 'image {0} not installed'.format(vmconfig['image_uuid'])
+
+        # disks need some special care
+        if 'disks' in vmconfig:
+            new_disks = []
+            for disk in vmconfig['disks']:
+                if 'path' in disk:
+                    del disk['path']
+                new_disks.append(disk)
+            vmconfig['disks'] = new_disks
 
         # create vm
         if ret['result']:
