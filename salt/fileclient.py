@@ -26,7 +26,6 @@ import salt.utils.templates
 import salt.utils.gzip_util
 from salt._compat import (
     URLError, HTTPError, BaseHTTPServer, urlparse, urlunparse)
-import salt.utils.s3
 from salt.utils.openstack.swift import SaltSwift
 
 log = logging.getLogger(__name__)
