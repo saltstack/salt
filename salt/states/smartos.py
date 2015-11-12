@@ -16,14 +16,12 @@ TODO:
           - quota: 5
           - max_physical_memory: 512
           - nics:
-            -
-              - mac: "82:1b:8e:49:e9:12"
+            - "82:1b:8e:49:e9:12"
               - nic_tag: trunk
               - mtu: 1500
               - ips: [ "dhcp" ]
               - vlan_id: 10
-            -
-              - mac: "82:1b:8e:49:e9:13"
+            - "82:1b:8e:49:e9:13"
               - nic_tag: trunk
               - mtu: 1500
               - ips: [ "dhcp" ]
