@@ -1829,6 +1829,9 @@ def exactly_n(l, n=1):
 
 
 def exactly_one(l):
+    '''
+    Check if only one item is not None, False, or 0 in an iterable.
+    '''
     return exactly_n(l)
 
 
