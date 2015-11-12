@@ -408,8 +408,10 @@ def vm_present(name, vmconfig, config=None):
 
         Instances for the follow properties should have unique ids.
           - nic : mac
-          - disk : path
+          - disk : path or diskN for zvols
           - filesystem: target
+
+        e.g. disk0 will be the first disk added, disk1 the 2nd,...
 
     '''
     name = name.lower()
