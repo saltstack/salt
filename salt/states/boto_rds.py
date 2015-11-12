@@ -50,6 +50,13 @@ config:
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
 
+# Import Python Libs
+from __future__ import absolute_import
+
+# Import Salt Libs
+from salt.exceptions import SaltInvocationError
+from salt.utils import exactly_one
+
 
 def __virtual__():
     '''
@@ -332,8 +339,9 @@ def replica_present(name, source, db_instance_class=None, availability_zone=None
     return ret
 
 
-def subnet_group_present(name, subnet_ids, description, tags=None, region=None,
-                         key=None, keyid=None, profile=None):
+def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
+                         tags=None, region=None, key=None, keyid=None,
+                         profile=None):
     '''
     Ensure DB subnet group exists.
 
@@ -341,7 +349,12 @@ def subnet_group_present(name, subnet_ids, description, tags=None, region=None,
         The name for the DB subnet group. This value is stored as a lowercase string.
 
     subnet_ids
-        The EC2 Subnet IDs for the DB subnet group.
+        A list of the EC2 Subnet IDs for the DB subnet group.
+        Either subnet_ids or subnet_names must be provided.
+
+    subnet_names
+        A list of The EC2 Subnet names for the DB subnet group.
+        Either subnet_ids or subnet_names must be provided.
 
     description
         Subnet group description.
@@ -362,11 +375,40 @@ def subnet_group_present(name, subnet_ids, description, tags=None, region=None,
         A dict with region, key and keyid, or a pillar key (string) that
         contains a dict with region, key and keyid.
     '''
+    if not exactly_one((subnet_ids, subnet_names)):
+        raise SaltInvocationError('One (but not both) of subnet_ids or '
+                                  'subnet_names must be provided.')
+
     ret = {'name': name,
            'result': True,
            'comment': '',
            'changes': {}
            }
+
+    if not subnet_ids:
+        subnet_ids = []
+
+    if subnet_names:
+        for i in subnet_names:
+            r = __salt__['boto_vpc.get_resource_id']('subnet',
+                                                     name=i,
+                                                     region=region,
+                                                     key=key,
+                                                     keyid=keyid,
+                                                     profile=profile)
+
+            if 'error' in r:
+                msg = 'Error looking up subnet ids: {0}'.format(
+                    r['error']['message'])
+                ret['comment'] = msg
+                ret['result'] = False
+                return ret
+            if r['id'] is None:
+                msg = 'Subnet {0} does not exist.'.format(i)
+                ret['comment'] = msg
+                ret['result'] = False
+                return ret
+            subnet_ids.append(r['id'])
 
     exists = __salt__['boto_rds.subnet_group_exists'](name=name, tags=tags, region=region, key=key,
                                                       keyid=keyid, profile=profile)
