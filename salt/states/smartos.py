@@ -2,6 +2,9 @@
 '''
 Management of SmartOS Standalone Compute Nodes
 
+TODO:
+- test disks
+
 .. code-block:: yaml
 
     test.example.org:
@@ -116,7 +119,7 @@ def _parse_state_config(config, default_config):
     return default_config
 
 
-def _parse_vmconfig(config):
+def _parse_vmconfig(config, instances):
     '''
     Parse vm_present vm config
     '''
@@ -130,18 +133,18 @@ def _parse_vmconfig(config):
                     vmconfig = {}
                 for k in prop:
                     if isinstance(prop[k], (list)):
-                        vmconfig[k] = _parse_vmconfig(prop[k])
+                        if k not in instances:
+                            continue
+                        if k not in vmconfig:
+                            vmconfig[k] = []
+                        for instance in prop[k]:
+                            instance_key = instance.keys()[0]
+                            instance = _parse_vmconfig(instance[instance_key], instances)
+                            if instances[k] not in instance:
+                                instance[instances[k]] = instance_key
+                            vmconfig[k].append(instance)
                     else:
                         vmconfig[k] = prop[k]
-            # instance
-            if len(prop) > 1 and isinstance(prop, (list)):
-                if not vmconfig:
-                    vmconfig = []
-                instance = {}
-                for dataset in prop:
-                    for k in dataset:
-                        instance[k] = dataset[k]
-                vmconfig.append(instance)
     else:
         log.error('smartos.vm_present::parse_vmconfig - failed to parse')
 
@@ -408,6 +411,7 @@ def vm_present(name, vmconfig, config=None):
         Instances for the follow properties should have unique ids.
           - nic : mac
           - disk : path
+          - filesystem: target
 
     '''
     name = name.lower()
@@ -439,7 +443,8 @@ def vm_present(name, vmconfig, config=None):
         ],
         'instance': {
             'nics': 'mac',
-            'disk': 'path'
+            'disks': 'path',
+            'filesystems': 'target'
         },
         'create_only': [
             'filesystems'
@@ -447,7 +452,7 @@ def vm_present(name, vmconfig, config=None):
     }
 
     # parse vmconfig
-    vmconfig = _parse_vmconfig(vmconfig)
+    vmconfig = _parse_vmconfig(vmconfig, vmconfig_type['instance'])
     log.debug('smartos.vm_present::{0}::vmconfig - {1}'.format(name, vmconfig))
 
     # set hostname if needed
@@ -511,6 +516,10 @@ def vm_present(name, vmconfig, config=None):
             if collection not in vmconfig['state']:
                 continue
 
+            # skip create only collections
+            if collection in vmconfig_type['create_only']:
+                continue
+
             # process add and update for collection
             for prop in vmconfig['state'][collection]:
                 # skip unchanged properties
@@ -542,6 +551,10 @@ def vm_present(name, vmconfig, config=None):
         for instance in vmconfig_type['instance']:
             # skip if not present
             if instance not in vmconfig['state']:
+                continue
+
+            # skip create only instances
+            if instance in vmconfig_type['create_only']:
                 continue
 
             # add or update instances
