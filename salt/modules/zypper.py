@@ -33,6 +33,7 @@ HAS_ZYPP = False
 ZYPP_HOME = '/etc/zypp'
 LOCKS = '{0}/locks'.format(ZYPP_HOME)
 REPOS = '{0}/repos.d'.format(ZYPP_HOME)
+DEFAULT_PRIORITY = 99
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -537,6 +538,12 @@ def mod_repo(repo, **kwargs):
 
     if kwargs.get('gpgautoimport') is True:
         cmd_opt.append('--gpg-auto-import-keys')
+
+    if 'priority' in kwargs:
+        cmd_opt.append("--priority='{0}'".format(kwargs.get('priority', DEFAULT_PRIORITY)))
+
+    if 'humanname' in kwargs:
+        cmd_opt.append("--name='{0}'".format(kwargs.get('humanname')))
 
     if cmd_opt:
         cmd = ['zypper', '-x', 'mr']
