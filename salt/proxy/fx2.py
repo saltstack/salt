@@ -216,6 +216,18 @@ def init(opts):
         return False
 
 
+def admin_username():
+    return DETAILS['admin_username']
+
+
+def admin_password():
+    return DETAILS['admin_password']
+
+
+def host():
+    return DETAILS['host']
+
+
 def _grains(host, user, password):
     '''
     Get the grains from the proxied device
