@@ -139,7 +139,7 @@ def modify(name, beacon_data, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' beacon.modify ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
+        salt '*' beacons.modify ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
     '''
 
     ret = {'comment': '',
