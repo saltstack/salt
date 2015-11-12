@@ -162,9 +162,9 @@ def _get_instance_changes(current, state):
     # compare configs
     changed = salt.utils.compare_dicts(current, state)
     for change in changed.keys():
-        if changed[change]['old'] == "":
+        if change in changed and changed[change]['old'] == "":
             del changed[change]
-        if changed[change]['new'] == "":
+        if change in changed and changed[change]['new'] == "":
             del changed[change]
 
     return changed
@@ -494,6 +494,23 @@ def vm_present(name, vmconfig, config=None):
             vmconfig['reprovision_uuid'] = vmconfig['state']['image_uuid']
             vmconfig['state']['image_uuid'] = vmconfig['current']['image_uuid']
 
+        # disks need some special care
+        if 'disks' in vmconfig['state']:
+            new_disks = []
+            for disk in vmconfig['state']['disks']:
+                path = False
+                if 'disks' in vmconfig['current']:
+                    for cdisk in vmconfig['current']['disks']:
+                        if cdisk['path'].endswith(disk['path']):
+                            path = cdisk['path']
+                            break
+                if not path:
+                    del disk['path']
+                else:
+                    disk['path'] = path
+                new_disks.append(disk)
+            vmconfig['state']['disks'] = new_disks
+
         # process properties
         for prop in vmconfig['state']:
             # skip special vmconfig_types
@@ -567,23 +584,26 @@ def vm_present(name, vmconfig, config=None):
                         # ids have matched, disable add instance
                         add_instance = False
 
-                        # skip if value is unchanged
                         changed = _get_instance_changes(current_cfg, state_cfg)
-                        if len(changed) == 0:
-                            continue
-
-                        # create update_ array
-                        if 'remove_{0}'.format(instance) not in vmconfig['changed']:
-                            vmconfig['changed']['update_{0}'.format(instance)] = []
-
-                        # generate update
                         update_cfg = {}
-                        update_cfg[vmconfig_type['instance'][instance]] = state_cfg[vmconfig_type['instance'][instance]]
-                        for prop in changed:
-                            update_cfg[prop] = state_cfg[prop]
+
+                        # handle changes
+                        if len(changed) > 0:
+                            for prop in changed:
+                                update_cfg[prop] = state_cfg[prop]
+
+                        # handle new properties
+                        for prop in state_cfg:
+                            if prop not in current_cfg:
+                                update_cfg[prop] = state_cfg[prop]
 
                         # update instance
-                        vmconfig['changed']['update_{0}'.format(instance)].append(update_cfg)
+                        if len(update_cfg) > 0:
+                            # create update_ array
+                            if 'update_{0}'.format(instance) not in vmconfig['changed']:
+                                vmconfig['changed']['update_{0}'.format(instance)] = []
+
+                            vmconfig['changed']['update_{0}'.format(instance)].append(update_cfg)
 
                 if add_instance:
                     # create add_ array
@@ -591,6 +611,7 @@ def vm_present(name, vmconfig, config=None):
                         vmconfig['changed']['add_{0}'.format(instance)] = []
 
                     # add instance
+                    update_cfg[vmconfig_type['instance'][instance]] = state_cfg[vmconfig_type['instance'][instance]]
                     vmconfig['changed']['add_{0}'.format(instance)].append(state_cfg)
 
             # skip remove instances if none in current
@@ -619,20 +640,24 @@ def vm_present(name, vmconfig, config=None):
 
         # update vm if we have pending changes
         if not __opts__['test'] and len(vmconfig['changed']) > 0:
-            if __salt__['vmadm.update'](vm=vmconfig['state']['hostname'], key='hostname', **vmconfig['changed']):
-                ret['changes'][vmconfig['state']['hostname']] = vmconfig['changed']
-            else:
+            rret = __salt__['vmadm.update'](vm=vmconfig['state']['hostname'], key='hostname', **vmconfig['changed'])
+            if not isinstance(rret, (bool)) and 'Error' in rret:
                 ret['result'] = False
+                ret['comment'] = "{0}".format(rret['Error'])
+            else:
+                ret['result'] = True
+                ret['changes'][vmconfig['state']['hostname']] = vmconfig['changed']
 
         if ret['result']:
             if len(ret['changes']) > 0:
                 ret['comment'] = 'vm {0} updated'.format(vmconfig['state']['hostname'])
                 if config['kvm_reboot'] and vmconfig['current']['brand'] == 'kvm' and not __opts__['test']:
-                    __salt__['vmadm.reboot'](vm=vmconfig['state']['hostname'], key='hostname')
+                    if vmconfig['state']['hostname'] in __salt__['vmadm.list'](order='hostname', search='state=running'):
+                        __salt__['vmadm.reboot'](vm=vmconfig['state']['hostname'], key='hostname')
             else:
                 ret['comment'] = 'vm {0} is up to date'.format(vmconfig['state']['hostname'])
 
-            if vmconfig['reprovision_uuid'] != vmconfig['current']['image_uuid']:
+            if 'image_uuid' in vmconfig['current'] and vmconfig['reprovision_uuid'] != vmconfig['current']['image_uuid']:
                 if config['reprovision']:
                     # check required image installed
                     if vmconfig['reprovision_uuid'] not in __salt__['imgadm.list']():
@@ -671,6 +696,8 @@ def vm_present(name, vmconfig, config=None):
                     ))
         else:
             ret['comment'] = 'vm {0} failed to be updated'.format(vmconfig['state']['hostname'])
+            if not isinstance(rret, (bool)) and 'Error' in rret:
+                ret['comment'] = "{0}".format(rret['Error'])
     else:
         # check required image installed
         ret['result'] = True
@@ -688,6 +715,15 @@ def vm_present(name, vmconfig, config=None):
             else:
                 ret['result'] = False
                 ret['comment'] = 'image {0} not installed'.format(vmconfig['image_uuid'])
+
+        # disks need some special care
+        if 'disks' in vmconfig:
+            new_disks = []
+            for disk in vmconfig['disks']:
+                if 'path' in disk:
+                    del disk['path']
+                new_disks.append(disk)
+            vmconfig['disks'] = new_disks
 
         # create vm
         if ret['result']:
