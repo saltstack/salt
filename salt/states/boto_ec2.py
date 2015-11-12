@@ -248,7 +248,9 @@ def eni_present(
         if __opts__['test']:
             ret['comment'] = 'ENI is set to be created.'
             if allocate_eip:
-                ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated/assocaited to the ENI.']) 
+                ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated/assocaited to the ENI.'])
+            if arecords:
+                ret['comment'] = ' '.join([ret['comment'], 'A records are set to be created.'])
             ret['result'] = None
             return ret
         result_create = __salt__['boto_ec2.create_network_interface'](
@@ -298,7 +300,7 @@ def eni_present(
     if allocate_eip:
         if 'allocationId' not in r['result']:
             if __opts__['test']:
-                ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated and assocaited to the ENI.']) 
+                ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated and assocaited to the ENI.'])
             else:
                 eip_alloc = __salt__['boto_ec2.allocate_eip_address'](domain=None,
                                                                       region=region,
