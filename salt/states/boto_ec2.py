@@ -567,7 +567,7 @@ def snapshot_created(name, ami_name, instance_name, wait_until_available=True, w
 
     starttime = time()
     while True:
-        images = __salt__['boto_ec2.find_images'](ami_name=ami_name, return_objs=True)
+        images = __salt__['boto_ec2.find_images'](ami_name=ami_name, return_objs=True, **kwargs)
         if images and images[0].state == 'available':
             break
         if time() - starttime > wait_timeout_seconds:
