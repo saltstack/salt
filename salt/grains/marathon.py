@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Generate marathon proxy minion grains.
+
+.. versionadded:: Boron
+
 '''
 from __future__ import absolute_import
-
 
 import salt.utils
 import salt.utils.http

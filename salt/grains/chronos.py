@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
 Generate chronos proxy minion grains.
+
+.. versionadded:: Boron
+
 '''
 from __future__ import absolute_import
 
