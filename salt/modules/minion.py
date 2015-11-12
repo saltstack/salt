@@ -32,7 +32,7 @@ def list_():
     transport = __salt__['config.get']('transport', '')
 
     # We have to replace the minion/master directories
-    pki_dir = pki_dir.replace("minion", "master")
+    pki_dir = pki_dir.replace('minion', 'master')
 
     # The source code below is (nearly) a copy of salt.key.Key.list_keys
 
