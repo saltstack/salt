@@ -53,6 +53,7 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 
 # Import Salt libs
 import salt.utils.compat
+import salt.utils.exactly_one
 import salt.ext.six as six
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
@@ -243,7 +244,7 @@ def release_eip_address(public_ip=None, allocation_id=None, region=None, key=Non
 
     .. versionadded:: Boron
     '''
-    if not _exactly_one((public_ip, allocation_id)):
+    if not salt.utils.exactly_one((public_ip, allocation_id)):
         raise SaltInvocationError('Exactly one (but not both) of \'public_ip\' '
                                   'or \'allocation_id\' must be provided')
 
@@ -1090,9 +1091,10 @@ def _describe_network_interface(eni):
     return r
 
 
-def create_network_interface(
-        name, subnet_id, private_ip_address=None, description=None,
-        groups=None, region=None, key=None, keyid=None, profile=None):
+def create_network_interface(name, subnet_id=None, subnet_name=None,
+                             private_ip_address=None, description=None,
+                             groups=None, region=None, key=None, keyid=None,
+                             profile=None):
     '''
     Create an Elastic Network Interface.
 
@@ -1104,6 +1106,21 @@ def create_network_interface(
 
         salt myminion boto_ec2.create_network_interface my_eni subnet-12345 description=my_eni groups=['my_group']
     '''
+    if not exactly_one((subnet_id, subnet_name)):
+        raise SaltInvocationError('One (but not both) of subnet_id or '
+                                  'subnet_name must be provided.')
+
+    if subnet_name:
+        resource = __salt__['boto_vpc.get_resource_id']('subnet', subnet_name,
+                                                        region=region, key=key,
+                                                        keyid=keyid,
+                                                        profile=profile)
+        if 'id' not in resource:
+            log.warning('Couldn\'t resolve subnet name {0}.').format(
+                subnet_name)
+            return False
+        subnet_id = resource['id']
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = {}
     result = _get_network_interface(conn, name)
