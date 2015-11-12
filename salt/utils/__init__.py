@@ -537,9 +537,13 @@ def which(exe=None):
                     continue
             return False
 
-        # enhance POSIX path for the reliability at some environments, when $PATH is changing
-        default_path = '/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin'
-        search_path = list(set(os.pathsep.join([os.environ.get('PATH', ''), default_path]).split(os.pathsep)))
+        # Enhance POSIX path for the reliability at some environments, when $PATH is changing
+        # This also keeps order, where 'first came, first win' for cases to find optional alternatives
+        search_path = os.environ.get('PATH') and os.environ['PATH'].split(os.pathsep) or list()
+        for default_path in ['/bin', '/sbin', '/usr/bin', '/usr/sbin', '/usr/local/bin']:
+            if default_path not in search_path:
+                search_path.append(default_path)
+
         for path in search_path:
             full_path = os.path.join(path, exe)
             if _is_executable_file_or_link(full_path):
