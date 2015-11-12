@@ -1644,8 +1644,8 @@ def syndic_config(master_config_path,
     minion_opts = minion_config(
         minion_config_path, minion_env_var, minion_defaults
     )
-    opts['_minion_conf_file'] = master_opts['conf_file']
-    opts['_master_conf_file'] = minion_opts['conf_file']
+    opts['_master_conf_file'] = master_opts['conf_file']
+    opts['_minion_conf_file'] = minion_opts['conf_file']
     opts.update(master_opts)
     opts.update(minion_opts)
     syndic_opts = {
