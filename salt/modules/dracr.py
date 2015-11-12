@@ -29,6 +29,7 @@ except NameError:
         'cmd.run_all': salt.modules.cmdmod._run_all_quiet
     }
 
+
 def __virtual__():
     if salt.utils.which('racadm'):
         return True
