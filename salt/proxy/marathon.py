@@ -22,7 +22,7 @@ the marathon endpoint:
       proxytype: marathon
       base_url: http://my-marathon-master.mydomain.com:8080
 
-.. versionadded:: Boron
+.. versionadded:: 2015.8.2
 '''
 from __future__ import absolute_import
 

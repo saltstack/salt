@@ -2,7 +2,7 @@
 '''
 Generate chronos proxy minion grains.
 
-.. versionadded:: Boron
+.. versionadded:: 2015.8.2
 
 '''
 from __future__ import absolute_import
