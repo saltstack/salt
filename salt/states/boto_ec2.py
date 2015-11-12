@@ -343,7 +343,7 @@ def eni_present(
                     arecord['value'] = eip_alloc['public_ip']
                 else:
                     msg = 'Unable to add an A record for the public IP address, a public IP address does not seem to be allocated to this ENI.'
-                    raise CommandExectuionError(msg)
+                    raise CommandExecutionError(msg)
             else:
                 arecord['value'] = r['result']['private_ip_address']
             if 'provider' in arecord:
