@@ -2,9 +2,6 @@
 '''
 Management of SmartOS Standalone Compute Nodes
 
-TODO:
-- test disks
-
 .. code-block:: yaml
 
     test.example.org:
