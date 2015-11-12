@@ -156,7 +156,8 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             'open_mode': True,
             'log_file': logfile,
             'log_level': 'quiet',
-            'log_level_logfile': 'info'
+            'log_level_logfile': 'info',
+            'transport': self.master_opts['transport'],
         }
 
         # Remove existing logfile
