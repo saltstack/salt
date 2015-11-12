@@ -87,11 +87,37 @@ structure:
             snmp: nonpublic
             password: saltstack1
 
-And to go with it, here's an example state that pulls the data from pillar
+And to go with it, here's an example state that pulls the data from pillar.
+This example assumes that the pillar data would be structured like
+
+Pillar:
 
 .. code-block:: yaml
 
-    {% set details = pillar['chassis'] with context %}
+    proxy:
+      host: 192.168.1.1
+      admin_username: root
+      admin_password: sekrit
+      fallback_admin_username: root
+      fallback_admin_password: old_sekrit
+      proxytype: fx2
+
+      chassis:
+        name: fx2-1
+        username: root
+        datacenter: UT1
+        location: UT1
+        management_mode: 2
+        idrac_launch: 0
+        slot_names:
+          1: blade1
+          2: blade2
+
+State:
+
+.. code-block:: yaml
+
+    {% set details = pillar.get('proxy:chassis', {}) %}
     standup-step1:
       dellchassis.chassis:
         - name: {{ details['name'] }}
