@@ -169,12 +169,12 @@ def eni_present(
         description=None,
         groups=None,
         source_dest_check=True,
+        allocate_eip=False,
+        arecords=None,
         region=None,
         key=None,
         keyid=None,
-        profile=None,
-        allocate_eip=False,
-        arecords=None):
+        profile=None):
     '''
     Ensure the EC2 ENI exists.
 
@@ -201,6 +201,18 @@ def eni_present(
         Boolean specifying whether source/destination checking is enabled on
         the ENI.
 
+    allocate_eip
+        .. versionadded:: Boron
+        True/False - allocate and associate an EIP to the ENI
+
+    arecords
+        .. versionadded:: Boron
+        A list of arecord dicts with attributes needed for the DNS add_record state.
+        By default the boto_route53.add_record state will be used, which requires: name, zone, ttl, and identifier.
+        See the boto_route53 state for information about these attributes.
+        Other DNS modules can be called by specifying the provider keyword.
+        By default, the private ENI IP address will be used, set 'public: True' in the arecord dict to use the ENI's public IP address
+
     region
         Region to connect to.
 
@@ -213,18 +225,6 @@ def eni_present(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-
-    allocate_eip
-        .. versionadded:: Boron
-        True/False - allocate and associate an EIP to the ENI
-
-    arecords
-        .. versionadded:: Boron
-        A list of arecord dicts with attributes needed for the DNS add_record state.
-        By default the boto_route53.add_record state will be used, which requires: name, zone, ttl, and identifier.
-        See the boto_route53 state for information about these attributes.
-        Other DNS modules can be called by specifying the provider keyword.
-        By default, the private ENI IP address will be used, set 'public: True' in the arecord dict to use the ENI's public IP address
     '''
     if not subnet_id:
         raise SaltInvocationError('subnet_id is a required argument.')
@@ -430,11 +430,11 @@ def _eni_groups(metadata, groups, region, key, keyid, profile):
 
 def eni_absent(
         name,
+        release_eip=False,
         region=None,
         key=None,
         keyid=None,
-        profile=None,
-        release_eip=False):
+        profile=None):
     '''
     Ensure the EC2 ENI is absent.
 
@@ -442,6 +442,9 @@ def eni_absent(
 
     name
         Name tag associated with the ENI.
+
+    release_eip
+        True/False - release any EIP associated with the ENI
 
     region
         Region to connect to.
@@ -455,9 +458,6 @@ def eni_absent(
     profile
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
-
-    release_eip
-        True/False - release any EIP associated with the ENI
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     r = __salt__['boto_ec2.get_network_interface'](
