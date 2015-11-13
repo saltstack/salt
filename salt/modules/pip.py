@@ -646,7 +646,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             cmd.append('--pre')
 
     if cert:
-        cmd.append(['--cert', cert])
+        cmd.extend(['--cert', cert])
 
     if global_options:
         if isinstance(global_options, string_types):
@@ -697,7 +697,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             allow_external = [p.strip() for p in allow_external.split(',')]
 
         for pkg in allow_external:
-            cmd.append('--allow-external {0}'.format(pkg))
+            cmd.extend(['--allow-external', pkg])
 
     if allow_unverified:
         if isinstance(allow_unverified, string_types):
@@ -705,7 +705,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 [p.strip() for p in allow_unverified.split(',')]
 
         for pkg in allow_unverified:
-            cmd.append('--allow-unverified {0}'.format(pkg))
+            cmd.extend(['--allow-unverified', pkg])
 
     if process_dependency_links:
         cmd.append('--process-dependency-links')
@@ -717,7 +717,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             raise CommandExecutionError('env_vars {0} is not a dictionary'.format(env_vars))
 
     if trusted_host:
-        cmd.append('--trusted-host {0}'.format(trusted_host))
+        cmd.extend(['--trusted-host', trusted_host])
 
     try:
         cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt, runas=user)

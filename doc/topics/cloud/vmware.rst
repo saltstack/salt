@@ -409,6 +409,11 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
     Specify the virtual hardware version for the vm/template that is supported by the
     host.
 
+``customization``
+    Specify whether the new virtual machine should be customized or not. If
+    ``customization: False`` is set, the new virtual machine will not be customized.
+    Default is ``customization: True``.
+
 ``image``
     Specify the guest id of the VM. For a full list of supported values see the
     VMware vSphere documentation:

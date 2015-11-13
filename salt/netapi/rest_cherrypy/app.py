@@ -1193,6 +1193,7 @@ class Keys(LowDataAdapter):
     module <salt.wheel.key>` functions.
     '''
 
+    @cherrypy.config(**{'tools.salt_token.on': True})
     def GET(self, mid=None):
         '''
         Show the list of minion keys or detail on a specific key
@@ -1260,8 +1261,6 @@ class Keys(LowDataAdapter):
               minions:
                 jerry: 51:93:b3:d0:9f:3a:6d:e5:28:67:c2:4b:27:d6:cd:2b
         '''
-        self._cp_config['tools.salt_token.on'] = True
-
         if mid:
             lowstate = [{
                 'client': 'wheel',
@@ -1279,6 +1278,7 @@ class Keys(LowDataAdapter):
 
         return {'return': next(result, {}).get('data', {}).get('return', {})}
 
+    @cherrypy.config(**{'tools.hypermedia_out.on': False, 'tools.sessions.on': False})
     def POST(self, mid, keysize=None, force=None, **kwargs):
         r'''
         Easily generate keys for a minion and auto-accept the new key
@@ -1339,9 +1339,6 @@ class Keys(LowDataAdapter):
 
             jerry.pub0000644000000000000000000000070300000000000010730 0ustar  00000000000000
         '''
-        self._cp_config['tools.hypermedia_out.on'] = False
-        self._cp_config['tools.sessions.on'] = False
-
         lowstate = [{
             'client': 'wheel',
             'fun': 'key.gen_accept',

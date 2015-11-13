@@ -39,7 +39,8 @@ class RabbitmqUserTestCase(TestCase):
         name = 'foo'
         passwd = 'password'
         tag = 'user'
-        perms = [{'/': ['.*', '.*']}]
+        existing_perms = {'/': ['.*', '.*']}
+        perms = [existing_perms]
 
         ret = {'name': name,
                'changes': {},
@@ -49,7 +50,7 @@ class RabbitmqUserTestCase(TestCase):
         mock = MagicMock(side_effect=[True, False, True, True,
                                       True, True, True])
         mock_dct = MagicMock(return_value={name: set(tag)})
-        mock_pr = MagicMock(return_value=perms)
+        mock_pr = MagicMock(return_value=existing_perms)
         mock_add = MagicMock(return_value={'Added': name})
         with patch.dict(rabbitmq_user.__salt__,
                         {'rabbitmq.user_exists': mock,

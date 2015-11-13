@@ -21,6 +21,14 @@ from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
+try:
+    run_all = __salt__['cmd.run_all']
+except NameError:
+    import salt.modules.cmdmod
+    __salt__ = {
+        'cmd.run_all': salt.modules.cmdmod._run_all_quiet
+    }
+
 
 def __virtual__():
     if salt.utils.which('racadm'):
@@ -37,13 +45,16 @@ def __parse_drac(output):
     section = ''
 
     for i in output.splitlines():
+        if i.strip().endswith(':') and '=' not in i:
+            section = i[0:-1]
+            drac[section] = {}
         if len(i.rstrip()) > 0 and '=' in i:
             if section in drac:
                 drac[section].update(dict(
                     [[prop.strip() for prop in i.split('=')]]
                 ))
             else:
-                section = i.strip()[1:-1]
+                section = i.strip()
                 if section not in drac and section:
                     drac[section] = {}
 
@@ -127,7 +138,6 @@ def __execute_ret(command, host=None,
             fmtlines.append(l)
             if '=' in l:
                 continue
-            break
         cmd['stdout'] = '\n'.join(fmtlines)
 
     return cmd
@@ -135,8 +145,6 @@ def __execute_ret(command, host=None,
 
 def get_dns_dracname(host=None,
                      admin_username=None, admin_password=None):
-    import pydevd
-    pydevd.settrace('172.16.207.1', port=65500, stdoutToServer=True, stderrToServer=True)
 
     ret = __execute_ret('get iDRAC.NIC.DNSRacName', host=host,
                         admin_username=admin_username,
@@ -976,7 +984,10 @@ def get_slotname(slot, host=None, admin_username=None, admin_password=None):
     '''
     slots = list_slotnames(host=host, admin_username=admin_username,
                            admin_password=admin_password)
-    return slots[slot]
+    # The keys for this dictionary are strings, not integers, so convert the
+    # argument to a string
+    slot = str(slot)
+    return slots[slot]['slotname']
 
 
 def set_slotname(slot, name, host=None,

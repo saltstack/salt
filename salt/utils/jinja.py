@@ -281,11 +281,11 @@ class SerializerExtension(Extension, object):
 
     **Load tags**
 
-    Salt implements **import_yaml** and **import_json** tags. They work like
+    Salt implements ``import_yaml`` and ``import_json`` tags. They work like
     the `import tag`_, except that the document is also deserialized.
 
-    Syntaxes are {% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}
-    and {% load_json as [VARIABLE] %}[YOUR DATA]{% endload %}
+    Syntaxes are ``{% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}``
+    and ``{% load_json as [VARIABLE] %}[YOUR DATA]{% endload %}``
 
     For example:
 

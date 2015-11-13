@@ -86,7 +86,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             opts['master_uri'] = kwargs['master_uri']
         return (opts['pki_dir'],     # where the keys are stored
                 opts['id'],          # minion ID
-                opts['master_uri'],  # master ID
+                opts['master_uri'],
                 kwargs.get('crypt', 'aes'),  # TODO: use the same channel for crypt
                 )
 

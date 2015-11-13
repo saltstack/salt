@@ -243,3 +243,137 @@ def get_network_adapter_type(adapter_type):
         return vim.vm.device.VirtualE1000()
     elif adapter_type == "e1000e":
         return vim.vm.device.VirtualE1000e()
+
+
+def list_objects(service_instance, vim_object, properties=None):
+    '''
+    Returns a simple list of objects from a given service instance.
+
+    service_instance
+        The Service Instance for which to obtain a list of objects.
+
+    object_type
+        The type of content for which to obtain information.
+
+    property_list
+        An optional list of object properties used to return reference results.
+        If not provided, defaults to ``name``.
+    '''
+    if properties is None:
+        properties = ['name']
+
+    items = []
+    item_list = get_mors_with_properties(service_instance, vim_object, properties)
+    for item in item_list:
+        items.append(item['name'])
+    return items
+
+
+def list_datacenters(service_instance):
+    '''
+    Returns a list of datacenters associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain datacenters.
+    '''
+    return list_objects(service_instance, vim.Datacenter)
+
+
+def list_clusters(service_instance):
+    '''
+    Returns a list of clusters associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain clusters.
+    '''
+    return list_objects(service_instance, vim.ClusterComputeResource)
+
+
+def list_datastore_clusters(service_instance):
+    '''
+    Returns a list of datastore clusters associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain datastore clusters.
+    '''
+    return list_objects(service_instance, vim.StoragePod)
+
+
+def list_datastores(service_instance):
+    '''
+    Returns a list of datastores associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain datastores.
+    '''
+    return list_objects(service_instance, vim.Datastore)
+
+
+def list_hosts(service_instance):
+    '''
+    Returns a list of hosts associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain hosts.
+    '''
+    return list_objects(service_instance, vim.HostSystem)
+
+
+def list_resourcepools(service_instance):
+    '''
+    Returns a list of resource pools associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain resource pools.
+    '''
+    return list_objects(service_instance, vim.ResourcePool)
+
+
+def list_networks(service_instance):
+    '''
+    Returns a list of networks associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain networks.
+    '''
+    return list_objects(service_instance, vim.Network)
+
+
+def list_vms(service_instance):
+    '''
+    Returns a list of VMs associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain VMs.
+    '''
+    return list_objects(service_instance, vim.VirtualMachine)
+
+
+def list_folders(service_instance):
+    '''
+    Returns a list of folders associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain folders.
+    '''
+    return list_objects(service_instance, vim.Folder)
+
+
+def list_dvs(service_instance):
+    '''
+    Returns a list of distributed virtual switches associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain distributed virtual switches.
+    '''
+    return list_objects(service_instance, vim.DistributedVirtualSwitch)
+
+
+def list_vapps(service_instance):
+    '''
+    Returns a list of vApps associated with a given service instance.
+
+    service_instance
+        The Service Instance Object from which to obtain vApps.
+    '''
+    return list_objects(service_instance, vim.VirtualApp)

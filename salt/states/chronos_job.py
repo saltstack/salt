@@ -10,7 +10,7 @@ Configure Chronos jobs via a salt proxy.
             command: "echo 'hi'"
             owner: "me@mycompany.com"
 
-.. versionadded:: Boron
+.. versionadded:: 2015.8.2
 '''
 from __future__ import absolute_import
 import copy
