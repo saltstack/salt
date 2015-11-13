@@ -3565,7 +3565,7 @@ def patch(name,
         using this state function.
 
     name
-        The file to with the patch will be applied.
+        The file to which the patch will be applied.
 
     source
         The source patch to download to the minion, this source file must be
