@@ -4,13 +4,11 @@ Module for running fmadm and fmdump on Solaris
 TODO:
  - fmadm faulty [-afgiprsv] [-u <uuid>] [-n <max_fault>] - display list of faulty resources
  - fmadm flush <fmri> ...         - flush cached state for resource
- - fmadm load <path>              - load specified fault manager module
  - fmadm repaired <fmri>|label>   - notify fault manager that resource has been repaired
  - fmadm acquit <fmri> [<uuid>] | label [<uuid>] | <uuid> - acquit resource or acquit case
  - fmadm replaced <fmri>|label    - notify fault manager that resource has been replaced
  - fmadm reset [-s serd] <module> - reset module or sub-component
  - fmadm rotate <logname>         - rotate log file
- - fmadm unload <module>          - unload specified fault manager module
 '''
 from __future__ import absolute_import
 
@@ -239,6 +237,66 @@ def config():
         result['Error'] = 'error executing fmadm config'
     else:
         result = _parse_fmadm_config(res['stdout'])
+
+    return result
+
+
+def load(path):
+    '''
+    Load specified fault manager module
+
+    path: string
+        path of fault manager module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' fmadm.load /module/path
+    '''
+    ret = {}
+    fmadm = _check_fmadm()
+    cmd = '{cmd} load {path}'.format(
+        cmd=fmadm,
+        path=path
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    result = {}
+    if retcode != 0:
+        result['Error'] = res['stderr']
+    else:
+        result = True
+
+    return result
+
+
+def unload(module):
+    '''
+    Unload specified fault manager module
+
+    module: string
+        module to unload
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' fmadm.load /module/path
+    '''
+    ret = {}
+    fmadm = _check_fmadm()
+    cmd = '{cmd} unload {module}'.format(
+        cmd=fmadm,
+        module=module
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    result = {}
+    if retcode != 0:
+        result['Error'] = res['stderr']
+    else:
+        result = True
 
     return result
 
