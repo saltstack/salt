@@ -146,6 +146,7 @@ def timing(function):
     '''
     Decorator wrapper to log execution time, for profiling purposes
     '''
+    @wraps(function)
     def wrapped(*args, **kwargs):
         start_time = time.time()
         ret = function(*args, **salt.utils.clean_kwargs(**kwargs))
