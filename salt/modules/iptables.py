@@ -480,7 +480,7 @@ def get_saved_rules(conf_file=None, family='ipv4'):
         IPv6:
         salt '*' iptables.get_saved_rules family=ipv6
     '''
-    return _parse_conf(conf_file, family)
+    return _parse_conf(conf_file=conf_file, family=family)
 
 
 def get_rules(family='ipv4'):

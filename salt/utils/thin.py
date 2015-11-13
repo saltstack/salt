@@ -30,6 +30,24 @@ except ImportError:
     HAS_CERTIFI = False
 
 try:
+    import singledispatch
+    HAS_SINGLEDISPATCH = True
+except ImportError:
+    HAS_SINGLEDISPATCH = False
+
+try:
+    import singledispatch_helpers
+    HAS_SINGLEDISPATCH_HELPERS = True
+except ImportError:
+    HAS_SINGLEDISPATCH_HELPERS = False
+
+try:
+    import backports_abc
+    HAS_BACKPORTS_ABC = True
+except ImportError:
+    HAS_BACKPORTS_ABC = False
+
+try:
     import markupsafe
     HAS_MARKUPSAFE = True
 except ImportError:
@@ -98,6 +116,15 @@ def get_tops(extra_mods='', so_mods=''):
 
     if HAS_CERTIFI:
         tops.append(os.path.dirname(certifi.__file__))
+
+    if HAS_SINGLEDISPATCH:
+        tops.append(singledispatch.__file__.replace('.pyc', '.py'))
+
+    if HAS_SINGLEDISPATCH_HELPERS:
+        tops.append(singledispatch_helpers.__file__.replace('.pyc', '.py'))
+
+    if HAS_BACKPORTS_ABC:
+        tops.append(backports_abc.__file__.replace('.pyc', '.py'))
 
     if HAS_SSL_MATCH_HOSTNAME:
         tops.append(os.path.dirname(os.path.dirname(ssl_match_hostname.__file__)))

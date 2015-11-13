@@ -24,7 +24,6 @@ describes the package. An example of this file is:
     name: apache
     os: RedHat, Debian, Ubuntu, Suse, FreeBSD
     os_family: RedHat, Debian, Suse, FreeBSD
-    dependencies: None
     version: 201506
     release: 2
     summary: Formula for installing Apache
@@ -96,12 +95,6 @@ instance, the ``top_level_dir`` should be set to ``apache``.
 Files outside the ``top_level_dir``, such as ``README.rst``, ``FORMULA``, and
 ``LICENSE`` will not be installed. The exceptions to this rule are files that
 are already treated specially, such as ``pillar.example`` and ``_modules/``.
-
-dependencies
-~~~~~~~~~~~~
-A list of packages which must be installed before this package can function. If
-a matching package is found in an SPM repository, the dependency is installed
-automatically.
 
 recommended
 ~~~~~~~~~~~

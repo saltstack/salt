@@ -4,7 +4,7 @@ Module providing a simple management interface to a chronos cluster.
 
 Currently this only works when run through a proxy minion.
 
-.. versionadded:: Boron
+.. versionadded:: 2015.8.2
 '''
 from __future__ import absolute_import
 

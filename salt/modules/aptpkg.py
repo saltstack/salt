@@ -473,7 +473,7 @@ def install(name=None,
 
         .. versionadded:: 2015.5.0
 
-   force_conf_new
+    force_conf_new
         Always install the new version of any configuration files.
 
         .. versionadded:: 2015.8.0
@@ -839,7 +839,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 
-    Returns a dict containing the changes.
+    Returns a dict containing the changes::
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
@@ -848,9 +848,9 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         Whether to perform the upgrade using dist-upgrade vs upgrade.  Default
         is to use upgrade.
 
-    .. versionadded:: 2014.7.0
+        .. versionadded:: 2014.7.0
 
-   force_conf_new
+    force_conf_new
         Always install the new version of any configuration files.
 
         .. versionadded:: 2015.8.0
@@ -1622,19 +1622,30 @@ def mod_repo(repo, saltenv='base', **kwargs):
     '''
     Modify one or more values for a repo.  If the repo does not exist, it will
     be created, so long as the definition is well formed.  For Ubuntu the
-    "ppa:<project>/repo" format is acceptable. "ppa:" format can only be
+    ``ppa:<project>/repo`` format is acceptable. ``ppa:`` format can only be
     used to create a new repository.
 
-    The following options are available to modify a repo definition::
+    The following options are available to modify a repo definition:
 
-        comps (a comma separated list of components for the repo, e.g. "main")
-        file (a file name to be used)
-        keyserver (keyserver to get gpg key from)
-        keyid (key id to load with the keyserver argument)
-        key_url (URL to a gpg key to add to the apt gpg keyring)
-        consolidate (if true, will attempt to de-dup and consolidate sources)
+        comps
+            a comma separated list of components for the repo, e.g. ``main``
 
-        * Note: Due to the way keys are stored for apt, there is a known issue
+        file
+            a file name to be used
+
+        keyserver
+            keyserver to get gpg key from
+
+        keyid
+            key id to load with the keyserver argument
+
+        key_url
+            URL to a GPG key to add to the APT GPG keyring
+
+        consolidate
+            if ``True``, will attempt to de-dup and consolidate sources
+
+        .. note:: Due to the way keys are stored for APT, there is a known issue
                 where the key wont be updated unless another change is made
                 at the same time.  Keys should be properly added on initial
                 configuration.
@@ -2043,10 +2054,10 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
 
     The state can be any one of, documented in ``dpkg(1)``:
 
-     - install
-     - hold
-     - deinstall
-     - purge
+    - install
+    - hold
+    - deinstall
+    - purge
 
     This command is commonly used to mark specific packages to be held from
     being upgraded, that is, to be kept at a certain version. When a state is
