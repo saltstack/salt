@@ -1343,7 +1343,7 @@ class ExecutionOptionsMixIn(six.with_metaclass(MixInMeta, object)):
             '-m', '--map',
             default=None,
             help='Specify a cloud map file to use for deployment. This option '
-                 'may be used alone, or in conjunction with -Q, -F, -S or -d.'
+                 'may be used alone, or in conjunction with -Q, -F, -S or -d. '
                  'The map can also be filtered by a list of VM names.'
         )
         group.add_option(
