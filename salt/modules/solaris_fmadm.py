@@ -10,7 +10,6 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
-import json
 
 # Import Salt libs
 import salt.utils
@@ -72,7 +71,7 @@ def _parse_fmdump(output):
         # prepare faults
         fault = OrderedDict()
         for field in header:
-            fault[field] = entry[header.index(field)] 
+            fault[field] = entry[header.index(field)]
 
         result.append(fault)
 
@@ -132,8 +131,8 @@ def _parse_fmadm_config(output):
         # prepare component
         component = OrderedDict()
         for field in header:
-            component[field] = entry[header.index(field)] 
-        
+            component[field] = entry[header.index(field)]
+
         result.append(component)
 
     # keying
