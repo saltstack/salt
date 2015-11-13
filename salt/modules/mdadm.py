@@ -344,7 +344,7 @@ def assemble(name,
     if isinstance(devices, str):
         devices = devices.split(',')
 
-    cmd = ['mdadm', '-A', name, '-v', opts] + devices
+    cmd = ['mdadm', '-A', name, '-v'] + opts + devices
 
     if test_mode is True:
         return cmd
