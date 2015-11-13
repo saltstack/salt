@@ -59,9 +59,9 @@ Management of the Salt scheduler
     job1:
       schedule.present:
         - function: state.sls
-        - args:
+        - job_args:
           - httpd
-        - kwargs:
+        - job_kwargs:
             test: True
         - when:
             - Monday 5:00pm
