@@ -3,11 +3,7 @@
 Module for running fmadm and fmdump on Solaris
 TODO:
  - fmadm faulty [-afgiprsv] [-u <uuid>] [-n <max_fault>] - display list of faulty resources
- - fmadm flush <fmri> ...         - flush cached state for resource
- - fmadm repaired <fmri>|label>   - notify fault manager that resource has been repaired
  - fmadm acquit <fmri> [<uuid>] | label [<uuid>] | <uuid> - acquit resource or acquit case
- - fmadm replaced <fmri>|label    - notify fault manager that resource has been replaced
- - fmadm reset [-s serd] <module> - reset module or sub-component
  - fmadm rotate <logname>         - rotate log file
 '''
 from __future__ import absolute_import
@@ -151,6 +147,28 @@ def _parse_fmadm_config(output):
     return result
 
 
+def _fmadm_action_fmri(action, fmri):
+    '''
+    Internal function for fmadm.repqired, fmadm.replaced, fmadm.flush
+    '''
+    ret = {}
+    fmadm = _check_fmadm()
+    cmd = '{cmd} {action} {fmri}'.format(
+        cmd=fmadm,
+        action=action,
+        fmri=fmri
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    result = {}
+    if retcode != 0:
+        result['Error'] = res['stderr']
+    else:
+        result = True
+
+    return result
+
+
 def list_records(after=None, before=None):
     '''
     Display fault management logs
@@ -282,7 +300,7 @@ def unload(module):
 
     .. code-block:: bash
 
-        salt '*' fmadm.load /module/path
+        salt '*' fmadm.unload software-response
     '''
     ret = {}
     fmadm = _check_fmadm()
@@ -299,5 +317,86 @@ def unload(module):
         result = True
 
     return result
+
+
+def reset(module, serd=None):
+    '''
+    Reset module or sub-component
+
+    module: string
+        module to unload
+    serd : string
+        serd sub module
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' fmadm.reset software-response
+    '''
+    ret = {}
+    fmadm = _check_fmadm()
+    cmd = '{cmd} reset {serd}{module}'.format(
+        cmd=fmadm,
+        serd='-s {0} '.format(serd) if serd else '',
+        module=module
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    result = {}
+    if retcode != 0:
+        result['Error'] = res['stderr']
+    else:
+        result = True
+
+    return result
+
+
+def flush(fmri):
+    '''
+    Flush cached state for resource
+
+    module: string
+        module to unload
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' fmadm.flush fmri
+    '''
+    return _fmadm_action_fmri('flush', fmri)
+
+
+def repaired(fmri):
+    '''
+    Notify fault manager that resource has been repaired
+
+    module: string
+        module to unload
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' fmadm.repaired fmri
+    '''
+    return _fmadm_action_fmri('repaired', fmri)
+
+
+def replaced(fmri):
+    '''
+    Notify fault manager that resource has been replaced
+
+    module: string
+        module to unload
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' fmadm.repaired fmri
+    '''
+    return _fmadm_action_fmri('replaced', fmri)
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
