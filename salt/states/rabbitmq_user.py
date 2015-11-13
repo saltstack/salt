@@ -171,7 +171,7 @@ def present(name,
                               {'old': tags,
                                'new': new_tags}})
     try:
-        existing_perms = __salt__['rabbitmq.list_user_permissions'](name, runas=runas)[0]
+        existing_perms = __salt__['rabbitmq.list_user_permissions'](name, runas=runas)
     except CommandExecutionError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
