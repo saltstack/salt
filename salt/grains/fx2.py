@@ -73,9 +73,9 @@ def location():
         GRAINS_CACHE.update(_grains())
 
     try:
-        return GRAINS_CACHE.get('Chassis Information').get('Chassis Location')
+        return {'location': GRAINS_CACHE.get('Chassis Information').get('Chassis Location')}
     except AttributeError:
-        return "Unknown"
+        return {'location': 'Unknown'}
 
 
 def os_family():
