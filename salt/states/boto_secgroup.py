@@ -172,6 +172,8 @@ def present(
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
+        elif ret['result'] is None:
+            return ret
     if rules is not None:
         _ret = _rules_present(name, rules, vpc_id=vpc_id, vpc_name=vpc_name,
                               region=region, key=key, keyid=keyid,
@@ -599,6 +601,11 @@ def _tags_present(name, tags, vpc_id=None, vpc_name=None, region=None,
     if tags:
         sg = __salt__['boto_secgroup.get_config'](name, None, region, key,
                                                   keyid, profile, vpc_id, vpc_name)
+        if not sg:
+            msg = '{0} security group configuration could not be retrieved.'
+            ret['comment'] = msg.format(name)
+            ret['result'] = False
+            return ret
         tags_to_add = tags
         tags_to_update = {}
         tags_to_remove = []
