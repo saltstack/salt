@@ -2,7 +2,6 @@
 '''
 Module for running fmadm and fmdump on Solaris
 TODO:
- - show (fmdump -u xxx -v)
  - fmadm faulty [-afgiprsv] [-u <uuid>] [-n <max_fault>] - display list of faulty resources
  - fmadm flush <fmri> ...         - flush cached state for resource
  - fmadm load <path>              - load specified fault manager module
@@ -85,9 +84,44 @@ def _parse_fmdump(output):
 
     return result
 
+
+def _parse_fmdump_verbose(output):
+    '''
+    Parses fmdump verbose output
+    '''
+    result = []
+    output = output.split("\n")
+
+    fault = []
+    verbose_fault = {}
+    for line in output:
+        if line.startswith('TIME'):
+            fault.append(line)
+            if len(verbose_fault) > 0:
+                result.append(verbose_fault)
+                verbose_fault = {}
+        elif len(fault) == 1:
+            fault.append(line)
+            verbose_fault = _parse_fmdump("\n".join(fault))[0]
+            fault = []
+        elif len(verbose_fault) > 0:
+            if 'details' not in verbose_fault:
+                verbose_fault['details'] = ""
+            if line.strip() == '':
+                continue
+            verbose_fault['details'] = '{0}{1}\n'.format(
+                verbose_fault['details'],
+                line
+            )
+    if len(verbose_fault) > 0:
+        result.append(verbose_fault)
+
+    return result
+
+
 def _parse_fmadm_config(output):
     '''
-    Parses fmdump/fmadm output
+    Parsbb fmdump/fmadm output
     '''
     result = []
     output = output.split("\n")
@@ -152,6 +186,37 @@ def list_records(after=None, before=None):
 
     return result
 
+
+def show(uuid):
+    '''
+    Display log details
+
+    uuid: string
+        uuid of fault
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' fmadm.show 11b4070f-4358-62fa-9e1e-998f485977e1
+    '''
+    ret = {}
+    fmdump = _check_fmdump()
+    cmd = '{cmd} -u {uuid} -V'.format(
+        cmd=fmdump,
+        uuid=uuid
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    result = {}
+    if retcode != 0:
+        result['Error'] = 'error executing fmdump'
+    else:
+        result = _parse_fmdump_verbose(res['stdout'])
+
+    return result
+
+
 def config():
     '''
     Display fault manager configuration
@@ -171,7 +236,7 @@ def config():
     retcode = res['retcode']
     result = {}
     if retcode != 0:
-        result['Error'] = 'error executing fmdump'
+        result['Error'] = 'error executing fmadm config'
     else:
         result = _parse_fmadm_config(res['stdout'])
 
