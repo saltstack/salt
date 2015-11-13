@@ -92,8 +92,10 @@ def get_hash(path, form='sha1', chunk_size=4096):
 def unpack_thin(thin_path):
     """Unpack the Salt thin archive."""
     tfile = tarfile.TarFile.gzopen(thin_path)
+    old_umask = os.umask(0o077)
     tfile.extractall(path=OPTIONS.saltdir)
     tfile.close()
+    os.umask(old_umask)
     os.unlink(thin_path)
 
 
@@ -114,8 +116,10 @@ def unpack_ext(ext_path):
             'minion',
             'extmods')
     tfile = tarfile.TarFile.gzopen(ext_path)
+    old_umask = os.umask(0o077)
     tfile.extractall(path=modcache)
     tfile.close()
+    os.umask(old_umask)
     os.unlink(ext_path)
     ver_path = os.path.join(modcache, 'ext_version')
     ver_dst = os.path.join(OPTIONS.saltdir, 'ext_version')
