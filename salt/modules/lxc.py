@@ -106,7 +106,7 @@ def version():
     '''
     Return the actual lxc client version
 
-        .. versionadded:: 2015.8.0
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -297,61 +297,61 @@ def cloud_init_interface(name, vm_=None, **kwargs):
 
         Legacy but still supported options:
 
-    from_container
-        which container we use as a template
-        when running lxc.clone
-    image
-        which template do we use when we
-        are using lxc.create. This is the default
-        mode unless you specify something in from_container
-    backing
-        which backing store to use.
-        Values can be: overlayfs, dir(default), lvm, zfs, brtfs
-    fstype
-        When using a blockdevice level backing store,
-        which filesystem to use on
-    size
-        When using a blockdevice level backing store,
-        which size for the filesystem to use on
-    snapshot
-        Use snapshot when cloning the container source
-    vgname
-        if using LVM: vgname
-    lvname
-        if using LVM: lvname
-    ip
-        ip for the primary nic
-    mac
-        mac address for the primary nic
-    netmask
-        netmask for the primary nic (24)
-        = ``vm_.get('netmask', '24')``
-    bridge
-        bridge for the primary nic (lxcbr0)
-    gateway
-        network gateway for the container
-    additional_ips
-        additional ips which will be wired on the main bridge (br0)
-        which is connected to internet.
-        Be aware that you may use manual virtual mac addresses
-        providen by you provider (online, ovh, etc).
-        This is a list of mappings {ip: '', mac: '', netmask:''}
-        Set gateway to None and an interface with a gateway
-        to escape from another interface that eth0.
-        eg::
+        from_container
+            which container we use as a template
+            when running lxc.clone
+        image
+            which template do we use when we
+            are using lxc.create. This is the default
+            mode unless you specify something in from_container
+        backing
+            which backing store to use.
+            Values can be: overlayfs, dir(default), lvm, zfs, brtfs
+        fstype
+            When using a blockdevice level backing store,
+            which filesystem to use on
+        size
+            When using a blockdevice level backing store,
+            which size for the filesystem to use on
+        snapshot
+            Use snapshot when cloning the container source
+        vgname
+            if using LVM: vgname
+        lvname
+            if using LVM: lvname
+        ip
+            ip for the primary nic
+        mac
+            mac address for the primary nic
+        netmask
+            netmask for the primary nic (24)
+            = ``vm_.get('netmask', '24')``
+        bridge
+            bridge for the primary nic (lxcbr0)
+        gateway
+            network gateway for the container
+        additional_ips
+            additional ips which will be wired on the main bridge (br0)
+            which is connected to internet.
+            Be aware that you may use manual virtual mac addresses
+            providen by you provider (online, ovh, etc).
+            This is a list of mappings {ip: '', mac: '', netmask:''}
+            Set gateway to None and an interface with a gateway
+            to escape from another interface that eth0.
+            eg::
 
-              - {'mac': '00:16:3e:01:29:40',
-                 'gateway': None, (default)
-                 'link': 'br0', (default)
-                 'netmask': '', (default)
-                 'ip': '22.1.4.25'}
+                  - {'mac': '00:16:3e:01:29:40',
+                     'gateway': None, (default)
+                     'link': 'br0', (default)
+                     'netmask': '', (default)
+                     'ip': '22.1.4.25'}
 
-    users
-        administrative users for the container
-        default: [root] and [root, ubuntu] on ubuntu
-    default_nic
-        name of the first interface, you should
-        really not override this
+        users
+            administrative users for the container
+            default: [root] and [root, ubuntu] on ubuntu
+        default_nic
+            name of the first interface, you should
+            really not override this
 
     CLI Example:
 
@@ -609,7 +609,7 @@ def get_container_profile(name=None, **kwargs):
     of variable names and values. See the :ref:`LXC Tutorial
     <tutorial-lxc-profiles>` for more information on how to use LXC profiles.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -669,7 +669,7 @@ def get_network_profile(name=None, **kwargs):
         ``/etc/sysconfig/network-scripts/ifcfg-<interface_name>`` on
         RHEL/CentOS, or ``/etc/network/interfaces`` on Debian/Ubuntu/etc.)
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -2363,7 +2363,6 @@ def restart(name, path=None, lxc_config=None, force=False):
         .. versionadded:: 2015.8.0
 
     lxc_config
-
         path to a lxc config file
         config file will be guessed from container name otherwise
 
@@ -2407,7 +2406,6 @@ def start(name, **kwargs):
         .. versionadded:: 2015.8.0
 
     lxc_config
-
         path to a lxc config file
         config file will be guessed from container name otherwise
 
@@ -2972,7 +2970,6 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
     Edit LXC configuration options
 
     path
-
         path to the container parent
         default: /var/lib/lxc (system default)
 
@@ -3426,7 +3423,7 @@ def bootstrap(name,
         that the salt-master be configured to either auto-accept all keys or
         expect a signing request from the target host. Default: ``True``
 
-   path
+    path
         path to the container parent
         default: /var/lib/lxc (system default)
 
@@ -4291,9 +4288,9 @@ def read_conf(conf_file, out_format='simple'):
     dict, but can also return a more detailed structure including blank lines
     and comments.
 
-        out_format:
-            set to 'simple' if you need the old and unsupported behavior.
-            This wont support the multiple lxc values (eg: multiple network nics)
+    out_format:
+        set to 'simple' if you need the old and unsupported behavior.
+        This wont support the multiple lxc values (eg: multiple network nics)
 
     CLI Examples:
 
