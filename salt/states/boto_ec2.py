@@ -341,45 +341,42 @@ def eni_present(
             if 'name' not in arecord:
                 msg = 'The arecord must contain a "name" property.'
                 raise SaltInvocationError(msg)
-            if __opts__['test']:
-                ret['comment'] = ' '.join([ret['comment'], 'The following A record is set to be added: {0}'.format(arecord['name'])])
-            else:
-                log.debug('processing arecord {0}'.format(arecord))
-                _ret = None
-                dns_provider = 'boto_route53'
-                arecord['record_type'] = 'A'
-                public_ip_arecord = False
-                if 'public' in arecord:
-                    public_ip_arecord = arecord.pop('public')
-                if public_ip_arecord:
-                    if 'publicIp' in r['result']:
-                        arecord['value'] = r['result']['publicIp']
-                    elif 'public_ip' in eip_alloc:
-                        arecord['value'] = eip_alloc['public_ip']
-                    else:
-                        msg = 'Unable to add an A record for the public IP address, a public IP address does not seem to be allocated to this ENI.'
-                        raise CommandExecutionError(msg)
+            log.debug('processing arecord {0}'.format(arecord))
+            _ret = None
+            dns_provider = 'boto_route53'
+            arecord['record_type'] = 'A'
+            public_ip_arecord = False
+            if 'public' in arecord:
+                public_ip_arecord = arecord.pop('public')
+            if public_ip_arecord:
+                if 'publicIp' in r['result']:
+                    arecord['value'] = r['result']['publicIp']
+                elif 'public_ip' in eip_alloc:
+                    arecord['value'] = eip_alloc['public_ip']
                 else:
-                    arecord['value'] = r['result']['private_ip_address']
-                if 'provider' in arecord:
-                    dns_provider = arecord.pop('provider')
-                if dns_provider == 'boto_route53':
-                    if 'profile' not in arecord:
-                        arecord['profile'] = profile
-                    if 'key' not in arecord:
-                        arecord['key'] = key
-                    if 'keyid' not in arecord:
-                        arecord['keyid'] = keyid
-                    if 'region' not in arecord:
-                        arecord['region'] = region
-                _ret = __states__['.'.join([dns_provider, 'present'])](**arecord)
-                log.debug('ret from dns_provider.present = {0}'.format(_ret))
-                ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
-                ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
-                if not _ret['result']:
-                    ret['result'] = _ret['result']
-                    if ret['result'] is False:
-                        return ret
+                    msg = 'Unable to add an A record for the public IP address, a public IP address does not seem to be allocated to this ENI.'
+                    raise CommandExecutionError(msg)
+            else:
+                arecord['value'] = r['result']['private_ip_address']
+            if 'provider' in arecord:
+                dns_provider = arecord.pop('provider')
+            if dns_provider == 'boto_route53':
+                if 'profile' not in arecord:
+                    arecord['profile'] = profile
+                if 'key' not in arecord:
+                    arecord['key'] = key
+                if 'keyid' not in arecord:
+                    arecord['keyid'] = keyid
+                if 'region' not in arecord:
+                    arecord['region'] = region
+            _ret = __states__['.'.join([dns_provider, 'present'])](**arecord)
+            log.debug('ret from dns_provider.present = {0}'.format(_ret))
+            ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+            ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+            if not _ret['result']:
+                ret['result'] = _ret['result']
+                if ret['result'] is False:
+                    return ret
     return ret
 
 
