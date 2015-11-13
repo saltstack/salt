@@ -172,10 +172,10 @@ def user_present(name,
             ret['comment'] = 'User "{0}" has been updated'.format(name)
             ret['changes']['Tenant'] = 'Added to "{0}" tenant'.format(tenant)
         if (password_reset is True and
-               not __salt__['keystone.user_verify_password'](name=name,
-                                                             password=password,
-                                                             profile=profile,
-                                                             **connection_args):
+              not __salt__['keystone.user_verify_password'](name=name,
+                                                            password=password,
+                                                            profile=profile,
+                                                            **connection_args)):
             if __opts__['test']:
                 ret['result'] = None
                 ret['changes']['Password'] = 'Will be updated'
