@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Module for running fmadm and fmdump on Solaris
+.. versionadded:: Boron
 '''
 from __future__ import absolute_import
 
@@ -45,7 +46,12 @@ def __virtual__():
     if salt.utils.is_sunos() and \
         _check_fmadm() and _check_fmdump():
         return __virtualname__
-    return False
+    return (
+        False,
+        '{0} module can only be loaded on Solaris with the fault management installed'.format(
+            __virtualname__
+        )
+    )
 
 
 def _parse_fmdump(output):
