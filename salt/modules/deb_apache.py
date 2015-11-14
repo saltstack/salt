@@ -151,10 +151,15 @@ def check_mod_enabled(mod):
 
     .. code-block:: bash
 
-        salt '*' apache.check_mod_enabled status.conf
+        salt '*' apache.check_mod_enabled status
         salt '*' apache.check_mod_enabled status.load
+        salt '*' apache.check_mod_enabled status.conf
     '''
-    return os.path.islink('/etc/apache2/mods-enabled/{0}'.format(mod))
+    if mod.endswith('.load') or mod.endswith('.conf'):
+        mod_file = mod
+    else:
+        mod_file = '{0}.load'.format(mod)
+    return os.path.islink('/etc/apache2/mods-enabled/{0}'.format(mod_file))
 
 
 def a2enmod(mod):
