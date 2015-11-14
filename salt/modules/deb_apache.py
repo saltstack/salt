@@ -19,6 +19,8 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = 'apache'
 
+SITE_ENABLED_DIR = '/etc/apache2/sites-enabled'
+
 
 def __virtual__():
     '''
@@ -45,7 +47,7 @@ def _detect_os():
 
 def check_site_enabled(site):
     '''
-    Checks to see if the specific Site symlink is in /etc/apache2/sites-enabled.
+    Checks to see if the specific site symlink is in /etc/apache2/sites-enabled.
 
     This will only be functional on Debian-based operating systems (Ubuntu,
     Mint, etc).
@@ -55,10 +57,16 @@ def check_site_enabled(site):
     .. code-block:: bash
 
         salt '*' apache.check_site_enabled example.com
+        salt '*' apache.check_site_enabled example.com.conf
     '''
-    if os.path.islink('/etc/apache2/sites-enabled/{0}'.format(site)):
+    if site.endswith('.conf'):
+        site_file = site
+    else:
+        site_file = '{0}.conf'.format(site)
+    if os.path.islink('{0}/{1}'.format(SITE_ENABLED_DIR, site_file)):
         return True
-    elif site == 'default' and os.path.islink('/etc/apache2/sites-enabled/000-{0}'.format(site)):
+    elif site == 'default' and \
+            os.path.islink('{0}/000-{1}'.format(SITE_ENABLED_DIR, site_file)):
         return True
     else:
         return False
