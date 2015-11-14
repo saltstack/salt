@@ -71,7 +71,12 @@ def __virtual__():
     '''
     if salt.utils.is_smartos_globalzone() and _check_imgadm():
         return __virtualname__
-    return False
+    return (
+        False,
+        '{0} module can only be loaded on SmartOS computed nodes'.format(
+            __virtualname__
+        )
+    )
 
 
 def version():
