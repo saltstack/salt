@@ -44,6 +44,7 @@ def __virtual__():
     '''
     # Enable on these platforms only.
     enable = set((
+        'XenServer',
         'RedHat',
         'CentOS',
         'ScientificLinux',
@@ -57,6 +58,8 @@ def __virtual__():
         'McAfee  OS Server'
     ))
     if __grains__['os'] in enable:
+        if __grains__['os'] == 'XenServer':
+            return __virtualname__
         if __grains__['os'] == 'SUSE':
             if str(__grains__['osrelease']).startswith('11'):
                 return __virtualname__
