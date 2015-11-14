@@ -243,10 +243,14 @@ def check_conf_enabled(conf):
 
     .. code-block:: bash
 
+        salt '*' apache.check_conf_enabled security
         salt '*' apache.check_conf_enabled security.conf
-        salt '*' apache.check_conf_enabled status.load
     '''
-    return os.path.islink('/etc/apache2/conf-enabled/{0}'.format(conf))
+    if conf.endswith('.conf'):
+        conf_file = conf
+    else:
+        conf_file = '{0}.conf'.format(conf)
+    return os.path.islink('/etc/apache2/conf-enabled/{0}'.format(conf_file))
 
 
 @salt.utils.decorators.which('a2enconf')
