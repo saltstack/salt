@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
 Module for running fmadm and fmdump on Solaris
-TODO:
- - fmadm faulty [-afgiprsv] [-u <uuid>] [-n <max_fault>] - display list of faulty resources
- - fmadm.healthy - true or false depending on faulty output
 '''
 from __future__ import absolute_import
 
@@ -409,8 +406,36 @@ def acquit(fmri):
 
     .. code-block:: bash
 
-        salt '*' fmadm.acquit fmri | uuid 
+        salt '*' fmadm.acquit fmri | uuid
     '''
     return _fmadm_action_fmri('acquit', fmri)
+
+
+def faulty():
+    '''
+    Display list of faulty resources
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' fmadm.faulty
+    '''
+    ret = {}
+    fmadm = _check_fmadm()
+    cmd = '{cmd} faulty'.format(
+        cmd=fmadm,
+    )
+    res = __salt__['cmd.run_all'](cmd)
+    retcode = res['retcode']
+    result = {}
+    if retcode != 0:
+        #NOTE: manpage vague, non 0 output = we have faults
+        #FIXME: capture correct output and try to parse
+        result = True
+    else:
+        result = False
+
+    return result
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
