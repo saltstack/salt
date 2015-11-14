@@ -3,8 +3,7 @@
 Module for running fmadm and fmdump on Solaris
 TODO:
  - fmadm faulty [-afgiprsv] [-u <uuid>] [-n <max_fault>] - display list of faulty resources
- - fmadm acquit <fmri> [<uuid>] | label [<uuid>] | <uuid> - acquit resource or acquit case
- - fmadm rotate <logname>         - rotate log file
+ - fmadm.healthy - true or false depending on faulty output
 '''
 from __future__ import absolute_import
 
@@ -355,8 +354,8 @@ def flush(fmri):
     '''
     Flush cached state for resource
 
-    module: string
-        module to unload
+    fmri: string
+        fmri
 
     CLI Example:
 
@@ -371,8 +370,8 @@ def repaired(fmri):
     '''
     Notify fault manager that resource has been repaired
 
-    module: string
-        module to unload
+    fmri: string
+        fmri
 
     CLI Example:
 
@@ -387,8 +386,8 @@ def replaced(fmri):
     '''
     Notify fault manager that resource has been replaced
 
-    module: string
-        module to unload
+    fmri: string
+        fmri
 
     CLI Example:
 
@@ -397,5 +396,21 @@ def replaced(fmri):
         salt '*' fmadm.repaired fmri
     '''
     return _fmadm_action_fmri('replaced', fmri)
+
+
+def acquit(fmri):
+    '''
+    Acquit resource or acquit case
+
+    fmri: string
+        fmri or uuid
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' fmadm.acquit fmri | uuid 
+    '''
+    return _fmadm_action_fmri('acquit', fmri)
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
