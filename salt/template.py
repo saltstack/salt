@@ -91,7 +91,15 @@ def compile_template(template,
         render_kwargs.update(kwargs)
         if argline:
             render_kwargs['argline'] = argline
+        start = time.time()
         ret = render(input_data, saltenv, sls, **render_kwargs)
+        log.profile(
+            'Time (in seconds) to render \'{0}\' using \'{1}\' renderer: {2}'.format(
+                template,
+                render.__module__.split('.')[-1],
+                time.time() - start
+            )
+        )
         if ret is None:
             # The file is empty or is being written elsewhere
             time.sleep(0.01)
