@@ -13,6 +13,7 @@ import os
 import yaml
 
 import salt.utils
+import salt.utils.loader
 
 import logging
 log = logging.getLogger(__name__)
@@ -91,10 +92,8 @@ def add(name, beacon_data, **kwargs):
         ret['comment'] = 'Beacon: {0} would be added.'.format(name)
     else:
         # Attempt to load the beacon module so we have access to the validate function
-        try:
-            beacon_module = __import__('salt.beacons.' + name, fromlist=['validate'])
-            log.debug('Successfully imported beacon.')
-        except ImportError:
+        beacon_module = salt.utils.loader.load_module(name, 'beacons')
+        if not beacon_module:
             ret['comment'] = 'Beacon {0} does not exist'.format(name)
             return ret
 
@@ -155,10 +154,8 @@ def modify(name, beacon_data, **kwargs):
         ret['comment'] = 'Beacon: {0} would be added.'.format(name)
     else:
         # Attempt to load the beacon module so we have access to the validate function
-        try:
-            beacon_module = __import__('salt.beacons.' + name, fromlist=['validate'])
-            log.debug('Successfully imported beacon.')
-        except ImportError:
+        beacon_module = salt.utils.loader.load_module(name, 'beacons')
+        if not beacon_module:
             ret['comment'] = 'Beacon {0} does not exist'.format(name)
             return ret
 
