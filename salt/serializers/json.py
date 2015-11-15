@@ -25,7 +25,7 @@ available = True
 
 def deserialize(stream_or_string, **options):
     """
-    Deserialize any string of stream like object into a Python data structure.
+    Deserialize any string or stream like object into a Python data structure.
 
     :param stream_or_string: stream or string to deserialize.
     :param options: options given to lower json/simplejson module.
