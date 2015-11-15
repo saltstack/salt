@@ -932,6 +932,7 @@ _OS_NAME_MAP = {
     'scientific': 'ScientificLinux',
     'synology': 'Synology',
     'manjaro': 'Manjaro',
+    'sles': 'SUSE',
 }
 
 # Map the 'os' grain to the 'os_family' grain
