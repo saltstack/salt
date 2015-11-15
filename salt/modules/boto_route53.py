@@ -190,7 +190,7 @@ def _decode_name(name):
 
 def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
                keyid=None, profile=None, split_dns=False, private_zone=False,
-               retry_on_rate_limit=True, rate_limit_retries=5):
+               retry_on_rate_limit=True, rate_limit_retries=5, identifier=None):
     '''
     Get a record from a zone.
 
@@ -200,6 +200,8 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
     '''
     if region is None:
         region = 'universal'
+    if identifier:
+        identifier = [str(x) for x in identifier]
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -217,15 +219,7 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
             ret = odict.OrderedDict()
 
             name = _encode_name(name)
-            if _type == 'A':
-                _record = _zone.get_a(name, fetch_all)
-            elif _type == 'CNAME':
-                _record = _zone.get_cname(name, fetch_all)
-            elif _type == 'MX':
-                _record = _zone.get_mx(name, fetch_all)
-            else:
-                _record = _zone.find_records(name, _type, all=fetch_all)
-
+            _record = _zone.find_records(name, _type, all=fetch_all, identifier=identifier)
             break  # the while True
 
         except DNSServerError as e:
@@ -238,10 +232,31 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
             raise e
 
     if _record:
-        ret['name'] = _decode_name(_record.name)
-        ret['value'] = _record.to_print()
-        ret['record_type'] = _record.type
-        ret['ttl'] = _record.ttl
+        ret = {}
+        if isinstance(_record, list):
+            ret = []
+            for this_record in _record:
+                tret = {}
+                tret['name'] = _decode_name(this_record.name)
+                tret['record_type'] = this_record.type
+                tret['ttl'] = this_record.ttl
+                if this_record.weight:
+                    tret['identifier'] = [this_record.identifier, this_record.weight]
+                elif this_record.region:
+                    tret['identifier'] = [this_record.identifier, this_record.region]
+                if this_record.resource_records:
+                    tret['value'] = ','.join(this_record.resource_records)
+                ret.append(tret)
+        else:
+            ret['name'] = _decode_name(_record.name)
+            ret['record_type'] = _record.type
+            ret['ttl'] = _record.ttl
+            if _record.weight:
+                ret['identifier'] = [_record.identifier, _record.weight]
+            elif _record.region:
+                ret['identifier'] = [_record.identifier, _record.region]
+            if _record.resource_records:
+                ret['value'] = ','.join(_record.resource_records)
 
     return ret
 
@@ -323,13 +338,55 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
 def update_record(name, value, zone, record_type, identifier=None, ttl=None,
                   region=None, key=None, keyid=None, profile=None,
                   wait_for_sync=True, split_dns=False, private_zone=False,
-                  retry_on_rate_limit=True, rate_limit_retries=5):
+                  retry_on_rate_limit=True, rate_limit_retries=5, new_identifier=None):
     '''
     Modify a record in a zone.
 
+    name
+        the name of the record to update
+
+    value
+        the new value to set for the record
+
+    record_type
+        the type of record to update (i.e. A, MX, CNAME, etc)
+
+    identifier
+        record set policy identifer
+            for a weighted policy record ['unique id', 'weight']
+            for a latency policy record ['unique id', 'region']
+
+    ttl
+        the new ttl for the record
+
+    region
+        the amazon region
+
+    key
+        secret key
+
+    keyid
+        key id
+
+    wait_for_sync
+        wait for the record to sync before returning
+
+    split_dns
+
+    private_zone
+
+    retry_on_rate_limit
+
+    rate_limit_retries=5
+
+    new_identifier
+        the new record set policy identifier
+            weighted policy records ['unique id', 'weight']
+            latency policy records ['unique id', 'region']
+
     CLI example::
 
-        salt myminion boto_route53.modify_record test.example.org 1.1.1.1 example.org A
+        salt myminion boto_route53.update_record test.example.org 1.1.1.1 example.org A
     '''
     if region is None:
         region = 'universal'
@@ -346,24 +403,19 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
         return False
     _type = record_type.upper()
 
+    if not new_identifier:
+        new_identifier = identifier
+    if identifier:
+        identifier = [str(x) for x in identifier]
     _value = _munge_value(value, _type)
     while rate_limit_retries > 0:
         try:
-            if _type == 'A':
-                status = _zone.update_a(name, _value, ttl, identifier)
-                return _wait_for_sync(status.id, conn, wait_for_sync)
-            elif _type == 'CNAME':
-                status = _zone.update_cname(name, _value, ttl, identifier)
-                return _wait_for_sync(status.id, conn, wait_for_sync)
-            elif _type == 'MX':
-                status = _zone.update_mx(name, _value, ttl, identifier)
-                return _wait_for_sync(status.id, conn, wait_for_sync)
-            else:
-                old_record = _zone.find_records(name, _type)
-                if not old_record:
-                    return False
-                status = _zone.update_record(old_record, _value, ttl, identifier)
-                return _wait_for_sync(status.id, conn, wait_for_sync)
+            old_record = _zone.find_records(name, _type, identifier=identifier)
+            log.debug('old_record = {0}'.format(old_record))
+            if not old_record:
+                return False
+            status = _zone.update_record(old_record, _value, ttl, new_identifier)
+            return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
             # if rate limit, retry:
@@ -400,24 +452,16 @@ def delete_record(name, zone, record_type, identifier=None, all_records=False,
         log.error(msg)
         return False
     _type = record_type.upper()
+    if identifier:
+        identifier = [str(x) for x in identifier]
 
     while rate_limit_retries > 0:
         try:
-            if _type == 'A':
-                status = _zone.delete_a(name, identifier, all_records)
-                return _wait_for_sync(status.id, conn, wait_for_sync)
-            elif _type == 'CNAME':
-                status = _zone.delete_cname(name, identifier, all_records)
-                return _wait_for_sync(status.id, conn, wait_for_sync)
-            elif _type == 'MX':
-                status = _zone.delete_mx(name, identifier, all_records)
-                return _wait_for_sync(status.id, conn, wait_for_sync)
-            else:
-                old_record = _zone.find_records(name, _type, all=all_records)
-                if not old_record:
-                    return False
-                status = _zone.delete_record(old_record)
-                return _wait_for_sync(status.id, conn, wait_for_sync)
+            old_record = _zone.find_records(name, _type, all=all_records, identifier=identifier)
+            if not old_record:
+                return False
+            status = _zone.delete_record(old_record)
+            return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
             # if rate limit, retry:
