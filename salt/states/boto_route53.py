@@ -69,6 +69,55 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - profile:
             keyid: GKTADJGHEIQSXMKKRBJ08H
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+    # weight based policy records (weight of 10 and 20)
+    myrecord1:
+      boto_route53.present:
+        - name: test.example.com.
+        - value: 1.1.1.1
+        - zone: example.com.
+        - ttl: 60
+        - record_type: A
+        - profile: my_profile
+        - identifier:
+          - my_set_id
+          - 10 
+    myrecord2:
+      boto_route53.present:
+        - name: test.example.com.
+        - value: 1.1.1.2
+        - zone: example.com.
+        - ttl: 60
+        - record_type: A
+        - profile: my_profile
+        - identifier:
+          - my_set_id
+          - 20
+
+    # latency/region based policy record (us-east-1 record and us-west-1 record)
+    myeastrecord:
+      boto_route53.present:
+        - name: test.example.com.
+        - value: 1.1.1.1
+        - zone: example.com.
+        - ttl: 60
+        - record_type: A
+        - profile: my_profile
+        - identifier:
+          - my_east_server
+          - us-east-1
+    mywestrecord:
+      boto_route53.present:
+        - name: test.example.com.
+        - value: 1.1.1.2
+        - zone: example.com.
+        - ttl: 60
+        - record_type: A
+        - profile: my_profile
+        - identifier:
+          - my_west_server
+          - us-west-1
+
 '''
 
 # Import Python Libs
