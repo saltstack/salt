@@ -9,7 +9,7 @@
 from __future__ import absolute_import
 
 import StringIO
-import ConfigParser as configparser
+import salt.ext.six.moves.configparser as configparser
 
 from salt.ext.six import string_types
 from salt.serializers import DeserializationError, SerializationError
@@ -38,7 +38,13 @@ def deserialize(stream_or_string, **options):
 
             # python2's ConfigParser cannot parse a config from a string
             cp.readfp(StringIO.StringIO(stream_or_string))
-        return {s: {k: v for k, v in cp.items(s)} for s in cp.sections()}
+        data = {}
+        for section_name in cp.sections():
+            section = {}
+            for k, v in cp.items(section_name):
+                section[k] = v
+            data[section_name] = section
+        return data
     except Exception as error:
         raise DeserializationError(error)
 
@@ -53,7 +59,7 @@ def serialize(obj, **options):
 
     try:
         if not isinstance(obj, dict):
-            raise TypeError("configparser can only serialize dictionaries, not {}".format(type(obj)))
+            raise TypeError("configparser can only serialize dictionaries, not {0}".format(type(obj)))
         fp = options.pop('fp', None)
         cp = configparser.SafeConfigParser(**options)
         _read_dict(cp, obj)
