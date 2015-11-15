@@ -334,6 +334,9 @@ class TestSerializers(TestCase):
         serialized = configparser.serialize(data).strip()
         assert serialized == "[foo]\nbar = baz", serialized
 
+        deserialized = configparser.deserialize(serialized)
+        assert deserialized == data, deserialized
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(TestSerializers, needs_daemon=False)
