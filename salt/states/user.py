@@ -373,6 +373,14 @@ def present(name,
            'result': True,
            'comment': 'User {0} is present and up to date'.format(name)}
 
+    # the comma is used to separate field in GECOS, thus resulting into
+    # salt adding the end of fullname each time this function is called
+    for gecos_field in ['fullname', 'roomnumber', 'workphone', 'homephone']:
+        if isinstance(locals()[gecos_field], type('')) and ',' in locals()[gecos_field]:
+            ret['comment'] = "Unsupported char ',' in {0}".format(gecos_field)
+            ret['result'] = False
+            return ret
+
     if groups:
         missing_groups = [x for x in groups if not __salt__['group.info'](x)]
         if missing_groups:
