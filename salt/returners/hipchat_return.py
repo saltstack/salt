@@ -52,6 +52,13 @@ Hipchat settings may also be configured as:
       profile: hipchat_profile
       room_id: RoomName
 
+    hipchat:
+      room_id: RoomName
+      api_key: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      api_version: v1
+      api_url: api.hipchat.com
+      from_name: user@email.com
+
 To use the HipChat returner, append '--return hipchat' to the salt command.
 
 .. code-block:: bash
@@ -144,6 +151,7 @@ def _query(function,
            api_key=None,
            api_version=None,
            room_id=None,
+           api_url='api.hipchat.com',
            method='GET',
            data=None):
     '''
@@ -195,7 +203,7 @@ def _query(function,
         },
     }
 
-    api_url = 'https://api.hipchat.com'
+    api_url = 'https://{0}'.format(api_url)
     base_url = _urljoin(api_url, api_version + '/')
     path = hipchat_functions.get(api_version).get(function).get('request')
     url = _urljoin(base_url, path, False)
@@ -253,6 +261,7 @@ def _send_message(room_id,
                   from_name,
                   api_key=None,
                   api_version=None,
+                  api_url='api.hipchat.com',
                   color='yellow',
                   notify=False):
     '''
@@ -279,6 +288,7 @@ def _send_message(room_id,
                     api_key=api_key,
                     api_version=api_version,
                     room_id=room_id,
+                    api_url=api_url,
                     method='POST',
                     data=parameters)
 
@@ -340,6 +350,7 @@ def returner(ret):
                             _options.get('from_name'),
                             _options.get('api_key'),
                             _options.get('api_version'),
+                            _options.get('api_url', 'api.hipchat.com'),
                             _options.get('color'),
                             _options.get('notify'))
     return hipchat
