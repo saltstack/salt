@@ -55,7 +55,15 @@ def __virtual__():
     '''
     Provides smartos state provided for SmartOS
     '''
-    return __virtualname__ if 'vmadm.create' in __salt__ else False
+    if 'vmadm.create' in __salt__ and 'imgadm.list' in __salt__:
+        return True
+    else:
+        return (
+            False,
+            '{0} state module can only be loaded on SmartOS computed nodes'.format(
+                __virtualname__
+            )
+        )
 
 
 def _load_config():
