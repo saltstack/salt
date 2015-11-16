@@ -13,7 +13,7 @@ developers can add new secrets quickly and easily.
 
 This renderer requires the gpg binary.
 
-**No python libraries are required as of the Beryllium release.**
+**No python libraries are required as of the 2015.8.3 release.**
 
 To set things up, you will first need to generate a keypair. On your master,
 run:
