@@ -24,8 +24,7 @@ Below is an example state that sets parameters just to show the basics.
           - server-3: powercycle
 
 However, it is possible to place the entire set of chassis configuration
-data in pillar. Here's an example pillar
-structure:
+data in pillar. Here's an example pillar structure:
 
 .. code-block:: yaml
 
@@ -48,30 +47,30 @@ structure:
           - 'server-2': blade2
 
         blades:
-           blade1:
-             idrac_password: saltstack1
-             ipmi_over_lan: True
-             ip: 172.17.17.1
-             subnet: 255.255.0.0
-             netmask: 172.17.255.255
+          blade1:
+            idrac_password: saltstack1
+            ipmi_over_lan: True
+            ip: 172.17.17.1
+            subnet: 255.255.0.0
+            netmask: 172.17.255.255
           blade2:
-             idrac_password: saltstack1
-             ipmi_over_lan: True
-             ip: 172.17.17.2
-             subnet: 255.255.0.0
-             netmask: 172.17.255.255
+            idrac_password: saltstack1
+            ipmi_over_lan: True
+            ip: 172.17.17.2
+            subnet: 255.255.0.0
+            netmask: 172.17.255.255
           blade3:
-             idrac_password: saltstack1
-             ipmi_over_lan: True
-             ip: 172.17.17.2
-             subnet: 255.255.0.0
-             netmask: 172.17.255.255
+            idrac_password: saltstack1
+            ipmi_over_lan: True
+            ip: 172.17.17.2
+            subnet: 255.255.0.0
+            netmask: 172.17.255.255
           blade4:
-             idrac_password: saltstack1
-             ipmi_over_lan: True
-             ip: 172.17.17.2
-             subnet: 255.255.0.0
-             netmask: 172.17.255.255
+            idrac_password: saltstack1
+            ipmi_over_lan: True
+            ip: 172.17.17.2
+            subnet: 255.255.0.0
+            netmask: 172.17.255.255
 
         switches:
           switch-1:
@@ -88,7 +87,7 @@ structure:
             password: saltstack1
 
 And to go with it, here's an example state that pulls the data from pillar.
-This example assumes that the pillar data would be structured like
+This example assumes that the pillar data would be structured like:
 
 Pillar:
 
@@ -124,15 +123,14 @@ State:
         - location: {{ details['location'] }}
         - mode: {{ details['management_mode'] }}
         - idrac_launch: {{ details['idrac_launch'] }}
-        - slot_names
-          {% for k, v in details['chassis']['slot_names'].iteritems() %}
+        - slot_names:
+          {% for k, v in details['slot_names'].iteritems() %}
           - {{ k }}: {{ v }}
           {% endfor %}
 
-
-    {% for k, v in details['chassis']['switches'].iteritems() %}
+    {% for k, v in details['switches'].iteritems() %}
     standup-switches-{{ k }}:
-      dellchassis.dell_switch:
+      dellchassis.switch:
         - name: {{ k }}
         - ip: {{ v['ip'] }}
         - netmask: {{ v['netmask'] }}
@@ -141,14 +139,8 @@ State:
         - snmp: {{ v['snmp'] }}
     {% endfor %}
 
-    dellchassis
-    {% for k, v in details['chassis']['slot_names'].iteritems() %}
-
-          - {{ k }}: {{ v }}
-          {% endfor %}
-
     blade_powercycle:
-      chassis.dell_chassis:
+      chassis.chassis:
         - blade_power_states:
           - server-1: powercycle
           - server-2: powercycle
@@ -476,7 +468,7 @@ def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
     .. code-block:: yaml
 
         my-dell-chassis:
-          dellchassis.dell_switch:
+          dellchassis.switch:
             - switch: switch-1
             - ip: 192.168.1.1
             - netmask: 255.255.255.0
