@@ -271,16 +271,6 @@ class Compiler(object):
         self.opts = opts
         self.rend = renderers
 
-    # We need __setstate__ and __getstate__ to avoid pickling errors since
-    # 'self.rend' contains a function reference which is not picklable.
-    # These methods are only used when pickling so will not be used on
-    # non-Windows platforms.
-    def __setstate__(self, state):
-        self.__init__(state['opts'])
-
-    def __getstate__(self):
-        return {'opts': self.opts}
-
     def render_template(self, template, **kwargs):
         '''
         Enforce the states in a template

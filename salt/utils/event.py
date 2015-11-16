@@ -871,8 +871,8 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     The interface that takes master events and republishes them out to anyone
     who wants to listen
     '''
-    def __init__(self, opts):
-        super(EventPublisher, self).__init__()
+    def __init__(self, opts, **kwargs):
+        super(EventPublisher, self).__init__(**kwargs)
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.opts.update(opts)
 
@@ -963,13 +963,13 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, **kwargs):
         '''
         Initialize the EventReturn system
 
         Return an EventReturn instance
         '''
-        super(EventReturn, self).__init__()
+        super(EventReturn, self).__init__(**kwargs)
 
         self.opts = opts
         self.event_return_queue = self.opts['event_return_queue']
