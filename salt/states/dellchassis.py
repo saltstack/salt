@@ -144,6 +144,7 @@ import os
 
 log = logging.getLogger(__name__)
 
+from salt.exceptions import CommandExecutionError
 
 def __virtual__():
     return 'chassis.cmd' in __salt__
@@ -548,8 +549,24 @@ def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
     return ret
 
 
-def firmware_update(firmwarefile='', host='',
-                    directory=''):
+def _firmware_update(firmwarefile='', host='',
+                     directory=''):
+    '''
+    Update firmware for a single host
+    '''
+    dest = os.path.join(directory, filename[7:])
+
+    __salt__['cp.get_file'](firmwarefile, dest)
+
+    username = __pillar__['proxy']['admin_user']
+    password = __pillar__['proxy']['admin_password']
+    __salt__['dracr.update_firmware'](dest,
+                                      host=host,
+                                      admin_username=username,
+                                      admin_password=password)
+
+
+def firmware_update(hosts=None, directory=''):
     '''
         State to update the firmware on host
         using the ``racadm`` command
@@ -567,18 +584,34 @@ def firmware_update(firmwarefile='', host='',
 
         dell-chassis-firmware-update:
           dellchassis.firmware_update:
-            - firmwarefile: salt://dellfirmware.exe
-            - host: 192.168.1.1
-            - directory: /firmwares
-
+            hosts:
+              cmc:
+                salt://firmware_cmc.exe
+              server-1:
+                salt://firmware.exe
+            directory: /opt/firmwares
     '''
-    dest = os.path.join(directory, filename[7:])
+    ret = {}
+    ret.changes = {}
+    success = True
+    for host, firmwarefile in hosts:
+        try:
+            firmware_update(firmwarefile, host, directory)
+            ret['changes'].update({
+                'host': {
+                    'comment': 'Firmware update submitted for {0}'.format(host),
+                    'success': True,
+                }
+            })
+        except CommandExecutionError as err:
+            success = False
+            ret['changes'].update({
+                'host': {
+                    'comment': 'FAILED to update firmware for {0}'.format(host),
+                    'success': False,
+                    'reason': str(err),
+                }
+            })
+    ret['result'] = success
+    return ret
 
-    __salt__['cp.get_file'](firmwarefile, dest)
-
-    username = __pillar__['proxy']['admin_user']
-    password = __pillar__['proxy']['admin_password']
-    __salt__['dracr.update_firmware'](dest,
-                                      host=host,
-                                      admin_username=username,
-                                      admin_password=password)
