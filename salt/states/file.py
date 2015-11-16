@@ -4301,7 +4301,7 @@ def serialize(name,
         return _error(
             ret, 'Neither \'dataset\' nor \'dataset_pillar\' was defined')
 
-    all_serializers = salt.loader.searializers(__opts__)
+    all_serializers = salt.loader.serializers(__opts__)
     if formatter in all_serializers:
         serializer = all_serializers[formatter]
         if merge_if_exists:
