@@ -531,7 +531,7 @@ def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
     return ret
 
 
-def firmware_update(firmwarefile, host,
+def firmware_update(firmwarefile='', host='',
                     directory=''):
     '''
         State to update the firmware on host
@@ -545,6 +545,15 @@ def firmware_update(firmwarefile, host,
         directory
             Directory name where firmwarefile
             will be downloaded
+
+    .. code-block:: yaml
+
+        dell-chassis-firmware-update:
+          dellchassis.firmware_update:
+            - firmwarefile: salt://dellfirmware.exe
+            - host: 192.168.1.1
+            - directory: /firmwares
+
     '''
     dest = os.path.join(directory, filename[7:])
 
