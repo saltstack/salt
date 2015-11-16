@@ -2,6 +2,11 @@
 '''
 Management of SmartOS Standalone Compute Nodes
 
+:maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
+:maturity:      new
+:depends:       vmadm, imgadm
+:platform:      smartos
+
 .. code-block:: yaml
 
     vmtest.example.org:
