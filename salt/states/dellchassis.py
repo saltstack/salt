@@ -140,6 +140,7 @@ log = logging.getLogger(__name__)
 
 from salt.exceptions import CommandExecutionError
 
+
 def __virtual__():
     return 'chassis.cmd' in __salt__
 
@@ -537,7 +538,7 @@ def _firmware_update(firmwarefile='', host='',
     '''
     Update firmware for a single host
     '''
-    dest = os.path.join(directory, filename[7:])
+    dest = os.path.join(directory, firmwarefile[7:])
 
     __salt__['cp.get_file'](firmwarefile, dest)
 
@@ -579,7 +580,7 @@ def firmware_update(hosts=None, directory=''):
     success = True
     for host, firmwarefile in hosts:
         try:
-            firmware_update(firmwarefile, host, directory)
+            _firmware_update(firmwarefile, host, directory)
             ret['changes'].update({
                 'host': {
                     'comment': 'Firmware update submitted for {0}'.format(host),
@@ -597,4 +598,3 @@ def firmware_update(hosts=None, directory=''):
             })
     ret['result'] = success
     return ret
-
