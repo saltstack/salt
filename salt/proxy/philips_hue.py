@@ -16,6 +16,8 @@
 
 '''
 Philips HUE lamps module for proxy.
+
+.. versionadded:: 2015.8.3
 '''
 
 from __future__ import absolute_import
