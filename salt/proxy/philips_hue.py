@@ -16,6 +16,9 @@
 
 '''
 Philips HUE lamps module for proxy.
+
+.. versionadded:: 2015.8.3
+
 '''
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
