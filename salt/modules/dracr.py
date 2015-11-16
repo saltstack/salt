@@ -1328,6 +1328,12 @@ def _update_firmware(cmd,
                      host=None,
                      admin_username=None,
                      admin_password=None):
+
+    if not admin_username:
+        admin_username = __pillar__['proxy']['admin_username']
+    if not admin_username:
+        admin_password = __pillar__['proxy']['admin_password']
+
     ret = __execute_ret(cmd,
                         host=host,
                         admin_username=admin_username,
