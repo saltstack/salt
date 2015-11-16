@@ -28,6 +28,7 @@ import re  # do not remove, used in imported file.py functions
 import sys  # do not remove, used in imported file.py functions
 import fileinput  # do not remove, used in imported file.py functions
 import fnmatch  # do not remove, used in imported file.py functions
+import mmap  # do not remove, used in imported file.py functions
 from salt.ext.six import string_types  # do not remove, used in imported file.py functions
 # do not remove, used in imported file.py functions
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
