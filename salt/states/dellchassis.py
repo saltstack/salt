@@ -134,6 +134,7 @@ And to go with it, here's an example state that pulls the data from pillar
 # Import python libs
 from __future__ import absolute_import
 import logging
+import os
 
 log = logging.getLogger(__name__)
 
@@ -528,3 +529,29 @@ def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
 
     ret['comment'] = 'Dell chassis switch {0} was updated.'.format(name)
     return ret
+
+
+def firmware_update(firmwarefile, host,
+                    directory=''):
+    '''
+        State to update the firmware on host
+        using the ``racadm`` command
+
+        firmwarefile
+            filename (string) starting with ``salt://``
+        host
+            string representing the hostname
+            supplied to the ``racadm`` command
+        directory
+            Directory name where firmwarefile
+            will be downloaded
+    '''
+    dest = os.path.join(directory, filename[7:])
+
+    __salt__['cp.get_file'](firmwarefile, dest)
+
+    username = __pillar__['proxy']['admin_user']
+    password = __pillar__['proxy']['admin_password']
+    __salt__['dracr.update_firmware'](dest, host,
+                                      admin_username=username,
+                                      admin_password=password)
