@@ -20,12 +20,12 @@ available = True
 
 
 def deserialize(stream_or_string, **options):
-    """
+    '''
     Deserialize any string or stream like object into a Python data structure.
 
     :param stream_or_string: stream or string to deserialize.
     :param options: options given to lower configparser module.
-    """
+    '''
 
     cp = configparser.SafeConfigParser(**options)
 
@@ -50,12 +50,12 @@ def deserialize(stream_or_string, **options):
 
 
 def serialize(obj, **options):
-    """
+    '''
     Serialize Python data to a configparser formatted string or file.
 
     :param obj: the data structure to serialize
     :param options: options given to lower configparser module.
-    """
+    '''
 
     try:
         if not isinstance(obj, dict):
@@ -75,9 +75,9 @@ def serialize(obj, **options):
 
 
 def _read_dict(configparser, dictionary):
-    """
+    '''
     Cribbed from python3's ConfigParser.read_dict function.
-    """
+    '''
     for section, keys in dictionary.items():
         section = str(section)
         configparser.add_section(section)
