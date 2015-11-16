@@ -22,12 +22,12 @@ available = True
 
 
 def serialize(obj, **options):
-    """
+    '''
     Serialize Python data to a Python string representation (via pprint.format)
 
     :param obj: the data structure to serialize
     :param options: options given to pprint.format
-    """
+    '''
 
     #round-trip this through JSON to avoid OrderedDict types
     # there's probably a more performant way to do this...
