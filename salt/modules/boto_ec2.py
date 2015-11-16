@@ -260,8 +260,8 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
         allocation_id=None, network_interface_id=None, private_ip_address=None,
         allow_reassociation=False, region=None, key=None, keyid=None, profile=None):
     '''
-    Associate an Elastic IP address with a currently running instance.  This
-    requires exactly one of either 'public_ip' or 'allocation_id', depending
+    Associate an Elastic IP address with a currently running instance or a network interface.
+    This requires exactly one of either 'public_ip' or 'allocation_id', depending
     on whether you’re associating a VPC address or a plain EC2 address.
 
     instance_id
@@ -272,6 +272,8 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
         (string) – Public IP address, for standard EC2 based allocations.
     allocation_id
         (string) – Allocation ID for a VPC-based EIP.
+    network_interface_id
+        (string) ID of the network interface to associate the EIP with
     private_ip_address
         (string) – The primary or secondary private IP address to associate with the Elastic IP address.
     allow_reassociation
@@ -288,9 +290,10 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
 
     .. versionadded:: Boron
     '''
-    if not _exactly_one((instance_id, instance_name)):
-        raise SaltInvocationError('Exactly one (but not both) of \'instance_id\' '
-                                  'or \'instance_name\' must be provided')
+    if not network_interface_id:
+        if not _exactly_one((instance_id, instance_name)):
+            raise SaltInvocationError('Exactly one (but not both) of \'instance_id\' '
+                                      'or \'instance_name\' must be provided or a network_interface_id')
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
@@ -300,10 +303,9 @@ def associate_eip_address(instance_id=None, instance_name=None, public_ip=None,
         except boto.exception.BotoServerError as e:
             log.error(e)
             return False
-
-    if not instance_id:
-        log.error("Given instance_name cannot be mapped to an instance_id")
-        return False
+        if not instance_id:
+            log.error("Given instance_name cannot be mapped to an instance_id")
+            return False
 
     try:
         return conn.associate_address(instance_id=instance_id, public_ip=public_ip,
