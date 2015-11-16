@@ -543,7 +543,7 @@ def which(exe=None):
         for default_path in ['/bin', '/sbin', '/usr/bin', '/usr/sbin', '/usr/local/bin']:
             if default_path not in search_path:
                 search_path.append(default_path)
-
+        os.environ['PATH'] = os.pathsep.join(search_path)
         for path in search_path:
             full_path = os.path.join(path, exe)
             if _is_executable_file_or_link(full_path):
