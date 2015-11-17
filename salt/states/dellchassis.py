@@ -281,7 +281,7 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
               - server-2: off
               - server-3: powercycle
     '''
-    ret = {'chassis_name': chassis_name,
+    ret = {'name': chassis_name,
            'result': True,
            'changes': {},
            'comment': ''}
