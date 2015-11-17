@@ -2,27 +2,74 @@
 '''
 Management of SmartOS Standalone Compute Nodes
 
+:maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
+:maturity:      new
+:depends:       vmadm, imgadm
+:platform:      smartos
+
+.. versionadded:: Boron
+
 .. code-block:: yaml
 
-    test.example.org:
+    vmtest.example.org:
+      smartos.vm_present:
+        - config:
+            reprovision: true
+        - vmconfig:
+            image_uuid: c02a2044-c1bd-11e4-bd8c-dfc1db8b0182
+            brand: joyent
+            alias: vmtest
+            quota: 5
+            max_physical_memory: 512
+            tags:
+              label: 'test vm'
+              owner: 'sjorge'
+            nics:
+              "82:1b:8e:49:e9:12"
+                nic_tag: trunk
+                mtu: 1500
+                ips:
+                  - 172.16.1.123/16
+                  - 192.168.2.123/24
+                vlan_id: 10
+              "82:1b:8e:49:e9:13"
+                nic_tag: trunk
+                mtu: 1500
+                ips:
+                  - dhcp
+                vlan_id: 30
+            filesystems:
+              "/bigdata":
+                source: "/bulk/data"
+                type: lofs
+                options:
+                  - ro
+                  - nodevices
+
+    kvmtest.example.org:
       smartos.vm_present:
         - vmconfig:
-          - image_uuid: c02a2044-c1bd-11e4-bd8c-dfc1db8b0182
-          - brand: joyent
-          - alias: test
-          - quota: 5
-          - max_physical_memory: 512
-          - nics:
-            - "82:1b:8e:49:e9:12"
-              - nic_tag: trunk
-              - mtu: 1500
-              - ips: [ "dhcp" ]
-              - vlan_id: 10
-            - "82:1b:8e:49:e9:13"
-              - nic_tag: trunk
-              - mtu: 1500
-              - ips: [ "dhcp" ]
-              - vlan_id: 30
+            brand: kvm
+            alias: kvmtest
+            cpu_type: host
+            ram: 512
+            vnc_port: 9
+            tags:
+              label: 'test kvm'
+              owner: 'sjorge'
+            disks:
+              disk0
+                size: 2048
+                model: virtio
+                compression: lz4
+                boot: true
+            nics:
+              "82:1b:8e:49:e9:15"
+                nic_tag: trunk
+                mtu: 1500
+                ips:
+                  - dhcp
+                vlan_id: 30
 
     cleanup_images:
       smartos.image_vacuum
@@ -105,49 +152,23 @@ def _write_config(config):
         return False
 
 
-def _parse_state_config(config, default_config):
-    '''
-    Parse vm_present state config
-    '''
-    for cfg_item in config if config else []:
-        for k in cfg_item:
-            if k in default_config:
-                if isinstance(cfg_item[k], (bool)):
-                    default_config[k] = cfg_item[k]
-                else:
-                    log.warning('smartos.vm_present::config - property {0} must be bool, using default: {1}'.format(k, default_config[k]))
-            else:
-                log.warning('smartos.vm_present::config - property {0} not one of {1}'.format(k, default_config.keys()))
-
-    return default_config
-
-
 def _parse_vmconfig(config, instances):
     '''
     Parse vm_present vm config
     '''
     vmconfig = None
 
-    if isinstance(config, (list)):
-        for prop in config:
-            # property
-            if len(prop) == 1 and isinstance(prop, (salt.utils.odict.OrderedDict)):
-                if not vmconfig:
-                    vmconfig = {}
-                for k in prop:
-                    if isinstance(prop[k], (list)):
-                        if k not in instances:
-                            continue
-                        if k not in vmconfig:
-                            vmconfig[k] = []
-                        for instance in prop[k]:
-                            instance_key = instance.keys()[0]
-                            instance = _parse_vmconfig(instance[instance_key], instances)
-                            if instances[k] not in instance:
-                                instance[instances[k]] = instance_key
-                            vmconfig[k].append(instance)
-                    else:
-                        vmconfig[k] = prop[k]
+    if isinstance(config, (salt.utils.odict.OrderedDict)):
+        vmconfig = OrderedDict()
+        for prop in config.keys():
+            if prop not in instances:
+                vmconfig[prop] = config[prop]
+            else:
+                vmconfig[prop] = []
+                for instance in config[prop]:
+                    instance_config = config[prop][instance]
+                    instance_config[instances[prop]] = instance
+                    vmconfig[prop].append(instance_config)
     else:
         log.error('smartos.vm_present::parse_vmconfig - failed to parse')
 
@@ -425,15 +446,14 @@ def vm_present(name, vmconfig, config=None):
            'result': None,
            'comment': ''}
 
-    # parse config
-    config = _parse_state_config(
-        config,
-        {
-            'kvm_reboot': True,
-            'auto_import': False,
-            'reprovision': False
-        }
-    )
+    # config defaults
+    state_config = config if config else {}
+    config = {
+        'kvm_reboot': True,
+        'auto_import': False,
+        'reprovision': False
+    }
+    config.update(state_config)
     log.debug('smartos.vm_present::{0}::config - {1}'.format(name, config))
 
     # map special vmconfig parameters
@@ -463,23 +483,6 @@ def vm_present(name, vmconfig, config=None):
     # set hostname if needed
     if 'hostname' not in vmconfig:
         vmconfig['hostname'] = name
-
-    # ensure instances have ids
-    for instance_type in vmconfig_type['instance']:
-        # skip if instance type not in vmconfig
-        if instance_type not in vmconfig:
-            continue
-        # ensure we have unique id
-        for instance in vmconfig[instance_type]:
-            # skip if we have the id
-            if vmconfig_type['instance'][instance_type] in instance:
-                continue
-            ret['result'] = False
-            ret['comment'] = 'one or more {0} is missing unique id {1}'.format(
-                instance_type,
-                vmconfig_type['instance'][instance_type]
-            )
-            return ret
 
     # check if vm exists
     if vmconfig['hostname'] in __salt__['vmadm.list'](order='hostname'):
@@ -602,6 +605,10 @@ def vm_present(name, vmconfig, config=None):
 
                         # handle new properties
                         for prop in state_cfg:
+                            # skip empty props like ips, options,..
+                            if isinstance(state_cfg[prop], (list)) and len(state_cfg[prop]) == 0:
+                                continue
+
                             if prop not in current_cfg:
                                 update_cfg[prop] = state_cfg[prop]
 
