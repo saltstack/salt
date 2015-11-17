@@ -429,7 +429,7 @@ def roster(opts, whitelist=None):
     )
 
 
-def states(opts, functions, utils, whitelist=None):
+def states(opts, functions, utils, serializers, whitelist=None):
     '''
     Returns the state modules
 
@@ -454,6 +454,7 @@ def states(opts, functions, utils, whitelist=None):
     )
     ret.pack['__states__'] = ret
     ret.pack['__utils__'] = utils
+    ret.pack['__serializers__'] = serializers
     return ret
 
 
