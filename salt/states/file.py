@@ -4301,12 +4301,12 @@ def serialize(name,
         return _error(
             ret, 'Neither \'dataset\' nor \'dataset_pillar\' was defined')
 
-    serializer_name = '{}.serialize'.format(formatter)
+    serializer_name = '{0}.serialize'.format(formatter)
     if serializer_name in __serializers__:
         serializer = __serializers__[serializer_name]
         if merge_if_exists:
             if os.path.isfile(name):
-                if '{}.deserialize'.format(formatter) in __serializers__:
+                if '{0}.deserialize'.format(formatter) in __serializers__:
                     with salt.utils.fopen(name, 'r') as fhr:
                         existing_data = serializer.deserialize(fhr)
                 else:
