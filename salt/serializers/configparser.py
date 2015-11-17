@@ -33,9 +33,6 @@ def deserialize(stream_or_string, **options):
         if not isinstance(stream_or_string, (bytes, string_types)):
             cp.readfp(stream_or_string)
         else:
-            if isinstance(stream_or_string, bytes):
-                stream_or_string = stream_or_string.decode('utf-8')
-
             # python2's ConfigParser cannot parse a config from a string
             cp.readfp(StringIO.StringIO(stream_or_string))
         data = {}
