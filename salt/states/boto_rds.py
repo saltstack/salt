@@ -433,7 +433,48 @@ def subnet_group_present(name, description, subnet_ids=None, subnet_names=None,
 
 
 def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
-           tags=None, region=None, key=None, keyid=None, profile=None):
+           tags=None, region=None, key=None, keyid=None, profile=None,
+           wait_for_deletion=True, timeout=180):
+    '''
+    Ensure RDS instance is absent.
+
+    name
+        Name of the RDS instance.
+
+    skip_final_snapshot
+        Whether a final db snapshot is created before the instance is deleted.
+        If True, no snapshot is created.
+        If False, a snapshot is created before deleting the instance.
+
+    final_db_snapshot_identifier
+        If a final snapshot is requested, this is the identifier used for that
+        snapshot.
+
+    tags
+        A list of tags.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+
+    .. _create_dbinstance: http://boto.readthedocs.org/en/latest/ref/rds.html#boto.rds.RDSConnection.create_dbinstance
+
+    wait_for_deletion (bool)
+        Wait for the RDS instance to be deleted completely before finishing
+        the state.
+
+    timeout (in seconds)
+        The amount of time that can pass before raising an Exception.
+    '''
     ret = {'name': name,
            'result': True,
            'comment': '',
@@ -453,7 +494,8 @@ def absent(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
         return ret
     deleted = __salt__['boto_rds.delete'](name, skip_final_snapshot,
                                           final_db_snapshot_identifier,
-                                          region, key, keyid, profile)
+                                          region, key, keyid, profile,
+                                          wait_for_deletion, timeout)
     if not deleted:
         ret['result'] = False
         ret['comment'] = 'Failed to delete {0} RDS.'.format(name)

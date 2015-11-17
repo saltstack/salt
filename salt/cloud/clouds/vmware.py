@@ -2234,7 +2234,7 @@ def create(vm_):
             scheduled_hardware_upgrade.versionKey = hardware_version
             config_spec.scheduledHardwareUpgradeInfo = scheduled_hardware_upgrade
         else:
-            log.debug("Virtual hardware version already set to {1}".format(hardware_version))
+            log.debug("Virtual hardware version already set to {0}".format(hardware_version))
 
     if num_cpus:
         log.debug("Setting cpu to: {0}".format(num_cpus))
