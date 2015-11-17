@@ -206,7 +206,7 @@ def latest(name,
         necessary) to ensure that the commit to which ``rev`` points exists in
         the local checkout, but no changes will be made to the local HEAD.
 
-        .. versionadded:: 2015.8.2
+        .. versionadded:: 2015.8.3
 
     force : False
         .. deprecated:: 2015.8.0
