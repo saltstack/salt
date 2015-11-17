@@ -1076,9 +1076,9 @@ def get_chassis_name(host=None, admin_username=None, admin_password=None):
             admin_username=root admin_password=secret
 
     '''
-    return system_info(host=host, admin_username=admin_username,
-                       admin_password=
-                       admin_password)['Chassis Information']['Chassis Name']
+    return bare_rac_cmd('getchassisname', host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
 
 
 def inventory(host=None, admin_username=None, admin_password=None):
@@ -1293,6 +1293,19 @@ def set_general(cfg_sec, cfg_var, val, host=None,
 def get_general(cfg_sec, cfg_var, host=None,
                 admin_username=None, admin_password=None):
     ret = __execute_ret('getconfig -g {0} -o {1}'.format(cfg_sec, cfg_var),
+                        host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
+
+    if ret['retcode'] == 0:
+        return ret['stdout']
+    else:
+        return ret
+
+
+def bare_rac_cmd(cmd, host=None,
+                admin_username=None, admin_password=None):
+    ret = __execute_ret('{0}'.format(cmd),
                         host=host,
                         admin_username=admin_username,
                         admin_password=admin_password)

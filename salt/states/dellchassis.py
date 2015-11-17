@@ -31,9 +31,10 @@ data in pillar. Here's an example pillar structure:
     proxy:
       host: 10.27.20.18
       admin_username: root
-      admin_password: super-secret
       fallback_admin_username: root
-      fallback_admin_password: old-secret
+      passwords:
+        - super-secret
+        - old-secret
       proxytype: fx2
 
       chassis:
@@ -452,43 +453,48 @@ def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
            'comment': ''}
 
     current_nic = __salt__['chassis.cmd']('network_info', module=name)
-    if current_nic.get('retcode', 0) != 0:
-        ret['result'] = False
-        ret['comment'] = current_nic['stdout']
-        return ret
+    try:
+        if current_nic.get('retcode', 0) != 0:
+            ret['result'] = False
+            ret['comment'] = current_nic['stdout']
+            return ret
 
-    if ip or netmask or gateway:
-        if not ip:
-            ip = current_nic['Network']['IP Address']
-        if not netmask:
-            ip = current_nic['Network']['Subnet Mask']
-        if not gateway:
-            ip = current_nic['Network']['Gateway']
+        if ip or netmask or gateway:
+            if not ip:
+                ip = current_nic['Network']['IP Address']
+            if not netmask:
+                ip = current_nic['Network']['Subnet Mask']
+            if not gateway:
+                ip = current_nic['Network']['Gateway']
 
-    if current_nic['Network']['DHCP Enabled'] == '0' and dhcp:
-        ret['changes'].update({'DHCP': {'Old': {'DHCP Enabled': current_nic['Network']['DHCP Enabled']},
-                                        'New': {'DHCP Enabled': dhcp}}})
+        if current_nic['Network']['DHCP Enabled'] == '0' and dhcp:
+            ret['changes'].update({'DHCP': {'Old': {'DHCP Enabled': current_nic['Network']['DHCP Enabled']},
+                                            'New': {'DHCP Enabled': dhcp}}})
 
-    if ((ip or netmask or gateway) and not dhcp and (ip != current_nic['Network']['IP Address'] or
-                                                             netmask != current_nic['Network']['Subnet Mask'] or
-                                                             gateway != current_nic['Network']['Gateway'])):
-        ret['changes'].update({'IP': {'Old': current_nic['Network'],
-                                      'New': {'IP Address': ip,
-                                              'Subnet Mask': netmask,
-                                              'Gateway': gateway}}})
+        if ((ip or netmask or gateway) and not dhcp and (ip != current_nic['Network']['IP Address'] or
+                                                                 netmask != current_nic['Network']['Subnet Mask'] or
+                                                                 gateway != current_nic['Network']['Gateway'])):
+            ret['changes'].update({'IP': {'Old': current_nic['Network'],
+                                          'New': {'IP Address': ip,
+                                                  'Subnet Mask': netmask,
+                                                  'Gateway': gateway}}})
 
-    if password:
-        if 'New' not in ret['changes']:
-            ret['changes']['New'] = {}
-        ret['changes']['New'].update({'Password': '*****'})
+        if password:
+            if 'New' not in ret['changes']:
+                ret['changes']['New'] = {}
+            ret['changes']['New'].update({'Password': '*****'})
 
-    if snmp:
-        if 'New' not in ret['changes']:
-            ret['changes']['New'] = {}
-        ret['changes']['New'].update({'SNMP': '*****'})
+        if snmp:
+            if 'New' not in ret['changes']:
+                ret['changes']['New'] = {}
+            ret['changes']['New'].update({'SNMP': '*****'})
 
-    if ret['changes'] == {}:
-        ret['comment'] = 'Switch ' + name + ' is already in desired state'
+        if ret['changes'] == {}:
+            ret['comment'] = 'Switch ' + name + ' is already in desired state'
+            return ret
+    except AttributeError:
+        ret['changes'] = {}
+        ret['comment'] = 'Something went wrong retrieving the switch details'
         return ret
 
     if __opts__['test']:
@@ -506,7 +512,7 @@ def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
         password_ret = __salt__['chassis.cmd']('deploy_password', 'root', password, module=name)
 
     if snmp:
-        snmp_ret = __salt__['chassis.cmd']('deploy_snmp', password, module=name)
+        snmp_ret = __salt__['chassis.cmd']('deploy_snmp', snmp, module=name)
 
     if any([password_ret, snmp_ret, net_ret, dhcp_ret]) is False:
         ret['result'] = False
