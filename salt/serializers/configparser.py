@@ -3,6 +3,8 @@
     salt.serializers.json
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    .. versionadded:: Boron
+
     Implements a configparser serializer.
 '''
 
