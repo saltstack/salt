@@ -945,6 +945,7 @@ class AESFuncs(object):
         return self.ckminions.auth_check(
             perms,
             clear_load['fun'],
+            clear_load['arg'],
             clear_load['tgt'],
             clear_load.get('tgt_type', 'glob'),
             publish_validate=True)
@@ -1867,6 +1868,7 @@ class ClearFuncs(object):
             good = self.ckminions.auth_check(
                 auth_list,
                 clear_load['fun'],
+                clear_load['arg'],
                 clear_load['tgt'],
                 clear_load.get('tgt_type', 'glob'))
             if not good:
@@ -1954,6 +1956,7 @@ class ClearFuncs(object):
             good = self.ckminions.auth_check(
                 auth_list,
                 clear_load['fun'],
+                clear_load['arg'],
                 clear_load['tgt'],
                 clear_load.get('tgt_type', 'glob')
                 )
@@ -1982,6 +1985,7 @@ class ClearFuncs(object):
                     good = self.ckminions.auth_check(
                                 publisher_acl.get(clear_load['user'].split('_', 1)[-1]),
                                 clear_load['fun'],
+                                clear_load['arg'],
                                 clear_load['tgt'],
                                 clear_load.get('tgt_type', 'glob'))
                     if not good:
@@ -2023,6 +2027,7 @@ class ClearFuncs(object):
                     good = self.ckminions.auth_check(
                         acl[clear_load['user']],
                         clear_load['fun'],
+                        clear_load['arg'],
                         clear_load['tgt'],
                         clear_load.get('tgt_type', 'glob'))
                     if not good:

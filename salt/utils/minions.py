@@ -692,7 +692,7 @@ class CkMinions(object):
                 log.error('Invalid regular expression: {0}'.format(regex))
         return all(vals)
 
-    def any_auth(self, form, auth_list, fun, tgt=None, tgt_type='glob'):
+    def any_auth(self, form, auth_list, fun, arg, tgt=None, tgt_type='glob'):
         '''
         Read in the form and determine which auth check routine to execute
         '''
@@ -700,6 +700,7 @@ class CkMinions(object):
             return self.auth_check(
                     auth_list,
                     fun,
+                    arg,
                     tgt,
                     tgt_type)
         return self.spec_check(
@@ -710,6 +711,7 @@ class CkMinions(object):
     def auth_check(self,
                    auth_list,
                    funs,
+                   args,
                    tgt,
                    tgt_type='glob',
                    groups=None,
@@ -736,8 +738,11 @@ class CkMinions(object):
         # compound commands will come in a list so treat everything as a list
         if not isinstance(funs, list):
             funs = [funs]
+            args = [args]
         try:
-            for fun in funs:
+            for num in six.range(funs):
+                fun = funs[num]
+                arg = args[num]
                 for ind in auth_list:
                     if isinstance(ind, six.string_types):
                         # Allowed for all minions
@@ -758,8 +763,11 @@ class CkMinions(object):
                                 if self.match_check(ind[valid], fun):
                                     return True
                             elif isinstance(ind[valid], list):
-                                for regex in ind[valid]:
-                                    if self.match_check(regex, fun):
+                                for cond in ind[valid]:
+                                    if isinstance(cond, six.string_types):
+                                        if self.match_check(cond, fun):
+                                            return True
+                                    elif isinstance(cond, dict):
                                         return True
         except TypeError:
             return False
