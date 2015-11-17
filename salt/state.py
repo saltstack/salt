@@ -824,7 +824,8 @@ class State(object):
                                         func[func.rindex('.'):]
                                         )
                                 self.functions[f_key] = funcs[func]
-        self.states = salt.loader.states(self.opts, self.functions, self.utils)
+        self.serializers = salt.loader.serializers(self.opts)
+        self.states = salt.loader.states(self.opts, self.functions, self.utils, self.serializers)
         self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
 
     def module_refresh(self):
@@ -3290,7 +3291,8 @@ class MasterState(State):
         # Load the states, but they should not be used in this class apart
         # from inspection
         self.utils = salt.loader.utils(self.opts)
-        self.states = salt.loader.states(self.opts, self.functions, self.utils)
+        self.serializers = salt.loader.serializers(self.opts)
+        self.states = salt.loader.states(self.opts, self.functions, self.utils, self.serializers)
         self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
 
 

@@ -38,7 +38,7 @@ HAS_LIBS = False
 HAS_SIX = False
 try:
     import requests
-    from six.moves.html_parser import HTMLParser
+    from salt.ext.six.moves.html_parser import HTMLParser  # pylint: disable=E0611
     try:
         import salt.ext.six as six
         HAS_SIX = True

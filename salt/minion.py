@@ -537,11 +537,15 @@ class SMinion(MinionBase):
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils,
                                                  include_errors=True)
+        self.serializers = salt.loader.serializers(self.opts)
         self.returners = salt.loader.returners(self.opts, self.functions)
         self.proxy = salt.loader.proxy(self.opts, self.functions, self.returners, None)
         # TODO: remove
         self.function_errors = {}  # Keep the funcs clean
-        self.states = salt.loader.states(self.opts, self.functions, self.utils)
+        self.states = salt.loader.states(self.opts,
+                self.functions,
+                self.utils,
+                self.serializers)
         self.rend = salt.loader.render(self.opts, self.functions)
         self.matcher = Matcher(self.opts, self.functions)
         self.functions['sys.reload_modules'] = self.gen_modules
@@ -583,12 +587,14 @@ class MasterMinion(object):
             utils=self.utils,
             whitelist=self.whitelist,
             initial_load=initial_load)
+        self.serializers = salt.loader.serializers(self.opts)
         if self.mk_returners:
             self.returners = salt.loader.returners(self.opts, self.functions)
         if self.mk_states:
             self.states = salt.loader.states(self.opts,
                                              self.functions,
-                                             self.utils)
+                                             self.utils,
+                                             self.serializers)
         if self.mk_rend:
             self.rend = salt.loader.render(self.opts, self.functions)
         if self.mk_matcher:

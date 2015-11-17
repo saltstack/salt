@@ -359,7 +359,7 @@ def owner(*paths):
         return ''
     ret = {}
     for path in paths:
-        cmd = ['rpm', '-qf', '--queryformat', '%{{NAME}}', path]
+        cmd = ['rpm', '-qf', '--queryformat', '%{name}', path]
         ret[path] = __salt__['cmd.run_stdout'](cmd,
                                                output_loglevel='trace',
                                                python_shell=False)
