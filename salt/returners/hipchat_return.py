@@ -373,5 +373,6 @@ def event_return(events):
                       _options.get('from_name'),
                       _options.get('api_key'),
                       _options.get('api_version'),
+                      _options.get('api_url', 'api.hipchat.com'),
                       _options.get('color'),
                       _options.get('notify'))
