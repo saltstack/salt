@@ -124,6 +124,27 @@ pillar stated above:
           - server-3: powercycle
           - server-4: powercycle
 
+    # Set idrac_passwords for blades
+    {% for k, v in details['blades'].iteritems() %}
+    {{ k }}:
+      dellchassis.blade_idrac:
+        - idrac_password: {{ password }}
+    {% endfor %}
+
+.. note::
+
+    This state module relies on the dracr.py execution module, which runs idrac commands on
+    the chassis, blades, etc. The idrac command runs very slowly and, depending on your state,
+    the proxy minion return might timeout before the idrac commands have completed. If you
+    are repeatedly seeing minions timeout after state calls, please use the ``-t`` CLI argument
+    to increase the timeout variable.
+
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' state.sls my-dell-chasis-state-name -t 60
+
 '''
 
 # Import python libs
