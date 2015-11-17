@@ -764,11 +764,63 @@ class CkMinions(object):
                                     return True
                             elif isinstance(ind[valid], list):
                                 for cond in ind[valid]:
+                                    # Function name match
                                     if isinstance(cond, six.string_types):
                                         if self.match_check(cond, fun):
                                             return True
+                                    # Function and args match
                                     elif isinstance(cond, dict):
-                                        return True
+                                        if len(cond) != 1:
+                                            # Invalid argument
+                                            continue
+                                        fcond = next(six.iterkeys(cond))
+                                        # cond: {
+                                        #   'mod.func': {
+                                        #       'args': [
+                                        #           'one.*', 'two\\|three'],
+                                        #       'kwargs': {
+                                        #           'functioin': 'teach\\|feed',
+                                        #           'user': 'mother\\|father'
+                                        #           }
+                                        #       }
+                                        #   }
+                                        if self.match_check(fcond, fun):  # check key that is function name match
+                                            acond = cond[fcond]
+                                            if not isinstance(acond, dict):
+                                                # Invalid argument
+                                                continue
+                                            # whitelist args, kwargs
+                                            cond_args = acond.get('args', [])
+                                            good = True
+                                            for i in six.range(len(cond_args)):
+                                                if len(arg) <= i:
+                                                    good = False
+                                                    break
+                                                if acond[i] is None:  # None == '.*' i.e. allow any
+                                                    continue
+                                                if not self.match_check(acond[i], arg[i]):
+                                                    good = False
+                                                    break
+                                            if not good:
+                                                continue
+                                            # Check kwargs
+                                            cond_kwargs = acond.get('kwargs', {})
+                                            arg_kwargs = {}
+                                            for a in arg:
+                                                if isinstance(a, dict) and '__kwarg__' in a:
+                                                    arg_kwargs = a
+                                                    break
+                                            for k, v in cond_kwargs:
+                                                if v is None:  # None == '.*' i.e. allow any
+                                                    continue
+                                                if k not in arg_kwargs:
+                                                    good = False
+                                                    break
+                                                if not self.match_check(v, arg_kwargs.get[k]):
+                                                    good = False
+                                                    break
+                                            if good:
+                                                return True
         except TypeError:
             return False
         return False
