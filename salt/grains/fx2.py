@@ -34,6 +34,8 @@ def _grains():
     '''
     Get the grains from the proxied device
     '''
+    username = __pillar__['proxy']['admin_username']
+    password = __pillar__['proxy']['admin_password']
     r = salt.modules.dracr.system_info(host=__pillar__['proxy']['host'],
                                        admin_username=__pillar__['proxy']['admin_username'],
                                        admin_password=__pillar__['proxy']['admin_password'])

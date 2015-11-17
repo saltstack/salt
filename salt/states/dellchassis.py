@@ -105,17 +105,6 @@ pillar stated above:
           - {{ k }}: {{ v }}
           {% endfor %}
 
-    {% for k, v in details['switches'].iteritems() %}
-    standup-switches-{{ k }}:
-      dellchassis.switch:
-        - name: {{ k }}
-        - ip: {{ v['ip'] }}
-        - netmask: {{ v['netmask'] }}
-        - gateway: {{ v['gateway'] }}
-        - password: {{ v['password'] }}
-        - snmp: {{ v['snmp'] }}
-    {% endfor %}
-
     blade_powercycle:
       dellchassis.chassis:
         - blade_power_states:
@@ -252,6 +241,7 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
               - server-3: powercycle
     '''
     ret = {'name': chassis_name,
+           'chassis_name': chassis_name,
            'result': True,
            'changes': {},
            'comment': ''}

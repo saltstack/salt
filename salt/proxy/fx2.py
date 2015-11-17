@@ -283,8 +283,10 @@ def chconfig(cmd, *args, **kwargs):
     # Catch password reset
     if cmd == 'change_password':
         if 'username' in kwargs:
+            __opts__['proxy']['admin_username'] = kwargs['username']
             DETAILS['admin_username'] = kwargs['username']
         if 'password' in kwargs:
+            __opts__['proxy']['admin_password'] = kwargs['password']
             DETAILS['admin_password'] = kwargs['password']
     if 'dracr.'+cmd not in __salt__:
         return {'retcode': -1, 'message': 'dracr.' + cmd + ' is not available'}
