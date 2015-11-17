@@ -64,6 +64,19 @@ class Client(object):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)
 
+    # Add __setstate__ and __getstate__ so that the object may be
+    # deep copied. It normally can't be deep copied because its
+    # constructor requires an 'opts' parameter.
+    # The TCP transport needs to be able to deep copy this class
+    # due to 'salt.utils.context.ContextDict.clone'.
+    def __setstate__(self, state):
+        # This will polymorphically call __init__
+        # in the derived class.
+        self.__init__(state['opts'])
+
+    def __getstate__(self):
+        return {'opts': self.opts}
+
     def _check_proto(self, path):
         '''
         Make sure that this path is intended for the salt master and trim it
