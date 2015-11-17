@@ -243,6 +243,12 @@ def network_info(host=None,
 
     inv = inventory(host=host, admin_username=admin_username,
                     admin_password=admin_password)
+    if inv is None:
+        cmd = {}
+        cmd['retcode'] = -1
+        cmd['stdout'] = 'Problem getting switch inventory'
+        return cmd
+
     if module not in inv.get('switch'):
         cmd = {}
         cmd['retcode'] = -1
