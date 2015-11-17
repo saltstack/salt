@@ -443,7 +443,9 @@ class ProcessManager(object):
 
 class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
     def __init__(self, *args, **kwargs):
-        self.log_queue = kwargs.pop('log_queue', salt.log.setup.get_multiprocessing_logging_queue())
+        self.log_queue = kwargs.pop('log_queue', None)
+        if self.log_queue is None:
+            self.log_queue = salt.log.setup.get_multiprocessing_logging_queue()
         multiprocessing.util.register_after_fork(self, MultiprocessingProcess.__setup_process_logging)
         multiprocessing.util.Finalize(self, salt.log.setup.shutdown_multiprocessing_logging, exitpriority=16)
         super(MultiprocessingProcess, self).__init__(*args, **kwargs)

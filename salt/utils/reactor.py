@@ -29,8 +29,9 @@ class Reactor(salt.utils.process.MultiprocessingProcess, salt.state.Compiler):
     The reactor has the capability to execute pre-programmed executions
     as reactions to events
     '''
-    def __init__(self, opts, **kwargs):
-        salt.utils.process.MultiprocessingProcess.__init__(self, **kwargs)
+    def __init__(self, opts, log_queue=None):
+        salt.utils.process.MultiprocessingProcess.__init__(
+            self, log_queue=log_queue)
         local_minion_opts = opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
