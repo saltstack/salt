@@ -1269,7 +1269,7 @@ def attach_network_interface(device_index, name=None, network_interface_id=None,
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.create_network_interface my_eni subnet-12345 description=my_eni groups=['my_group']
+        salt myminion boto_ec2.attach_network_interface my_eni instance_name=salt-master device_index=0
     '''
     if not salt.utils.exactly_one((name, network_interface_id)):
         raise SaltInvocationError(
