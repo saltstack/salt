@@ -1275,9 +1275,14 @@ def _validate_file_roots(opts):
                     ' using defaults')
         return {'base': _expand_glob_path([salt.syspaths.BASE_FILE_ROOTS_DIR])}
     for saltenv, dirs in six.iteritems(opts['file_roots']):
+        normalized_saltenv = six.text_type(saltenv)
+        if normalized_saltenv != saltenv:
+            opts['file_roots'][normalized_saltenv] = \
+                opts['file_roots'].pop(saltenv)
         if not isinstance(dirs, (list, tuple)):
-            opts['file_roots'][saltenv] = []
-        opts['file_roots'][saltenv] = _expand_glob_path(opts['file_roots'][saltenv])
+            opts['file_roots'][normalized_saltenv] = []
+        opts['file_roots'][normalized_saltenv] = \
+            _expand_glob_path(opts['file_roots'][normalized_saltenv])
     return opts['file_roots']
 
 
