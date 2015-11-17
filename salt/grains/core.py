@@ -1214,12 +1214,15 @@ def os_data():
                 elif os.path.isfile('/etc/SuSE-release'):
                     grains['lsb_distrib_id'] = 'SUSE'
                     with salt.utils.fopen('/etc/SuSE-release') as fhr:
-                        rel = re.sub("[^0-9]", "", fhr.read().split('\n')[1])
-                    with salt.utils.fopen('/etc/SuSE-release') as fhr:
-                        patch = re.sub("[^0-9]", "", fhr.read().split('\n')[2])
-                    release = rel + " SP" + patch
-                    grains['lsb_distrib_release'] = release
-                    grains['lsb_distrib_codename'] = "n.a"
+                        for line in fhr:
+                            if 'enterprise' in line.lower():
+                                grains['lsb_distrib_id'] = 'SLES'
+                            elif 'version' in line.lower():
+                                version = re.sub(r'[^0-9]', '', line)
+                            elif 'patchlevel' in line.lower():
+                                patch = re.sub(r'[^0-9]', '', line)
+                    grains['lsb_distrib_release'] = version + ' SP' + patch
+                    grains['lsb_distrib_codename'] = 'n.a'
                 elif os.path.isfile('/etc/altlinux-release'):
                     # ALT Linux
                     grains['lsb_distrib_id'] = 'altlinux'

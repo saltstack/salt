@@ -1419,6 +1419,7 @@ def run_all(cmd,
             ignore_retcode=False,
             saltenv='base',
             use_vt=False,
+            redirect_stderr=False,
             **kwargs):
     '''
     Execute the passed command and return a dict of return data
@@ -1513,6 +1514,14 @@ def run_all(cmd,
     Note that ``env`` represents the environment variables for the command, and
     should be formatted as a dict, or a YAML string which resolves to a dict.
 
+    redirect_stderr : False
+        If set to ``True``, then stderr will be redirected to stdout. This is
+        helpful for cases where obtaining both the retcode and output is
+        desired, but it is not desired to have the output separated into both
+        stdout and stderr.
+
+        .. versionadded:: 2015.8.2
+
     CLI Example:
 
     .. code-block:: bash
@@ -1537,10 +1546,12 @@ def run_all(cmd,
     '''
     python_shell = _python_shell_default(python_shell,
                                          kwargs.get('__pub_jid', ''))
+    stderr = subprocess.STDOUT if redirect_stderr else subprocess.PIPE
     ret = _run(cmd,
                runas=runas,
                cwd=cwd,
                stdin=stdin,
+               stderr=stderr,
                shell=shell,
                python_shell=python_shell,
                env=env,
