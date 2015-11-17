@@ -144,6 +144,51 @@ def get_all_eip_addresses(addresses=None, allocation_ids=None, region=None,
                 key, keyid, profile)]
 
 
+def get_unassociated_eip_address(domain='standard', region=None, key=None,
+                                 keyid=None, profile=None):
+    '''
+    Return the first unassociated EIP
+
+    domain
+        Indicates whether the address is a EC2 address or a VPC address
+        (standard|vpc).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-call boto_ec2.get_unassociated_eip_address
+
+    .. versionadded:: Boron
+    '''
+    eip = None
+    for address in get_all_eip_addresses(region=region, key=key, keyid=keyid,
+                                         profile=profile):
+        address_info = get_eip_address_info(addresses=address, region=region,
+                                            key=key, keyid=keyid,
+                                            profile=profile)[0]
+        if address_info['instance_id']:
+            log.debug('{0} is already associated with the instance {1}'.format(
+                address, address_info['instance_id']))
+            continue
+
+        if address_info['network_interface_id']:
+            log.debug('{0} is already associated with the network interface {1}'
+                      .format(address, address_info['network_interface_id']))
+            continue
+
+        if address_info['domain'] == domain:
+            log.debug("The first unassociated EIP address in the domain '{0}' "
+                      "is {1}".format(domain, address))
+            eip = address
+            break
+
+    if not eip:
+        log.debug('No unassociated Elastic IP found!')
+
+    return eip
+
+
 def get_eip_address_info(addresses=None, allocation_ids=None, region=None, key=None,
                          keyid=None, profile=None):
     '''
