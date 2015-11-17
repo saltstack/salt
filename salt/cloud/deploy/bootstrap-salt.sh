@@ -291,7 +291,7 @@ EOT
 }   # ----------  end of function usage  ----------
 
 
-while getopts ":hvnDc:Gg:k:MSNXCPFUKIA:i:Lp:dH:Zb" opt
+while getopts ":hvnDc:Gg:k:MSNXCPFUKIA:i:Lp:dH:Zbs:" opt
 do
   case "${opt}" in
 
@@ -326,6 +326,7 @@ do
              exit 1
          fi
          ;;
+    s )  __DEFAULT_SLEEP="$OPTARG"                      ;;
     M )  _INSTALL_MASTER=$BS_TRUE                       ;;
     S )  _INSTALL_SYNDIC=$BS_TRUE                       ;;
     N )  _INSTALL_MINION=$BS_FALSE                      ;;
