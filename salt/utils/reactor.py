@@ -29,12 +29,27 @@ class Reactor(salt.utils.process.MultiprocessingProcess, salt.state.Compiler):
     The reactor has the capability to execute pre-programmed executions
     as reactions to events
     '''
-    def __init__(self, opts):
-        salt.utils.process.MultiprocessingProcess.__init__(self)
+    def __init__(self, opts, log_queue=None):
+        salt.utils.process.MultiprocessingProcess.__init__(
+            self, log_queue=log_queue)
         local_minion_opts = opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
         salt.state.Compiler.__init__(self, opts, self.minion.rend)
+
+    # We need __setstate__ and __getstate__ to avoid pickling errors since
+    # 'self.rend' (from salt.state.Compiler) contains a function reference
+    # which is not picklable.
+    # These methods are only used when pickling so will not be used on
+    # non-Windows platforms.
+    def __setstate__(self, state):
+        Reactor.__init__(
+            self, state['opts'],
+            log_queue=state['log_queue'])
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'log_queue': self.log_queue}
 
     def sig_stop(self, signum, frame):
         msg = 'Received a '
