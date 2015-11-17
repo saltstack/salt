@@ -1200,7 +1200,7 @@ DEFAULT_PROXY_MINION_OPTS = {
     # salt.vt will have trouble with our forking model.
     # Proxies with non-persistent (mostly REST API) connections
     # can change this back to True
-    'multiprocessing': False
+    'multiprocessing': True
 }
 
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
