@@ -69,6 +69,55 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - profile:
             keyid: GKTADJGHEIQSXMKKRBJ08H
             key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+
+    # weight based policy records (weight of 10 and 20)
+    myrecord1:
+      boto_route53.present:
+        - name: test.example.com.
+        - value: 1.1.1.1
+        - zone: example.com.
+        - ttl: 60
+        - record_type: A
+        - profile: my_profile
+        - identifier:
+          - my_set_id
+          - 10 
+    myrecord2:
+      boto_route53.present:
+        - name: test.example.com.
+        - value: 1.1.1.2
+        - zone: example.com.
+        - ttl: 60
+        - record_type: A
+        - profile: my_profile
+        - identifier:
+          - my_set_id
+          - 20
+
+    # latency/region based policy record (us-east-1 record and us-west-1 record)
+    myeastrecord:
+      boto_route53.present:
+        - name: test.example.com.
+        - value: 1.1.1.1
+        - zone: example.com.
+        - ttl: 60
+        - record_type: A
+        - profile: my_profile
+        - identifier:
+          - my_east_server
+          - us-east-1
+    mywestrecord:
+      boto_route53.present:
+        - name: test.example.com.
+        - value: 1.1.1.2
+        - zone: example.com.
+        - ttl: 60
+        - record_type: A
+        - profile: my_profile
+        - identifier:
+          - my_west_server
+          - us-west-1
+
 '''
 
 # Import Python Libs
@@ -119,6 +168,8 @@ def present(
 
     identifier
         The unique identifier to use for this record.
+            For weighed policy records ['id', 'weight']
+            For latency policy records ['id', 'region']
 
     region
         The region to connect to.
@@ -152,13 +203,45 @@ def present(
 
     try:
         record = __salt__['boto_route53.get_record'](name, zone, record_type,
-                                                     False, region, key, keyid,
+                                                     True, region, key, keyid,
                                                      profile, split_dns,
                                                      private_zone)
+        if isinstance(record, list):
+            # get_record has returned a list, so we are working with record sets with a policy/identifier
+            # we need to find the record that has the matching "set id" which is the first portion of the identifier tuple
+            # so we can update the weight/region
+            if not identifier:
+                ret['comment'] = 'Error - multiple records match {0}, but no identifier was specified'.format(name)
+                ret['result'] = False
+                return ret
+            elif not isinstance(identifier, list):
+                ret['comment'] = 'Error - identifier must be a list'
+                ret['result'] = False
+                return ret
+            found_record = False
+            for thisrecord in record:
+                if identifier[0] == thisrecord['identifier'][0]:
+                    record = thisrecord
+                    found_record = True
+                    break
+            if not found_record:
+                record = {}
+        else:
+            if record:
+                if not isinstance(identifier, list):
+                    ret['comment'] = 'Error - identifier must be a list'
+                    ret['result'] = False
+                    return ret
+                if identifier[0] != record['identifier'][0]:
+                    record = {}
+
     except SaltInvocationError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         ret['result'] = False
         return ret
+
+    if identifier:
+        identifier = [str(x) for x in identifier]
 
     if isinstance(record, dict) and not record:
         if __opts__['test']:
@@ -176,6 +259,8 @@ def present(
                                      'value': value,
                                      'record_type': record_type,
                                      'ttl': ttl}
+            if identifier:
+                ret['changes']['new']['identifier'] = identifier
             ret['comment'] = 'Added {0} Route53 record.'.format(name)
         else:
             ret['result'] = False
@@ -206,18 +291,22 @@ def present(
                 return ret
             updated = __salt__['boto_route53.update_record'](name, value, zone,
                                                              record_type,
-                                                             identifier, ttl,
+                                                             (record['identifier'] if 'identifier' in record else None),
+                                                             ttl,
                                                              region, key,
                                                              keyid, profile,
                                                              wait_for_sync,
                                                              split_dns,
-                                                             private_zone)
+                                                             private_zone,
+                                                             new_identifier=identifier)
             if updated:
                 ret['changes']['old'] = record
                 ret['changes']['new'] = {'name': name,
                                          'value': value,
                                          'record_type': record_type,
                                          'ttl': ttl}
+                if identifier:
+                    ret['changes']['new']['identifier'] = identifier
                 ret['comment'] = 'Updated {0} Route53 record.'.format(name)
             else:
                 ret['result'] = False
@@ -283,7 +372,7 @@ def absent(
     record = __salt__['boto_route53.get_record'](name, zone, record_type,
                                                  False, region, key, keyid,
                                                  profile, split_dns,
-                                                 private_zone)
+                                                 private_zone, identifier=identifier)
     if record:
         if __opts__['test']:
             msg = 'Route53 record {0} set to be deleted.'.format(name)
