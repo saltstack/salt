@@ -124,7 +124,7 @@ def _get_options(ret=None):
 
     profile_attrs = {'from_jid': 'from_jid',
                      'api_key': 'api_key',
-                     'api_version': 'api_key'
+                     'api_version': 'api_key',
                      'api_url': 'api_url',
                      }
 
