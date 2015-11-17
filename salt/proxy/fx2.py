@@ -200,8 +200,6 @@ def init(opts):
 
     (username, password) = find_credentials()
 
-    check_grains = _grains(DETAILS['host'], username, password)
-
 
 def admin_username():
     '''
