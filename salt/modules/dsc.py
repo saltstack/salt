@@ -194,3 +194,69 @@ def remove(name):
     cmd = 'Uninstall-Module {0}'.format(name)
     no_ret = _pshell(cmd)
     return name not in list_modules()
+
+
+def run_config(path):
+    # Run the DSC Configuration
+    cmd = '$job = Start-DscConfiguration -Path {0};'.format(path)
+    cmd += 'Do{ } While ($job.State -notin \'Completed\', \'Failed\'); ' \
+           'return $job.State'
+    ret = __salt__['cmd.run'](cmd, shell='powershell', python_shell=True)
+    if ret == 'Completed':
+        return True
+    else:
+        return False
+
+
+def test_config():
+    cmd = 'Test-DscConfiguration *>&1'
+    ret = __salt__['cmd.run'](cmd, shell='powershell', python_shell=True)
+    if ret == 'True':
+        return True
+    else:
+        return False
+
+
+def get_config():
+    cmd = 'Get-DscConfiguration | ' \
+          'Select-Object * -ExcludeProperty Cim* | ' \
+          'ConvertTo-JSON'
+    ret = __salt__['cmd.run'](cmd, shell='powershell', python_shell=True)
+    try:
+        ret = json.loads(ret, strict=False)
+    except ValueError as esc:
+        log.debug('Json not returned')
+    return ret
+
+
+def get_config_status():
+    cmd = 'Get-DscConfigurationStatus | ' \
+          'Select-Object -Property HostName, Status, ' \
+          '@{Name="StartDate";Expression={Get-Date ($_.StartDate) -Format g}}, ' \
+          'Type, Mode, RebootRequested, NumberofResources | ' \
+          'ConvertTo-JSON'
+    ret = __salt__['cmd.run'](cmd, shell='powershell', python_shell=True)
+    try:
+        ret = json.loads(ret, strict=False)
+    except ValueError as esc:
+        log.debug('Json not returned')
+        return ret
+
+    return ret
+
+
+def create_config(name, resource, **kwargs):
+
+    cmd = 'Configuration {config_name} '.format(config_name=name)
+    cmd += '{ '
+    cmd += 'param([string[]]$computerName="localhost") '
+    cmd += 'Import-DscResource -ModuleName "PSDesiredStateConfiguration" '
+    cmd += 'Node $computerName { '
+    cmd += '{resource} {resource}Name '.format(resource=resource)
+    cmd += '{ '
+    for key, value in kwargs.iteritems():
+        if not key.startswith('__'):
+            cmd += '{key} = "{value}" '.format(key=key, value=value)
+    cmd += '} } }; '
+    cmd += '{config_name}'.format(config_name=name)
+    return cmd
