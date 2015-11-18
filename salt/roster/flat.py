@@ -82,6 +82,8 @@ class RosterMatcher(object):
         Return minions that match via list
         '''
         minions = {}
+        if not isinstance(self.tgt, list):
+            self.tgt = self.tgt.split(',')
         for minion in self.raw:
             if minion in self.tgt:
                 data = self.get_data(minion)
