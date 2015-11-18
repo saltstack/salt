@@ -13,9 +13,11 @@ from __future__ import absolute_import
 import copy
 import logging
 import json
+import os
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -38,13 +40,13 @@ def _pshell(cmd):
     Execute the desired powershell command and ensure that it returns data
     in json format and load that into python
     '''
-    if 'ConvertTo-Json' not in cmd:
+    if 'convertto-json' not in cmd.lower():
         cmd = ' '.join([cmd, '| ConvertTo-Json -Depth 10'])
     log.debug('DSC: {0}'.format(cmd))
     ret = __salt__['cmd.shell'](cmd, shell='powershell')
     try:
         ret = json.loads(ret, strict=False)
-    except ValueError as esc:
+    except ValueError:
         log.debug('Json not returned')
     return ret
 
@@ -173,7 +175,8 @@ def install(name):
 
         salt 'win01' dsc.install PowerPlan
     '''
-    cmd = 'Install-Module -name {0} -Force'.format(name)
+    # Putting quotes around the parameter protects against command injection
+    cmd = 'Install-Module -name "{0}" -Force'.format(name)
     no_ret = _pshell(cmd)
     return name in list_modules()
 
@@ -191,6 +194,99 @@ def remove(name):
 
         salt 'win01' dsc.remove PowerPlan
     '''
-    cmd = 'Uninstall-Module {0}'.format(name)
+    # Putting quotes around the parameter protects against command injection
+    cmd = 'Uninstall-Module "{0}"'.format(name)
     no_ret = _pshell(cmd)
     return name not in list_modules()
+
+
+def run_config(path):
+    '''
+    Run an existing DSC configuration
+
+    :param str path: Path to the directory that contains the .mof configuration
+    file
+
+    :return: True if successful, otherwise False
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dsc.run_config C:\\DSC\\WebSiteConfiguration
+    '''
+    # Make sure the path exists
+    if not os.path.exists(path):
+        raise CommandExecutionError('Must pass a valid path')
+
+    # Run the DSC Configuration
+    # Putting quotes around the parameter protects against command injection
+    cmd = '$job = Start-DscConfiguration -Path "{0}";'.format(path)
+    cmd += 'Do{ } While ($job.State -notin \'Completed\', \'Failed\'); ' \
+           'return $job.State'
+    ret = _pshell(cmd)
+    if ret == 'Completed':
+        return True
+    else:
+        return False
+
+
+def test_config():
+    '''
+    Tests the current applied DSC Configuration
+
+    :return: True if successfully applied, otherwise False
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dsc.test_config
+    '''
+    cmd = 'Test-DscConfiguration *>&1'
+    ret = _pshell(cmd)
+    if ret == 'True':
+        return True
+    else:
+        return False
+
+
+def get_config():
+    '''
+    Get the current DSC Configuration
+
+    :return: A dictionary representing the DSC Configuration on the machine
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dsc.get_config
+    '''
+    cmd = 'Get-DscConfiguration | ' \
+          'Select-Object * -ExcludeProperty Cim*'
+    return _pshell(cmd)
+
+
+def get_config_status():
+    '''
+    Get the status of the current DSC Configuration
+
+    :return: A dictionary representing the status of the current DSC
+    Configuration on the machine
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dsc.get_config_status
+    '''
+    cmd = 'Get-DscConfigurationStatus | ' \
+          'Select-Object -Property HostName, Status, ' \
+          '@{Name="StartDate";Expression={Get-Date ($_.StartDate) -Format g}}, ' \
+          'Type, Mode, RebootRequested, NumberofResources'
+    return _pshell(cmd)
