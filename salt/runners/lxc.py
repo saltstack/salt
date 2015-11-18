@@ -313,8 +313,6 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
             kw = copy.deepcopy(kw)
             kw['name'] = name
             saved_kwargs = {}
-            if 'bootstrap_delay' in kw:
-                saved_kwargs['bootstrap_delay'] = kw['bootstrap_delay']
             if 'uses_systemd' in kw:
                 saved_kwargs['uses_systemd'] = kw['uses_systemd']
             kw = client.cmd(
