@@ -13,9 +13,11 @@ from __future__ import absolute_import
 import copy
 import logging
 import json
+import os
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandExecutionError
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -38,13 +40,13 @@ def _pshell(cmd):
     Execute the desired powershell command and ensure that it returns data
     in json format and load that into python
     '''
-    if 'ConvertTo-Json' not in cmd:
+    if 'convertto-json' not in cmd.lower():
         cmd = ' '.join([cmd, '| ConvertTo-Json -Depth 10'])
     log.debug('DSC: {0}'.format(cmd))
     ret = __salt__['cmd.shell'](cmd, shell='powershell')
     try:
         ret = json.loads(ret, strict=False)
-    except ValueError as esc:
+    except ValueError:
         log.debug('Json not returned')
     return ret
 
@@ -173,7 +175,8 @@ def install(name):
 
         salt 'win01' dsc.install PowerPlan
     '''
-    cmd = 'Install-Module -name {0} -Force'.format(name)
+    # Putting quotes around the parameter protects against command injection
+    cmd = 'Install-Module -name "{0}" -Force'.format(name)
     no_ret = _pshell(cmd)
     return name in list_modules()
 
@@ -191,17 +194,24 @@ def remove(name):
 
         salt 'win01' dsc.remove PowerPlan
     '''
-    cmd = 'Uninstall-Module {0}'.format(name)
+    # Putting quotes around the parameter protects against command injection
+    cmd = 'Uninstall-Module "{0}"'.format(name)
     no_ret = _pshell(cmd)
     return name not in list_modules()
 
 
 def run_config(path):
+
+    # Make sure the path exists
+    if not os.path.exists(path):
+        raise CommandExecutionError('Must pass a valid path')
+
     # Run the DSC Configuration
-    cmd = '$job = Start-DscConfiguration -Path {0};'.format(path)
+    # Putting quotes around the parameter protects against command injection
+    cmd = '$job = Start-DscConfiguration -Path "{0}";'.format(path)
     cmd += 'Do{ } While ($job.State -notin \'Completed\', \'Failed\'); ' \
            'return $job.State'
-    ret = __salt__['cmd.run'](cmd, shell='powershell', python_shell=True)
+    ret = _pshell(cmd)
     if ret == 'Completed':
         return True
     else:
@@ -210,7 +220,7 @@ def run_config(path):
 
 def test_config():
     cmd = 'Test-DscConfiguration *>&1'
-    ret = __salt__['cmd.run'](cmd, shell='powershell', python_shell=True)
+    ret = _pshell(cmd)
     if ret == 'True':
         return True
     else:
@@ -219,44 +229,13 @@ def test_config():
 
 def get_config():
     cmd = 'Get-DscConfiguration | ' \
-          'Select-Object * -ExcludeProperty Cim* | ' \
-          'ConvertTo-JSON'
-    ret = __salt__['cmd.run'](cmd, shell='powershell', python_shell=True)
-    try:
-        ret = json.loads(ret, strict=False)
-    except ValueError as esc:
-        log.debug('Json not returned')
-    return ret
+          'Select-Object * -ExcludeProperty Cim*'
+    return _pshell(cmd)
 
 
 def get_config_status():
     cmd = 'Get-DscConfigurationStatus | ' \
           'Select-Object -Property HostName, Status, ' \
           '@{Name="StartDate";Expression={Get-Date ($_.StartDate) -Format g}}, ' \
-          'Type, Mode, RebootRequested, NumberofResources | ' \
-          'ConvertTo-JSON'
-    ret = __salt__['cmd.run'](cmd, shell='powershell', python_shell=True)
-    try:
-        ret = json.loads(ret, strict=False)
-    except ValueError as esc:
-        log.debug('Json not returned')
-        return ret
-
-    return ret
-
-
-def create_config(name, resource, **kwargs):
-
-    cmd = 'Configuration {config_name} '.format(config_name=name)
-    cmd += '{ '
-    cmd += 'param([string[]]$computerName="localhost") '
-    cmd += 'Import-DscResource -ModuleName "PSDesiredStateConfiguration" '
-    cmd += 'Node $computerName { '
-    cmd += '{resource} {resource}Name '.format(resource=resource)
-    cmd += '{ '
-    for key, value in kwargs.iteritems():
-        if not key.startswith('__'):
-            cmd += '{key} = "{value}" '.format(key=key, value=value)
-    cmd += '} } }; '
-    cmd += '{config_name}'.format(config_name=name)
-    return cmd
+          'Type, Mode, RebootRequested, NumberofResources'
+    return _pshell(cmd)
