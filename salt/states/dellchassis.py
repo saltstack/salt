@@ -124,6 +124,27 @@ pillar stated above:
           - server-3: powercycle
           - server-4: powercycle
 
+    # Set idrac_passwords for blades
+    {% for k, v in details['blades'].iteritems() %}
+    {{ k }}:
+      dellchassis.blade_idrac:
+        - idrac_password: {{ password }}
+    {% endfor %}
+
+.. note::
+
+    This state module relies on the dracr.py execution module, which runs racadm commands on
+    the chassis, blades, etc. The racadm command runs very slowly and, depending on your state,
+    the proxy minion return might timeout before the racadm commands have completed. If you
+    are repeatedly seeing minions timeout after state calls, please use the ``-t`` CLI argument
+    to increase the timeout variable.
+
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' state.sls my-dell-chasis-state-name -t 60
+
 '''
 
 # Import python libs
@@ -205,7 +226,11 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
         The location of the chassis.
 
     password
-        Password for the chassis
+        Password for the chassis. Note: If this password is set for the chassis,
+        the current implementation of this state will set this password both on
+        the chassis and the iDrac passwords on any configured blades. If the
+        password for the blades should be distinct, they should be set separately
+        with the blade_idrac function.
 
     mode
         The management mode of the chassis. Viable options are:
