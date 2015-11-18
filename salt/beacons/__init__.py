@@ -75,7 +75,7 @@ class Beacon(object):
                     if not self._process_interval(mod, interval):
                         log.trace('Skipping beacon {0}. Interval not reached.'.format(mod))
                         continue
-                if self._determine_beacon_config(mod, 'disable_during_state_run', b_config):
+                if self._determine_beacon_config(current_beacon_config, 'disable_during_state_run'):
                     log.trace('Evaluting if beacon {0} should be skipped due to a state run.'.format(mod))
                     b_config = self._trim_config(b_config, mod, 'disable_during_state_run')
                     is_running = False
@@ -104,19 +104,19 @@ class Beacon(object):
         Take a beacon configuration and strip out the interval bits
         '''
         if isinstance(b_config[mod], list):
-            self._remove_list_item(b_config[mod], 'interval')
+            self._remove_list_item(b_config[mod], key)
         elif isinstance(b_config[mod], dict):
-            b_config[mod].pop('interval')
+            b_config[mod].pop(key)
         return b_config
 
-    def _determine_beacon_config(self, mod, val, config_mod):
+    def _determine_beacon_config(self, current_beacon_config, key):
         '''
         Process a beacon configuration to determine its interval
         '''
         
         interval = False
         if isinstance(current_beacon_config, dict):
-            interval = current_beacon_config.get('interval', False)
+            interval = current_beacon_config.get(key, False)
 
         return interval
 
