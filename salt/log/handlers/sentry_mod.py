@@ -101,6 +101,7 @@ __virtualname__ = 'sentry'
 
 
 def __virtual__():
+    global __grains__, __salt__
     if HAS_RAVEN is True:
         __grains__ = salt.loader.grains(__opts__)
         __salt__ = salt.loader.minion_mods(__opts__)
