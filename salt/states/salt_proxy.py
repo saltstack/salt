@@ -19,6 +19,8 @@
     and start the salt-proxy process (default true),
     if it isn't already running.
 '''
+from salt.ext.six.moves import shlex_quote as quote
+
 import os
 import logging
 
@@ -80,10 +82,12 @@ def configure_proxy(proxyname='p8000', start=True, **kwargs):
     changes_old.extend(msg_old)
     # start the proxy process
     if start:
+        cmd = ('ps ax | grep "salt-proxy --proxyid={0}" | grep -v grep'
+               .format(quote(proxyname)))
         cmdout = __salt__['cmd.run_all'](
-            'ps ax | grep "salt-proxy --proxyid={0}"  | grep -v grep'
-            .format(proxyname),
-            timeout=5, python_shell=True)
+            cmd,
+            timeout=5,
+            python_shell=True)
         if not cmdout['stdout']:
             __salt__['cmd.run'](
                 'salt-proxy --proxyid={0} -l info -d'.format(proxyname),
