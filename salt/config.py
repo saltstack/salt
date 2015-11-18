@@ -591,7 +591,7 @@ VALID_OPTS = {
 
     # List-only nodegroups for salt-ssh. Each group must be formed as either a
     # comma-separated list, or a YAML list.
-    'ssh_nodegroups': dict,
+    'ssh_list_nodegroups': dict,
 
     # The logfile location for salt-key
     'key_logfile': str,
@@ -1116,7 +1116,7 @@ DEFAULT_MASTER_OPTS = {
     'search_index_interval': 3600,
     'loop_interval': 60,
     'nodegroups': {},
-    'ssh_nodegroups': {},
+    'ssh_list_nodegroups': {},
     'cython_enable': False,
     'enable_gpu_grains': False,
     # XXX: Remove 'key_logfile' support in 2014.1.0
