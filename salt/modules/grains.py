@@ -99,10 +99,16 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM):
 
         salt '*' grains.get pkg:apache
     '''
-    return salt.utils.traverse_dict_and_list(__grains__,
+    ret = salt.utils.traverse_dict_and_list(__grains__,
                                              key,
                                              default,
                                              delimiter)
+
+    if ret.startswith('sdb://'):
+        return sdb.sdb_get(ret, __opts__) or default
+    else:
+        return ret
+
 
 
 def has_value(key):
