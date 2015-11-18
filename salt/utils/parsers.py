@@ -2929,3 +2929,22 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
 
     def setup_config(self):
         return salt.config.spm_config(self.get_config_file_path())
+
+
+class SaltAPIParser(six.with_metaclass(OptionParserMeta,
+                                       OptionParser,
+                                       ConfigDirMixIn,
+                                       LogLevelMixIn,
+                                       PidfileMixin,
+                                       DaemonMixIn,
+                                       MergeConfigMixIn)):
+    '''
+    The Salt API cli parser object used to fire up the salt api system.
+    '''
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'api')
+
+    def setup_config(self):
+        return salt.config.api_config(self.get_config_file_path())  # pylint: disable=no-member
