@@ -349,17 +349,18 @@ def available(name):
 
         salt '*' service.available sshd
     '''
-    name = _canonical_template_unit_name(name)
-    if name.endswith('.service'):
-        name = name[:-8]  # len('.service') is 8
-    units = get_all()
-    if name in units:
+    name = _canonical_unit_name(name)
+    list_unit = 'systemctl --full --no-legend --no-pager list-units ' + name
+    matched_units = __salt__['cmd.run_stdout'](list_unit)
+    if len(matched_units) > 0:
         return True
-    elif '@' in name:
-        templatename = name[:name.find('@') + 1]
-        return templatename in units
-    else:
-        return False
+    # Units such as getty@tty1.service appear in list-units only if they are
+    # already running, so we have to check list-unit-files for getty@.service
+    # aswell.
+    name = _canonical_template_unit_name(name)
+    list_unit_file = 'systemctl --full --no-legend --no-pager list-unit-files ' + name
+    matched_files = __salt__['cmd.run_stdout'](list_unit_file)
+    return len(matched_files) > 0
 
 
 def missing(name):
