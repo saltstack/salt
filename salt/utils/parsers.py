@@ -2951,7 +2951,6 @@ class SaltAPIParser(six.with_metaclass(OptionParserMeta,
                                        OptionParser,
                                        ConfigDirMixIn,
                                        LogLevelMixIn,
-                                       PidfileMixin,
                                        DaemonMixIn,
                                        MergeConfigMixIn)):
     '''
