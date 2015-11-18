@@ -201,7 +201,21 @@ def remove(name):
 
 
 def run_config(path):
+    '''
+    Run an existing DSC configuration
 
+    :param str path: Path to the directory that contains the .mof configuration
+    file
+
+    :return: True if successful, otherwise False
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dsc.run_config C:\\DSC\\WebSiteConfiguration
+    '''
     # Make sure the path exists
     if not os.path.exists(path):
         raise CommandExecutionError('Must pass a valid path')
@@ -219,6 +233,18 @@ def run_config(path):
 
 
 def test_config():
+    '''
+    Tests the current applied DSC Configuration
+
+    :return: True if successfully applied, otherwise False
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dsc.test_config
+    '''
     cmd = 'Test-DscConfiguration *>&1'
     ret = _pshell(cmd)
     if ret == 'True':
@@ -228,12 +254,37 @@ def test_config():
 
 
 def get_config():
+    '''
+    Get the current DSC Configuration
+
+    :return: A dictionary representing the DSC Configuration on the machine
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dsc.get_config
+    '''
     cmd = 'Get-DscConfiguration | ' \
           'Select-Object * -ExcludeProperty Cim*'
     return _pshell(cmd)
 
 
 def get_config_status():
+    '''
+    Get the status of the current DSC Configuration
+
+    :return: A dictionary representing the status of the current DSC
+    Configuration on the machine
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' dsc.get_config_status
+    '''
     cmd = 'Get-DscConfigurationStatus | ' \
           'Select-Object -Property HostName, Status, ' \
           '@{Name="StartDate";Expression={Get-Date ($_.StartDate) -Format g}}, ' \
