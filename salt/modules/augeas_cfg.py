@@ -31,7 +31,6 @@ import re
 import logging
 from salt.ext.six.moves import zip
 import salt.ext.six as six
-import shlex
 
 # Make sure augeas python interface is installed
 HAS_AUGEAS = False
@@ -42,6 +41,7 @@ except ImportError:
     pass
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -149,7 +149,7 @@ def execute(context=None, lens=None, commands=()):
         nargs = arg_map[method]
 
         try:
-            parts = shlex.split(arg)
+            parts = salt.utils.shlex_split(arg)
             if len(parts) not in nargs:
                 err = '{0} takes {1} args: {2}'.format(method, nargs, parts)
                 raise ValueError(err)

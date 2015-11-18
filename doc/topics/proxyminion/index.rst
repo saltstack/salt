@@ -1,6 +1,8 @@
-===============================
-Salt Proxy Minion Documentation
-===============================
+.. _proxy-minion:
+
+=================
+Salt Proxy Minion
+=================
 
 Proxy minions are a developing Salt feature that enables controlling devices
 that, for whatever reason, cannot run a standard salt-minion.  Examples include
@@ -22,6 +24,35 @@ and discovery, control, status, remote execution, and state management.
 See the :doc:`Proxy Minion Walkthrough </topics/proxyminion/demo>` for an end-to-end
 demonstration of a working proxy minion.
 
+See the :doc:`Proxy Minion SSH Walkthrough </topics/proxyminion/ssh>` for an end-to-end
+demonstration of a working SSH proxy minion.
+
+New in 2015.8.2
+---------------
+
+*BREAKING CHANGE*: Adding the `proxymodule` variable  to __opts__ is deprecated.
+The `proxymodule` variable has been moved a new globally-injected variable
+called `__proxy__`.  A related configuration option called
+`add_proxymodule_to_opts` has been added and defaults to `True`.  In the next
+major release, codenamed Boron, this variable will default to False.
+
+In the meantime, proxies that functioned under 2015.8.0 and .1 should continue
+to work under 2015.8.2.  You should rework your proxy code to use `__proxy__` as
+soon as possible.
+
+The `rest_sample` example proxy minion has been updated to use `__proxy__`.
+
+This change was made because proxymodules are a LazyLoader object, but
+LazyLoaders cannot be serialized.  `__opts__` gets serialized, and so things
+like `saltutil.sync_all` and `state.highstate` would throw exceptions.
+
+Also in this release, proxymodules can be stored on the master in
+/srv/salt/_proxy.  A new saltutil function called `sync_proxies` will transfer
+these to remote proxy minions.  Note that you must restart the salt-proxy
+daemon to pick up these changes.
+
+In addition, a salt.utils helper function called `is_proxy()` was added to make
+it easier to tell when the running minion is a proxy minion.
 
 New in 2015.8
 -------------
@@ -243,7 +274,7 @@ and status; "package" installation, and a ping.
     # -*- coding: utf-8 -*-
     '''
     This is a simple proxy-minion designed to connect to and communicate with
-    the bottle-based web service contained in 
+    the bottle-based web service contained in
     https://github.com/saltstack/salt-contrib/proxyminion_rest_example
     '''
     from __future__ import absolute_import
@@ -276,12 +307,12 @@ and status; "package" installation, and a ping.
         log.debug('rest_sample proxy __virtual__() called...')
         return True
 
-    # Every proxy module needs an 'init', though you can 
+    # Every proxy module needs an 'init', though you can
     # just put a 'pass' here if it doesn't need to do anything.
     def init(opts):
         log.debug('rest_sample proxy init() called...')
 
-        # Save the REST URL 
+        # Save the REST URL
         DETAILS['url'] = opts['proxy']['url']
 
         # Make sure the REST URL ends with a '/'
@@ -292,7 +323,7 @@ and status; "package" installation, and a ping.
     def id(opts):
         '''
         Return a unique ID for this proxy minion.  This ID MUST NOT CHANGE.
-        If it changes while the proxy is running the salt-master will get 
+        If it changes while the proxy is running the salt-master will get
         really confused and may stop talking to this minion
         '''
         r = salt.utils.http.query(opts['proxy']['url']+'id', decode_type='json', decode=True)
@@ -479,16 +510,18 @@ Here is an excerpt from a module that was modified to support proxy-minions:
 .. code-block:: python
 
    __proxyenabled__ = ['*']
-   
+
    [...]
+   def ping():
 
-    def ping():
-
-        if 'proxymodule' in __opts__:
-            ping_cmd = __opts__['proxymodule'].loaded_base_name + '.ping'
+    if not salt.utils.is_proxy():
+        return True
+    else:
+        ping_cmd = __opts__['proxy']['proxytype'] + '.ping'
+        if __opts__.get('add_proxymodule_to_opts', False):
             return __opts__['proxymodule'][ping_cmd]()
         else:
-            return True
+            return __proxy__[ping_cmd]()
 
 And then in salt.proxy.rest_sample.py we find
 
@@ -505,3 +538,183 @@ And then in salt.proxy.rest_sample.py we find
             return False
 
 
+.. toctree::
+    :maxdepth: 2
+    :glob:
+
+    demo
+
+
+
+
+SSH Proxymodules
+----------------
+
+See above for a general introduction to writing proxy modules.
+All of the guidelines that apply to REST are the same for SSH.
+This sections specifically talks about the SSH proxy module and
+explains the working of the example proxy module ``ssh_sample``.
+
+Here is a simple example proxymodule used to interface to a device over SSH.
+Code for the SSH shell is in the `salt-contrib GitHub repository <https://github.com/saltstack/salt-contrib/proxyminion_ssh_example>`_
+
+This proxymodule enables "package" installation.
+
+.. code-block:: python
+
+
+    # -*- coding: utf-8 -*-
+    '''
+    This is a simple proxy-minion designed to connect to and communicate with
+    a server that exposes functionality via SSH.
+    This can be used as an option when the device does not provide
+    an api over HTTP and doesn't have the python stack to run a minion.
+    '''
+    from __future__ import absolute_import
+
+    # Import python libs
+    import json
+    import logging
+
+    # Import Salt's libs
+    from salt.utils.vt_helper import SSHConnection
+    from salt.utils.vt import TerminalException
+
+    # This must be present or the Salt loader won't load this module
+    __proxyenabled__ = ['ssh_sample']
+
+    DETAILS = {}
+
+    # Want logging!
+    log = logging.getLogger(__file__)
+
+
+    # This does nothing, it's here just as an example and to provide a log
+    # entry when the module is loaded.
+    def __virtual__():
+        '''
+        Only return if all the modules are available
+        '''
+        log.info('ssh_sample proxy __virtual__() called...')
+
+        return True
+
+
+    def init(opts):
+        '''
+        Required.
+        Can be used to initialize the server connection.
+        '''
+        try:
+            DETAILS['server'] = SSHConnection(host=__opts__['proxy']['host'],
+                                              username=__opts__['proxy']['username'],
+                                              password=__opts__['proxy']['password'])
+            # connected to the SSH server
+            out, err = DETAILS['server'].sendline('help')
+
+        except TerminalException as e:
+            log.error(e)
+            return False
+
+
+    def shutdown(opts):
+        '''
+        Disconnect
+        '''
+        DETAILS['server'].close_connection()
+
+
+    def parse(out):
+        '''
+        Extract json from out.
+
+        Parameter
+            out: Type string. The data returned by the
+            ssh command.
+        '''
+        jsonret = []
+        in_json = False
+        for ln_ in out.split('\n'):
+            if '{' in ln_:
+                in_json = True
+            if in_json:
+                jsonret.append(ln_)
+            if '}' in ln_:
+                in_json = False
+        return json.loads('\n'.join(jsonret))
+
+
+    def package_list():
+        '''
+        List "packages" by executing a command via ssh
+        This function is called in response to the salt command
+
+        ..code-block::bash
+            salt target_minion pkg.list_pkgs
+
+        '''
+        # Send the command to execute
+        out, err = DETAILS['server'].sendline('pkg_list')
+
+        # "scrape" the output and return the right fields as a dict
+        return parse(out)
+
+
+    def package_install(name, **kwargs):
+        '''
+        Install a "package" on the REST server
+        '''
+        cmd = 'pkg_install ' + name
+        if 'version' in kwargs:
+            cmd += '/'+kwargs['version']
+        else:
+            cmd += '/1.0'
+
+        # Send the command to execute
+        out, err = DETAILS['server'].sendline(cmd)
+
+        # "scrape" the output and return the right fields as a dict
+        return parse(out)
+
+
+    def package_remove(name):
+        '''
+        Remove a "package" on the REST server
+        '''
+        cmd = 'pkg_remove ' + name
+
+        # Send the command to execute
+        out, err = DETAILS['server'].sendline(cmd)
+
+        # "scrape" the output and return the right fields as a dict
+        return parse(out)
+
+Connection Setup
+################
+
+The ``init()`` method is responsible for connection setup. It uses the ``host``, ``username`` and ``password`` config variables defined in the pillar data. The ``prompt`` kwarg can be passed to ``SSHConnection`` if your SSH server's prompt differs from the example's prompt ``(Cmd)``. Instantiating the ``SSHConnection`` class establishes an SSH connection to the ssh server (using Salt VT).
+
+Command execution
+#################
+
+The ``package_*`` methods use the SSH connection (established in ``init()``) to send commands out to the SSH server. The ``sendline()`` method of ``SSHConnection`` class can be used to send commands out to the server. In the above example we send commands like ``pkg_list`` or ``pkg_install``. You can send any SSH command via this utility.
+
+Output parsing
+##############
+
+Output returned by ``sendline()`` is a tuple of strings representing the stdout and the stderr respectively. In the toy example shown we simply scrape the output and convert it to a python dictionary, as shown in the ``parse`` method. You can tailor this method to match your parsing logic.
+
+Connection teardown
+###################
+
+The ``shutdown`` method is responsible for calling the ``close_connection()`` method of ``SSHConnection`` class. This ends the SSH connection to the server.
+
+For more information please refer to class `SSHConnection`_.
+
+.. toctree::
+    :maxdepth: 2
+    :glob:
+
+    ssh
+
+.. _SSHConnection: https://github.com/saltstack/salt/blob/b8271c7512da7e048019ee26422be9e7d6b795ab/salt/utils/vt_helper.py#L28

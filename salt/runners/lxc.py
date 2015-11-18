@@ -312,6 +312,11 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         if saltcloud_mode:
             kw = copy.deepcopy(kw)
             kw['name'] = name
+            saved_kwargs = {}
+            if 'bootstrap_delay' in kw:
+                saved_kwargs['bootstrap_delay'] = kw['bootstrap_delay']
+            if 'uses_systemd' in kw:
+                saved_kwargs['uses_systemd'] = kw['uses_systemd']
             kw = client.cmd(
                 host, 'lxc.cloud_init_interface', args + [kw],
                 expr_form='list', timeout=600).get(host, {})
@@ -320,6 +325,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         kw['seed'] = seeds.get(name, seed_arg)
         if not kw['seed']:
             kw.pop('seed_cmd', '')
+        kw.update(saved_kwargs)
         cmds.append(
             (host,
              name,

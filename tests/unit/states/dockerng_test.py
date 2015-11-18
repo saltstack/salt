@@ -66,13 +66,11 @@ class DockerngTestCase(TestCase):
             'image:latest',
             validate_input=False,
             name='cont',
-            volumes=['/container-0'],
-            client_timeout=60)
-        dockerng_start.assert_called_with(
-            'cont',
             binds={'/host-0': {'bind': '/container-0', 'ro': True}},
+            volumes=['/container-0'],
             validate_ip_addrs=False,
-            validate_input=False)
+            client_timeout=60)
+        dockerng_start.assert_called_with('cont')
 
     def test_running_with_predifined_volume(self):
         '''
@@ -103,13 +101,11 @@ class DockerngTestCase(TestCase):
         dockerng_create.assert_called_with(
             'image:latest',
             validate_input=False,
-            name='cont',
-            client_timeout=60)
-        dockerng_start.assert_called_with(
-            'cont',
             binds={'/host-0': {'bind': '/container-0', 'ro': True}},
             validate_ip_addrs=False,
-            validate_input=False)
+            name='cont',
+            client_timeout=60)
+        dockerng_start.assert_called_with('cont')
 
     def test_running_with_no_predifined_ports(self):
         '''
@@ -142,12 +138,10 @@ class DockerngTestCase(TestCase):
             validate_input=False,
             name='cont',
             ports=[9797],
-            client_timeout=60)
-        dockerng_start.assert_called_with(
-            'cont',
             port_bindings={9797: [9090]},
             validate_ip_addrs=False,
-            validate_input=False)
+            client_timeout=60)
+        dockerng_start.assert_called_with('cont')
 
     def test_running_with_predifined_ports(self):
         '''
@@ -179,12 +173,10 @@ class DockerngTestCase(TestCase):
             'image:latest',
             validate_input=False,
             name='cont',
-            client_timeout=60)
-        dockerng_start.assert_called_with(
-            'cont',
             port_bindings={9797: [9090]},
             validate_ip_addrs=False,
-            validate_input=False)
+            client_timeout=60)
+        dockerng_start.assert_called_with('cont')
 
     def test_running_compare_images_by_id(self):
         '''
@@ -430,9 +422,36 @@ class DockerngTestCase(TestCase):
                 self.assertEqual(ret,
                                  {'changes': {},
                                   'comment': 'Environment values must'
-                                  ' be strings KEY={0!r}'.format(wrong_value),
+                                  ' be strings KEY=\'{0}\''.format(wrong_value),
                                   'name': 'cont',
                                   'result': False})
+
+    def test_running_with_labels(self):
+        '''
+        Test dockerng.running with labels parameter.
+        '''
+        dockerng_create = Mock()
+        __salt__ = {'dockerng.list_containers': MagicMock(),
+                    'dockerng.list_tags': MagicMock(),
+                    'dockerng.pull': MagicMock(),
+                    'dockerng.state': MagicMock(),
+                    'dockerng.inspect_image': MagicMock(),
+                    'dockerng.create': dockerng_create,
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            dockerng_state.running(
+                'cont',
+                image='image:latest',
+                labels=['LABEL1', 'LABEL2'],
+                )
+        dockerng_create.assert_called_with(
+            'image:latest',
+            validate_input=False,
+            validate_ip_addrs=False,
+            name='cont',
+            labels=['LABEL1', 'LABEL2'],
+            client_timeout=60)
 
 
 if __name__ == '__main__':

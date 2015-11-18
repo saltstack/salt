@@ -221,12 +221,15 @@ def image_create(name, location=None, profile=None, visibility=None,
     CLI Example, old format:
 
     .. code-block:: bash
+
         salt '*' glance.image_create name=f16-jeos is_public=true \\
                  disk_format=qcow2 container_format=ovf \\
                  copy_from=http://berrange.fedorapeople.org/\
                     images/2012-02-29/f16-x86_64-openstack-sda.qcow2
 
     CLI Example, new format resembling Glance API v2:
+
+    .. code-block:: bash
 
         salt '*' glance.image_create name=f16-jeos visibility=public \\
                  disk_format=qcow2 container_format=ovf \\
@@ -452,9 +455,9 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
     '''
     Update properties of given image.
     Known to work for:
-      - min_ram (in MB)
-      - protected (bool)
-      - visibility ('public' or 'private')
+    - min_ram (in MB)
+    - protected (bool)
+    - visibility ('public' or 'private')
     '''
     if id:
         image = image_show(id=id)

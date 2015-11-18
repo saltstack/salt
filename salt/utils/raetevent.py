@@ -148,7 +148,7 @@ class RAETEvent(object):
         '''
         return raw
 
-    def get_event(self, wait=5, tag='', full=False):
+    def get_event(self, wait=5, tag='', match_type=None, full=False, no_block=None):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
@@ -211,7 +211,7 @@ class RAETEvent(object):
             raise ValueError('Empty tag.')
 
         if not isinstance(data, MutableMapping):  # data must be dict
-            raise ValueError('Dict object expected, not "{0!r}".'.format(data))
+            raise ValueError('Dict object expected, not \'{0}\'.'.format(data))
         route = {'dst': (None, self.ryn, 'event_fire'),
                  'src': (None, self.stack.local.name, None)}
         msg = {'route': route, 'tag': tag, 'data': data}

@@ -104,7 +104,7 @@ def _check_pkg_version_format(pkg):
     if not HAS_PIP:
         ret['comment'] = (
             'An importable pip module is required but could not be found on '
-            'your system. This usually means that the system''s pip package '
+            'your system. This usually means that the system\'s pip package '
             'is not installed properly.'
         )
 
@@ -173,7 +173,7 @@ def _check_if_installed(prefix, state_pkg_name, version_spec,
     # result: False means the package is not installed
     ret = {'result': False, 'comment': None}
 
-    # Check if the requested packated is already installed.
+    # Check if the requested package is already installed.
     try:
         pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
                                         user=user, cwd=cwd)
@@ -390,7 +390,18 @@ def installed(name,
     env_vars
         Add or modify environment variables. Useful for tweaking build steps,
         such as specifying INCLUDE or LIBRARY paths in Makefiles, build scripts or
-        compiler calls.
+        compiler calls.  This must be in the form of a dictionary or a mapping.
+
+        Example:
+
+        .. code-block:: yaml
+
+            django:
+              pip.installed:
+                - name: django_app
+                - env_vars:
+                    CUSTOM_PATH: /opt/django_app
+                    VERBOSE: True
 
     use_vt
         Use VT terminal emulation (see ouptut while installing)
@@ -499,7 +510,13 @@ def installed(name,
         bin_env = env
 
     # If pkgs is present, ignore name
-    if not pkgs:
+    if pkgs:
+        if not isinstance(pkgs, list):
+            return {'name': name,
+                    'result': False,
+                    'changes': {},
+                    'comment': 'pkgs argument must be formatted as a list'}
+    else:
         pkgs = [name]
 
     # Assumption: If `pkg` is not an `string`, it's a `collections.OrderedDict`
@@ -574,7 +591,6 @@ def installed(name,
     target_pkgs = []
     already_installed_comments = []
     if requirements or editable:
-        name = ''
         comments = []
         # Append comments if this is a dry run.
         if __opts__['test']:
@@ -603,6 +619,12 @@ def installed(name,
                 out = _check_if_installed(prefix, state_pkg_name, version_spec,
                                           ignore_installed, force_reinstall,
                                           upgrade, user, cwd, bin_env)
+                # If _check_if_installed result is None, something went wrong with
+                # the command running. This way we keep stateful output.
+                if out['result'] is None:
+                    ret['result'] = False
+                    ret['comment'] = out['comment']
+                    return ret
             else:
                 out = {'result': False, 'comment': None}
 
@@ -682,7 +704,12 @@ def installed(name,
         trusted_host=trusted_host
     )
 
-    if pip_install_call and (pip_install_call.get('retcode', 1) == 0):
+    # Check the retcode for success, but don't fail if using pip1 and the package is
+    # already present. Pip1 returns a retcode of 1 (instead of 0 for pip2) if you run
+    # "pip install" without any arguments. See issue #21845.
+    if pip_install_call and \
+            (pip_install_call.get('retcode', 1) == 0 or pip_install_call.get('stdout', '').startswith(
+                'You must give at least one requirement to install')):
         ret['result'] = True
 
         if requirements or editable:

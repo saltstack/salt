@@ -69,8 +69,8 @@ import textwrap
 
 # Import salt libs
 import salt.utils
-import salt.utils.locales
 import salt.output
+from salt.utils.locales import sdecode
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -86,6 +86,8 @@ def output(data):
 
 
 def _format_host(host, data):
+    host = sdecode(host)
+
     colors = salt.utils.get_colors(
             __opts__.get('color'),
             __opts__.get('color_theme'))
@@ -111,11 +113,12 @@ def _format_host(host, data):
                       .format(hcolor, colors)))
         for err in data:
             if strip_colors:
-                err = salt.output.strip_esc_sequence(err)
+                err = salt.output.strip_esc_sequence(sdecode(err))
             hstrs.append((u'{0}----------\n    {1}{2[ENDC]}'
                           .format(hcolor, err, colors)))
     if isinstance(data, dict):
         # Verify that the needed data is present
+        data_tmp = {}
         for tname, info in six.iteritems(data):
             if isinstance(info, dict) and '__run_num__' not in info:
                 err = (u'The State execution failed to record the order '
@@ -123,6 +126,9 @@ def _format_host(host, data):
                        'return missing data is:')
                 hstrs.insert(0, pprint.pformat(info))
                 hstrs.insert(0, err)
+            if isinstance(info, dict) and 'result' in info:
+                data_tmp[tname] = info
+        data = data_tmp
         # Everything rendered as it should display the output
         for tname in sorted(
                 data,
@@ -156,7 +162,7 @@ def _format_host(host, data):
             if ret['result'] is None:
                 hcolor = colors['LIGHT_YELLOW']
                 tcolor = colors['LIGHT_YELLOW']
-            comps = tname.split('_|-')
+            comps = [sdecode(comp) for comp in tname.split('_|-')]
             if __opts__.get('state_output', 'full').lower() == 'filter':
                 # By default, full data is shown for all types. However, return
                 # data may be excluded by setting state_output_exclude to a
@@ -233,7 +239,7 @@ def _format_host(host, data):
                 # but try to continue on errors
                 pass
             try:
-                comment = salt.utils.locales.sdecode(ret['comment'])
+                comment = sdecode(ret['comment'])
                 comment = comment.strip().replace(
                         u'\n',
                         u'\n' + u' ' * 14)
@@ -266,7 +272,7 @@ def _format_host(host, data):
                 'tcolor': tcolor,
                 'comps': comps,
                 'ret': ret,
-                'comment': comment,
+                'comment': sdecode(comment),
                 # This nukes any trailing \n and indents the others.
                 'colors': colors
             }

@@ -206,7 +206,6 @@ from __future__ import absolute_import
 import os
 import copy
 import json
-import shlex
 import logging
 
 HAS_GRP = False
@@ -217,6 +216,7 @@ except ImportError:
     pass
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.ext.six import string_types
 
@@ -252,7 +252,7 @@ def _reinterpreted_state(state):
             out = out[idx + 1:]
         data = {}
         try:
-            for item in shlex.split(out):
+            for item in salt.utils.shlex_split(out):
                 key, val = item.split('=')
                 data[key] = val
         except ValueError:
@@ -494,7 +494,7 @@ def wait(name,
 
 
 # Alias "cmd.watch" to "cmd.wait", as this is a common misconfiguration
-watch = wait
+watch = salt.utils.alias_function(wait, 'watch')
 
 
 def wait_script(name,
@@ -865,6 +865,8 @@ def script(name,
            timeout=None,
            use_vt=False,
            output_loglevel='debug',
+           defaults=None,
+           context=None,
            **kwargs):
     '''
     Download a script and execute it with specified arguments.
@@ -972,6 +974,16 @@ def script(name,
         interactively to the console and the logs.
         This is experimental.
 
+    context
+        .. version_added:: Boron
+
+        Overrides default context variables passed to the template.
+
+    defaults
+        .. version_added:: Boron
+
+        Default context passed to the template.
+
     output_loglevel
         Control the loglevel at which the output from the command is logged.
         Note that the command being run will still be logged (loglevel: DEBUG)
@@ -1005,6 +1017,19 @@ def script(name,
                           'documentation.')
         return ret
 
+    if context and not isinstance(context, dict):
+        ret['comment'] = ('Invalidly-formatted \'context\' parameter. Must '
+                          'be formed as a dict.')
+        return ret
+    if defaults and not isinstance(defaults, dict):
+        ret['comment'] = ('Invalidly-formatted \'defaults\' parameter. Must '
+                          'be formed as a dict.')
+        return ret
+
+    tmpctx = defaults if defaults else {}
+    if context:
+        tmpctx.update(context)
+
     if HAS_GRP:
         pgid = os.getegid()
 
@@ -1022,6 +1047,7 @@ def script(name,
                        'timeout': timeout,
                        'output_loglevel': output_loglevel,
                        'use_vt': use_vt,
+                       'context': tmpctx,
                        'saltenv': __env__})
 
     run_check_cmd_kwargs = {

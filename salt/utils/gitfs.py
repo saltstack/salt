@@ -17,6 +17,9 @@ import subprocess
 from datetime import datetime
 
 VALID_PROVIDERS = ('gitpython', 'pygit2', 'dulwich')
+# Optional per-remote params that can only be used on a per-remote basis, and
+# thus do not have defaults in salt/config.py.
+PER_REMOTE_ONLY = ('name',)
 SYMLINK_RECURSE_DEPTH = 100
 
 # Auth support (auth params can be global or per-remote, too)
@@ -121,7 +124,23 @@ class GitProvider(object):
         self.env_whitelist = self.opts.get(
             '{0}_env_whitelist'.format(self.role), [])
         repo_conf = copy.deepcopy(per_remote_defaults)
-        bad_per_remote_conf = False
+
+        per_remote_collisions = [x for x in override_params
+                                 if x in PER_REMOTE_ONLY]
+        if per_remote_collisions:
+            log.critical(
+                'The following parameter names are restricted to per-remote '
+                'use only: {0}. This is a bug, please report it.'.format(
+                    ', '.join(per_remote_collisions)
+                )
+            )
+
+        try:
+            valid_per_remote_params = override_params + PER_REMOTE_ONLY
+        except TypeError:
+            valid_per_remote_params = \
+                list(override_params) + list(PER_REMOTE_ONLY)
+
         if isinstance(remote, dict):
             self.id = next(iter(remote))
             self.get_url()
@@ -139,9 +158,15 @@ class GitProvider(object):
                 )
                 failhard(self.role)
 
+            # Separate the per-remote-only (non-global) parameters
+            per_remote_only = {}
+            for param in PER_REMOTE_ONLY:
+                if param in per_remote_conf:
+                    per_remote_only[param] = per_remote_conf.pop(param)
+
             per_remote_errors = False
             for param in (x for x in per_remote_conf
-                          if x not in override_params):
+                          if x not in valid_per_remote_params):
                 if param in AUTH_PARAMS \
                         and self.provider not in AUTH_PROVIDERS:
                     msg = (
@@ -163,13 +188,13 @@ class GitProvider(object):
                         )
                     log.critical(msg)
                 else:
-                    log.critical(
+                    msg = (
                         'Invalid {0} configuration parameter \'{1}\' in '
                         'remote {2}. Valid parameters are: {3}.'.format(
                             self.role,
                             param,
                             self.url,
-                            ', '.join(override_params)
+                            ', '.join(valid_per_remote_params)
                         )
                     )
                     if self.role == 'gitfs':
@@ -177,12 +202,14 @@ class GitProvider(object):
                             ' See the GitFS Walkthrough in the Salt '
                             'documentation for further information.'
                         )
+                    log.critical(msg)
 
                 per_remote_errors = True
             if per_remote_errors:
                 failhard(self.role)
 
             repo_conf.update(per_remote_conf)
+            repo_conf.update(per_remote_only)
         else:
             self.id = remote
             self.get_url()
@@ -192,6 +219,15 @@ class GitProvider(object):
         # an empty string.
         if 'root' not in repo_conf:
             repo_conf['root'] = ''
+
+        if self.role == 'winrepo' and 'name' not in repo_conf:
+            # Ensure that winrepo has the 'name' parameter set if it wasn't
+            # provided. Default to the last part of the URL, minus the .git if
+            # it is present.
+            repo_conf['name'] = self.url.rsplit('/', 1)[-1]
+            # Remove trailing .git from name
+            if repo_conf['name'].lower().endswith('.git'):
+                repo_conf['name'] = repo_conf['name'][:-4]
 
         # Set all repo config params as attributes
         for key, val in six.iteritems(repo_conf):
@@ -216,7 +252,8 @@ class GitProvider(object):
 
         hash_type = getattr(hashlib, self.opts.get('hash_type', 'md5'))
         self.hash = hash_type(self.url).hexdigest()
-        self.cachedir = os.path.join(cache_root, self.hash)
+        self.cachedir_basename = getattr(self, 'name', self.hash)
+        self.cachedir = os.path.join(cache_root, self.cachedir_basename)
         if not os.path.isdir(self.cachedir):
             os.makedirs(self.cachedir)
 
@@ -705,7 +742,7 @@ class Pygit2(GitProvider):
         for line in subprocess.Popen(
                 'git ls-remote origin',
                 shell=True,
-                close_fds=True,
+                close_fds=not salt.utils.is_windows(),
                 cwd=self.repo.workdir,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT).communicate()[0].splitlines():
@@ -741,7 +778,17 @@ class Pygit2(GitProvider):
         else:
             # Repo cachedir exists, try to attach
             try:
-                self.repo = pygit2.Repository(self.cachedir)
+                try:
+                    self.repo = pygit2.Repository(self.cachedir)
+                except pygit2.GitError as exc:
+                    import pwd
+                    # https://github.com/libgit2/pygit2/issues/339
+                    # https://github.com/libgit2/libgit2/issues/2122
+                    if "Error stat'ing config file" not in str(exc):
+                        raise
+                    home = pwd.getpwnam(salt.utils.get_user).pw_dir
+                    pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
+                    self.repo = pygit2.Repository(self.cachedir)
             except KeyError:
                 log.error(_INVALID_REPO.format(self.cachedir, self.url))
                 return new
@@ -1471,11 +1518,11 @@ class GitBase(object):
             self.cache_root = os.path.join(self.opts['cachedir'], self.role)
         self.env_cache = os.path.join(self.cache_root, 'envs.p')
         self.hash_cachedir = os.path.join(
-            self.cache_root, self.role, 'hash')
+            self.cache_root, 'hash')
         self.file_list_cachedir = os.path.join(
             self.opts['cachedir'], 'file_lists', self.role)
 
-    def init_remotes(self, remotes, per_remote_params):
+    def init_remotes(self, remotes, per_remote_overrides):
         '''
         Initialize remotes
         '''
@@ -1483,7 +1530,7 @@ class GitBase(object):
         # gitfs_password, etc.) default to empty strings. If any of them
         # are defined and the provider is not one that supports auth, then
         # error out and do not proceed.
-        override_params = copy.deepcopy(per_remote_params)
+        override_params = copy.deepcopy(per_remote_overrides)
         global_auth_params = [
             '{0}_{1}'.format(self.role, x) for x in AUTH_PARAMS
             if self.opts['{0}_{1}'.format(self.role, x)]
@@ -1509,8 +1556,14 @@ class GitBase(object):
 
         per_remote_defaults = {}
         for param in override_params:
-            per_remote_defaults[param] = \
-                six.text_type(self.opts['{0}_{1}'.format(self.role, param)])
+            key = '{0}_{1}'.format(self.role, param)
+            if key not in self.opts:
+                log.critical(
+                    'Key \'{0}\' not present in global configuration. This is '
+                    'a bug, please report it.'.format(key)
+                )
+                failhard(self.role)
+            per_remote_defaults[param] = six.text_type(self.opts[key])
 
         self.remotes = []
         for remote in remotes:
@@ -1530,31 +1583,25 @@ class GitBase(object):
                 repo_obj.verify_auth()
                 self.remotes.append(repo_obj)
 
-        if any(x.new for x in self.remotes):
-            remote_map = os.path.join(self.cache_root, 'remote_map.txt')
-            try:
-                with salt.utils.fopen(remote_map, 'w+') as fp_:
-                    timestamp = \
-                        datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
-                    fp_.write(
-                        '# {0}_remote map as of {1}\n'.format(
-                            self.role,
-                            timestamp
-                        )
-                    )
-                    for repo in self.remotes:
-                        fp_.write(
-                            '{0} = {1}\n'.format(repo.hash, repo.id)
-                        )
-            except OSError:
-                pass
-            else:
-                log.info(
-                    'Wrote new {0} remote map to {1}'.format(
+        # Don't allow collisions in cachedir naming
+        cachedir_map = {}
+        for repo in self.remotes:
+            cachedir_map.setdefault(repo.cachedir, []).append(repo.id)
+        collisions = [x for x in cachedir_map if len(cachedir_map[x]) > 1]
+        if collisions:
+            for dirname in collisions:
+                log.critical(
+                    'The following {0} remotes have conflicting cachedirs: '
+                    '{1}. Resolve this using a per-remote parameter called '
+                    '\'name\'.'.format(
                         self.role,
-                        remote_map
+                        ', '.join(cachedir_map[dirname])
                     )
                 )
+                failhard(self.role)
+
+        if any(x.new for x in self.remotes):
+            self.write_remote_map()
 
     def clear_old_remotes(self):
         '''
@@ -1567,7 +1614,7 @@ class GitBase(object):
         # Remove actively-used remotes from list
         for repo in self.remotes:
             try:
-                cachedir_ls.remove(repo.hash)
+                cachedir_ls.remove(repo.cachedir_basename)
             except ValueError:
                 pass
         to_remove = []
@@ -1594,7 +1641,10 @@ class GitBase(object):
                     )
         for fdir in failed:
             to_remove.remove(fdir)
-        return bool(to_remove)
+        ret = bool(to_remove)
+        if ret:
+            self.write_remote_map()
+        return ret
 
     def clear_cache(self):
         '''
@@ -1645,7 +1695,7 @@ class GitBase(object):
                     'Update lockfile is present for {0} remote \'{1}\', '
                     'skipping. If this warning persists, it is possible that '
                     'the update process was interrupted. Removing {2} or '
-                    'running \'salt-run fileserver.clear_lock {0}\' will '
+                    'running \'salt-run cache.clear_git_lock {0}\' will '
                     'allow updates to continue for this remote.'
                     .format(self.role, repo.id, repo.lockfile)
                 )
@@ -1936,6 +1986,38 @@ class GitBase(object):
         self.opts['verified_{0}_provider'.format(self.role)] = 'dulwich'
         log.debug('dulwich {0}_provider enabled'.format(self.role))
         return True
+
+    def write_remote_map(self):
+        '''
+        Write the remote_map.txt
+        '''
+        remote_map = os.path.join(self.cache_root, 'remote_map.txt')
+        try:
+            with salt.utils.fopen(remote_map, 'w+') as fp_:
+                timestamp = \
+                    datetime.now().strftime('%d %b %Y %H:%M:%S.%f')
+                fp_.write(
+                    '# {0}_remote map as of {1}\n'.format(
+                        self.role,
+                        timestamp
+                    )
+                )
+                for repo in self.remotes:
+                    fp_.write(
+                        '{0} = {1}\n'.format(
+                            repo.cachedir_basename,
+                            repo.id
+                        )
+                    )
+        except OSError:
+            pass
+        else:
+            log.info(
+                'Wrote new {0} remote map to {1}'.format(
+                    self.role,
+                    remote_map
+                )
+            )
 
 
 class GitFS(GitBase):
@@ -2258,19 +2340,10 @@ class WinRepo(GitBase):
     '''
     Functionality specific to the winrepo runner
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, winrepo_dir):
         self.role = 'winrepo'
         # Dulwich has no function to check out a branch/tag, so this will be
         # limited to GitPython and Pygit2 for the forseeable future.
-        if 'win_repo' in opts:
-            salt.utils.warn_until(
-                'Nitrogen',
-                'The \'win_repo\' config option is deprecated, please use '
-                '\'winrepo_dir\' instead.'
-            )
-            winrepo_dir = opts['win_repo']
-        else:
-            winrepo_dir = opts['winrepo_dir']
         GitBase.__init__(self,
                          opts,
                          valid_providers=('gitpython', 'pygit2'),

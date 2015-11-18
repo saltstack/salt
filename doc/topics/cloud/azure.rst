@@ -14,11 +14,23 @@ More information about Azure is located at `http://www.windowsazure.com/
 
 Dependencies
 ============
-* The `Azure <https://pypi.python.org/pypi/azure>`_ Python SDK >= 0.11.1.
+* The `Azure <https://pypi.python.org/pypi/azure>`_ Python SDK >= 0.10.2 and < 1.0.0
 * The python-requests library, for Python < 2.7.9.
 * A Microsoft Azure account
 * OpenSSL (to generate the certificates)
 * `Salt <https://github.com/saltstack/salt>`_
+
+
+.. note::
+
+    The Azure driver is currently being updated to work with the new version of
+    the Python Azure SDK, 1.0.0. However until that process is complete, this
+    driver will not work with Azure 1.0.0. Please be sure you're running on a
+    minimum version of 0.10.2 and less than version 1.0.0.
+
+    See `Issue #27980`_ for more information.
+
+.. _Issue #27980: https://github.com/saltstack/salt/issues/27980
 
 
 Configuration
@@ -1442,7 +1454,7 @@ Required if the blob has an active lease.
 progress_callback
 `````````````````
 callback for progress with signature function(current, total) where
-current is the number of bytes transfered so far, and total is the
+current is the number of bytes transferred so far, and total is the
 size of the blob.
 
 max_connections

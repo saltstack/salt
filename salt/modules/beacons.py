@@ -139,7 +139,7 @@ def modify(name, beacon_data, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' beacon.modify ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
+        salt '*' beacons.modify ps "{'salt-master': 'stopped', 'apache2': 'stopped'}"
     '''
 
     ret = {'comment': '',
@@ -427,7 +427,7 @@ def disable_beacon(name, **kwargs):
     '''
     Disable beacon on the minion
 
-    :name:                  Name of the beacon to enable.
+    :name:                  Name of the beacon to disable.
     :return:                Boolean and status message on success or failure of disable.
 
     CLI Example:

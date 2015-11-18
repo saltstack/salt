@@ -77,7 +77,7 @@ def computer_desc(name):
                           '{0!r}'.format(name))
     return ret
 
-computer_description = computer_desc
+computer_description = salt.utils.alias_function(computer_desc, 'computer_description')
 
 
 def computer_name(name):
@@ -124,4 +124,39 @@ def computer_name(name):
     else:
         ret['result'] = False
         ret['comment'] = 'Unable to set computer name to {0!r}'.format(name)
+    return ret
+
+
+def hostname(name):
+    '''
+    .. versionadded:: Boron
+
+    Manage the hostname of the computer
+
+    name
+        The hostname to set
+    '''
+    ret = {
+        'name': name,
+        'changes': {},
+        'result': True,
+        'comment': ''
+    }
+
+    current_hostname = __salt__['system.get_hostname']()
+
+    if current_hostname.upper() == name.upper():
+        ret['comment'] = "Hostname is already set to '{0}'".format(name)
+        return ret
+
+    out = __salt__['system.set_hostname'](name)
+
+    if out:
+        ret['comment'] = "The current hostname is '{0}', " \
+                         "but will be changed to '{1}' on the next reboot".format(current_hostname, name)
+        ret['changes'] = {'hostname': name}
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Unable to set hostname'
+
     return ret

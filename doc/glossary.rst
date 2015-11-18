@@ -247,6 +247,7 @@ Glossary
         whether or not the module should be available to a minion. This
         function commonly contains logic to determine if all requirements
         for a module are available, such as external libraries.
+
     Worker
         A master process which can send notices and receive replies from
         minions. *See also*:

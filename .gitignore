@@ -17,15 +17,18 @@ MANIFEST
 #   top of salt such as
 # - /some/path$ git clone https://github.com/thatch45/salt.git
 # - /some/path$ virtualenv --python=/usr/bin/python2.6 salt
-bin/
-include/
-lib/
-lib64
-pip/
-share/
-tests/integration/tmp/
-tests/cachedir/
-tests/unit/templates/roots/
+/bin/
+/etc/
+/include/
+/lib/
+/lib64/
+/local/
+/pip/
+/share/
+/tests/integration/tmp/
+/tests/cachedir/
+/tests/unit/templates/roots/
+/var/
 
 # setuptools stuff
 *.egg-info

@@ -50,8 +50,8 @@ _ETHTOOL_CONFIG_OPTS = [
     'gso', 'gro', 'lro'
 ]
 _RH_CONFIG_OPTS = [
-    'domain', 'peerdns', 'defroute',
-    'mtu', 'static-routes', 'gateway'
+    'domain', 'peerdns', 'peerntp', 'defroute',
+    'mtu', 'static-routes', 'gateway', 'zone'
 ]
 _RH_CONFIG_BONDING_OPTS = [
     'mode', 'miimon', 'arp_interval',
@@ -276,9 +276,12 @@ def _parse_settings_bond_0(opts, iface, bond_def):
     if 'arp_ip_target' in opts:
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
-                bond.update({'arp_ip_target': []})
+                bond.update({'arp_ip_target': ''})
                 for ip in opts['arp_ip_target']:  # pylint: disable=C0103
-                    bond['arp_ip_target'].append(ip)
+                    if len(bond['arp_ip_target']) > 0:
+                        bond['arp_ip_target'] = bond['arp_ip_target'] + ',' + ip
+                    else:
+                        bond['arp_ip_target'] = ip
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
         else:
@@ -322,9 +325,9 @@ def _parse_settings_bond_1(opts, iface, bond_def):
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
-            bond.update({'use_carrier': 'on'})
+            bond.update({'use_carrier': '1'})
         elif opts['use_carrier'] in _CONFIG_FALSE:
-            bond.update({'use_carrier': 'off'})
+            bond.update({'use_carrier': '0'})
         else:
             valid = _CONFIG_TRUE + _CONFIG_FALSE
             _raise_error_iface(iface, 'use_carrier', valid)
@@ -349,9 +352,12 @@ def _parse_settings_bond_2(opts, iface, bond_def):
     if 'arp_ip_target' in opts:
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
-                bond.update({'arp_ip_target': []})
+                bond.update({'arp_ip_target': ''})
                 for ip in opts['arp_ip_target']:  # pylint: disable=C0103
-                    bond['arp_ip_target'].append(ip)
+                    if len(bond['arp_ip_target']) > 0:
+                        bond['arp_ip_target'] = bond['arp_ip_target'] + ',' + ip
+                    else:
+                        bond['arp_ip_target'] = ip
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
         else:
@@ -405,9 +411,9 @@ def _parse_settings_bond_3(opts, iface, bond_def):
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
-            bond.update({'use_carrier': 'on'})
+            bond.update({'use_carrier': '1'})
         elif opts['use_carrier'] in _CONFIG_FALSE:
-            bond.update({'use_carrier': 'off'})
+            bond.update({'use_carrier': '0'})
         else:
             valid = _CONFIG_TRUE + _CONFIG_FALSE
             _raise_error_iface(iface, 'use_carrier', valid)
@@ -449,9 +455,9 @@ def _parse_settings_bond_4(opts, iface, bond_def):
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
-            bond.update({'use_carrier': 'on'})
+            bond.update({'use_carrier': '1'})
         elif opts['use_carrier'] in _CONFIG_FALSE:
-            bond.update({'use_carrier': 'off'})
+            bond.update({'use_carrier': '0'})
         else:
             valid = _CONFIG_TRUE + _CONFIG_FALSE
             _raise_error_iface(iface, 'use_carrier', valid)
@@ -492,9 +498,9 @@ def _parse_settings_bond_5(opts, iface, bond_def):
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
-            bond.update({'use_carrier': 'on'})
+            bond.update({'use_carrier': '1'})
         elif opts['use_carrier'] in _CONFIG_FALSE:
-            bond.update({'use_carrier': 'off'})
+            bond.update({'use_carrier': '0'})
         else:
             valid = _CONFIG_TRUE + _CONFIG_FALSE
             _raise_error_iface(iface, 'use_carrier', valid)
@@ -528,9 +534,9 @@ def _parse_settings_bond_6(opts, iface, bond_def):
 
     if 'use_carrier' in opts:
         if opts['use_carrier'] in _CONFIG_TRUE:
-            bond.update({'use_carrier': 'on'})
+            bond.update({'use_carrier': '1'})
         elif opts['use_carrier'] in _CONFIG_FALSE:
-            bond.update({'use_carrier': 'off'})
+            bond.update({'use_carrier': '0'})
         else:
             valid = _CONFIG_TRUE + _CONFIG_FALSE
             _raise_error_iface(iface, 'use_carrier', valid)
@@ -634,7 +640,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     elif 'netmask' in opts:
         result['netmask'] = opts['netmask']
 
-    for opt in ['ipaddr', 'master', 'srcaddr', 'delay', 'domain', 'gateway', 'uuid', 'nickname']:
+    for opt in ['ipaddr', 'master', 'srcaddr', 'delay', 'domain', 'gateway', 'uuid', 'nickname', 'zone']:
         if opt in opts:
             result[opt] = opts[opt]
 

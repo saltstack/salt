@@ -34,7 +34,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import stat
 import uuid
 import pprint
 import logging
@@ -87,9 +86,6 @@ def __virtual__():
     '''
     Set up the libcloud funcstions and check for AWS configs
     '''
-    if not HAS_LIBCLOUD:
-        return False
-
     try:
         import botocore
         # Since we have botocore, we won't load the libcloud AWS module
@@ -100,30 +96,18 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
+    if get_dependencies() is False:
+        return False
+
     for provider, details in six.iteritems(__opts__['providers']):
-        if 'provider' not in details or details['provider'] != 'aws':
+        if 'aws' not in details:
             continue
 
-        if not os.path.exists(details['private_key']):
-            raise SaltCloudException(
-                'The AWS key file \'{0}\' used in the \'{1}\' provider '
-                'configuration does not exist\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
-
-        keymode = str(
-            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
-        )
-        if keymode not in ('0400', '0600'):
-            raise SaltCloudException(
-                'The AWS key file \'{0}\' used in the \'{1}\' provider '
-                'configuration needs to be set to mode 0400 or 0600\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
+        parameters = details['aws']
+        if salt.utils.cloud.check_key_path_and_mode(
+            provider, parameters['private_key']
+        ) is False:
+            return False
 
     global avail_images, avail_sizes, script, list_nodes
     global avail_locations, list_nodes_full, list_nodes_select, get_image
@@ -163,6 +147,16 @@ def get_configured_provider():
         __opts__,
         __active_provider_name__ or 'aws',
         ('id', 'key', 'keyname', 'securitygroup', 'private_key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBCLOUD}
     )
 
 
@@ -248,7 +242,7 @@ def ssh_username(vm_):
     initial = usernames[:]
 
     # Add common usernames to the list to be tested
-    for name in ('ec2-user', 'ubuntu', 'admin', 'bitnami', 'root'):
+    for name in 'ec2-user', 'ubuntu', 'admin', 'bitnami', 'root':
         if name not in usernames:
             usernames.append(name)
     # Add the user provided usernames to the end of the list since enough time

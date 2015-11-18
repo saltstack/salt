@@ -62,6 +62,9 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
 # Store a reference to the executing platform
 IS_WINDOWS_PLATFORM = sys.platform.startswith('win')
 
+# Store a reference wether if we're running under Python 3 and above
+IS_PY3 = sys.version_info > (3,)
+
 # Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
 # Or if setuptools was previously imported (which is the case when using
 # 'distribute')
@@ -137,6 +140,10 @@ def _parse_requirements_file(requirements_file):
                     # In Windows, we're installing M2CryptoWin{32,64} which comes
                     # compiled
                     continue
+            if IS_PY3 and 'futures' in line.lower():
+                # Python 3 already has futures, installing it will only break
+                # the current python installation whenever futures is imported
+                continue
             parsed_requirements.append(line)
     return parsed_requirements
 # <---- Helper Functions ---------------------------------------------------------------------------------------------
@@ -205,6 +212,9 @@ class GenerateSaltSyspaths(Command):
                 base_master_roots_dir=self.distribution.salt_base_master_roots_dir,
                 logs_dir=self.distribution.salt_logs_dir,
                 pidfile_dir=self.distribution.salt_pidfile_dir,
+                spm_formula_path=self.distribution.salt_spm_formula_dir,
+                spm_pillar_path=self.distribution.salt_spm_pillar_dir,
+                spm_reactor_path=self.distribution.salt_spm_reactor_dir,
             )
         )
 
@@ -398,7 +408,7 @@ class DownloadWindowsDlls(Command):
                         from contextlib import closing
                         with closing(requests.get(furl, stream=True)) as req:
                             if req.status_code == 200:
-                                with open(fdest, 'w') as wfh:
+                                with open(fdest, 'wb') as wfh:
                                     for chunk in req.iter_content(chunk_size=4096):
                                         if chunk:  # filter out keep-alive new chunks
                                             wfh.write(chunk)
@@ -413,7 +423,7 @@ class DownloadWindowsDlls(Command):
                         req = urlopen(furl)
 
                         if req.getcode() == 200:
-                            with open(fdest, 'w') as wfh:
+                            with open(fdest, 'wb') as wfh:
                                 while True:
                                     for chunk in req.read(4096):
                                         if not chunk:
@@ -620,6 +630,9 @@ BASE_PILLAR_ROOTS_DIR = {base_pillar_roots_dir!r}
 BASE_MASTER_ROOTS_DIR = {base_master_roots_dir!r}
 LOGS_DIR = {logs_dir!r}
 PIDFILE_DIR = {pidfile_dir!r}
+SPM_FORMULA_PATH = {spm_formula_path!r}
+SPM_PILLAR_PATH = {spm_pillar_path!r}
+SPM_REACTOR_PATH = {spm_reactor_path!r}
 '''
 
 
@@ -785,6 +798,7 @@ class SaltDistribution(distutils.dist.Distribution):
         * salt-cp
         * salt-minion
         * salt-unity
+        * salt-proxy
 
     When packaged for salt-ssh, the following scripts should be installed:
         * salt-call
@@ -823,6 +837,12 @@ class SaltDistribution(distutils.dist.Distribution):
          'Salt\'s pre-configured logs directory'),
         ('salt-pidfile-dir=', None,
          'Salt\'s pre-configured pidfiles directory'),
+        ('salt-spm-formula-dir=', None,
+         'Salt\'s pre-configured SPM formulas directory'),
+        ('salt-spm-pillar-dir=', None,
+         'Salt\'s pre-configured SPM pillar directory'),
+        ('salt-spm-reactor-dir=', None,
+         'Salt\'s pre-configured SPM reactor directory'),
     ]
 
     def __init__(self, attrs=None):
@@ -842,6 +862,9 @@ class SaltDistribution(distutils.dist.Distribution):
         self.salt_base_master_roots_dir = None
         self.salt_logs_dir = None
         self.salt_pidfile_dir = None
+        self.salt_spm_formula_dir = None
+        self.salt_spm_pillar_dir = None
+        self.salt_spm_reactor_dir = None
 
         self.name = 'salt-ssh' if PACKAGED_FOR_SALT_SSH else 'salt'
         self.salt_version = __version__  # pylint: disable=undefined-variable
@@ -963,6 +986,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             data_files[0][1].extend(['doc/man/salt-cp.1',
                                      'doc/man/salt-minion.1',
+                                     'doc/man/salt-proxy.1',
                                      'doc/man/salt-unity.1'])
             return data_files
 
@@ -973,6 +997,7 @@ class SaltDistribution(distutils.dist.Distribution):
                                  'doc/man/salt-key.1',
                                  'doc/man/salt-master.1',
                                  'doc/man/salt-minion.1',
+                                 'doc/man/salt-proxy.1',
                                  'doc/man/salt-run.1',
                                  'doc/man/spm.1',
                                  'doc/man/salt-ssh.1',
@@ -1014,6 +1039,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if IS_WINDOWS_PLATFORM:
             scripts.extend(['scripts/salt-cp',
                             'scripts/salt-minion',
+                            'scripts/salt-proxy',
                             'scripts/salt-unity'])
             return scripts
 
@@ -1029,6 +1055,7 @@ class SaltDistribution(distutils.dist.Distribution):
                         'scripts/salt-ssh',
                         'scripts/salt-syndic',
                         'scripts/salt-unity',
+                        'scripts/salt-proxy',
                         'scripts/spm'])
         return scripts
 
@@ -1179,7 +1206,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if self.salt_transport not in ('zeromq', 'raet', 'both', 'ssh', 'none'):
             raise DistutilsArgError(
                 'The value of --salt-transport needs be \'zeromq\', '
-                '\'raet\', \'both\', \'ssh\' or \'none\' not {0!r}'.format(
+                '\'raet\', \'both\', \'ssh\' or \'none\' not \'{0}\''.format(
                     self.salt_transport
                 )
             )

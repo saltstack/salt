@@ -50,6 +50,7 @@ Full list of builtin state modules
     cyg
     ddns
     debconfmod
+    dellchassis
     disk
     dockerio
     dockerng
@@ -87,6 +88,7 @@ Full list of builtin state modules
     keystone
     kmod
     layman
+    ldap
     libvirt
     linux_acl
     locale

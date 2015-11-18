@@ -35,10 +35,7 @@ import integration
 log = logging.getLogger(__name__)
 
 
-def _worktrees_supported():
-    '''
-    Check if the git version is 2.5.0 or later
-    '''
+def _git_version():
     git_version = subprocess.Popen(
         ['git', '--version'],
         shell=False,
@@ -49,9 +46,16 @@ def _worktrees_supported():
         log.debug('Git not installed')
         return False
     log.debug('Detected git version ' + git_version)
+    return LooseVersion(git_version.split()[-1])
+
+
+def _worktrees_supported():
+    '''
+    Check if the git version is 2.5.0 or later
+    '''
     try:
-        return LooseVersion(git_version.split()[-1]) >= LooseVersion('2.5.0')
-    except Exception:
+        return _git_version() >= LooseVersion('2.5.0')
+    except AttributeError:
         return False
 
 
@@ -350,7 +354,9 @@ class GitModuleTest(integration.ModuleCase):
         }
         _clear_config()
         try:
-            # Try to specify both single and multivar (error raised)
+            log.debug(
+                'Try to specify both single and multivar (should raise error)'
+            )
             self.assertTrue(
                 'Only one of \'value\' and \'multivar\' is permitted' in
                 self.run_function(
@@ -361,7 +367,10 @@ class GitModuleTest(integration.ModuleCase):
                     cwd=self.repo
                 )
             )
-            # Set single local value without cwd (error raised)
+            log.debug(
+                'Try to set single local value without cwd (should raise '
+                'error)'
+            )
             self.assertTrue(
                 '\'cwd\' argument required unless global=True' in
                 self.run_function(
@@ -370,7 +379,7 @@ class GitModuleTest(integration.ModuleCase):
                     value=cfg_local['foo.single'][0],
                 )
             )
-            # Set single local value
+            log.debug('Set single local value')
             self.assertEqual(
                 self.run_function(
                     'git.config_set',
@@ -380,7 +389,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 cfg_local['foo.single']
             )
-            # Set single global value
+            log.debug('Set single global value')
             self.assertEqual(
                 self.run_function(
                     'git.config_set',
@@ -390,7 +399,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 cfg_global['foo.single']
             )
-            # Set local multivar
+            log.debug('Set local multivar')
             self.assertEqual(
                 self.run_function(
                     'git.config_set',
@@ -400,7 +409,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 cfg_local['foo.multi']
             )
-            # Set global multivar
+            log.debug('Set global multivar')
             self.assertEqual(
                 self.run_function(
                     'git.config_set',
@@ -410,7 +419,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 cfg_global['foo.multi']
             )
-            # Get single local value
+            log.debug('Get single local value')
             self.assertEqual(
                 self.run_function(
                     'git.config_get',
@@ -419,7 +428,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 cfg_local['foo.single'][0]
             )
-            # Get single value from local multivar
+            log.debug('Get single value from local multivar')
             self.assertEqual(
                 self.run_function(
                     'git.config_get',
@@ -428,7 +437,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 cfg_local['foo.multi'][-1]
             )
-            # Get all values from multivar (includes globals)
+            log.debug('Get all values from multivar (includes globals)')
             self.assertEqual(
                 self.run_function(
                     'git.config_get',
@@ -438,7 +447,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 cfg_local['foo.multi']
             )
-            # Get single global value
+            log.debug('Get single global value')
             self.assertEqual(
                 self.run_function(
                     'git.config_get',
@@ -447,7 +456,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 cfg_global['foo.single'][0]
             )
-            # Get single value from global multivar
+            log.debug('Get single value from global multivar')
             self.assertEqual(
                 self.run_function(
                     'git.config_get',
@@ -456,7 +465,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 cfg_global['foo.multi'][-1]
             )
-            # Get all values from global multivar
+            log.debug('Get all values from global multivar')
             self.assertEqual(
                 self.run_function(
                     'git.config_get',
@@ -465,7 +474,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 cfg_global['foo.multi']
             )
-            # Get all local keys/values using regex
+            log.debug('Get all local keys/values using regex')
             self.assertEqual(
                 self.run_function(
                     'git.config_get_regexp',
@@ -474,7 +483,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 cfg_local
             )
-            # Get all global keys/values using regex
+            log.debug('Get all global keys/values using regex')
             self.assertEqual(
                 self.run_function(
                     'git.config_get_regexp',
@@ -484,7 +493,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 cfg_global
             )
-            # Get just the local foo.multi values containing 'a'
+            log.debug('Get just the local foo.multi values containing \'a\'')
             self.assertEqual(
                 self.run_function(
                     'git.config_get_regexp',
@@ -494,7 +503,7 @@ class GitModuleTest(integration.ModuleCase):
                 ),
                 {'foo.multi': [x for x in cfg_local['foo.multi'] if 'a' in x]}
             )
-            # Get just the global foo.multi values containing 'a'
+            log.debug('Get just the global foo.multi values containing \'a\'')
             self.assertEqual(
                 self.run_function(
                     'git.config_get_regexp',
@@ -509,7 +518,7 @@ class GitModuleTest(integration.ModuleCase):
             # TODO: More robust unset testing, try to trigger all the
             # exceptions raised.
 
-            # Unset a single local value
+            log.debug('Unset a single local value')
             self.assertTrue(
                 self.run_function(
                     'git.config_unset',
@@ -517,7 +526,7 @@ class GitModuleTest(integration.ModuleCase):
                     cwd=self.repo,
                 )
             )
-            # Unset an entire local multivar
+            log.debug('Unset an entire local multivar')
             self.assertTrue(
                 self.run_function(
                     'git.config_unset',
@@ -526,7 +535,7 @@ class GitModuleTest(integration.ModuleCase):
                     **{'all': True}
                 )
             )
-            # Unset a single global value
+            log.debug('Unset a single global value')
             self.assertTrue(
                 self.run_function(
                     'git.config_unset',
@@ -534,7 +543,7 @@ class GitModuleTest(integration.ModuleCase):
                     **{'global': True}
                 )
             )
-            # Unset an entire local multivar
+            log.debug('Unset an entire local multivar')
             self.assertTrue(
                 self.run_function(
                     'git.config_unset',
@@ -889,6 +898,13 @@ class GitModuleTest(integration.ModuleCase):
         This tests git.worktree_add, git.is_worktree, git.list_worktrees,
         git.worktree_rm, and git.worktree_prune
         '''
+        # We don't need to enclose this comparison in a try/except, since the
+        # decorator would skip this test if git is not installed and we'd never
+        # get here in the first place.
+        if _git_version() >= LooseVersion('2.6.0'):
+            worktree_add_prefix = 'Preparing '
+        else:
+            worktree_add_prefix = 'Enter '
         worktree_path = tempfile.mkdtemp(dir=integration.TMP)
         worktree_basename = os.path.basename(worktree_path)
         worktree_path2 = tempfile.mkdtemp(dir=integration.TMP)
@@ -897,11 +913,11 @@ class GitModuleTest(integration.ModuleCase):
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path],
         )
-        self.assertTrue('Enter ' + worktree_path in ret)
+        self.assertTrue(worktree_add_prefix + worktree_path in ret)
         ret = self.run_function(
             'git.worktree_add', [self.repo, worktree_path2]
         )
-        self.assertTrue('Enter ' + worktree_path2 in ret)
+        self.assertTrue(worktree_add_prefix + worktree_path2 in ret)
         # Check if this new path is a worktree
         self.assertTrue(self.run_function('git.is_worktree', [worktree_path]))
         # Check if the main repo is a worktree

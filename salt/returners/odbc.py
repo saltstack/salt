@@ -113,6 +113,15 @@ correctly.  Replace with equivalent SQL for other ODBC-compliant servers
   .. code-block:: bash
 
     salt '*' test.ping --return odbc --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: Boron
+
+.. code-block:: bash
+
+    salt '*' test.ping --return odbc --return_kwargs '{"dsn": "dsn-name"}'
+
 '''
 from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
@@ -281,13 +290,13 @@ def get_jids():
     '''
     conn = _get_conn(ret=None)
     cur = conn.cursor()
-    sql = '''SELECT distinct jid FROM jids'''
+    sql = '''SELECT distinct jid, load FROM jids'''
 
     cur.execute(sql)
     data = cur.fetchall()
-    ret = []
-    for jid in data:
-        ret.append(jid[0])
+    ret = {}
+    for jid, load in data:
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
     _close_conn(conn)
     return ret
 

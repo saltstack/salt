@@ -26,6 +26,11 @@ log = logging.getLogger(__name__)
 
 from salt.exceptions import SaltInvocationError
 
+# Don't shadow built-ins.
+__func_alias__ = {
+    'list_': 'list'
+}
+
 __virtualname__ = 'consul'
 
 
@@ -92,7 +97,7 @@ def _query(function,
     return ret
 
 
-def list(consul_url=None, key=None, **kwargs):
+def list_(consul_url=None, key=None, **kwargs):
     '''
     List keys in Consul
 
@@ -160,13 +165,15 @@ def get(consul_url=None, key=None, recurse=False, decode=False, raw=False):
 
         salt '*' consul.list key='web' recurse='True' decode='True'
 
-        By default values stored in Consul are base64 encoded, passing the
-        decode option will show them as the decoded values.
+    By default values stored in Consul are base64 encoded, passing the
+    decode option will show them as the decoded values.
+
+    .. code-block:: bash
 
         salt '*' consul.list key='web' recurse='True' decode='True' raw='True'
 
-        By default Consult will return other information about the key, the raw
-        option will return only the raw value.
+    By default Consult will return other information about the key, the raw
+    option will return only the raw value.
 
     '''
     ret = {}
@@ -2030,7 +2037,7 @@ def acl_update(consul_url=None, **kwargs):
     if 'id' in kwargs:
         data['ID'] = kwargs['id']
     else:
-        ret['message'] = 'Required paramter "id" is missing.'
+        ret['message'] = 'Required parameter "id" is missing.'
         ret['res'] = False
         return ret
 
@@ -2086,7 +2093,7 @@ def acl_delete(consul_url=None, **kwargs):
             return ret
 
     if 'id' not in kwargs:
-        ret['message'] = 'Required paramter "id" is missing.'
+        ret['message'] = 'Required parameter "id" is missing.'
         ret['res'] = False
         return ret
 
@@ -2133,7 +2140,7 @@ def acl_info(consul_url=None, **kwargs):
             return ret
 
     if 'id' not in kwargs:
-        ret['message'] = 'Required paramter "id" is missing.'
+        ret['message'] = 'Required parameter "id" is missing.'
         ret['res'] = False
         return ret
 
@@ -2172,7 +2179,7 @@ def acl_clone(consul_url=None, **kwargs):
             return ret
 
     if 'id' not in kwargs:
-        ret['message'] = 'Required paramter "id" is missing.'
+        ret['message'] = 'Required parameter "id" is missing.'
         ret['res'] = False
         return ret
 
@@ -2217,7 +2224,7 @@ def acl_list(consul_url=None, **kwargs):
             return ret
 
     if 'id' not in kwargs:
-        ret['message'] = 'Required paramter "id" is missing.'
+        ret['message'] = 'Required parameter "id" is missing.'
         ret['res'] = False
         return ret
 

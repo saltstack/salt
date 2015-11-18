@@ -21,9 +21,14 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import dockerng as dockerng_mod
+from salt.exceptions import SaltInvocationError
 
 dockerng_mod.__context__ = {'docker.docker_version': ''}
 dockerng_mod.__salt__ = {}
+
+
+def _docker_py_version():
+    return dockerng_mod.docker.version_info if dockerng_mod.HAS_DOCKER_PY else None
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -45,6 +50,18 @@ class DockerngTestCase(TestCase):
                 ret = dockerng_mod.ps_(host=True)
                 self.assertEqual(ret,
                                  {'host': {'interfaces': {'mocked': None}}})
+
+    def test_ps_with_filters(self):
+        '''
+        Check that dockerng.ps accept filters parameter.
+        '''
+        client = MagicMock()
+        with patch.dict(dockerng_mod.__context__,
+                        {'docker.client': client}):
+            dockerng_mod.ps_(filters={'label': 'KEY'})
+            client.containers.assert_called_once_with(
+                all=True,
+                filters={'label': 'KEY'})
 
     @patch.object(dockerng_mod, '_get_exec_driver')
     def test_check_mine_cache_is_refreshed_on_container_change_event(self, _):
@@ -77,6 +94,198 @@ class DockerngTestCase(TestCase):
                     command('container', *args)
             mine_send.assert_called_with('dockerng.ps', verbose=True, all=True,
                                          host=True)
+
+    @skipIf(_docker_py_version() < (1, 4, 0),
+            'docker module must be installed to run this test or is too old. >=1.4.0')
+    @patch.object(dockerng_mod, 'images', MagicMock())
+    @patch.object(dockerng_mod, 'inspect_image')
+    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    def test_create_with_arg_cmd(self, *args):
+        '''
+        When cmd argument is passed check it is renamed to command.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {}
+        client = Mock()
+        client.api_version = '1.19'
+        client.create_host_config.return_value = host_config
+        client.create_container.return_value = {}
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.create('image', cmd='ls', name='ctn')
+        client.create_container.assert_called_once_with(
+            command='ls',
+            host_config=host_config,
+            image='image',
+            name='ctn')
+
+    @skipIf(_docker_py_version() < (1, 4, 0),
+            'docker module must be installed to run this test or is too old. >=1.4.0')
+    @patch.object(dockerng_mod, 'images', MagicMock())
+    @patch.object(dockerng_mod, 'inspect_image')
+    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    def test_create_send_host_config(self, *args):
+        '''
+        Check host_config object is passed to create_container.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {'PublishAllPorts': True}
+        client = Mock()
+        client.api_version = '1.19'
+        client.create_host_config.return_value = host_config
+        client.create_container.return_value = {}
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.create('image', name='ctn', publish_all_ports=True)
+        client.create_container.assert_called_once_with(
+            host_config=host_config,
+            image='image',
+            name='ctn')
+
+    @skipIf(_docker_py_version() < (1, 4, 0),
+            'docker module must be installed to run this test or is too old. >=1.4.0')
+    @patch.object(dockerng_mod, 'images', MagicMock())
+    @patch.object(dockerng_mod, 'inspect_image')
+    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    def test_create_with_labels_dict(self, *args):
+        '''
+        Create container with labels dictionary.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {}
+        client = Mock()
+        client.api_version = '1.19'
+        client.create_host_config.return_value = host_config
+        client.create_container.return_value = {}
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.create(
+                    'image',
+                    name='ctn',
+                    labels={'KEY': 'VALUE'},
+                    validate_input=True,
+                )
+        client.create_container.assert_called_once_with(
+            labels={'KEY': 'VALUE'},
+            host_config=host_config,
+            image='image',
+            name='ctn',
+        )
+
+    @skipIf(_docker_py_version() < (1, 4, 0),
+            'docker module must be installed to run this test or is too old. >=1.4.0')
+    @patch.object(dockerng_mod, 'images', MagicMock())
+    @patch.object(dockerng_mod, 'inspect_image')
+    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    def test_create_with_labels_list(self, *args):
+        '''
+        Create container with labels list.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {}
+        client = Mock()
+        client.api_version = '1.19'
+        client.create_host_config.return_value = host_config
+        client.create_container.return_value = {}
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.create(
+                    'image',
+                    name='ctn',
+                    labels=['KEY1', 'KEY2'],
+                    validate_input=True,
+                )
+        client.create_container.assert_called_once_with(
+            labels=['KEY1', 'KEY2'],
+            host_config=host_config,
+            image='image',
+            name='ctn',
+        )
+
+    @skipIf(_docker_py_version() < (1, 4, 0),
+            'docker module must be installed to run this test or is too old. >=1.4.0')
+    @patch.object(dockerng_mod, 'images', MagicMock())
+    @patch.object(dockerng_mod, 'inspect_image')
+    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    def test_create_with_labels_error(self, *args):
+        '''
+        Create container with invalid labels.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {}
+        client = Mock()
+        client.api_version = '1.19'
+        client.create_host_config.return_value = host_config
+        client.create_container.return_value = {}
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                self.assertRaises(SaltInvocationError,
+                                  dockerng_mod.create,
+                                  'image',
+                                  name='ctn',
+                                  labels=22,
+                                  validate_input=True,
+                                  )
+
+    @skipIf(_docker_py_version() < (1, 4, 0),
+            'docker module must be installed to run this test or is too old. >=1.4.0')
+    @patch.object(dockerng_mod, 'images', MagicMock())
+    @patch.object(dockerng_mod, 'inspect_image')
+    @patch.object(dockerng_mod, 'version', Mock(return_value={'ApiVersion': '1.19'}))
+    def test_create_with_labels_dictlist(self, *args):
+        '''
+        Create container with labels dictlist.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {}
+        client = Mock()
+        client.api_version = '1.19'
+        client.create_host_config.return_value = host_config
+        client.create_container.return_value = {}
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.create(
+                    'image',
+                    name='ctn',
+                    labels=[{'KEY1': 'VALUE1'}, {'KEY2': 'VALUE2'}],
+                    validate_input=True,
+                )
+        client.create_container.assert_called_once_with(
+            labels={'KEY1': 'VALUE1', 'KEY2': 'VALUE2'},
+            host_config=host_config,
+            image='image',
+            name='ctn',
+        )
 
 
 if __name__ == '__main__':

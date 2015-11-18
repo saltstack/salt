@@ -45,10 +45,19 @@ def options_present(name, sections=None):
            'comment': 'No anomaly detected'
            }
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = ('ini file {0} shall be validated for presence of '
-                          'given options under their respective '
-                          'sections').format(name)
+        ret['result'] = True
+        ret['comment'] = ''
+        for section in sections or {}:
+            section_name = ' in section ' + section if section != 'DEFAULT_IMPLICIT' else ''
+            for key in sections[section]:
+                cur_value = __salt__['ini.get_option'](name, section, key)
+                if cur_value == str(sections[section][key]):
+                    ret['comment'] += 'Key {0}{1} unchanged.\n'.format(key, section_name)
+                    continue
+                ret['comment'] += 'Changed key {0}{1}.\n'.format(key, section_name)
+                ret['result'] = None
+        if ret['comment'] == '':
+            ret['comment'] = 'No changes detected.'
         return ret
     changes = __salt__['ini.set_option'](name, sections)
     if 'error' in changes:
@@ -85,10 +94,19 @@ def options_absent(name, sections=None):
            'comment': 'No anomaly detected'
            }
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = ('ini file {0} shall be validated for absence of '
-                          'given options under their respective '
-                          'sections').format(name)
+        ret['result'] = True
+        ret['comment'] = ''
+        for section in sections or {}:
+            section_name = ' in section ' + section if section != 'DEFAULT_IMPLICIT' else ''
+            for key in sections[section]:
+                cur_value = __salt__['ini.get_option'](name, section, key)
+                if not cur_value:
+                    ret['comment'] += 'Key {0}{1} does not exist.\n'.format(key, section_name)
+                    continue
+                ret['comment'] += 'Deleted key {0}{1}.\n'.format(key, section_name)
+                ret['result'] = None
+        if ret['comment'] == '':
+            ret['comment'] = 'No changes detected.'
         return ret
     sections = sections or {}
     for section, key in sections.iteritems():
@@ -124,9 +142,20 @@ def sections_present(name, sections=None):
            'comment': 'No anomaly detected'
            }
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = ('ini file {0} shall be validated for presence of '
-                          'given sections').format(name)
+        ret['result'] = True
+        ret['comment'] = ''
+        for section in sections or {}:
+            cur_section = __salt__['ini.get_section'](name, section)
+            if cmp(dict(sections[section]), cur_section) == 0:
+                ret['comment'] += 'Section unchanged {0}.\n'.format(section)
+                continue
+            elif cur_section:
+                ret['comment'] += 'Changed existing section {0}.\n'.format(section)
+            else:
+                ret['comment'] += 'Created new section {0}.\n'.format(section)
+            ret['result'] = None
+        if ret['comment'] == '':
+            ret['comment'] = 'No changes detected.'
         return ret
     section_to_update = {}
     for section_name in sections or []:
@@ -160,9 +189,17 @@ def sections_absent(name, sections=None):
            'comment': 'No anomaly detected'
            }
     if __opts__['test']:
-        ret['result'] = None
-        ret['comment'] = ('ini file {0} shall be validated for absence of '
-                          'given sections').format(name)
+        ret['result'] = True
+        ret['comment'] = ''
+        for section in sections or []:
+            cur_section = __salt__['ini.get_section'](name, section)
+            if not cur_section:
+                ret['comment'] += 'Section {0} does not exist.\n'.format(section)
+                continue
+            ret['comment'] += 'Deleted section {0}.\n'.format(section)
+            ret['result'] = None
+        if ret['comment'] == '':
+            ret['comment'] = 'No changes detected.'
         return ret
     for section in sections or []:
         cur_section = __salt__['ini.remove_section'](name, section)

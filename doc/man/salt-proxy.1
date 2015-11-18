@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-PROXY" "1" "July 29, 2015" "2015.8.0rc2-13-g733b842" "Salt"
+.TH "SALT-PROXY" "1" "September 01, 2015" "2015.8.0" "Salt"
 .SH NAME
 salt-proxy \- salt-proxy Documentation
 .
@@ -31,8 +31,8 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
 .sp
-The Salt Proxy minion daemon, receives commands from a remote Salt master
-and communicates with devices unable to run a full minion.
+Receives commands from a Salt master and proxies these commands to
+devices that are unable to run a full minion.
 .SH SYNOPSIS
 .INDENT 0.0
 .INDENT 3.5
@@ -46,8 +46,9 @@ salt\-proxy [ options ]
 .UNINDENT
 .SH DESCRIPTION
 .sp
-The Salt proxy minion receives commands from the central Salt master, transmits apppropriate commands
- to devices unable to run a minion, and replies with the results of said commands.
+The Salt proxy minion receives commands from a Salt master, transmits
+appropriate commands to devices that are unable to run a minion, and replies
+with the results of said commands.
 .SH OPTIONS
 .INDENT 0.0
 .TP
@@ -72,9 +73,9 @@ Show the help message and exit
 .INDENT 0.0
 .TP
 .B \-c CONFIG_DIR, \-\-config\-dir=CONFIG_dir
-The location of the Salt configuration directory. This directory contains
-the configuration files for Salt master and minions. The default location
-on most systems is \fB/etc/salt\fP\&.
+The location of the Salt configuration directory. This directory
+contains  the  configuration  files for Salt master and minions.
+The default location on most systems is \fB/etc/salt\fP\&.
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -89,7 +90,7 @@ Run salt\-proxy as a daemon
 .INDENT 0.0
 .TP
 .B \-\-pid\-file PIDFILE
-Specify the location of the pidfile. Default: /var/run/salt\-proxy-<id>\&.pid
+Specify the location of the pidfile. Default: \fB/var/run/salt\-proxy\-<id>.pid\fP
 .UNINDENT
 .SS Logging Options
 .sp

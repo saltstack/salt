@@ -25,6 +25,7 @@ import salt.loader
 import salt.utils
 import salt.utils.http as http
 import salt.syspaths as syspaths
+import salt.ext.six as six
 from salt.ext.six import string_types
 from salt.ext.six.moves import input
 from salt.ext.six.moves import zip
@@ -74,18 +75,21 @@ class SPMClient(object):
                 os.path.join(syspaths.CONFIG_DIR, 'spm')
             )
         self.opts = opts
+        self.db_prov = self.opts.get('spm_db_provider', 'sqlite3')
+        self.files_prov = self.opts.get('spm_files_provider', 'local')
+        self._prep_pkgdb()
+        self._prep_pkgfiles()
+        self._init()
 
-        self.db_prov = opts.get('spm_db_provider', 'sqlite3')
-        db_fun = '{0}.init'.format(self.db_prov)
-
+    def _prep_pkgdb(self):
         self.pkgdb = salt.loader.pkgdb(self.opts)
-        self.db_conn = self.pkgdb[db_fun]()
 
-        self.files_prov = opts.get('spm_files_provider', 'roots')
-        files_fun = '{0}.init'.format(self.files_prov)
-
+    def _prep_pkgfiles(self):
         self.pkgfiles = salt.loader.pkgfiles(self.opts)
-        self.files_conn = self.pkgfiles[files_fun]()
+
+    def _init(self):
+        self.db_conn = self._pkgdb_fun('init')
+        self.files_conn = self._pkgfiles_fun('init')
 
     def run(self, args):
         '''
@@ -114,6 +118,18 @@ class SPMClient(object):
         except SPMException as exc:
             self.ui.error(str(exc))
 
+    def _pkgdb_fun(self, func, *args, **kwargs):
+        try:
+            return getattr(getattr(self.pkgdb, self.db_prov), func)(*args, **kwargs)
+        except AttributeError:
+            return self.pkgdb['{0}.{1}'.format(self.db_prov, func)](*args, **kwargs)
+
+    def _pkgfiles_fun(self, func, *args, **kwargs):
+        try:
+            return getattr(getattr(self.pkgfiles, self.files_prov), func)(*args, **kwargs)
+        except AttributeError:
+            return self.pkgfiles['{0}.{1}'.format(self.files_prov, func)](*args, **kwargs)
+
     def _local(self, args):
         '''
         Process local commands
@@ -137,7 +153,7 @@ class SPMClient(object):
             raise SPMInvocationError('A package file must be specified')
 
         pkg_file = args[1]
-        if not self.pkgfiles['{0}.path_exists'.format(self.files_prov)](pkg_file):
+        if not os.path.exists(pkg_file):
             raise SPMInvocationError('Package file {0} not found'.format(pkg_file))
 
         comps = pkg_file.split('-')
@@ -148,27 +164,46 @@ class SPMClient(object):
         formula_ref = formula_tar.extractfile('{0}/FORMULA'.format(name))
         formula_def = yaml.safe_load(formula_ref)
 
-        pkg_info = self.pkgdb['{0}.info'.format(self.db_prov)](name, self.db_conn)
+        pkg_info = self._pkgdb_fun('info', name, self.db_conn)
         if pkg_info is not None and not self.opts['force']:
             raise SPMPackageError(
                 'Package {0} already installed, not installing again'.format(formula_def['name'])
             )
 
-        if 'dependencies' in formula_def:
-            if not isinstance(formula_def['dependencies'], list):
-                formula_def['dependencies'] = [formula_def['dependencies']]
-            needs = []
-            for dep in formula_def['dependencies']:
-                if not isinstance(dep, string_types):
+        if 'dependencies' in formula_def or 'optional' in formula_def or 'recommended' in formula_def:
+            self.repo_metadata = self._get_repo_metadata()
+            self.avail_pkgs = {}
+            for repo in self.repo_metadata:
+                if not isinstance(self.repo_metadata[repo]['packages'], dict):
                     continue
-                data = self.pkgdb['{0}.info'.format(self.db_prov)](dep, self.db_conn)
-                if data is not None:
-                    continue
-                needs.append(dep)
-            raise SPMPackageError(
-                'Cannot install {0}, the following dependencies are needed:\n\n{1}'.format(
-                    formula_def['name'], '\n'.join(needs))
-            )
+                for pkg in self.repo_metadata[repo]['packages']:
+                    self.avail_pkgs[pkg] = repo
+
+            needs, unavail, optional, recommended = self._resolve_deps(formula_def)
+
+            if len(unavail) > 0:
+                raise SPMPackageError(
+                    'Cannot install {0}, the following dependencies are needed:\n\n{1}'.format(
+                        formula_def['name'], '\n'.join(unavail))
+                )
+
+            if optional:
+                self.ui.status('The following dependencies are optional:')
+                for dep_pkg in optional:
+                    pkg_info = self._pkgdb_fun('info', formula_def['name'])
+                    if isinstance(pkg_info, dict):
+                        self.ui.status('{0} [Installed]').format(dep_pkg)
+                    else:
+                        self.ui.status(dep_pkg)
+
+            if recommended:
+                self.ui.status('The following dependencies are recommended:')
+                for dep_pkg in recommended:
+                    pkg_info = self._pkgdb_fun('info', formula_def['name'])
+                    if isinstance(pkg_info, dict):
+                        self.ui.status('{0} [Installed]').format(dep_pkg)
+                    else:
+                        self.ui.status(dep_pkg)
 
         if pkg_name is None:
             msg = 'Installing package from file {0}'.format(pkg_file)
@@ -185,9 +220,7 @@ class SPMClient(object):
 
         pkg_files = formula_tar.getmembers()
         # First pass: check for files that already exist
-        existing_files = self.pkgfiles['{0}.check_existing'.format(self.files_prov)](
-            name, pkg_files
-        )
+        existing_files = self._pkgfiles_fun('check_existing', name, pkg_files, formula_def)
 
         if existing_files and not self.opts['force']:
             raise SPMPackageError('Not installing {0} due to existing files:\n\n{1}'.format(
@@ -195,7 +228,7 @@ class SPMClient(object):
             )
 
         # We've decided to install
-        self.pkgdb['{0}.register_pkg'.format(self.db_prov)](name, formula_def, self.db_conn)
+        self._pkgdb_fun('register_pkg', name, formula_def, self.db_conn)
 
         # No defaults for this in config.py; default to the current running
         # user and group
@@ -211,26 +244,75 @@ class SPMClient(object):
             member.uname = uname
             member.gname = gname
 
-            file_ref = formula_tar.extractfile(member)
-            if member.isdir():
-                digest = ''
-            else:
-                file_hash = hashlib.sha1()
-                file_hash.update(file_ref.read())
-                digest = file_hash.hexdigest()
-
-            out_path = self.pkgfiles['{0}.install_file'.format(self.files_prov)](
-                name, formula_tar, member, self.files_conn
-            )
-            self.pkgdb['{0}.register_file'.format(self.db_prov)](
-                name,
-                member,
-                out_path,
-                digest,
-                self.db_conn
-            )
+            out_path = self._pkgfiles_fun('install_file',
+                                          name,
+                                          formula_tar,
+                                          member,
+                                          formula_def,
+                                          self.files_conn)
+            if out_path is not False:
+                if member.isdir():
+                    digest = ''
+                else:
+                    file_hash = hashlib.sha1()
+                    digest = self._pkgfiles_fun('hash_file', out_path, file_hash, self.files_conn)
+                self._pkgdb_fun('register_file',
+                                name,
+                                member,
+                                out_path,
+                                digest,
+                                self.db_conn)
 
         formula_tar.close()
+
+    def _resolve_deps(self, formula_def):
+        '''
+        Return a list of packages which need to be installed, to resolve all
+        dependencies
+        '''
+        pkg_info = self.pkgdb['{0}.info'.format(self.db_prov)](formula_def['name'])
+        if not isinstance(pkg_info, dict):
+            pkg_info = {}
+
+        can_has = {}
+        cant_has = []
+        for dep in formula_def.get('dependencies', '').split(','):
+            dep = dep.strip()
+            if not dep:
+                continue
+            if self.pkgdb['{0}.info'.format(self.db_prov)](dep):
+                continue
+
+            if dep in self.avail_pkgs:
+                can_has[dep] = self.avail_pkgs[dep]
+            else:
+                cant_has.append(dep)
+
+        optional = formula_def.get('optional', '').split(',')
+        recommended = formula_def.get('recommended', '').split(',')
+
+        inspected = []
+        to_inspect = can_has.copy()
+        while len(to_inspect) > 0:
+            dep = next(six.iterkeys(to_inspect))
+            del to_inspect[dep]
+
+            # Don't try to resolve the same package more than once
+            if dep in inspected:
+                continue
+            inspected.append(dep)
+
+            repo_contents = self.repo_metadata.get(can_has[dep], {})
+            repo_packages = repo_contents.get('packages', {})
+            dep_formula = repo_packages.get(dep, {}).get('info', {})
+
+            also_can, also_cant, opt_dep, rec_dep = self._resolve_deps(dep_formula)
+            can_has.update(also_can)
+            cant_has = sorted(set(cant_has + also_cant))
+            optional = sorted(set(optional + opt_dep))
+            recommended = sorted(set(recommended + rec_dep))
+
+        return can_has, cant_has, optional, recommended
 
     def _traverse_repos(self, callback, repo_name=None):
         '''
@@ -397,35 +479,33 @@ class SPMClient(object):
 
         self.ui.status('... removing')
 
-        if not self.pkgdb['{0}.db_exists'.format(self.db_prov)](self.opts['spm_db']):
+        if not self._pkgdb_fun('db_exists', self.opts['spm_db']):
             raise SPMDatabaseError('No database at {0}, cannot remove {1}'.format(self.opts['spm_db'], package))
 
         # Look at local repo index
-        pkg_info = self.pkgdb['{0}.info'.format(self.db_prov)](package, self.db_conn)
+        pkg_info = self._pkgdb_fun('info', package, self.db_conn)
         if pkg_info is None:
             raise SPMPackageError('package {0} not installed'.format(package))
 
         # Find files that have not changed and remove them
-        files = self.pkgdb['{0}.list_files'.format(self.db_prov)](package, self.db_conn)
+        files = self._pkgdb_fun('list_files', package, self.db_conn)
         dirs = []
         for filerow in files:
-            if self.pkgfiles['{0}.path_isdir'.format(self.files_prov)](filerow[0]):
+            if self._pkgfiles_fun('path_isdir', filerow[0]):
                 dirs.append(filerow[0])
                 continue
-            with salt.utils.fopen(filerow[0], 'r') as fh_:
-                file_hash = hashlib.sha1()
-                file_hash.update(fh_.read())
-                digest = file_hash.hexdigest()
-                if filerow[1] == digest:
-                    log.trace('Removing file {0}'.format(filerow[0]))
-                    self.pkgfiles['{0}.remove_file'.format(self.files_prov)](filerow[0], self.files_conn)
-                else:
-                    log.trace('Not removing file {0}'.format(filerow[0]))
-                self.pkgdb['{0}.unregister_file'.format(self.db_prov)](filerow[0], self.db_conn)
+            file_hash = hashlib.sha1()
+            digest = self._pkgfiles_fun('hash_file', filerow[0], file_hash, self.files_conn)
+            if filerow[1] == digest:
+                log.trace('Removing file {0}'.format(filerow[0]))
+                self._pkgfiles_fun('remove_file', filerow[0], self.files_conn)
+            else:
+                log.trace('Not removing file {0}'.format(filerow[0]))
+            self._pkgdb_fun('unregister_file', filerow[0], package, self.db_conn)
 
         # Clean up directories
         for dir_ in sorted(dirs, reverse=True):
-            self.pkgdb['{0}.unregister_file'.format(self.db_prov)](dir_, self.db_conn)
+            self._pkgdb_fun('unregister_file', dir_, package, self.db_conn)
             try:
                 log.trace('Removing directory {0}'.format(dir_))
                 os.rmdir(dir_)
@@ -433,7 +513,7 @@ class SPMClient(object):
                 # Leave directories in place that still have files in them
                 log.trace('Cannot remove directory {0}, probably not empty'.format(dir_))
 
-        self.pkgdb['{0}.unregister_pkg'.format(self.db_prov)](package, self.db_conn)
+        self._pkgdb_fun('unregister_pkg', package, self.db_conn)
 
     def _local_info(self, args):
         '''
@@ -466,7 +546,7 @@ class SPMClient(object):
 
         package = args[1]
 
-        pkg_info = self.pkgdb['{0}.info'.format(self.db_prov)](package, self.db_conn)
+        pkg_info = self._pkgdb_fun('info', package, self.db_conn)
         if pkg_info is None:
             raise SPMPackageError('package {0} not installed'.format(package))
         self.ui.status(self._get_info(pkg_info))
@@ -532,7 +612,7 @@ class SPMClient(object):
 
         package = args[1]
 
-        files = self.pkgdb['{0}.list_files'.format(self.db_prov)](package, self.db_conn)
+        files = self._pkgdb_fun('list_files', package, self.db_conn)
         if files is None:
             raise SPMPackageError('package {0} not installed'.format(package))
         else:
@@ -570,8 +650,16 @@ class SPMClient(object):
         if not os.path.exists(self.opts['spm_build_dir']):
             os.mkdir(self.opts['spm_build_dir'])
 
+        self.formula_conf = formula_conf
+
         formula_tar = tarfile.open(out_path, 'w:bz2')
-        formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
+
+        try:
+            formula_tar.add(formula_path, formula_conf['name'], filter=self._exclude)
+            formula_tar.add(self.abspath, formula_conf['name'], filter=self._exclude)
+        except TypeError:
+            formula_tar.add(formula_path, formula_conf['name'], exclude=self._exclude)
+            formula_tar.add(self.abspath, formula_conf['name'], exclude=self._exclude)
         formula_tar.close()
 
         self.ui.status('Built package {0}'.format(out_path))
@@ -580,9 +668,13 @@ class SPMClient(object):
         '''
         Exclude based on opts
         '''
+        if isinstance(member, string_types):
+            return None
+
         for item in self.opts['spm_build_exclude']:
-            exclude_name = '{0}/{1}'.format(self.abspath, item)
-            if member.name.startswith(exclude_name):
+            if member.name.startswith('{0}/{1}'.format(self.formula_conf['name'], item)):
+                return None
+            elif member.name.startswith('{0}/{1}'.format(self.abspath, item)):
                 return None
         return member
 

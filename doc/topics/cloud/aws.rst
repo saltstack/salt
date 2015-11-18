@@ -118,7 +118,7 @@ parameters are discussed in more detail below.
       keyname: my_test_key
 
       # This one should NOT be specified if VPC was not configured in AWS to be
-      # the default. It might cause an error message which sais that network
+      # the default. It might cause an error message which says that network
       # interfaces and an instance-level security groups may not be specified
       # on the same request.
       #
@@ -554,17 +554,6 @@ function exists which renames both the instance, and the salt keys.
     salt-cloud -a rename mymachine newname=yourmachine
 
 
-EC2 Termination Protection
-==========================
-EC2 allows the user to enable and disable termination protection on a specific
-instance. An instance with this protection enabled cannot be destroyed.
-
-.. code-block:: bash
-
-    salt-cloud -a enable_term_protect mymachine
-    salt-cloud -a disable_term_protect mymachine
-
-
 Rename on Destroy
 =================
 When instances on EC2 are destroyed, there will be a lag between the time that
@@ -901,6 +890,13 @@ point, and should be stored immediately.
 
     salt-cloud -f create_keypair ec2 keyname=mykeypair
 
+Importing a Key Pair
+-------------------
+
+.. code-block:: bash
+
+    salt-cloud -f import_keypair ec2 keyname=mykeypair file=/path/to/id_rsa.pub
+
 
 Show a Key Pair
 ---------------
@@ -973,7 +969,7 @@ the network interfaces of your virtual machines, for example:-
           # Uncomment this to associate an existing Elastic IP Address with
           # this network interface:
           #
-          # associate_eip: eni-XXXXXXXX
+          # associate_eip: eipalloc-XXXXXXXX
 
           # You can allocate more than one IP address to an interface. Use the
           # 'ip addr list' command to see them.

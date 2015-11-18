@@ -25,10 +25,11 @@ import salt.defaults.exitcodes
 import salt.output
 import salt.utils
 from salt.utils import parsers
-from salt.utils.verify import check_user, verify_env, verify_files
+from salt.utils.verify import check_user, verify_env, verify_files, verify_log
 
 # Import salt.cloud libs
 import salt.cloud
+import salt.utils.cloud
 from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 import salt.ext.six as six
 import salt.syspaths as syspaths
@@ -79,6 +80,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
         # Setup log file logging
         self.setup_logfile_logger()
+        verify_log(self.config)
 
         if self.options.update_bootstrap:
             ret = salt.utils.cloud.update_bootstrap(self.config)
@@ -91,6 +93,8 @@ class SaltCloud(parsers.SaltCloudParser):
         log.info('salt-cloud starting')
         try:
             mapper = salt.cloud.Map(self.config)
+        except SaltCloudSystemExit as exc:
+            self.handle_exception(exc.args, exc)
         except SaltCloudException as exc:
             msg = 'There was an error generating the mapper.'
             self.handle_exception(msg, exc)
@@ -349,10 +353,48 @@ class SaltCloud(parsers.SaltCloudParser):
 
                 if dmap.get('existing', None):
                     for name in dmap['existing']:
-                        ret[name] = {'Message': 'Already running'}
+                        if 'ec2' in dmap['existing'][name]['provider']:
+                            msg = 'Instance already exists, or is terminated and has the same name.'
+                        else:
+                            msg = 'Already running.'
+                        ret[name] = {'Message': msg}
 
             except (SaltCloudException, Exception) as exc:
                 msg = 'There was a query error: {0}'
+                self.handle_exception(msg, exc)
+
+        elif self.options.bootstrap:
+            host = self.options.bootstrap
+            if len(self.args) > 0:
+                if '=' not in self.args[0]:
+                    minion_id = self.args.pop(0)
+                else:
+                    minion_id = host
+            else:
+                minion_id = host
+
+            vm_ = {
+                'driver': '',
+                'ssh_host': host,
+                'name': minion_id,
+            }
+            args = self.args[:]
+            for arg in args[:]:
+                if '=' in arg:
+                    key, value = arg.split('=', 1)
+                    vm_[key] = value
+                    args.remove(arg)
+
+            if args:
+                self.error(
+                    'Any arguments passed to --bootstrap need to be passed as '
+                    'kwargs. Ex: ssh_username=larry. Remaining arguments: {0}'.format(args)
+                )
+
+            try:
+                ret = salt.utils.cloud.bootstrap(vm_, self.config)
+            except (SaltCloudException, Exception) as exc:
+                msg = 'There was an error bootstrapping the minion: {0}'
                 self.handle_exception(msg, exc)
 
         else:
@@ -377,7 +419,7 @@ class SaltCloud(parsers.SaltCloudParser):
 
     def handle_exception(self, msg, exc):
         if isinstance(exc, SaltCloudException):
-            # It's a know exception an we know own to handle it
+            # It's a known exception and we know how to handle it
             if isinstance(exc, SaltCloudSystemExit):
                 # This is a salt cloud system exit
                 if exc.exit_code > 0:

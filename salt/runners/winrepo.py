@@ -3,6 +3,9 @@
 Runner to manage Windows software repo
 '''
 
+# WARNING: Any modules imported here must also be added to
+# salt/modules/win_repo.py
+
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
@@ -25,7 +28,8 @@ import salt.template
 
 log = logging.getLogger(__name__)
 
-PER_REMOTE_PARAMS = ('ssl_verify',)
+# Global parameters which can be overridden on a per-remote basis
+PER_REMOTE_OVERRIDES = ('ssl_verify',)
 
 
 def genrepo(opts=None, fire_event=True):
@@ -135,7 +139,7 @@ def genrepo(opts=None, fire_event=True):
     return ret
 
 
-def update_git_repos(opts=None, masterless=False):
+def update_git_repos(opts=None, clean=False, masterless=False):
     '''
     Checkout git repos containing Windows Software Package Definitions
 
@@ -143,12 +147,23 @@ def update_git_repos(opts=None, masterless=False):
         Specify an alternate opts dict. Should not be used unless this function
         is imported into an execution module.
 
+    clean : False
+        Clean repo cachedirs which are not configured under
+        :conf_master:`winrepo_remotes`.
 
-    CLI Example:
+        .. warning::
+            This argument should not be set to ``True`` if a mix of git and
+            non-git repo definitions are being used, as it will result in the
+            non-git repo definitions being removed.
+
+        .. versionadded:: 2015.8.0
+
+    CLI Examples:
 
     .. code-block:: bash
 
         salt-run winrepo.update_git_repos
+        salt-run winrepo.update_git_repos clean=True
     '''
     if opts is None:
         opts = __opts__
@@ -173,75 +188,86 @@ def update_git_repos(opts=None, masterless=False):
     else:
         winrepo_remotes = opts['winrepo_remotes']
 
-    if not any((salt.utils.gitfs.HAS_GITPYTHON, salt.utils.gitfs.HAS_PYGIT2)):
-        # Use legacy code
-        if not salt.utils.is_windows():
-            # Don't warn on Windows, because Windows can't do cool things like
-            # use pygit2. It has to fall back to git.latest.
-            salt.utils.warn_until(
-                'Nitrogen',
-                'winrepo git support now requires either GitPython or pygit2. '
-                'Please install either GitPython >= {0} (or pygit2 >= {1} with '
-                'libgit2 >= {2}), clear out the winrepo_dir ({3}), and '
-                'restart the salt-master service.'.format(
-                    salt.utils.gitfs.GITPYTHON_MINVER,
-                    salt.utils.gitfs.PYGIT2_MINVER,
-                    salt.utils.gitfs.LIBGIT2_MINVER,
-                    winrepo_dir
-                )
-            )
-        ret = {}
-        for remote_info in winrepo_remotes:
-            if '/' in remote_info:
-                targetname = remote_info.split('/')[-1]
-            else:
-                targetname = remote_info
-            rev = None
-            # If a revision is specified, use it.
-            try:
-                rev, remote_url = remote_info.strip().split()
-            except ValueError:
-                remote_url = remote_info
-            gittarget = os.path.join(winrepo_dir, targetname).replace('.', '_')
-            if masterless:
-                result = __salt__['state.single']('git.latest',
-                                                  name=remote_url,
-                                                  rev=rev,
-                                                  branch='winrepo',
-                                                  target=gittarget,
-                                                  force_checkout=True,
-                                                  force_reset=True)
-                if isinstance(result, list):
-                    # Errors were detected
-                    raise CommandExecutionError(
-                        'Failed up update winrepo_remotes: {0}'.format(
-                            '\n'.join(result)
-                        )
+    winrepo_cfg = [(winrepo_remotes, winrepo_dir),
+                   (opts['winrepo_remotes_ng'], opts['winrepo_dir_ng'])]
+
+    ret = {}
+    for remotes, base_dir in winrepo_cfg:
+        if not any((salt.utils.gitfs.HAS_GITPYTHON, salt.utils.gitfs.HAS_PYGIT2)):
+            # Use legacy code
+            if not salt.utils.is_windows():
+                # Don't warn on Windows, because Windows can't do cool things like
+                # use pygit2. It has to fall back to git.latest.
+                salt.utils.warn_until(
+                    'Nitrogen',
+                    'winrepo git support now requires either GitPython or pygit2. '
+                    'Please install either GitPython >= {0} (or pygit2 >= {1} with '
+                    'libgit2 >= {2}), clear out {3}, and restart the salt-master '
+                    'service.'.format(
+                        salt.utils.gitfs.GITPYTHON_MINVER,
+                        salt.utils.gitfs.PYGIT2_MINVER,
+                        salt.utils.gitfs.LIBGIT2_MINVER,
+                        base_dir
                     )
-                if 'name' not in result:
-                    # Highstate output dict, the results are actually nested
-                    # one level down.
-                    key = next(iter(result))
-                    result = result[key]
-            else:
-                mminion = salt.minion.MasterMinion(opts)
-                result = mminion.states['git.latest'](remote_url,
+                )
+            winrepo_result = {}
+            for remote_info in remotes:
+                if '/' in remote_info:
+                    targetname = remote_info.split('/')[-1]
+                else:
+                    targetname = remote_info
+                rev = 'HEAD'
+                # If a revision is specified, use it.
+                try:
+                    rev, remote_url = remote_info.strip().split()
+                except ValueError:
+                    remote_url = remote_info
+                gittarget = os.path.join(base_dir, targetname).replace('.', '_')
+                if masterless:
+                    result = __salt__['state.single']('git.latest',
+                                                      name=remote_url,
                                                       rev=rev,
                                                       branch='winrepo',
                                                       target=gittarget,
                                                       force_checkout=True,
                                                       force_reset=True)
-            ret[result['name']] = result['result']
-        return ret
-    else:
-        # New winrepo code utilizing salt.utils.gitfs
-        try:
-            winrepo = salt.utils.gitfs.WinRepo(opts)
-            winrepo.init_remotes(winrepo_remotes, PER_REMOTE_PARAMS)
-            winrepo.fetch_remotes()
-            winrepo.checkout()
-        except Exception as exc:
-            msg = 'Failed to update winrepo_remotes: {0}'.format(exc)
-            log.error(msg, exc_info_on_loglevel=logging.DEBUG)
-            return msg
-        return winrepo.winrepo_dirs
+                    if isinstance(result, list):
+                        # Errors were detected
+                        raise CommandExecutionError(
+                            'Failed up update winrepo remotes: {0}'.format(
+                                '\n'.join(result)
+                            )
+                        )
+                    if 'name' not in result:
+                        # Highstate output dict, the results are actually nested
+                        # one level down.
+                        key = next(iter(result))
+                        result = result[key]
+                else:
+                    mminion = salt.minion.MasterMinion(opts)
+                    result = mminion.states['git.latest'](remote_url,
+                                                          rev=rev,
+                                                          branch='winrepo',
+                                                          target=gittarget,
+                                                          force_checkout=True,
+                                                          force_reset=True)
+                winrepo_result[result['name']] = result['result']
+            ret.update(winrepo_result)
+        else:
+            # New winrepo code utilizing salt.utils.gitfs
+            try:
+                winrepo = salt.utils.gitfs.WinRepo(opts, base_dir)
+                winrepo.init_remotes(remotes, PER_REMOTE_OVERRIDES)
+                winrepo.fetch_remotes()
+                # Since we're not running update(), we need to manually call
+                # clear_old_remotes() to remove directories from remotes that
+                # have been removed from configuration.
+                if clean:
+                    winrepo.clear_old_remotes()
+                winrepo.checkout()
+            except Exception as exc:
+                msg = 'Failed to update winrepo_remotes: {0}'.format(exc)
+                log.error(msg, exc_info_on_loglevel=logging.DEBUG)
+                return msg
+            ret.update(winrepo.winrepo_dirs)
+    return ret

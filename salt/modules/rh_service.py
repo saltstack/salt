@@ -44,6 +44,7 @@ def __virtual__():
     '''
     # Enable on these platforms only.
     enable = set((
+        'XenServer',
         'RedHat',
         'CentOS',
         'ScientificLinux',
@@ -57,6 +58,8 @@ def __virtual__():
         'McAfee  OS Server'
     ))
     if __grains__['os'] in enable:
+        if __grains__['os'] == 'XenServer':
+            return __virtualname__
         if __grains__['os'] == 'SUSE':
             if str(__grains__['osrelease']).startswith('11'):
                 return __virtualname__
@@ -153,23 +156,22 @@ def _sysv_is_enabled(name, runlevel=None):
 
 def _chkconfig_is_enabled(name, runlevel=None):
     '''
-    Return True if the service is enabled according to chkconfig; otherwise
-    return False.  If `runlevel` is None, then use the current runlevel.
+    Return ``True`` if the service is enabled according to chkconfig; otherwise
+    return ``False``.  If ``runlevel`` is ``None``, then use the current
+    runlevel.
     '''
     cmdline = '/sbin/chkconfig --list {0}'.format(name)
     result = __salt__['cmd.run_all'](cmdline, python_shell=False)
+
+    if runlevel is None:
+        runlevel = _runlevel()
     if result['retcode'] == 0:
-        cols = result['stdout'].splitlines()[0].split()
-        try:
-            if cols[0].strip(':') == name:
-                if runlevel is None:
-                    runlevel = _runlevel()
-                if len(cols) > 3 and '{0}:on'.format(runlevel) in cols:
+        for row in result['stdout'].splitlines():
+            if '{0}:on'.format(runlevel) in row:
+                if row.split()[0] == name:
                     return True
-                elif len(cols) < 3 and cols[1] and cols[1] == 'on':
-                    return True
-        except IndexError:
-            pass
+            elif row.split() == [name + ':', 'on']:
+                return True
     return False
 
 

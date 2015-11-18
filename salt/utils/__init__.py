@@ -520,11 +520,7 @@ def which(exe=None):
             # executable in cwd or fullpath
             return exe
 
-        # default path based on busybox's default
-        default_path = '/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin'
-        search_path = os.environ.get('PATH', default_path)
-        path_ext = os.environ.get('PATHEXT', '.EXE')
-        ext_list = path_ext.split(';')
+        ext_list = os.environ.get('PATHEXT', '.EXE').split(';')
 
         @real_memoize
         def _exe_has_ext():
@@ -541,7 +537,13 @@ def which(exe=None):
                     continue
             return False
 
-        search_path = search_path.split(os.pathsep)
+        # Enhance POSIX path for the reliability at some environments, when $PATH is changing
+        # This also keeps order, where 'first came, first win' for cases to find optional alternatives
+        search_path = os.environ.get('PATH') and os.environ['PATH'].split(os.pathsep) or list()
+        for default_path in ['/bin', '/sbin', '/usr/bin', '/usr/sbin', '/usr/local/bin']:
+            if default_path not in search_path:
+                search_path.append(default_path)
+        os.environ['PATH'] = os.pathsep.join(search_path)
         for path in search_path:
             full_path = os.path.join(path, exe)
             if _is_executable_file_or_link(full_path):
@@ -554,16 +556,10 @@ def which(exe=None):
                     # safely rely on that behavior
                     if _is_executable_file_or_link(full_path + ext):
                         return full_path + ext
-        log.trace(
-            '{0!r} could not be found in the following search '
-            'path: {1!r}'.format(
-                exe, search_path
-            )
-        )
+        log.trace('\'{0}\' could not be found in the following search path: \'{1}\''.format(exe, search_path))
     else:
-        log.error(
-            'No executable was passed to be searched by salt.utils.which()'
-        )
+        log.error('No executable was passed to be searched by salt.utils.which()')
+
     return None
 
 
@@ -1030,7 +1026,7 @@ def format_call(fun,
     if extra:
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
-            msg = '{0[0]!r} is an invalid keyword argument for {1!r}'.format(
+            msg = '\'{0[0]}\' is an invalid keyword argument for \'{1}\''.format(
                 list(extra.keys()),
                 ret.get(
                     # In case this is being called for a state module
@@ -1040,8 +1036,8 @@ def format_call(fun,
                 )
             )
         else:
-            msg = '{0} and {1!r} are invalid keyword arguments for {2!r}'.format(
-                ', '.join(['{0!r}'.format(e) for e in extra][:-1]),
+            msg = '{0} and \'{1}\' are invalid keyword arguments for \'{2}\''.format(
+                ', '.join(['\'{0}\''.format(e) for e in extra][:-1]),
                 list(extra.keys())[-1],
                 ret.get(
                     # In case this is being called for a state module
@@ -1362,7 +1358,7 @@ def subdict_match(data,
             try:
                 return re.match(pattern.lower(), str(target).lower())
             except Exception:
-                log.error('Invalid regex {0!r} in match'.format(pattern))
+                log.error('Invalid regex \'{0}\' in match'.format(pattern))
                 return False
         elif exact_match:
             return str(target).lower() == pattern.lower()
@@ -1409,8 +1405,8 @@ def subdict_match(data,
         splits = expr.split(delimiter)
         key = delimiter.join(splits[:idx])
         matchstr = delimiter.join(splits[idx:])
-        log.debug('Attempting to match {0!r} in {1!r} using delimiter '
-                  '{2!r}'.format(matchstr, key, delimiter))
+        log.debug('Attempting to match \'{0}\' in \'{1}\' using delimiter '
+                  '\'{2}\''.format(matchstr, key, delimiter))
         match = traverse_dict_and_list(data, key, {}, delimiter=delimiter)
         if match == {}:
             continue
@@ -1537,20 +1533,7 @@ def is_windows():
     '''
     Simple function to return if a host is Windows or not
     '''
-    import __main__ as main
-    # This is a hack.  If a proxy minion is started by other
-    # means, e.g. a custom script that creates the minion objects
-    # then this will fail.
-    is_proxy = False
-    try:
-        if 'salt-proxy' in main.__file__:
-            is_proxy = True
-    except AttributeError:
-        pass
-    if is_proxy:
-        return False
-    else:
-        return sys.platform.startswith('win')
+    return sys.platform.startswith('win')
 
 
 def sanitize_win_path_string(winpath):
@@ -1576,15 +1559,6 @@ def is_proxy():
     TODO: Need to extend this for proxies that might run on
     other Unices
     '''
-    return not (is_linux() or is_windows())
-
-
-@real_memoize
-def is_linux():
-    '''
-    Simple function to return if a host is Linux or not.
-    Note for a proxy minion, we need to return something else
-    '''
     import __main__ as main
     # This is a hack.  If a proxy minion is started by other
     # means, e.g. a custom script that creates the minion objects
@@ -1595,10 +1569,16 @@ def is_linux():
             is_proxy = True
     except AttributeError:
         pass
-    if is_proxy:
-        return False
-    else:
-        return sys.platform.startswith('linux')
+    return is_proxy
+
+
+@real_memoize
+def is_linux():
+    '''
+    Simple function to return if a host is Linux or not.
+    Note for a proxy minion, we need to return something else
+    '''
+    return sys.platform.startswith('linux')
 
 
 @real_memoize
@@ -1845,6 +1825,9 @@ def exactly_n(l, n=1):
 
 
 def exactly_one(l):
+    '''
+    Check if only one item is not None, False, or 0 in an iterable.
+    '''
     return exactly_n(l)
 
 
@@ -2022,7 +2005,7 @@ def get_hash(path, form='md5', chunk_size=65536):
 
 def namespaced_function(function, global_dict, defaults=None):
     '''
-    Redefine(clone) a function under a different globals() namespace scope
+    Redefine (clone) a function under a different globals() namespace scope
     '''
     if defaults is None:
         defaults = function.__defaults__
@@ -2035,6 +2018,32 @@ def namespaced_function(function, global_dict, defaults=None):
     )
     new_namespaced_function.__dict__.update(function.__dict__)
     return new_namespaced_function
+
+
+def alias_function(fun, name, doc=None):
+    '''
+    Copy a function
+    '''
+    alias_fun = types.FunctionType(fun.__code__,
+                                   fun.__globals__,
+                                   name,
+                                   fun.__defaults__,
+                                   fun.__closure__)
+    alias_fun.__dict__.update(fun.__dict__)
+
+    if doc and isinstance(doc, six.string_types):
+        alias_fun.__doc__ = doc
+    else:
+        if six.PY3:
+            orig_name = fun.__name__
+        else:
+            orig_name = fun.func_name  # pylint: disable=incompatible-py3-code
+
+        alias_msg = ('\nThis function is an alias of '
+                     '``{0}``.\n'.format(orig_name))
+        alias_fun.__doc__ = alias_msg + fun.__doc__
+
+    return alias_fun
 
 
 def _win_console_event_handler(event):
@@ -2166,7 +2175,7 @@ def warn_until(version,
         import inspect
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         raise RuntimeError(
-            'The warning triggered on filename {filename!r}, line number '
+            'The warning triggered on filename \'{filename}\', line number '
             '{lineno}, is supposed to be shown until version '
             '{until_version} is released. Current version is now '
             '{salt_version}. Please remove the warning.'.format(
@@ -2257,11 +2266,11 @@ def kwargs_warn_until(kwargs,
     _version_ = salt.version.SaltStackVersion(*_version_info_)
 
     if kwargs or _version_.info >= version.info:
-        arg_names = ', '.join('{0!r}'.format(key) for key in kwargs)
+        arg_names = ', '.join('\'{0}\''.format(key) for key in kwargs)
         warn_until(
             version,
             message='The following parameter(s) have been deprecated and '
-                    'will be removed in {0!r}: {1}.'.format(version.string,
+                    'will be removed in \'{0}\': {1}.'.format(version.string,
                                                             arg_names),
             category=category,
             stacklevel=stacklevel,
@@ -2564,7 +2573,7 @@ def get_group_list(user=None, include_default=True):
         raise Exception
     if hasattr(os, 'getgrouplist'):
         # Try os.getgrouplist, available in python >= 3.3
-        log.trace('Trying os.getgrouplist for {0!r}'.format(user))
+        log.trace('Trying os.getgrouplist for \'{0}\''.format(user))
         try:
             group_names = [
                 grp.getgrgid(grpid).gr_name for grpid in
@@ -2574,7 +2583,7 @@ def get_group_list(user=None, include_default=True):
             pass
     else:
         # Try pysss.getgrouplist
-        log.trace('Trying pysss.getgrouplist for {0!r}'.format(user))
+        log.trace('Trying pysss.getgrouplist for \'{0}\''.format(user))
         try:
             import pysss  # pylint: disable=import-error
             group_names = list(pysss.getgrouplist(user))
@@ -2584,7 +2593,7 @@ def get_group_list(user=None, include_default=True):
         # Fall back to generic code
         # Include the user's default group to behave like
         # os.getgrouplist() and pysss.getgrouplist() do
-        log.trace('Trying generic group list for {0!r}'.format(user))
+        log.trace('Trying generic group list for \'{0}\''.format(user))
         group_names = [g.gr_name for g in grp.getgrall() if user in g.gr_mem]
         try:
             default_group = grp.getgrgid(pwd.getpwnam(user).pw_gid).gr_name
@@ -2605,7 +2614,7 @@ def get_group_list(user=None, include_default=True):
         except KeyError:
             # If for some reason the user does not have a default group
             pass
-    log.trace('Group list for user {0!r}: {1!r}'.format(user, sorted(ugroups)))
+    log.trace('Group list for user \'{0}\': \'{1}\''.format(user, sorted(ugroups)))
     return sorted(ugroups)
 
 
@@ -2848,6 +2857,29 @@ def is_list(value):
     return isinstance(value, list)
 
 
+def is_iter(y, ignore=six.string_types):
+    '''
+    Test if an object is iterable, but not a string type.
+
+    Test if an object is an iterator or is iterable itself. By default this
+    does not return True for string objects.
+
+    The `ignore` argument defaults to a list of string types that are not
+    considered iterable. This can be used to also exclude things like
+    dictionaries or named tuples.
+
+    Based on https://bitbucket.org/petershinners/yter
+    '''
+
+    if ignore and isinstance(y, ignore):
+        return False
+    try:
+        iter(y)
+        return True
+    except TypeError:
+        return False
+
+
 def invalid_kwargs(invalid_kwargs, raise_exc=True):
     '''
     Raise a SaltInvocationError if invalid_kwargs is non-empty
@@ -2869,22 +2901,11 @@ def invalid_kwargs(invalid_kwargs, raise_exc=True):
         return msg
 
 
-def itersplit(orig, sep=None):
+def shlex_split(s, **kwargs):
     '''
-    Generator function for iterating through large strings, particularly useful
-    as a replacement for str.splitlines() if the string is expected to contain
-    a lot of lines.
-
-    See http://stackoverflow.com/a/3865367
+    Only split if variable is a string
     '''
-    exp = re.compile(r'\s+' if sep is None else re.escape(sep))
-    pos = 0
-    while True:
-        match = exp.search(orig, pos)
-        if not match:
-            if pos < len(orig) or sep is not None:
-                yield orig[pos:]
-            break
-        if pos < match.start() or sep is not None:
-            yield orig[pos:match.start()]
-        pos = match.end()
+    if isinstance(s, six.string_types):
+        return shlex.split(s, **kwargs)
+    else:
+        return s

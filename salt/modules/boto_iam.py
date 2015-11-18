@@ -41,8 +41,10 @@ Connection module for Amazon IAM
 from __future__ import absolute_import
 import logging
 import json
+import yaml
 
 # Import salt libs
+import salt.utils.compat
 import salt.utils.odict as odict
 
 # Import third party libs
@@ -67,8 +69,13 @@ def __virtual__():
     '''
     if not HAS_BOTO:
         return False
-    __utils__['boto.assign_funcs'](__name__, 'iam')
     return True
+
+
+def __init__(opts):
+    salt.utils.compat.pack_dunder(__name__)
+    if HAS_BOTO:
+        __utils__['boto.assign_funcs'](__name__, 'iam')
 
 
 def instance_profile_exists(name, region=None, key=None, keyid=None,
@@ -360,7 +367,8 @@ def create_group(group_name, path=None, region=None, key=None, keyid=None,
     '''
     if not path:
         path = '/'
-    if get_group(group_name, region, key, keyid, profile):
+    if get_group(group_name, region=region, key=key, keyid=keyid,
+                 profile=profile):
         return True
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
@@ -374,8 +382,7 @@ def create_group(group_name, path=None, region=None, key=None, keyid=None,
         return False
 
 
-def get_group(group_name, marker=None, max_items=None, region=None, key=None,
-              keyid=None, profile=None):
+def get_group(group_name, region=None, key=None, keyid=None, profile=None):
     '''
     Get group information.
 
@@ -389,13 +396,49 @@ def get_group(group_name, marker=None, max_items=None, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        info = conn.get_group(group_name, marker, max_items)
+        info = conn.get_group(group_name, max_items=1)
         if not info:
             return False
-        return info
+        return info['get_group_response']['get_group_result']['group']
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Failed to get group {0} info.'
+        log.error(msg.format(group_name))
+        return False
+
+
+def get_group_members(group_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get group information.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.get_group mygroup
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        marker = None
+        truncated = True
+        users = []
+        while truncated:
+            info = conn.get_group(group_name, marker=marker, max_items=1000)
+            if not info:
+                return False
+            truncated = bool(info['get_group_response']['get_group_result']['is_truncated'])
+            if truncated and 'marker' in info['get_group_response']['get_group_result']:
+                marker = info['get_group_response']['get_group_result']['marker']
+            else:
+                marker = None
+                truncated = False
+            users += info['get_group_response']['get_group_result']['users']
+        return users
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get group {0} members.'
         log.error(msg.format(group_name))
         return False
 
@@ -418,8 +461,8 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
         msg = 'Username : {0} does not exist.'
         log.error(msg.format(user_name, group_name))
         return False
-    if user_exists_in_group(user_name, group_name, region=None, key=None, keyid=None,
-                            profile=None):
+    if user_exists_in_group(user_name, group_name, region=region, key=key,
+                            keyid=keyid, profile=profile):
         return True
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
@@ -447,11 +490,14 @@ def user_exists_in_group(user_name, group_name, region=None, key=None, keyid=Non
 
         salt myminion boto_iam.user_exists_in_group myuser mygroup
     '''
-    group = get_group(group_name=group_name, region=region, key=key, keyid=keyid,
-                      profile=profile)
-    if group:
-        for _users in group['get_group_response']['get_group_result']['users']:
-            if user_name == _users['user_name']:
+    # TODO this should probably use boto.iam.get_groups_for_user
+    users = get_group_members(
+        group_name=group_name, region=region, key=key, keyid=keyid,
+        profile=profile
+    )
+    if users:
+        for _user in users:
+            if user_name == _user['user_name']:
                 msg = 'Username : {0} is already in group {1}.'
                 log.info(msg.format(user_name, group_name))
                 return True
@@ -505,11 +551,12 @@ def put_group_policy(group_name, policy_name, policy_json, region=None, key=None
 
         salt myminion boto_iam.put_group_policy mygroup policyname policyrules
     '''
-    group = get_group(group_name, region, key, keyid, profile)
+    group = get_group(group_name, region=region, key=key, keyid=keyid,
+                      profile=profile)
     if not group:
         log.error('Group {0} does not exist'.format(group_name))
         return False
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         if not isinstance(policy_json, string_types):
             policy_json = json.dumps(policy_json)
@@ -538,7 +585,7 @@ def delete_group_policy(group_name, policy_name, region=None, key=None,
 
         salt myminion boto_iam.delete_group_policy mygroup mypolicy
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return False
     _policy = get_group_policy(
@@ -599,7 +646,7 @@ def get_all_group_policies(group_name, region=None, key=None, keyid=None,
 
         salt myminion boto_iam.get_all_group_policies mygroup
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return False
     try:
@@ -642,6 +689,106 @@ def create_login_profile(user_name, password, region=None, key=None,
             return 'Conflict'
         msg = 'Failed to update profile for user {0}.'
         log.error(msg.format(user_name))
+        return False
+
+
+def delete_login_profile(user_name, region=None, key=None, keyid=None,
+                         profile=None):
+    '''
+    Deletes a login profile for the specified user.
+
+    .. versionadded::
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.delete_login_profile user_name
+    '''
+    user = get_user(user_name, region, key, keyid, profile)
+    if not user:
+        msg = 'Username {0} does not exist'
+        log.error(msg.format(user_name))
+        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        info = conn.delete_login_profile(user_name)
+        log.info('Deleted login profile for user {0}.'.format(user_name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        if 'Not Found' in e:
+            log.info('Login profile already deleted for user {0}.'.format(user_name))
+            return True
+        msg = 'Failed to delete login profile for user {0}.'
+        log.error(msg.format(user_name))
+        return False
+
+
+def get_all_mfa_devices(user_name, region=None, key=None, keyid=None,
+                        profile=None):
+    '''
+    Get all MFA devices associated with an IAM user.
+
+    .. versionadded::
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.get_all_mfa_devices user_name
+    '''
+    user = get_user(user_name, region, key, keyid, profile)
+    if not user:
+        msg = 'Username {0} does not exist'
+        log.error(msg.format(user_name))
+        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        result = conn.get_all_mfa_devices(user_name)
+        devices = result['list_mfa_devices_response']['list_mfa_devices_result']['mfa_devices']
+        return devices
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        if 'Not Found' in e:
+            log.info('Could not find user {0}.'.format(user_name))
+            return []
+        msg = 'Failed to get all MFA devices for user {0}.'
+        log.error(msg.format(user_name, serial))
+        return False
+
+
+def deactivate_mfa_device(user_name, serial, region=None, key=None, keyid=None,
+                          profile=None):
+    '''
+    Deactivates the specified MFA device and removes it from association with
+    the user.
+
+    .. versionadded::
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.deactivate_mfa_device user_name serial_num
+    '''
+    user = get_user(user_name, region, key, keyid, profile)
+    if not user:
+        msg = 'Username {0} does not exist'
+        log.error(msg.format(user_name))
+        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        conn.deactivate_mfa_device(user_name, serial)
+        log.info('Deactivated MFA device {1} for user {0}.'.format(user_name, serial))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        if 'Not Found' in e:
+            log.info('MFA device {1} not associated with user {0}.'.format(user_name, serial))
+            return True
+        msg = 'Failed to deactivate MFA device {1} for user {0}.'
+        log.error(msg.format(user_name, serial))
         return False
 
 
@@ -1144,7 +1291,7 @@ def put_user_policy(user_name, policy_name, policy_json, region=None, key=None, 
     if not user:
         log.error('User {0} does not exist'.format(user_name))
         return False
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         if not isinstance(policy_json, string_types):
             policy_json = json.dumps(policy_json)
@@ -1172,7 +1319,7 @@ def delete_user_policy(user_name, policy_name, region=None, key=None, keyid=None
 
         salt myminion boto_iam.delete_user_policy myuser mypolicy
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return False
     _policy = get_user_policy(
@@ -1277,3 +1424,64 @@ def delete_server_cert(cert_name, region=None, key=None, keyid=None, profile=Non
         msg = 'Failed to delete certificate {0}.'
         log.error(msg.format(cert_name))
         return False
+
+
+def _safe_dump(data):
+    ###########################################
+    # this presenter magic makes yaml.safe_dump
+    # work with the objects returned from
+    # boto.export_users()
+    ###########################################
+    def ordered_dict_presenter(dumper, data):
+        return dumper.represent_dict(data.items())
+
+    yaml.add_representer(odict.OrderedDict, ordered_dict_presenter,
+                         Dumper=yaml.dumper.SafeDumper)
+
+    return yaml.safe_dump(data, default_flow_style=False, indent=2)
+
+
+def export_users(path_prefix='/', region=None, key=None, keyid=None,
+                 profile=None):
+    '''
+    Get all IAM user details. Produces results that can be used to create an
+    sls file.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+        salt-call boto_iam.export_users --out=txt | sed "s/local: //" > iam_users.sls
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    if not conn:
+        return None
+    results = odict.OrderedDict()
+    _users = conn.get_all_users(path_prefix=path_prefix)
+    users = _users.list_users_response.list_users_result.users
+    marker = getattr(
+        _users.list_users_response.list_users_result, 'marker', None
+    )
+    while marker:
+        _users = conn.get_all_users(path_prefix=path_prefix, marker=marker)
+        users = users + _users.list_users_response.list_users_result.users
+        marker = getattr(
+            _users.list_users_response.list_users_result, 'marker', None
+        )
+    for user in users:
+        name = user.user_name
+        _policies = conn.get_all_user_policies(name, max_items=100)
+        _policies = _policies.list_user_policies_response.list_user_policies_result.policy_names
+        policies = {}
+        for policy_name in _policies:
+            _policy = conn.get_user_policy(name, policy_name)
+            _policy = json.loads(_unquote(
+                    _policy.get_user_policy_response.get_user_policy_result.policy_document
+            ))
+            policies[policy_name] = _policy
+        user_sls = []
+        user_sls.append({"name": name})
+        user_sls.append({"policies": policies})
+        user_sls.append({"path": user.path})
+        results["manage user " + name] = {"boto_iam.user_present": user_sls}
+    return _safe_dump(results)

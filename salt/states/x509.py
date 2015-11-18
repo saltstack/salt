@@ -47,7 +47,7 @@ the mine where it can be easily retrieved by other minions.
 
     salt-minion:
       service.running:
-        - enabled
+        - enable: True
         - listen:
           - file: /etc/salt/minion.d/signing_policies.conf
 
@@ -56,6 +56,9 @@ the mine where it can be easily retrieved by other minions.
         - source: salt://signing_policies.conf
 
     /etc/pki:
+      file.directory: []
+
+    /etc/pki/issued_certs:
       file.directory: []
 
     /etc/pki/ca.key:
@@ -122,10 +125,12 @@ handle properly formatting the text before writing the output.
 /srv/salt/cert.sls
 
 .. code-block:: yaml
+    /usr/local/share/ca-certificates:
+      file.directory: []
 
-    /usr/local/share/ca-certificates/intca.crt
+    /usr/local/share/ca-certificates/intca.crt:
       x509.pem_managed:
-        - text: {{ salt['mine.get']('pki', 'x509.get_pem_entries')['pki']['/etc/pki/ca.crt']|replace('\\n', '') }}
+        - text: {{ salt['mine.get']('ca', 'x509.get_pem_entries')['ca']['/etc/pki/ca.crt']|replace('\\n', '') }}
 
 
 This state creates a private key then requests a certificate signed by ca according to the www policy.
@@ -162,6 +167,16 @@ import salt.utils
 
 # Import 3rd-party libs
 import salt.ext.six as six
+
+
+def __virtual__():
+    '''
+    only load this module if the corresponding execution module is loaded
+    '''
+    if 'x509.get_pem_entry' in __salt__:
+        return 'x509'
+    else:
+        return (False, 'Could not load x509 state: m2crypto unavailable')
 
 
 def _revoked_to_list(revs):
@@ -331,11 +346,11 @@ def certificate_managed(name,
         Path to the certificate
 
     days_remaining:
-        The minimum number of days remaining when the certificate should be recreted. Default is 90. A
+        The minimum number of days remaining when the certificate should be recreated. Default is 90. A
         value of 0 disables automatic renewal.
 
     backup:
-        When replacing an existing file, backup the old file onthe minion. Default is False.
+        When replacing an existing file, backup the old file on the minion. Default is False.
 
     kwargs:
         Any arguments supported by :mod:`x509.create_certificate <salt.modules.x509.create_certificate>`

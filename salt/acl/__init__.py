@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
-The acl module handles client_acl operations
+The acl module handles publisher_acl operations
 
 Additional information on client_acl can be
-found by reading the salt documention:
+found by reading the salt documentation:
 
-    http://docs.saltstack.com/en/latest/ref/clientacl.html
+    http://docs.saltstack.com/en/latest/ref/publisheracl.html
 '''
 
 # Import python libraries
@@ -13,9 +13,9 @@ from __future__ import absolute_import
 import re
 
 
-class ClientACL(object):
+class PublisherACL(object):
     '''
-    Represents the client ACL and provides methods
+    Represents the publisher ACL and provides methods
     to query the ACL for given operations
     '''
     def __init__(self, blacklist):
@@ -40,6 +40,6 @@ class ClientACL(object):
             else:
                 funs_to_check = cmd
             for fun in funs_to_check:
-                if re.match(cmd, fun):
+                if re.match(blacklisted_module, fun):
                     return True
         return False

@@ -32,6 +32,8 @@ The event system fires events with a very specific criteria. Every event has a
 addition to the tag, each event has a data structure. This data structure is a
 dict, which contains information about the event.
 
+.. _reactor-mapping-events:
+
 Mapping Events to Reactor SLS Files
 ===================================
 
@@ -183,6 +185,8 @@ rendered SLS file (or any errors generated while rendering the SLS file).
     view the result of referencing Jinja variables. If the result is empty then
     Jinja produced an empty result and the Reactor will ignore it.
 
+.. _reactor-structure:
+
 Understanding the Structure of Reactor Formulas
 ===============================================
 
@@ -273,10 +277,10 @@ Any other parameters in the :py:meth:`LocalClient().cmd()
 Calling Runner modules and Wheel modules
 ----------------------------------------
 
-Calling Runner modules and wheel modules from the Reactor uses a more direct
+Calling Runner modules and Wheel modules from the Reactor uses a more direct
 syntax since the function is being executed locally instead of sending a
 command to a remote system to be executed there. There are no 'arg' or 'kwarg'
-parameters (unless the Runner function or Wheel function accepts a paramter
+parameters (unless the Runner function or Wheel function accepts a parameter
 with either of those names.)
 
 For example:
@@ -286,8 +290,8 @@ For example:
     clear_the_grains_cache_for_all_minions:
       runner.cache.clear_grains
 
-If :py:func:`the runner takes arguments <salt.runners.cache.clear_grains>` then
-they can be specified as well:
+If the :py:func:`the runner takes arguments <salt.runners.cloud.profile>` then
+they must be specified as keyword arguments.
 
 .. code-block:: yaml
 
@@ -297,6 +301,9 @@ they can be specified as well:
         - instances:
           - web11       # These VM names would be generated via Jinja in a
           - web12       # real-world example.
+
+To determine the proper names for the arguments, check the documentation
+or source code for the runner function you wish to call.
 
 Passing event data to Minions or Orchestrate as Pillar
 ------------------------------------------------------

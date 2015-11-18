@@ -247,8 +247,12 @@ def state(
         if mdata.get('failed', False):
             m_state = False
         else:
-            m_ret = mdata['ret']
-            m_state = salt.utils.check_state_result(m_ret)
+            try:
+                m_ret = mdata['ret']
+            except KeyError:
+                m_state = False
+            if not m_state:
+                m_state = salt.utils.check_state_result(m_ret)
 
         if not m_state:
             if minion not in fail_minions:
@@ -379,7 +383,6 @@ def function(
                 ).format(fun, tgt, str(False))
         ret['result'] = None
         return ret
-    cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     try:
         cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
     except Exception as exc:
@@ -452,11 +455,12 @@ def wait_for_event(
         name,
         id_list,
         event_id='id',
-        timeout=300):
+        timeout=300,
+        node='master'):
     '''
     Watch Salt's event bus and block until a condition is met
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         An event tag to watch for; supports Reactor-style globbing.
@@ -498,7 +502,7 @@ def wait_for_event(
     ret = {'name': name, 'changes': {}, 'comment': '', 'result': False}
 
     sevent = salt.utils.event.get_event(
-            'master',
+            node,
             __opts__['sock_dir'],
             __opts__['transport'],
             opts=__opts__,
@@ -558,7 +562,7 @@ def runner(name, **kwargs):
     '''
     Execute a runner module on the master
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         The name of the function to run
@@ -587,7 +591,7 @@ def wheel(name, **kwargs):
     '''
     Execute a wheel module on the master
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         The name of the function to run

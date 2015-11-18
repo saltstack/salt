@@ -3,6 +3,11 @@
 Manage Docker containers
 ========================
 
+.. deprecated:: 2015.8.0
+    Future feature development will be done only in :mod:`dockerng
+    <salt.states.dockerng>`. See the documentation for this module for
+    information on the deprecation path.
+
 `Docker <https://www.docker.io>`_
 is a lightweight, portable, self-sufficient software container
 wrapper. The base supported wrapper type is
@@ -77,7 +82,7 @@ Available Functions
 
   .. note::
 
-      The ``port_bindings`` argument above is a dictionary. The double
+      The ``ports`` argument above is a dictionary. The double
       indentation is required for PyYAML to load the data structure
       properly as a python dictionary. More information can be found
       :ref:`here <nested-dict-indentation>`
@@ -300,8 +305,8 @@ def _parse_volumes(volumes):
                     contvolumes.append(str(vol))
                     continue
             bindvolumes[source] = {
-                    'bind': target,
-                    'ro': read_only
+                'bind': target,
+                'ro': read_only
             }
     result = {'bindvols': bindvolumes, 'contvols': contvolumes}
     log.trace("Finished parsing volumes, with result: " + str(result))
@@ -474,20 +479,13 @@ def loaded(name, tag='latest', source=None, source_hash='', force=False):
 
         .. note::
 
-            See first the documentation for salt file.managed
-            <http://docs.saltstack.com/en/latest/ref/states/all/_
-            salt.states.file.html#salt.states.file.managed>
+            See first the documentation for Salt `file.managed
+            <http://docs.saltstack.com/en/latest/ref/states/all/salt.states.file.html#salt.states.file.managed>`_
 
     source_hash
         This can be one of the following:
             1. a source hash string
             2. the URI of a file that contains source hash strings
-
-            .. note::
-
-                See first the documentation for salt file.managed
-                <http://docs.saltstack.com/en/latest/ref/states/all/_
-                salt.states.file.html#salt.states.file.managed>
 
     force
         Load even if the image exists
@@ -507,9 +505,9 @@ def loaded(name, tag='latest', source=None, source_hash='', force=False):
 
     tmp_filename = salt.utils.mkstemp()
     __salt__['state.single']('file.managed',
-                            name=tmp_filename,
-                            source=source,
-                            source_hash=source_hash)
+                             name=tmp_filename,
+                             source=source,
+                             source_hash=source_hash)
     changes = {}
 
     if image_infos['status']:
@@ -517,9 +515,8 @@ def loaded(name, tag='latest', source=None, source_hash='', force=False):
         remove_image = __salt__['docker.remove_image']
         remove_info = remove_image(image_name)
         if not remove_info['status']:
-            return _invalid(
-                name=name,
-                comment='Image could not be removed: {0}'.format(image_name))
+            return _invalid(name=name,
+                            comment='Image could not be removed: {0}'.format(name))
 
     load = __salt__['docker.load']
     returned = load(tmp_filename)
@@ -641,9 +638,8 @@ def installed(name,
         List of volumes (see notes for the running function)
 
     For other parameters, see absolutely first the salt.modules.dockerio
-    execution module and the docker-py python bindings for docker
-    documentation
-    <https://github.com/dotcloud/docker-py#api>`_ for
+    execution module and the `docker-py python bindings for docker
+    documentation <https://github.com/dotcloud/docker-py#api>`_ for
     `docker.create_container`.
 
     .. note::
@@ -757,23 +753,23 @@ def absent(name):
                 is_gone = __salt__['docker.exists'](cid)
                 if is_gone:
                     return _valid(comment=('Container {0!r}'
-                                           ' was stopped and destroyed, '.format(cid)),
-                                           changes={name: True})
+                                  ' was stopped and destroyed, '.format(cid)),
+                                  changes={name: True})
                 else:
                     return _valid(comment=('Container {0!r}'
-                                           ' was stopped but could not be destroyed,'.format(cid)),
-                                           changes={name: True})
+                                  ' was stopped but could not be destroyed,'.format(cid)),
+                                  changes={name: True})
         else:
             __salt__['docker.remove_container'](cid)
             is_gone = __salt__['docker.exists'](cid)
             if is_gone:
                 return _valid(comment=('Container {0!r}'
-                                       ' is stopped and was destroyed, '.format(cid)),
-                                       changes={name: True})
+                              'is stopped and was destroyed, '.format(cid)),
+                              changes={name: True})
             else:
                 return _valid(comment=('Container {0!r}'
-                                       ' is stopped but could not be destroyed,'.format(cid)),
-                                       changes={name: True})
+                              ' is stopped but could not be destroyed,'.format(cid)),
+                              changes={name: True})
     else:
         return _valid(comment="Container {0!r} not found".format(name))
 
@@ -862,7 +858,7 @@ def run(name,
             if not onlyif:
                 return valid(comment='onlyif execution failed')
         elif isinstance(onlyif, string_types):
-            if retcode(cid, onlyif) != 0:
+            if not __salt__['cmd.retcode'](onlyif) == 0:
                 return valid(comment='onlyif execution failed')
 
     if unless is not None:
@@ -870,7 +866,7 @@ def run(name,
             if unless:
                 return valid(comment='unless execution succeeded')
         elif isinstance(unless, string_types):
-            if retcode(cid, unless) == 0:
+            if __salt__['cmd.retcode'](unless) == 0:
                 return valid(comment='unless execution succeeded')
 
     if docked_onlyif is not None:
@@ -878,7 +874,7 @@ def run(name,
             if not docked_onlyif:
                 return valid(comment='docked_onlyif execution failed')
         elif isinstance(docked_onlyif, string_types):
-            if retcode(cid, docked_onlyif) != 0:
+            if not retcode(cid, docked_onlyif):
                 return valid(comment='docked_onlyif execution failed')
 
     if docked_unless is not None:
@@ -886,7 +882,7 @@ def run(name,
             if docked_unless:
                 return valid(comment='docked_unless execution succeeded')
         elif isinstance(docked_unless, string_types):
-            if retcode(cid, docked_unless) == 0:
+            if retcode(cid, docked_unless):
                 return valid(comment='docked_unless execution succeeded')
 
     if __opts__['test']:
@@ -1266,9 +1262,8 @@ def running(name,
             if is_running:
                 changes.append('Container {0!r} started.\n'.format(name))
             else:
-                return _invalid(comment=(
-                                'Container {0!r} cannot be started\n{1!s}'
-                                .format(name, started['out'],)))
+                return _invalid(comment=('Container {0!r} cannot be started\n{1!s}'
+                                         .format(name, started['out'],)))
         else:
             changes.append('Container {0!r} started.\n'.format(name))
     return _valid(comment='\n'.join(changes), changes={name: True})

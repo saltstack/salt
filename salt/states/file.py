@@ -252,6 +252,7 @@ import salt.payload
 import salt.utils
 import salt.utils.templates
 import salt.utils.url
+from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError
 from salt.serializers import yaml as yaml_serializer
 from salt.serializers import json as json_serializer
@@ -371,10 +372,12 @@ def _gen_keep_files(name, require, walk_d=None):
         required_files = [comp for comp in require if 'file' in comp]
         for comp in required_files:
             for low in __lowstate__:
-                if low['name'] == comp['file']:
+                # A requirement should match either the ID and the name of
+                # another state.
+                if low['name'] == comp['file'] or low['__id__'] == comp['file']:
                     fn = low['name']
-                    if os.path.isdir(comp['file']):
-                        if _is_child(comp['file'], name):
+                    if os.path.isdir(fn):
+                        if _is_child(fn, name):
                             if walk_d:
                                 walk_ret = set()
                                 _process_by_walk_d(fn, walk_ret)
@@ -816,6 +819,16 @@ def symlink(
         user = __opts__['user']
 
     if salt.utils.is_windows():
+
+        # Make sure the user exists in Windows
+        # Salt default is 'root'
+        if not __salt__['user.info'](user):
+            # User not found, use the account salt is running under
+            # If username not found, use System
+            user = __salt__['user.current']()
+            if not user:
+                user = 'SYSTEM'
+
         if group is not None:
             log.warning(
                 'The group argument for {0} has been ignored as this '
@@ -1316,9 +1329,14 @@ def managed(name,
     check_cmd
         .. versionadded:: 2014.7.0
 
-        The specified command will be run with the managed file as an argument.
-        If the command exits with a nonzero exit code, the command will not be
-        run.
+        The specified command will be run with an appended argument of a *temporary*
+        file containing the new managed contents.  If the command exits with a zero
+        status the new managed contents will be written to the managed destination.
+        If the command exits with a nonzero exit code, the new managed contents will
+        be discarded.
+
+        **NOTE**: This ``check_cmd`` functions differently than the requisite
+        ``check_cmd``.
     '''
     name = os.path.expanduser(name)
 
@@ -1330,7 +1348,7 @@ def managed(name,
 
     # If no source is specified, set replace to False, as there is nothing
     # to replace the file with.
-    src_defined = source or contents or contents_pillar or contents_grains
+    src_defined = source or contents is not None or contents_pillar or contents_grains
     if not src_defined and replace:
         replace = False
         log.warning(
@@ -1346,8 +1364,12 @@ def managed(name,
 
     if contents_pillar:
         contents = __salt__['pillar.get'](contents_pillar)
+        if not contents:
+            return _error(ret, 'contents_pillar {0} results in empty contents'.format(contents_pillar))
     if contents_grains:
         contents = __salt__['grains.get'](contents_grains)
+        if not contents:
+            return _error(ret, 'contents_grain {0} results in empty contents'.format(contents_grains))
 
     # ensure contents is a string
     if contents:
@@ -1452,6 +1474,10 @@ def managed(name,
             if ret['pchanges']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
+                if show_diff and 'diff' in ret['pchanges']:
+                    ret['changes']['diff'] = ret['pchanges']['diff']
+                if not show_diff:
+                    ret['changes']['diff'] = '<show_diff=False>'
             else:
                 ret['result'] = True
                 ret['comment'] = 'The file {0} is in the correct state'.format(name)
@@ -1637,18 +1663,6 @@ def directory(name,
         Leave files or directories unchanged:
 
         .. code-block:: yaml
-
-            /var/log/httpd:
-                file.directory:
-                - user: root
-                - group: root
-                - dir_mode: 755
-                - file_mode: 644
-                - recurse:
-                    - user
-                    - group
-                    - mode
-                    - ignore_files
 
             /var/log/httpd:
                 file.directory:
@@ -2096,7 +2110,7 @@ def recurse(name,
         recursively removed so that symlink creation can proceed. This
         option is usually not needed except in special circumstances.
     '''
-    name = os.path.expanduser(name)
+    name = os.path.expanduser(sdecode(name))
 
     user = _test_owner(kwargs, user=user)
     if salt.utils.is_windows():
@@ -2334,7 +2348,7 @@ def recurse(name,
         # the file to copy from; it is either a normal file or an
         # empty dir(if include_empty==true).
 
-        relname = os.path.relpath(fn_, srcpath)
+        relname = sdecode(os.path.relpath(fn_, srcpath))
         if relname.startswith('..'):
             continue
 
@@ -2473,7 +2487,7 @@ def replace(name,
             pattern,
             repl,
             count=0,
-            flags=0,
+            flags=8,
             bufsize=1,
             append_if_not_found=False,
             prepend_if_not_found=False,
@@ -2495,19 +2509,23 @@ def replace(name,
         The replacement text.
 
     count
-        Maximum number of pattern occurrences to be replaced.
+        Maximum number of pattern occurrences to be replaced.  Defaults to 0.
+        If count is a positive integer n, no more than n occurrences will be
+        replaced, otherwise all occurrences will be replaced.
 
     flags
-        A list of flags defined in the :ref:`re module documentation <contents-of-module-re>`.
-        Each list item should be a string that will correlate to the human-friendly flag name.
-        E.g., ``['IGNORECASE', 'MULTILINE']``. Note: multiline searches must specify ``file``
-        as the ``bufsize`` argument below. Defaults to 0 and can be a list or an int.
+        A list of flags defined in the :ref:`re module documentation
+        <contents-of-module-re>`. Each list item should be a string that will
+        correlate to the human-friendly flag name. E.g., ``['IGNORECASE',
+        'MULTILINE']``. Optionally, ``flags`` may be an int, with a value
+        corresponding to the XOR (``|``) of all the desired flags. Defaults to
+        8 (which supports 'MULTILINE').
 
     bufsize
-        How much of the file to buffer into memory at once. The default value ``1`` processes
-        one line at a time. The special value ``file`` may be specified which will read the
-        entire file into memory before processing. Note: multiline searches must specify ``file``
-        buffering. Can be an int or a str.
+        How much of the file to buffer into memory at once. The default value
+        ``1`` processes one line at a time. The special value ``file`` may be
+        specified which will read the entire file into memory before
+        processing.
 
     append_if_not_found
         If pattern is not found and set to ``True`` then, the content will be appended to the file.
@@ -3276,11 +3294,9 @@ def append(name,
             if not check_res:
                 return _error(ret, check_msg)
 
-        # Make sure that we have a file
-        __salt__['file.touch'](name)
-
     check_res, check_msg = _check_file(name)
     if not check_res:
+        # Try to create the file
         touch(name, makedirs=makedirs)
         retry_res, retry_msg = _check_file(name)
         if not retry_res:
@@ -3450,12 +3466,13 @@ def prepend(name,
             if not check_res:
                 return _error(ret, check_msg)
 
-        # Make sure that we have a file
-        __salt__['file.touch'](name)
-
     check_res, check_msg = _check_file(name)
     if not check_res:
-        return _error(ret, check_msg)
+        # Try to create the file
+        touch(name, makedirs=makedirs)
+        retry_res, retry_msg = _check_file(name)
+        if not retry_res:
+            return _error(ret, check_msg)
 
     # Follow the original logic and re-assign 'text' if using source(s)...
     if sl_:
@@ -3549,7 +3566,7 @@ def patch(name,
         using this state function.
 
     name
-        The file to with the patch will be applied.
+        The file to which the patch will be applied.
 
     source
         The source patch to download to the minion, this source file must be
@@ -3755,7 +3772,7 @@ def copy(
         .. versionadded:: 2015.5.0
 
         Set ``preserve: True`` to preserve user/group ownership and mode
-        after copying. Default is ``False``. If ``preseve`` is set to ``True``,
+        after copying. Default is ``False``. If ``preserve`` is set to ``True``,
         then user/group/mode attributes will be ignored.
 
     user
@@ -3864,11 +3881,16 @@ def copy(
                 )
 
     if __opts__['test']:
-        ret['comment'] = 'File "{0}" is set to be copied to "{1}"'.format(
-            source,
-            name
-        )
-        ret['result'] = None
+        if changed:
+            ret['comment'] = 'File "{0}" is set to be copied to "{1}"'.format(
+                source,
+                name
+            )
+            ret['result'] = None
+        else:
+            ret['comment'] = ('The target file "{0}" exists and will not be '
+                              'overwritten'.format(name))
+            ret['result'] = True
         return ret
 
     if not changed:
@@ -4287,10 +4309,10 @@ def serialize(name,
         if os.path.isfile(name):
             if formatter == 'yaml':
                 with salt.utils.fopen(name, 'r') as fhr:
-                    existing_data = yaml.safe_load(fhr.read())
+                    existing_data = yaml.safe_load(fhr)
             elif formatter == 'json':
                 with salt.utils.fopen(name, 'r') as fhr:
-                    existing_data = json.load(fhr.read())
+                    existing_data = json.load(fhr)
             else:
                 return {'changes': {},
                         'comment': ('{0} format is not supported for merging'
@@ -4333,6 +4355,8 @@ def serialize(name,
                 'name': name,
                 'result': False
                 }
+
+    contents += '\n'
 
     if __opts__['test']:
         ret['changes'] = __salt__['file.check_managed_changes'](
@@ -4603,10 +4627,131 @@ def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
 
     log.debug('running our check_cmd')
     _cmd = '{0} {1}'.format(cmd, filename)
-    if __salt__['cmd.retcode'](_cmd, **check_cmd_opts) != 0:
-        return {'comment': 'check_cmd execution failed',
-                'skip_watch': True,
-                'result': False}
+    cret = __salt__['cmd.run_all'](_cmd, **check_cmd_opts)
+    if cret['retcode'] != 0:
+        ret = {'comment': 'check_cmd execution failed',
+               'skip_watch': True,
+               'result': False}
+
+        if cret.get('stdout'):
+            ret['comment'] += '\n' + cret['stdout']
+        if cret.get('stderr'):
+            ret['comment'] += '\n' + cret['stderr']
+
+        return ret
 
     # No reason to stop, return True
     return True
+
+
+def decode(name,
+        encoded_data=None,
+        contents_pillar=None,
+        encoding_type='base64',
+        checksum='md5'):
+    '''
+    Decode an encoded file and write it to disk
+
+    .. versionadded:: Boron
+
+    name
+        Path of the file to be written.
+    encoded_data
+        The encoded file. Either this option or ``contents_pillar`` must be
+        specified.
+    contents_pillar
+        A Pillar path to the encoded file. Uses the same path syntax as
+        :py:func:`pillar.get <salt.modules.pillar.get>`. The
+        :py:func:`hashutil.base64_encodefile
+        <salt.modules.hashutil.base64_encodefile>` function can load encoded
+        content into Pillar. Either this option or ``encoded_data`` must be
+        specified.
+    encoding_type : ``base64``
+        The type of encoding.
+    checksum : ``md5``
+        The hashing algorithm to use to generate checksums. Wraps the
+        :py:func:`hashutil.digest <salt.modules.hashutil.digest>` execution
+        function.
+
+    Usage:
+
+    .. code-block:: yaml
+
+        write_base64_encoded_string_to_a_file:
+          file.decode:
+            - name: /tmp/new_file
+            - encoding_type: base64
+            - contents_pillar: mypillar:thefile
+
+        # or
+
+        write_base64_encoded_string_to_a_file:
+          file.decode:
+            - name: /tmp/new_file
+            - encoding_type: base64
+            - encoded_data: |
+                Z2V0IHNhbHRlZAo=
+
+    Be careful with multi-line strings that the YAML indentation is correct.
+    E.g.,
+
+    .. code-block:: yaml
+
+        write_base64_encoded_string_to_a_file:
+          file.decode:
+            - name: /tmp/new_file
+            - encoding_type: base64
+            - encoded_data: |
+                {{ salt.pillar.get('path:to:data') | indent(8) }}
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if not (encoded_data or contents_pillar):
+        raise CommandExecutionError("Specify either the 'encoded_data' or "
+            "'contents_pillar' argument.")
+    elif encoded_data and contents_pillar:
+        raise CommandExecutionError("Specify only one 'encoded_data' or "
+            "'contents_pillar' argument.")
+    elif encoded_data:
+        content = encoded_data
+    elif contents_pillar:
+        content = __salt__['pillar.get'](contents_pillar, False)
+        if content is False:
+            raise CommandExecutionError('Pillar data not found.')
+    else:
+        raise CommandExecutionError('No contents given.')
+
+    dest_exists = __salt__['file.file_exists'](name)
+    if dest_exists:
+        instr = __salt__['hashutil.base64_decodestring'](content)
+        insum = __salt__['hashutil.digest'](instr, checksum)
+        del instr  # no need to keep in-memory after we have the hash
+        outsum = __salt__['hashutil.digest_file'](name, checksum)
+
+        if insum != outsum:
+            ret['changes'] = {
+                'old': outsum,
+                'new': insum,
+            }
+
+        if not ret['changes']:
+            ret['comment'] = 'File is in the correct state.'
+            ret['result'] = True
+
+            return ret
+
+    if __opts__['test'] is True:
+        ret['comment'] = 'File is set to be updated.'
+        ret['result'] = None
+        return ret
+
+    ret['result'] = __salt__['hashutil.base64_decodefile'](content, name)
+    ret['comment'] = 'File was updated.'
+
+    if not ret['changes']:
+        ret['changes'] = {
+            'old': None,
+            'new': __salt__['hashutil.digest_file'](name, checksum),
+        }
+
+    return ret

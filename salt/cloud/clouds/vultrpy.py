@@ -17,7 +17,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 my-vultr-config:
   # Vultr account api key
   api_key: <supersecretapi_key>
-  driver: vultrpy
+  driver: vultr
 
 '''
 
@@ -89,7 +89,7 @@ def list_nodes(**kwargs):
     nodes = list_nodes_full()
     for node in nodes:
         ret[node] = {}
-        for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
+        for prop in 'id', 'image', 'size', 'state', 'private_ips', 'public_ips':
             ret[node][prop] = nodes[node][prop]
 
     return ret

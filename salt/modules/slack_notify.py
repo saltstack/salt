@@ -80,6 +80,7 @@ def list_rooms(api_key=None):
 def list_users(api_key=None):
     '''
     List all Slack users.
+
     :param api_key: The Slack admin api key.
     :return: The user list.
 
@@ -101,6 +102,7 @@ def list_users(api_key=None):
 def find_room(name, api_key=None):
     '''
     Find a room by name and return it.
+
     :param name:    The room name.
     :param api_key: The Slack admin api key.
     :return:        The room object.
@@ -134,6 +136,7 @@ def find_room(name, api_key=None):
 def find_user(name, api_key=None):
     '''
     Find a user by name and return it.
+
     :param name:        The user name.
     :param api_key:     The Slack admin api key.
     :return:            The user object.
@@ -162,13 +165,16 @@ def find_user(name, api_key=None):
 def post_message(channel,
                  message,
                  from_name,
-                 api_key=None):
+                 api_key=None,
+                 icon=None):
     '''
     Send a message to a Slack channel.
+
     :param channel:     The channel name, either will work.
     :param message:     The message to send to the Slack channel.
     :param from_name:   Specify who the message is from.
     :param api_key:     The Slack api key, if not specified in the configuration.
+    :param icon:        URL to an image to use as the icon for this message
     :return:            Boolean if message was sent successfully.
 
     CLI Example:
@@ -202,6 +208,9 @@ def post_message(channel,
         'username': from_name,
         'text': message
     }
+
+    if icon is not None:
+        parameters['icon_url'] = icon
 
     # Slack wants the body on POST to be urlencoded.
     result = salt.utils.slack.query(function='message',

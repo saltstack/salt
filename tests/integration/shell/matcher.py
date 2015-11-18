@@ -170,7 +170,7 @@ class MatchTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.assertNotIn('minion', data.replace('sub_minion', 'stub'))
         data = self.run_salt('-G "planets:pluto" test.ping')
         expect = None
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             expect = (
                 'No minions matched the target. '
                 'No command was sent, no jid was '

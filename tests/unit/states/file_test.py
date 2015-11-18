@@ -63,7 +63,7 @@ class TestFileState(TestCase):
         self.assertEqual(json.loads(returner.returned), dataset)
 
         filestate.serialize('/tmp', dataset, formatter="python")
-        self.assertEqual(returner.returned, pprint.pformat(dataset))
+        self.assertEqual(returner.returned, pprint.pformat(dataset) + '\n')
 
     def test_contents_and_contents_pillar(self):
         def returner(contents, *args, **kwargs):
@@ -248,7 +248,6 @@ class FileTestCase(TestCase):
                                               group=group), ret)
 
     # 'absent' function tests: 1
-    @patch.object(os.path, 'islink', MagicMock(return_value=False))
     def test_absent(self):
         '''
         Test to make sure that the named file or directory is absent.
@@ -268,61 +267,76 @@ class FileTestCase(TestCase):
 
         comt = ('Must provide name to file.absent')
         ret.update({'comment': comt, 'name': ''})
-        self.assertDictEqual(filestate.absent(''), ret)
 
-        with patch.object(os.path, 'isabs', mock_f):
-            comt = ('Specified file {0} is not an absolute path'
-                    .format(name))
-            ret.update({'comment': comt, 'name': name})
-            self.assertDictEqual(filestate.absent(name), ret)
+        with patch.object(os.path, 'islink', MagicMock(return_value=False)):
+            self.assertDictEqual(filestate.absent(''), ret)
 
-        with patch.object(os.path, 'isabs', mock_t):
-            comt = ('Refusing to make "/" absent')
-            ret.update({'comment': comt, 'name': '/'})
-            self.assertDictEqual(filestate.absent('/'), ret)
-
-        with patch.object(os.path, 'isfile', mock_t):
-            with patch.dict(filestate.__opts__, {'test': True}):
-                comt = ('File {0} is set for removal'.format(name))
-                ret.update({'comment': comt, 'name': name, 'result': None, 'pchanges': {'removed': '/fake/file.conf'}})
+            with patch.object(os.path, 'isabs', mock_f):
+                comt = ('Specified file {0} is not an absolute path'
+                        .format(name))
+                ret.update({'comment': comt, 'name': name})
                 self.assertDictEqual(filestate.absent(name), ret)
 
-            with patch.dict(filestate.__opts__, {'test': False}):
-                with patch.dict(filestate.__salt__,
-                                {'file.remove': mock_file}):
-                    comt = ('Removed file {0}'.format(name))
-                    ret.update({'comment': comt, 'result': True,
-                                'changes': {'removed': name}})
-                    self.assertDictEqual(filestate.absent(name), ret)
+            with patch.object(os.path, 'isabs', mock_t):
+                comt = ('Refusing to make "/" absent')
+                ret.update({'comment': comt, 'name': '/'})
+                self.assertDictEqual(filestate.absent('/'), ret)
 
-                    comt = ('Removed file {0}'.format(name))
-                    ret.update({'comment': '', 'result': False, 'changes': {}})
-                    self.assertDictEqual(filestate.absent(name), ret)
-
-        with patch.object(os.path, 'isfile', mock_f):
-            with patch.object(os.path, 'isdir', mock_t):
+            with patch.object(os.path, 'isfile', mock_t):
                 with patch.dict(filestate.__opts__, {'test': True}):
-                    comt = ('Directory {0} is set for removal'.format(name))
-                    ret.update({'comment': comt, 'result': None})
+                    comt = ('File {0} is set for removal'.format(name))
+                    ret.update({'comment': comt,
+                                'name': name,
+                                'result': None,
+                                'pchanges': {'removed': '/fake/file.conf'}})
                     self.assertDictEqual(filestate.absent(name), ret)
+                    ret.update({'pchanges': {}})
 
                 with patch.dict(filestate.__opts__, {'test': False}):
-                    with patch.object(shutil, 'rmtree', mock_tree):
-                        comt = ('Removed directory {0}'.format(name))
+                    with patch.dict(filestate.__salt__,
+                                    {'file.remove': mock_file}):
+                        comt = ('Removed file {0}'.format(name))
                         ret.update({'comment': comt, 'result': True,
-                                    'changes': {'removed': name}})
+                                    'changes': {'removed': name},
+                                    'pchanges': {'removed': name}})
                         self.assertDictEqual(filestate.absent(name), ret)
 
-                        comt = ('Failed to remove directory {0}'.format(name))
-                        ret.update({'comment': comt, 'result': False,
+                        comt = ('Removed file {0}'.format(name))
+                        ret.update({'comment': '',
+                                    'result': False,
                                     'changes': {}})
                         self.assertDictEqual(filestate.absent(name), ret)
+                        ret.update({'pchanges': {}})
 
-            with patch.object(os.path, 'isdir', mock_f):
-                with patch.dict(filestate.__opts__, {'test': True}):
-                    comt = ('File {0} is not present'.format(name))
-                    ret.update({'comment': comt, 'result': True, 'pchanges': {}})
-                    self.assertDictEqual(filestate.absent(name), ret)
+            with patch.object(os.path, 'isfile', mock_f):
+                with patch.object(os.path, 'isdir', mock_t):
+                    with patch.dict(filestate.__opts__, {'test': True}):
+                        comt = \
+                            'Directory {0} is set for removal'.format(name)
+                        ret.update({'comment': comt,
+                                    'pchanges': {'removed': name},
+                                    'result': None})
+                        self.assertDictEqual(filestate.absent(name), ret)
+
+                    with patch.dict(filestate.__opts__, {'test': False}):
+                        with patch.object(shutil, 'rmtree', mock_tree):
+                            comt = ('Removed directory {0}'.format(name))
+                            ret.update({'comment': comt, 'result': True,
+                                        'changes': {'removed': name}})
+                            self.assertDictEqual(filestate.absent(name), ret)
+
+                            comt = \
+                                'Failed to remove directory {0}'.format(name)
+                            ret.update({'comment': comt, 'result': False,
+                                        'changes': {}})
+                            self.assertDictEqual(filestate.absent(name), ret)
+                            ret.update({'pchanges': {}})
+
+                with patch.object(os.path, 'isdir', mock_f):
+                    with patch.dict(filestate.__opts__, {'test': True}):
+                        comt = ('File {0} is not present'.format(name))
+                        ret.update({'comment': comt, 'result': True})
+                        self.assertDictEqual(filestate.absent(name), ret)
 
     # 'exists' function tests: 1
 
@@ -406,6 +420,7 @@ class FileTestCase(TestCase):
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
+        mock_cmd_fail = MagicMock(return_value={'retcode': 1})
         mock_uid = MagicMock(side_effect=['', 'U12', 'U12', 'U12', 'U12', 'U12',
                                           'U12', 'U12', 'U12', 'U12', 'U12',
                                           'U12', 'U12', 'U12', 'U12', 'U12'])
@@ -437,7 +452,7 @@ class FileTestCase(TestCase):
                          'file.source_list': mock_file,
                          'file.copy': mock_cp,
                          'file.manage_file': mock_ex,
-                         'cmd.retcode': mock_t}):
+                         'cmd.run_all': mock_cmd_fail}):
             comt = ('Must provide name to file.exists')
             ret.update({'comment': comt, 'name': '', 'pchanges': {}})
             self.assertDictEqual(filestate.managed(''), ret)
@@ -1581,8 +1596,8 @@ class FileTestCase(TestCase):
         ret = {'comment': 'check_cmd execution failed',
                'result': False, 'skip_watch': True}
 
-        mock = MagicMock(side_effect=[1, 0])
-        with patch.dict(filestate.__salt__, {'cmd.retcode': mock}):
+        mock = MagicMock(side_effect=[{'retcode': 1}, {'retcode': 0}])
+        with patch.dict(filestate.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(filestate.mod_run_check_cmd(cmd, filename),
                                  ret)
 

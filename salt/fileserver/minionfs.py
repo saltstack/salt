@@ -252,7 +252,7 @@ def file_list(load):
         # pushed files
         if tgt_minion not in minion_dirs:
             log.warning(
-                'No files found in minionfs cache for minion ID {0!r}'
+                'No files found in minionfs cache for minion ID \'{0}\''
                 .format(tgt_minion)
             )
             return []
@@ -335,7 +335,7 @@ def dir_list(load):
         # pushed files
         if tgt_minion not in minion_dirs:
             log.warning(
-                'No files found in minionfs cache for minion ID {0!r}'
+                'No files found in minionfs cache for minion ID \'{0}\''
                 .format(tgt_minion)
             )
             return []

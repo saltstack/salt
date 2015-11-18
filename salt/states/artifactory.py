@@ -17,37 +17,42 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
     it will be downloaded. It it already exists then the checksum of existing file is checked against checksum
     in artifactory. If it is different then the step will fail.
 
-    artifact:
-        Details of the artifact to be downloaded from artifactory.
-            - artifactory_url: URL of the artifactory instance
-            - repository: Repository in artifactory
-            - artifact_id: Artifact ID
-            - group_id: Group ID
-            - packaging: Packaging
-            - classifier: Classifier
-            - version: Version
-            - username: Artifactory username
-            - password: Artifactory password
-    target_dir:
+    artifact
+        Details of the artifact to be downloaded from artifactory. Various options are:
+
+        - artifactory_url: URL of the artifactory instance
+        - repository: Repository in artifactory
+        - artifact_id: Artifact ID
+        - group_id: Group ID
+        - packaging: Packaging
+        - classifier: Classifier
+          .. versionadded:: 2015.8.0
+        - version: Version
+        - username: Artifactory username
+          .. versionadded:: 2015.8.0
+        - password: Artifactory password
+          .. versionadded:: 2015.8.0
+
+    target_dir
         Directory where the artifact should be downloaded. By default it is downloaded to /tmp directory.
-    target_file:
+
+    target_file
         Target file to download artifact to. By default file name is resolved by artifactory.
 
-    Example::
-    Download artifact to a specific file:
+    An example to download an artifact to a specific file:
 
     .. code-block:: yaml
 
         jboss_module_downloaded:
           artifactory.downloaded:
            - artifact:
-                artifactory_url: http://artifactory.intranet.company.com/artifactory
-                repository: 'libs-release-local'
-                artifact_id: 'module'
-                group_id: 'com.company.module'
-                packaging: 'jar'
-                classifier: 'sources'
-                version: '1.0'
+               artifactory_url: http://artifactory.intranet.company.com/artifactory
+               repository: 'libs-release-local'
+               artifact_id: 'module'
+               group_id: 'com.company.module'
+               packaging: 'jar'
+               classifier: 'sources'
+               version: '1.0'
            - target_file: /opt/jboss7/modules/com/company/lib/module.jar
 
     Download artifact to the folder (automatically resolves file name):

@@ -341,7 +341,7 @@ class Resolver(object):
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
-        if self.opts['transport'] == 'zeromq':
+        if self.opts['transport'] in ('zeromq', 'tcp'):
             master_uri = 'tcp://' + salt.utils.ip_bracket(self.opts['interface']) + \
                          ':' + str(self.opts['ret_port'])
             channel = salt.transport.client.ReqChannel.factory(self.opts,
@@ -382,6 +382,10 @@ class Resolver(object):
                 ret['kwarg'] = self.opts[kwarg]
             else:
                 ret[kwarg] = input('{0} [{1}]: '.format(kwarg, default))
+
+        # Use current user if empty
+        if 'username' in ret and not ret['username']:
+            ret['username'] = salt.utils.get_user()
 
         return ret
 

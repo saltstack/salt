@@ -17,6 +17,7 @@ To work with an etcd server you must configure an etcd profile in the Salt
 Master configuration, for example:
 
 .. code-block:: yaml
+
     my_etd_config:
       etcd.host: 127.0.0.1
       etcd.port: 4001
@@ -25,6 +26,7 @@ You can also configure etcd without a profile however it is recommended that
 you use profiles:
 
 .. code-block:: yaml
+
     etcd.host: 127.0.0.1
     etcd.port: 4001
 
@@ -38,6 +40,7 @@ Available Functions
   means you can watch these states for changes.
 
   .. code-block:: yaml
+
       /foo/bar/baz:
         etcd.set:
           - value: foo
@@ -45,7 +48,7 @@ Available Functions
 
 - ``wait_set``
 
-  Performs the same functionality as``set`` but only if a watch requisite is ``True``.
+  Performs the same functionality as ``set`` but only if a watch requisite is ``True``.
 
   .. code-block:: yaml
 
@@ -67,13 +70,14 @@ Available Functions
   not exist then no changes will occur.
 
   .. code-block:: yaml
+
       /foo/bar/baz:
         etcd.rm:
           - profile: my_etcd_config
 
 - ``wait_rm``
 
-  Performs the same functionality as``rm`` but only if a watch requisite is ``True``.
+  Performs the same functionality as ``rm`` but only if a watch requisite is ``True``.
 
   .. code-block:: yaml
 
@@ -103,7 +107,7 @@ __func_alias__ = {
 
 # Import third party libs
 try:
-    import etcd
+    import salt.utils.etcd_util  # pylint: disable=W0611
     HAS_ETCD = True
 except ImportError:
     HAS_ETCD = False
@@ -139,15 +143,13 @@ def set_(name, value, profile=None):
         'changes': {}
     }
 
-    try:
-        current = __salt__['etcd.get'](name, profile=profile)
-    except etcd.EtcdKeyNotFound:
+    current = __salt__['etcd.get'](name, profile=profile)
+    if not current:
         created = True
-        current = None
 
     result = __salt__['etcd.set'](name, value, profile=profile)
 
-    if result != current:
+    if result and result != current:
         if created:
             rtn['comment'] = 'New key created'
         else:
@@ -200,9 +202,7 @@ def rm_(name, recurse=False, profile=None):
         'changes': {}
     }
 
-    try:
-        __salt__['etcd.get'](name, profile=profile)
-    except etcd.EtcdKeyNotFound:
+    if not __salt__['etcd.get'](name, profile=profile):
         rtn['comment'] = 'Key does not exist'
         return rtn
 

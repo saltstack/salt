@@ -728,14 +728,14 @@ def hw_addr(iface):
     return salt.utils.network.hw_addr(iface)
 
 # Alias hwaddr to preserve backward compat
-hwaddr = hw_addr
+hwaddr = salt.utils.alias_function(hw_addr, 'hwaddr')
 
 
 def interface(iface):
     '''
     Return the inet address for a given interface
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -750,7 +750,7 @@ def interface_ip(iface):
     '''
     Return the inet address for a given interface
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -814,6 +814,27 @@ def ip_in_subnet(ip_addr, cidr):
     return salt.utils.network.in_subnet(cidr, ip_addr)
 
 
+def convert_cidr(cidr):
+    '''
+    returns the network and subnet mask of a cidr addr
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.convert_cidr 172.31.0.0/16
+    '''
+    ret = {'network': None,
+           'netmask': None}
+    cidr = calc_net(cidr)
+    network_info = salt.ext.ipaddress.ip_network(cidr)
+    ret['network'] = str(network_info.network_address)
+    ret['netmask'] = str(network_info.netmask)
+    return ret
+
+
 def calc_net(ip_addr, netmask=None):
     '''
     Returns the CIDR of a subnet based on
@@ -853,7 +874,7 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None):
     else:
         return addrs
 
-ipaddrs = ip_addrs
+ipaddrs = salt.utils.alias_function(ip_addrs, 'ipaddrs')
 
 
 def ip_addrs6(interface=None, include_loopback=False, cidr=None):
@@ -877,7 +898,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     else:
         return addrs
 
-ipaddrs6 = ip_addrs6
+ipaddrs6 = salt.utils.alias_function(ip_addrs6, 'ipaddrs6')
 
 
 def get_hostname():
@@ -993,7 +1014,7 @@ def connect(host, port=None, **kwargs):
     Test connectivity to a host using a particular
     port from the minion.
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 

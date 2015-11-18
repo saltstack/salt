@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
-Helpful decorators module writing
+Helpful decorators for module writing
 '''
 
 # Import python libs
 from __future__ import absolute_import
 import inspect
 import logging
+import time
 from functools import wraps
 from collections import defaultdict
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandNotFoundError
+from salt.log import LOG_LEVELS
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -92,7 +94,7 @@ class Depends(object):
                     )
                     continue
 
-                if dependency in dir(frame):
+                if dependency in frame.f_globals:
                     log.trace(
                         'Dependency ({0}) already loaded inside {1}, '
                         'skipping'.format(
@@ -140,6 +142,30 @@ class depends(Depends):  # pylint: disable=C0103
     '''
 
 
+def timing(function):
+    '''
+    Decorator wrapper to log execution time, for profiling purposes
+    '''
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        start_time = time.time()
+        ret = function(*args, **salt.utils.clean_kwargs(**kwargs))
+        end_time = time.time()
+        if function.__module__.startswith('salt.loaded.int.'):
+            mod_name = function.__module__[16:]
+        else:
+            mod_name = function.__module__
+        log.profile(
+            'Function {0}.{1} took {2:.20f} seconds to execute'.format(
+                mod_name,
+                function.__name__,
+                end_time - start_time
+            )
+        )
+        return ret
+    return wrapped
+
+
 def which(exe):
     '''
     Decorator wrapper for salt.utils.which
@@ -148,7 +174,7 @@ def which(exe):
         def wrapped(*args, **kwargs):
             if salt.utils.which(exe) is None:
                 raise CommandNotFoundError(
-                    'The {0!r} binary was not found in $PATH.'.format(exe)
+                    'The \'{0}\' binary was not found in $PATH.'.format(exe)
                 )
             return function(*args, **kwargs)
         return identical_signature_wrapper(function, wrapped)
@@ -165,7 +191,7 @@ def which_bin(exes):
                 raise CommandNotFoundError(
                     'None of provided binaries({0}) was not found '
                     'in $PATH.'.format(
-                        ['{0!r}'.format(exe) for exe in exes]
+                        ['\'{0}\''.format(exe) for exe in exes]
                     )
                 )
             return function(*args, **kwargs)

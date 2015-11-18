@@ -92,7 +92,6 @@ import stat
 import shutil
 import sys
 import time
-import shlex
 from subprocess import Popen, PIPE
 try:
     import grp
@@ -158,7 +157,7 @@ def _parse_interval(value):
     '''
     match = _INTERVAL_REGEX.match(str(value))
     if match is None:
-        raise ValueError('invalid time interval: {0!r}'.format(value))
+        raise ValueError('invalid time interval: \'{0}\''.format(value))
 
     result = 0
     resolution = None
@@ -559,8 +558,8 @@ class ExecOption(Option):
     def execute(self, fullpath, fstat, test=False):
         try:
             command = self.command.replace('{}', fullpath)
-            print(shlex.split(command))
-            p = Popen(shlex.split(command),
+            print(salt.utils.shlex_split(command))
+            p = Popen(salt.utils.shlex_split(command),
                       stdout=PIPE,
                       stderr=PIPE)
             (out, err) = p.communicate()

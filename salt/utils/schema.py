@@ -479,6 +479,9 @@ class BaseSchemaItemMeta(six.with_metaclass(Prepareable, type)):
         attributes = []
         for base in reversed(bases):
             try:
+                base_attributes = getattr(base, '_attributes', [])
+                if base_attributes:
+                    attributes.extend(base_attributes)
                 # Extend the attributes with the base argspec argument names
                 # but skip "self"
                 for argname in inspect.getargspec(base.__init__).args:
@@ -1118,24 +1121,25 @@ class ArrayItem(BaseSchemaItem):
         super(ArrayItem, self).__init__(**kwargs)
 
     def __validate_attributes__(self):
-        if not self.items:
+        if not self.items and not self.additional_items:
             raise RuntimeError(
-                'The passed items must not be empty'
+                'One of items or additional_items must be passed.'
             )
-        if isinstance(self.items, (list, tuple)):
-            for item in self.items:
-                if not isinstance(item, (Schema, SchemaItem)):
-                    raise RuntimeError(
-                        'All items passed in the item argument tuple/list must be '
-                        'a subclass of Schema, SchemaItem or BaseSchemaItem, '
-                        'not {0}'.format(type(item))
-                    )
-        elif not isinstance(self.items, (Schema, SchemaItem)):
-            raise RuntimeError(
-                'The items argument passed must be a subclass of '
-                'Schema, SchemaItem or BaseSchemaItem, not '
-                '{0}'.format(type(self.items))
-            )
+        if self.items is not None:
+            if isinstance(self.items, (list, tuple)):
+                for item in self.items:
+                    if not isinstance(item, (Schema, SchemaItem)):
+                        raise RuntimeError(
+                            'All items passed in the item argument tuple/list must be '
+                            'a subclass of Schema, SchemaItem or BaseSchemaItem, '
+                            'not {0}'.format(type(item))
+                        )
+            elif not isinstance(self.items, (Schema, SchemaItem)):
+                raise RuntimeError(
+                    'The items argument passed must be a subclass of '
+                    'Schema, SchemaItem or BaseSchemaItem, not '
+                    '{0}'.format(type(self.items))
+                )
 
     def __get_items__(self):
         if isinstance(self.items, (Schema, SchemaItem)):
@@ -1221,9 +1225,9 @@ class DictItem(BaseSchemaItem):
         super(DictItem, self).__init__(**kwargs)
 
     def __validate_attributes__(self):
-        if not self.properties and not self.pattern_properties:
+        if not self.properties and not self.pattern_properties and not self.additional_properties:
             raise RuntimeError(
-                'One of properties or pattern properties must be passed'
+                'One of properties, pattern_properties or additional_properties must be passed'
             )
         if self.properties is not None:
             if not isinstance(self.properties, (Schema, dict)):

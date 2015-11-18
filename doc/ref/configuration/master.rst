@@ -417,7 +417,7 @@ configuration requirements. Read the returner's documentation.
 ``master_job_cache``
 --------------------
 
-.. versionadded:: 2014.7
+.. versionadded:: 2014.7.0
 
 Default: 'local_cache'
 
@@ -451,10 +451,11 @@ only the cache for the mine system.
 
 Default: 0
 
-The number of minions the master should allow to connect. Use this to accommodate
-the number of minions per master if you have different types of hardware serving
-your minions. The default of ``0`` means unlimited connections. Please note, that
-this can slow down the authentication process a bit in large setups.
+The maximum number of minion connections allowed by the master. Use this to
+accommodate the number of minions per master if you have different types of
+hardware serving your minions. The default of ``0`` means unlimited connections.
+Please note, that this can slow down the authentication process a bit in large
+setups.
 
 .. code-block:: yaml
 
@@ -607,27 +608,28 @@ minion IDs for which keys will automatically be rejected. Will override both
 membership in the :conf_master:`autosign_file` and the
 :conf_master:`auto_accept` setting.
 
-.. conf_master:: client_acl
+.. conf_master:: publisher_acl
 
-``client_acl``
---------------
+``publisher_acl``
+-----------------
 
 Default: ``{}``
 
 Enable user accounts on the master to execute specific modules. These modules
-can be expressed as regular expressions.
+can be expressed as regular expressions. Note that client_acl option is
+deprecated by publisher_acl option and will be removed in future releases.
 
 .. code-block:: yaml
 
-    client_acl:
+    publisher_acl:
       fred:
         - test.ping
         - pkg.*
 
-.. conf_master:: client_acl_blacklist
+.. conf_master:: publisher_acl_blacklist
 
-``client_acl_blacklist``
-------------------------
+``publisher_acl_blacklist``
+---------------------------
 
 Default: ``{}``
 
@@ -635,13 +637,14 @@ Blacklist users or modules
 
 This example would blacklist all non sudo users, including root from
 running any commands. It would also blacklist any use of the "cmd"
-module.
+module. Note that client_acl_blacklist option is deprecated by
+publisher_acl_blacklist option and will be removed in future releases.
 
 This is completely disabled by default.
 
 .. code-block:: yaml
 
-    client_acl_blacklist:
+    publisher_acl_blacklist:
       users:
         - root
         - '^(?!sudo_).*$'   #  all non sudo users
@@ -2252,6 +2255,34 @@ strategy between different sources. It accepts 4 values:
           element2: True
       baz: quux
 
+* recurse_list:
+
+  it will merge recursively mapping of data similar to ``recurse`` but merge
+  lists by aggregating them instead of replacing them.
+
+  .. code-block:: yaml
+
+      foo: 43
+      bar:
+         - 1
+         - 2
+
+  .. code-block:: yaml
+
+      bar:
+         - 3
+      baz: quux
+
+  will be merged as:
+
+  .. code-block:: yaml
+
+      foo: 42
+      bar:
+         - 1
+         - 2
+         - 3
+      baz: quux
 
 * aggregate:
 
@@ -2750,16 +2781,34 @@ used.
 ---------------
 
 .. versionchanged:: 2015.8.0
-    Renamed from ``win_repo`` to ``winrepo_dir``
+    Renamed from ``win_repo`` to ``winrepo_dir``.
 
 Default: ``/srv/salt/win/repo``
 
-Location on the master where the :conf_master:`winrepo_remotes` are checked
-out.
+Location on the master where the :conf_master:`winrepo_remotes` are checked out
+for pre-2015.8.0 minions. 2015.8.0 and later minions use
+:conf_master:`winrepo_remotes_ng <winrepo_remotes_ng>` instead.
 
 .. code-block:: yaml
 
     winrepo_dir: /srv/salt/win/repo
+
+.. conf_master:: winrepo_dir_ng
+
+``winrepo_dir_ng``
+---------------
+
+.. versionadded:: 2015.8.0
+    A new :ref:`ng <windows-package-manager>` repo was added.
+
+Default: ``/srv/salt/win/repo-ng``
+
+Location on the master where the :conf_master:`winrepo_remotes_ng` are checked
+out for 2015.8.0 and later minions.
+
+.. code-block:: yaml
+
+    winrepo_dir: /srv/salt/win/repo-ng
 
 .. conf_master:: winrepo_cachefile
 .. conf_master:: win_repo_mastercachefile
@@ -2769,6 +2818,10 @@ out.
 
 .. versionchanged:: 2015.8.0
     Renamed from ``win_repo_mastercachefile`` to ``winrepo_cachefile``
+
+.. note::
+    2015.8.0 and later minions do not use this setting since the cachefile
+    is now located on the minion.
 
 Default: ``winrepo.p``
 
@@ -2786,11 +2839,13 @@ created.
 -------------------
 
 .. versionchanged:: 2015.8.0
-    Renamed from ``win_gitrepos`` to ``winrepo_remotes``
+    Renamed from ``win_gitrepos`` to ``winrepo_remotes``.
 
 Default: ``['https://github.com/saltstack/salt-winrepo.git']``
 
-List of git repositories to checkout and include in the winrepo
+List of git repositories to checkout and include in the winrepo for
+pre-2015.8.0 minions. 2015.8.0 and later minions use
+:conf_master:`winrepo_remotes_ng <winrepo_remotes_ng>` instead.
 
 .. code-block:: yaml
 
@@ -2798,12 +2853,42 @@ List of git repositories to checkout and include in the winrepo
       - https://github.com/saltstack/salt-winrepo.git
 
 To specify a specific revision of the repository, prepend a commit ID to the
-URL of the the repository:
+URL of the repository:
 
 .. code-block:: yaml
 
     winrepo_remotes:
       - '<commit_id> https://github.com/saltstack/salt-winrepo.git'
+
+Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
+ID is useful in that it allows one to revert back to a previous version in the
+event that an error is introduced in the latest revision of the repo.
+
+.. conf_master:: winrepo_remotes_ng
+
+``winrepo_remotes_ng``
+-------------------
+
+.. versionadded:: 2015.8.0
+    A new :ref:`ng <windows-package-manager>` repo was added.
+
+Default: ``['https://github.com/saltstack/salt-winrepo-ng.git']``
+
+List of git repositories to checkout and include in the winrepo for
+2015.8.0 and later minions.
+
+.. code-block:: yaml
+
+    winrepo_remotes_ng:
+      - https://github.com/saltstack/salt-winrepo-ng.git
+
+To specify a specific revision of the repository, prepend a commit ID to the
+URL of the repository:
+
+.. code-block:: yaml
+
+    winrepo_remotes:
+      - '<commit_id> https://github.com/saltstack/salt-winrepo-ng.git'
 
 Replace ``<commit_id>`` with the SHA1 hash of a commit ID. Specifying a commit
 ID is useful in that it allows one to revert back to a previous version in the

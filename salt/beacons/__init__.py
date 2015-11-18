@@ -6,10 +6,12 @@ This package contains the loader modules for the salt streams system
 from __future__ import absolute_import
 import logging
 import copy
+import re
 
 # Import Salt libs
 import salt.loader
 import salt.utils
+import salt.utils.minion
 
 log = logging.getLogger(__name__)
 
@@ -67,17 +69,24 @@ class Beacon(object):
             log.trace('Beacon processing: {0}'.format(mod))
             fun_str = '{0}.beacon'.format(mod)
             if fun_str in self.beacons:
-                if isinstance(current_beacon_config, dict):
-                    interval = current_beacon_config.get('interval', False)
-                
+                interval = self._determine_beacon_config(current_beacon_config, 'interval')
                 if interval:
-                    if isinstance(b_config[mod], list):
-                        self._remove_list_item(b_config[mod], 'interval')
-                    elif isinstance(b_config[mod], dict):
-                        b_config[mod].pop('interval')
+                    b_config = self._trim_config(b_config, mod, 'interval')
                     if not self._process_interval(mod, interval):
                         log.trace('Skipping beacon {0}. Interval not reached.'.format(mod))
                         continue
+                if self._determine_beacon_config(mod, 'disable_during_state_run', b_config):
+                    log.trace('Evaluting if beacon {0} should be skipped due to a state run.'.format(mod))
+                    b_config = self._trim_config(b_config, mod, 'disable_during_state_run')
+                    is_running = False
+                    running_jobs = salt.utils.minion.running(self.opts)
+                    for job in running_jobs:
+                        if re.match('state.*', job['fun']):
+                            is_running = True
+                    if is_running:
+                        log.info('Skipping beacon {0}. State run in progress.'.format(mod))
+                        continue
+                # Fire the beacon!
                 raw = self.beacons[fun_str](b_config[mod])
                 for data in raw:
                     tag = 'salt/beacon/{0}/{1}/'.format(self.opts['id'], mod)
@@ -86,7 +95,30 @@ class Beacon(object):
                     if 'id' not in data:
                         data['id'] = self.opts['id']
                     ret.append({'tag': tag, 'data': data})
+            else:
+                log.debug('Unable to process beacon {0}'.format(mod))
         return ret
+
+    def _trim_config(self, b_config, mod, key):
+        '''
+        Take a beacon configuration and strip out the interval bits
+        '''
+        if isinstance(b_config[mod], list):
+            self._remove_list_item(b_config[mod], 'interval')
+        elif isinstance(b_config[mod], dict):
+            b_config[mod].pop('interval')
+        return b_config
+
+    def _determine_beacon_config(self, mod, val, config_mod):
+        '''
+        Process a beacon configuration to determine its interval
+        '''
+        
+        interval = False
+        if isinstance(current_beacon_config, dict):
+            interval = current_beacon_config.get('interval', False)
+
+        return interval
 
     def _process_interval(self, mod, interval):
         '''

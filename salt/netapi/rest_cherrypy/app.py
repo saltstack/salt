@@ -131,24 +131,23 @@ The token may be sent in one of two ways:
 
   For example, using curl:
 
-  .. code-block:: bash
+    .. code-block:: bash
 
-      curl -sSk https://localhost:8000/login \
-            -H 'Accept: application/x-yaml' \
-            -d username=saltdev \
-            -d password=saltdev \
+        curl -sSk https://localhost:8000/login \\
+            -H 'Accept: application/x-yaml' \\
+            -d username=saltdev \\
+            -d password=saltdev \\
             -d eauth=auto
 
-  Copy the ``token`` value from the output and include it in subsequent
-  requests:
+Copy the ``token`` value from the output and include it in subsequent requests:
 
-  .. code-block:: bash
+    .. code-block:: bash
 
-      curl -sSk https://localhost:8000 \
-            -H 'Accept: application/x-yaml' \
-            -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\
-            -d client=local \
-            -d tgt='*' \
+        curl -sSk https://localhost:8000 \\
+            -H 'Accept: application/x-yaml' \\
+            -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\\
+            -d client=local \\
+            -d tgt='*' \\
             -d fun=test.ping
 
 * Sent via a cookie. This option is a convenience for HTTP clients that
@@ -159,19 +158,19 @@ The token may be sent in one of two ways:
   .. code-block:: bash
 
       # Write the cookie file:
-      curl -sSk https://localhost:8000/login \
-            -c ~/cookies.txt \
-            -H 'Accept: application/x-yaml' \
-            -d username=saltdev \
-            -d password=saltdev \
+      curl -sSk https://localhost:8000/login \\
+            -c ~/cookies.txt \\
+            -H 'Accept: application/x-yaml' \\
+            -d username=saltdev \\
+            -d password=saltdev \\
             -d eauth=auto
 
       # Read the cookie file:
-      curl -sSk https://localhost:8000 \
-            -b ~/cookies.txt \
-            -H 'Accept: application/x-yaml' \
-            -d client=local \
-            -d tgt='*' \
+      curl -sSk https://localhost:8000 \\
+            -b ~/cookies.txt \\
+            -H 'Accept: application/x-yaml' \\
+            -d client=local \\
+            -d tgt='*' \\
             -d fun=test.ping
 
 .. seealso:: You can bypass the session handling via the :py:class:`Run` URL.
@@ -694,7 +693,7 @@ def lowdata_fmt():
     # if the data was sent as urlencoded, we need to make it a list.
     # this is a very forgiving implementation as different clients set different
     # headers for form encoded data (including charset or something similar)
-    if not isinstance(data, list):
+    if data and not isinstance(data, list):
         # Make the 'arg' param a list if not already
         if 'arg' in data and not isinstance(data['arg'], list):
             data['arg'] = [data['arg']]
@@ -713,7 +712,7 @@ cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
         salt_auth_tool, priority=60)
 cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
         hypermedia_in)
-cherrypy.tools.cors_tool = cherrypy.Tool('before_handler',
+cherrypy.tools.cors_tool = cherrypy.Tool('before_request_body',
         cors_tool, priority=30)
 cherrypy.tools.lowdata_fmt = cherrypy.Tool('before_handler',
         lowdata_fmt, priority=40)
@@ -904,7 +903,7 @@ class LowDataAdapter(object):
                     -d arg='du -sh .' \\
                     -d arg='/path/to/dir'
 
-            # Sending posiitonal args and Keyword args with JSON:
+            # Sending positional args and Keyword args with JSON:
             echo '[
                 {
                     "client": "local",
@@ -1081,6 +1080,9 @@ class Jobs(LowDataAdapter):
 
             List jobs or show a single job from the job cache.
 
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
+
             :status 200: |200|
             :status 401: |401|
             :status 406: |406|
@@ -1191,6 +1193,7 @@ class Keys(LowDataAdapter):
     module <salt.wheel.key>` functions.
     '''
 
+    @cherrypy.config(**{'tools.salt_token.on': True})
     def GET(self, mid=None):
         '''
         Show the list of minion keys or detail on a specific key
@@ -1258,8 +1261,6 @@ class Keys(LowDataAdapter):
               minions:
                 jerry: 51:93:b3:d0:9f:3a:6d:e5:28:67:c2:4b:27:d6:cd:2b
         '''
-        self._cp_config['tools.salt_token.on'] = True
-
         if mid:
             lowstate = [{
                 'client': 'wheel',
@@ -1277,6 +1278,7 @@ class Keys(LowDataAdapter):
 
         return {'return': next(result, {}).get('data', {}).get('return', {})}
 
+    @cherrypy.config(**{'tools.hypermedia_out.on': False, 'tools.sessions.on': False})
     def POST(self, mid, keysize=None, force=None, **kwargs):
         r'''
         Easily generate keys for a minion and auto-accept the new key
@@ -1337,9 +1339,6 @@ class Keys(LowDataAdapter):
 
             jerry.pub0000644000000000000000000000070300000000000010730 0ustar  00000000000000
         '''
-        self._cp_config['tools.hypermedia_out.on'] = False
-        self._cp_config['tools.sessions.on'] = False
-
         lowstate = [{
             'client': 'wheel',
             'fun': 'key.gen_accept',
@@ -1527,7 +1526,7 @@ class Login(LowDataAdapter):
             perms = eauth.get(token['name'], [])
             perms.extend(eauth.get('*', []))
 
-            if 'groups' in token:
+            if 'groups' in token and token['groups'] is not False:
                 user_groups = set(token['groups'])
                 eauth_groups = set([i.rstrip('%') for i in eauth.keys() if i.endswith('%')])
 
@@ -1919,21 +1918,21 @@ class WebsocketEndpoint(object):
 
         .. http:get:: /ws/(token)
 
-            :query format_events: The event stream will undergo server-side
-                formatting if the ``format_events`` URL parameter is included
-                in the request. This can be useful to avoid formatting on the
-                client-side:
+        :query format_events: The event stream will undergo server-side
+            formatting if the ``format_events`` URL parameter is included
+            in the request. This can be useful to avoid formatting on the
+            client-side:
 
-                .. code-block:: bash
+            .. code-block:: bash
 
-                    curl -NsS <...snip...> localhost:8000/ws?format_events
+                curl -NsS <...snip...> localhost:8000/ws?format_events
 
-            :reqheader X-Auth-Token: an authentication token from
-                :py:class:`~Login`.
+        :reqheader X-Auth-Token: an authentication token from
+            :py:class:`~Login`.
 
-            :status 101: switching to the websockets protocol
-            :status 401: |401|
-            :status 406: |406|
+        :status 101: switching to the websockets protocol
+        :status 401: |401|
+        :status 406: |406|
 
         **Example request:**
 
@@ -2223,7 +2222,9 @@ class Webhook(object):
         '''
         tag = '/'.join(itertools.chain(self.tag_base, args))
         data = cherrypy.serving.request.unserialized_data
-        raw_body = cherrypy.serving.request.raw_body
+        if not data:
+            data = {}
+        raw_body = getattr(cherrypy.serving.request, 'raw_body', '')
         headers = dict(cherrypy.request.headers)
 
         ret = self.event.fire_event({

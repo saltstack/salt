@@ -427,11 +427,16 @@ def create(vm_, call=None):
         'lxc_profile',
         vm_.get('container_profile', None))
 
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event', 'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
         {'name': vm_['name'], 'profile': profile,
-         'provider': vm_['provider'], },
+         'provider': vm_['driver'], },
         transport=__opts__['transport'])
     ret = {'name': vm_['name'], 'changes': {}, 'result': True, 'comment': ''}
     if 'pub_key' not in vm_ and 'priv_key' not in vm_:
@@ -461,6 +466,18 @@ def create(vm_, call=None):
     if 'profile' in __opts__:
         __opts__['internal_lxc_profile'] = __opts__['profile']
         del __opts__['profile']
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'created instance',
+        'salt/cloud/{0}/created'.format(vm_['name']),
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['driver'],
+        },
+        transport=__opts__['transport']
+    )
 
     return ret
 
@@ -527,13 +544,10 @@ def get_configured_provider(vm_=None):
                             {}).get(dalias, {}).get(driver, {})
     # in all cases, verify that the linked saltmaster is alive.
     if data:
-        try:
-            ret = _salt('test.ping', salt_target=data['target'])
-            if not ret:
-                raise Exception('error')
-            return data
-        except Exception:
+        ret = _salt('test.ping', salt_target=data['target'])
+        if not ret:
             raise SaltCloudSystemExit(
                 'Configured provider {0} minion: {1} is unreachable'.format(
                     __active_provider_name__, data['target']))
+        return data
     return False

@@ -6,11 +6,11 @@ from __future__ import absolute_import
 
 # Import python libs
 import contextlib
-import errno
 import logging
 import hashlib
 import os
 import shutil
+import ftplib
 
 # Import salt libs
 from salt.exceptions import (
@@ -23,10 +23,13 @@ import salt.payload
 import salt.transport
 import salt.fileserver
 import salt.utils
+import salt.utils.files
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.gzip_util
 import salt.utils.http
+import salt.utils.s3
+from salt.utils.locales import sdecode
 from salt.utils.openstack.swift import SaltSwift
 
 # pylint: disable=no-name-in-module,import-error
@@ -60,6 +63,19 @@ class Client(object):
     def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)
+
+    # Add __setstate__ and __getstate__ so that the object may be
+    # deep copied. It normally can't be deep copied because its
+    # constructor requires an 'opts' parameter.
+    # The TCP transport needs to be able to deep copy this class
+    # due to 'salt.utils.context.ContextDict.clone'.
+    def __setstate__(self, state):
+        # This will polymorphically call __init__
+        # in the derived class.
+        self.__init__(state['opts'])
+
+    def __getstate__(self):
+        return {'opts': self.opts}
 
     def _check_proto(self, path):
         '''
@@ -212,7 +228,7 @@ class Client(object):
 
         ret = []
 
-        path = self._check_proto(path)
+        path = self._check_proto(sdecode(path))
         # We want to make sure files start with this *directory*, use
         # '/' explicitly because the master (that's generating the
         # list of files) only runs on POSIX
@@ -220,13 +236,14 @@ class Client(object):
             path = path + '/'
 
         log.info(
-            'Caching directory {0!r} for environment {1!r}'.format(
+            'Caching directory \'{0}\' for environment \'{1}\''.format(
                 path, saltenv
             )
         )
         # go through the list of all files finding ones that are in
         # the target directory and caching them
         for fn_ in self.file_list(saltenv):
+            fn_ = sdecode(fn_)
             if fn_.strip() and fn_.startswith(path):
                 if salt.utils.check_include_exclude(
                         fn_, include_pat, exclude_pat):
@@ -250,6 +267,7 @@ class Client(object):
                 saltenv
             )
             for fn_ in self.file_list_emptydirs(saltenv):
+                fn_ = sdecode(fn_)
                 if fn_.startswith(path):
                     minion_dir = '{0}/{1}'.format(dest, fn_)
                     if not os.path.isdir(minion_dir):
@@ -390,7 +408,7 @@ class Client(object):
         if limit_traversal:
             if saltenv not in self.opts['file_roots']:
                 log.warning(
-                    'During an attempt to list states for saltenv {0!r}, '
+                    'During an attempt to list states for saltenv \'{0}\', '
                     'the environment could not be found in the configured '
                     'file roots'.format(saltenv)
                 )
@@ -532,7 +550,7 @@ class Client(object):
             # Local filesystem
             if not os.path.isabs(url_data.path):
                 raise CommandExecutionError(
-                    'Path {0!r} is not absolute'.format(url_data.path)
+                    'Path \'{0}\' is not absolute'.format(url_data.path)
                 )
             return url_data.path
 
@@ -553,23 +571,39 @@ class Client(object):
 
         if url_data.scheme == 's3':
             try:
+                import salt.utils.s3
+
+                def s3_opt(key, default=None):
+                    '''Get value of s3.<key> from Minion config or from Pillar'''
+                    if 's3.' + key in self.opts:
+                        return self.opts['s3.' + key]
+                    try:
+                        return self.opts['pillar']['s3'][key]
+                    except (KeyError, TypeError):
+                        return default
                 salt.utils.s3.query(method='GET',
                                     bucket=url_data.netloc,
                                     path=url_data.path[1:],
                                     return_bin=False,
                                     local_file=dest,
                                     action=None,
-                                    key=self.opts.get('s3.key', None),
-                                    keyid=self.opts.get('s3.keyid', None),
-                                    service_url=self.opts.get('s3.service_url',
-                                                              None),
-                                    verify_ssl=self.opts.get('s3.verify_ssl',
-                                                              True),
-                                    location=self.opts.get('s3.location',
-                                                              None))
+                                    key=s3_opt('key'),
+                                    keyid=s3_opt('keyid'),
+                                    service_url=s3_opt('service_url'),
+                                    verify_ssl=s3_opt('verify_ssl', True),
+                                    location=s3_opt('location'))
                 return dest
-            except Exception:
-                raise MinionError('Could not fetch from {0}'.format(url))
+            except Exception as exc:
+                raise MinionError('Could not fetch from {0}. Exception: {1}'.format(url, exc))
+        if url_data.scheme == 'ftp':
+            try:
+                ftp = ftplib.FTP(url_data.hostname)
+                ftp.login()
+                with salt.utils.fopen(dest, 'wb') as fp_:
+                    ftp.retrbinary('RETR {0}'.format(url_data.path), fp_.write)
+                return dest
+            except Exception as exc:
+                raise MinionError('Could not retrieve {0} from FTP server. Exception: {1}'.format(url, exc))
 
         if url_data.scheme == 'swift':
             try:
@@ -597,47 +631,22 @@ class Client(object):
 
         destfp = None
         try:
-            if no_cache:
-                result = []
-
-                def on_chunk(chunk):
-                    result.append(chunk)
-            else:
-                dest_tmp = "{0}.part".format(dest)
-                destfp = salt.utils.fopen(dest_tmp, 'wb')
-
-                def on_chunk(chunk):
-                    destfp.write(chunk)
-
             query = salt.utils.http.query(
                 fixed_url,
-                stream=True,
-                streaming_callback=on_chunk,
+                text=True,
                 username=url_data.username,
                 password=url_data.password,
                 **get_kwargs
             )
-            if 'handle' not in query:
+            if 'text' not in query:
                 raise MinionError('Error: {0}'.format(query['error']))
             if no_cache:
-                return ''.join(result)
+                return query['body']
             else:
-                destfp.close()
-                destfp = None
-                # Can't just do an os.rename() here, this results in a
-                # WindowsError being raised when the destination path exists on
-                # a Windows machine. Have to remove the file.
-                try:
-                    os.remove(dest)
-                except OSError as exc:
-                    if exc.errno != errno.ENOENT:
-                        raise MinionError(
-                            'Error: Unable to remove {0}: {1}'.format(
-                                dest,
-                                exc.strerror
-                            )
-                        )
-                os.rename(dest_tmp, dest)
+                dest_tmp = "{0}.part".format(dest)
+                with salt.utils.fopen(dest_tmp, 'wb') as destfp:
+                    destfp.write(query['body'])
+                salt.utils.files.rename(dest_tmp, dest)
                 return dest
         except HTTPError as exc:
             raise MinionError('HTTP error {0} reading {1}: {3}'.format(
@@ -807,12 +816,8 @@ class LocalClient(Client):
                 os.path.join(path, prefix), followlinks=True
             ):
                 for fname in files:
-                    ret.append(
-                        os.path.relpath(
-                            os.path.join(root, fname),
-                            path
-                        )
-                    )
+                    relpath = os.path.relpath(os.path.join(root, fname), path)
+                    ret.append(sdecode(relpath))
         return ret
 
     def file_list_emptydirs(self, saltenv='base', prefix='', env=None):
@@ -839,7 +844,7 @@ class LocalClient(Client):
                 os.path.join(path, prefix), followlinks=True
             ):
                 if len(dirs) == 0 and len(files) == 0:
-                    ret.append(os.path.relpath(root, path))
+                    ret.append(sdecode(os.path.relpath(root, path)))
         return ret
 
     def dir_list(self, saltenv='base', prefix='', env=None):
@@ -865,7 +870,7 @@ class LocalClient(Client):
             for root, dirs, files in os.walk(
                 os.path.join(path, prefix), followlinks=True
             ):
-                ret.append(os.path.relpath(root, path))
+                ret.append(sdecode(os.path.relpath(root, path)))
         return ret
 
     def hash_file(self, path, saltenv='base', env=None):
@@ -996,7 +1001,7 @@ class RemoteClient(Client):
         hash_server = self.hash_file(path, saltenv)
         if hash_server == '':
             log.debug(
-                'Could not find file from saltenv {0!r}, {1!r}'.format(
+                'Could not find file from saltenv \'{0}\', \'{1}\''.format(
                     saltenv, path
                 )
             )
@@ -1019,34 +1024,31 @@ class RemoteClient(Client):
             rel_path = self._check_proto(path)
 
             log.debug(
-                'In saltenv {0!r}, looking at rel_path {1!r} to resolve {2!r}'.format(
-                    saltenv, rel_path, path
-                )
+                'In saltenv \'{0}\', looking at rel_path \'{1}\' to resolve '
+                '\'{2}\''.format(saltenv, rel_path, path)
             )
             with self._cache_loc(rel_path, saltenv) as cache_dest:
                 dest2check = cache_dest
 
         log.debug(
-            'In saltenv {0!r}, ** considering ** path {1!r} to resolve {2!r}'.format(
-                saltenv, dest2check, path
-            )
+            'In saltenv \'{0}\', ** considering ** path \'{1}\' to resolve '
+            '\'{2}\''.format(saltenv, dest2check, path)
         )
 
         if dest2check and os.path.isfile(dest2check):
             hash_local = self.hash_file(dest2check, saltenv)
             if hash_local == hash_server:
                 log.info(
-                    'Fetching file from saltenv {0!r}, ** skipped ** '
-                    'latest already in cache {1!r}'.format(
+                    'Fetching file from saltenv \'{0}\', ** skipped ** '
+                    'latest already in cache \'{1}\''.format(
                         saltenv, path
                     )
                 )
                 return dest2check
 
         log.debug(
-            'Fetching file from saltenv {0!r}, ** attempting ** {1!r}'.format(
-                saltenv, path
-            )
+            'Fetching file from saltenv \'{0}\', ** attempting ** '
+            '\'{1}\''.format(saltenv, path)
         )
         d_tries = 0
         transport_tries = 0
@@ -1120,15 +1122,13 @@ class RemoteClient(Client):
         if fn_:
             fn_.close()
             log.info(
-                'Fetching file from saltenv {0!r}, ** done ** {1!r}'.format(
-                    saltenv, path
-                )
+                'Fetching file from saltenv \'{0}\', ** done ** '
+                '\'{1}\''.format(saltenv, path)
             )
         else:
             log.debug(
-                'In saltenv {0!r}, we are ** missing ** the file {1!r}'.format(
-                    saltenv, path
-                )
+                'In saltenv \'{0}\', we are ** missing ** the file '
+                '\'{1}\''.format(saltenv, path)
             )
 
         return dest

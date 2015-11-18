@@ -10,15 +10,15 @@ import errno
 import logging
 import os
 import re
-import shlex
-import sys
+from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
 import salt.utils
+import salt.utils.files
+import salt.utils.itertools
+import salt.utils.url
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 from salt.ext import six
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
-from salt.ext.six.moves.urllib.parse import urlunparse as _urlunparse  # pylint: disable=no-name-in-module,import-error
 
 log = logging.getLogger(__name__)
 
@@ -31,32 +31,11 @@ def __virtual__():
     '''
     Only load if git exists on the system
     '''
-    return True if salt.utils.which('git') else False
-
-
-def _add_http_basic_auth(url, https_user=None, https_pass=None):
-    if https_user is None and https_pass is None:
-        return url
+    if salt.utils.which('git') is None:
+        return (False,
+                'The git execution module cannot be loaded: git unavailable.')
     else:
-        urltuple = _urlparse(url)
-        if urltuple.scheme == 'https':
-            if https_pass is None:
-                netloc = '{0}@{1}'.format(
-                    https_user,
-                    urltuple.netloc
-                )
-                urltuple = urltuple._replace(netloc=netloc)
-                return _urlunparse(urltuple)
-            else:
-                netloc = '{0}:{1}@{2}'.format(
-                    https_user,
-                    https_pass,
-                    urltuple.netloc
-                )
-                urltuple = urltuple._replace(netloc=netloc)
-                return _urlunparse(urltuple)
-        else:
-            raise SaltInvocationError('Basic Auth only supported for HTTPS')
+        return True
 
 
 def _config_getter(get_opt,
@@ -92,10 +71,7 @@ def _config_getter(get_opt,
         value_regex = None
 
     command = ['git', 'config']
-    if global_:
-        command.append('--global')
-    else:
-        command.append('--local')
+    command.extend(_which_git_config(global_, cwd, user))
     command.append(get_opt)
     command.append(key)
     if value_regex is not None:
@@ -108,11 +84,14 @@ def _config_getter(get_opt,
 
 
 def _expand_path(cwd, user):
+    '''
+    Expand home directory
+    '''
     try:
         to_expand = '~' + user if user else '~'
     except TypeError:
         # Users should never be numeric but if we don't account for this then
-        # we're going to get a traceback
+        # we're going to get a traceback if someone passes this invalid input.
         to_expand = '~' + str(user) if user else '~'
     try:
         return os.path.join(os.path.expanduser(to_expand), cwd)
@@ -138,7 +117,7 @@ def _format_opts(opts):
         if not isinstance(opts, six.string_types):
             opts = [str(opts)]
         else:
-            opts = shlex.split(opts)
+            opts = salt.utils.shlex_split(opts)
     try:
         if opts[-1] == '--':
             # Strip the '--' if it was passed at the end of the opts string,
@@ -152,7 +131,8 @@ def _format_opts(opts):
 
 
 def _git_run(command, cwd=None, runas=None, identity=None,
-             ignore_retcode=False, failhard=True, **kwargs):
+             ignore_retcode=False, failhard=True, redirect_stderr=False,
+             **kwargs):
     '''
     simple, throw an exception with the error message on an error return code.
 
@@ -173,6 +153,17 @@ def _git_run(command, cwd=None, runas=None, identity=None,
 
         # try each of the identities, independently
         for id_file in identity:
+            if 'salt://' in id_file:
+                _id_file = id_file
+                id_file = __salt__['cp.cache_file'](id_file)
+                if not id_file:
+                    log.error('identity {0} does not exist.'.format(_id_file))
+                    continue
+            else:
+                if not __salt__['file.file_exists'](id_file):
+                    log.error('identity {0} does not exist.'.format(id_file))
+                    continue
+
             env = {
                 'GIT_IDENTITY': id_file
             }
@@ -207,13 +198,16 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 env['GIT_SSH'] = tmp_file
 
             try:
-                result = __salt__['cmd.run_all'](command,
-                                                 cwd=cwd,
-                                                 runas=runas,
-                                                 env=env,
-                                                 python_shell=False,
-                                                 ignore_retcode=ignore_retcode,
-                                                 **kwargs)
+                result = __salt__['cmd.run_all'](
+                    command,
+                    cwd=cwd,
+                    runas=runas,
+                    env=env,
+                    python_shell=False,
+                    log_callback=salt.utils.url.redact_http_basic_auth,
+                    ignore_retcode=ignore_retcode,
+                    redirect_stderr=redirect_stderr,
+                    **kwargs)
             finally:
                 if not salt.utils.is_windows() and 'GIT_SSH' in env:
                     os.remove(env['GIT_SSH'])
@@ -222,7 +216,8 @@ def _git_run(command, cwd=None, runas=None, identity=None,
             if result['retcode'] == 0:
                 return result
             else:
-                stderr = _remove_sensitive_data(result['stderr'])
+                stderr = \
+                    salt.utils.url.redact_http_basic_auth(result['stderr'])
                 stderrs.append(stderr)
 
         # we've tried all IDs and still haven't passed, so error out
@@ -231,13 +226,16 @@ def _git_run(command, cwd=None, runas=None, identity=None,
         return result
 
     else:
-        result = __salt__['cmd.run_all'](command,
-                                         cwd=cwd,
-                                         runas=runas,
-                                         env=env,
-                                         python_shell=False,
-                                         ignore_retcode=ignore_retcode,
-                                         **kwargs)
+        result = __salt__['cmd.run_all'](
+            command,
+            cwd=cwd,
+            runas=runas,
+            env=env,
+            python_shell=False,
+            log_callback=salt.utils.url.redact_http_basic_auth,
+            ignore_retcode=ignore_retcode,
+            redirect_stderr=redirect_stderr,
+            **kwargs)
 
         if result['retcode'] == 0:
             return result
@@ -246,10 +244,12 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                 gitcommand = ' '.join(command) \
                     if isinstance(command, list) \
                     else command
-                msg = 'Command \'{0}\' failed'.format(gitcommand)
+                msg = 'Command \'{0}\' failed'.format(
+                    salt.utils.url.redact_http_basic_auth(gitcommand)
+                )
                 if result['stderr']:
                     msg += ': {0}'.format(
-                        _remove_sensitive_data(result['stderr'])
+                        salt.utils.url.redact_http_basic_auth(result['stderr'])
                     )
                 raise CommandExecutionError(msg)
             return result
@@ -266,27 +266,38 @@ def _get_toplevel(path, user=None):
     )['stdout']
 
 
-def _remove_sensitive_data(output):
+def _git_config(cwd, user):
     '''
-    Remove HTTP user and password
+    Helper to retrive git config options
     '''
-    # We can't use re.compile because re.compile(someregex).sub() doesn't
-    # support flags even in Python 2.7.
-    url_re = '(https?)://.*@'
-    redacted = r'\1://<redacted>@'
-    if sys.version_info[0] > 2 \
-            or (sys.version_info[0] == 2 and sys.version_info[1] >= 7):
-        # re.sub() supports flags as of 2.7, use this to do a case-insensitive
-        # match.
-        return re.sub(url_re, redacted, output, flags=re.IGNORECASE)
+    contextkey = 'git.config.' + cwd
+    if contextkey not in __context__:
+        git_dir = rev_parse(cwd,
+                            opts=['--git-dir'],
+                            user=user,
+                            ignore_retcode=True)
+        if not os.path.isabs(git_dir):
+            paths = (cwd, git_dir, 'config')
+        else:
+            paths = (git_dir, 'config')
+        __context__[contextkey] = os.path.join(*paths)
+    return __context__[contextkey]
+
+
+def _which_git_config(global_, cwd, user):
+    '''
+    Based on whether global or local config is desired, return a list of CLI
+    args to include in the git config command.
+    '''
+    if global_:
+        return ['--global']
+    version_ = _LooseVersion(version(versioninfo=False))
+    if version_ >= _LooseVersion('1.7.10.2'):
+        # --local added in 1.7.10.2
+        return ['--local']
     else:
-        # We're on python 2.6, test if a lowercased version of the output
-        # string matches the regex...
-        if re.search(url_re, output.lower()):
-            # ... and if it does, perform the regex substitution.
-            return re.sub(url_re, redacted, output.lower())
-    # No match, just return the original string
-    return output
+        # For earlier versions, need to specify the path to the git config file
+        return ['--file', _git_config(cwd, user)]
 
 
 def add(cwd, filename, opts='', user=None, ignore_retcode=False):
@@ -480,7 +491,7 @@ def archive(cwd,
     return True
 
 
-def branch(cwd, name, opts='', user=None, ignore_retcode=False):
+def branch(cwd, name=None, opts='', user=None, ignore_retcode=False):
     '''
     Interface to `git-branch(1)`_
 
@@ -488,7 +499,8 @@ def branch(cwd, name, opts='', user=None, ignore_retcode=False):
         The path to the git checkout
 
     name
-        Name of the branch on which to operate
+        Name of the branch on which to operate. If not specified, the current
+        branch will be assumed.
 
     opts
         Any additional options to add to the command line, in a single string
@@ -533,7 +545,8 @@ def branch(cwd, name, opts='', user=None, ignore_retcode=False):
     cwd = _expand_path(cwd, user)
     command = ['git', 'branch']
     command.extend(_format_opts(opts))
-    command.append(name)
+    if name is not None:
+        command.append(name)
     _git_run(command, cwd=cwd, runas=user, ignore_retcode=ignore_retcode)
     return True
 
@@ -613,7 +626,8 @@ def checkout(cwd,
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
-                    ignore_retcode=ignore_retcode)['stderr']
+                    ignore_retcode=ignore_retcode,
+                    redirect_stderr=True)['stdout']
 
 
 def clone(cwd,
@@ -669,6 +683,10 @@ def clone(cwd,
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
+
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
 
@@ -705,7 +723,14 @@ def clone(cwd,
     if not url:
         raise SaltInvocationError('Missing \'url\' argument')
 
-    url = _add_http_basic_auth(url, https_user, https_pass)
+    try:
+        url = salt.utils.url.add_http_basic_auth(url,
+                                                 https_user,
+                                                 https_pass,
+                                                 https_only=True)
+    except ValueError as exc:
+        raise SaltInvocationError(exc.__str__())
+
     command = ['git', 'clone']
     command.extend(_format_opts(opts))
     command.extend(['--', url])
@@ -713,13 +738,20 @@ def clone(cwd,
         if not isinstance(name, six.string_types):
             name = str(name)
         command.append(name)
+        if not os.path.exists(cwd):
+            os.makedirs(cwd)
+        clone_cwd = cwd
     else:
         command.append(cwd)
-    # Use '/tmp' instead of $HOME (/root for root user) to work around upstream
-    # git bug. See the following comment on the Salt bug tracker for more info:
-    # https://github.com/saltstack/salt/issues/15519#issuecomment-128531310
+        # Use '/tmp' instead of $HOME (/root for root user) to work around
+        # upstream git bug. See the following comment on the Salt bug tracker
+        # for more info:
+        # https://github.com/saltstack/salt/issues/15519#issuecomment-128531310
+        # On Windows, just fall back to None (runs git clone command using the
+        # home directory as the cwd).
+        clone_cwd = '/tmp' if not salt.utils.is_windows() else None
     _git_run(command,
-             cwd='/tmp' if name is None else cwd,
+             cwd=clone_cwd,
              runas=user,
              identity=identity,
              ignore_retcode=ignore_retcode)
@@ -882,7 +914,7 @@ def config_get_regexp(key,
                       ignore_retcode=False,
                       **kwargs):
     r'''
-    .. versionaded:: 2015.8.0
+    .. versionadded:: 2015.8.0
 
     Get the value of a key or keys in the git configuration file using regexes
     for more flexible matching. The return data is a dictionary mapping keys to
@@ -950,7 +982,7 @@ def config_get_regexp(key,
         ret.setdefault(param, []).append(value)
     return ret
 
-config_get_regex = config_get_regexp
+config_get_regex = salt.utils.alias_function(config_get_regexp, 'config_get_regex')
 
 
 def config_set(key,
@@ -1025,6 +1057,7 @@ def config_set(key,
         salt myminion git.config_set user.email foo@bar.com global=True
     '''
     kwargs = salt.utils.clean_kwargs(**kwargs)
+    add_ = kwargs.pop('add', False)
     global_ = kwargs.pop('global', False)
     is_global = kwargs.pop('is_global', False)
     if kwargs:
@@ -1076,7 +1109,10 @@ def config_set(key,
 
     if value is not None:
         command = copy.copy(command_prefix)
-        command.append('--add')
+        if add_:
+            command.append('--add')
+        else:
+            command.append('--replace-all')
         command.extend([key, value])
         _git_run(command,
                  cwd=cwd,
@@ -1153,17 +1189,6 @@ def config_unset(key,
     if kwargs:
         salt.utils.invalid_kwargs(kwargs)
 
-    command = ['git', 'config']
-    if all_:
-        command.append('--unset-all')
-    else:
-        command.append('--unset')
-
-    if global_:
-        command.append('--global')
-    else:
-        command.append('--local')
-
     if cwd is None:
         if not global_:
             raise SaltInvocationError(
@@ -1171,6 +1196,13 @@ def config_unset(key,
             )
     else:
         cwd = _expand_path(cwd, user)
+
+    command = ['git', 'config']
+    if all_:
+        command.append('--unset-all')
+    else:
+        command.append('--unset')
+    command.extend(_which_git_config(global_, cwd, user))
 
     if not isinstance(key, six.string_types):
         key = str(key)
@@ -1297,6 +1329,10 @@ def fetch(cwd,
           identity=None,
           ignore_retcode=False):
     '''
+    .. versionchanged:: 2015.8.2
+        Return data is now a dictionary containing information on branches and
+        tags that were added/updated
+
     Interface to `git-fetch(1)`_
 
     cwd
@@ -1343,6 +1379,10 @@ def fetch(cwd,
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
+
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
@@ -1366,9 +1406,9 @@ def fetch(cwd,
     command.extend(
         [x for x in _format_opts(opts) if x not in ('-f', '--force')]
     )
-    if not isinstance(remote, six.string_types):
-        remote = str(remote)
     if remote:
+        if not isinstance(remote, six.string_types):
+            remote = str(remote)
         command.append(remote)
     if refspecs is not None:
         if isinstance(refspecs, (list, tuple)):
@@ -1383,11 +1423,38 @@ def fetch(cwd,
                 refspecs = str(refspecs)
             refspec_list = refspecs.split(',')
         command.extend(refspec_list)
-    return _git_run(command,
-                    cwd=cwd,
-                    runas=user,
-                    identity=identity,
-                    ignore_retcode=ignore_retcode)['stdout']
+    output = _git_run(command,
+                      cwd=cwd,
+                      runas=user,
+                      identity=identity,
+                      ignore_retcode=ignore_retcode,
+                      redirect_stderr=True)['stdout']
+
+    update_re = re.compile(
+        r'[\s*]*(?:([0-9a-f]+)\.\.([0-9a-f]+)|'
+        r'\[(?:new (tag|branch)|tag update)\])\s+(.+)->'
+    )
+    ret = {}
+    for line in salt.utils.itertools.split(output, '\n'):
+        match = update_re.match(line)
+        if match:
+            old_sha, new_sha, new_ref_type, ref_name = \
+                match.groups()
+            ref_name = ref_name.rstrip()
+            if new_ref_type is not None:
+                # ref is a new tag/branch
+                ref_key = 'new tags' \
+                    if new_ref_type == 'tag' \
+                    else 'new branches'
+                ret.setdefault(ref_key, []).append(ref_name)
+            elif old_sha is not None:
+                # ref is a branch update
+                ret.setdefault('updated branches', {})[ref_name] = \
+                    {'old': old_sha, 'new': new_sha}
+            else:
+                # ref is an updated tag
+                ret.setdefault('updated tags', []).append(ref_name)
+    return ret
 
 
 def init(cwd,
@@ -1464,11 +1531,11 @@ def init(cwd,
     if template is not None:
         if not isinstance(template, six.string_types):
             template = str(template)
-        command.extend(['--template', template])
+        command.append('--template={0}'.format(template))
     if separate_git_dir is not None:
         if not isinstance(separate_git_dir, six.string_types):
             separate_git_dir = str(separate_git_dir)
-        command.extend(['--separate-git-dir', separate_git_dir])
+        command.append('--separate-git-dir={0}'.format(separate_git_dir))
     if shared is not None:
         if isinstance(shared, six.integer_types):
             shared = '0' + str(shared)
@@ -1476,7 +1543,7 @@ def init(cwd,
             # Using lower here because booleans would be capitalized when
             # converted to a string.
             shared = str(shared).lower()
-        command.extend(['--shared', shared])
+        command.append('--shared={0}'.format(shared))
     command.extend(_format_opts(opts))
     command.append(cwd)
     return _git_run(command,
@@ -1766,6 +1833,10 @@ def ls_remote(cwd=None,
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
+
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
 
@@ -1794,7 +1865,13 @@ def ls_remote(cwd=None,
     '''
     if cwd is not None:
         cwd = _expand_path(cwd, user)
-    remote = _add_http_basic_auth(remote, https_user, https_pass)
+    try:
+        remote = salt.utils.url.add_http_basic_auth(remote,
+                                                    https_user,
+                                                    https_pass,
+                                                    https_only=True)
+    except ValueError as exc:
+        raise SaltInvocationError(exc.__str__())
     command = ['git', 'ls-remote']
     command.extend(_format_opts(opts))
     if not isinstance(remote, six.string_types):
@@ -1821,8 +1898,8 @@ def merge(cwd,
           rev=None,
           opts='',
           user=None,
-          branch=None,
-          ignore_retcode=False):
+          ignore_retcode=False,
+          **kwargs):
     '''
     Interface to `git-merge(1)`_
 
@@ -1874,14 +1951,19 @@ def merge(cwd,
         # .. or merge another rev
         salt myminion git.merge /path/to/repo rev=upstream/foo
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    branch_ = kwargs.pop('branch', None)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
     cwd = _expand_path(cwd, user)
-    if branch:
+    if branch_:
         salt.utils.warn_until(
             'Nitrogen',
             'The \'branch\' argument to git.merge has been deprecated, please '
             'use \'rev\' instead.'
         )
-        rev = branch
+        rev = branch_
     command = ['git', 'merge']
     command.extend(_format_opts(opts))
     if rev:
@@ -1935,6 +2017,10 @@ def merge_base(cwd,
 
         .. note::
             This option requires two commits to be passed.
+
+        .. versionchanged:: 2015.8.2
+            Works properly in git versions older than 1.8.0, where the
+            ``--is-ancestor`` CLI option is not present.
 
     independent : False
         If ``True``, this function will return the IDs of the refs/commits
@@ -1991,7 +2077,8 @@ def merge_base(cwd,
 
     if all_ and (independent or is_ancestor or fork_point):
         raise SaltInvocationError(
-
+            'The \'all\' argument is not compatible with \'independent\', '
+            '\'is_ancestor\', or \'fork_point\''
         )
 
     if refs is None:
@@ -2006,25 +2093,12 @@ def merge_base(cwd,
             'Only one of \'octopus\', \'independent\', \'is_ancestor\', and '
             '\'fork_point\' is permitted'
         )
-    elif independent:
-        if all_:
-            raise SaltInvocationError(
-                '\'all\' is not compatible with \'independent\''
-            )
     elif is_ancestor:
-        if all_:
-            raise SaltInvocationError(
-                '\'all\' is not compatible with \'is_ancestor\''
-            )
         if len(refs) != 2:
             raise SaltInvocationError(
                 'Two refs/commits are required if \'is_ancestor\' is True'
             )
     elif fork_point:
-        if all_:
-            raise SaltInvocationError(
-                '\'all\' is not compatible with \'fork_point\''
-            )
         if len(refs) > 1:
             raise SaltInvocationError(
                 'At most one ref/commit can be passed if \'fork_point\' is '
@@ -2034,6 +2108,24 @@ def merge_base(cwd,
             refs = ['HEAD']
         if not isinstance(fork_point, six.string_types):
             fork_point = str(fork_point)
+
+    if is_ancestor:
+        if _LooseVersion(version(versioninfo=False)) < _LooseVersion('1.8.0'):
+            # Pre 1.8.0 git doesn't have --is-ancestor, so the logic here is a
+            # little different. First we need to resolve the first ref to a
+            # full SHA1, and then if running git merge-base on both commits
+            # returns an identical commit to the resolved first ref, we know
+            # that the first ref is an ancestor of the second ref.
+            first_commit = rev_parse(cwd,
+                                     refs[0],
+                                     opts=['--verify'],
+                                     user=user,
+                                     ignore_retcode=ignore_retcode)
+            return merge_base(cwd,
+                              refs=refs,
+                              is_ancestor=False,
+                              user=user,
+                              ignore_retcode=ignore_retcode) == first_commit
 
     command = ['git', 'merge-base']
     command.extend(_format_opts(opts))
@@ -2161,6 +2253,10 @@ def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False):
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
+
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
@@ -2192,7 +2288,7 @@ def push(cwd,
          user=None,
          identity=None,
          ignore_retcode=False,
-         branch=None):
+         **kwargs):
     '''
     Interface to `git-push(1)`_
 
@@ -2241,6 +2337,10 @@ def push(cwd,
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
+
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
@@ -2261,14 +2361,19 @@ def push(cwd,
         # Delete remote branch 'upstream/temp'
         salt myminion git.push /path/to/repo upstream :temp
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    branch_ = kwargs.pop('branch', None)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
     cwd = _expand_path(cwd, user)
-    if branch:
+    if branch_:
         salt.utils.warn_until(
             'Nitrogen',
             'The \'branch\' argument to git.push has been deprecated, please '
             'use \'ref\' instead.'
         )
-        ref = branch
+        ref = branch_
     command = ['git', 'push']
     command.extend(_format_opts(opts))
     if not isinstance(remote, six.string_types):
@@ -2330,14 +2435,18 @@ def rebase(cwd, rev='master', opts='', user=None, ignore_retcode=False):
     command.extend(opts)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
-    command.extend(shlex.split(rev))
+    command.extend(salt.utils.shlex_split(rev))
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
                     ignore_retcode=ignore_retcode)['stdout']
 
 
-def remote_get(cwd, remote='origin', user=None, ignore_retcode=False):
+def remote_get(cwd,
+               remote='origin',
+               user=None,
+               redact_auth=True,
+               ignore_retcode=False):
     '''
     Get the fetch and push URL for a specific remote
 
@@ -2351,13 +2460,26 @@ def remote_get(cwd, remote='origin', user=None, ignore_retcode=False):
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
 
+    redact_auth : True
+        Set to ``False`` to include the username/password if the remote uses
+        HTTPS Basic Auth. Otherwise, this information will be redacted.
+
+        .. warning::
+            Setting this to ``False`` will not only reveal any HTTPS Basic Auth
+            that is configured, but the return data will also be written to the
+            job cache. When possible, it is recommended to use SSH for
+            authentication.
+
+        .. versionadded:: 2015.5.6
+
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
 
         .. versionadded:: 2015.8.0
 
-    CLI Example:
+
+    CLI Examples:
 
     .. code-block:: bash
 
@@ -2365,13 +2487,100 @@ def remote_get(cwd, remote='origin', user=None, ignore_retcode=False):
         salt myminion git.remote_get /path/to/repo upstream
     '''
     cwd = _expand_path(cwd, user)
-    all_remotes = remotes(cwd, user=user, ignore_retcode=ignore_retcode)
+    all_remotes = remotes(cwd,
+                          user=user,
+                          redact_auth=redact_auth,
+                          ignore_retcode=ignore_retcode)
     if remote not in all_remotes:
         raise CommandExecutionError(
             'Remote \'{0}\' not present in git checkout located at {1}'
             .format(remote, cwd)
         )
     return all_remotes[remote]
+
+
+def remote_refs(url,
+                heads=False,
+                tags=False,
+                user=None,
+                identity=None,
+                https_user=None,
+                https_pass=None,
+                ignore_retcode=False):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Return the remote refs for the specified URL
+
+    url
+        URL of the remote repository
+
+    heads : False
+        Restrict output to heads. Can be combined with ``tags``.
+
+    tags : False
+        Restrict output to tags. Can be combined with ``heads``.
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    identity
+        Path to a private key to use for ssh URLs
+
+        .. warning::
+
+            Key must be passphraseless to allow for non-interactive login. For
+            greater security with passphraseless private keys, see the
+            `sshd(8)`_ manpage for information on securing the keypair from the
+            remote side in the ``authorized_keys`` file.
+
+            .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
+
+    https_user
+        Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
+
+    https_pass
+        Set HTTP Basic Auth password. Only accepted for HTTPS URLs.
+
+    ignore_retcode : False
+        If ``True``, do not log an error to the minion log if the git command
+        returns a nonzero exit status.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion git.remote_refs https://github.com/saltstack/salt.git
+    '''
+    command = ['git', 'ls-remote']
+    if heads:
+        command.append('--heads')
+    if tags:
+        command.append('--tags')
+    try:
+        command.append(salt.utils.url.add_http_basic_auth(url,
+                                                          https_user,
+                                                          https_pass,
+                                                          https_only=True))
+    except ValueError as exc:
+        raise SaltInvocationError(exc.__str__())
+    output = _git_run(command,
+                      runas=user,
+                      identity=identity,
+                      ignore_retcode=ignore_retcode)['stdout']
+    ret = {}
+    for line in salt.utils.itertools.split(output, '\n'):
+        try:
+            sha1_hash, ref_name = line.split(None, 1)
+        except ValueError:
+            continue
+        ret[ref_name] = sha1_hash
+    return ret
 
 
 def remote_set(cwd,
@@ -2441,7 +2650,7 @@ def remote_set(cwd,
         salt myminion git.remote_set /path/to/repo https://github.com/user/repo.git remote=upstream push_url=git@github.com:user/repo.git
     '''
     # Check if remote exists
-    if remote in remotes(cwd, user=user, ignore_retcode=ignore_retcode):
+    if remote in remotes(cwd, user=user):
         log.debug(
             'Remote \'{0}\' already exists in git checkout located at {1}, '
             'removing so it can be re-added'.format(remote, cwd)
@@ -2449,7 +2658,13 @@ def remote_set(cwd,
         command = ['git', 'remote', 'rm', remote]
         _git_run(command, cwd=cwd, runas=user, ignore_retcode=ignore_retcode)
     # Add remote
-    url = _add_http_basic_auth(url, https_user, https_pass)
+    try:
+        url = salt.utils.url.add_http_basic_auth(url,
+                                                 https_user,
+                                                 https_pass,
+                                                 https_only=True)
+    except ValueError as exc:
+        raise SaltInvocationError(exc.__str__())
     if not isinstance(remote, six.string_types):
         remote = str(remote)
     if not isinstance(url, six.string_types):
@@ -2459,11 +2674,13 @@ def remote_set(cwd,
     if push_url:
         if not isinstance(push_url, six.string_types):
             push_url = str(push_url)
-        push_url = _add_http_basic_auth(
-            push_url,
-            push_https_user,
-            push_https_pass
-        )
+        try:
+            push_url = salt.utils.url.add_http_basic_auth(push_url,
+                                                          push_https_user,
+                                                          push_https_pass,
+                                                          https_only=True)
+        except ValueError as exc:
+            raise SaltInvocationError(exc.__str__())
         command = ['git', 'remote', 'set-url', '--push', remote, push_url]
         _git_run(command, cwd=cwd, runas=user, ignore_retcode=ignore_retcode)
     return remote_get(cwd=cwd,
@@ -2472,7 +2689,7 @@ def remote_set(cwd,
                       ignore_retcode=ignore_retcode)
 
 
-def remotes(cwd, user=None, ignore_retcode=False):
+def remotes(cwd, user=None, redact_auth=True, ignore_retcode=False):
     '''
     Get fetch and push URLs for each remote in a git checkout
 
@@ -2482,6 +2699,19 @@ def remotes(cwd, user=None, ignore_retcode=False):
     user
         User under which to run the git command. By default, the command is run
         by the user under which the minion is running.
+
+    redact_auth : True
+        Set to ``False`` to include the username/password for authenticated
+        remotes in the return data. Otherwise, this information will be
+        redacted.
+
+        .. warning::
+            Setting this to ``False`` will not only reveal any HTTPS Basic Auth
+            that is configured, but the return data will also be written to the
+            job cache. When possible, it is recommended to use SSH for
+            authentication.
+
+        .. versionadded:: 2015.5.6
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -2503,7 +2733,7 @@ def remotes(cwd, user=None, ignore_retcode=False):
                       cwd=cwd,
                       runas=user,
                       ignore_retcode=ignore_retcode)['stdout']
-    for remote_line in output.splitlines():
+    for remote_line in salt.utils.itertools.split(output, '\n'):
         try:
             remote, remote_info = remote_line.split(None, 1)
         except ValueError:
@@ -2520,6 +2750,8 @@ def remotes(cwd, user=None, ignore_retcode=False):
                 'located in {2}'.format(action, remote, cwd)
             )
             continue
+        if redact_auth:
+            remote_url = salt.utils.url.redact_http_basic_auth(remote_url)
         ret.setdefault(remote, {})[action] = remote_url
     return ret
 
@@ -2828,8 +3060,8 @@ def submodule(cwd,
               opts='',
               user=None,
               identity=None,
-              init=False,
-              ignore_retcode=False):
+              ignore_retcode=False,
+              **kwargs):
     '''
     .. versionchanged:: 2015.8.0
         Added the ``command`` argument to allow for operations other than
@@ -2881,6 +3113,10 @@ def submodule(cwd,
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
+
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
@@ -2907,8 +3143,13 @@ def submodule(cwd,
         # Unregister submodule (2015.8.0 and later)
         salt myminion git.submodule /path/to/repo/sub/repo deinit
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    init_ = kwargs.pop('init', False)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
     cwd = _expand_path(cwd, user)
-    if init:
+    if init_:
         raise SaltInvocationError(
             'The \'init\' argument is no longer supported. Either set '
             '\'command\' to \'init\', or include \'--init\' in the \'opts\' '
@@ -2995,7 +3236,7 @@ def symbolic_ref(cwd,
                     ignore_retcode=ignore_retcode)['stdout']
 
 
-def version(versioninfo=False, user=None):
+def version(versioninfo=False):
     '''
     .. versionadded:: 2015.8.0
 
@@ -3004,10 +3245,6 @@ def version(versioninfo=False, user=None):
     versioninfo : False
         If ``True``, return the version in a versioninfo list (e.g. ``[2, 5,
         0]``)
-
-    user
-        User under which to run the git command. By default, the command is run
-        by the user under which the minion is running.
 
 
     CLI Example:
@@ -3020,7 +3257,7 @@ def version(versioninfo=False, user=None):
     contextkey_info = 'git.versioninfo'
     if contextkey not in __context__:
         try:
-            version_ = _git_run(['git', '--version'], runas=user)['stdout']
+            version_ = _git_run(['git', '--version'])['stdout']
         except CommandExecutionError as exc:
             log.error(
                 'Failed to obtain the git version (error follows):\n{0}'
@@ -3051,14 +3288,14 @@ def version(versioninfo=False, user=None):
 
 def worktree_add(cwd,
                  worktree_path,
-                 branch=None,
                  ref=None,
                  reset_branch=None,
                  force=None,
                  detach=False,
                  opts='',
                  user=None,
-                 ignore_retcode=False):
+                 ignore_retcode=False,
+                 **kwargs):
     '''
     .. versionadded:: 2015.8.0
 
@@ -3127,8 +3364,13 @@ def worktree_add(cwd,
         salt myminion git.worktree_add /path/to/repo/main ../hotfix ref=origin/master
         salt myminion git.worktree_add /path/to/repo/main ../hotfix branch=hotfix21 ref=v2.1.9.3
     '''
+    kwargs = salt.utils.clean_kwargs(**kwargs)
+    branch_ = kwargs.pop('branch', None)
+    if kwargs:
+        salt.utils.invalid_kwargs(kwargs)
+
     cwd = _expand_path(cwd, user)
-    if branch and detach:
+    if branch_ and detach:
         raise SaltInvocationError(
             'Only one of \'branch\' and \'detach\' is allowed'
         )
@@ -3142,9 +3384,9 @@ def worktree_add(cwd,
             )
         command.append('--detach')
     else:
-        if not branch:
-            branch = os.path.basename(worktree_path)
-        command.extend(['-B' if reset_branch else '-b', branch])
+        if not branch_:
+            branch_ = os.path.basename(worktree_path)
+        command.extend(['-B' if reset_branch else '-b', branch_])
         if force:
             command.append('--force')
     command.extend(_format_opts(opts))
@@ -3159,7 +3401,8 @@ def worktree_add(cwd,
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
-                    ignore_retcode=ignore_retcode)['stderr']
+                    ignore_retcode=ignore_retcode,
+                    redirect_stderr=True)['stdout']
 
 
 def worktree_prune(cwd,
@@ -3215,6 +3458,7 @@ def worktree_prune(cwd,
         .. versionadded:: 2015.8.0
 
     .. _`git-worktree(1)`: http://git-scm.com/docs/git-worktree
+    .. _`git-config(1)`: http://git-scm.com/docs/git-config/2.5.1
 
 
     CLI Examples:

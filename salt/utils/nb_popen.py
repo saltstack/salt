@@ -25,7 +25,9 @@ import logging
 import tempfile
 import subprocess
 
-if subprocess.mswindows:
+mswindows = (sys.platform == "win32")
+
+if mswindows:
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
     import msvcrt
@@ -59,6 +61,7 @@ class NonBlockingPopen(subprocess.Popen):
             'stderr_logger_name', self._stderr_logger_name_
         )
 
+        logging_command = kwargs.pop('logging_command', None)
         stderr = kwargs.get('stderr', None)
 
         super(NonBlockingPopen, self).__init__(*args, **kwargs)
@@ -87,9 +90,20 @@ class NonBlockingPopen(subprocess.Popen):
             self._stderr_logger_name_.format(pid=self.pid)
         )
 
-        log.info(
-            'Running command under pid {0}: {1!r}'.format(self.pid, *args)
-        )
+        if logging_command is None:
+            log.info(
+                'Running command under pid {0}: {1!r}'.format(
+                    self.pid,
+                    *args
+                )
+            )
+        else:
+            log.info(
+                'Running command under pid {0}: {1!r}'.format(
+                    self.pid,
+                    logging_command
+                )
+            )
 
     def recv(self, maxsize=None):
         return self._recv('stdout', maxsize)
@@ -111,7 +125,7 @@ class NonBlockingPopen(subprocess.Popen):
         getattr(self, which).close()
         setattr(self, which, None)
 
-    if subprocess.mswindows:
+    if mswindows:
         def send(self, input):
             if not self.stdin:
                 return None

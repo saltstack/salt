@@ -309,11 +309,30 @@ line:
 
     salt '*' state.sls my_sls_file pillar='{"hello": "world"}'
 
+Nested pillar values can also be set via the command line:
+
+.. code-block:: bash
+
+   salt '*' state.sls my_sls_file pillar='{"foo": {"bar": "baz"}}'
+
 .. note::
 
     If a key is passed on the command line that already exists on the minion,
     the key that is passed in will overwrite the entire value of that key,
     rather than merging only the specified value set via the command line.
+
+The example below will swap the value for vim with telnet in the previously
+specified list, notice the nested pillar dict:
+
+.. code-block:: bash
+
+    salt '*' state.sls edit.vim pillar='{"pkgs": {"vim": "telnet"}}'
+
+.. note::
+
+    This will attempt to install telnet on your minions, feel free to
+    uninstall the package or replace telnet value with anything else.
+
 
 More On Pillar
 ==============

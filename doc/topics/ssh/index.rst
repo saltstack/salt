@@ -1,44 +1,33 @@
+.. _salt-ssh:
+
 ========
 Salt SSH
 ========
 
-.. note::
+.. raw:: html
+ :file: index.html
 
-    Salt ssh is considered production ready in version 2014.7.0
-
-.. note::
-
-    On many systems, the ``salt-ssh`` executable will be in its own package, usually named
-    ``salt-ssh``.
-
-In version 0.17.0 of Salt a new transport system was introduced, the ability
-to use SSH for Salt communication. This addition allows for Salt routines to
-be executed on remote systems entirely through ssh, bypassing the need for
-a Salt Minion to be running on the remote systems and the need for a Salt
-Master.
-
-.. note::
-
-    The Salt SSH system does not supercede the standard Salt communication
-    systems, it simply offers an SSH based alternative that does not require
-    ZeroMQ and a remote agent. Be aware that since all communication with Salt SSH is
-    executed via SSH it is substantially slower than standard Salt with ZeroMQ.
+Getting Started
+===============
 
 Salt SSH is very easy to use, simply set up a basic `roster` file of the
 systems to connect to and run ``salt-ssh`` commands in a similar way as
 standard ``salt`` commands.
 
-.. note::
-
-    The Salt SSH eventually is supposed to support the same set of commands and
-    functionality as standard ``salt`` command.
-
-    At the moment fileserver operations must be wrapped to ensure that the
-    relevant files are delivered with the ``salt-ssh`` commands.
-    The state module is an exception, which compiles the state run on the
-    master, and in the process finds all the references to ``salt://`` paths and
-    copies those files down in the same tarball as the state run.
-    However, needed fileserver wrappers are still under development.
+- Salt ssh is considered production ready in version 2014.7.0
+- Python is required on the remote system (unless using the ``-r`` option to send raw ssh commands)
+- On many systems, the ``salt-ssh`` executable will be in its own package, usually named
+  ``salt-ssh``
+- The Salt SSH system does not supercede the standard Salt communication
+  systems, it simply offers an SSH-based alternative that does not require
+  ZeroMQ and a remote agent. Be aware that since all communication with Salt SSH is
+  executed via SSH it is substantially slower than standard Salt with ZeroMQ.
+- At the moment fileserver operations must be wrapped to ensure that the
+  relevant files are delivered with the ``salt-ssh`` commands.
+  The state module is an exception, which compiles the state run on the
+  master, and in the process finds all the references to ``salt://`` paths and
+  copies those files down in the same tarball as the state run.
+  However, needed fileserver wrappers are still under development.
 
 Salt SSH Roster
 ===============
@@ -46,7 +35,6 @@ Salt SSH Roster
 The roster system in Salt allows for remote minions to be easily defined.
 
 .. note::
-
     See the :doc:`Roster documentation </topics/ssh/roster>` for more details.
 
 Simply create the roster file, the default location is `/etc/salt/roster`:
@@ -69,9 +57,43 @@ address. A more elaborate roster can be created:
       host: 192.168.42.2
 
 .. note::
-
     sudo works only if NOPASSWD is set for user in /etc/sudoers:
     ``fred ALL=(ALL) NOPASSWD: ALL``
+
+Deploy ssh key for salt-ssh
+===========================
+
+By default, salt-ssh will generate key pairs for ssh, the default path will be
+/etc/salt/pki/master/ssh/salt-ssh.rsa
+
+You can use ssh-copy-id, (the OpenSSH key deployment tool) to deploy keys to your servers.
+
+.. code-block:: bash
+
+   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa.pub user@server.demo.com
+
+One could also create a simple shell script, named salt-ssh-copy-id.sh as follows:
+
+.. code-block:: bash
+
+   #!/bin/bash
+   if [ -z $1 ]; then
+      echo $0 user@host.com
+      exit 0
+   fi
+   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa.pub $1
+
+
+.. note::
+    Be certain to chmod +x salt-ssh-copy-id.sh.
+
+.. code-block:: bash
+
+   ./salt-ssh-copy-id.sh user@server1.host.com
+   ./salt-ssh-copy-id.sh user@server2.host.com
+
+Once keys are successfully deployed, salt-ssh can be used to control them.
+
 
 Calling Salt SSH
 ================

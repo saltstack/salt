@@ -73,13 +73,16 @@ class LoadAuthTestCase(TestCase):
 @patch('salt.auth.LoadAuth.time_auth', MagicMock(return_value=True))
 class MasterACLTestCase(integration.ModuleCase):
     '''
-    A class to check various aspects of the client ACL system
+    A class to check various aspects of the publisher ACL system
     '''
     @patch('salt.minion.MasterMinion', MagicMock())
     @patch('salt.utils.verify.check_path_traversal', MagicMock())
     def setUp(self):
         opts = self.get_config('minion', from_scratch=True)
+        opts['client_acl'] = {}
+        opts['publisher_acl'] = {}
         opts['client_acl_blacklist'] = {}
+        opts['publisher_acl_blacklist'] = {}
         opts['master_job_cache'] = ''
         opts['sign_pub_messages'] = False
         opts['con_cache'] = ''
@@ -153,7 +156,7 @@ class MasterACLTestCase(integration.ModuleCase):
     def test_master_publish_some_minions(self, fire_event_mock):
         '''
         Tests to ensure we can only target minions for which we
-        have permission with client acl.
+        have permission with publisher acl.
 
         Note that in order for these sorts of tests to run correctly that
         you should NOT patch check_minions!
@@ -166,7 +169,7 @@ class MasterACLTestCase(integration.ModuleCase):
     def test_master_not_user_glob_all(self, fire_event_mock):
         '''
         Test to ensure that we DO NOT access to a given
-        function to all users with client acl. ex:
+        function to all users with publisher acl. ex:
 
         '*':
             my_minion:

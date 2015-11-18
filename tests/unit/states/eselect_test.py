@@ -44,7 +44,7 @@ class EselectTestCase(TestCase):
 
         mock = MagicMock(return_value=target)
         with patch.dict(eselect.__salt__, {'eselect.get_current_target': mock}):
-            comt = ('Target {0!r} is already set on {1!r} module.'
+            comt = ('Target \'{0}\' is already set on \'{1}\' module.'
                     .format(target, name))
             ret.update({'comment': comt})
             self.assertDictEqual(eselect.set_(name, target), ret)

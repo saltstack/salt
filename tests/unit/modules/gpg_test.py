@@ -10,13 +10,13 @@ from __future__ import absolute_import
 from salttesting import TestCase, skipIf
 from salttesting.mock import (
     MagicMock,
+    mock_open,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
 )
 
 from salttesting.helpers import ensure_in_syspath
-from mock import mock_open
 
 ensure_in_syspath('../../')
 

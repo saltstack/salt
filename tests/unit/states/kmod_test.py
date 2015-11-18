@@ -29,85 +29,159 @@ class KmodTestCase(TestCase):
     '''
     Test cases for salt.states.kmod
     '''
-    # 'present' function tests: 1
+    # 'present' function tests: 2
 
     def test_present(self):
         '''
         Test to ensure that the specified kernel module is loaded.
         '''
-        name = 'kvm_amd'
-
+        name = 'cheese'
         ret = {'name': name,
                'result': True,
                'comment': '',
                'changes': {}}
 
-        mock = MagicMock(side_effect=[[name], [], [], [], [], [name], [],
-                                      [name]])
-        mock_t = MagicMock(side_effect=[[name], name])
-        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock,
-                                        'kmod.available': mock,
-                                        'kmod.load': mock_t}):
-            comt = ('Kernel module {0} is already present'.format(name))
-            ret.update({'comment': comt})
+        mock_mod_list = MagicMock(return_value=[name])
+        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
+            comment = 'Kernel module {0} is already present'.format(name)
+            ret.update({'comment': comment})
             self.assertDictEqual(kmod.present(name), ret)
 
+        mock_mod_list = MagicMock(return_value=[])
+        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
             with patch.dict(kmod.__opts__, {'test': True}):
-                comt = ('Module {0} is set to be loaded'.format(name))
-                ret.update({'comment': comt, 'result': None})
+                comment = 'Kernel module {0} is set to be loaded'.format(name)
+                ret.update({'comment': comment, 'result': None})
                 self.assertDictEqual(kmod.present(name), ret)
 
+        mock_mod_list = MagicMock(return_value=[])
+        mock_available = MagicMock(return_value=[name])
+        mock_load = MagicMock(return_value=[name])
+        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list,
+                                        'kmod.available': mock_available,
+                                        'kmod.load': mock_load}):
             with patch.dict(kmod.__opts__, {'test': False}):
-                comt = ('Kernel module {0} is unavailable'.format(name))
-                ret.update({'comment': comt, 'result': False})
+                comment = 'Loaded kernel module {0}'.format(name)
+                ret.update({'comment': comment,
+                            'result': True,
+                            'changes': {name: 'loaded'}})
                 self.assertDictEqual(kmod.present(name), ret)
 
-                comt = ('Loaded kernel module {0}'.format(name))
-                ret.update({'comment': comt, 'result': True,
-                            'changes': {'kvm_amd': 'loaded'}})
-                self.assertDictEqual(kmod.present(name), ret)
+    def test_present_multi(self):
+        '''
+        Test to ensure that multiple kernel modules are loaded.
+        '''
+        name = 'salted kernel'
+        mods = ['cheese', 'crackers']
+        ret = {'name': name,
+               'result': True,
+               'comment': '',
+               'changes': {}}
 
-                comt = ('Loaded kernel module {0}'.format(name))
-                ret.update({'comment': name, 'changes': {}, 'result': False})
-                self.assertDictEqual(kmod.present(name), ret)
+        mock_mod_list = MagicMock(return_value=mods)
+        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
+            comment = 'Kernel modules {0} are already present'.format(', '.join(mods))
+            ret.update({'comment': comment})
+            self.assertDictEqual(kmod.present(name, mods=mods), ret)
 
-    # 'absent' function tests: 1
+        mock_mod_list = MagicMock(return_value=[])
+        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
+            with patch.dict(kmod.__opts__, {'test': True}):
+                comment = 'Kernel modules {0} are set to be loaded'.format(', '.join(mods))
+                ret.update({'comment': comment, 'result': None})
+                self.assertDictEqual(kmod.present(name, mods=mods), ret)
+
+        mock_mod_list = MagicMock(return_value=[])
+        mock_available = MagicMock(return_value=mods)
+        mock_load = MagicMock(return_value=mods)
+        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list,
+                                        'kmod.available': mock_available,
+                                        'kmod.load': mock_load}):
+            with patch.dict(kmod.__opts__, {'test': False}):
+                comment = 'Loaded kernel modules {0}'.format(', '.join(mods))
+                ret.update({'comment': comment,
+                            'result': True,
+                            'changes': {mods[0]: 'loaded',
+                                        mods[1]: 'loaded'}})
+                self.assertDictEqual(kmod.present(name, mods=mods), ret)
+
+    # 'absent' function tests: 2
 
     def test_absent(self):
         '''
         Test to verify that the named kernel module is not loaded.
         '''
-        name = 'kvm_amd'
-
+        name = 'cheese'
         ret = {'name': name,
-               'result': None,
+               'result': True,
                'comment': '',
                'changes': {}}
 
-        mock = MagicMock(side_effect=[[name], [name], [name], []])
-        mock_t = MagicMock(side_effect=[[name], ['A']])
-        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock,
-                                        'kmod.remove': mock_t}):
+        mock_mod_list = MagicMock(return_value=[name])
+        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
             with patch.dict(kmod.__opts__, {'test': True}):
-                comt = ('Module {0} is set to be unloaded'.format(name))
-                ret.update({'comment': comt})
+                comment = 'Kernel module {0} is set to be removed'.format(name)
+                ret.update({'comment': comment, 'result': None})
                 self.assertDictEqual(kmod.absent(name), ret)
 
+        mock_mod_list = MagicMock(return_value=[name])
+        mock_remove = MagicMock(return_value=[name])
+        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list,
+                                        'kmod.remove': mock_remove}):
             with patch.dict(kmod.__opts__, {'test': False}):
-                comt = ('Removed kernel module {0}'.format(name))
-                ret.update({'comment': comt, 'result': True,
+                comment = 'Removed kernel module {0}'.format(name)
+                ret.update({'comment': comment,
+                            'result': True,
                             'changes': {name: 'removed'}})
                 self.assertDictEqual(kmod.absent(name), ret)
 
-                comt = ('Module {0} is present but failed to remove'
-                        .format(name))
-                ret.update({'comment': comt, 'result': False,
-                            'changes': {'A': 'removed'}})
+        mock_mod_list = MagicMock(return_value=[])
+        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
+            with patch.dict(kmod.__opts__, {'test': True}):
+                comment = 'Kernel module {0} is already removed'.format(name)
+                ret.update({'comment': comment,
+                            'result': True,
+                            'changes': {}})
                 self.assertDictEqual(kmod.absent(name), ret)
 
-            comt = ('Kernel module {0} is already absent'.format(name))
-            ret.update({'comment': comt, 'result': True, 'changes': {}})
-            self.assertDictEqual(kmod.absent(name), ret)
+    def test_absent_multi(self):
+        '''
+        Test to verify that multiple kernel modules are not loaded.
+        '''
+        name = 'salted kernel'
+        mods = ['cheese', 'crackers']
+        ret = {'name': name,
+               'result': True,
+               'comment': '',
+               'changes': {}}
+
+        mock_mod_list = MagicMock(return_value=mods)
+        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
+            with patch.dict(kmod.__opts__, {'test': True}):
+                comment = 'Kernel modules {0} are set to be removed'.format(', '.join(mods))
+                ret.update({'comment': comment, 'result': None})
+                self.assertDictEqual(kmod.absent(name, mods=mods), ret)
+
+        mock_mod_list = MagicMock(return_value=mods)
+        mock_remove = MagicMock(return_value=mods)
+        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list,
+                                        'kmod.remove': mock_remove}):
+            with patch.dict(kmod.__opts__, {'test': False}):
+                comment = 'Removed kernel modules {0}'.format(', '.join(mods))
+                ret.update({'comment': comment,
+                            'result': True,
+                            'changes': {mods[0]: 'removed',
+                                        mods[1]: 'removed'}})
+                self.assertDictEqual(kmod.absent(name, mods=mods), ret)
+
+        mock_mod_list = MagicMock(return_value=[])
+        with patch.dict(kmod.__salt__, {'kmod.mod_list': mock_mod_list}):
+            with patch.dict(kmod.__opts__, {'test': True}):
+                comment = 'Kernel modules {0} are already removed'.format(', '.join(mods))
+                ret.update({'comment': comment,
+                            'result': True,
+                            'changes': {}})
+                self.assertDictEqual(kmod.absent(name, mods=mods), ret)
 
 
 if __name__ == '__main__':

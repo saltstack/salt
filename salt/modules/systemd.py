@@ -297,7 +297,7 @@ def get_enabled():
         if name in units:
             continue
         # performance; if the legacy initscript doesnt exists,
-        # dont contiue up with systemd query
+        # don't contiue up with systemd query
         if not _service_is_sysv(name):
             continue
         if _sysv_is_enabled(name):

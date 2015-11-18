@@ -1,45 +1,175 @@
+.. _installation-rhel:
+
 ==============================================================
 RHEL / CentOS / Scientific Linux / Amazon Linux / Oracle Linux
 ==============================================================
 
-Installation from Repository
-============================
+.. _installation-rhel-repo:
 
-.. _installation-rhel-5:
+Salt should work properly with all mainstream derivatives of Red Hat Enterprise
+Linux, including CentOS, Scientific Linux, Oracle Linux, and Amazon Linux.
+Report any bugs or issues on the `issue tracker`__.
 
-RHEL/CentOS 5
--------------
+.. __: https://github.com/saltstack/salt/issues
 
-Due to the removal of some of Salt's dependencies from EPEL5, we have created a
-repository on `Fedora COPR`_. Moving forward, this will be the official means
-of installing Salt on RHEL5-based systems. Information on how to enable this
-repository can be found here__.
+Installation from the SaltStack Repository
+==========================================
 
-.. _`Fedora COPR`: https://copr.fedoraproject.org/
-.. __: https://copr.fedoraproject.org/coprs/saltstack/salt-el5/
+2015.8.0 and later packages for RHEL 5, 6, and 7 are available in the
+SaltStack repository.
+
+To install using the SaltStack repository:
+
+#. Run one of the following commands based on your version to import the SaltStack repository key:
+
+   Version 7:
+
+   .. code-block:: bash
+
+       wget https://repo.saltstack.com/yum/rhel7/SALTSTACK-GPG-KEY.pub
+       rpm --import SALTSTACK-GPG-KEY.pub
+       rm -f SALTSTACK-GPG-KEY.pub
+
+   Version 6:
+
+   .. code-block:: bash
+
+       wget https://repo.saltstack.com/yum/rhel6/SALTSTACK-GPG-KEY.pub
+       rpm --import SALTSTACK-GPG-KEY.pub
+       rm -f SALTSTACK-GPG-KEY.pub
+
+   Version 5:
+
+   .. code-block:: bash
+
+       wget https://repo.saltstack.com/yum/rhel5/SALTSTACK-EL5-GPG-KEY.pub
+       rpm --import SALTSTACK-EL5-GPG-KEY.pub
+       rm -f SALTSTACK-EL5-GPG-KEY.pub
+
+#. Save the following file to ``/etc/yum.repos.d/saltstack.repo``:
+
+   Version 7:
+
+   .. code-block:: cfg
+
+       ####################
+       # Enable SaltStack's package repository
+       [saltstack-repo]
+       name=SaltStack repo for RHEL/CentOS 7
+       baseurl=https://repo.saltstack.com/yum/rhel7
+       enabled=1
+       gpgcheck=1
+       gpgkey=https://repo.saltstack.com/yum/rhel7/SALTSTACK-GPG-KEY.pub
+
+   Version 6:
+
+   .. code-block:: cfg
+
+       ####################
+       # Enable SaltStack's package repository
+       [saltstack-repo]
+       name=SaltStack repo for RHEL/CentOS 6
+       baseurl=https://repo.saltstack.com/yum/rhel6
+       enabled=1
+       gpgcheck=1
+       gpgkey=https://repo.saltstack.com/yum/rhel6/SALTSTACK-GPG-KEY.pub
+
+   Version 5:
+
+   .. code-block:: cfg
+
+       ####################
+       # Enable SaltStack's package repository
+       [saltstack-repo]
+       name=SaltStack repo for RHEL/CentOS 5
+       baseurl=https://repo.saltstack.com/yum/rhel5
+       enabled=1
+       gpgcheck=1
+       gpgkey=https://repo.saltstack.com/yum/rhel5/SALTSTACK-EL5-GPG-KEY.pub
+
+#. Run ``sudo yum clean expire-cache``.
+
+#. Run ``sudo yum update``.
+
+#. Install the salt-minion, salt-master, or other Salt components:
+
+   - ``yum install salt-master``
+   - ``yum install salt-minion``
+   - ``yum install salt-ssh``
+   - ``yum install salt-syndic``
+   - ``yum install salt-cloud``
+
+.. note::
+    EPEL support is not required when installing using the SaltStack repository
+    on Red Hat 6 and 7. EPEL must be enabled when installing on Red Hat 5.
+
+Post-installation tasks
+=======================
+
+**Master**
+
+To have the Master start automatically at boot time:
+
+.. code-block:: bash
+
+    chkconfig salt-master on
+
+To start the Master:
+
+.. code-block:: bash
+
+    service salt-master start
+
+**Minion**
+
+To have the Minion start automatically at boot time:
+
+.. code-block:: bash
+
+    chkconfig salt-minion on
+
+
+To start the Minion:
+
+.. code-block:: bash
+
+    service salt-minion start
+
+Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
+
+Installation from the Community Repository
+==========================================
+
+Beginning with version 0.9.4, Salt has been available in `EPEL`_. For
+RHEL/CentOS 5, `Fedora COPR`_ is recommended due to the removal of some
+dependencies from EPEL5.
+
+On RHEL/CentOS 6, the proper Jinja package 'python-jinja2' was moved from EPEL
+to the "RHEL Server Optional Channel". Verify this repository is enabled before
+installing salt on RHEL/CentOS 6.
+
+.. note::
+   Packages in these repositories are community built, and it can
+   take a little while until the latest SaltStack release is available
+   in this repository.
+
+.. _`EPEL`: http://fedoraproject.org/wiki/EPEL
+.. _`Fedora COPR`: https://copr.fedoraproject.org/coprs/saltstack/salt-el5/
 
 RHEL/CentOS 6 and 7, Scientific Linux, etc.
 -------------------------------------------
 
-Beginning with version 0.9.4, Salt has been available in `EPEL`_. It is
-installable using yum. Salt should work properly with all mainstream
-derivatives of RHEL, including CentOS, Scientific Linux, Oracle Linux and
-Amazon Linux. Report any bugs or issues on the `issue tracker`__.
-
-.. __: https://github.com/saltstack/salt/issues
-
-On RHEL6, the proper Jinja package 'python-jinja2' was moved from EPEL to the
-"RHEL Server Optional Channel". Verify this repository is enabled before
-installing salt on RHEL6.
-
-.. _`EPEL`: http://fedoraproject.org/wiki/EPEL
-
+.. warning::
+    Salt 2015.8 requires ``python-crypto`` 2.6.1 or higher, and ``python-tornado`` version
+    4.2.1 or higher. These packages are not currently available in EPEL for
+    Red Hat 5 and 6. You must install these dependencies from another location
+    or use the SaltStack repository documented above.
 
 Enabling EPEL
 *************
 
 If the EPEL repository is not installed on your system, you can download the
-RPM from here__ for RHEL/CentOS 6 (or here__ for RHEL/CentOS 7) and install it
+RPM for `RHEL/CentOS 6`_ or for `RHEL/CentOS 7`_ and install it
 using the following command:
 
 .. code-block:: bash
@@ -48,28 +178,22 @@ using the following command:
 
 Replace ``epel-release-X-Y.rpm`` with the appropriate filename.
 
-.. __: http://download.fedoraproject.org/pub/epel/6/i386/repoview/epel-release.html
-.. __: http://download.fedoraproject.org/pub/epel/7/x86_64/repoview/epel-release.html
+.. _RHEL/CentOS 6: http://download.fedoraproject.org/pub/epel/6/i386/repoview/epel-release.html
+.. _RHEL/CentOS 7: http://download.fedoraproject.org/pub/epel/7/x86_64/repoview/epel-release.html
 
 
 Installing Stable Release
 *************************
 
-Salt is packaged separately for the minion and the master. It is necessary only
-to install the appropriate package for the role the machine will play.
+Salt is packaged separately for the minion and the master. It is necessary
+to install only the appropriate package for the role the machine will play.
 Typically, there will be one master and multiple minions.
 
-On the salt-master, run this:
-
-.. code-block:: bash
-
-    yum install salt-master
-
-On each salt-minion, run this:
-
-.. code-block:: bash
-
-    yum install salt-minion
+   - ``yum install salt-master``
+   - ``yum install salt-minion``
+   - ``yum install salt-ssh``
+   - ``yum install salt-syndic``
+   - ``yum install salt-cloud``
 
 Installing from ``epel-testing``
 ********************************
@@ -119,12 +243,10 @@ ZeroMQ 4
 ========
 
 We recommend using ZeroMQ 4 where available. SaltStack provides ZeroMQ 4.0.4
-and pyzmq 14.3.1 in a COPR_ repository. Instructions for adding this repository
-(as well as for upgrading ZeroMQ and pyzmq on existing minions) can be found
-here__.
+and pyzmq 14.3.1 in the :ref:`SaltStack Repository <installation-rhel-repo>`
+as well as a COPR_ repository.
 
-.. _COPR: http://copr.fedoraproject.org/
-.. __: http://copr.fedoraproject.org/coprs/saltstack/zeromq4/
+.. _COPR: http://copr.fedoraproject.org/coprs/saltstack/zeromq4/
 
 If this repo is added *before* Salt is installed, then installing either
 ``salt-master`` or ``salt-minion`` will automatically pull in ZeroMQ 4.0.4, and
@@ -136,7 +258,6 @@ additional states to upgrade ZeroMQ and pyzmq are unnecessary.
     because YUM will not be able to process the SHA256 checksums used by COPR.
 
 .. note::
-
     For RHEL/CentOS 5 installations, if using the new repository to install
     Salt (as detailed :ref:`above <installation-rhel-5>`), then it is not
     necessary to enable the zeromq4 COPR, as the new EL5 repository includes

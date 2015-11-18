@@ -34,7 +34,7 @@ import pprint
 import logging
 import decimal
 
-# Import Salt Cloud Libs
+# Import Salt Libs
 import salt.utils.cloud
 import salt.config as config
 from salt.exceptions import (
@@ -44,6 +44,9 @@ from salt.exceptions import (
     SaltCloudExecutionFailure,
     SaltCloudExecutionTimeout
 )
+import salt.ext.six as six
+from salt.ext.six.moves import zip
+from salt.ext.six import string_types
 
 # Import Third Party Libs
 try:
@@ -51,9 +54,6 @@ try:
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
-
-# Import 3rd-party libs
-import salt.ext.six as six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -66,10 +66,10 @@ def __virtual__():
     '''
     Check for DigitalOcean configurations
     '''
-    if not HAS_REQUESTS:
+    if get_configured_provider() is False:
         return False
 
-    if get_configured_provider() is False:
+    if get_dependencies() is False:
         return False
 
     return __virtualname__
@@ -81,8 +81,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'digital_ocean',
+        __active_provider_name__ or __virtualname__,
         ('personal_access_token',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'requests': HAS_REQUESTS}
     )
 
 
@@ -125,9 +135,9 @@ def avail_images(call=None):
         items = query(method='images', command='?page=' + str(page) + '&per_page=200')
 
         for image in items['images']:
-            ret[image['id']] = {}
+            ret[image['name']] = {}
             for item in six.iterkeys(image):
-                ret[image['id']][item] = str(image[item])
+                ret[image['name']][item] = image[item]
 
         page += 1
         try:
@@ -166,31 +176,10 @@ def list_nodes(call=None):
         raise SaltCloudSystemExit(
             'The list_nodes function must be called with -f or --function.'
         )
-
-    fetch = True
-    page = 1
-    ret = {}
-
-    while fetch:
-        items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
-        for node in items['droplets']:
-            ret[node['name']] = {
-                'id': node['id'],
-                'image': node['image']['name'],
-                'networks': str(node['networks']),
-                'size': node['size_slug'],
-                'state': str(node['status']),
-            }
-        page += 1
-        try:
-            fetch = 'next' in items['links']['pages']
-        except KeyError:
-            fetch = False
-
-    return ret
+    return _list_nodes()
 
 
-def list_nodes_full(call=None, forOutput=True):
+def list_nodes_full(call=None, for_output=True):
     '''
     Return a list of the VMs that are on the provider
     '''
@@ -198,26 +187,7 @@ def list_nodes_full(call=None, forOutput=True):
         raise SaltCloudSystemExit(
             'The list_nodes_full function must be called with -f or --function.'
         )
-
-    fetch = True
-    page = 1
-    ret = {}
-
-    while fetch:
-        items = query(method='droplets', command='?page=' + str(page) + '&per_page=200')
-        for node in items['droplets']:
-            ret[node['name']] = {}
-            for item in six.iterkeys(node):
-                value = node[item]
-                if value is not None and forOutput:
-                    value = str(value)
-                ret[node['name']][item] = value
-        page += 1
-        try:
-            fetch = 'next' in items['links']['pages']
-        except KeyError:
-            fetch = False
-    return ret
+    return _list_nodes(full=True, for_output=for_output)
 
 
 def list_nodes_select(call=None):
@@ -234,9 +204,12 @@ def get_image(vm_):
     Return the image object to use
     '''
     images = avail_images()
-    vm_image = str(config.get_cloud_config_value(
+    vm_image = config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
-    ))
+    )
+    if not isinstance(vm_image, string_types):
+        vm_image = str(vm_image)
+
     for image in images:
         if vm_image in (images[image]['name'],
                         images[image]['slug'],
@@ -393,6 +366,39 @@ def create(vm_):
             raise SaltCloudConfigError("'ipv6' should be a boolean value.")
         kwargs['ipv6'] = ipv6
 
+    create_dns_record = config.get_cloud_config_value(
+        'create_dns_record', vm_, __opts__, search_global=False, default=None,
+    )
+
+    if create_dns_record:
+        log.info('create_dns_record: will attempt to write DNS records')
+        default_dns_domain = None
+        dns_domain_name = vm_['name'].split('.')
+        if len(dns_domain_name) > 2:
+            log.debug('create_dns_record: inferring default dns_hostname, dns_domain from minion name as FQDN')
+            default_dns_hostname = '.'.join(dns_domain_name[:-2])
+            default_dns_domain = '.'.join(dns_domain_name[-2:])
+        else:
+            log.debug("create_dns_record: can't infer dns_domain from {0}".format(vm_['name']))
+            default_dns_hostname = dns_domain_name[0]
+
+        dns_hostname = config.get_cloud_config_value(
+            'dns_hostname', vm_, __opts__, search_global=False, default=default_dns_hostname,
+        )
+        dns_domain = config.get_cloud_config_value(
+            'dns_domain', vm_, __opts__, search_global=False, default=default_dns_domain,
+        )
+        if dns_hostname and dns_domain:
+            log.info('create_dns_record: using dns_hostname="{0}", dns_domain="{1}"'.format(dns_hostname, dns_domain))
+            __add_dns_addr__ = lambda t, d: post_dns_record(dns_domain, dns_hostname, t, d)
+            log.debug('create_dns_record: {0}'.format(__add_dns_addr__))
+        else:
+            log.error('create_dns_record: could not determine dns_hostname and/or dns_domain')
+            raise SaltCloudConfigError(
+                '\'create_dns_record\' must be a dict specifying "domain" '
+                'and "hostname" or the minion name must be an FQDN.'
+            )
+
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
@@ -445,11 +451,31 @@ def create(vm_):
         finally:
             raise SaltCloudSystemExit(str(exc))
 
-    for network in data['networks']['v4']:
-        if network['type'] == 'public':
-            ip_address = network['ip_address']
+    if not vm_.get('ssh_host'):
+        vm_['ssh_host'] = None
+
+    # add DNS records, set ssh_host, default to first found IP, preferring IPv4 for ssh bootstrap script target
+    addr_families, dns_arec_types = (('v4', 'v6'), ('A', 'AAAA'))
+    arec_map = dict(list(zip(addr_families, dns_arec_types)))
+    for facing, addr_family, ip_address in [(net['type'], family, net['ip_address'])
+                                            for family in addr_families
+                                            for net in data['networks'][family]]:
+        log.info('found {0} IP{1} interface for "{2}"'.format(facing, addr_family, ip_address))
+        dns_rec_type = arec_map[addr_family]
+        if facing == 'public':
+            if create_dns_record:
+                __add_dns_addr__(dns_rec_type, ip_address)
+            if not vm_['ssh_host']:
+                vm_['ssh_host'] = ip_address
+
+    if vm_['ssh_host'] is None:
+        raise SaltCloudSystemExit(
+            'No suitable IP addresses found for ssh minion bootstrapping: {0}'.format(repr(data['networks']))
+        )
+
+    log.debug('Found public IP address to use for ssh minion bootstrapping: {0}'.format(vm_['ssh_host']))
+
     vm_['key_filename'] = key_filename
-    vm_['ssh_host'] = ip_address
     ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data)
 
@@ -565,7 +591,7 @@ def _get_node(name):
     attempts = 10
     while attempts >= 0:
         try:
-            return list_nodes_full(forOutput=False)[name]
+            return list_nodes_full(for_output=False)[name]
         except KeyError:
             attempts -= 1
             log.debug(
@@ -592,10 +618,20 @@ def list_keypairs(call=None):
 
     items = query(method='account/keys')
     ret = {}
-    for keypair in items['ssh_keys']:
-        ret[keypair['name']] = {}
-        for item in six.iterkeys(keypair):
-            ret[keypair['name']][item] = str(keypair[item])
+    for key_pair in items['ssh_keys']:
+        name = key_pair['name']
+        if name in ret:
+            raise SaltCloudSystemExit(
+                'A duplicate key pair name, \'{0}\', was found in DigitalOcean\'s '
+                'key pair list. Please change the key name stored by DigitalOcean. '
+                'Be sure to adjust the value of \'ssh_key_file\' in your cloud '
+                'profile or provider configuration, if necessary.'.format(
+                    name
+                )
+            )
+        ret[name] = {}
+        for item in six.iterkeys(key_pair):
+            ret[name][item] = str(key_pair[item])
 
     return ret
 
@@ -714,15 +750,32 @@ def destroy(name, call=None):
     data = show_instance(name, call='action')
     node = query(method='droplets', droplet_id=data['id'], http_method='delete')
 
-    delete_record = config.get_cloud_config_value(
-        'delete_dns_record', get_configured_provider(), __opts__, search_global=False, default=None,
-    )
-    if delete_record is not None:
-        if not isinstance(delete_record, bool):
-            raise SaltCloudConfigError("'delete_dns_record' should be a boolean value.")
+    ## This is all terribly optomistic:
+    # vm_ = get_vm_config(name=name)
+    # delete_dns_record = config.get_cloud_config_value(
+    #     'delete_dns_record', vm_, __opts__, search_global=False, default=None,
+    # )
+    # TODO: when _vm config data can be made available, we should honor the configuration settings,
+    # but until then, we should assume stale DNS records are bad, and default behavior should be to
+    # delete them if we can. When this is resolved, also resolve the comments a couple of lines below.
+    delete_dns_record = True
 
-    if delete_record:
-        delete_dns_record(name)
+    if not isinstance(delete_dns_record, bool):
+        raise SaltCloudConfigError(
+            '\'delete_dns_record\' should be a boolean value.'
+        )
+    # When the "to do" a few lines up is resolved, remove these lines and use the if/else logic below.
+    log.debug('Deleting DNS records for {0}.'.format(name))
+    destroy_dns_records(name)
+
+    # Until the "to do" from line 748 is taken care of, we don't need this logic.
+    # if delete_dns_record:
+    #    log.debug('Deleting DNS records for {0}.'.format(name))
+    #    destroy_dns_records(name)
+    # else:
+    #    log.debug('delete_dns_record : {0}'.format(delete_dns_record))
+    #    for line in pprint.pformat(dir()).splitlines():
+    #       log.debug('delete  context: {0}'.format(line))
 
     salt.utils.cloud.fire_event(
         'event',
@@ -738,12 +791,38 @@ def destroy(name, call=None):
     return node
 
 
+def post_dns_record(dns_domain, name, record_type, record_data):
+    '''
+    Creates or updates a DNS record for the given name if the domain is managed with DO.
+    '''
+    domain = query(method='domains', droplet_id=dns_domain)
+
+    if domain:
+        result = query(
+            method='domains',
+            droplet_id=dns_domain,
+            command='records',
+            args={'type': record_type, 'name': name, 'data': record_data},
+            http_method='post'
+        )
+        return result
+
+    return False
+
+# Delete this with create_dns_record() and delete_dns_record() for Carbon release
+__deprecated_fqdn_parsing = lambda fqdn: ('.'.join(fqdn.split('.')[-2:]), '.'.join(fqdn.split('.')[:-2]))
+
+
 def create_dns_record(hostname, ip_address):
-    '''
-    Creates a DNS record for the given hostname if the domain is managed with DO.
-    '''
-    domainname = '.'.join(hostname.split('.')[-2:])
-    subdomain = '.'.join(hostname.split('.')[:-2])
+    salt.utils.warn_until(
+        'Carbon',
+        'create_dns_record() is deprecated and will be removed in Carbon. Please use post_dns_record() instead.'
+    )
+    return __deprecated_create_dns_record(hostname, ip_address)
+
+
+def __deprecated_create_dns_record(hostname, ip_address):
+    domainname, subdomain = __deprecated_fqdn_parsing(hostname)
     domain = query(method='domains', droplet_id=domainname)
 
     if domain:
@@ -759,12 +838,48 @@ def create_dns_record(hostname, ip_address):
     return False
 
 
+def destroy_dns_records(fqdn):
+    '''
+    Deletes DNS records for the given hostname if the domain is managed with DO.
+    '''
+    domain = '.'.join(fqdn.split('.')[-2:])
+    hostname = '.'.join(fqdn.split('.')[:-2])
+    response = query(method='domains', droplet_id=domain, command='records')
+    log.debug("found DNS records: {0}".format(pprint.pformat(response)))
+    records = response['domain_records']
+
+    if records:
+        record_ids = [r['id'] for r in records if r['name'].decode() == hostname]
+        log.debug("deleting DNS record IDs: {0}".format(repr(record_ids)))
+        for id in record_ids:
+            try:
+                log.info('deleting DNS record {0}'.format(id))
+                ret = query(
+                    method='domains',
+                    droplet_id=domain,
+                    command='records/{0}'.format(id),
+                    http_method='delete'
+                )
+            except SaltCloudSystemExit:
+                log.error('failed to delete DNS domain {0} record ID {1}.'.format(domain, hostname))
+            log.debug('DNS deletion REST call returned: {0}'.format(pprint.pformat(ret)))
+
+    return False
+
+
 def delete_dns_record(hostname):
+    salt.utils.warn_until(
+        'Carbon',
+        'delete_dns_record() is deprecated and will be removed in Carbon. Please use destroy_dns_records() instead.'
+    )
+    return __deprecated_delete_dns_record(hostname)
+
+
+def __deprecated_delete_dns_record(hostname):
     '''
     Deletes a DNS for the given hostname if the domain is managed with DO.
     '''
-    domainname = '.'.join(hostname.split('.')[-2:])
-    subdomain = '.'.join(hostname.split('.')[:-2])
+    domainname, subdomain = __deprecated_fqdn_parsing(hostname)
     records = query(method='domains', droplet_id=domainname, command='records')
 
     if records:
@@ -776,7 +891,6 @@ def delete_dns_record(hostname):
                     command='records/' + str(record['id']),
                     http_method='delete'
                 )
-
     return False
 
 
@@ -817,3 +931,301 @@ def show_pricing(kwargs=None, call=None):
         ret['_raw'] = raw
 
     return {profile['profile']: ret}
+
+
+def list_floating_ips(call=None):
+    '''
+    Return a list of the floating ips that are on the provider
+
+    .. versionadded:: Boron
+
+    CLI Examples:
+
+    ... code-block:: bash
+
+        salt-cloud -f list_floating_ips my-digitalocean-config
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_floating_ips function must be called with '
+            '-f or --function, or with the --list-floating-ips option'
+        )
+
+    fetch = True
+    page = 1
+    ret = {}
+
+    while fetch:
+        items = query(method='floating_ips',
+                      command='?page=' + str(page) + '&per_page=200')
+
+        for floating_ip in items['floating_ips']:
+            ret[floating_ip['ip']] = {}
+            for item in six.iterkeys(floating_ip):
+                ret[floating_ip['ip']][item] = floating_ip[item]
+
+        page += 1
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
+
+    return ret
+
+
+def show_floating_ip(kwargs=None, call=None):
+    '''
+    Show the details of a floating IP
+
+    .. versionadded:: Boron
+
+    CLI Examples:
+
+    ... code-block:: bash
+
+        salt-cloud -f show_floating_ip my-digitalocean-config floating_ip='45.55.96.47'
+    '''
+    if call != 'function':
+        log.error(
+            'The show_floating_ip function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'floating_ip' not in kwargs:
+        log.error('A floating IP is required.')
+        return False
+
+    floating_ip = kwargs['floating_ip']
+    log.debug('Floating ip is {0}'.format(floating_ip))
+
+    details = query(method='floating_ips', command=floating_ip)
+
+    return details
+
+
+def create_floating_ip(kwargs=None, call=None):
+    '''
+    Create a new floating IP
+
+    .. versionadded:: Boron
+
+    CLI Examples:
+
+    ... code-block:: bash
+
+        salt-cloud -f create_floating_ip my-digitalocean-config region='NYC2'
+
+        salt-cloud -f create_floating_ip my-digitalocean-config droplet_id='1234567'
+    '''
+    if call != 'function':
+        log.error(
+            'The create_floating_ip function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'droplet_id' in kwargs:
+        result = query(method='floating_ips',
+                           args={'droplet_id': kwargs['droplet_id']},
+                           http_method='post')
+
+        return result
+
+    elif 'region' in kwargs:
+        result = query(method='floating_ips',
+                           args={'region': kwargs['region']},
+                           http_method='post')
+
+        return result
+
+    else:
+        log.error('A droplet_id or region is required.')
+        return False
+
+
+def delete_floating_ip(kwargs=None, call=None):
+    '''
+    Delete a floating IP
+
+    .. versionadded:: Boron
+
+    CLI Examples:
+
+    ... code-block:: bash
+
+        salt-cloud -f delete_floating_ip my-digitalocean-config floating_ip='45.55.96.47'
+    '''
+    if call != 'function':
+        log.error(
+            'The delete_floating_ip function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'floating_ip' not in kwargs:
+        log.error('A floating IP is required.')
+        return False
+
+    floating_ip = kwargs['floating_ip']
+    log.debug('Floating ip is {0}'.format('floating_ip'))
+
+    result = query(method='floating_ips',
+                   command=floating_ip,
+                   http_method='delete')
+
+    return result
+
+
+def assign_floating_ip(kwargs=None, call=None):
+    '''
+    Assign a floating IP
+
+    .. versionadded:: Boron
+
+    CLI Examples:
+
+    ... code-block:: bash
+
+        salt-cloud -f assign_floating_ip my-digitalocean-config droplet_id=1234567 floating_ip='45.55.96.47'
+    '''
+    if call != 'function':
+        log.error(
+            'The assign_floating_ip function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'floating_ip' and 'droplet_id' not in kwargs:
+        log.error('A floating IP and droplet_id is required.')
+        return False
+
+    result = query(method='floating_ips',
+                   command=kwargs['floating_ip'] + '/actions',
+                   args={'droplet_id': kwargs['droplet_id'], 'type': 'assign'},
+                   http_method='post')
+
+    return result
+
+
+def unassign_floating_ip(kwargs=None, call=None):
+    '''
+    Unassign a floating IP
+
+    .. versionadded:: Boron
+
+    CLI Examples:
+
+    ... code-block:: bash
+
+        salt-cloud -f unassign_floating_ip my-digitalocean-config floating_ip='45.55.96.47'
+    '''
+    if call != 'function':
+        log.error(
+            'The inassign_floating_ip function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'floating_ip' not in kwargs:
+        log.error('A floating IP is required.')
+        return False
+
+    result = query(method='floating_ips',
+                   command=kwargs['floating_ip'] + '/actions',
+                   args={'type': 'unassign'},
+                   http_method='post')
+
+    return result
+
+
+def _list_nodes(full=False, for_output=False):
+    '''
+    Helper function to format and parse node data.
+    '''
+    fetch = True
+    page = 1
+    ret = {}
+
+    while fetch:
+        items = query(method='droplets',
+                      command='?page=' + str(page) + '&per_page=200')
+        for node in items['droplets']:
+            name = node['name']
+            ret[name] = {}
+            if full:
+                ret[name] = _get_full_output(node, for_output=for_output)
+            else:
+                public_ips, private_ips = _get_ips(node['networks'])
+                ret[name] = {
+                    'id': node['id'],
+                    'image': node['image']['name'],
+                    'name': name,
+                    'private_ips': private_ips,
+                    'public_ips': public_ips,
+                    'size': node['size_slug'],
+                    'state': str(node['status']),
+                }
+
+        page += 1
+        try:
+            fetch = 'next' in items['links']['pages']
+        except KeyError:
+            fetch = False
+
+    return ret
+
+
+def _get_full_output(node, for_output=False):
+    '''
+    Helper function for _list_nodes to loop through all node information.
+    Returns a dictionary containing the full information of a node.
+    '''
+    ret = {}
+    for item in six.iterkeys(node):
+        value = node[item]
+        if value is not None and for_output:
+            value = str(value)
+        ret[item] = value
+    return ret
+
+
+def _get_ips(networks):
+    '''
+    Helper function for list_nodes. Returns public and private ip lists based on a
+    given network dictionary.
+    '''
+    v4s = networks.get('v4')
+    v6s = networks.get('v6')
+    public_ips = []
+    private_ips = []
+
+    if v4s:
+        for item in v4s:
+            ip_type = item.get('type')
+            ip_address = item.get('ip_address')
+            if ip_type == 'public':
+                public_ips.append(ip_address)
+            if ip_type == 'private':
+                private_ips.append(ip_address)
+
+    if v6s:
+        for item in v6s:
+            ip_type = item.get('type')
+            ip_address = item.get('ip_address')
+            if ip_type == 'public':
+                public_ips.append(ip_address)
+            if ip_type == 'private':
+                private_ips.append(ip_address)
+
+    return public_ips, private_ips

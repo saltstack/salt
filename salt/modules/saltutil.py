@@ -94,15 +94,16 @@ def _sync(form, saltenv=None):
     remote = set()
     source = salt.utils.url.create('_' + form)
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
+    cumask = os.umask(0o77)
     if not os.path.isdir(mod_dir):
-        log.info('Creating module dir {0!r}'.format(mod_dir))
+        log.info('Creating module dir \'{0}\''.format(mod_dir))
         try:
             os.makedirs(mod_dir)
         except (IOError, OSError):
             msg = 'Cannot create cache module directory {0}. Check permissions.'
             log.error(msg.format(mod_dir))
     for sub_env in saltenv:
-        log.info('Syncing {0} for environment {1!r}'.format(form, sub_env))
+        log.info('Syncing {0} for environment \'{1}\''.format(form, sub_env))
         cache = []
         log.info('Loading cache from {0}, for {1})'.format(source, sub_env))
         # Grab only the desired files (.py, .pyx, .so)
@@ -117,13 +118,13 @@ def _sync(form, saltenv=None):
                 sub_env,
                 '_{0}'.format(form)
                 )
-        log.debug('Local cache dir: {0!r}'.format(local_cache_dir))
+        log.debug('Local cache dir: \'{0}\''.format(local_cache_dir))
         for fn_ in cache:
             relpath = os.path.relpath(fn_, local_cache_dir)
             relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
             remote.add(relpath)
             dest = os.path.join(mod_dir, relpath)
-            log.info('Copying {0!r} to {1!r}'.format(fn_, dest))
+            log.info('Copying \'{0}\' to \'{1}\''.format(fn_, dest))
             if os.path.isfile(dest):
                 # The file is present, if the sum differs replace it
                 hash_type = __opts__.get('hash_type', 'md5')
@@ -161,6 +162,14 @@ def _sync(form, saltenv=None):
         mod_file = os.path.join(__opts__['cachedir'], 'module_refresh')
         with salt.utils.fopen(mod_file, 'a+') as ofile:
             ofile.write('')
+    if form == 'grains' and \
+       __opts__.get('grains_cache') and \
+       os.path.isfile(os.path.join(__opts__['cachedir'], 'grains.cache.p')):
+        try:
+            os.remove(os.path.join(__opts__['cachedir'], 'grains.cache.p'))
+        except OSError:
+            log.error('Could not remove grains cache!')
+    os.umask(cumask)
     return ret
 
 
@@ -185,7 +194,7 @@ def update(version=None):
     '''
     Update the salt minion from the URL defined in opts['update_url']
     SaltStack, Inc provides the latest builds here:
-    update_url: http://docs.saltstack.com/downloads/
+    update_url: https://repo.saltstack.com/windows/
 
     Be aware that as of 2014-8-11 there's a bug in esky such that only the
     latest version available in the update_url can be downloaded and installed.
@@ -383,23 +392,44 @@ def sync_returners(saltenv=None, refresh=True):
     return ret
 
 
-def sync_outputters(saltenv=None, refresh=True):
+def sync_proxymodules(saltenv=None, refresh=False):
     '''
-    Sync the outputters from the _outputters directory on the salt master file
+    Sync the proxy modules from the _proxy directory on the salt master file
     server. This function is environment aware, pass the desired environment
-    to grab the contents of the _outputters directory, base is the default
+    to grab the contents of the _returners directory, base is the default
     environment.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' saltutil.sync_outputters
+        salt '*' saltutil.sync_proxymodules
     '''
-    ret = _sync('outputters', saltenv)
+    ret = _sync('proxy', saltenv)
     if refresh:
         refresh_modules()
     return ret
+
+
+def sync_output(saltenv=None, refresh=True):
+    '''
+    Sync the output modules from the _output directory on the salt master file
+    server. This function is environment aware. Pass the desired environment
+    to grab the contents of the _output directory. Base is the default
+    environment.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_output
+    '''
+    ret = _sync('output', saltenv)
+    if refresh:
+        refresh_modules()
+    return ret
+
+sync_outputters = salt.utils.alias_function(sync_output, 'sync_outputters')
 
 
 def sync_utils(saltenv=None, refresh=True):
@@ -445,7 +475,8 @@ def sync_log_handlers(saltenv=None, refresh=True):
 def sync_all(saltenv=None, refresh=True):
     '''
     Sync down all of the dynamic modules from the file server for a specific
-    environment
+    environment. This function synchronizes custom modules, states, beacons,
+    grains, returners, output modules, renderers, and utils.
 
     refresh : True
         Also refresh the execution modules and pillar data available to the minion.
@@ -481,9 +512,10 @@ def sync_all(saltenv=None, refresh=True):
     ret['grains'] = sync_grains(saltenv, False)
     ret['renderers'] = sync_renderers(saltenv, False)
     ret['returners'] = sync_returners(saltenv, False)
-    ret['outputters'] = sync_outputters(saltenv, False)
+    ret['output'] = sync_output(saltenv, False)
     ret['utils'] = sync_utils(saltenv, False)
     ret['log_handlers'] = sync_log_handlers(saltenv, False)
+    ret['proxymodules'] = sync_proxymodules(saltenv, False)
     if refresh:
         refresh_modules()
         refresh_pillar()
@@ -525,7 +557,7 @@ def refresh_pillar():
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
 
-pillar_refresh = refresh_pillar
+pillar_refresh = salt.utils.alias_function(refresh_pillar, 'pillar_refresh')
 
 
 def refresh_modules(async=True):
@@ -634,7 +666,8 @@ def find_job(jid):
 
 def find_cached_job(jid):
     '''
-    Return the data for a specific cached job id
+    Return the data for a specific cached job id. Note this only works if
+    cache_jobs has previously been set to True on the minion.
 
     CLI Example:
 
@@ -646,7 +679,11 @@ def find_cached_job(jid):
     proc_dir = os.path.join(__opts__['cachedir'], 'minion_jobs')
     job_dir = os.path.join(proc_dir, str(jid))
     if not os.path.isdir(job_dir):
-        return
+        if not __opts__.get('cache_jobs'):
+            return ('Local jobs cache directory not found; you may need to'
+                    ' enable cache_jobs on this minion')
+        else:
+            return 'Local jobs cache directory {0} not found'.format(job_dir)
     path = os.path.join(job_dir, 'return.p')
     with salt.utils.fopen(path, 'rb') as fp_:
         buf = fp_.read()
@@ -892,7 +929,7 @@ def runner(_fun, **kwargs):
     '''
     Execute a runner module (this function must be run on the master)
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         The name of the function to run
@@ -922,7 +959,7 @@ def wheel(_fun, **kwargs):
     '''
     Execute a wheel module (this function must be run on the master)
 
-    .. versionadded:: 2014.7
+    .. versionadded:: 2014.7.0
 
     name
         The name of the function to run

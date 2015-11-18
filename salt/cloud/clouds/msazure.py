@@ -6,7 +6,7 @@ Azure Cloud Module
 The Azure cloud module is used to control access to Microsoft Azure
 
 :depends:
-    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure/0.9.0>`_ >= 0.11.1
+    * `Microsoft Azure SDK for Python <https://pypi.python.org/pypi/azure/1.0.2>`_ >= 1.0.2
     * python-requests, for Python < 2.7.9
 :configuration:
     Required provider parameters:
@@ -44,6 +44,7 @@ import copy
 import logging
 import pprint
 import time
+import yaml
 
 # Import salt libs
 import salt.config as config
@@ -51,17 +52,14 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.utils.cloud
 
 # Import 3rd-party libs
-import yaml
-
-# Import azure libs
 HAS_LIBS = False
 try:
     import azure
     import azure.storage
     import azure.servicemanagement
-    from azure import (WindowsAzureConflictError,
-                       WindowsAzureMissingResourceError,
-                       WindowsAzureError)
+    from azure.common import (AzureConflictHttpError,
+                       AzureMissingResourceHttpError,
+                       AzureException)
     import salt.utils.msazure
     from salt.utils.msazure import object_to_dict
     HAS_LIBS = True
@@ -80,10 +78,10 @@ def __virtual__():
     '''
     Check for Azure configurations.
     '''
-    if not HAS_LIBS:
+    if get_configured_provider() is False:
         return False
 
-    if get_configured_provider() is False:
+    if get_dependencies() is False:
         return False
 
     return __virtualname__
@@ -97,6 +95,16 @@ def get_configured_provider():
         __opts__,
         __active_provider_name__ or __virtualname__,
         ('subscription_id', 'certificate_path')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'azure': HAS_LIBS}
     )
 
 
@@ -214,7 +222,7 @@ def list_nodes(conn=None, call=None):
     nodes = list_nodes_full(conn, call)
     for node in nodes:
         ret[node] = {}
-        for prop in ('id', 'image', 'size', 'state', 'private_ips', 'public_ips'):
+        for prop in ('id', 'image', 'name', 'size', 'state', 'private_ips', 'public_ips'):
             ret[node][prop] = nodes[node][prop]
     return ret
 
@@ -472,9 +480,24 @@ def create(vm_):
             admin_username=vm_['win_username'],
             admin_password=vm_['win_password'],
         )
+
+        smb_port = '445'
+        if 'smb_port' in vm_:
+            smb_port = vm_['smb_port']
+
+        smb_endpoint = azure.servicemanagement.ConfigurationSetInputEndpoint(
+            name='SMB',
+            protocol='TCP',
+            port=smb_port,
+            local_port=smb_port,
+        )
+
+        network_config.input_endpoints.input_endpoints.append(smb_endpoint)
+
         # Domain and WinRM configuration not yet supported by Salt Cloud
         system_config.domain_join = None
         system_config.win_rm = None
+
     else:
         system_config = azure.servicemanagement.LinuxConfigurationSet(
             host_name=vm_['name'],
@@ -524,10 +547,9 @@ def create(vm_):
 
     # Azure lets you open winrm on a new VM
     # Can open up specific ports in Azure; but not on Windows
-
     try:
         conn.create_hosted_service(**service_kwargs)
-    except WindowsAzureConflictError:
+    except AzureConflictHttpError:
         log.debug('Cloud service already exists')
     except Exception as exc:
         error = 'The hosted service name is invalid.'
@@ -557,7 +579,7 @@ def create(vm_):
         result = conn.create_virtual_machine_deployment(**vm_kwargs)
         log.debug('Request ID for machine: {0}'.format(result.request_id))
         _wait_for_async(conn, result.request_id)
-    except WindowsAzureConflictError:
+    except AzureConflictHttpError:
         log.debug('Conflict error. The deployment may already exist, trying add_role')
         # Deleting two useless keywords
         del vm_kwargs['deployment_slot']
@@ -602,7 +624,7 @@ def create(vm_):
             data = show_instance(vm_['name'], call='action')
             if 'url' in data and data['url'] != str(''):
                 return data['url']
-        except WindowsAzureMissingResourceError:
+        except AzureMissingResourceHttpError:
             pass
         time.sleep(1)
         return False
@@ -877,7 +899,7 @@ def _wait_for_async(conn, request_id):
         result = conn.get_operation_status(request_id)
 
     if result.status != 'Succeeded':
-        raise WindowsAzureError('Operation failed. {message} ({code})'
+        raise AzureException('Operation failed. {message} ({code})'
                                 .format(message=result.error.message,
                                         code=result.error.code))
 
@@ -916,13 +938,13 @@ def destroy(name, conn=None, call=None, kwargs=None):
         log.debug('Deleting role')
         result = conn.delete_role(service_name, service_name, name)
         delete_type = 'delete_role'
-    except WindowsAzureError:
+    except AzureException:
         log.debug('Failed to delete role, deleting deployment')
         try:
             result = conn.delete_deployment(service_name, service_name)
-        except WindowsAzureConflictError as exc:
+        except AzureConflictHttpError as exc:
             log.error(exc.message)
-            return {'Error': exc.message}
+            raise SaltCloudSystemExit('{0}: {1}'.format(name, exc.message))
         delete_type = 'delete_deployment'
     _wait_for_async(conn, result.request_id)
     ret[name] = {
@@ -951,7 +973,7 @@ def destroy(name, conn=None, call=None, kwargs=None):
             try:
                 data = delete_disk(kwargs={'name': disk_name, 'delete_vhd': cleanup_vhds}, call='function')
                 return data
-            except WindowsAzureConflictError:
+            except AzureConflictHttpError:
                 log.debug('Waiting for VM to be destroyed...')
             time.sleep(5)
             return False
@@ -982,7 +1004,7 @@ def destroy(name, conn=None, call=None, kwargs=None):
                 try:
                     data = delete_service(kwargs={'name': service_name}, call='function')
                     return data
-                except WindowsAzureConflictError:
+                except AzureConflictHttpError:
                     log.debug('Waiting for disk to be deleted...')
                 time.sleep(5)
                 return False
@@ -1029,7 +1051,7 @@ def list_storage_services(conn=None, call=None):
 
 def get_operation_status(kwargs=None, conn=None, call=None):
     '''
-    .. versionadded:: 2015.2
+    .. versionadded:: 2015.8.0
 
     Get Operation Status, based on a request ID
 
@@ -1162,12 +1184,12 @@ def show_storage_keys(kwargs=None, conn=None, call=None):
         data = conn.get_storage_account_keys(
             kwargs['name'],
         )
-    except WindowsAzureMissingResourceError as exc:
+    except AzureMissingResourceHttpError as exc:
         storage_data = show_storage(kwargs={'name': kwargs['name']}, call='function')
         if storage_data['storage_service_properties']['status'] == 'Creating':
-            return {'Error': 'The storage account keys have not yet been created'}
+            raise SaltCloudSystemExit('The storage account keys have not yet been created.')
         else:
-            return {'Error': exc.message}
+            raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['name'], exc.message))
     return object_to_dict(data)
 
 
@@ -1223,8 +1245,8 @@ def create_storage(kwargs=None, conn=None, call=None):
             account_type=kwargs.get('account_type', 'Standard_GRS'),
         )
         return {'Success': 'The storage account was successfully created'}
-    except WindowsAzureConflictError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the storage account already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. This usually means that the storage account already exists.')
 
 
 def update_storage(kwargs=None, conn=None, call=None):
@@ -1300,8 +1322,8 @@ def regenerate_storage_keys(kwargs=None, conn=None, call=None):
             key_type=kwargs['key_type'],
         )
         return show_storage_keys(kwargs={'name': kwargs['name']}, call='function')
-    except WindowsAzureConflictError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the storage account already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. This usually means that the storage account already exists.')
 
 
 def delete_storage(kwargs=None, conn=None, call=None):
@@ -1333,8 +1355,8 @@ def delete_storage(kwargs=None, conn=None, call=None):
     try:
         data = conn.delete_storage_account(kwargs['name'])
         return {'Success': 'The storage account was successfully deleted'}
-    except WindowsAzureMissingResourceError as exc:
-        return {'Error': exc.message}
+    except AzureMissingResourceHttpError as exc:
+        raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['name'], exc.message))
 
 
 def list_services(kwargs=None, conn=None, call=None):
@@ -1442,8 +1464,8 @@ def create_service(kwargs=None, conn=None, call=None):
             kwargs.get('extended_properties', None),
         )
         return {'Success': 'The service was successfully created'}
-    except WindowsAzureConflictError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the service already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. This usually means that the service already exists.')
 
 
 def delete_service(kwargs=None, conn=None, call=None):
@@ -1473,10 +1495,10 @@ def delete_service(kwargs=None, conn=None, call=None):
         conn = get_conn()
 
     try:
-        data = conn.delete_hosted_service(kwargs['name'])
+        conn.delete_hosted_service(kwargs['name'])
         return {'Success': 'The service was successfully deleted'}
-    except WindowsAzureMissingResourceError as exc:
-        return {'Error': exc.message}
+    except AzureMissingResourceHttpError as exc:
+        raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['name'], exc.message))
 
 
 def list_disks(kwargs=None, conn=None, call=None):
@@ -1605,8 +1627,8 @@ def delete_disk(kwargs=None, conn=None, call=None):
     try:
         data = conn.delete_disk(kwargs['name'], kwargs.get('delete_vhd', False))
         return {'Success': 'The disk was successfully deleted'}
-    except WindowsAzureMissingResourceError as exc:
-        return {'Error': exc.message}
+    except AzureMissingResourceHttpError as exc:
+        raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['name'], exc.message))
 
 
 def update_disk(kwargs=None, conn=None, call=None):
@@ -1770,8 +1792,9 @@ def add_service_certificate(kwargs=None, conn=None, call=None):
             kwargs['password'],
         )
         return {'Success': 'The service certificate was successfully added'}
-    except WindowsAzureConflictError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the service certificate already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. This usually means that the '
+                                  'service certificate already exists.')
 
 
 def delete_service_certificate(kwargs=None, conn=None, call=None):
@@ -1814,8 +1837,8 @@ def delete_service_certificate(kwargs=None, conn=None, call=None):
             kwargs['thumbprint'],
         )
         return {'Success': 'The service certificate was successfully deleted'}
-    except WindowsAzureMissingResourceError as exc:
-        return {'Error': exc.message}
+    except AzureMissingResourceHttpError as exc:
+        raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['name'], exc.message))
 
 
 def list_management_certificates(kwargs=None, conn=None, call=None):
@@ -1914,14 +1937,15 @@ def add_management_certificate(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit('Certificate data must be specified as "data"')
 
     try:
-        data = conn.add_management_certificate(
+        conn.add_management_certificate(
             kwargs['name'],
             kwargs['thumbprint'],
             kwargs['data'],
         )
         return {'Success': 'The management certificate was successfully added'}
-    except WindowsAzureConflictError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the management certificate already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. '
+                                  'This usually means that the management certificate already exists.')
 
 
 def delete_management_certificate(kwargs=None, conn=None, call=None):
@@ -1952,10 +1976,10 @@ def delete_management_certificate(kwargs=None, conn=None, call=None):
         conn = get_conn()
 
     try:
-        data = conn.delete_management_certificate(kwargs['thumbprint'])
+        conn.delete_management_certificate(kwargs['thumbprint'])
         return {'Success': 'The management certificate was successfully deleted'}
-    except WindowsAzureMissingResourceError as exc:
-        return {'Error': exc.message}
+    except AzureMissingResourceHttpError as exc:
+        raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['thumbprint'], exc.message))
 
 
 def list_virtual_networks(kwargs=None, conn=None, call=None):
@@ -2359,15 +2383,15 @@ def create_affinity_group(kwargs=None, conn=None, call=None):
         raise SaltCloudSystemExit('A location must be specified as "location"')
 
     try:
-        data = conn.create_affinity_group(
+        conn.create_affinity_group(
             kwargs['name'],
             kwargs['label'],
             kwargs['location'],
             kwargs.get('description', None),
         )
         return {'Success': 'The affinity group was successfully created'}
-    except WindowsAzureConflictError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the affinity group already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. This usually means that the affinity group already exists.')
 
 
 def update_affinity_group(kwargs=None, conn=None, call=None):
@@ -2399,7 +2423,7 @@ def update_affinity_group(kwargs=None, conn=None, call=None):
     if 'label' not in kwargs:
         raise SaltCloudSystemExit('A label must be specified as "label"')
 
-    data = conn.update_affinity_group(
+    conn.update_affinity_group(
         affinity_group_name=kwargs['name'],
         label=kwargs['label'],
         description=kwargs.get('description', None),
@@ -2434,10 +2458,10 @@ def delete_affinity_group(kwargs=None, conn=None, call=None):
         conn = get_conn()
 
     try:
-        data = conn.delete_affinity_group(kwargs['name'])
+        conn.delete_affinity_group(kwargs['name'])
         return {'Success': 'The affinity group was successfully deleted'}
-    except WindowsAzureMissingResourceError as exc:
-        return {'Error': exc.message}
+    except AzureMissingResourceHttpError as exc:
+        raise SaltCloudSystemExit('{0}: {1}'.format(kwargs['name'], exc.message))
 
 
 def get_storage_conn(storage_account=None, storage_key=None, conn_kwargs=None):
@@ -2578,15 +2602,15 @@ def create_storage_container(kwargs=None, storage_conn=None, call=None):
         storage_conn = get_storage_conn(conn_kwargs=kwargs)
 
     try:
-        data = storage_conn.create_container(
+        storage_conn.create_container(
             container_name=kwargs['name'],
             x_ms_meta_name_values=kwargs.get('meta_name_values', None),
             x_ms_blob_public_access=kwargs.get('blob_public_access', None),
             fail_on_exist=kwargs.get('fail_on_exist', False),
         )
         return {'Success': 'The storage container was successfully created'}
-    except WindowsAzureConflictError as exc:
-        return {'Error': 'There was a Conflict. This usually means that the storage container already exists.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict. This usually means that the storage container already exists.')
 
 
 def show_storage_container(kwargs=None, storage_conn=None, call=None):
@@ -2719,8 +2743,8 @@ def set_storage_container_metadata(kwargs=None, storage_conn=None, call=None):
             x_ms_lease_id=kwargs.get('lease_id', None),
         )
         return {'Success': 'The storage container was successfully updated'}
-    except WindowsAzureConflictError as exc:
-        return {'Error': 'There was a Conflict.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict.')
 
 
 def show_storage_container_acl(kwargs=None, storage_conn=None, call=None):
@@ -2804,8 +2828,8 @@ def set_storage_container_acl(kwargs=None, storage_conn=None, call=None):
             x_ms_lease_id=kwargs.get('lease_id', None),
         )
         return {'Success': 'The storage container was successfully updated'}
-    except WindowsAzureConflictError as exc:
-        return {'Error': 'There was a Conflict.'}
+    except AzureConflictHttpError:
+        raise SaltCloudSystemExit('There was a conflict.')
 
 
 def delete_storage_container(kwargs=None, storage_conn=None, call=None):
@@ -3116,8 +3140,8 @@ def show_blob_properties(kwargs=None, storage_conn=None, call=None):
             blob_name=kwargs['blob'],
             x_ms_lease_id=kwargs.get('lease_id', None),
         )
-    except WindowsAzureMissingResourceError as exc:
-        return {'Error': 'The specified blob does not exist.'}
+    except AzureMissingResourceHttpError:
+        raise SaltCloudSystemExit('The specified blob does not exist.')
 
     return data
 
@@ -3301,7 +3325,7 @@ def get_blob(kwargs=None, storage_conn=None, call=None):
         Required if the blob has an active lease.
     progress_callback:
         callback for progress with signature function(current, total) where
-        current is the number of bytes transfered so far, and total is the
+        current is the number of bytes transferred so far, and total is the
         size of the blob.
     max_connections:
         Maximum number of parallel connections to use when the blob size

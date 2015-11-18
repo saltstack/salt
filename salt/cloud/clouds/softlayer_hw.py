@@ -24,11 +24,9 @@ SoftLayer salt.cloud modules. See: https://pypi.python.org/pypi/SoftLayer
 
 :depends: softlayer
 '''
-# pylint: disable=E0102
-
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import time
 import decimal
@@ -48,19 +46,21 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'softlayer_hw'
+
 
 # Only load in this module if the SoftLayer configurations are in place
 def __virtual__():
     '''
     Check for SoftLayer configurations.
     '''
-    if not HAS_SLLIBS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -69,8 +69,18 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'softlayer_hw',
+        __active_provider_name__ or __virtualname__,
         ('apikey',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'softlayer': HAS_SLLIBS}
     )
 
 
@@ -217,28 +227,43 @@ def create(vm_):
     if 'provider' in vm_:
         vm_['driver'] = vm_.pop('provider')
 
+    name = vm_['name']
+    hostname = name
+    domain = config.get_cloud_config_value(
+        'domain', vm_, __opts__, default=None
+    )
+    if domain is None:
+        SaltCloudSystemExit(
+            'A domain name is required for the SoftLayer driver.'
+        )
+
+    if vm_.get('use_fqdn'):
+        name = '.'.join([name, domain])
+        vm_['name'] = name
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
-        'salt/cloud/{0}/creating'.format(vm_['name']),
+        'salt/cloud/{0}/creating'.format(name),
         {
-            'name': vm_['name'],
+            'name': name,
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
 
-    log.info('Creating Cloud VM {0}'.format(vm_['name']))
+    log.info('Creating Cloud VM {0}'.format(name))
     conn = get_conn(service='SoftLayer_Product_Order')
     kwargs = {
         'complexType': 'SoftLayer_Container_Product_Order_Hardware_Server',
         'quantity': 1,
         'hardware': [{
-            'hostname': vm_['name'],
-            'domain': vm_['domain'],
+            'hostname': hostname,
+            'domain': domain,
         }],
-        'packageId': 50,  # Baremetal Package
+        # Baremetal Package
+        'packageId': 50,
         'prices': [
             # Size Ex: 1921: 2 x 2.0 GHz Core Bare Metal Instance - 2 GB Ram
             {'id': vm_['size']},
@@ -283,6 +308,12 @@ def create(vm_):
     )
     kwargs['prices'].append({'id': bandwidth})
 
+    post_uri = config.get_cloud_config_value(
+        'post_uri', vm_, __opts__, default=None
+    )
+    if post_uri:
+        kwargs['prices'].append({'id': post_uri})
+
     vlan_id = config.get_cloud_config_value(
         'vlan', vm_, __opts__, default=False
     )
@@ -300,7 +331,7 @@ def create(vm_):
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
-        'salt/cloud/{0}/requesting'.format(vm_['name']),
+        'salt/cloud/{0}/requesting'.format(name),
         {'kwargs': kwargs},
         transport=__opts__['transport']
     )
@@ -314,7 +345,7 @@ def create(vm_):
             'Error creating {0} on SoftLayer\n\n'
             'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
-                vm_['name'], str(exc)
+                name, str(exc)
             ),
             # Show the traceback if the debug logging level is enabled
             exc_info_on_loglevel=logging.DEBUG
@@ -326,8 +357,8 @@ def create(vm_):
         Wait for the IP address to become available
         '''
         nodes = list_nodes_full()
-        if 'primaryIpAddress' in nodes[vm_['name']]:
-            return nodes[vm_['name']]['primaryIpAddress']
+        if 'primaryIpAddress' in nodes[hostname]:
+            return nodes[hostname]['primaryIpAddress']
         time.sleep(1)
         return False
 
@@ -338,7 +369,8 @@ def create(vm_):
     )
 
     ssh_connect_timeout = config.get_cloud_config_value(
-        'ssh_connect_timeout', vm_, __opts__, 900   # 15 minutes
+        # 15 minutes
+        'ssh_connect_timeout', vm_, __opts__, 900
     )
     if not salt.utils.cloud.wait_for_port(ip_address,
                                          timeout=ssh_connect_timeout):
@@ -362,9 +394,10 @@ def create(vm_):
         '''
         node_info = pass_conn.getVirtualGuests(id=response['id'], mask=mask)
         for node in node_info:
-            if node['id'] == response['id']:
-                if 'passwords' in node['operatingSystem'] and len(node['operatingSystem']['passwords']) > 0:
-                    return node['operatingSystem']['passwords'][0]['password']
+            if node['id'] == response['id'] \
+                    and 'passwords' in node['operatingSystem'] \
+                    and len(node['operatingSystem']['passwords']) > 0:
+                return node['operatingSystem']['passwords'][0]['password']
         time.sleep(5)
         return False
 
@@ -389,9 +422,9 @@ def create(vm_):
     salt.utils.cloud.fire_event(
         'event',
         'created instance',
-        'salt/cloud/{0}/created'.format(vm_['name']),
+        'salt/cloud/{0}/created'.format(name),
         {
-            'name': vm_['name'],
+            'name': name,
             'profile': vm_['profile'],
             'provider': vm_['driver'],
         },
@@ -413,7 +446,7 @@ def list_nodes_full(mask='mask[id, hostname, primaryIpAddress, \
         )
 
     ret = {}
-    conn = get_conn(service='Account')
+    conn = get_conn(service='SoftLayer_Account')
     response = conn.getHardware(mask=mask)
 
     for node in response:
@@ -499,6 +532,9 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
+    # If the VM was created with use_fqdn, the short hostname will be used instead.
+    name = name.split('.')[0]
+
     node = show_instance(name, call='action')
     conn = get_conn(service='SoftLayer_Ticket')
     response = conn.createCancelServerTicket(
@@ -533,7 +569,7 @@ def list_vlans(call=None):
             'The list_vlans function must be called with -f or --function.'
         )
 
-    conn = get_conn(service='Account')
+    conn = get_conn(service='SoftLayer_Account')
     return conn.getNetworkVlans()
 
 
@@ -592,13 +628,15 @@ def show_pricing(kwargs=None, call=None):
 
 def show_all_prices(call=None, kwargs=None):
     '''
-    Return a dict of all available VM images on the cloud provider.
+    Return a dict of all prices on the cloud provider.
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The avail_images function must be called with '
-            '-f or --function, or with the --list-images option'
+            'The show_all_prices function must be called with -f or --function.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     conn = get_conn(service='SoftLayer_Product_Package')
     if 'code' not in kwargs:
@@ -613,3 +651,23 @@ def show_all_prices(call=None, kwargs=None):
                 ret[price['id']] = price['item'].copy()
                 del ret[price['id']]['id']
     return ret
+
+
+def show_all_categories(call=None):
+    '''
+    Return a dict of all available categories on the cloud provider.
+
+    .. versionadded:: Boron
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The show_all_categories function must be called with -f or --function.'
+        )
+
+    conn = get_conn(service='SoftLayer_Product_Package')
+    categories = []
+
+    for category in conn.getCategories(id=50):
+        categories.append(category['categoryCode'])
+
+    return {'category_codes': categories}

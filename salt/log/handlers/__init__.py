@@ -111,6 +111,7 @@ if sys.version_info > (2, 6):
         Watched file handler which properly handles exc_info on a per handler basis
         '''
 
+
 if sys.version_info < (3, 2):
     class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.Handler, NewStyleClassMixIn):
         '''
@@ -160,7 +161,7 @@ if sys.version_info < (3, 2):
             # exc_info attribute, as it's no longer needed and, if not None,
             # will typically not be pickleable.
             self.format(record)
-            record.msg = record.message
+            record.msg = record.getMessage()
             record.args = None
             record.exc_info = None
             return record

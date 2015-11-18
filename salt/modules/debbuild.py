@@ -2,7 +2,7 @@
 '''
 Debian Package builder system
 
-.. versionadded:: Beryllium
+.. versionadded:: 2015.8.0
 
 This system allows for all of the components to build debs safely in chrooted
 environments. This also provides a function to generate debian repositories
@@ -12,16 +12,18 @@ This module impliments the pkgbuild interface
 
 # import python libs
 from __future__ import absolute_import, print_function
+import errno
+import logging
 import os
 import tempfile
 import shutil
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltInvocationError
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 
-# pylint: disable=import-error
+log = logging.getLogger(__name__)
 
 __virtualname__ = 'pkgbuild'
 
@@ -52,9 +54,28 @@ def _get_build_env(env):
     return env_override
 
 
-def _get_repo_env(env):
+def _get_repo_options_env(env):
     '''
-    Get repo environment overrides dictionary to use in repo process
+    Get repo environment overrides dictionary to use in repo options process
+
+    env
+        A dictionary of variables to define the repository options
+        Example:
+
+        .. code-block:: yaml
+
+                - env:
+                  - OPTIONS : 'ask-passphrase'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
     '''
     env_options = ''
     if env is None:
@@ -64,8 +85,94 @@ def _get_repo_env(env):
             '\'env\' must be a Python dictionary'
         )
     for key, value in env.items():
-        env_options += '{0}\n'.format(value)
+        if key == 'OPTIONS':
+            env_options += '{0}\n'.format(value)
     return env_options
+
+
+def _get_repo_dists_env(env):
+    '''
+    Get repo environment overrides dictionary to use in repo distributions process
+
+    env
+        A dictionary of variables to define the repository distributions
+        Example:
+
+        .. code-block:: yaml
+
+                - env:
+                  - ORIGIN : 'jessie'
+                  - LABEL : 'salt debian'
+                  - SUITE : 'main'
+                  - VERSION : '8.1'
+                  - CODENAME : 'jessie'
+                  - ARCHS : 'amd64 i386 source'
+                  - COMPONENTS : 'main'
+                  - DESCRIPTION : 'SaltStack Debian package repo'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+    '''
+    # env key with tuple of control information for handling input env dictionary
+    # 0 | M - Mandatory, O - Optional, I - Ignore
+    # 1 | 'text string for repo field'
+    # 2 | 'default value'
+    dflts_dict = {
+                'OPTIONS': ('I', '', 'processed by _get_repo_options_env'),
+                'ORIGIN': ('O', 'Origin', 'SaltStack'),
+                'LABEL': ('O', 'Label', 'salt_debian'),
+                'SUITE': ('O', 'Suite', 'stable'),
+                'VERSION': ('O', 'Version', '8.1'),
+                'CODENAME': ('M', 'Codename', 'jessie'),
+                'ARCHS': ('M', 'Architectures', 'i386 amd64 source'),
+                'COMPONENTS': ('M', 'Components', 'main'),
+                'DESCRIPTION': ('O', 'Description', 'SaltStack debian package repo'),
+    }
+
+    env_dists = ''
+    codename = ''
+    dflts_keys = list(dflts_dict.keys())
+    if env is None:
+        for key, value in dflts_dict.items():
+            if dflts_dict[key][0] == 'M':
+                env_dists += '{0}: {1}\n'.format(dflts_dict[key][1], dflts_dict[key][2])
+                if key == 'CODENAME':
+                    codename = dflts_dict[key][2]
+        return (codename, env_dists)
+
+    if not isinstance(env, dict):
+        raise SaltInvocationError(
+            '\'env\' must be a Python dictionary'
+        )
+
+    env_man_seen = []
+    for key, value in env.items():
+        if key in dflts_keys:
+            if dflts_dict[key][0] == 'M':
+                env_man_seen.append(key)
+                if key == 'CODENAME':
+                    codename = value
+            if dflts_dict[key][0] != 'I':
+                env_dists += '{0}: {1}\n'.format(dflts_dict[key][1], value)
+        else:
+            env_dists += '{0}: {1}\n'.format(key, value)
+
+    ## ensure mandatories are included
+    env_keys = list(env.keys())
+    for key in env_keys:
+        if key in dflts_keys and dflts_dict[key][0] == 'M' and key not in env_man_seen:
+            env_dists += '{0}: {1}\n'.format(dflts_dict[key][1], dflts_dict[key][2])
+            if key == 'CODENAME':
+                codename = value
+
+    return (codename, env_dists)
 
 
 def _create_pbuilders(env):
@@ -90,69 +197,13 @@ def _create_pbuilders(env):
             idiosyncrasies can be found :doc:`here
             </topics/troubleshooting/yaml_idiosyncrasies>`.
 
-
     '''
-    hook_text = '''#!/bin/sh
-set -e
-cat > "/etc/apt/preferences" << EOF
-
-Package: python-abalaster
-Pin: release a=testing
-Pin-Priority: 950
-
-Package: python-sphinx
-Pin: release a=experimental
-Pin-Priority: 900
-
-Package: sphinx-common
-Pin: release a=experimental
-Pin-Priority: 900
-
-Package: *
-Pin: release a=jessie-backports
-Pin-Priority: 750
-
-Package: *
-Pin: release a=stable
-Pin-Priority: 700
-
-Package: *
-Pin: release a=testing
-Pin-Priority: 650
-
-Package: *
-Pin: release a=unstable
-Pin-Priority: 600
-
-Package: *
-Pin: release a=experimental
-Pin-Priority: 550
-
-EOF
-'''
-
-    pbldrc_text = '''DIST="jessie"
-if [ -n "${DIST}" ]; then
-  TMPDIR=/tmp
-  BASETGZ="`dirname $BASETGZ`/$DIST-base.tgz"
-  DISTRIBUTION=$DIST
-  APTCACHE="/var/cache/pbuilder/$DIST/aptcache"
-fi
-HOOKDIR="${HOME}/.pbuilder-hooks"
-OTHERMIRROR="deb http://ftp.us.debian.org/debian/ testing main contrib non-free  | deb http://ftp.us.debian.org/debian/ experimental main contrib non-free"
-'''
     home = os.path.expanduser('~')
-    pbuilder_hooksdir = os.path.join(home, '.pbuilder-hooks')
-    if not os.path.isdir(pbuilder_hooksdir):
-        os.makedirs(pbuilder_hooksdir)
-
-    d05hook = os.path.join(pbuilder_hooksdir, 'D05apt-preferences')
-    with salt.utils.fopen(d05hook, 'w') as fow:
-        fow.write('{0}'.format(hook_text))
-
     pbuilderrc = os.path.join(home, '.pbuilderrc')
-    with salt.utils.fopen(pbuilderrc, 'w') as fow:
-        fow.write('{0}'.format(pbldrc_text))
+    if not os.path.isfile(pbuilderrc):
+        raise SaltInvocationError(
+            'pbuilderrc environment is incorrectly setup'
+        )
 
     env_overrides = _get_build_env(env)
     if env_overrides and not env_overrides.isspace():
@@ -244,7 +295,8 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
 
     frontname = salttarball.split('.tar.gz')
     salttar_name = frontname[0]
-    debname = salttar_name.replace('-', '_')
+    k = salttar_name.rfind('-')
+    debname = salttar_name[:k] + '_' + salttar_name[k+1:]
     debname += '+ds'
     debname_orig = debname + '.orig.tar.gz'
     abspath_debname = os.path.join(tree_base, debname)
@@ -270,17 +322,25 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     __salt__['cmd.run'](cmd)
 
     for dfile in os.listdir(tree_base):
-        if dfile.startswith('salt_'):
-            if not dfile.endswith('.build'):
-                full = os.path.join(tree_base, dfile)
-                trgt = os.path.join(dest_dir, dfile)
-                shutil.copy(full, trgt)
-                ret.append(trgt)
+        if not dfile.endswith('.build'):
+            full = os.path.join(tree_base, dfile)
+            trgt = os.path.join(dest_dir, dfile)
+            shutil.copy(full, trgt)
+            ret.append(trgt)
 
     return ret
 
 
-def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='base'):
+def build(runas,
+          tgt,
+          dest_dir,
+          spec,
+          sources,
+          deps,
+          env,
+          template,
+          saltenv='base',
+          log_dir='/var/log/salt/pkgbuild'):  # pylint: disable=unused-argument
     '''
     Given the package destination directory, the tarball containing debian files (e.g. control)
     and package sources, use pbuilder to safely build the platform package
@@ -288,19 +348,24 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
     CLI Example:
 
     Debian
-        salt '*' pkgbuild.make_src_pkg deb-8-x86_64 /var/www/html/ https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/deb/python-libnacl.control https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
+        salt '*' pkgbuild.make_src_pkg deb-8-x86_64 /var/www/html https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/deb/python-libnacl.control https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
 
     This example command should build the libnacl package for Debian using pbuilder
     and place it in /var/www/html/ on the minion
     '''
     ret = {}
-    if not os.path.isdir(dest_dir):
-        try:
-            os.makedirs(dest_dir)
-        except (IOError, OSError):
-            pass
+    try:
+        os.makedirs(dest_dir)
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise
     dsc_dir = tempfile.mkdtemp()
-    dscs = make_src_pkg(dsc_dir, spec, sources, env, template, saltenv)
+    try:
+        dscs = make_src_pkg(dsc_dir, spec, sources, env, template, saltenv)
+    except Exception as exc:
+        shutil.rmtree(dsc_dir)
+        log.error('Failed to make src package')
+        return ret
 
     # dscs should only contain salt orig and debian tarballs and dsc file
     for dsc in dscs:
@@ -310,27 +375,26 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
 
         if dsc.endswith('.dsc'):
             dbase = os.path.dirname(dsc)
-            cmd = 'chown {0} -R {1}'.format(runas, dbase)
-            __salt__['cmd.run'](cmd)
-
             results_dir = tempfile.mkdtemp()
-            cmd = 'chown {0} -R {1}'.format(runas, results_dir)
-            __salt__['cmd.run'](cmd)
+            try:
+                __salt__['cmd.run']('chown {0} -R {1}'.format(runas, dbase))
+                __salt__['cmd.run']('chown {0} -R {1}'.format(runas, results_dir))
 
-            cmd = 'pbuilder create'
-            __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
-            cmd = 'pbuilder --build --buildresult {1} {0}'.format(dsc, results_dir)
-            __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
+                cmd = 'pbuilder --create'
+                __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
+                cmd = 'pbuilder --build --buildresult {1} {0}'.format(
+                    dsc, results_dir)
+                __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
 
-            for bfile in os.listdir(results_dir):
-                full = os.path.join(results_dir, bfile)
-                if bfile.endswith('.deb'):
+                for bfile in os.listdir(results_dir):
+                    full = os.path.join(results_dir, bfile)
                     bdist = os.path.join(dest_dir, bfile)
                     shutil.copy(full, bdist)
-                else:
-                    with salt.utils.fopen(full, 'r') as fp_:
-                        ret[bfile] = fp_.read()
-            shutil.rmtree(results_dir)
+                    ret.setdefault('Packages', []).append(bdist)
+            except Exception as exc:
+                log.error('Error building from {0}: {1}'.format(dsc, exc))
+            finally:
+                shutil.rmtree(results_dir)
     shutil.rmtree(dsc_dir)
     return ret
 
@@ -343,37 +407,29 @@ def make_repo(repodir, keyid=None, env=None):
 
         salt '*' pkgbuild.make_repo /var/www/html/
     '''
-    repocfg_text = '''Origin: SaltStack
-Label: salt_debian
-Suite: unstable
-Codename: jessie
-Architectures: i386 amd64 source
-Components: contrib
-Description: SaltStack debian package repo
-Pull: jessie
-'''
     repoconf = os.path.join(repodir, 'conf')
     if not os.path.isdir(repoconf):
         os.makedirs(repoconf)
 
+    codename, repocfg_dists = _get_repo_dists_env(env)
     repoconfdist = os.path.join(repoconf, 'distributions')
     with salt.utils.fopen(repoconfdist, 'w') as fow:
-        fow.write('{0}'.format(repocfg_text))
+        fow.write('{0}'.format(repocfg_dists))
 
     if keyid is not None:
         with salt.utils.fopen(repoconfdist, 'a') as fow:
-            fow.write('Signwith: {0}\n'.format(keyid))
+            fow.write('SignWith: {0}\n'.format(keyid))
 
-    repocfg_opts = _get_repo_env(env)
+    repocfg_opts = _get_repo_options_env(env)
     repoconfopts = os.path.join(repoconf, 'options')
     with salt.utils.fopen(repoconfopts, 'w') as fow:
         fow.write('{0}'.format(repocfg_opts))
 
     for debfile in os.listdir(repodir):
         if debfile.endswith('.changes'):
-            cmd = 'reprepro -Vb . include jessie {0}'.format(os.path.join(repodir, debfile))
+            cmd = 'reprepro -Vb . include {0} {1}'.format(codename, os.path.join(repodir, debfile))
             __salt__['cmd.run'](cmd, cwd=repodir)
 
         if debfile.endswith('.deb'):
-            cmd = 'reprepro -Vb . includedeb jessie {0}'.format(os.path.join(repodir, debfile))
+            cmd = 'reprepro -Vb . includedeb {0} {1}'.format(codename, os.path.join(repodir, debfile))
             __salt__['cmd.run'](cmd, cwd=repodir)

@@ -20,18 +20,16 @@ except ImportError:
 import salt.utils
 import salt.utils.aws
 import salt.utils.xmlutil as xml
-import salt.utils.iam as iam
 from salt._compat import ElementTree as ET
 
 log = logging.getLogger(__name__)
-DEFAULT_LOCATION = 'us-east-1'
 
 
 def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
           path='', return_bin=False, action=None, local_file=None,
           verify_ssl=True, full_headers=False, kms_keyid=None,
-          location=DEFAULT_LOCATION):
+          location=None):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -88,14 +86,11 @@ def query(key, keyid, method='GET', params=None, headers=None,
         endpoint = service_url
 
     # Try grabbing the credentials from the EC2 instance IAM metadata if available
-    if not key or not keyid:
+    if not key:
         key = salt.utils.aws.IROLE_CODE
-        keyid = salt.utils.aws.IROLE_CODE
 
-    if not location:
-        location = iam.get_iam_region()
-    if not location:
-        location = DEFAULT_LOCATION
+    if not keyid:
+        keyid = salt.utils.aws.IROLE_CODE
 
     if kms_keyid is not None and method in ('PUT', 'POST'):
         headers['x-amz-server-side-encryption'] = 'aws:kms'
@@ -135,10 +130,10 @@ def query(key, keyid, method='GET', params=None, headers=None,
                                   verify=verify_ssl)
         response = result.content
     except requests.exceptions.HTTPError as exc:
-        log.error('There was an error::')
-        if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-            log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-        log.error('    Content: \n{0}'.format(exc.read()))
+        log.error('Failed to {0} {1}::'.format(method, requesturl))
+        log.error('    Exception: {0}'.format(exc))
+        if exc.response:
+            log.error('    Response content: {0}'.format(exc.response.content))
         return False
 
     log.debug('S3 Response Status Code: {0}'.format(result.status_code))

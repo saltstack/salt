@@ -36,8 +36,8 @@ class ServiceTestCase(TestCase):
         Test to start the specified service
         '''
         with patch.object(os.path, 'join', return_value='A'):
-            with patch.dict(service.__salt__, {'cmd.retcode':
-                                               MagicMock(return_value=False)}):
+            with patch.dict(service.__salt__, {'service.run':
+                                               MagicMock(return_value=True)}):
                 self.assertTrue(service.start('name'))
 
     def test_stop(self):
@@ -45,8 +45,8 @@ class ServiceTestCase(TestCase):
         Test to stop the specified service
         '''
         with patch.object(os.path, 'join', return_value='A'):
-            with patch.dict(service.__salt__, {'cmd.retcode':
-                                               MagicMock(return_value=False)}):
+            with patch.dict(service.__salt__, {'service.run':
+                                               MagicMock(return_value=True)}):
                 self.assertTrue(service.stop('name'))
 
     def test_restart(self):
@@ -54,8 +54,8 @@ class ServiceTestCase(TestCase):
         Test to restart the specified service
         '''
         with patch.object(os.path, 'join', return_value='A'):
-            with patch.dict(service.__salt__, {'cmd.retcode':
-                                               MagicMock(return_value=False)}):
+            with patch.dict(service.__salt__, {'service.run':
+                                               MagicMock(return_value=True)}):
                 self.assertTrue(service.restart('name'))
 
     def test_status(self):
@@ -73,9 +73,18 @@ class ServiceTestCase(TestCase):
         Test to restart the specified service
         '''
         with patch.object(os.path, 'join', return_value='A'):
+            with patch.dict(service.__salt__, {'service.run':
+                                               MagicMock(return_value=True)}):
+                self.assertTrue(service.reload_('name'))
+
+    def test_run(self):
+        '''
+        Test to run the specified service
+        '''
+        with patch.object(os.path, 'join', return_value='A'):
             with patch.dict(service.__salt__, {'cmd.retcode':
                                                MagicMock(return_value=False)}):
-                self.assertTrue(service.reload_('name'))
+                self.assertTrue(service.run('name', 'action'))
 
     def test_available(self):
         '''

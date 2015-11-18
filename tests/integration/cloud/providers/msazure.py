@@ -29,6 +29,9 @@ try:
 except ImportError:
     HAS_AZURE = False
 
+if HAS_AZURE and not hasattr(azure, '__version__'):
+    import azure.common
+
 
 def __random_name(size=6):
     '''
@@ -42,6 +45,7 @@ def __random_name(size=6):
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'azure'
+PROFILE_NAME = 'azure-test'
 REQUIRED_AZURE = '0.11.1'
 
 
@@ -49,7 +53,10 @@ def __has_required_azure():
     '''
     Returns True/False if the required version of the Azure SDK is installed.
     '''
-    version = LooseVersion(azure.__version__)
+    if hasattr(azure, '__version__'):
+        version = LooseVersion(azure.__version__)
+    else:
+        version = LooseVersion(azure.common.__version__)
     if HAS_AZURE is True and REQUIRED_AZURE <= version:
         return True
     else:
@@ -71,9 +78,9 @@ class AzureTest(integration.ShellCase):
         super(AzureTest, self).setUp()
 
         # check if appropriate cloud provider and profile files are present
-        profile_str = 'azure-config'
+        provider_str = 'azure-config'
         providers = self.run_cloud('--list-providers')
-        if profile_str + ':' not in providers:
+        if provider_str + ':' not in providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
@@ -81,13 +88,16 @@ class AzureTest(integration.ShellCase):
             )
 
         # check if subscription_id and certificate_path are present in provider file
-        provider_path = os.path.join(integration.FILES,
-                            'conf',
-                            'cloud.providers.d',
-                            PROVIDER_NAME + '.conf')
-        provider_config = cloud_providers_config(provider_path)
-        sub_id = provider_config['azure-config']['azure']['subscription_id']
-        cert_path = provider_config['azure-config']['azure']['certificate_path']
+        provider_config = cloud_providers_config(
+            os.path.join(
+                integration.FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
+        sub_id = provider_config[provider_str][PROVIDER_NAME]['subscription_id']
+        cert_path = provider_config[provider_str][PROVIDER_NAME]['certificate_path']
         if sub_id == '' or cert_path == '':
             self.skipTest(
                 'A subscription_id and certificate_path must be provided to run '
@@ -107,9 +117,9 @@ class AzureTest(integration.ShellCase):
                 PROVIDER_NAME + '.conf'
             )
         )
-        ssh_user = profile_config['azure-test'][profile_str]['ssh_username']
-        ssh_pass = profile_config['azure-test'][profile_str]['ssh_password']
-        media_link = profile_config['azure-test'][profile_str]['media_link']
+        ssh_user = profile_config[PROFILE_NAME][provider_str]['ssh_username']
+        ssh_pass = profile_config[PROFILE_NAME][provider_str]['ssh_password']
+        media_link = profile_config[PROFILE_NAME][provider_str]['media_link']
 
         if ssh_user == '' or ssh_pass == '' or media_link == '':
             self.skipTest(
@@ -128,7 +138,12 @@ class AzureTest(integration.ShellCase):
         try:
             self.assertIn(
                 INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p azure-test {0}'.format(INSTANCE_NAME))]
+                [i.strip() for i in self.run_cloud(
+                    '-p {0} {1}'.format(
+                        PROFILE_NAME,
+                        INSTANCE_NAME
+                    )
+                )]
             )
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
@@ -138,7 +153,11 @@ class AzureTest(integration.ShellCase):
         try:
             self.assertIn(
                 INSTANCE_NAME + ':',
-                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))]
+                [i.strip() for i in self.run_cloud(
+                    '-d {0} --assume-yes'.format(
+                        INSTANCE_NAME
+                    )
+                )]
             )
         except AssertionError:
             raise

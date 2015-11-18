@@ -12,6 +12,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six import integer_types
 
@@ -222,10 +223,10 @@ def increment(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
     cur = get(key)
 
     if cur is None:
-        raise CommandExecutionError('Key {0!r} does not exist'.format(key))
+        raise CommandExecutionError('Key \'{0}\' does not exist'.format(key))
     elif not isinstance(cur, integer_types):
         raise CommandExecutionError(
-            'Value for key {0!r} must be an integer to be '
+            'Value for key \'{0}\' must be an integer to be '
             'incremented'.format(key)
         )
 
@@ -234,7 +235,7 @@ def increment(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
     except ValueError:
         raise SaltInvocationError('Delta value must be an integer')
 
-incr = increment
+incr = salt.utils.alias_function(increment, 'incr')
 
 
 def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
@@ -253,10 +254,10 @@ def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
 
     cur = get(key)
     if cur is None:
-        raise CommandExecutionError('Key {0!r} does not exist'.format(key))
+        raise CommandExecutionError('Key \'{0}\' does not exist'.format(key))
     elif not isinstance(cur, integer_types):
         raise CommandExecutionError(
-            'Value for key {0!r} must be an integer to be '
+            'Value for key \'{0}\' must be an integer to be '
             'decremented'.format(key)
         )
 
@@ -265,4 +266,4 @@ def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
     except ValueError:
         raise SaltInvocationError('Delta value must be an integer')
 
-decr = decrement
+decr = salt.utils.alias_function(decrement, 'decr')

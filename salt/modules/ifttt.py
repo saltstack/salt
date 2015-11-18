@@ -81,7 +81,7 @@ def trigger_event(event=None, **kwargs):
     CLI Example:
 
     .. code-block:: yaml
-
+        TBA
     '''
 
     res = {'result': False, 'message': 'Something went wrong'}

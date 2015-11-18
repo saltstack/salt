@@ -2,10 +2,8 @@
 '''
 Management of PostgreSQL tablespace
 ===================================
-The postgres_tablespace module is used to create and manage Postgres
-tablespaces.
 
-Tablespaces can be set as either absent or present.
+A module used to create and manage PostgreSQL tablespaces.
 
 .. code-block:: yaml
     ssd-tablespace:

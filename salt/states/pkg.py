@@ -368,27 +368,28 @@ def _find_install_targets(name=None,
                 for name, version in desired.items()
                 if not (name in cur_pkgs and version in (None, cur_pkgs[name]))
             ])
-            problems = _preflight_check(not_installed, **kwargs)
-            comments = []
-            if problems.get('no_suggest'):
-                comments.append(
-                    'The following package(s) were not found, and no possible '
-                    'matches were found in the package db: '
-                    '{0}'.format(', '.join(sorted(problems['no_suggest'])))
-                )
-            if problems.get('suggest'):
-                for pkgname, suggestions in six.iteritems(problems['suggest']):
+            if not_installed:
+                problems = _preflight_check(not_installed, **kwargs)
+                comments = []
+                if problems.get('no_suggest'):
                     comments.append(
-                        'Package \'{0}\' not found (possible matches: {1})'
-                        .format(pkgname, ', '.join(suggestions))
+                        'The following package(s) were not found, and no possible '
+                        'matches were found in the package db: '
+                        '{0}'.format(', '.join(sorted(problems['no_suggest'])))
                     )
-            if comments:
-                if len(comments) > 1:
-                    comments.append('')
-                return {'name': name,
-                        'changes': {},
-                        'result': False,
-                        'comment': '. '.join(comments).rstrip()}
+                if problems.get('suggest'):
+                    for pkgname, suggestions in six.iteritems(problems['suggest']):
+                        comments.append(
+                            'Package \'{0}\' not found (possible matches: {1})'
+                            .format(pkgname, ', '.join(suggestions))
+                        )
+                if comments:
+                    if len(comments) > 1:
+                        comments.append('')
+                    return {'name': name,
+                            'changes': {},
+                            'result': False,
+                            'comment': '. '.join(comments).rstrip()}
 
     # Find out which packages will be targeted in the call to pkg.install
     targets = {}
@@ -933,6 +934,10 @@ def installed(
 
     if version is not None and version == 'latest':
         version = __salt__['pkg.latest_version'](name)
+        # If version is empty, it means the latest version is installed
+        # so we grab that version to avoid passing an empty string
+        if not version:
+            version = __salt__['pkg.version'](name)
 
     kwargs['allow_updates'] = allow_updates
     result = _find_install_targets(name, version, pkgs, sources,
@@ -1804,12 +1809,10 @@ def uptodate(name, refresh=False, **kwargs):
 
     if updated.get('result') is False:
         ret.update(updated)
-    elif updated:
-        ret['changes'] = updated
-        ret['comment'] = 'Upgrade successful.'
-        ret['result'] = True
     else:
-        ret['comment'] = 'Upgrade failed.'
+        ret['changes'] = updated.get('changes', {})
+        ret['comment'] = 'Upgrade ran successfully.'
+        ret['result'] = True
 
     return ret
 

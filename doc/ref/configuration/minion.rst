@@ -198,7 +198,7 @@ need to be changed to the ownership of the new user.
 .. conf_minion:: sudo_user
 
 ``sudo_user``
---------
+-------------
 
 Default: ``''``
 
@@ -480,6 +480,35 @@ behavior is to have time-frame within all minions try to reconnect.
 .. code-block:: yaml
 
     recon_randomize: True
+
+.. conf_minion:: return_retry_timer
+
+``return_retry_timer``
+-------------------
+
+Default: ``5``
+
+The default timeout for a minion return attempt.
+
+.. code-block:: yaml
+
+    return_retry_timer: 5
+
+
+.. conf_minion:: return_retry_timer_max
+
+``return_retry_timer_max``
+-------------------
+
+Default: ``10``
+
+The maximum timeout for a minion return attempt. If non-zero the minion return
+retry timeout will be a random int beween ``return_retry_timer`` and
+``return_retry_timer_max``
+
+.. code-block:: yaml
+
+    return_retry_timer_max: 10
 
 .. conf_minion:: cache_sreqs
 
@@ -986,8 +1015,11 @@ Thread Settings
 
 Default: ``True``
 
-Disable multiprocessing support by default when a minion receives a
+If `multiprocessing` is enabled when a minion receives a
 publication a new process is spawned and the command is executed therein.
+Conversely, if `multiprocessing` is disabled the new publication will be run
+executed in a thread.
+
 
 .. code-block:: yaml
 
@@ -1031,7 +1063,7 @@ Examples:
 ``log_level``
 -------------
 
-Default: ``warning``
+Default: ``info``
 
 The level of messages to send to the console. See also :conf_log:`log_level`.
 
@@ -1045,7 +1077,7 @@ The level of messages to send to the console. See also :conf_log:`log_level`.
 ``log_level_logfile``
 ---------------------
 
-Default: ``warning``
+Default: ``info``
 
 The level of messages to send to the log file. See also
 :conf_log:`log_level_logfile`. When it is not set explicitly

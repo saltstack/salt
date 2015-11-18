@@ -154,7 +154,7 @@ def check_db(*names, **kwargs):
     ret = {}
     for name in names:
         if name in ret:
-            log.warning('pkg.check_db: Duplicate package name {0!r} '
+            log.warning('pkg.check_db: Duplicate package name \'{0}\' '
                         'submitted'.format(name))
             continue
         if '/' not in name:
@@ -237,7 +237,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def _get_upgradable(backtrack=3):
@@ -587,16 +587,16 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
-        emerge_opts = 'tbz2file'
+        emerge_opts = ['tbz2file']
     else:
-        emerge_opts = ''
+        emerge_opts = []
 
     if binhost == 'try':
-        bin_opts = '-g'
+        bin_opts = ['-g']
     elif binhost == 'force':
-        bin_opts = '-G'
+        bin_opts = ['-G']
     else:
-        bin_opts = ''
+        bin_opts = []
 
     changes = {}
 
@@ -646,7 +646,9 @@ def install(name=None,
                 if not changes:
                     inst_v = version(param)
 
-                    if latest_version(param) == inst_v:
+                    # Prevent latest_version from calling refresh_db. Either we
+                    # just called it or we were asked not to.
+                    if latest_version(param, refresh=False) == inst_v:
                         all_uses = __salt__['portage_config.get_cleared_flags'](param)
                         if _flags_changed(*all_uses):
                             changes[param] = {'version': inst_v,
@@ -655,7 +657,10 @@ def install(name=None,
                 targets.append(target)
     else:
         targets = pkg_params
-    cmd = 'emerge --ask n --quiet {0} {1} {2}'.format(bin_opts, emerge_opts, ' '.join(targets))
+    cmd = ['emerge', '--ask', 'n', '--quiet']
+    cmd.extend(bin_opts)
+    cmd.extend(emerge_opts)
+    cmd.extend(targets)
 
     old = list_pkgs()
     call = __salt__['cmd.run_all'](cmd,
@@ -708,14 +713,17 @@ def update(pkg, slot=None, fromrepo=None, refresh=False, binhost=None):
         full_atom = '{0}::{1}'.format(full_atom, fromrepo)
 
     if binhost == 'try':
-        bin_opts = '-g'
+        bin_opts = ['-g']
     elif binhost == 'force':
-        bin_opts = '-G'
+        bin_opts = ['-G']
     else:
-        bin_opts = ''
+        bin_opts = []
 
     old = list_pkgs()
-    cmd = 'emerge --ask n --quiet --update --newuse --oneshot {0} {1}'.format(bin_opts, full_atom)
+    cmd = ['emerge', '--ask', 'n', '--quiet', '--update', '--newuse',
+           '--oneshot']
+    cmd.extend(bin_opts)
+    cmd.append(full_atom)
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
                                    python_shell=False)
@@ -755,18 +763,17 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
     '''
     ret = {'changes': {},
            'result': True,
-           'comment': '',
-           }
+           'comment': ''}
 
     if salt.utils.is_true(refresh):
         refresh_db()
 
     if binhost == 'try':
-        bin_opts = '--getbinpkg'
+        bin_opts = ['--getbinpkg']
     elif binhost == 'force':
-        bin_opts = '--getbinpkgonly'
+        bin_opts = ['--getbinpkgonly']
     else:
-        bin_opts = ''
+        bin_opts = []
 
     old = list_pkgs()
     cmd = ['emerge',
@@ -777,7 +784,7 @@ def upgrade(refresh=True, binhost=None, backtrack=3):
            '--newuse',
            '--deep']
     if bin_opts:
-        cmd.append(bin_opts)
+        cmd.extend(bin_opts)
     cmd.append('@world')
 
     call = __salt__['cmd.run_all'](cmd,
@@ -846,8 +853,8 @@ def remove(name=None, slot=None, fromrepo=None, pkgs=None, **kwargs):
 
     if not targets:
         return {}
-    cmd = 'emerge --ask n --quiet --unmerge --quiet-unmerge-warn ' \
-          '{0}'.format(' '.join(targets))
+    cmd = ['emerge', '--ask', 'n', '--quiet', '--unmerge',
+           '--quiet-unmerge-warn'] + targets
     __salt__['cmd.run_all'](cmd,
                             output_loglevel='trace',
                             python_shell=False)
@@ -938,7 +945,7 @@ def depclean(name=None, slot=None, fromrepo=None, pkgs=None):
     else:
         targets = [x for x in pkg_params if x in old]
 
-    cmd = 'emerge --ask n --quiet --depclean {0}'.format(' '.join(targets))
+    cmd = ['emerge', '--ask', 'n', '--quiet', '--depclean'] + targets
     __salt__['cmd.run_all'](cmd,
                             output_loglevel='trace',
                             python_shell=False)

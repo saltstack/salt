@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'sys'
 
-__proxyenabled__ = '*'
+__proxyenabled__ = ['*']
 
 
 def __virtual__():
@@ -716,7 +716,7 @@ def list_runner_functions(*args, **kwargs):  # pylint: disable=unused-argument
 
 def list_returners(*args):
     '''
-    List the runners loaded on the minion
+    List the returners loaded on the minion
 
     .. versionadded:: 2014.7.0
 

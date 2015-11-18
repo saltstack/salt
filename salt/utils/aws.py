@@ -45,6 +45,7 @@ AWS_RETRY_CODES = [
     'InsufficientAddressCapacity',
     'InsufficientReservedInstanceCapacity',
 ]
+AWS_METADATA_TIMEOUT = 3.05
 
 IROLE_CODE = 'use-instance-role-credentials'
 __AccessKeyId__ = ''
@@ -75,21 +76,27 @@ def creds(provider):
                 # Current timestamp less than expiration fo cached credentials
                 return __AccessKeyId__, __SecretAccessKey__, __Token__
         # We don't have any cached credentials, or they are expired, get them
-        # TODO: Wrap this with a try and handle exceptions gracefully
 
-        # Connections to instance meta-data must never be proxied
-        result = requests.get(
-            "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
-            proxies={'http': ''},
-        )
-        result.raise_for_status()
-        role = result.text
-        # TODO: Wrap this with a try and handle exceptions gracefully
-        result = requests.get(
-            "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role),
-            proxies={'http': ''},
-        )
-        result.raise_for_status()
+        # Connections to instance meta-data must fail fast and never be proxied
+        try:
+            result = requests.get(
+                "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
+                proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
+            )
+            result.raise_for_status()
+            role = result.text
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectTimeout):
+            return provider['id'], provider['key'], ''
+
+        try:
+            result = requests.get(
+                "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role),
+                proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
+            )
+            result.raise_for_status()
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectTimeout):
+            return provider['id'], provider['key'], ''
+
         data = result.json()
         __AccessKeyId__ = data['AccessKeyId']
         __SecretAccessKey__ = data['SecretAccessKey']
@@ -205,9 +212,7 @@ def sig4(method, endpoint, params, prov_dict,
     ))
 
     # Create the string to sign
-    credential_scope = '/'.join((
-        datestamp, location, product, 'aws4_request'
-    ))
+    credential_scope = '/'.join((datestamp, location, product, 'aws4_request'))
     string_to_sign = '\n'.join((
         algorithm,
         amzdate,
@@ -273,8 +278,11 @@ def _sig_key(key, date_stamp, regionName, serviceName):
     http://docs.aws.amazon.com/general/latest/gr/signature-v4-examples.html#signature-v4-examples-python
     '''
     kDate = _sign(('AWS4' + key).encode('utf-8'), date_stamp)
-    kRegion = _sign(kDate, regionName)
-    kService = _sign(kRegion, serviceName)
+    if regionName:
+        kRegion = _sign(kDate, regionName)
+        kService = _sign(kRegion, serviceName)
+    else:
+        kService = _sign(kDate, serviceName)
     kSigning = _sign(kService, 'aws4_request')
     return kSigning
 
@@ -474,10 +482,10 @@ def get_region_from_metadata():
         return __Location__
 
     try:
-        # Connections to instance meta-data must never be proxied
+        # Connections to instance meta-data must fail fast and never be proxied
         result = requests.get(
             "http://169.254.169.254/latest/dynamic/instance-identity/document",
-            proxies={'http': ''},
+            proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
         )
     except requests.exceptions.RequestException:
         LOG.warning('Failed to get AWS region from instance metadata.', exc_info=True)

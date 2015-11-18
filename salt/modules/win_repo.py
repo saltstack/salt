@@ -11,17 +11,29 @@ For documentation on Salt's Windows Repo feature, see :ref:`here
 # Import python libs
 from __future__ import absolute_import, print_function
 import logging
+import os
 
 # Import salt libs
 import salt.output
 import salt.utils
 import salt.loader
 import salt.template
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltRenderError
+
+# All the "unused" imports here are needed for the imported winrepo runner code
+# pylint: disable=unused-import
 from salt.runners.winrepo import (
     genrepo as _genrepo,
-    update_git_repos as _update_git_repos
+    update_git_repos as _update_git_repos,
+    PER_REMOTE_OVERRIDES
 )
+from salt.ext import six
+try:
+    import msgpack
+except ImportError:
+    import msgpack_pure as msgpack  # pylint: disable=import-error
+import salt.utils.gitfs
+# pylint: enable=unused-import
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +54,25 @@ def __virtual__():
     return False
 
 
+def _get_local_repo_dir(saltenv='base'):
+    if 'win_repo_source_dir' in __opts__:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The \'win_repo_source_dir\' config option is deprecated, please '
+            'use \'winrepo_source_dir\' instead.'
+        )
+        winrepo_source_dir = __opts__['win_repo_source_dir']
+    else:
+        winrepo_source_dir = __opts__['winrepo_source_dir']
+
+    dirs = []
+    dirs.append(salt.syspaths.CACHE_DIR)
+    dirs.extend(['minion', 'files'])
+    dirs.append(saltenv)
+    dirs.extend(winrepo_source_dir[7:].strip('/').split('/'))
+    return os.sep.join(dirs)
+
+
 def genrepo():
     r'''
     Generate winrepo_cachefile based on sls files in the winrepo_dir
@@ -55,7 +86,7 @@ def genrepo():
     return _genrepo(opts=__opts__, fire_event=False)
 
 
-def update_git_repos():
+def update_git_repos(clean=False):
     '''
     Checkout git repos containing :ref:`Windows Software Package Definitions
     <windows-package-manager>`
@@ -66,6 +97,24 @@ def update_git_repos():
         permits the git executable to be run from the Command Prompt.
 
     .. _`Git for Windows`: https://git-for-windows.github.io/
+
+    clean : False
+        Clean repo cachedirs which are not configured under
+        :conf_minion:`winrepo_remotes`.
+
+        .. note::
+            This option only applies if either pygit2_ or GitPython_ is
+            installed into Salt's bundled Python.
+
+        .. warning::
+            This argument should not be set to ``True`` if a mix of git and
+            non-git repo definitions are being used, as it will result in the
+            non-git repo definitions being removed.
+
+        .. versionadded:: 2015.8.0
+
+        .. _GitPython: https://github.com/gitpython-developers/GitPython
+        .. _pygit2: https://github.com/libgit2/pygit2
 
     CLI Example:
 
@@ -78,4 +127,77 @@ def update_git_repos():
             'Git for Windows is not installed, or not configured to be '
             'accessible from the Command Prompt'
         )
-    return _update_git_repos(opts=__opts__, masterless=True)
+    return _update_git_repos(opts=__opts__, clean=clean, masterless=True)
+
+
+def show_sls(name, saltenv='base'):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Display the rendered software definition from a specific sls file in the
+    local winrepo cache. This will parse all Jinja. Run pkg.refresh_db to pull
+    the latest software definitions from the master.
+
+
+    :param str name:
+        The name of the package you want to view. Start from the local winrepo
+        root. If you have ``.sls`` files organized in subdirectories you'll have
+        to denote them with ``.``. For example, if I have a ``test`` directory
+        in the winrepo root with a ``gvim.sls`` file inside, I would target that
+        file like so: ``test.gvim``. Directories can be targeted as well as long
+        as they contain an ``init.sls`` inside. For example, if I have a ``node``
+        directory with an ``init.sls`` inside, I would target that like so:
+        ``node``.
+
+    :param str saltenv:
+        The default environment is ``base``
+
+    :return:
+        Returns a dictionary containing the rendered data structure
+    :rtype: dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' winrepo.show_sls gvim
+        salt '*' winrepo.show_sls test.npp
+    '''
+    # Get the location of the local repo
+    repo = _get_local_repo_dir(saltenv)
+
+    # Add the sls file name to the path
+    repo = repo.split('\\')
+    definition = name.split('.')
+    repo.extend(definition)
+
+    # Check for the sls file by name
+    sls_file = '{0}.sls'.format(os.sep.join(repo))
+    if not os.path.exists(sls_file):
+
+        # Maybe it's a directory with an init.sls
+        sls_file = '{0}\\init.sls'.format(os.sep.join(repo))
+        if not os.path.exists(sls_file):
+
+            # It's neither, return
+            return 'Software definition {0} not found'.format(name)
+
+    # Load the renderer
+    renderers = salt.loader.render(__opts__, __salt__)
+    config = {}
+
+    # Run the file through the renderer
+    try:
+        config = salt.template.compile_template(
+            sls_file,
+            renderers,
+            __opts__['renderer'])
+
+    # Dump return the error if any
+    except SaltRenderError as exc:
+        log.debug('Failed to compile {0}.'.format(sls_file))
+        log.debug('Error: {0}.'.format(exc))
+        config['Message'] = 'Failed to compile {0}'.format(sls_file)
+        config['Error'] = '{0}'.format(exc)
+
+    return config

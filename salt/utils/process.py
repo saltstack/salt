@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
 import os
 import sys
 import time
 import types
 import signal
-import subprocess
 import logging
+import threading
+import contextlib
+import subprocess
 import multiprocessing
 import multiprocessing.util
 
-import threading
 
 # Import salt libs
 import salt.defaults.exitcodes
@@ -35,6 +36,13 @@ except ImportError:
     pass
 
 
+def systemd_notify_call(action):
+    process = subprocess.Popen(['systemd-notify', action], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process.communicate()
+    status = process.poll()
+    return status == 0
+
+
 def notify_systemd():
     '''
     Notify systemd that this process has started
@@ -42,7 +50,10 @@ def notify_systemd():
     try:
         import systemd.daemon
     except ImportError:
+        if salt.utils.which('systemd-notify') and systemd_notify_call('--booted'):
+            return systemd_notify_call('--ready')
         return False
+
     if systemd.daemon.booted():
         try:
             return systemd.daemon.notify('READY=1')
@@ -102,6 +113,23 @@ def set_pidfile(pidfile, user):
     log.debug('Chowned pidfile: {0} to user: {1}'.format(pidfile, user))
 
 
+def check_pidfile(pidfile):
+    '''
+    Determine if a pidfile has been written out
+    '''
+    return os.path.isfile(pidfile)
+
+
+def get_pidfile(pidfile):
+    '''
+    Return the pid from a pidfile as an integer
+    '''
+    with salt.utils.fopen(pidfile) as pdf:
+        pid = pdf.read()
+
+    return int(pid)
+
+
 def clean_proc(proc, wait_for_kill=10):
     '''
     Generic method for cleaning up multiprocessing procs
@@ -133,6 +161,8 @@ def os_is_running(pid):
     '''
     Use OS facilities to determine if a process is running
     '''
+    if isinstance(pid, six.string_types):
+        pid = int(pid)
     if HAS_PSUTIL:
         return psutil.pid_exists(pid)
     else:
@@ -194,9 +224,15 @@ class ThreadPool(object):
         while True:
             # 1s timeout so that if the parent dies this thread will die within 1s
             try:
-                func, args, kwargs = self._job_queue.get(timeout=1)
-                self._job_queue.task_done()  # Mark the task as done once we get it
-            except queue.Empty:
+                try:
+                    func, args, kwargs = self._job_queue.get(timeout=1)
+                    self._job_queue.task_done()  # Mark the task as done once we get it
+                except queue.Empty:
+                    continue
+            except AttributeError:
+                # During shutdown, `queue` may not have an `Empty` atttribute. Thusly,
+                # we have to catch a possible exception from our exception handler in
+                # order to avoid an unclean shutdown. Le sigh.
                 continue
             try:
                 log.debug('ThreadPool executing func: {0} with args:{1}'
@@ -223,8 +259,9 @@ class ProcessManager(object):
         # store some pointers for the SIGTERM handler
         self._pid = os.getpid()
         self._sigterm_handler = signal.getsignal(signal.SIGTERM)
+        self._restart_processes = True
 
-    def add_process(self, tgt, args=None, kwargs=None):
+    def add_process(self, tgt, args=None, kwargs=None, name=None):
         '''
         Create a processes and args + kwargs
         This will deterimine if it is a Process class, otherwise it assumes
@@ -236,30 +273,52 @@ class ProcessManager(object):
         if kwargs is None:
             kwargs = {}
 
+        if salt.utils.is_windows():
+            # Need to ensure that 'log_queue' is correctly transfered to
+            # processes that inherit from 'MultiprocessingProcess'.
+            if type(MultiprocessingProcess) is type(tgt) and (
+                    issubclass(tgt, MultiprocessingProcess)):
+                need_log_queue = True
+            else:
+                need_log_queue = False
+
+            if need_log_queue and 'log_queue' not in kwargs:
+                if hasattr(self, 'log_queue'):
+                    kwargs['log_queue'] = self.log_queue
+                else:
+                    kwargs['log_queue'] = (
+                            salt.log.setup.get_multiprocessing_logging_queue())
+
         if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
             process = tgt(*args, **kwargs)
         else:
             process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
 
-        process.start()
+        if isinstance(process, SignalHandlingMultiprocessingProcess):
+            with default_signals(signal.SIGINT, signal.SIGTERM):
+                process.start()
+        else:
+            process.start()
 
         # create a nicer name for the debug log
-        if isinstance(tgt, types.FunctionType):
-            name = '{0}.{1}'.format(
-                tgt.__module__,
-                tgt.__name__,
-            )
-        else:
-            name = '{0}.{1}.{2}'.format(
-                tgt.__module__,
-                tgt.__class__,
-                tgt.__name__,
-            )
+        if name is None:
+            if isinstance(tgt, types.FunctionType):
+                name = '{0}.{1}'.format(
+                    tgt.__module__,
+                    tgt.__name__,
+                )
+            else:
+                name = '{0}{1}.{2}'.format(
+                    tgt.__module__,
+                    '.{0}'.format(tgt.__class__) if str(tgt.__class__) != "<type 'type'>" else '',
+                    tgt.__name__,
+                )
         log.debug("Started '{0}' with pid {1}".format(name, process.pid))
         self._process_map[process.pid] = {'tgt': tgt,
                                           'args': args,
                                           'kwargs': kwargs,
                                           'Process': process}
+        return process
 
     def restart_process(self, pid):
         '''
@@ -278,6 +337,13 @@ class ProcessManager(object):
 
         del self._process_map[pid]
 
+    def stop_restarting(self):
+        self._restart_processes = False
+
+    def send_signal_to_processes(self, signal):
+        for pid in self._process_map:
+            os.kill(pid, signal)
+
     def run(self):
         '''
         Load and start all available api modules
@@ -285,7 +351,12 @@ class ProcessManager(object):
         salt.utils.appendproctitle(self.name)
 
         # make sure to kill the subprocesses if the parent is killed
-        signal.signal(signal.SIGTERM, self.kill_children)
+        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+            # There are not SIGTERM handlers installed, install ours
+            signal.signal(signal.SIGTERM, self.kill_children)
+        if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
+            # There are not SIGTERM handlers installed, install ours
+            signal.signal(signal.SIGINT, self.kill_children)
 
         while True:
             try:
@@ -310,9 +381,10 @@ class ProcessManager(object):
         '''
         Check the children once
         '''
-        for pid, mapping in six.iteritems(self._process_map):
-            if not mapping['Process'].is_alive():
-                self.restart_process(pid)
+        if self._restart_processes is True:
+            for pid, mapping in six.iteritems(self._process_map):
+                if not mapping['Process'].is_alive():
+                    self.restart_process(pid)
 
     def kill_children(self, *args):
         '''
@@ -339,6 +411,9 @@ class ProcessManager(object):
                     p_map['Process'].terminate()
         else:
             for pid, p_map in six.iteritems(self._process_map.copy()):
+                if args:
+                    # escalate the signal to the process
+                    os.kill(pid, args[0])
                 try:
                     p_map['Process'].terminate()
                 except OSError as exc:
@@ -368,9 +443,53 @@ class ProcessManager(object):
 
 class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
     def __init__(self, *args, **kwargs):
-        self.log_queue = kwargs.pop('log_queue', salt.log.setup.get_multiprocessing_logging_queue())
+        self.log_queue = kwargs.pop('log_queue', None)
+        if self.log_queue is None:
+            self.log_queue = salt.log.setup.get_multiprocessing_logging_queue()
         multiprocessing.util.register_after_fork(self, MultiprocessingProcess.__setup_process_logging)
+        multiprocessing.util.Finalize(self, salt.log.setup.shutdown_multiprocessing_logging, exitpriority=16)
         super(MultiprocessingProcess, self).__init__(*args, **kwargs)
 
     def __setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+
+
+class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
+    def __init__(self, *args, **kwargs):
+        multiprocessing.util.register_after_fork(self, SignalHandlingMultiprocessingProcess.__setup_signals)
+        super(SignalHandlingMultiprocessingProcess, self).__init__(*args, **kwargs)
+
+    def __setup_signals(self):
+        signal.signal(signal.SIGINT, self._handle_signals)
+        signal.signal(signal.SIGTERM, self._handle_signals)
+
+    def _handle_signals(self, signum, sigframe):
+        msg = '{0} received a '.format(self.__class__.__name__)
+        if signum == signal.SIGINT:
+            msg += 'SIGINT'
+        elif signum == signal.SIGTERM:
+            msg += 'SIGTERM'
+        msg += '. Exiting'
+        log.debug(msg)
+        exit(0)
+
+    def start(self):
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            super(SignalHandlingMultiprocessingProcess, self).start()
+
+
+@contextlib.contextmanager
+def default_signals(*signals):
+    old_signals = {}
+    for signum in signals:
+        old_signals[signum] = signal.getsignal(signum)
+        signal.signal(signum, signal.SIG_DFL)
+
+    # Do whatever is needed with the reset signals
+    yield
+
+    # Restore signals
+    for signum in old_signals:
+        signal.signal(signum, old_signals[signum])
+
+    del old_signals

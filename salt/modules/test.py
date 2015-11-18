@@ -110,11 +110,15 @@ def ping():
 
         salt '*' test.ping
     '''
-    if 'proxymodule' in __opts__:
-        ping_cmd = __opts__['proxymodule'].loaded_base_name + '.ping'
-        return __opts__['proxymodule'][ping_cmd]()
-    else:
+
+    if not salt.utils.is_proxy():
         return True
+    else:
+        ping_cmd = __opts__['proxy']['proxytype'] + '.ping'
+        if __opts__.get('add_proxymodule_to_opts', False):
+            return __opts__['proxymodule'][ping_cmd]()
+        else:
+            return __proxy__[ping_cmd]()
 
 
 def sleep(length):
@@ -186,7 +190,7 @@ def versions_report():
     return '\n'.join(salt.version.versions_report())
 
 
-versions = versions_report
+versions = salt.utils.alias_function(versions_report, 'versions')
 
 
 def conf_test():
@@ -537,7 +541,7 @@ def try_(module, return_try_exception=False, **kwargs):
     '''
     Try to run a module command. On an exception return None.
     If `return_try_exception` is set True return the exception.
-    This can be helpfull in templates where running a module might fail as expected.
+    This can be helpful in templates where running a module might fail as expected.
 
     CLI Example:
 

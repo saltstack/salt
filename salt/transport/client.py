@@ -67,16 +67,20 @@ class AsyncChannel(object):
     '''
     Parent class for Async communication channels
     '''
-    # Resolver used by Tornado TCPClient
+    # Resolver is used by Tornado TCPClient.
     # This static field is shared between
-    # AsyncReqChannel and AsyncPubChannel
-    _resolver = None
+    # AsyncReqChannel and AsyncPubChannel.
+    # This will check to make sure the Resolver
+    # is configured before first use.
+    _resolver_configured = False
 
     @classmethod
-    def _init_resolver(cls, num_threads=10):
-        from tornado.netutil import ThreadedResolver
-        cls._resolver = ThreadedResolver()
-        cls._resolver.initialize(num_threads=num_threads)
+    def _config_resolver(cls, num_threads=10):
+        from tornado.netutil import Resolver
+        Resolver.configure(
+                'tornado.netutil.ThreadedResolver',
+                num_threads=num_threads)
+        cls._resolver_configured = True
 
 
 # TODO: better doc strings
@@ -103,11 +107,11 @@ class AsyncReqChannel(AsyncChannel):
             import salt.transport.raet
             return salt.transport.raet.AsyncRAETReqChannel(opts, **kwargs)
         elif ttype == 'tcp':
-            if not cls._resolver:
+            if not cls._resolver_configured:
                 # TODO: add opt to specify number of resolver threads
-                AsyncChannel._init_resolver()
+                AsyncChannel._config_resolver()
             import salt.transport.tcp
-            return salt.transport.tcp.AsyncTCPReqChannel(opts, resolver=cls._resolver, **kwargs)
+            return salt.transport.tcp.AsyncTCPReqChannel(opts, **kwargs)
         elif ttype == 'local':
             import salt.transport.local
             return salt.transport.local.AsyncLocalChannel(opts, **kwargs)
@@ -152,9 +156,9 @@ class AsyncPubChannel(AsyncChannel):
             import salt.transport.raet
             return salt.transport.raet.AsyncRAETPubChannel(opts, **kwargs)
         elif ttype == 'tcp':
-            if not cls._resolver:
+            if not cls._resolver_configured:
                 # TODO: add opt to specify number of resolver threads
-                AsyncChannel._init_resolver()
+                AsyncChannel._config_resolver()
             import salt.transport.tcp
             return salt.transport.tcp.AsyncTCPPubChannel(opts, **kwargs)
         elif ttype == 'local':  # TODO:
@@ -172,7 +176,7 @@ class AsyncPubChannel(AsyncChannel):
 
     def on_recv(self, callback):
         '''
-        When jobs are recieved pass them (decoded) to callback
+        When jobs are received pass them (decoded) to callback
         '''
         raise NotImplementedError()
 

@@ -88,40 +88,30 @@ will be created without the rest of the interfaces
 Note: For rackconnect v3, rackconnectv3 needs to be specified with the
 rackconnect v3 cloud network as its variable.
 '''
-from __future__ import absolute_import
 # pylint: disable=E0102
 
-# The import section is mostly libcloud boilerplate
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import socket
 import pprint
 import yaml
 
-# Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+# Import Salt Libs
 import salt.ext.six as six
+import salt.utils
+import salt.client
 try:
     from salt.utils.openstack import nova
+    import novaclient.exceptions
     HAS_NOVA = True
 except NameError as exc:
     HAS_NOVA = False
 
+# Import Salt Cloud Libs
+from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
 import salt.utils.cloud
-
-# Import nova libs
-try:
-    import novaclient.exceptions
-except ImportError:
-    pass
-
-# Import salt libs
-import salt.utils
-import salt.client
-
-# Import salt.cloud libs
 import salt.utils.pycrypto as sup
 import salt.config as config
 from salt.utils import namespaced_function
@@ -133,7 +123,6 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
-# Import netaddr IP matching
 try:
     from netaddr import all_matching_cidrs
     HAS_NETADDR = True
@@ -143,6 +132,8 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 request_log = logging.getLogger('requests')
+
+__virtualname__ = 'nova'
 
 # Some of the libcloud functions need to be in the same namespace as the
 # functions defined in the module, so we create new function objects inside
@@ -157,7 +148,14 @@ def __virtual__():
     Check for Nova configurations
     '''
     request_log.setLevel(getattr(logging, __opts__.get('requests_log_level', 'warning').upper()))
-    return HAS_NOVA
+
+    if get_configured_provider() is False:
+        return False
+
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -166,7 +164,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'nova'
+        __active_provider_name__ or __virtualname__,
+        ('user', 'tenant', 'identity_url', 'compute_region',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'netaddr': HAS_NETADDR,
+        'python-novaclient': HAS_NOVA,
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
@@ -383,10 +396,11 @@ def destroy(name, conn=None, call=None):
     profile = None
     if 'metadata' in node.extra and 'profile' in node.extra['metadata']:
         profile = node.extra['metadata']['profile']
+
     flush_mine_on_destroy = False
-    if profile is not None and profile in profiles:
-        if 'flush_mine_on_destroy' in profiles[profile]:
-            flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+    if profile and profile in profiles and 'flush_mine_on_destroy' in profiles[profile]:
+        flush_mine_on_destroy = profiles[profile]['flush_mine_on_destroy']
+
     if flush_mine_on_destroy:
         log.info('Clearing Salt Mine: {0}'.format(name))
         salt_client = salt.client.get_local_client(__opts__['conf_file'])
@@ -631,7 +645,7 @@ def create(vm_):
             return
 
         rackconnectv3 = config.get_cloud_config_value(
-            'rackconnectv3', vm_, __opts__, default='False',
+            'rackconnectv3', vm_, __opts__, default=False,
             search_global=False
         )
 
@@ -703,24 +717,31 @@ def create(vm_):
                     if private_ip not in data.private_ips and not ignore_ip:
                         result.append(private_ip)
 
-        if rackconnect(vm_) is True:
-            if ssh_interface(vm_) != 'private_ips' or rackconnectv3:
-                data.public_ips = access_ip
-                return data
+        if rackconnect(vm_) is True and (ssh_interface(vm_) != 'private_ips' or rackconnectv3):
+            data.public_ips = access_ip
+            return data
+
+        # populate return data with private_ips
+        # when ssh_interface is set to private_ips and public_ips exist
+        if not result and ssh_interface(vm_) == 'private_ips':
+            for private_ip in private:
+                ignore_ip = ignore_cidr(vm_, private_ip)
+                if private_ip not in data.private_ips and not ignore_ip:
+                    result.append(private_ip)
 
         if cloudnetwork(vm_) is True:
             data.public_ips = access_ip
             return data
 
+        if public:
+            data.public_ips = public
+            if ssh_interface(vm_) != 'private_ips':
+                return data
+
         if result:
             log.debug('result = {0}'.format(result))
             data.private_ips = result
             if ssh_interface(vm_) == 'private_ips':
-                return data
-
-        if public:
-            data.public_ips = public
-            if ssh_interface(vm_) != 'private_ips':
                 return data
 
     try:

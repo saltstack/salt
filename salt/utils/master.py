@@ -11,7 +11,6 @@
 from __future__ import absolute_import
 import os
 import logging
-import multiprocessing
 import signal
 import tempfile
 from threading import Thread, Event
@@ -27,6 +26,7 @@ import salt.payload
 from salt.exceptions import SaltException
 import salt.config
 from salt.utils.cache import CacheCli as cache_cli
+from salt.utils.process import MultiprocessingProcess
 
 # Import third party libs
 import salt.ext.six as six
@@ -102,7 +102,7 @@ class MasterPillarUtil(object):
         self.grains_fallback = grains_fallback
         self.pillar_fallback = pillar_fallback
         log.debug(
-            'Init settings: tgt: {0!r}, expr_form: {1!r}, saltenv: {2!r}, '
+            'Init settings: tgt: \'{0}\', expr_form: \'{1}\', saltenv: \'{2}\', '
             'use_cached_grains: {3}, use_cached_pillar: {4}, '
             'grains_fallback: {5}, pillar_fallback: {6}'.format(
                 tgt, expr_form, saltenv, use_cached_grains, use_cached_pillar,
@@ -343,7 +343,7 @@ class MasterPillarUtil(object):
         if clear_mine:
             clear_what.append('mine')
         if clear_mine_func is not None:
-            clear_what.append('mine_func: {0!r}'.format(clear_mine_func))
+            clear_what.append('mine_func: \'{0}\''.format(clear_mine_func))
         if not len(clear_what):
             log.debug('No cached data types specified for clearing.')
             return False
@@ -445,7 +445,7 @@ class CacheTimer(Thread):
                 count = 0
 
 
-class CacheWorker(multiprocessing.Process):
+class CacheWorker(MultiprocessingProcess):
     '''
     Worker for ConnectedCache which runs in its
     own process to prevent blocking of ConnectedCache
@@ -470,7 +470,7 @@ class CacheWorker(multiprocessing.Process):
         log.debug('ConCache CacheWorker update finished')
 
 
-class ConnectedCache(multiprocessing.Process):
+class ConnectedCache(MultiprocessingProcess):
     '''
     Provides access to all minions ids that the master has
     successfully authenticated. The cache is cleaned up regularly by

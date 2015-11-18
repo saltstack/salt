@@ -22,7 +22,6 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       verify_ssl: True
 
 :maintainer: Frank Klaassen <frank@cloudright.nl>
-:maturity: new
 :depends: requests >= 2.2.1
 :depends: IPy >= 0.81
 '''
@@ -34,6 +33,7 @@ import pprint
 import logging
 
 # Import salt libs
+import salt.ext.six as six
 import salt.utils
 
 # Import salt cloud libs
@@ -45,12 +45,7 @@ from salt.exceptions import (
     SaltCloudExecutionTimeout
 )
 
-# Import 3rd-party libs
-import salt.ext.six as six
-
-# Get logging started
-log = logging.getLogger(__name__)
-
+# Import Third Party Libs
 try:
     import requests
     HAS_REQUESTS = True
@@ -63,18 +58,23 @@ try:
 except ImportError:
     HAS_IPY = False
 
+# Get logging started
+log = logging.getLogger(__name__)
+
+__virtualname__ = 'proxmox'
+
 
 def __virtual__():
     '''
     Check for PROXMOX configurations
     '''
-    if not (HAS_IPY and HAS_REQUESTS):
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -83,8 +83,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'proxmox',
+        __active_provider_name__ or __virtualname__,
         ('user',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'requests': HAS_REQUESTS,
+        'IPy': HAS_IPY
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
@@ -109,10 +123,9 @@ def _authenticate():
         'password', get_configured_provider(), __opts__, search_global=False
     )
     verify_ssl = config.get_cloud_config_value(
-        'verify_ssl', get_configured_provider(), __opts__, search_global=False
+        'verify_ssl', get_configured_provider(), __opts__,
+        default=True, search_global=False
     )
-    if verify_ssl is None:
-        verify_ssl = True
 
     connect_data = {'username': username, 'password': passwd}
     full_url = 'https://{0}:8006/api2/json/access/ticket'.format(url)
@@ -174,7 +187,7 @@ def query(conn_type, option, post_data=None):
         log.error(response)
 
 
-def _getVmByName(name, allDetails=False):
+def _get_vm_by_name(name, allDetails=False):
     '''
     Since Proxmox works based op id's rather than names as identifiers this
     requires some filtering to retrieve the required information.
@@ -187,7 +200,7 @@ def _getVmByName(name, allDetails=False):
     return False
 
 
-def _getVmById(vmid, allDetails=False):
+def _get_vm_by_id(vmid, allDetails=False):
     '''
     Retrieve a VM based on the ID.
     '''
@@ -528,7 +541,8 @@ def create(vm_):
                 vm_['ip_address'] = str(ip_address)
 
     try:
-        data = create_node(vm_)
+        newid = _get_next_vmid()
+        data = create_node(vm_, newid)
     except Exception as exc:
         log.error(
             'Error creating {0} on PROXMOX\n\n'
@@ -543,7 +557,10 @@ def create(vm_):
 
     ret['creation_data'] = data
     name = vm_['name']        # hostname which we know
-    vmid = data['vmid']       # vmid which we have received
+    if (vm_['clone']) is True:
+        vmid = newid
+    else:
+        vmid = data['vmid']       # vmid which we have received
     host = data['node']       # host which we have received
     nodeType = data['technology']  # VM tech (Qemu / OpenVZ)
 
@@ -610,7 +627,7 @@ def create(vm_):
     return ret
 
 
-def create_node(vm_):
+def create_node(vm_, newid):
     '''
     Build and submit the requestdata to create a new node
     '''
@@ -636,9 +653,9 @@ def create_node(vm_):
 
     # Required by both OpenVZ and Qemu (KVM)
     vmhost = vm_['host']
-    newnode['vmid'] = _get_next_vmid()
+    newnode['vmid'] = newid
 
-    for prop in ('cpuunits', 'description', 'memory', 'onboot'):
+    for prop in 'cpuunits', 'description', 'memory', 'onboot':
         if prop in vm_:  # if the property is set, use it for the VM request
             newnode[prop] = vm_[prop]
 
@@ -648,12 +665,12 @@ def create_node(vm_):
         newnode['ostemplate'] = vm_['image']
 
         # optional VZ settings
-        for prop in ('cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid', 'storage'):
+        for prop in 'cpus', 'disk', 'ip_address', 'nameserver', 'password', 'swap', 'poolid', 'storage':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
     elif vm_['technology'] == 'qemu':
         # optional Qemu settings
-        for prop in ('acpi', 'cores', 'cpu', 'pool', 'storage'):
+        for prop in 'acpi', 'cores', 'cpu', 'pool', 'storage', 'sata0', 'ostype', 'ide2', 'net0':
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
@@ -667,7 +684,17 @@ def create_node(vm_):
 
     log.debug('Preparing to generate a node using these parameters: {0} '.format(
               newnode))
-    node = query('post', 'nodes/{0}/{1}'.format(vmhost, vm_['technology']), newnode)
+    if vm_['clone'] is True and vm_['technology'] == 'qemu':
+        postParams = {}
+        postParams['newid'] = newnode['vmid']
+
+        for prop in 'description', 'format', 'full', 'name':
+            if 'clone_' + prop in vm_:  # if the property is set, use it for the VM request
+                postParams[prop] = vm_['clone_' + prop]
+
+        node = query('post', 'nodes/{0}/qemu/{1}/clone'.format(vmhost, vm_['clone_from']), postParams)
+    else:
+        node = query('post', 'nodes/{0}/{1}'.format(vmhost, vm_['technology']), newnode)
     return _parse_proxmox_upid(node, vm_)
 
 
@@ -774,7 +801,7 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
-    vmobj = _getVmByName(name)
+    vmobj = _get_vm_by_name(name)
     if vmobj is not None:
         # stop the vm
         if get_vm_status(vmid=vmobj['vmid'])['status'] != 'stopped':
@@ -809,11 +836,11 @@ def set_vm_status(status, name=None, vmid=None):
     if vmid is not None:
         log.debug('set_vm_status: via ID - VMID {0} ({1}): {2}'.format(
                   vmid, name, status))
-        vmobj = _getVmById(vmid)
+        vmobj = _get_vm_by_id(vmid)
     else:
         log.debug('set_vm_status: via name - VMID {0} ({1}): {2}'.format(
                   vmid, name, status))
-        vmobj = _getVmByName(name)
+        vmobj = _get_vm_by_name(name)
 
     if not vmobj or 'node' not in vmobj or 'type' not in vmobj or 'vmid' not in vmobj:
         log.error('Unable to set status {0} for {1} ({2})'.format(
@@ -839,10 +866,10 @@ def get_vm_status(vmid=None, name=None):
     '''
     if vmid is not None:
         log.debug('get_vm_status: VMID {0}'.format(vmid))
-        vmobj = _getVmById(vmid)
+        vmobj = _get_vm_by_id(vmid)
     elif name is not None:
         log.debug('get_vm_status: name {0}'.format(name))
-        vmobj = _getVmByName(name)
+        vmobj = _get_vm_by_name(name)
     else:
         log.debug("get_vm_status: No ID or NAME given")
         raise SaltCloudExecutionFailure

@@ -3,8 +3,7 @@
 The EC2 Cloud Module
 ====================
 
-The EC2 cloud module is used to interact with the Amazon Elastic Cloud
-Computing.
+The EC2 cloud module is used to interact with the Amazon Elastic Compute Cloud.
 
 To use the EC2 cloud module, set up the cloud configuration at
  ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/ec2.conf``:
@@ -71,12 +70,12 @@ To use the EC2 cloud module, set up the cloud configuration at
 from __future__ import absolute_import
 import os
 import sys
-import stat
 import time
 import uuid
 import pprint
 import logging
 import yaml
+
 # Import libs for talking to the EC2 API
 import hmac
 import hashlib
@@ -88,30 +87,7 @@ import json
 import re
 import decimal
 
-# Import 3rd-party libs
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
-import salt.ext.six as six
-from salt.ext.six.moves import map, range, zip
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
-
-# Try to import PyCrypto, which may not be installed on a RAET-based system
-try:
-    import Crypto
-    # PKCS1_v1_5 was added in PyCrypto 2.5
-    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
-    from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
-    HAS_PYCRYPTO = True
-except ImportError:
-    HAS_PYCRYPTO = False
-
-try:
-    import requests
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-# pylint: enable=import-error,no-name-in-module,redefined-builtin
-
-# Import salt libs
+# Import Salt Libs
 import salt.utils
 from salt import syspaths
 from salt._compat import ElementTree as ET
@@ -129,23 +105,44 @@ from salt.exceptions import (
     SaltCloudExecutionFailure
 )
 
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
+import salt.ext.six as six
+from salt.ext.six.moves import map, range, zip
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse, urlencode as _urlencode
+
+# Import 3rd-Party Libs
+# Try to import PyCrypto, which may not be installed on a RAET-based system
+try:
+    import Crypto
+    # PKCS1_v1_5 was added in PyCrypto 2.5
+    from Crypto.Cipher import PKCS1_v1_5  # pylint: disable=E0611
+    from Crypto.Hash import SHA  # pylint: disable=E0611,W0611
+    HAS_PYCRYPTO = True
+except ImportError:
+    HAS_PYCRYPTO = False
+
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    HAS_REQUESTS = False
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
+
 # Get logging started
 log = logging.getLogger(__name__)
 
 SIZE_MAP = {
-    'Micro Instance': 't1.micro',
-    'Small Instance': 'm1.small',
-    'Medium Instance': 'm1.medium',
-    'Large Instance': 'm1.large',
-    'Extra Large Instance': 'm1.xlarge',
-    'High-CPU Medium Instance': 'c1.medium',
-    'High-CPU Extra Large Instance': 'c1.xlarge',
-    'High-Memory Extra Large Instance': 'm2.xlarge',
-    'High-Memory Double Extra Large Instance': 'm2.2xlarge',
-    'High-Memory Quadruple Extra Large Instance': 'm2.4xlarge',
-    'Cluster GPU Quadruple Extra Large Instance': 'cg1.4xlarge',
-    'Cluster Compute Quadruple Extra Large Instance': 'cc1.4xlarge',
-    'Cluster Compute Eight Extra Large Instance': 'cc2.8xlarge',
+    'Micro Instance': 't2.micro',
+    'Small Instance': 't2.small',
+    'Medium Instance': 'm3.medium',
+    'Large Instance': 'm4.large',
+    'Extra Large Instance': 'm4.xlarge',
+    'High-CPU Medium Instance': 'c4.large',
+    'High-CPU Extra Large Instance': 'c4.xlarge',
+    'High-Memory Extra Large Instance': 'r3.xlarge',
+    'High-Memory Double Extra Large Instance': 'r3.2xlarge',
+    'High-Memory Quadruple Extra Large Instance': 'r3.4xlarge',
+    'Cluster GPU Quadruple Extra Large Instance': 'g2.8xlarge'
 }
 
 
@@ -175,44 +172,31 @@ EC2_RETRY_CODES = [
 
 JS_COMMENT_RE = re.compile(r'/\*.*?\*/', re.S)
 
+__virtualname__ = 'ec2'
+
 
 # Only load in this module if the EC2 configurations are in place
 def __virtual__():
     '''
     Set up the libcloud functions and check for EC2 configurations
     '''
-    if not HAS_REQUESTS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
+    if get_dependencies() is False:
+        return False
+
     for provider, details in six.iteritems(__opts__['providers']):
-        if 'provider' not in details or details['provider'] != 'ec2':
+        if 'ec2' not in details:
             continue
 
-        if not os.path.exists(details['private_key']):
-            raise SaltCloudException(
-                'The EC2 key file \'{0}\' used in the \'{1}\' provider '
-                'configuration does not exist\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
+        parameters = details['ec2']
+        if salt.utils.cloud.check_key_path_and_mode(
+                provider, parameters['private_key']
+        ) is False:
+            return False
 
-        keymode = str(
-            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
-        )
-        if keymode not in ('0400', '0600'):
-            raise SaltCloudException(
-                'The EC2 key file \'{0}\' used in the \'{1}\' provider '
-                'configuration needs to be set to mode 0400 or 0600\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
-
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -221,8 +205,22 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'ec2',
+        __active_provider_name__ or __virtualname__,
         ('id', 'key', 'keyname', 'private_key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    deps = {
+        'requests': HAS_REQUESTS,
+        'pycrypto': HAS_PYCRYPTO
+    }
+    return config.check_driver_dependencies(
+        __virtualname__,
+        deps
     )
 
 
@@ -604,57 +602,93 @@ def avail_sizes(call=None):
                 'ram': '22.5 GiB'
             },
         },
-        'High CPU': {
-            'c1.xlarge': {
-                'id': 'c1.xlarge',
-                'cores': '8 (with 2.5 ECUs each)',
-                'disk': '1680 GiB (4 x 420 GiB)',
-                'ram': '8 GiB'
+        'Compute Optimized': {
+            'c4.large': {
+                'id': 'c4.large',
+                'cores': '2',
+                'disk': 'EBS - 500 Mbps',
+                'ram': '3.75 GiB'
             },
-            'c1.medium': {
-                'id': 'c1.medium',
-                'cores': '2 (with 2.5 ECUs each)',
-                'disk': '340 GiB (1 x 340 GiB)',
-                'ram': '1.7 GiB'
+            'c4.xlarge': {
+                'id': 'c4.xlarge',
+                'cores': '4',
+                'disk': 'EBS - 750 Mbps',
+                'ram': '7.5 GiB'
+            },
+            'c4.2xlarge': {
+                'id': 'c4.2xlarge',
+                'cores': '8',
+                'disk': 'EBS - 1000 Mbps',
+                'ram': '15 GiB'
+            },
+            'c4.4xlarge': {
+                'id': 'c4.4xlarge',
+                'cores': '16',
+                'disk': 'EBS - 2000 Mbps',
+                'ram': '30 GiB'
+            },
+            'c4.8xlarge': {
+                'id': 'c4.8xlarge',
+                'cores': '36',
+                'disk': 'EBS - 4000 Mbps',
+                'ram': '60 GiB'
             },
             'c3.large': {
                 'id': 'c3.large',
-                'cores': '2 (with 3.5 ECUs each)',
+                'cores': '2',
                 'disk': '32 GiB (2 x 16 GiB SSD)',
                 'ram': '3.75 GiB'
             },
             'c3.xlarge': {
                 'id': 'c3.xlarge',
-                'cores': '4 (with 3.5 ECUs each)',
+                'cores': '4',
                 'disk': '80 GiB (2 x 40 GiB SSD)',
                 'ram': '7.5 GiB'
             },
             'c3.2xlarge': {
                 'id': 'c3.2xlarge',
-                'cores': '8 (with 3.5 ECUs each)',
+                'cores': '8',
                 'disk': '160 GiB (2 x 80 GiB SSD)',
                 'ram': '15 GiB'
             },
             'c3.4xlarge': {
                 'id': 'c3.4xlarge',
-                'cores': '16 (with 3.5 ECUs each)',
-                'disk': '320 GiB (2 x 80 GiB SSD)',
+                'cores': '16',
+                'disk': '320 GiB (2 x 160 GiB SSD)',
                 'ram': '30 GiB'
             },
             'c3.8xlarge': {
                 'id': 'c3.8xlarge',
-                'cores': '32 (with 3.5 ECUs each)',
-                'disk': '320 GiB (2 x 160 GiB SSD)',
+                'cores': '32',
+                'disk': '640 GiB (2 x 320 GiB SSD)',
                 'ram': '60 GiB'
             }
         },
         'High I/O': {
-            'hi1.4xlarge': {
-                'id': 'hi1.4xlarge',
-                'cores': '8 (with 4.37 ECUs each)',
-                'disk': '2 TiB',
-                'ram': '60.5 GiB'
+            'i2.xlarge': {
+                'id': 'i2.xlarge',
+                'cores': '4',
+                'disk': 'SSD (1 x 800 GiB)',
+                'ram': '30.5 GiB'
             },
+            'i2.2xlarge': {
+                'id': 'i2.2xlarge',
+                'cores': '8',
+                'disk': 'SSD (2 x 800 GiB)',
+                'ram': '61 GiB'
+            },
+            'i2.4xlarge': {
+                'id': 'i2.4xlarge',
+                'cores': '16',
+                'disk': 'SSD (4 x 800 GiB)',
+                'ram': '122 GiB'
+            },
+            'i2.8xlarge': {
+                'id': 'i2.8xlarge',
+                'cores': '32',
+                'disk': 'SSD (8 x 800 GiB)',
+                'ram': '244 GiB'
+            }
         },
         'High Memory': {
             'm2.2xlarge': {
@@ -722,50 +756,84 @@ def avail_sizes(call=None):
                 'ram': '117 GiB'
             },
         },
-        'Micro': {
-            't1.micro': {
-                'id': 't1.micro',
+        'General Purpose': {
+            't2.micro': {
+                'id': 't2.micro',
                 'cores': '1',
                 'disk': 'EBS',
-                'ram': '615 MiB'
+                'ram': '1 GiB'
             },
-        },
-        'Standard': {
-            'm1.xlarge': {
-                'id': 'm1.xlarge',
-                'cores': '4 (with 2 ECUs each)',
-                'disk': '1680 GB (4 x 420 GiB)',
-                'ram': '15 GiB'
-            },
-            'm1.large': {
-                'id': 'm1.large',
-                'cores': '2 (with 2 ECUs each)',
-                'disk': '840 GiB (2 x 420 GiB)',
-                'ram': '7.5 GiB'
-            },
-            'm1.medium': {
-                'id': 'm1.medium',
+            't2.small': {
+                'id': 't2.small',
                 'cores': '1',
-                'disk': '400 GiB',
+                'disk': 'EBS',
+                'ram': '2 GiB'
+            },
+            't2.medium': {
+                'id': 't2.medium',
+                'cores': '2',
+                'disk': 'EBS',
+                'ram': '4 GiB'
+            },
+            't2.large': {
+                'id': 't2.large',
+                'cores': '2',
+                'disk': 'EBS',
+                'ram': '8 GiB'
+            },
+            'm4.large': {
+                'id': 'm4.large',
+                'cores': '2',
+                'disk': 'EBS - 450 Mbps',
+                'ram': '8 GiB'
+            },
+            'm4.xlarge': {
+                'id': 'm4.xlarge',
+                'cores': '4',
+                'disk': 'EBS - 750 Mbps',
+                'ram': '16 GiB'
+            },
+            'm4.2xlarge': {
+                'id': 'm4.2xlarge',
+                'cores': '8',
+                'disk': 'EBS - 1000 Mbps',
+                'ram': '32 GiB'
+            },
+            'm4.4xlarge': {
+                'id': 'm4.4xlarge',
+                'cores': '16',
+                'disk': 'EBS - 2000 Mbps',
+                'ram': '64 GiB'
+            },
+            'm4.10xlarge': {
+                'id': 'm4.10xlarge',
+                'cores': '40',
+                'disk': 'EBS - 4000 Mbps',
+                'ram': '160 GiB'
+            },
+            'm3.medium': {
+                'id': 'm3.medium',
+                'cores': '1',
+                'disk': 'SSD (1 x 4)',
                 'ram': '3.75 GiB'
             },
-            'm1.small': {
-                'id': 'm1.small',
-                'cores': '1',
-                'disk': '150 GiB',
-                'ram': '1.7 GiB'
-            },
-            'm3.2xlarge': {
-                'id': 'm3.2xlarge',
-                'cores': '8 (with 3.25 ECUs each)',
-                'disk': 'EBS',
-                'ram': '30 GiB'
+            'm3.large': {
+                'id': 'm3.large',
+                'cores': '2',
+                'disk': 'SSD (1 x 32)',
+                'ram': '7.5 GiB'
             },
             'm3.xlarge': {
                 'id': 'm3.xlarge',
-                'cores': '4 (with 3.25 ECUs each)',
-                'disk': 'EBS',
+                'cores': '4',
+                'disk': 'SSD (2 x 40)',
                 'ram': '15 GiB'
+            },
+           'm3.2xlarge': {
+                'id': 'm3.2xlarge',
+                'cores': '8',
+                'disk': 'SSD (2 x 80)',
+                'ram': '30 GiB'
             },
         }
     }
@@ -1158,13 +1226,12 @@ def _create_eni_if_necessary(interface):
         if 'item' in subnet_query_result:
             if isinstance(subnet_query_result['item'], dict):
                 for key, value in subnet_query_result['item'].iteritems():
-                    if key == "subnetId":
-                        if value == interface['SubnetId']:
-                            found = True
-                            break
+                    if key == "subnetId" and value == interface['SubnetId']:
+                        found = True
+                        break
             else:
                 for subnet in subnet_query_result['item']:
-                    if subnet['subnetId'] == interface['SubnetId']:
+                    if 'subnetId' in subnet and subnet['subnetId'] == interface['SubnetId']:
                         found = True
                         break
 
@@ -1175,12 +1242,11 @@ def _create_eni_if_necessary(interface):
 
     params = {'SubnetId': interface['SubnetId']}
 
-    for k in ('Description', 'PrivateIpAddress',
-              'SecondaryPrivateIpAddressCount'):
+    for k in 'Description', 'PrivateIpAddress', 'SecondaryPrivateIpAddressCount':
         if k in interface:
             params[k] = interface[k]
 
-    for k in ('PrivateIpAddresses', 'SecurityGroupId'):
+    for k in 'PrivateIpAddresses', 'SecurityGroupId':
         if k in interface:
             params.update(_param_from_config(k, interface[k]))
 
@@ -1208,13 +1274,14 @@ def _create_eni_if_necessary(interface):
     if isinstance(associate_public_ip, str):
         # Assume id of EIP as value
         _associate_eip_with_interface(eni_id, associate_public_ip)
-    elif interface.get('associate_eip'):
+
+    if interface.get('associate_eip'):
         _associate_eip_with_interface(eni_id, interface.get('associate_eip'))
-    elif interface.get('allocate_new_eip') or associate_public_ip:
+    elif interface.get('allocate_new_eip'):
         _new_eip = _request_eip(interface)
         _associate_eip_with_interface(eni_id, _new_eip)
     elif interface.get('allocate_new_eips'):
-        addr_list = _list_interface_private_addresses(eni_desc)
+        addr_list = _list_interface_private_addrs(eni_desc)
         eip_list = []
         for idx, addr in enumerate(addr_list):
             eip_list.append(_request_eip(interface))
@@ -1239,7 +1306,7 @@ def _create_eni_if_necessary(interface):
             'NetworkInterfaceId': eni_id}
 
 
-def _list_interface_private_addresses(eni_desc):
+def _list_interface_private_addrs(eni_desc):
     '''
     Returns a list of all of the private IP addresses attached to a
     network interface. The 'primary' address will be listed first.
@@ -1282,7 +1349,13 @@ def _modify_eni_properties(eni_id, properties=None):
     while retries > 0:
         retries = retries - 1
 
-        result = query(params, return_root=True)
+        result = aws.query(params,
+                           return_root=True,
+                           location=get_location(),
+                           provider=get_provider(),
+                           opts=__opts__,
+                           sigver='4')
+
         if isinstance(result, dict) and result.get('error'):
             time.sleep(1)
             continue
@@ -1587,7 +1660,7 @@ def request_instance(vm_=None, call=None):
         if not isinstance(ex_securitygroupid, list):
             params[spot_prefix + 'SecurityGroupId.1'] = ex_securitygroupid
         else:
-            for (counter, sg_) in enumerate(ex_securitygroupid):
+            for counter, sg_ in enumerate(ex_securitygroupid):
                 params[
                     spot_prefix + 'SecurityGroupId.{0}'.format(counter)
                 ] = sg_
@@ -1632,11 +1705,10 @@ def request_instance(vm_=None, call=None):
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
     )
 
-    if set_del_root_vol_on_destroy is not None:
-        if not isinstance(set_del_root_vol_on_destroy, bool):
-            raise SaltCloudConfigError(
-                '\'del_root_vol_on_destroy\' should be a boolean value.'
-            )
+    if set_del_root_vol_on_destroy and not isinstance(set_del_root_vol_on_destroy, bool):
+        raise SaltCloudConfigError(
+            '\'del_root_vol_on_destroy\' should be a boolean value.'
+        )
 
     vm_['set_del_root_vol_on_destroy'] = set_del_root_vol_on_destroy
 
@@ -1718,11 +1790,10 @@ def request_instance(vm_=None, call=None):
         'del_all_vols_on_destroy', vm_, __opts__, search_global=False, default=False
     )
 
-    if set_del_all_vols_on_destroy is not None:
-        if not isinstance(set_del_all_vols_on_destroy, bool):
-            raise SaltCloudConfigError(
-                '\'del_all_vols_on_destroy\' should be a boolean value.'
-            )
+    if set_del_all_vols_on_destroy and not isinstance(set_del_all_vols_on_destroy, bool):
+        raise SaltCloudConfigError(
+            '\'del_all_vols_on_destroy\' should be a boolean value.'
+        )
 
     salt.utils.cloud.fire_event(
         'event',
@@ -2045,13 +2116,19 @@ def wait_for_instance(
                     },
                     call='action',
                 )
-                log.debug(password_data)
                 win_passwd = password_data.get('password', None)
                 if win_passwd is None:
+                    log.debug(password_data)
                     # This wait is so high, because the password is unlikely to
                     # be generated for at least 4 minutes
                     time.sleep(60)
                 else:
+                    logging_data = password_data
+
+                    logging_data['password'] = 'XXX-REDACTED-XXX'
+                    logging_data['passwordData'] = 'XXX-REDACTED-XXX'
+                    log.debug(logging_data)
+
                     vm_['win_password'] = win_passwd
                     break
 
@@ -3010,6 +3087,11 @@ def list_nodes_full(location=None, call=None):
             get_location(vm_) for vm_ in six.itervalues(__opts__['profiles'])
             if _vm_provider_driver(vm_)
         )
+        # If there aren't any profiles defined for EC2, check
+        # the provider config file, or use the default location.
+        if not locations:
+            locations = [get_location()]
+
         for loc in locations:
             ret.update(_list_nodes_full(loc))
         return ret
@@ -3056,6 +3138,7 @@ def _extract_instance_info(instances):
             for item in instance['instancesSet']['item']:
                 name = _extract_name_tag(item)
                 ret[name] = item
+                ret[name]['name'] = name
                 ret[name].update(
                     dict(
                         id=item['instanceId'],
@@ -3070,6 +3153,7 @@ def _extract_instance_info(instances):
             item = instance['instancesSet']['item']
             name = _extract_name_tag(item)
             ret[name] = item
+            ret[name]['name'] = name
             ret[name].update(
                 dict(
                     id=item['instanceId'],
@@ -3173,6 +3257,7 @@ def list_nodes(call=None):
         ret[node] = {
             'id': nodes[node]['id'],
             'image': nodes[node]['image'],
+            'name': nodes[node]['name'],
             'size': nodes[node]['size'],
             'state': nodes[node]['state'],
             'private_ips': nodes[node]['private_ips'],
@@ -3792,6 +3877,50 @@ def create_keypair(kwargs=None, call=None):
     return data
 
 
+def import_keypair(kwargs=None, call=None):
+    '''
+    Import an SSH public key.
+
+    .. versionadded:: Boron
+    '''
+    if call != 'function':
+        log.error(
+            'The import_keypair function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'keyname' not in kwargs:
+        log.error('A keyname is required.')
+        return False
+
+    if 'file' not in kwargs:
+        log.error('A public key file is required.')
+        return False
+
+    params = {'Action': 'ImportKeyPair',
+              'KeyName': kwargs['keyname']}
+
+    public_key_file = kwargs['file']
+
+    if os.path.exists(public_key_file):
+        with salt.utils.fopen(public_key_file, 'r') as fh_:
+            public_key = fh_.read()
+
+    if public_key is not None:
+        params['PublicKeyMaterial'] = base64.b64encode(public_key)
+
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
+    return data
+
+
 def show_keypair(kwargs=None, call=None):
     '''
     Show the details of an SSH keypair
@@ -3903,15 +4032,17 @@ def create_snapshot(kwargs=None, call=None, wait_to_finish=False):
     for d in data:
         for k, v in six.iteritems(d):
             r_data[k] = v
-    snapshot_id = r_data['snapshotId']
 
-    # Waits till volume is available
-    if wait_to_finish:
-        salt.utils.cloud.run_func_until_ret_arg(fun=describe_snapshots,
-                                                kwargs={'snapshot_id': snapshot_id},
-                                                fun_call=call,
-                                                argument_being_watched='status',
-                                                required_argument_response='completed')
+    if 'snapshotId' in r_data:
+        snapshot_id = r_data['snapshotId']
+
+        # Waits till volume is available
+        if wait_to_finish:
+            salt.utils.cloud.run_func_until_ret_arg(fun=describe_snapshots,
+                                                    kwargs={'snapshot_id': snapshot_id},
+                                                    fun_call=call,
+                                                    argument_being_watched='status',
+                                                    required_argument_response='completed')
 
     return r_data
 
