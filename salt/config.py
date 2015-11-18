@@ -753,9 +753,6 @@ VALID_OPTS = {
 
     # Delay in seconds before executing bootstrap (salt cloud)
     'bootstrap_delay': int,
-
-    # Does this lxc template have systemd installed?
-    'uses_systemd': bool,
 }
 
 # default configurations
@@ -1227,7 +1224,6 @@ CLOUD_CONFIG_DEFAULTS = {
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
     'bootstrap_delay': None,
-    'uses_systemd': True,
 }
 
 DEFAULT_API_OPTS = {
