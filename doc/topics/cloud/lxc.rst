@@ -192,31 +192,6 @@ Driver Support
 - Image listing (LXC templates)
 - Running container information (IP addresses, etc.)
 
-Systemd Check
--------------
-
-.. versionadded:: 2015.8.2
-
-Some container templates might not have systemd installed resulting in errors during
-container creation time. To prevent this please set the ``uses_systemd`` option to ``False``.
-Option `uses_systemd` defaults to `True`.
-
-.. code-block:: yaml
-
-    ubuntu-lxc:
-      provider: dev-lxc
-      lxc_profile:
-        template: download
-        options:
-          release: trusty
-          arch: amd64
-      image: ubuntu
-      script_args: -P
-      uses_systemd: False
-      network_profile: ubuntu
-      minion:
-        master: localhost
-
 Bootstrap Delay
 ---------------
 

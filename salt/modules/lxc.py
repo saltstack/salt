@@ -1145,7 +1145,6 @@ def init(name,
          bootstrap_args=None,
          bootstrap_shell=None,
          bootstrap_url=None,
-         uses_systemd=True,
          **kwargs):
     '''
     Initialize a new container.
@@ -1298,9 +1297,6 @@ def init(name,
 
     unconditional_install
         Run the script even if the container seems seeded
-
-    uses_systemd
-        Set to true if the lxc template has systemd installed
 
     CLI Example:
 
@@ -1622,8 +1618,7 @@ def init(name,
                     bootstrap_delay=bootstrap_delay,
                     bootstrap_url=bootstrap_url,
                     bootstrap_shell=bootstrap_shell,
-                    bootstrap_args=bootstrap_args,
-                    uses_systemd=uses_systemd)
+                    bootstrap_args=bootstrap_args)
             except (SaltInvocationError, CommandExecutionError) as exc:
                 ret['comment'] = 'Bootstrap failed: ' + exc.strerror
                 ret['result'] = False
@@ -3324,7 +3319,7 @@ def test_bare_started_state(name, path=None):
     return ret
 
 
-def wait_started(name, path=None, timeout=300, uses_systemd=True):
+def wait_started(name, path=None, timeout=300):
     '''
     Check that the system has fully inited
 
@@ -3352,7 +3347,7 @@ def wait_started(name, path=None, timeout=300, uses_systemd=True):
         raise CommandExecutionError(
             'Container {0} is not running'.format(name))
     ret = False
-    if uses_systemd and running_systemd(name, path=path):
+    if running_systemd(name, path=path):
         test_started = test_sd_started_state
         logger = log.error
     else:
@@ -3408,8 +3403,7 @@ def bootstrap(name,
               path=None,
               bootstrap_delay=None,
               bootstrap_args=None,
-              bootstrap_shell=None,
-              uses_systemd=True):
+              bootstrap_shell=None):
     '''
     Install and configure salt in a container.
 
@@ -3470,7 +3464,7 @@ def bootstrap(name,
                 [approve_key=(True|False)] [install=(True|False)]
 
     '''
-    wait_started(name, path=path, uses_systemd=uses_systemd)
+    wait_started(name, path=path)
     if bootstrap_delay is not None:
         try:
             log.info('LXC {0}: bootstrap_delay: {1}'.format(
