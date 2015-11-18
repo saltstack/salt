@@ -132,7 +132,7 @@ def _untracked_custom_unit_found(name):
     '''
     unit_path = os.path.join('/etc/systemd/system',
                              _canonical_unit_name(name))
-    return name not in get_all() and os.access(unit_path, os.R_OK)
+    return os.access(unit_path, os.R_OK) and name not in get_all()
 
 
 def _unit_file_changed(name):
