@@ -277,6 +277,25 @@ def sync_beacons(saltenv=None, refresh=True):
     return ret
 
 
+def sync_sdb(saltenv=None, refresh=False):
+    '''
+    Sync sdb modules from the _sdb directory on the salt master file
+    server. This function is environment aware, pass the desired environment
+    to grab the contents of the _sdb directory, base is the default
+    environment.
+
+    .. versionadded:: 2015.5.7
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_sdb
+    '''
+    ret = _sync('sdb', saltenv)
+    return ret
+
+
 def sync_modules(saltenv=None, refresh=True):
     '''
     Sync the modules from the _modules directory on the salt master file
@@ -509,6 +528,7 @@ def sync_all(saltenv=None, refresh=True):
     ret['beacons'] = sync_beacons(saltenv, False)
     ret['modules'] = sync_modules(saltenv, False)
     ret['states'] = sync_states(saltenv, False)
+    ret['sdb'] = sync_sdb(saltenv, False)
     ret['grains'] = sync_grains(saltenv, False)
     ret['renderers'] = sync_renderers(saltenv, False)
     ret['returners'] = sync_returners(saltenv, False)
