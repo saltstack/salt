@@ -127,12 +127,12 @@ def _get_all_legacy_init_scripts():
 
 def _untracked_custom_unit_found(name):
     '''
-    If the passed service name is not in the output from get_all(), but a unit
-    file exist in /etc/systemd/system, return True. Otherwise, return False.
+    If the passed service name is not available, but a unit file exist in
+    /etc/systemd/system, return True. Otherwise, return False.
     '''
     unit_path = os.path.join('/etc/systemd/system',
                              _canonical_unit_name(name))
-    return os.access(unit_path, os.R_OK) and name not in get_all()
+    return os.access(unit_path, os.R_OK) and not available(name)
 
 
 def _unit_file_changed(name):
