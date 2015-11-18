@@ -6,12 +6,29 @@ import logging
 log = logging.getLogger(__name__)
 
 
+def _write_proxy_conf(proxyfile):
+    msg = 'Invalid value for proxy file provided!, Supplied value = {0}' \
+        .format(proxyfile)
+
+    log.trace('Salt Proxy Module: write proxy conf')
+
+    if proxyfile:
+        log.debug('Writing proxy conf file')
+        with open(path, 'w') as proxy_conf:
+            proxy_conf.write('master = {0}'
+                             .format(__grains__['master']))
+        msg = 'Wrote proxy file {0}'.format(proxyfile)
+        log.debug(msg)
+
+    return msg
+
+
 def _proxy_conf_file(proxyfile):
     changes = []
     success = True
     if not os.path.exists(proxyfile):
-        __salt__['salt_proxy.write_proxy_conf'](path=proxyfile)
         try:
+            changes.append(_write_proxy_conf(proxyfile))
             msg = 'Salt Proxy: Wrote proxy conf {0}'.format(proxyfile)
         except (OSError, IOError) as err:
             success = False
