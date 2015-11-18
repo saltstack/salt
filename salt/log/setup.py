@@ -32,6 +32,7 @@ from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-e
 
 # Let's define these custom logging levels before importing the salt.log.mixins
 # since they will be used there
+PROFILE = logging.PROFILE = 15
 TRACE = logging.TRACE = 5
 GARBAGE = logging.GARBAGE = 1
 QUIET = logging.QUIET = 1000
@@ -54,6 +55,7 @@ LOG_LEVELS = {
     'critical': logging.CRITICAL,
     'garbage': GARBAGE,
     'info': logging.INFO,
+    'profile': PROFILE,
     'quiet': QUIET,
     'trace': TRACE,
     'warning': logging.WARNING,
@@ -67,6 +69,7 @@ LOG_COLORS = {
         'ERROR': TextFormat('bold', 'red'),
         'WARNING': TextFormat('bold', 'yellow'),
         'INFO': TextFormat('bold', 'green'),
+        'PROFILE': TextFormat('bold', 'cyan'),
         'DEBUG': TextFormat('bold', 'cyan'),
         'TRACE': TextFormat('bold', 'magenta'),
         'GARBAGE': TextFormat('bold', 'blue'),
@@ -80,6 +83,7 @@ LOG_COLORS = {
         'ERROR': TextFormat('red'),
         'WARNING': TextFormat('yellow'),
         'INFO': TextFormat('green'),
+        'PROFILE': TextFormat('bold', 'cyan'),
         'DEBUG': TextFormat('cyan'),
         'TRACE': TextFormat('magenta'),
         'GARBAGE': TextFormat('blue'),
@@ -366,6 +370,7 @@ if logging.getLoggerClass() is not SaltLoggingClass:
 
     logging.setLoggerClass(SaltLoggingClass)
     logging.addLevelName(QUIET, 'QUIET')
+    logging.addLevelName(PROFILE, 'PROFILE')
     logging.addLevelName(TRACE, 'TRACE')
     logging.addLevelName(GARBAGE, 'GARBAGE')
 

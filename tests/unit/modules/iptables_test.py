@@ -145,21 +145,25 @@ class IptablesTestCase(TestCase):
 
     # 'get_saved_rules' function tests: 1
 
-    @patch('salt.modules.iptables._parse_conf', MagicMock(return_value=False))
     def test_get_saved_rules(self):
         '''
         Test if it return a data structure of the rules in the conf file
         '''
-        self.assertFalse(iptables.get_saved_rules())
+        mock = MagicMock(return_value=False)
+        with patch.object(iptables, '_parse_conf', mock):
+            self.assertFalse(iptables.get_saved_rules())
+            mock.assert_called_with(conf_file=None, family='ipv4')
 
     # 'get_rules' function tests: 1
 
-    @patch('salt.modules.iptables._parse_conf', MagicMock(return_value=False))
     def test_get_rules(self):
         '''
         Test if it return a data structure of the current, in-memory rules
         '''
-        self.assertFalse(iptables.get_rules())
+        mock = MagicMock(return_value=False)
+        with patch.object(iptables, '_parse_conf', mock):
+            self.assertFalse(iptables.get_rules())
+            mock.assert_called_with(in_mem=True, family='ipv4')
 
     # 'get_saved_policy' function tests: 1
 
