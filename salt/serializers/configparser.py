@@ -11,7 +11,7 @@
 from __future__ import absolute_import
 
 import StringIO
-import salt.ext.six.moves.configparser as configparser
+import salt.ext.six.moves.configparser as configparser # pylint: disable=E0611
 
 from salt.ext.six import string_types
 from salt.serializers import DeserializationError, SerializationError
