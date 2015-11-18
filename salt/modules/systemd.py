@@ -73,8 +73,7 @@ def _get_all_units():
                       r')\s+loaded\s+(?P<active>[^\s]+)')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --all --full --no-legend --no-pager list-units | col -b',
-        python_shell=True
+        'systemctl --all --full --no-legend --no-pager list-units'
     )
 
     ret = {}
@@ -96,8 +95,7 @@ def _get_all_unit_files():
                       r')\s+(?P<state>.+)$')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --full --no-legend --no-pager list-unit-files | col -b',
-        python_shell=True
+        'systemctl --full --no-legend --no-pager list-unit-files'
     )
 
     ret = {}
