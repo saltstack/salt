@@ -57,6 +57,7 @@ class SaltAPI(parsers.SaltAPIParser):
         self.set_pidfile()
 
     def run(self):
+        import salt.utils
         salt.utils.warn_until(
             'Nitrogen',
             'Please stop calling \'SaltAPI.run()\' and instead call '
