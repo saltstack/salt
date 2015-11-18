@@ -460,9 +460,9 @@ def disable_beacon(name, **kwargs):
                     beacons = event_ret['beacons']
                     beacon_config_dict = _get_beacon_config_dict(beacons[name])
 
-                    if 'enabled' in beacon_config_dict and beacon_config_dict['enabled']:
+                    if 'enabled' in beacon_config_dict and not beacon_config_dict['enabled']:
                         ret['result'] = True
-                        ret['comment'] = 'Disabled beacon on minion.'
+                        ret['comment'] = 'Disabled beacon {0} on minion.'.format(name)
                     else:
                         ret['result'] = False
                         ret['comment'] = 'Failed to disable beacon on minion.'
