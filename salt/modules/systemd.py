@@ -109,8 +109,8 @@ def _get_all_unit_files():
 
 def _get_all_legacy_init_scripts():
     '''
-    Get all old-fashioned init-style scripts. State is always inactive, because systemd would already show them
-    otherwise.
+    Get all old-fashioned init-style scripts. State is always inactive, because
+    systemd would already show them otherwise.
     '''
     ret = {}
     if not os.path.isdir(LEGACY_INIT_SCRIPT_PATH):
