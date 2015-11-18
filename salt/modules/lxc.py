@@ -291,6 +291,8 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         autostart the container at boot time
     password
         administrative password for the container
+    bootstrap_delay
+        delay before launching bootstrap script at Container init
 
 
     .. warning::
@@ -521,6 +523,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['bootstrap_url'] = script
     lxc_init_interface['bootstrap_args'] = script_args
     lxc_init_interface['bootstrap_shell'] = _cloud_get('bootstrap_shell', 'sh')
+    lxc_init_interface['bootstrap_delay'] = _cloud_get('bootstrap_delay', None)
     lxc_init_interface['autostart'] = autostart
     lxc_init_interface['users'] = users
     lxc_init_interface['password'] = password
@@ -3470,6 +3473,8 @@ def bootstrap(name,
     wait_started(name, path=path, uses_systemd=uses_systemd)
     if bootstrap_delay is not None:
         try:
+            log.info('LXC {0}: bootstrap_delay: {1}'.format(
+                name, bootstrap_delay))
             time.sleep(bootstrap_delay)
         except TypeError:
             # Bad input, but assume since a value was passed that
