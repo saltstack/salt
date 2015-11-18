@@ -89,6 +89,22 @@ class RosterMatcher(object):
                     minions[minion] = data
         return minions
 
+    def ret_nodegroup_minions(self):
+        '''
+        Return minions which match the special list-only groups defined by
+        ssh_nodegroups
+        '''
+        minions = {}
+        nodegroup = __opts__.get('ssh_nodegroups', {}).get(self.tgt, [])
+        if not isinstance(nodegroup, list):
+            nodegroup = nodegroup.split(',')
+        for minion in self.raw:
+            if minion in nodegroup:
+                data = self.get_data(minion)
+                if data:
+                    minions[minion] = data
+        return minions
+
     def get_data(self, minion):
         '''
         Return the configured ip
