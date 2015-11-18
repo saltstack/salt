@@ -82,3 +82,11 @@ class SaltAPI(parsers.SaltAPIParser):
         else:
             exitmsg = msg.strip()
         super(SaltAPI, self).shutdown(exitcode, exitmsg)
+
+    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+        # escalate signal to the process manager processes
+        self.api.process_manager.stop_restarting()
+        self.api.process_manager.send_signal_to_processes(signum)
+        # kill any remaining processes
+        self.api.process_manager.kill_children()
+        super(SaltAPI, self)._handle_signals(signum, sigframe)
