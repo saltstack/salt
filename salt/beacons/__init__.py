@@ -55,7 +55,7 @@ class Beacon(object):
                     'Beacon configuration should be a list instead of a dictionary.'
                 )
                 current_beacon_config = config[mod]
-                
+
             if 'enabled' in current_beacon_config:
                 if not current_beacon_config['enabled']:
                     log.trace('Beacon {0} disabled'.format(mod))
@@ -114,7 +114,7 @@ class Beacon(object):
         '''
         Process a beacon configuration to determine its interval
         '''
-        
+
         interval = False
         if isinstance(current_beacon_config, dict):
             interval = current_beacon_config.get(key, False)
@@ -146,26 +146,26 @@ class Beacon(object):
         '''
         Return the index of a labeled config item in the beacon config, -1 if the index is not found
         '''
-        
+
         indexes = [index for index, item in enumerate(beacon_config) if label in item]
         if len(indexes) < 1:
             return -1
         else:
             return indexes[0]
-    
+
     def _remove_list_item(self, beacon_config, label):
         '''
         Remove an item from a beacon config list
         '''
-        
+
         index = self._get_index(beacon_config, label)
         del beacon_config[index]
-    
+
     def _update_enabled(self, name, enabled_value):
         '''
         Update whether an individual beacon is enabled
         '''
-        
+
         if isinstance(self.opts['beacons'][name], dict):
             # Backwards compatibility
             self.opts['beacons'][name]['enabled'] = enabled_value
@@ -175,7 +175,7 @@ class Beacon(object):
                 self.opts['beacons'][name][enabled_index]['enabled'] = enabled_value
             else:
                 self.opts['beacons'][name].append({'enabled': enabled_value})
-    
+
     def list_beacons(self):
         '''
         List the beacon items
@@ -290,7 +290,7 @@ class Beacon(object):
         '''
         Disable a beacon
         '''
-        
+
         self._update_enabled(name, False)
 
         # Fire the complete event back along with updated list of beacons

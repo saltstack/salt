@@ -371,8 +371,9 @@ def _get_beacon_config_dict(beacon_config):
         list(map(beacon_config_dict.update, beacon_config))
     else:
         beacon_config_dict = beacon_config
-        
+
     return beacon_config_dict
+
 
 def enable_beacon(name, **kwargs):
     '''
@@ -410,7 +411,7 @@ def enable_beacon(name, **kwargs):
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
                     beacon_config_dict = _get_beacon_config_dict(beacons[name])
-                        
+
                     if 'enabled' in beacon_config_dict and beacon_config_dict['enabled']:
                         ret['result'] = True
                         ret['comment'] = 'Enabled beacon {0} on minion.'.format(name)
