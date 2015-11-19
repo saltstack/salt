@@ -315,9 +315,9 @@ def chconfig(cmd, *args, **kwargs):
 
     # Catch password reset
     if 'dracr.'+cmd not in __salt__:
-        ret =  {'retcode': -1, 'message': 'dracr.' + cmd + ' is not available'}
+        ret = {'retcode': -1, 'message': 'dracr.' + cmd + ' is not available'}
     else:
-        ret =  __salt__['dracr.'+cmd](*args, **kwargs)
+        ret = __salt__['dracr.'+cmd](*args, **kwargs)
 
     if cmd == 'change_password':
         if 'username' in kwargs:

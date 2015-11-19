@@ -54,7 +54,6 @@ def _find_credentials():
                 # and password
                 return (u, p)
 
-
     logger.debug('grains fx2._find_credentials found no valid credentials, using Dell default')
     return ('root', 'calvin')
 
