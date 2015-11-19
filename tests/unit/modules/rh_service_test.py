@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import
+import textwrap
 
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
@@ -90,6 +91,35 @@ class RhServiceTestCase(TestCase):
         Return Bool value.
         '''
         return MagicMock(return_value=bol)
+
+    def test__chkconfig_is_enabled(self):
+        '''
+        test _chkconfig_is_enabled function
+        '''
+        name = 'atd'
+        chkconfig_out = textwrap.dedent('''\
+
+            {0}           0:off   1:off   2:off   3:on    4:on    5:on    6:off
+            '''.format(name))
+        xinetd_out = textwrap.dedent('''\
+            xinetd based services:
+                    {0}:  on
+            '''.format(name))
+
+        with patch.object(rh_service, '_runlevel', MagicMock(return_value=3)):
+            mock_run = MagicMock(return_value={'retcode': 0,
+                                               'stdout': chkconfig_out})
+            with patch.dict(rh_service.__salt__, {'cmd.run_all': mock_run}):
+                self.assertTrue(rh_service._chkconfig_is_enabled(name))
+                self.assertFalse(rh_service._chkconfig_is_enabled(name, 2))
+                self.assertTrue(rh_service._chkconfig_is_enabled(name, 3))
+
+            mock_run = MagicMock(return_value={'retcode': 0,
+                                               'stdout': xinetd_out})
+            with patch.dict(rh_service.__salt__, {'cmd.run_all': mock_run}):
+                self.assertTrue(rh_service._chkconfig_is_enabled(name))
+                self.assertTrue(rh_service._chkconfig_is_enabled(name, 2))
+                self.assertTrue(rh_service._chkconfig_is_enabled(name, 3))
 
     # 'get_enabled' function tests: 1
 

@@ -1257,9 +1257,9 @@ def delete_network_interface(
     return r
 
 
-def attach_network_interface(
-        name=None, network_interface_id=None, instance_id=None,
-        device_index=None, region=None, key=None, keyid=None, profile=None):
+def attach_network_interface(device_index, name=None, network_interface_id=None,
+                             instance_name=None, instance_id=None,
+                             region=None, key=None, keyid=None, profile=None):
     '''
     Attach an Elastic Network Interface.
 
@@ -1269,16 +1269,20 @@ def attach_network_interface(
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.create_network_interface my_eni subnet-12345 description=my_eni groups=['my_group']
+        salt myminion boto_ec2.attach_network_interface my_eni instance_name=salt-master device_index=0
     '''
-    if not (name or network_interface_id):
+    if not salt.utils.exactly_one((name, network_interface_id)):
         raise SaltInvocationError(
-            'Either name or network_interface_id must be provided.'
+            "Exactly one (but not both) of 'name' or 'network_interface_id' "
+            "must be provided."
         )
-    if not (instance_id and device_index):
+
+    if not salt.utils.exactly_one((instance_name, instance_id)):
         raise SaltInvocationError(
-            'instance_id and device_index are required parameters.'
+            "Exactly one (but not both) of 'instance_name' or 'instance_id' "
+            "must be provided."
         )
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = {}
     result = _get_network_interface(conn, name, network_interface_id)
@@ -1291,6 +1295,15 @@ def attach_network_interface(
     except KeyError:
         r['error'] = {'message': 'ID not found for this network interface.'}
         return r
+
+    if instance_name:
+        try:
+            instance_id = get_id(name=instance_name, region=region, key=key,
+                                 keyid=keyid, profile=profile)
+        except boto.exception.BotoServerError as e:
+            log.error(e)
+            return False
+
     try:
         r['result'] = conn.attach_network_interface(
             network_interface_id, instance_id, device_index

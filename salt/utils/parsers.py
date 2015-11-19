@@ -15,6 +15,7 @@
 from __future__ import absolute_import, print_function
 import os
 import sys
+import types
 import signal
 import getpass
 import logging
@@ -954,31 +955,46 @@ class PidfileMixin(six.with_metaclass(MixInMeta, object)):
             'DaemonMixIn which contains the same behavior. PidfileMixin '
             'will be supported until Salt {version}.'
         )
-        self.add_option(
-            '--pid-file', dest='pidfile',
-            default=os.path.join(
-                syspaths.PIDFILE_DIR, '{0}.pid'.format(self.get_prog_name())
-            ),
-            help=('Specify the location of the pidfile. Default: %default')
-        )
+        try:
+            self.add_option(
+                '--pid-file', dest='pidfile',
+                default=os.path.join(
+                    syspaths.PIDFILE_DIR, '{0}.pid'.format(self.get_prog_name())
+                ),
+                help=('Specify the location of the pidfile. Default: %default')
+            )
 
-    def set_pidfile(self):
-        from salt.utils.process import set_pidfile
-        set_pidfile(self.config['pidfile'], self.config['user'])
+            # Since there was no colision with DaemonMixin, let's add the
+            # pidfile mixin methods. This is used using types.MethodType
+            # because if we had defined these at the class level, they would
+            # have overridden the exact same methods from the DaemonMixin.
 
-    def check_pidfile(self):
-        '''
-        Report whether a pidfile exists
-        '''
-        from salt.utils.process import check_pidfile
-        return check_pidfile(self.config['pidfile'])
+            def set_pidfile(self):
+                from salt.utils.process import set_pidfile
+                set_pidfile(self.config['pidfile'], self.config['user'])
 
-    def get_pidfile(self):
-        '''
-        Return a pid contained in a pidfile
-        '''
-        from salt.utils.process import get_pidfile
-        return get_pidfile(self.config['pidfile'])
+            self.set_pidfile = types.MethodType(set_pidfile, self)
+
+            def check_pidfile(self):
+                '''
+                Report whether a pidfile exists
+                '''
+                from salt.utils.process import check_pidfile
+                return check_pidfile(self.config['pidfile'])
+
+            self.check_pidfile = types.MethodType(check_pidfile, self)
+
+            def get_pidfile(self):
+                '''
+                Return a pid contained in a pidfile
+                '''
+                from salt.utils.process import get_pidfile
+                return get_pidfile(self.config['pidfile'])
+
+            self.get_pidfile = types.MethodType(get_pidfile, self)
+        except optparse.OptionConflictError:
+            # The option was already added by the DaemonMixin
+            pass
 
 
 class TargetOptionsMixIn(six.with_metaclass(MixInMeta, object)):
@@ -2929,3 +2945,21 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
 
     def setup_config(self):
         return salt.config.spm_config(self.get_config_file_path())
+
+
+class SaltAPIParser(six.with_metaclass(OptionParserMeta,
+                                       OptionParser,
+                                       ConfigDirMixIn,
+                                       LogLevelMixIn,
+                                       DaemonMixIn,
+                                       MergeConfigMixIn)):
+    '''
+    The Salt API cli parser object used to fire up the salt api system.
+    '''
+    # ConfigDirMixIn config filename attribute
+    _config_filename_ = 'master'
+    # LogLevelMixIn attributes
+    _default_logging_logfile_ = os.path.join(syspaths.LOGS_DIR, 'api')
+
+    def setup_config(self):
+        return salt.config.api_config(self.get_config_file_path())  # pylint: disable=no-member

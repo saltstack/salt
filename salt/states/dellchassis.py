@@ -4,7 +4,7 @@ Manage chassis via Salt Proxies.
 
 .. versionadded:: 2015.8.2
 
-Below is an example state that sets parameters just to show the basics.
+Below is an example state that sets basic parameters:
 
 .. code-block:: yaml
 
@@ -24,15 +24,16 @@ Below is an example state that sets parameters just to show the basics.
           - server-3: powercycle
 
 However, it is possible to place the entire set of chassis configuration
-data in pillar. Here's an example pillar
-structure:
+data in pillar. Here's an example pillar structure:
 
 .. code-block:: yaml
 
     proxy:
       host: 10.27.20.18
       admin_username: root
-      admin_password: saltstack
+      admin_password: super-secret
+      fallback_admin_username: root
+      fallback_admin_password: old-secret
       proxytype: fx2
 
       chassis:
@@ -48,30 +49,30 @@ structure:
           - 'server-2': blade2
 
         blades:
-           blade1:
-             idrac_password: saltstack1
-             ipmi_over_lan: True
-             ip: 172.17.17.1
-             subnet: 255.255.0.0
-             netmask: 172.17.255.255
+          blade1:
+            idrac_password: saltstack1
+            ipmi_over_lan: True
+            ip: 172.17.17.1
+            subnet: 255.255.0.0
+            netmask: 172.17.255.255
           blade2:
-             idrac_password: saltstack1
-             ipmi_over_lan: True
-             ip: 172.17.17.2
-             subnet: 255.255.0.0
-             netmask: 172.17.255.255
+            idrac_password: saltstack1
+            ipmi_over_lan: True
+            ip: 172.17.17.2
+            subnet: 255.255.0.0
+            netmask: 172.17.255.255
           blade3:
-             idrac_password: saltstack1
-             ipmi_over_lan: True
-             ip: 172.17.17.2
-             subnet: 255.255.0.0
-             netmask: 172.17.255.255
+            idrac_password: saltstack1
+            ipmi_over_lan: True
+            ip: 172.17.17.2
+            subnet: 255.255.0.0
+            netmask: 172.17.255.255
           blade4:
-             idrac_password: saltstack1
-             ipmi_over_lan: True
-             ip: 172.17.17.2
-             subnet: 255.255.0.0
-             netmask: 172.17.255.255
+            idrac_password: saltstack1
+            ipmi_over_lan: True
+            ip: 172.17.17.2
+            subnet: 255.255.0.0
+            netmask: 172.17.255.255
 
         switches:
           switch-1:
@@ -87,33 +88,8 @@ structure:
             snmp: nonpublic
             password: saltstack1
 
-And to go with it, here's an example state that pulls the data from pillar.
-This example assumes that the pillar data would be structured like
-
-Pillar:
-
-.. code-block:: yaml
-
-    proxy:
-      host: 192.168.1.1
-      admin_username: root
-      admin_password: sekrit
-      fallback_admin_username: root
-      fallback_admin_password: old_sekrit
-      proxytype: fx2
-
-      chassis:
-        name: fx2-1
-        username: root
-        datacenter: UT1
-        location: UT1
-        management_mode: 2
-        idrac_launch: 0
-        slot_names:
-          1: blade1
-          2: blade2
-
-State:
+And to go with it, here's an example state that pulls the data from the
+pillar stated above:
 
 .. code-block:: yaml
 
@@ -124,15 +100,14 @@ State:
         - location: {{ details['location'] }}
         - mode: {{ details['management_mode'] }}
         - idrac_launch: {{ details['idrac_launch'] }}
-        - slot_names
-          {% for k, v in details['chassis']['slot_names'].iteritems() %}
+        - slot_names:
+          {% for k, v in details['slot_names'].iteritems() %}
           - {{ k }}: {{ v }}
           {% endfor %}
 
-
-    {% for k, v in details['chassis']['switches'].iteritems() %}
+    {% for k, v in details['switches'].iteritems() %}
     standup-switches-{{ k }}:
-      dellchassis.dell_switch:
+      dellchassis.switch:
         - name: {{ k }}
         - ip: {{ v['ip'] }}
         - netmask: {{ v['netmask'] }}
@@ -141,14 +116,8 @@ State:
         - snmp: {{ v['snmp'] }}
     {% endfor %}
 
-    dellchassis
-    {% for k, v in details['chassis']['slot_names'].iteritems() %}
-
-          - {{ k }}: {{ v }}
-          {% endfor %}
-
     blade_powercycle:
-      chassis.dell_chassis:
+      dellchassis.chassis:
         - blade_power_states:
           - server-1: powercycle
           - server-2: powercycle
@@ -171,7 +140,7 @@ def __virtual__():
     return 'chassis.cmd' in __salt__
 
 
-def blade_idrac(idrac_password=None, idrac_ipmi=None,
+def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
                 idrac_ip=None, idrac_netmask=None, idrac_gateway=None,
                 idrac_dnsname=None,
                 drac_dhcp=None):
@@ -188,7 +157,8 @@ def blade_idrac(idrac_password=None, idrac_ipmi=None,
     :return: A standard Salt changes dictionary
     '''
 
-    ret = {'result': True,
+    ret = {'name': name,
+           'result': True,
            'changes': {},
            'comment': ''}
 
@@ -284,7 +254,7 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
               - server-2: off
               - server-3: powercycle
     '''
-    ret = {'chassis_name': chassis_name,
+    ret = {'name': chassis_name,
            'result': True,
            'changes': {},
            'comment': ''}
@@ -479,7 +449,7 @@ def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
     .. code-block:: yaml
 
         my-dell-chassis:
-          dellchassis.dell_switch:
+          dellchassis.switch:
             - switch: switch-1
             - ip: 192.168.1.1
             - netmask: 255.255.255.0

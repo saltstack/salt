@@ -79,11 +79,11 @@ class HgTestCase(TestCase):
                                         MagicMock(return_value='A')}):
             self.assertEqual(hg.clone('cwd', 'repository'), 'A')
 
-    def test_status(self):
+    def test_status_single(self):
         '''
         Test for Status to a given repository
         '''
-        with patch.dict(hg.__salt__, {'cmd.run':
+        with patch.dict(hg.__salt__, {'cmd.run_stdout':
                                         MagicMock(return_value=(
                                             'A added 0\n'
                                             'A added 1\n'
@@ -91,6 +91,21 @@ class HgTestCase(TestCase):
             self.assertEqual(hg.status('cwd'), {
                 'added': ['added 0', 'added 1'],
                 'modified': ['modified'],
+            })
+
+    def test_status_multiple(self):
+        '''
+        Test for Status to a given repository (cwd is list)
+        '''
+        with patch.dict(hg.__salt__, {
+            'cmd.run_stdout': MagicMock(side_effect=(
+                lambda *args, **kwargs: {
+                    'dir 0': 'A file 0\n',
+                    'dir 1': 'M file 1'
+                }[kwargs['cwd']]))}):
+            self.assertEqual(hg.status(['dir 0', 'dir 1']), {
+                'dir 0': {'added': ['file 0']},
+                'dir 1': {'modified': ['file 1']},
             })
 
 

@@ -1,5 +1,5 @@
 ===========================
-Salt 2015.8.1 Release Notes
+Salt 2015.8.2 Release Notes
 ===========================
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):

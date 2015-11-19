@@ -623,11 +623,11 @@ def install(name=None,
                     # If no prefix characters were supplied and verstr contains a version, use '='
                     if len(verstr) > 0 and verstr[0] != ':' and verstr[0] != '[':
                         prefix = prefix or '='
-                        target = '"{0}{1}-{2}"'.format(prefix, param, verstr)
+                        target = '{0}{1}-{2}'.format(prefix, param, verstr)
                     else:
-                        target = '"{0}{1}"'.format(param, verstr)
+                        target = '{0}{1}'.format(param, verstr)
                 else:
-                    target = '"{0}"'.format(param)
+                    target = '{0}'.format(param)
 
                 if '[' in target:
                     old = __salt__['portage_config.get_flags_from_package_conf']('use', target[1:-1])

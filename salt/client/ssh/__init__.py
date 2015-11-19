@@ -591,7 +591,7 @@ class SSH(object):
             self.cache_job(jid, host, ret[host], fun)
             ret = self.key_deploy(host, ret)
 
-            if ret[host].get('stderr', '').startswith('ssh:'):
+            if isinstance(ret[host], dict) and ret[host].get('stderr', '').startswith('ssh:'):
                 ret[host] = ret[host]['stderr']
 
             if not isinstance(ret[host], dict):

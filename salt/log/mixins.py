@@ -17,6 +17,15 @@ import sys
 import logging
 
 
+class LoggingProfileMixIn(object):
+    '''
+    Simple mix-in class to add a trace method to python's logging.
+    '''
+
+    def profile(self, msg, *args, **kwargs):
+        self.log(getattr(logging, 'PROFILE', 15), msg, *args, **kwargs)
+
+
 class LoggingTraceMixIn(object):
     '''
     Simple mix-in class to add a trace method to python's logging.
@@ -45,7 +54,7 @@ class LoggingMixInMeta(type):
     the bases.
     '''
     def __new__(mcs, name, bases, attrs):
-        include_trace = include_garbage = True
+        include_profile = include_trace = include_garbage = True
         bases = list(bases)
         if name == 'SaltLoggingClass':
             for base in bases:
@@ -53,6 +62,8 @@ class LoggingMixInMeta(type):
                     include_trace = False
                 if hasattr(base, 'garbage'):
                     include_garbage = False
+        if include_profile:
+            bases.append(LoggingProfileMixIn)
         if include_trace:
             bases.append(LoggingTraceMixIn)
         if include_garbage:

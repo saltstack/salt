@@ -9,6 +9,7 @@ import copy
 import errno
 import logging
 import os
+import re
 from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
@@ -130,7 +131,8 @@ def _format_opts(opts):
 
 
 def _git_run(command, cwd=None, runas=None, identity=None,
-             ignore_retcode=False, failhard=True, **kwargs):
+             ignore_retcode=False, failhard=True, redirect_stderr=False,
+             **kwargs):
     '''
     simple, throw an exception with the error message on an error return code.
 
@@ -204,6 +206,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                     python_shell=False,
                     log_callback=salt.utils.url.redact_http_basic_auth,
                     ignore_retcode=ignore_retcode,
+                    redirect_stderr=redirect_stderr,
                     **kwargs)
             finally:
                 if not salt.utils.is_windows() and 'GIT_SSH' in env:
@@ -231,6 +234,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
             python_shell=False,
             log_callback=salt.utils.url.redact_http_basic_auth,
             ignore_retcode=ignore_retcode,
+            redirect_stderr=redirect_stderr,
             **kwargs)
 
         if result['retcode'] == 0:
@@ -622,7 +626,8 @@ def checkout(cwd,
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
-                    ignore_retcode=ignore_retcode)['stderr']
+                    ignore_retcode=ignore_retcode,
+                    redirect_stderr=True)['stdout']
 
 
 def clone(cwd,
@@ -1324,6 +1329,10 @@ def fetch(cwd,
           identity=None,
           ignore_retcode=False):
     '''
+    .. versionchanged:: 2015.8.2
+        Return data is now a dictionary containing information on branches and
+        tags that were added/updated
+
     Interface to `git-fetch(1)`_
 
     cwd
@@ -1398,7 +1407,9 @@ def fetch(cwd,
         [x for x in _format_opts(opts) if x not in ('-f', '--force')]
     )
     if remote:
-        command.append(str(remote))
+        if not isinstance(remote, six.string_types):
+            remote = str(remote)
+        command.append(remote)
     if refspecs is not None:
         if isinstance(refspecs, (list, tuple)):
             refspec_list = []
@@ -1412,11 +1423,38 @@ def fetch(cwd,
                 refspecs = str(refspecs)
             refspec_list = refspecs.split(',')
         command.extend(refspec_list)
-    return _git_run(command,
-                    cwd=cwd,
-                    runas=user,
-                    identity=identity,
-                    ignore_retcode=ignore_retcode)['stdout']
+    output = _git_run(command,
+                      cwd=cwd,
+                      runas=user,
+                      identity=identity,
+                      ignore_retcode=ignore_retcode,
+                      redirect_stderr=True)['stdout']
+
+    update_re = re.compile(
+        r'[\s*]*(?:([0-9a-f]+)\.\.([0-9a-f]+)|'
+        r'\[(?:new (tag|branch)|tag update)\])\s+(.+)->'
+    )
+    ret = {}
+    for line in salt.utils.itertools.split(output, '\n'):
+        match = update_re.match(line)
+        if match:
+            old_sha, new_sha, new_ref_type, ref_name = \
+                match.groups()
+            ref_name = ref_name.rstrip()
+            if new_ref_type is not None:
+                # ref is a new tag/branch
+                ref_key = 'new tags' \
+                    if new_ref_type == 'tag' \
+                    else 'new branches'
+                ret.setdefault(ref_key, []).append(ref_name)
+            elif old_sha is not None:
+                # ref is a branch update
+                ret.setdefault('updated branches', {})[ref_name] = \
+                    {'old': old_sha, 'new': new_sha}
+            else:
+                # ref is an updated tag
+                ret.setdefault('updated tags', []).append(ref_name)
+    return ret
 
 
 def init(cwd,
@@ -3363,7 +3401,8 @@ def worktree_add(cwd,
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
-                    ignore_retcode=ignore_retcode)['stderr']
+                    ignore_retcode=ignore_retcode,
+                    redirect_stderr=True)['stdout']
 
 
 def worktree_prune(cwd,
