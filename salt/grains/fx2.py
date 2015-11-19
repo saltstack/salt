@@ -30,28 +30,47 @@ def __virtual__():
         return __virtualname__
 
 
+def _find_credentials():
+    '''
+    Cycle through all the possible credentials and return the first one that
+    works
+    '''
+    usernames = []
+    usernames.append(__pillar__['proxy'].get('admin_username', 'root'))
+    if 'fallback_admin_username' in __pillar__.get('proxy'):
+        usernames.append(__pillar__['proxy'].get('fallback_admin_username'))
+
+    for u in usernames:
+        for p in __pillar__['proxy']['passwords']:
+            r = salt.modules.dracr.get_chassis_name(host=__pillar__['proxy']['host'],
+                                                    admin_username=u,
+                                                    admin_password=p)
+            # Retcode will be present if the chassis_name call failed
+            try:
+                if r.get('retcode', None) is None:
+                    return (u, p)
+            except AttributeError:
+                # Then the above was a string, and we can return the username
+                # and password
+                return (u, p)
+
+    logger.debug('grains fx2._find_credentials found no valid credentials, using Dell default')
+    return ('root', 'calvin')
+
+
 def _grains():
     '''
     Get the grains from the proxied device
     '''
+    (username, password) = _find_credentials()
     r = salt.modules.dracr.system_info(host=__pillar__['proxy']['host'],
-                                       admin_username=__pillar__['proxy']['admin_username'],
-                                       admin_password=__pillar__['proxy']['admin_password'])
+                                       admin_username=username,
+                                       admin_password=password)
 
     if r.get('retcode', 0) == 0:
         GRAINS_CACHE = r
-        username = __pillar__['proxy']['admin_username']
-        password = __pillar__['proxy']['admin_password']
     else:
-        r = salt.modules.dracr.system_info(host=__pillar__['proxy']['host'],
-                                           admin_username=__pillar__['proxy']['fallback_admin_username'],
-                                           admin_password=__pillar__['proxy']['fallback_admin_password'])
-        if r.get('retcode', 0) == 0:
-            GRAINS_CACHE = r
-            username = __pillar__['proxy']['fallback_admin_username']
-            password = __pillar__['proxy']['fallback_admin_password']
-        else:
-            GRAINS_CACHE = {}
+        GRAINS_CACHE = {}
 
     GRAINS_CACHE.update(salt.modules.dracr.inventory(host=__pillar__['proxy']['host'],
                                                      admin_username=username,
