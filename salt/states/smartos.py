@@ -74,12 +74,13 @@ Management of SmartOS Standalone Compute Nodes
     cleanup_images:
       smartos.image_vacuum
 
-    .. note::
+.. note::
 
-        Keep in mind that when removing entries from vmconfig they will not get removed from the vm's current configuration,
-         for nics, disk, tags, ... they get removed as via add_*, set_*, update_*, and remove_*. Other properties must be
-         manual reset to there default value just like when using vmadm update.
-
+    Keep in mind that when removing entries from vmconfig they will not get
+    removed from the vm's current configuration, for nics, disk, tags, ... they
+    get removed as via add_*, set_*, update_*, and remove_*. Other properties
+    must be manually reset to their default value just like when using vmadm
+    update.
 '''
 from __future__ import absolute_import
 
@@ -322,9 +323,8 @@ def image_absent(name):
 
     .. note::
 
-        computenode.image_absent will only remove the image if
-         it is not used by a vm.
-
+        computenode.image_absent will only remove the image if it is not used
+        by a vm.
     '''
     ret = {'name': name,
            'changes': {},
