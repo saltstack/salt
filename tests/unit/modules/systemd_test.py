@@ -99,17 +99,19 @@ class SystemdTestCase(TestCase):
         '''
             Test to check that the given service is available
         '''
-        mock = MagicMock(side_effect=["a", "@", "c"])
-        with patch.object(systemd, '_canonical_template_unit_name', mock):
-            mock = MagicMock(side_effect=[{"a": "z", "b": "z"},
-                                          {"@": "z", "b": "z"},
-                                          {"a": "z", "b": "z"}])
-            with patch.object(systemd, 'get_all', mock):
-                self.assertTrue(systemd.available("sshd"))
+        name = 'thing1'
 
-                self.assertTrue(systemd.available("sshd"))
+        mock_stdout = MagicMock(return_value=name)
+        with patch.dict(systemd.__salt__, {'cmd.run_stdout': mock_stdout}):
+            self.assertTrue(systemd.available(name))
 
-                self.assertFalse(systemd.available("sshd"))
+        mock_stdout = MagicMock(side_effect=['', ''])
+        with patch.dict(systemd.__salt__, {'cmd.run_stdout': mock_stdout}):
+            self.assertFalse(systemd.available(name))
+
+        mock_stdout = MagicMock(side_effect=['', name])
+        with patch.dict(systemd.__salt__, {'cmd.run_stdout': mock_stdout}):
+            self.assertTrue(systemd.available(name))
 
     def test_missing(self):
         '''
