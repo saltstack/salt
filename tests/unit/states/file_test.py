@@ -21,6 +21,9 @@ import yaml
 
 # Import salt libs
 import salt.states.file as filestate
+import salt.serializers.yaml as yamlserializer
+import salt.serializers.json as jsonserializer
+import salt.serializers.python as pythonserializer
 from salt.exceptions import CommandExecutionError
 import salt
 import os
@@ -28,6 +31,11 @@ import shutil
 
 filestate.__env__ = 'base'
 filestate.__salt__ = {'file.manage_file': False}
+filestate.__serializers__ = {
+    'yaml.serialize': yamlserializer.serialize,
+    'python.serialize': pythonserializer.serialize,
+    'json.serialize': jsonserializer.serialize
+}
 filestate.__opts__ = {'test': False, 'cachedir': ''}
 filestate.__instance_id__ = ''
 filestate.__grains__ = {}
