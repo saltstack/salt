@@ -336,6 +336,10 @@ class GpgTestCase(TestCase):
                 self.assertRaises(SaltInvocationError, gpg.import_key,
                                   filename='/path/to/public-key-file')
 
+            gpg.GPG_1_3_1 = True
+            self.assertDictEqual(gpg.import_key(text='-BEGIN PGP PUBLIC KEY BLOCK-'), ret)
+
+            gpg.GPG_1_3_1 = False
             self.assertDictEqual(gpg.import_key(text='-BEGIN PGP PUBLIC KEY BLOCK-'), ret)
 
     # 'export_key' function tests: 1
