@@ -13,8 +13,9 @@ This external pillar allows for a Pillar top file and Pillar SLS files to be
 sourced from a git repository.
 
 However, since git_pillar does not have an equivalent to the
-:conf_master:`pillar_roots` parameter, configuration is slightly different. The
-Pillar top file must still contain the relevant environment, like so:
+:conf_master:`pillar_roots` parameter, configuration is slightly different. A
+Pillar top file is required to be in the git repository and must still contain
+the relevant environment, like so:
 
 .. code-block:: yaml
 
