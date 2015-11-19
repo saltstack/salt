@@ -26,6 +26,7 @@
 from __future__ import absolute_import
 
 from salt.ext.six.moves import shlex_quote as quote
+from salt.utils import fopen
 
 import os
 import logging
@@ -44,7 +45,7 @@ def _write_proxy_conf(proxyfile):
 
     if proxyfile:
         log.debug('Writing proxy conf file')
-        with open(proxyfile, 'w') as proxy_conf:
+        with fopen(proxyfile, 'w') as proxy_conf:
             proxy_conf.write('master = {0}'
                              .format(__grains__['master']))
         msg = 'Wrote proxy file {0}'.format(proxyfile)
