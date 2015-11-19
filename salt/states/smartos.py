@@ -653,7 +653,18 @@ def vm_present(name, vmconfig, config=None):
                         )
 
         # update vm if we have pending changes
+        kvm_needs_start = False
         if not __opts__['test'] and len(vmconfig['changed']) > 0:
+            # stop kvm if disk updates and kvm_reboot
+            if vmconfig['current']['brand'] == 'kvm' and config['kvm_reboot']:
+                if 'add_disks' in vmconfig['changed'] or \
+                    'update_disks' in vmconfig['changed'] or \
+                    'remove_disks' in vmconfig['changed']:
+                    if vmconfig['state']['hostname'] in __salt__['vmadm.list'](order='hostname', search='state=running'):
+                        kvm_needs_start = True
+                        __salt__['vmadm.stop'](vm=vmconfig['state']['hostname'], key='hostname')
+
+            # do update
             rret = __salt__['vmadm.update'](vm=vmconfig['state']['hostname'], key='hostname', **vmconfig['changed'])
             if not isinstance(rret, (bool)) and 'Error' in rret:
                 ret['result'] = False
@@ -663,11 +674,16 @@ def vm_present(name, vmconfig, config=None):
                 ret['changes'][vmconfig['state']['hostname']] = vmconfig['changed']
 
         if ret['result']:
+            if __opts__['test']:
+                ret['changes'][vmconfig['state']['hostname']] = vmconfig['changed']
+
             if len(ret['changes']) > 0:
                 ret['comment'] = 'vm {0} updated'.format(vmconfig['state']['hostname'])
                 if config['kvm_reboot'] and vmconfig['current']['brand'] == 'kvm' and not __opts__['test']:
                     if vmconfig['state']['hostname'] in __salt__['vmadm.list'](order='hostname', search='state=running'):
                         __salt__['vmadm.reboot'](vm=vmconfig['state']['hostname'], key='hostname')
+                    if kvm_needs_start:
+                        __salt__['vmadm.start'](vm=vmconfig['state']['hostname'], key='hostname')
             else:
                 ret['comment'] = 'vm {0} is up to date'.format(vmconfig['state']['hostname'])
 
