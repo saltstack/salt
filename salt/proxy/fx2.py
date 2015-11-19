@@ -69,6 +69,27 @@ should not need to restart the proxy minion--it should just pick up the
 third password in the list.  You can then change pillar at will to
 move that password to the front and retire the unused ones.
 
+Beware, many Dell CMC and iDRAC units are configured to lockout
+IP addresses or users after too many failed password attempts.  This can
+generate user panic in the form of "I no longer know what the password is!!!".
+To mitigate panic try the web interface from a different IP, or setup a
+emergency administrator user in the CMC before doing a wholesale
+password rotation.
+
+The automatic lockout can be disabled via Salt with the following:
+
+.. code-block:: bash
+
+    salt <cmc> chassis.cmd set_general cfgRacTuning cfgRacTuneIpBlkEnable 0
+
+and then verified with
+
+.. code-block:: bash
+
+    salt <cmc> chassis.cmd get_general cfgRacTuning cfgRacTuneIpBlkEnable
+
+
+
 salt-proxy
 ----------
 
