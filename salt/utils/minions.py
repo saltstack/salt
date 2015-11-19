@@ -740,7 +740,7 @@ class CkMinions(object):
             funs = [funs]
             args = [args]
         try:
-            for num in six.range(funs):
+            for num in six.moves.range(funs):
                 fun = funs[num]
                 arg = args[num]
                 for ind in auth_list:
@@ -792,7 +792,7 @@ class CkMinions(object):
                                             # whitelist args, kwargs
                                             cond_args = acond.get('args', [])
                                             good = True
-                                            for i in six.range(len(cond_args)):
+                                            for i in six.moves.range(len(cond_args)):
                                                 if len(arg) <= i:
                                                     good = False
                                                     break
