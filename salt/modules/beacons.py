@@ -13,6 +13,7 @@ import os
 import yaml
 
 import salt.utils
+from salt.ext.six.moves import map
 
 import logging
 log = logging.getLogger(__name__)
@@ -367,7 +368,7 @@ def disable(**kwargs):
 def _get_beacon_config_dict(beacon_config):
     beacon_config_dict = {}
     if isinstance(beacon_config, list):
-        map(beacon_config_dict.update, beacon_config)
+        list(map(beacon_config_dict.update, beacon_config))
     else:
         beacon_config_dict = beacon_config
         

@@ -12,6 +12,7 @@ import re
 import salt.loader
 import salt.utils
 import salt.utils.minion
+from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ class Beacon(object):
             current_beacon_config = None
             if isinstance(config[mod], list):
                 current_beacon_config = {}
-                map(current_beacon_config.update, config[mod])
+                list(map(current_beacon_config.update, config[mod]))
             elif isinstance(config[mod], dict):
                 salt.utils.warn_until(
                     'Boron',
@@ -55,7 +56,7 @@ class Beacon(object):
                 )
                 current_beacon_config = config[mod]
                 
-            if current_beacon_config.has_key('enabled'):
+            if 'enabled' in current_beacon_config:
                 if not current_beacon_config['enabled']:
                     log.trace('Beacon {0} disabled'.format(mod))
                     continue
@@ -146,7 +147,7 @@ class Beacon(object):
         Return the index of a labeled config item in the beacon config, -1 if the index is not found
         '''
         
-        indexes = [index for index, item in enumerate(beacon_config) if item.has_key(label)]
+        indexes = [index for index, item in enumerate(beacon_config) if label in item]
         if len(indexes) < 1:
             return -1
         else:
