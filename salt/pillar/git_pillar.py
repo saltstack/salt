@@ -115,7 +115,20 @@ GitPython_ (Dulwich_ will not be supported for the forseeable future). The
 requirements for GitPython_ and pygit2_ are the same as for gitfs, as described
 :ref:`here <gitfs-dependencies>`.
 
-Here is an example git_pillar configuration.
+.. important::
+    git_pillar has its own set of global configuration parameters. While it may
+    seem intuitive to use the global gitfs configuration parameters
+    (:conf_master:`gitfs_base`, etc.) to manage git_pillar, this will not work.
+    The main difference for this is the fact that the different components
+    which use Salt's git backend code do not all function identically. For
+    instance, in git_pillar it is necessary to specify which branch/tag to be
+    used for git_pillar remotes. This is the reverse behavior from gitfs, where
+    branches/tags make up your environments.
+
+    See :ref:`here <git_pillar-config-opts>` for documentation on the
+    git_pillar configuration options and their usage.
+
+Here is an example git_pillar configuration:
 
 .. code-block:: yaml
 
@@ -158,9 +171,6 @@ the :ref:`Git Fileserver Backend Walkthrough <gitfs-authentication>`), only
 with the global authenication parameter names prefixed with ``git_pillar``
 instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
 :conf_master:`git_pillar_privkey`, :conf_master:`git_pillar_passphrase`, etc.).
-
-A full list of the git_pillar configuration options can be found :ref:`here
-<git_pillar-config-opts>`.
 
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
