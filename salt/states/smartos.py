@@ -544,7 +544,7 @@ def vm_present(name, vmconfig, config=None):
                 continue
 
             # process add and update for collection
-            if collection in vmconfig['state']:
+            if collection in vmconfig['state'] and vmconfig['state'][collection] is not None:
                 for prop in vmconfig['state'][collection]:
                     # skip unchanged properties
                     if prop in vmconfig['current'][collection] and \
@@ -559,10 +559,10 @@ def vm_present(name, vmconfig, config=None):
                     vmconfig['changed']['set_{0}'.format(collection)][prop] = vmconfig['state'][collection][prop]
 
             # process remove for collection
-            if collection in vmconfig['current']:
+            if collection in vmconfig['current'] and vmconfig['current'][collection] is not None:
                 for prop in vmconfig['current'][collection]:
                     # skip if exists in state
-                    if collection in vmconfig['state']:
+                    if collection in vmconfig['state'] and vmconfig['state'][collection] is not None:
                         if prop in vmconfig['state'][collection]:
                             continue
 
@@ -580,7 +580,7 @@ def vm_present(name, vmconfig, config=None):
                 continue
 
             # add or update instances
-            if instance in vmconfig['state']:
+            if instance in vmconfig['state'] and vmconfig['state'][instance] is not None:
                 for state_cfg in vmconfig['state'][instance]:
                     add_instance = True
 
@@ -628,12 +628,12 @@ def vm_present(name, vmconfig, config=None):
                         vmconfig['changed']['add_{0}'.format(instance)].append(state_cfg)
 
             # remove instances
-            if instance in vmconfig['current']:
+            if instance in vmconfig['current'] and vmconfig['current'][instance] is not None:
                 for current_cfg in vmconfig['current'][instance]:
                     remove_instance = True
 
                     # find instance with matching ids
-                    if instance in vmconfig['state']:
+                    if instance in vmconfig['state'] and vmconfig['state'][instance] is not None:
                         for state_cfg in vmconfig['state'][instance]:
                             if vmconfig_type['instance'][instance] not in state_cfg:
                                 continue
