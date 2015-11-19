@@ -81,7 +81,6 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-import salt.loader
 from salt.log import LOG_LEVELS
 
 # Import 3rd party libs
