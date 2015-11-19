@@ -23,7 +23,9 @@
     and start the salt-proxy process (default true),
     if it isn't already running.
 '''
-from salt.ext.six.moves import shlex_quote as quote  # pylint: disable=import-error
+from __future__ import absolute_import
+
+from salt.ext.six.moves import shlex_quote as quote
 
 import os
 import logging
