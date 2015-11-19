@@ -165,6 +165,8 @@ def _parse_vmconfig(config, instances):
             if prop not in instances:
                 vmconfig[prop] = config[prop]
             else:
+                if not isinstance(config[prop], (salt.utils.odict.OrderedDict)):
+                    continue
                 vmconfig[prop] = []
                 for instance in config[prop]:
                     instance_config = config[prop][instance]
@@ -537,127 +539,132 @@ def vm_present(name, vmconfig, config=None):
 
         # process collections
         for collection in vmconfig_type['collection']:
-            # skip if not present
-            if collection not in vmconfig['state']:
-                continue
-
             # skip create only collections
             if collection in vmconfig_type['create_only']:
                 continue
 
             # process add and update for collection
-            for prop in vmconfig['state'][collection]:
-                # skip unchanged properties
-                if prop in vmconfig['current'][collection] and \
-                    vmconfig['current'][collection][prop] == vmconfig['state'][collection][prop]:
-                    continue
+            if collection in vmconfig['state'] and vmconfig['state'][collection] is not None:
+                for prop in vmconfig['state'][collection]:
+                    # skip unchanged properties
+                    if prop in vmconfig['current'][collection] and \
+                        vmconfig['current'][collection][prop] == vmconfig['state'][collection][prop]:
+                        continue
 
-                # create set_ dict
-                if 'set_{0}'.format(collection) not in vmconfig['changed']:
-                    vmconfig['changed']['set_{0}'.format(collection)] = {}
+                    # create set_ dict
+                    if 'set_{0}'.format(collection) not in vmconfig['changed']:
+                        vmconfig['changed']['set_{0}'.format(collection)] = {}
 
-                # add property to changeset
-                vmconfig['changed']['set_{0}'.format(collection)][prop] = vmconfig['state'][collection][prop]
+                    # add property to changeset
+                    vmconfig['changed']['set_{0}'.format(collection)][prop] = vmconfig['state'][collection][prop]
 
             # process remove for collection
-            for prop in vmconfig['current'][collection]:
-                # skip if exists in state
-                if prop in vmconfig['state'][collection]:
-                    continue
+            if collection in vmconfig['current'] and vmconfig['current'][collection] is not None:
+                for prop in vmconfig['current'][collection]:
+                    # skip if exists in state
+                    if collection in vmconfig['state'] and vmconfig['state'][collection] is not None:
+                        if prop in vmconfig['state'][collection]:
+                            continue
 
-                # create remove_ array
-                if 'remove_{0}'.format(collection) not in vmconfig['changed']:
-                    vmconfig['changed']['remove_{0}'.format(collection)] = []
+                    # create remove_ array
+                    if 'remove_{0}'.format(collection) not in vmconfig['changed']:
+                        vmconfig['changed']['remove_{0}'.format(collection)] = []
 
-                # remove property
-                vmconfig['changed']['remove_{0}'.format(collection)].append(prop)
+                    # remove property
+                    vmconfig['changed']['remove_{0}'.format(collection)].append(prop)
 
         # process instances
         for instance in vmconfig_type['instance']:
-            # skip if not present
-            if instance not in vmconfig['state']:
-                continue
-
             # skip create only instances
             if instance in vmconfig_type['create_only']:
                 continue
 
             # add or update instances
-            for state_cfg in vmconfig['state'][instance]:
-                add_instance = True
+            if instance in vmconfig['state'] and vmconfig['state'][instance] is not None:
+                for state_cfg in vmconfig['state'][instance]:
+                    add_instance = True
 
-                # find instance with matching ids
-                for current_cfg in vmconfig['current'][instance]:
-                    if vmconfig_type['instance'][instance] not in state_cfg:
-                        continue
+                    # find instance with matching ids
+                    for current_cfg in vmconfig['current'][instance]:
+                        if vmconfig_type['instance'][instance] not in state_cfg:
+                            continue
 
-                    if state_cfg[vmconfig_type['instance'][instance]] == current_cfg[vmconfig_type['instance'][instance]]:
-                        # ids have matched, disable add instance
-                        add_instance = False
+                        if state_cfg[vmconfig_type['instance'][instance]] == current_cfg[vmconfig_type['instance'][instance]]:
+                            # ids have matched, disable add instance
+                            add_instance = False
 
-                        changed = _get_instance_changes(current_cfg, state_cfg)
-                        update_cfg = {}
+                            changed = _get_instance_changes(current_cfg, state_cfg)
+                            update_cfg = {}
 
-                        # handle changes
-                        if len(changed) > 0:
-                            for prop in changed:
-                                update_cfg[prop] = state_cfg[prop]
+                            # handle changes
+                            if len(changed) > 0:
+                                for prop in changed:
+                                    update_cfg[prop] = state_cfg[prop]
 
-                        # handle new properties
-                        for prop in state_cfg:
-                            # skip empty props like ips, options,..
-                            if isinstance(state_cfg[prop], (list)) and len(state_cfg[prop]) == 0:
-                                continue
+                            # handle new properties
+                            for prop in state_cfg:
+                                # skip empty props like ips, options,..
+                                if isinstance(state_cfg[prop], (list)) and len(state_cfg[prop]) == 0:
+                                    continue
 
-                            if prop not in current_cfg:
-                                update_cfg[prop] = state_cfg[prop]
+                                if prop not in current_cfg:
+                                    update_cfg[prop] = state_cfg[prop]
 
-                        # update instance
-                        if len(update_cfg) > 0:
-                            # create update_ array
-                            if 'update_{0}'.format(instance) not in vmconfig['changed']:
-                                vmconfig['changed']['update_{0}'.format(instance)] = []
+                            # update instance
+                            if len(update_cfg) > 0:
+                                # create update_ array
+                                if 'update_{0}'.format(instance) not in vmconfig['changed']:
+                                    vmconfig['changed']['update_{0}'.format(instance)] = []
 
-                            update_cfg[vmconfig_type['instance'][instance]] = state_cfg[vmconfig_type['instance'][instance]]
-                            vmconfig['changed']['update_{0}'.format(instance)].append(update_cfg)
+                                update_cfg[vmconfig_type['instance'][instance]] = state_cfg[vmconfig_type['instance'][instance]]
+                                vmconfig['changed']['update_{0}'.format(instance)].append(update_cfg)
 
-                if add_instance:
-                    # create add_ array
-                    if 'add_{0}'.format(instance) not in vmconfig['changed']:
-                        vmconfig['changed']['add_{0}'.format(instance)] = []
+                    if add_instance:
+                        # create add_ array
+                        if 'add_{0}'.format(instance) not in vmconfig['changed']:
+                            vmconfig['changed']['add_{0}'.format(instance)] = []
 
-                    # add instance
-                    vmconfig['changed']['add_{0}'.format(instance)].append(state_cfg)
-
-            # skip remove instances if none in current
-            if instance not in vmconfig['current']:
-                continue
+                        # add instance
+                        vmconfig['changed']['add_{0}'.format(instance)].append(state_cfg)
 
             # remove instances
-            for current_cfg in vmconfig['current'][instance]:
-                remove_instance = True
+            if instance in vmconfig['current'] and vmconfig['current'][instance] is not None:
+                for current_cfg in vmconfig['current'][instance]:
+                    remove_instance = True
 
-                # find instance with matching ids
-                for state_cfg in vmconfig['state'][instance]:
-                    if vmconfig_type['instance'][instance] not in state_cfg:
-                        continue
+                    # find instance with matching ids
+                    if instance in vmconfig['state'] and vmconfig['state'][instance] is not None:
+                        for state_cfg in vmconfig['state'][instance]:
+                            if vmconfig_type['instance'][instance] not in state_cfg:
+                                continue
 
-                    if state_cfg[vmconfig_type['instance'][instance]] == current_cfg[vmconfig_type['instance'][instance]]:
-                        # keep instance if matched
-                        remove_instance = False
+                            if state_cfg[vmconfig_type['instance'][instance]] == current_cfg[vmconfig_type['instance'][instance]]:
+                                # keep instance if matched
+                                remove_instance = False
 
-                if remove_instance:
-                    # create remove_ array
-                    if 'remove_{0}'.format(instance) not in vmconfig['changed']:
-                        vmconfig['changed']['remove_{0}'.format(instance)] = []
+                    if remove_instance:
+                        # create remove_ array
+                        if 'remove_{0}'.format(instance) not in vmconfig['changed']:
+                            vmconfig['changed']['remove_{0}'.format(instance)] = []
 
-                    # remove instance
-                    vmconfig['changed']['remove_{0}'.format(instance)].append(
-                        current_cfg[vmconfig_type['instance'][instance]]
-                    )
+                        # remove instance
+                        vmconfig['changed']['remove_{0}'.format(instance)].append(
+                            current_cfg[vmconfig_type['instance'][instance]]
+                        )
 
         # update vm if we have pending changes
+        kvm_needs_start = False
         if not __opts__['test'] and len(vmconfig['changed']) > 0:
+            # stop kvm if disk updates and kvm_reboot
+            if vmconfig['current']['brand'] == 'kvm' and config['kvm_reboot']:
+                if 'add_disks' in vmconfig['changed'] or \
+                    'update_disks' in vmconfig['changed'] or \
+                    'remove_disks' in vmconfig['changed']:
+                    if vmconfig['state']['hostname'] in __salt__['vmadm.list'](order='hostname', search='state=running'):
+                        kvm_needs_start = True
+                        __salt__['vmadm.stop'](vm=vmconfig['state']['hostname'], key='hostname')
+
+            # do update
             rret = __salt__['vmadm.update'](vm=vmconfig['state']['hostname'], key='hostname', **vmconfig['changed'])
             if not isinstance(rret, (bool)) and 'Error' in rret:
                 ret['result'] = False
@@ -667,11 +674,16 @@ def vm_present(name, vmconfig, config=None):
                 ret['changes'][vmconfig['state']['hostname']] = vmconfig['changed']
 
         if ret['result']:
+            if __opts__['test']:
+                ret['changes'][vmconfig['state']['hostname']] = vmconfig['changed']
+
             if len(ret['changes']) > 0:
                 ret['comment'] = 'vm {0} updated'.format(vmconfig['state']['hostname'])
                 if config['kvm_reboot'] and vmconfig['current']['brand'] == 'kvm' and not __opts__['test']:
                     if vmconfig['state']['hostname'] in __salt__['vmadm.list'](order='hostname', search='state=running'):
                         __salt__['vmadm.reboot'](vm=vmconfig['state']['hostname'], key='hostname')
+                    if kvm_needs_start:
+                        __salt__['vmadm.start'](vm=vmconfig['state']['hostname'], key='hostname')
             else:
                 ret['comment'] = 'vm {0} is up to date'.format(vmconfig['state']['hostname'])
 
