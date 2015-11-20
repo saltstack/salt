@@ -478,7 +478,7 @@ def _virtual(osdata):
     # Skip the below loop on platforms which have none of the desired cmds
     # This is a temporary measure until we can write proper virtual hardware
     # detection.
-    skip_cmds = ('AIX',)
+    skip_cmds = ('AIX', 'SunOS',)
 
     # list of commands to be executed to determine the 'virtual' grain
     _cmds = ['systemd-detect-virt', 'virt-what', 'dmidecode']
