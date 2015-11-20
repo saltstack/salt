@@ -20,11 +20,10 @@ from __future__ import absolute_import
 import re
 import os.path
 import logging
-import pprint
 
 # pylint: disable=import-error,no-name-in-module
 import salt.utils
-import salt.ext.six as six
+from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
 # pylint: enable=import-error,no-name-in-module
 
@@ -187,12 +186,12 @@ def create(name,
             'The specified VM ({0}) is already registered.'.format(name)
         )
 
+    params = ''
+
     if name:
-        if NAME_RE.search(new_name):
+        if NAME_RE.search(name):
             raise CommandExecutionError('New VM name contains invalid characters')
         params += ' --name {0}'.format(name)
-
-    params = ''
 
     if groups:
         if isinstance(groups, string_types):
@@ -209,6 +208,7 @@ def create(name,
         raise CommandExecutionError(
             'The specified OS type ({0}) is not available.'.format(name)
         )
+    else:
         params += ' --ostype ' + ostype
 
     if register is True:
@@ -224,7 +224,7 @@ def create(name,
             raise CommandExecutionError('New UUID contains invalid characters')
         params += ' --uuid {0}'.format(new_uuid)
 
-    cmd = '{0} create {1}'.format(vboxcmd(), name, params)
+    cmd = '{0} create {1}'.format(vboxcmd(), params)
     ret = salt.modules.cmdmod.run_all(cmd)
     if ret['retcode'] == 0:
         return True
@@ -287,14 +287,13 @@ def clonevm(name=None,
             raise CommandExecutionError('Snapshot name contains invalid characters')
         params += ' --snapshot {0}'.format(snapshot_uuid)
 
+    valid_modes = ('machine', 'machineandchildren', 'all')
     if mode and mode not in valid_modes:
-        valid_mode = ('machine', 'machineandchildren', 'all')
-        if not os.path.exists(file_in):
-            raise CommandExecutionError(
-                'Mode must be one of: {0} (default "machine")'.format(', '.join(valid_mode))
-            )
-        else:
-            params += ' --mode ' + mode
+        raise CommandExecutionError(
+            'Mode must be one of: {0} (default "machine")'.format(', '.join(valid_mode))
+        )
+    else:
+        params += ' --mode ' + mode
 
     if options and options not in valid_options:
         valid_options = ('link', 'keepallmacs', 'keepnatmacs', 'keepdisknames')
@@ -414,8 +413,8 @@ def clonemedium(medium,
         else:
             params += ' --format ' + mformat
 
+    valid_variant = ('Standard', 'Fixed', 'Split2G', 'Stream', 'ESX')
     if variant and variant not in valid_variant:
-        valid_variant = ('Standard', 'Fixed', 'Split2G', 'Stream', 'ESX')
         if not os.path.exists(file_in):
             raise CommandExecutionError(
                 'If specified, variant must be one of: {0}'.format(', '.join(valid_variant))
