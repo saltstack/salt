@@ -682,10 +682,6 @@ class Pygit2(GitProvider):
         '''
         Checkout the configured branch/tag
         '''
-        def _log_error(exc):
-            '''
-            Log an exception caught during the checkout process
-            '''
         local_ref = 'refs/heads/' + self.branch
         remote_ref = 'refs/remotes/origin/' + self.branch
         tag_ref = 'refs/tags/' + self.branch
@@ -699,6 +695,34 @@ class Pygit2(GitProvider):
                     # No local branch for this remote, so create one and point
                     # it at the commit id of the remote ref
                     self.repo.create_reference(local_ref, oid)
+
+                # Check HEAD ref existence (checking out local_ref when HEAD
+                # ref doesn't exist will raise an exception in pygit2 >= 0.21),
+                # and create the HEAD ref if it is missing.
+                head_ref = self.repo.lookup_reference('HEAD').target
+                if head_ref not in refs:
+                    branch_name = head_ref.partition('refs/heads/')[-1]
+                    if not branch_name:
+                        # Shouldn't happen, but log an error if it does
+                        log.error(
+                            'pygit2 was unable to resolve branch name from '
+                            'HEAD ref \'{0}\' in {1} remote \'{2}\''.format(
+                                head_ref, self.role, self.id
+                            )
+                        )
+                        return None
+                    remote_head = 'refs/remotes/origin/' + branch_name
+                    if remote_head not in refs:
+                        log.error(
+                            'Unable to find remote ref \'{0}\' in {1} remote '
+                            '\'{2}\''.format(head_ref, self.role, self.id)
+                        )
+                        return None
+                    self.repo.create_reference(
+                        head_ref,
+                        self.repo.lookup_reference(remote_head).target
+                    )
+
                 # Point HEAD at the local ref
                 self.repo.checkout(local_ref)
                 # Reset HEAD to the commit id of the remote ref
