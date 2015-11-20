@@ -8,18 +8,18 @@ Example:
 .. code-block:: yaml
 
     rabbit_user:
-        rabbitmq_user.present:
-            - password: password
-            - force: True
-            - tags:
-                - monitoring
-                - user
-            - perms:
-              - '/':
-                - '.*'
-                - '.*'
-                - '.*'
-            - runas: rabbitmq
+      rabbitmq_user.present:
+        - password: password
+        - force: True
+        - tags:
+          - monitoring
+          - user
+        - perms:
+          - '/':
+            - '.*'
+            - '.*'
+            - '.*'
+        - runas: rabbitmq
 '''
 from __future__ import absolute_import
 
