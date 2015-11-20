@@ -64,8 +64,8 @@ class Depends(object):
         class wide depandancy_dict
         '''
         try:
-            # This inspect call may fail under certain conditions in the loader. Possibly related to 
-            # a Python bug here: 
+            # This inspect call may fail under certain conditions in the loader. Possibly related to
+            # a Python bug here:
             # http://bugs.python.org/issue17735
             frame = inspect.stack()[1][0]
             # due to missing *.py files under esky we cannot use inspect.getmodule
