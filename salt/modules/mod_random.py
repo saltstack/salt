@@ -25,8 +25,8 @@ def __virtual__():
     '''
     # Certain versions of hashlib do not contain
     # the necessary functions
-    if not hasattr(hashlib, 'algorithms'):
-        return False
+    #if not hasattr(hashlib, 'algorithms'):
+    #    return False
     return __virtualname__
 
 
