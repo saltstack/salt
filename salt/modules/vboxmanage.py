@@ -290,19 +290,18 @@ def clonevm(name=None,
     valid_modes = ('machine', 'machineandchildren', 'all')
     if mode and mode not in valid_modes:
         raise CommandExecutionError(
-            'Mode must be one of: {0} (default "machine")'.format(', '.join(valid_mode))
+            'Mode must be one of: {0} (default "machine")'.format(', '.join(valid_modes))
         )
     else:
         params += ' --mode ' + mode
 
+    valid_options = ('link', 'keepallmacs', 'keepnatmacs', 'keepdisknames')
     if options and options not in valid_options:
-        valid_options = ('link', 'keepallmacs', 'keepnatmacs', 'keepdisknames')
-        if not os.path.exists(file_in):
-            raise CommandExecutionError(
-                'If specified, options must be one of: {0}'.format(', '.join(valid_options))
-            )
-        else:
-            params += ' --options ' + options
+        raise CommandExecutionError(
+            'If specified, options must be one of: {0}'.format(', '.join(valid_options))
+        )
+    else:
+        params += ' --options ' + options
 
     if new_name:
         if NAME_RE.search(new_name):
