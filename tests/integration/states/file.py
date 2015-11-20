@@ -10,6 +10,7 @@ import glob
 import grp
 import os
 import pwd
+import sys
 import shutil
 import stat
 import tempfile
@@ -1708,6 +1709,12 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     ('Something went really wrong while testing this sls:'
                     ' {0}').format(repr(ret))
                 )
+            # difflib produces different output on python 2.6 than on >=2.7
+            if sys.version_info < (2, 7):
+                utf_diff = '---  \n+++  \n@@ -1,1 +1,3 @@\n'
+            else:
+                utf_diff = '--- \n+++ \n@@ -1 +1,3 @@\n'
+            utf_diff += '+\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89\n \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98\n+\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89\n'
             # using unicode.encode('utf-8') we should get the same as
             # an utf-8 string
             expected = {
@@ -1723,7 +1730,7 @@ class FileTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
                     'name': '{0}'.format(test_file),
                     '__run_num__': 1,
                     'comment': 'File {0} updated'.format(test_file),
-                    'diff': '--- \n+++ \n@@ -1 +1,3 @@\n+\xec\xb2\xab \xeb\xb2\x88\xec\xa7\xb8 \xed\x96\x89\n \xed\x95\x9c\xea\xb5\xad\xec\x96\xb4 \xec\x8b\x9c\xed\x97\x98\n+\xeb\xa7\x88\xec\xa7\x80\xeb\xa7\x89 \xed\x96\x89\n'
+                    'diff': utf_diff
                 },
                 ('file_|-some-utf8-file-exists_|-{0}'
                 '_|-exists').format(test_file): {
