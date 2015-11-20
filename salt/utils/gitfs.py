@@ -887,19 +887,28 @@ class Pygit2(GitProvider):
         Check the refs and return a list of the ones which can be used as salt
         environments.
         '''
+        def _check_ref(env_set, base_ref, rname):
+            '''
+            Check the ref and resolve it as the base_ref if it matches. If the
+            resulting env is exposed via whitelist/blacklist, add it to the
+            env_set.
+            '''
+            if base_ref is not None and base_ref == rname:
+                rname = 'base'
+            if self.env_is_exposed(rname):
+                env_set.add(rname)
+
         ret = set()
+        base_ref = getattr(self, 'base', None)
         for ref in self.repo.listall_references():
             ref = re.sub('^refs/', '', ref)
-            rtype, rspec = ref.split('/', 1)
+            rtype, rname = ref.split('/', 1)
             if rtype == 'remotes':
-                parted = rspec.partition('/')
-                rspec = parted[2] if parted[2] else parted[0]
-                if hasattr(self, 'base') and self.base == rspec:
-                    rspec = 'base'
-                if self.env_is_exposed(rspec):
-                    ret.add(rspec)
-            elif rtype == 'tags' and self.env_is_exposed(rspec):
-                ret.add(rspec)
+                parted = rname.partition('/')
+                rname = parted[2] if parted[2] else parted[0]
+                _check_ref(ret, base_ref, rname)
+            elif rtype == 'tags':
+                _check_ref(ret, base_ref, rname)
         return ret
 
     def fetch(self):
