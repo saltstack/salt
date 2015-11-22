@@ -436,10 +436,61 @@ def faulty():
     if res['stdout'] == '':
         result = False
     else:
-        #NOTE: manpage vague, non 0 output = we have faults
-        #FIXME: capture correct output and try to parse
-        result = True
+        #TODO: parse data
+        #TODO: move to function
+        summary = []
+        summary_data = {}
+        fault_data = {}
+        data_key = None
+        for line in res['stdout'].split("\n"):
+            # we hit a divider
+            log.error(line)
+            if line.startswith('-'):
+                if summary and summary_data and fault_data:
+                    # we have data, store it and reset
+                    uuid = summary_data['event-id']
+                    del summary_data['event-id']
 
+                    result[uuid] = OrderedDict()
+                    result[uuid]['summary'] = summary_data
+                    result[uuid]['fault'] = fault_data
+
+                    summary = []
+                    summary_data = {}
+                    fault_data = {}
+                    continue
+                else:
+                    # we don't have all data, colelct more
+                    continue
+            if not summary:
+                summary.append(line)
+                continue
+            if summary and not summary_data:
+                summary.append(line)
+                summary_data = _parse_fmdump("\n".join(summary))[0]
+                continue
+            if summary and summary_data:
+                if line.startswith(' ') and data_key:
+                    fault_data[data_key] = "{0}\n{1}".format(
+                        fault_data[data_key],
+                        line.strip()
+                    )
+                elif ':' in line:
+                    line = line.split(':')
+                    data_key = line[0].strip()
+                    fault_data[data_key] = ":".join(line[1:]).strip()
+                    # note: for some reason Chassis_id is lobbed ofter Platform, fix that here
+                    if data_key == 'Platform':
+                        fault_data['Chassis_id'] = fault_data[data_key][fault_data[data_key].index('Chassis_id'):].split(':')[-1].strip()
+                        fault_data[data_key] = fault_data[data_key][0:fault_data[data_key].index('Chassis_id')].strip()
+
+        # we have data, store it and reset
+        uuid = summary_data['event-id']
+        del summary_data['event-id']
+
+        result[uuid] = OrderedDict()
+        result[uuid]['summary'] = summary_data
+        result[uuid]['fault'] = fault_data
     return result
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
