@@ -32,6 +32,7 @@ def secure_password(length=20):
     '''
     Generate a secure password.
     '''
+    length = int(length)
     pw = ''
     while len(pw) < length:
         if HAS_RANDOM:
