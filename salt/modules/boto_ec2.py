@@ -215,7 +215,9 @@ def exists(instance_id=None, name=None, tags=None, region=None, key=None,
 
         salt myminion boto_ec2.exists myinstance
     '''
-    instances = find_instances(instance_id=instance_id, name=name, tags=tags)
+    instances = find_instances(instance_id=instance_id, name=name, tags=tags,
+                               region=region, key=key, keyid=keyid,
+                               profile=profile)
     if instances:
         log.info('instance exists.')
         return True
