@@ -427,20 +427,18 @@ def faulty():
 
         salt '*' fmadm.faulty
     '''
-    ret = {}
     fmadm = _check_fmadm()
     cmd = '{cmd} faulty'.format(
         cmd=fmadm,
     )
     res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
     result = {}
-    if retcode != 0:
+    if res['stdout'] == '':
+        result = False
+    else:
         #NOTE: manpage vague, non 0 output = we have faults
         #FIXME: capture correct output and try to parse
         result = True
-    else:
-        result = False
 
     return result
 
