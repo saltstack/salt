@@ -554,8 +554,6 @@ class Client(object):
 
         if url_data.scheme == 's3':
             try:
-                import salt.utils.s3
-
                 def s3_opt(key, default=None):
                     '''Get value of s3.<key> from Minion config or from Pillar'''
                     if 's3.' + key in self.opts:
