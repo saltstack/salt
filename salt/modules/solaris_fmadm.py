@@ -510,4 +510,17 @@ def faulty():
 
     return result
 
+
+def healthy():
+    '''
+    Return wether fmadm is reporting faults
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' fmadm.healthy
+    '''
+    return False if faulty() else True
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
