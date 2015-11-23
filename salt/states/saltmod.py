@@ -248,7 +248,7 @@ def state(
         if 'return' in mdata and 'ret' not in mdata:
             mdata['ret'] = mdata.pop('return')
 
-        m_state = None
+        m_state = True
         if mdata.get('failed', False):
             m_state = False
         else:
@@ -256,7 +256,7 @@ def state(
                 m_ret = mdata['ret']
             except KeyError:
                 m_state = False
-            if m_state is None:
+            if not m_state:
                 m_state = salt.utils.check_state_result(m_ret)
 
         if not m_state:
