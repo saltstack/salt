@@ -36,6 +36,9 @@ import salt.utils.locales
 # Import 3rd-party libs
 import salt.ext.six as six
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 log = logging.getLogger(__name__)
 
 
