@@ -125,6 +125,6 @@ def query(function,
                 return ret
             ret['message'] = _result.get(response)
         else:
-            ret['message'] = 'Unknown error when connection to Slack'
+            ret['message'] = 'invalid_auth'
             ret['res'] = False
         return ret
