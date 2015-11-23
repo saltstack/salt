@@ -857,6 +857,7 @@ def avail_sizes(call=None):
     }
     return sizes
 
+
 def avail_images(kwargs=None, call=None):
     '''
     Return a dict of all available VM images on the cloud provider.
@@ -3824,6 +3825,7 @@ def create_keypair(kwargs=None, call=None):
                      sigver='4')
     return data
 
+
 def import_keypair(kwargs=None, call=None):
     '''
     Import an SSH public key
@@ -3864,6 +3866,7 @@ def import_keypair(kwargs=None, call=None):
                      opts=__opts__,
                      sigver='4')
     return data
+
 
 def show_keypair(kwargs=None, call=None):
     '''
