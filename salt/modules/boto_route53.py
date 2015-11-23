@@ -55,6 +55,7 @@ import time
 # Import salt libs
 import salt.utils.compat
 import salt.utils.odict as odict
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -145,12 +146,41 @@ def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
 
     .. versionadded:: 2015.8.0
 
+    zone
+        DNZ zone to create
+
+    private
+        True/False if the zone will be a private zone
+
+    vpc_id
+        VPC ID to associate the zone to (required if private is True)
+
+    vpc_region
+        VPC Region (required if private is True)
+
+    region
+        region endpoint to connect to
+
+    key
+        AWS key
+
+    keyid
+        AWS keyid
+
+    profile
+        AWS pillar profile
+
     CLI Example::
 
         salt myminion boto_route53.create_zone example.org
     '''
     if region is None:
         region = 'universal'
+
+    if private:
+        if not vpc_id and not vpc_region:
+            msg = 'vpc_id and vpc_region must be specified for a private zone'
+            raise SaltInvocationError(msg)
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
