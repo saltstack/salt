@@ -269,6 +269,35 @@ class GitProvider(object):
             log.critical(msg, exc_info_on_loglevel=logging.DEBUG)
             failhard(self.role)
 
+    def _get_envs_from_ref_paths(self, refs):
+        '''
+        Return the names of remote refs (stripped of the remote name) and tags
+        which are exposed as environments. If a branch or tag matches
+        '''
+        def _check_ref(env_set, base_ref, rname):
+            '''
+            Check the ref and resolve it as the base_ref if it matches. If the
+            resulting env is exposed via whitelist/blacklist, add it to the
+            env_set.
+            '''
+            if base_ref is not None and base_ref == rname:
+                rname = 'base'
+            if self.env_is_exposed(rname):
+                env_set.add(rname)
+
+        ret = set()
+        base_ref = getattr(self, 'base', None)
+        for ref in refs:
+            ref = re.sub('^refs/', '', ref)
+            rtype, rname = ref.split('/', 1)
+            if rtype == 'remotes':
+                parted = rname.partition('/')
+                rname = parted[2] if parted[2] else parted[0]
+                _check_ref(ret, base_ref, rname)
+            elif rtype == 'tags':
+                _check_ref(ret, base_ref, rname)
+        return ret
+
     def check_root(self):
         '''
         Check if the relative root path exists in the checked-out copy of the
@@ -542,18 +571,8 @@ class GitPython(GitProvider):
         Check the refs and return a list of the ones which can be used as salt
         environments.
         '''
-        ret = set()
-        for ref in self.repo.refs:
-            parted = ref.name.partition('/')
-            rspec = parted[2] if parted[2] else parted[0]
-            if isinstance(ref, git.Head):
-                if hasattr(self, 'base') and self.base == rspec:
-                    rspec = 'base'
-                if self.env_is_exposed(rspec):
-                    ret.add(rspec)
-            elif isinstance(ref, git.Tag) and self.env_is_exposed(rspec):
-                ret.add(rspec)
-        return ret
+        ref_paths = [x.path for x in self.repo.refs]
+        return self._get_envs_from_ref_paths(ref_paths)
 
     def fetch(self):
         '''
@@ -908,29 +927,8 @@ class Pygit2(GitProvider):
         Check the refs and return a list of the ones which can be used as salt
         environments.
         '''
-        def _check_ref(env_set, base_ref, rname):
-            '''
-            Check the ref and resolve it as the base_ref if it matches. If the
-            resulting env is exposed via whitelist/blacklist, add it to the
-            env_set.
-            '''
-            if base_ref is not None and base_ref == rname:
-                rname = 'base'
-            if self.env_is_exposed(rname):
-                env_set.add(rname)
-
-        ret = set()
-        base_ref = getattr(self, 'base', None)
-        for ref in self.repo.listall_references():
-            ref = re.sub('^refs/', '', ref)
-            rtype, rname = ref.split('/', 1)
-            if rtype == 'remotes':
-                parted = rname.partition('/')
-                rname = parted[2] if parted[2] else parted[0]
-                _check_ref(ret, base_ref, rname)
-            elif rtype == 'tags':
-                _check_ref(ret, base_ref, rname)
-        return ret
+        ref_paths = self.repo.listall_references()
+        return self._get_envs_from_ref_paths(ref_paths)
 
     def fetch(self):
         '''
@@ -1203,7 +1201,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
     def __init__(self, opts, remote, per_remote_defaults,
                  override_params, cache_root, role='gitfs'):
         self.get_env_refs = lambda refs: [
-            x for x in refs if re.match('refs/(heads|tags)', x)
+            x for x in refs if re.match('refs/(remotes|tags)', x)
             and not x.endswith('^{}')
         ]
         self.provider = 'dulwich'
@@ -1251,18 +1249,8 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         Check the refs and return a list of the ones which can be used as salt
         environments.
         '''
-        ret = set()
-        for ref in self.get_env_refs(self.repo.get_refs()):
-            # ref will be something like 'refs/heads/master'
-            rtype, rspec = ref[5:].split('/', 1)
-            if rtype == 'heads':
-                if hasattr(self, 'base') and self.base == rspec:
-                    rspec = 'base'
-                if self.env_is_exposed(rspec):
-                    ret.add(rspec)
-            elif rtype == 'tags' and self.env_is_exposed(rspec):
-                ret.add(rspec)
-        return ret
+        ref_paths = self.get_env_refs(self.repo.get_refs())
+        return self._get_envs_from_ref_paths(ref_paths)
 
     def fetch(self):
         '''
