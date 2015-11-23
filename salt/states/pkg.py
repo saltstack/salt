@@ -1437,7 +1437,7 @@ def latest(
                     cmp_func=cmp_func):
                     targets[pkg] = avail[pkg]
                 else:
-                    if __salt__['portage_config.is_changed_uses'](pkg):
+                    if not cur[pkg] or __salt__['portage_config.is_changed_uses'](pkg):
                         targets[pkg] = avail[pkg]
     else:
         for pkg in desired_pkgs:
