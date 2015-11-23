@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-    salt.serializers.json
+    salt.serializers.configparser
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     .. versionadded:: Boron
