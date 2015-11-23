@@ -49,6 +49,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import time
 
 # Import salt libs
