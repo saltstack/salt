@@ -703,7 +703,7 @@ class Pygit2(GitProvider):
                 # ref doesn't exist will raise an exception in pygit2 >= 0.21),
                 # and create the HEAD ref if it is missing.
                 head_ref = self.repo.lookup_reference('HEAD').target
-                if head_ref not in refs:
+                if head_ref not in refs and head_ref != local_ref:
                     branch_name = head_ref.partition('refs/heads/')[-1]
                     if not branch_name:
                         # Shouldn't happen, but log an error if it does
