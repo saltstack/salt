@@ -344,7 +344,7 @@ def _compare(actual, create_kwargs):
             )
             if actual_hosts != desired_hosts:
                 ret.update({item: {'old': actual_hosts,
-                                    'new': desired_hosts}})
+                                   'new': desired_hosts}})
                 continue
 
         elif isinstance(data, list):
