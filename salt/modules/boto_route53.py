@@ -64,6 +64,12 @@ try:
     import boto.route53
     from boto.route53.exception import DNSServerError
     #pylint: enable=unused-import
+    # create_zone params were changed in boto 2.35+
+    required_boto_version = '2.35.0'
+    if _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
+        msg = 'boto_route53 requires at least boto {0}.'.format(required_boto_version)
+        log.error(msg)
+        raise ImportError()
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -147,13 +153,13 @@ def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    _zone = conn.get_zone(zone, private_zone=private, vpc_id=vpc_id,
-                          vpc_region=vpc_region)
+    _zone = conn.get_zone(zone)
 
     if _zone:
         return False
 
-    conn.create_zone(zone)
+    conn.create_zone(zone, private_zone=private, vpc_id=vpc_id,
+                     vpc_region=vpc_region)
     return True
 
 
