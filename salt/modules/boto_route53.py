@@ -178,7 +178,7 @@ def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
         region = 'universal'
 
     if private:
-        if not vpc_id and not vpc_region:
+        if not vpc_id or not vpc_region:
             msg = 'vpc_id and vpc_region must be specified for a private zone'
             raise SaltInvocationError(msg)
 
