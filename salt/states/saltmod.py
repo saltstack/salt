@@ -256,7 +256,7 @@ def state(
                 m_ret = mdata['ret']
             except KeyError:
                 m_state = False
-            if m_state is None:
+            if not m_state:
                 m_state = salt.utils.check_state_result(m_ret)
 
         if not m_state:
