@@ -11,6 +11,7 @@ import hashlib
 import logging
 import os
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -53,6 +54,7 @@ _INVALID_REPO = (
 
 # Import salt libs
 import salt.utils
+import salt.utils.itertools
 import salt.utils.url
 import salt.fileserver
 from salt.exceptions import FileserverConfigError
@@ -421,6 +423,7 @@ class GitProvider(object):
         '''
         Override this function in a sub-class to implement auth checking.
         '''
+        self.credentials = None
         return True
 
     def write_file(self, blob, dest):
@@ -752,7 +755,7 @@ class Pygit2(GitProvider):
         '''
         Clean stale local refs so they don't appear as fileserver environments
         '''
-        if hasattr(self, 'credentials'):
+        if self.credentials is not None:
             log.debug(
                 'pygit2 does not support detecting stale refs for '
                 'authenticated remotes, saltenvs will not reflect '
@@ -763,15 +766,28 @@ class Pygit2(GitProvider):
         if local_refs is None:
             local_refs = self.repo.listall_references()
         remote_refs = []
-        for line in subprocess.Popen(
-                'git ls-remote origin',
-                shell=True,
-                close_fds=not salt.utils.is_windows(),
-                cwd=self.repo.workdir,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT).communicate()[0].splitlines():
+        cmd_str = 'git ls-remote origin'
+        cmd = subprocess.Popen(
+            shlex.split(cmd_str),
+            close_fds=not salt.utils.is_windows(),
+            cwd=self.repo.workdir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        output = cmd.communicate()[0]
+        if cmd.returncode != 0:
+            log.warning(
+                'Failed to list remote references for {0} remote \'{1}\'. '
+                'Output from \'{2}\' follows:\n{3}'.format(
+                    self.role,
+                    self.id,
+                    cmd_str,
+                    output
+                )
+            )
+            return []
+        for line in salt.utils.itertools.split(output, '\n'):
             try:
-                # Rename heads to match the ref names from
+                # Rename heads to match the remote ref names from
                 # pygit2.Repository.listall_references()
                 remote_refs.append(
                     line.split()[-1].replace(b'refs/heads/',
@@ -780,9 +796,14 @@ class Pygit2(GitProvider):
             except IndexError:
                 continue
         cleaned = []
-        for ref in [x for x in local_refs if x not in remote_refs]:
-            self.repo.lookup_reference(ref).delete()
-            cleaned.append(ref)
+        if remote_refs:
+            for ref in local_refs:
+                if ref.startswith('refs/heads/'):
+                    # Local head, ignore it
+                    continue
+                elif ref not in remote_refs:
+                    self.repo.lookup_reference(ref).delete()
+                    cleaned.append(ref)
         if cleaned:
             log.debug('{0} cleaned the following stale refs: {1}'
                       .format(self.role, cleaned))
@@ -918,16 +939,15 @@ class Pygit2(GitProvider):
         '''
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
-        credentials = getattr(self, 'credentials', None)
-        if credentials is not None:
-            origin.credentials = credentials
+        if self.credentials is not None:
+            origin.credentials = self.credentials
         try:
             fetch_results = origin.fetch()
         except GitError as exc:
             # Using exc.__str__() here to avoid deprecation warning
             # when referencing exc.message
             if 'unsupported url protocol' in exc.__str__().lower() \
-                    and isinstance(credentials, pygit2.Keypair):
+                    and isinstance(self.credentials, pygit2.Keypair):
                 log.error(
                     'Unable to fetch SSH-based {0} remote \'{1}\'. '
                     'libgit2 must be compiled with libssh2 to support '
@@ -1067,11 +1087,13 @@ class Pygit2(GitProvider):
     def verify_auth(self):
         '''
         Check the username and password/keypair info for validity. If valid,
-        set a 'credentials' attribute (consisting of the appropriate
-        credentials object) to the repo config dict passed to this function.
-        Return False if a required auth param is not present. Return True if
-        the required auth parameters are present, otherwise return False.
+        set a 'credentials' attribute consisting of the appropriate Pygit2
+        credentials object. Return False if a required auth param is not
+        present. Return True if the required auth parameters are present (or
+        auth is not configured), otherwise failhard if there is a problem with
+        authenticaion.
         '''
+        self.credentials = None
         if os.path.isabs(self.url):
             # If the URL is an absolute file path, there is no authentication.
             return True
