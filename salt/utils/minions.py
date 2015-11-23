@@ -740,9 +740,7 @@ class CkMinions(object):
             funs = [funs]
             args = [args]
         try:
-            for num in six.moves.range(funs):
-                fun = funs[num]
-                arg = args[num]
+            for num, fun in enumerate(funs):
                 for ind in auth_list:
                     if isinstance(ind, six.string_types):
                         # Allowed for all minions
@@ -790,15 +788,16 @@ class CkMinions(object):
                                                 # Invalid argument
                                                 continue
                                             # whitelist args, kwargs
+                                            arg_list = args[num]
                                             cond_args = acond.get('args', [])
                                             good = True
-                                            for i in six.moves.range(len(cond_args)):
-                                                if len(arg) <= i:
+                                            for i, cond_arg in enumerate(cond_args):
+                                                if len(arg_list) <= i:
                                                     good = False
                                                     break
-                                                if acond[i] is None:  # None == '.*' i.e. allow any
+                                                if cond_arg is None:  # None == '.*' i.e. allow any
                                                     continue
-                                                if not self.match_check(acond[i], arg[i]):
+                                                if not self.match_check(cond_arg, arg_list[i]):
                                                     good = False
                                                     break
                                             if not good:
@@ -806,7 +805,7 @@ class CkMinions(object):
                                             # Check kwargs
                                             cond_kwargs = acond.get('kwargs', {})
                                             arg_kwargs = {}
-                                            for a in arg:
+                                            for a in arg_list:
                                                 if isinstance(a, dict) and '__kwarg__' in a:
                                                     arg_kwargs = a
                                                     break
@@ -816,7 +815,7 @@ class CkMinions(object):
                                                 if k not in arg_kwargs:
                                                     good = False
                                                     break
-                                                if not self.match_check(v, arg_kwargs.get[k]):
+                                                if not self.match_check(v, arg_kwargs[k]):
                                                     good = False
                                                     break
                                             if good:
