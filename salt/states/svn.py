@@ -3,9 +3,15 @@
 Manage SVN repositories
 =======================
 
-Manage repository checkouts via the svn vcs system:
+Manage repository checkouts via the svn vcs system. Note that subversion must 
+be installed for these states to be available, so svn states should include a
+requisite to a pkg.installed state for the package which provides subversion
+(``subversion`` in most cases). Example:
 
 .. code-block:: yaml
+
+    subversion:
+      pkg.installed
 
     http://unladen-swallow.googlecode.com/svn/trunk/:
       svn.latest:
