@@ -31,9 +31,10 @@ data in pillar. Here's an example pillar structure:
     proxy:
       host: 10.27.20.18
       admin_username: root
-      admin_password: super-secret
       fallback_admin_username: root
-      fallback_admin_password: old-secret
+      passwords:
+        - super-secret
+        - old-secret
       proxytype: fx2
 
       chassis:
@@ -105,17 +106,6 @@ pillar stated above:
           - {{ k }}: {{ v }}
           {% endfor %}
 
-    {% for k, v in details['switches'].iteritems() %}
-    standup-switches-{{ k }}:
-      dellchassis.switch:
-        - name: {{ k }}
-        - ip: {{ v['ip'] }}
-        - netmask: {{ v['netmask'] }}
-        - gateway: {{ v['gateway'] }}
-        - password: {{ v['password'] }}
-        - snmp: {{ v['snmp'] }}
-    {% endfor %}
-
     blade_powercycle:
       dellchassis.chassis:
         - blade_power_states:
@@ -123,6 +113,27 @@ pillar stated above:
           - server-2: powercycle
           - server-3: powercycle
           - server-4: powercycle
+
+    # Set idrac_passwords for blades
+    {% for k, v in details['blades'].iteritems() %}
+    {{ k }}:
+      dellchassis.blade_idrac:
+        - idrac_password: {{ password }}
+    {% endfor %}
+
+.. note::
+
+    This state module relies on the dracr.py execution module, which runs racadm commands on
+    the chassis, blades, etc. The racadm command runs very slowly and, depending on your state,
+    the proxy minion return might timeout before the racadm commands have completed. If you
+    are repeatedly seeing minions timeout after state calls, please use the ``-t`` CLI argument
+    to increase the timeout variable.
+
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' state.sls my-dell-chasis-state-name -t 60
 
 '''
 
@@ -208,7 +219,11 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
         The location of the chassis.
 
     password
-        Password for the chassis
+        Password for the chassis. Note: If this password is set for the chassis,
+        the current implementation of this state will set this password both on
+        the chassis and the iDrac passwords on any configured blades. If the
+        password for the blades should be distinct, they should be set separately
+        with the blade_idrac function.
 
     mode
         The management mode of the chassis. Viable options are:
@@ -255,6 +270,7 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
               - server-3: powercycle
     '''
     ret = {'name': chassis_name,
+           'chassis_name': chassis_name,
            'result': True,
            'changes': {},
            'comment': ''}
@@ -465,43 +481,48 @@ def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
            'comment': ''}
 
     current_nic = __salt__['chassis.cmd']('network_info', module=name)
-    if current_nic.get('retcode', 0) != 0:
-        ret['result'] = False
-        ret['comment'] = current_nic['stdout']
-        return ret
+    try:
+        if current_nic.get('retcode', 0) != 0:
+            ret['result'] = False
+            ret['comment'] = current_nic['stdout']
+            return ret
 
-    if ip or netmask or gateway:
-        if not ip:
-            ip = current_nic['Network']['IP Address']
-        if not netmask:
-            ip = current_nic['Network']['Subnet Mask']
-        if not gateway:
-            ip = current_nic['Network']['Gateway']
+        if ip or netmask or gateway:
+            if not ip:
+                ip = current_nic['Network']['IP Address']
+            if not netmask:
+                ip = current_nic['Network']['Subnet Mask']
+            if not gateway:
+                ip = current_nic['Network']['Gateway']
 
-    if current_nic['Network']['DHCP Enabled'] == '0' and dhcp:
-        ret['changes'].update({'DHCP': {'Old': {'DHCP Enabled': current_nic['Network']['DHCP Enabled']},
-                                        'New': {'DHCP Enabled': dhcp}}})
+        if current_nic['Network']['DHCP Enabled'] == '0' and dhcp:
+            ret['changes'].update({'DHCP': {'Old': {'DHCP Enabled': current_nic['Network']['DHCP Enabled']},
+                                            'New': {'DHCP Enabled': dhcp}}})
 
-    if ((ip or netmask or gateway) and not dhcp and (ip != current_nic['Network']['IP Address'] or
-                                                             netmask != current_nic['Network']['Subnet Mask'] or
-                                                             gateway != current_nic['Network']['Gateway'])):
-        ret['changes'].update({'IP': {'Old': current_nic['Network'],
-                                      'New': {'IP Address': ip,
-                                              'Subnet Mask': netmask,
-                                              'Gateway': gateway}}})
+        if ((ip or netmask or gateway) and not dhcp and (ip != current_nic['Network']['IP Address'] or
+                                                                 netmask != current_nic['Network']['Subnet Mask'] or
+                                                                 gateway != current_nic['Network']['Gateway'])):
+            ret['changes'].update({'IP': {'Old': current_nic['Network'],
+                                          'New': {'IP Address': ip,
+                                                  'Subnet Mask': netmask,
+                                                  'Gateway': gateway}}})
 
-    if password:
-        if 'New' not in ret['changes']:
-            ret['changes']['New'] = {}
-        ret['changes']['New'].update({'Password': '*****'})
+        if password:
+            if 'New' not in ret['changes']:
+                ret['changes']['New'] = {}
+            ret['changes']['New'].update({'Password': '*****'})
 
-    if snmp:
-        if 'New' not in ret['changes']:
-            ret['changes']['New'] = {}
-        ret['changes']['New'].update({'SNMP': '*****'})
+        if snmp:
+            if 'New' not in ret['changes']:
+                ret['changes']['New'] = {}
+            ret['changes']['New'].update({'SNMP': '*****'})
 
-    if ret['changes'] == {}:
-        ret['comment'] = 'Switch ' + name + ' is already in desired state'
+        if ret['changes'] == {}:
+            ret['comment'] = 'Switch ' + name + ' is already in desired state'
+            return ret
+    except AttributeError:
+        ret['changes'] = {}
+        ret['comment'] = 'Something went wrong retrieving the switch details'
         return ret
 
     if __opts__['test']:
@@ -519,7 +540,7 @@ def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
         password_ret = __salt__['chassis.cmd']('deploy_password', 'root', password, module=name)
 
     if snmp:
-        snmp_ret = __salt__['chassis.cmd']('deploy_snmp', password, module=name)
+        snmp_ret = __salt__['chassis.cmd']('deploy_snmp', snmp, module=name)
 
     if any([password_ret, snmp_ret, net_ret, dhcp_ret]) is False:
         ret['result'] = False

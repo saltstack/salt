@@ -565,7 +565,10 @@ class SSH(object):
         try:
             if isinstance(jid, bytes):
                 jid = jid.decode('utf-8')
-            self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+            if self.opts['master_job_cache'] == 'local_cache':
+                self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load, minions=self.targets.keys())
+            else:
+                self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
         except Exception as exc:
             log.exception(exc)
             log.error('Could not save load with returner {0}: {1}'.format(self.opts['master_job_cache'], exc))

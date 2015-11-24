@@ -5,6 +5,7 @@ Nova class
 
 # Import Python libs
 from __future__ import absolute_import, with_statement
+from distutils.version import LooseVersion
 import time
 import inspect
 import logging
@@ -14,11 +15,8 @@ import salt.ext.six as six
 HAS_NOVA = False
 # pylint: disable=import-error
 try:
-    try:
-        from novaclient.v2 import client
-    except ImportError:
-        from novaclient.v1_1 import client
-    from novaclient import client as nclient
+    import novaclient
+    from novaclient import client
     from novaclient.shell import OpenStackComputeShell
     import novaclient.utils
     import novaclient.auth_plugin
@@ -27,7 +25,8 @@ try:
     import novaclient.base
     HAS_NOVA = True
 except ImportError:
-    pass
+    class OpenStackComputeShell(object):
+        '''mock class for errors'''
 # pylint: enable=import-error
 
 # Import salt libs
@@ -37,9 +36,17 @@ from salt.exceptions import SaltCloudSystemExit
 # Get logging started
 log = logging.getLogger(__name__)
 
+# Version added to novaclient.client.Client function
+NOVACLIENT_MINVER = '2.6.1'
+
 
 def check_nova():
-    return HAS_NOVA
+    novaclient_ver = LooseVersion(novaclient.__version__)
+    min_ver = LooseVersion(NOVACLIENT_MINVER)
+    if novaclient_ver >= min_ver:
+        return HAS_NOVA
+    log.debug('Newer novaclient version required.  Minimum: 2.6.1')
+    return False
 
 
 # kwargs has to be an object instead of a dictionary for the __post_parse_arg__
@@ -132,13 +139,10 @@ class SaltNova(OpenStackComputeShell):
         '''
         Set up nova credentials
         '''
-        if not HAS_NOVA:
-            return None
-
         self.kwargs = kwargs.copy()
 
         if not novaclient.base.Manager._hooks_map:
-            self.extensions = nclient.discover_extensions('1.1')
+            self.extensions = client.discover_extensions('1.1')
             for extension in self.extensions:
                 extension.run_hooks('__pre_parse_args__')
             self.kwargs['extensions'] = self.extensions
@@ -172,20 +176,19 @@ class SaltNova(OpenStackComputeShell):
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
-        if not hasattr(client.Client, '__exit__'):
-            raise SaltCloudSystemExit("Newer version of novaclient required for __exit__.")
+        # Requires novaclient version >= 2.6.1
+        self.kwargs['version'] = str(kwargs.get('version', 2))
 
-        with client.Client(**self.kwargs) as conn:
-            try:
-                conn.client.authenticate()
-            except novaclient.exceptions.AmbiguousEndpoints:
-                raise SaltCloudSystemExit(
-                    "Nova provider requires a 'region_name' to be specified"
-                )
+        conn = client.Client(**self.kwargs)
+        try:
+            conn.client.authenticate()
+        except novaclient.exceptions.AmbiguousEndpoints:
+            raise SaltCloudSystemExit(
+                "Nova provider requires a 'region_name' to be specified"
+            )
 
-            self.kwargs['auth_token'] = conn.client.auth_token
-            self.catalog = \
-                conn.client.service_catalog.catalog['access']['serviceCatalog']
+        self.kwargs['auth_token'] = conn.client.auth_token
+        self.catalog = conn.client.service_catalog.catalog['access']['serviceCatalog']
 
         if region_name is not None:
             servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']

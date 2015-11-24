@@ -1306,6 +1306,8 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
     in_whitelist = False
     in_blacklist = False
     if whitelist:
+        if not isinstance(whitelist, list):
+            whitelist = [whitelist]
         try:
             for expr in whitelist:
                 if expr_match(value, expr):
@@ -1318,6 +1320,8 @@ def check_whitelist_blacklist(value, whitelist=None, blacklist=None):
         whitelist = None
 
     if blacklist:
+        if not isinstance(blacklist, list):
+            blacklist = [blacklist]
         try:
             for expr in blacklist:
                 if expr_match(value, expr):

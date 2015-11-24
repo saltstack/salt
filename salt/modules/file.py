@@ -3238,11 +3238,13 @@ def source_list(source, source_hash, saltenv):
             if isinstance(single, dict):
                 # check the proto, if it is http or ftp then download the file
                 # to check, if it is salt then check the master list
+                # if it is a local file, check if the file exists
                 if len(single) != 1:
                     continue
                 single_src = next(iter(single))
                 single_hash = single[single_src] if single[single_src] else source_hash
-                proto = _urlparse(single_src).scheme
+                urlparsed_single_src = _urlparse(single_src)
+                proto = urlparsed_single_src.scheme
                 if proto == 'salt':
                     path, senv = salt.utils.url.parse(single_src)
                     if not senv:
@@ -3257,11 +3259,24 @@ def source_list(source, source_hash, saltenv):
                     if fn_:
                         ret = (single_src, single_hash)
                         break
+                elif proto == 'file' and os.path.exists(urlparsed_single_src.path):
+                    ret = (single_src, single_hash)
+                    break
+                elif single_src.startswith('/') and os.path.exists(single_src):
+                    ret = (single_src, single_hash)
+                    break
             elif isinstance(single, six.string_types):
                 path, senv = salt.utils.url.parse(single)
                 if not senv:
                     senv = saltenv
                 if (path, senv) in mfiles or (path, senv) in mdirs:
+                    ret = (single, source_hash)
+                    break
+                urlparsed_source = _urlparse(single)
+                if urlparsed_source.scheme == 'file' and os.path.exists(urlparsed_source.path):
+                    ret = (single, source_hash)
+                    break
+                if single.startswith('/') and os.path.exists(single):
                     ret = (single, source_hash)
                     break
         if ret is None:

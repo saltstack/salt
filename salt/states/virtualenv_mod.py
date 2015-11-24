@@ -50,7 +50,8 @@ def managed(name,
             use_vt=False,
             env_vars=None,
             no_use_wheel=False,
-            pip_upgrade=False):
+            pip_upgrade=False,
+            pip_pkgs=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
@@ -84,6 +85,9 @@ def managed(name,
         pick up a header file while compiling.
     pip_upgrade: False
         Pass `--upgrade` to `pip install`.
+    pip_pkgs: None
+        As an alternative to `requirements`, pass a list of pip packages that
+        should be installed.
 
 
      Also accepts any kwargs that the virtualenv module will.
@@ -210,9 +214,10 @@ def managed(name,
             return ret
 
     # Populate the venv via a requirements file
-    if requirements:
+    if requirements or pip_pkgs:
         before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
         _ret = __salt__['pip.install'](
+            pkgs=pip_pkgs,
             requirements=requirements,
             bin_env=name,
             use_wheel=use_wheel,

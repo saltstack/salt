@@ -73,8 +73,7 @@ def _get_all_units():
                       r')\s+loaded\s+(?P<active>[^\s]+)')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --all --full --no-legend --no-pager list-units | col -b',
-        python_shell=True
+        'systemctl --all --full --no-legend --no-pager list-units'
     )
 
     ret = {}
@@ -96,8 +95,7 @@ def _get_all_unit_files():
                       r')\s+(?P<state>.+)$')
 
     out = __salt__['cmd.run_stdout'](
-        'systemctl --full --no-legend --no-pager list-unit-files | col -b',
-        python_shell=True
+        'systemctl --full --no-legend --no-pager list-unit-files'
     )
 
     ret = {}
@@ -111,8 +109,8 @@ def _get_all_unit_files():
 
 def _get_all_legacy_init_scripts():
     '''
-    Get all old-fashioned init-style scripts. State is always inactive, because systemd would already show them
-    otherwise.
+    Get all old-fashioned init-style scripts. State is always inactive, because
+    systemd would already show them otherwise.
     '''
     ret = {}
     if not os.path.isdir(LEGACY_INIT_SCRIPT_PATH):
