@@ -35,3 +35,9 @@ GitHub, chdir into the base repo directory, and run
     ./build.sh
 
 
+References:
+
+http://crushbeercrushcode.org/2014/01/using-pkgbuild-and-productbuild-on-os-x-10-7/
+http://stackoverflow.com/questions/11487596/making-os-x-installer-packages-like-a-pro-xcode-developer-id-ready-pkg
+
+
