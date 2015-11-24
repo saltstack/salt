@@ -102,7 +102,9 @@ class MasterACLTestCase(integration.ModuleCase):
                                                      'kwargs': {'kwa': 'kwa.*',
                                                                 'kwb': 'kwb'}}}]},
                                 {'minion1': [{'test.echo': {'args': ['TEST',
-                                                                     'TEST.*']}}]}
+                                                                     None,
+                                                                     'TEST.*']}},
+                                             {'test.empty:': {}}]}
                                 ]
              }
         self.clear = salt.master.ClearFuncs(opts, MagicMock())
@@ -236,9 +238,30 @@ class MasterACLTestCase(integration.ModuleCase):
 
     @patch('salt.utils.minions.CkMinions.check_minions',
            MagicMock(return_value='minion1'))
+    def test_args_empty_spec(self, fire_event_mock):
+        '''
+        Test simple arg restriction allowed.
+
+        'test_user_func':
+            minion1:
+                - test.echo:
+                    args:
+                        - 'TEST'
+                        - 'TEST.*'
+        '''
+        self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
+        self.valid_clear_load.update({'user': 'test_user_func',
+                                      'tgt': 'minion1',
+                                      'fun': 'test.empty',
+                                      'arg': ['TEST']})
+        self.clear.publish(self.valid_clear_load)
+        self.assertEqual(fire_event_mock.call_args[0][0]['fun'], 'test.empty')
+
+    @patch('salt.utils.minions.CkMinions.check_minions',
+           MagicMock(return_value='minion1'))
     def test_args_simple_match(self, fire_event_mock):
         '''
-        Test simple arg restricion allowed.
+        Test simple arg restriction allowed.
 
         'test_user_func':
             minion1:
@@ -251,7 +274,7 @@ class MasterACLTestCase(integration.ModuleCase):
         self.valid_clear_load.update({'user': 'test_user_func',
                                       'tgt': 'minion1',
                                       'fun': 'test.echo',
-                                      'arg': ['TEST', 'TEST ABC']})
+                                      'arg': ['TEST', 'any', 'TEST ABC']})
         self.clear.publish(self.valid_clear_load)
         self.assertEqual(fire_event_mock.call_args[0][0]['fun'], 'test.echo')
 
@@ -259,7 +282,7 @@ class MasterACLTestCase(integration.ModuleCase):
            MagicMock(return_value='minion1'))
     def test_args_more_args(self, fire_event_mock):
         '''
-        Test simple arg restricion allowed to pass other unlistd args.
+        Test simple arg restriction allowed to pass unlisted args.
 
         'test_user_func':
             minion1:
@@ -273,6 +296,7 @@ class MasterACLTestCase(integration.ModuleCase):
                                       'tgt': 'minion1',
                                       'fun': 'test.echo',
                                       'arg': ['TEST',
+                                              'any',
                                               'TEST ABC',
                                               'arg 3',
                                               {'kwarg1': 'val1',
@@ -294,19 +318,19 @@ class MasterACLTestCase(integration.ModuleCase):
                         - 'TEST.*'
         '''
         self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
-        # Wrong second arg
+        # Wrong last arg
         self.valid_clear_load.update({'user': 'test_user_func',
                                       'tgt': 'minion1',
                                       'fun': 'test.echo',
-                                      'arg': ['TEST', 'TESLA']})
+                                      'arg': ['TEST', 'any', 'TESLA']})
         self.clear.publish(self.valid_clear_load)
         self.assertEqual(fire_event_mock.mock_calls, [])
         # Wrong first arg
-        self.valid_clear_load['arg'] = ['TES', 'TEST1234']
+        self.valid_clear_load['arg'] = ['TES', 'any', 'TEST1234']
         self.clear.publish(self.valid_clear_load)
         self.assertEqual(fire_event_mock.mock_calls, [])
-        # Missing the second arg
-        self.valid_clear_load['arg'] = ['TEST']
+        # Missing the last arg
+        self.valid_clear_load['arg'] = ['TEST', 'any']
         self.clear.publish(self.valid_clear_load)
         self.assertEqual(fire_event_mock.mock_calls, [])
         # No args
@@ -318,7 +342,7 @@ class MasterACLTestCase(integration.ModuleCase):
            MagicMock(return_value='some_minions'))
     def test_args_kwargs_match(self, fire_event_mock):
         '''
-        Test simple kwargs restricion allowed.
+        Test simple kwargs restriction allowed.
 
         'test_user_func':
             '*':
@@ -341,7 +365,7 @@ class MasterACLTestCase(integration.ModuleCase):
            MagicMock(return_value='some_minions'))
     def test_args_kwargs_mismatch(self, fire_event_mock):
         '''
-        Test simple kwargs restricion allowed.
+        Test simple kwargs restriction allowed.
 
         'test_user_func':
             '*':
@@ -366,6 +390,15 @@ class MasterACLTestCase(integration.ModuleCase):
                                          '__kwarg__': True}]
         self.clear.publish(self.valid_clear_load)
         self.assertEqual(fire_event_mock.mock_calls, [])
+        self.valid_clear_load['arg'] = [{'__kwarg__': True}]
+        self.clear.publish(self.valid_clear_load)
+        self.assertEqual(fire_event_mock.mock_calls, [])
+        self.valid_clear_load['arg'] = [{}]
+        self.clear.publish(self.valid_clear_load)
+        self.assertEqual(fire_event_mock.mock_calls, [])
+        self.valid_clear_load['arg'] = []
+        self.clear.publish(self.valid_clear_load)
+        self.assertEqual(fire_event_mock.mock_calls, [])
         # Missing kwarg allowing any value
         self.valid_clear_load['arg'] = [{'text': 'KWMSG: a message',
                                          'none': 'hello none',
@@ -382,7 +415,7 @@ class MasterACLTestCase(integration.ModuleCase):
            MagicMock(return_value='some_minions'))
     def test_args_mixed_match(self, fire_event_mock):
         '''
-        Test mixed args and kwargs restricion allowed.
+        Test mixed args and kwargs restriction allowed.
 
         'test_user_func':
             '*':
@@ -413,7 +446,7 @@ class MasterACLTestCase(integration.ModuleCase):
            MagicMock(return_value='some_minions'))
     def test_args_mixed_mismatch(self, fire_event_mock):
         '''
-        Test mixed args and kwargs restricion forbidden.
+        Test mixed args and kwargs restriction forbidden.
 
         'test_user_func':
             '*':

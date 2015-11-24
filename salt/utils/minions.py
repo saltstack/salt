@@ -690,7 +690,7 @@ class CkMinions(object):
                     vals.append(False)
             except Exception:
                 log.error('Invalid regular expression: {0}'.format(regex))
-        return all(vals)
+        return vals and all(vals)
 
     def any_auth(self, form, auth_list, fun, arg, tgt=None, tgt_type='glob'):
         '''
