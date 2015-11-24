@@ -809,12 +809,12 @@ class CkMinions(object):
                                                 if isinstance(a, dict) and '__kwarg__' in a:
                                                     arg_kwargs = a
                                                     break
-                                            for k, v in cond_kwargs:
-                                                if v is None:  # None == '.*' i.e. allow any
-                                                    continue
+                                            for k, v in six.iteritems(cond_kwargs):
                                                 if k not in arg_kwargs:
                                                     good = False
                                                     break
+                                                if v is None:  # None == '.*' i.e. allow any
+                                                    continue
                                                 if not self.match_check(v, arg_kwargs[k]):
                                                     good = False
                                                     break
