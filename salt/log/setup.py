@@ -678,7 +678,10 @@ def setup_extended_logging(opts):
     initial_handlers = logging.root.handlers[:]
 
     # Load any additional logging handlers
-    providers = salt.loader.log_handlers(opts)
+    # Pack the handlers with exec modules and grains
+    funcs = salt.loader.minion_mods(opts)
+    grains = salt.loader.grains(opts)
+    providers = salt.loader.log_handlers(opts, functions=funcs, grains=grains)
 
     # Let's keep track of the new logging handlers so we can sync the stored
     # log records with them

@@ -76,11 +76,11 @@ Management of SmartOS Standalone Compute Nodes
 
 .. note::
 
-    Keep in mind that when removing entries from vmconfig they will not get
-    removed from the vm's current configuration, for nics, disk, tags, ... they
-    get removed as via add_*, set_*, update_*, and remove_*. Other properties
-    must be manually reset to their default value just like when using vmadm
-    update.
+    Keep in mind that when removing properties from vmconfig they will not get
+    removed from the vm's current configuration, except for nics, disk, tags, ...
+    they get removed via add_*, set_*, update_*, and remove_*. Properties must
+    be manually reset to their default value.
+    The same behavior as when using 'vmadm update'.
 '''
 from __future__ import absolute_import
 
@@ -199,7 +199,7 @@ def _get_instance_changes(current, state):
 
 def config_present(name, value):
     '''
-    Ensure configuration property is present in /usbkey/config
+    Ensure configuration property is set to value in /usbkey/config
 
     name : string
         name of property
@@ -425,19 +425,19 @@ def vm_present(name, vmconfig, config=None):
 
     .. note::
 
-        State ID is used as hostname. Hostnames should be unique.
+        State ID is used as hostname. Hostnames must be unique.
 
     .. note::
 
-        If hostname is provided in vmconfig, this hostname will be used and not the state id.
+        If hostname is provided in vmconfig this will take president over the State ID.
         This allows multiple states to be applied to the same vm.
 
     .. note::
 
-        Instances for the follow properties should have unique ids.
+        The following instances should have a unique ID.
           - nic : mac
-          - disk : path or diskN for zvols
           - filesystem: target
+          - disk : path or diskN for zvols
 
         e.g. disk0 will be the first disk added, disk1 the 2nd,...
 
@@ -780,7 +780,7 @@ def vm_absent(name, archive=False):
 
     .. note::
 
-        State ID is used as hostname. Hostnames should be unique.
+        State ID is used as hostname. Hostnames must be unique.
 
     '''
     name = name.lower()
@@ -823,7 +823,7 @@ def vm_running(name):
 
     .. note::
 
-        State ID is used as hostname. Hostnames should be unique.
+        State ID is used as hostname. Hostnames must be unique.
 
     '''
     name = name.lower()
@@ -858,7 +858,7 @@ def vm_stopped(name):
 
     .. note::
 
-        State ID is used as hostname. Hostnames should be unique.
+        State ID is used as hostname. Hostnames must be unique.
 
     '''
     name = name.lower()

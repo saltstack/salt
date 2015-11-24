@@ -635,7 +635,8 @@ def exists(instance_id=None, name=None, tags=None, region=None, key=None,
         salt myminion boto_ec2.exists myinstance
     '''
     instances = find_instances(instance_id=instance_id, name=name, tags=tags,
-                               in_states=in_states)
+                               region=region, key=key, keyid=keyid,
+                               profile=profile, in_states=in_states)
     if instances:
         log.info('Instance exists.')
         return True
@@ -652,7 +653,8 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         instance_initiated_shutdown_behavior=None, placement_group=None,
         client_token=None, security_group_ids=None, security_group_names=None,
         additional_info=None, tenancy=None, instance_profile_arn=None,
-        instance_profile_name=None, ebs_optimized=None, network_interfaces=None,
+        instance_profile_name=None, ebs_optimized=None,
+        network_interface_id=None, network_interface_name=None,
         region=None, key=None, keyid=None, profile=None):
     #TODO: support multi-instance reservations
     '''
@@ -747,6 +749,10 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         (boto.ec2.networkinterface.NetworkInterfaceCollection) – A
         NetworkInterfaceCollection data structure containing the ENI
         specifications for the instance.
+    network_interface_id
+        (string) - ID of the network interface to attach to the instance
+    network_interface_name
+        (string) - Name of the network interface to attach to the instance
 
     '''
     if all((subnet_id, subnet_name)):
@@ -775,20 +781,47 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                 return False
             security_group_ids += [r]
 
+    if all((network_interface_id, network_interface_name)):
+        raise SaltInvocationError('Only one of network_interface_id or '
+                                  'network_interface_name may be provided.')
+    if network_interface_name:
+        network_interface_id = get_network_interface_id(network_interface_name,
+                                                        region=region, key=key,
+                                                        keyid=keyid,
+                                                        profile=profile)
+        if not network_interface_id:
+            log.warning(
+                "Given network_interface_name '{0}' cannot be mapped to an "
+                "network_interface_id".format(network_interface_name)
+            )
+
+    if network_interface_id:
+        interface = boto.ec2.networkinterface.NetworkInterfaceSpecification(
+            network_interface_id=network_interface_id,
+            device_index=0
+        )
+    else:
+        interface = boto.ec2.networkinterface.NetworkInterfaceSpecification(
+            subnet_id=subnet_id,
+            groups=security_group_ids,
+            device_index=0
+        )
+    interfaces = boto.ec2.networkinterface.NetworkInterfaceCollection(interface)
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     reservation = conn.run_instances(image_id, key_name=key_name, security_groups=security_groups,
                                      user_data=user_data, instance_type=instance_type,
                                      placement=placement, kernel_id=kernel_id, ramdisk_id=ramdisk_id,
-                                     monitoring_enabled=monitoring_enabled, subnet_id=subnet_id,
+                                     monitoring_enabled=monitoring_enabled,
                                      private_ip_address=private_ip_address, block_device_map=block_device_map,
                                      disable_api_termination=disable_api_termination,
                                      instance_initiated_shutdown_behavior=instance_initiated_shutdown_behavior,
                                      placement_group=placement_group, client_token=client_token,
-                                     security_group_ids=security_group_ids, additional_info=additional_info,
+                                     additional_info=additional_info,
                                      tenancy=tenancy, instance_profile_arn=instance_profile_arn,
                                      instance_profile_name=instance_profile_name, ebs_optimized=ebs_optimized,
-                                     network_interfaces=network_interfaces)
+                                     network_interfaces=interfaces)
     if not reservation:
         log.warning('Instance could not be reserved')
         return False

@@ -581,7 +581,7 @@ def install(name=None,
             if fromrepo is not None:
                 version_num += '::{0}'.format(fromrepo)
             if uses is not None:
-                version_num += '["{0}"]'.format('","'.join(uses))
+                version_num += '[{0}]'.format(','.join(uses))
             pkg_params = {name: version_num}
 
     if pkg_params is None or len(pkg_params) == 0:
@@ -618,8 +618,6 @@ def install(name=None,
                     keyword, gt_lt, eq, verstr = match.groups()
                     prefix = gt_lt or ''
                     prefix += eq or ''
-                    # We need to delete quotes around use flag list elements
-                    verstr = verstr.replace("'", "")
                     # If no prefix characters were supplied and verstr contains a version, use '='
                     if len(verstr) > 0 and verstr[0] != ':' and verstr[0] != '[':
                         prefix = prefix or '='
@@ -630,16 +628,16 @@ def install(name=None,
                     target = '{0}'.format(param)
 
                 if '[' in target:
-                    old = __salt__['portage_config.get_flags_from_package_conf']('use', target[1:-1])
-                    __salt__['portage_config.append_use_flags'](target[1:-1])
-                    new = __salt__['portage_config.get_flags_from_package_conf']('use', target[1:-1])
+                    old = __salt__['portage_config.get_flags_from_package_conf']('use', target)
+                    __salt__['portage_config.append_use_flags'](target)
+                    new = __salt__['portage_config.get_flags_from_package_conf']('use', target)
                     if old != new:
                         changes[param + '-USE'] = {'old': old, 'new': new}
-                    target = target[:target.rfind('[')] + '"'
+                    target = target[:target.rfind('[')]
 
                 if keyword is not None:
                     __salt__['portage_config.append_to_package_conf']('accept_keywords',
-                                                                        target[1:-1],
+                                                                        target,
                                                                         ['~ARCH'])
                     changes[param + '-ACCEPT_KEYWORD'] = {'old': '', 'new': '~ARCH'}
 

@@ -84,7 +84,7 @@ def installed(name,          # pylint: disable=C0103
             'Use of argument ruby found, but neither rvm or rbenv is installed'
         )
     gems = __salt__['gem.list'](name, ruby, gem_bin=gem_bin, runas=user)
-    if name in gems and version is not None and version in gems[name]:
+    if name in gems and version is not None and str(version) in gems[name]:
         ret['result'] = True
         ret['comment'] = 'Gem is already installed.'
         return ret
