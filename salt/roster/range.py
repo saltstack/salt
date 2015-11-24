@@ -11,7 +11,7 @@ When you want to use a range query for target matching, use ``--roster range``. 
     salt-ssh --roster range '%%%example.range.cluster' test.ping
 
 '''
-
+from __future__ import absolute_import
 import fnmatch
 
 import logging
@@ -26,8 +26,10 @@ except ImportError:
     log.error("Unable to load range library")
 # pylint: enable=import-error
 
+
 def __virtual__():
     return HAS_RANGE
+
 
 def targets(tgt, tgt_type='range', **kwargs):
     '''
@@ -62,8 +64,10 @@ def targets(tgt, tgt_type='range', **kwargs):
 
     return targeted_hosts
 
+
 def target_range(tgt, hosts):
-    return {host: {'host': host, 'user': __opts__['ssh_user']} for host in hosts}
+    return dict((host, {'host': host, 'user': __opts__['ssh_user']}) for host in hosts)
+
 
 def target_glob(tgt, hosts):
-    return {host: {'host': host, 'user': __opts__['ssh_user']} for host in hosts if fnmatch.fnmatch(tgt, host)}
+    return dict((host, {'host': host, 'user': __opts__['ssh_user']}) for host in hosts if fnmatch.fnmatch(tgt, host))
