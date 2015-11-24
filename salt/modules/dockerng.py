@@ -175,8 +175,8 @@ Functions
       <salt.modules.dockerng.inspect_network>`
     - :py:func:`dockerng.connect_container_to_network
       <salt.modules.dockerng.connect_container_to_network>`
-    - :py:func:`dockerng.disconnect_container_to_network
-      <salt.modules.dockerng.disconnect_container_to_network>`
+    - :py:func:`dockerng.disconnect_container_from_network
+      <salt.modules.dockerng.disconnect_container_from_network>`
 
 
 
@@ -1594,7 +1594,7 @@ def _validate_input(kwargs,
             else:
                 # just a name assume it is a network
                 log.info(
-                    'Assuming network_mode {0!r} is a network.'.format(
+                    'Assuming network_mode \'{0}\' is a network.'.format(
                       kwargs['network_mode'])
                 )
         except SaltInvocationError:
