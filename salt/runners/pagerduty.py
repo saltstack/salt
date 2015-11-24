@@ -22,6 +22,7 @@ import yaml
 import json
 
 # Import salt libs
+import salt.utils
 import salt.utils.pagerduty
 from salt.ext.six import string_types
 
