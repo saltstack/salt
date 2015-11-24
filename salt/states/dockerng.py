@@ -344,7 +344,7 @@ def _compare(actual, create_kwargs):
             )
             if actual_hosts != desired_hosts:
                 ret.update({item: {'old': actual_hosts,
-                                    'new': desired_hosts}})
+                                   'new': desired_hosts}})
                 continue
 
         elif isinstance(data, list):
@@ -1959,6 +1959,123 @@ def absent(name, force=False):
             method = 'Successfully'
         ret['comment'] = '{0} removed container \'{1}\''.format(method, name)
         ret['result'] = True
+    return ret
+
+
+def network_present(name, driver=None, containers=None):
+    '''
+    Ensure that a network is present.
+
+    name
+        Name of the netwotk
+
+    driver
+        Type of driver for that network.
+
+    containers:
+        List of container names that should be part of this network
+    Usage Examples:
+
+    .. code-block:: yaml
+
+        network_foo:
+          dockerng.network_present
+
+
+    .. code-block:: yaml
+
+        network_bar:
+          dockerng.network_present
+            - name: bar
+            - containers:
+                - cont1
+                - cont2
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+    if containers is None:
+        containers = []
+    networks = __salt__['dockerng.networks'](names=[name])
+    if networks:
+        network = networks[0]  # we expect network's name to be unique
+        if all(c in network['Containers'] for c in containers):
+            ret['result'] = True
+            ret['comment'] = 'Network \'{0}\' already exists.'.format(name)
+            return ret
+        result = True
+        for container in containers:
+            if container not in network['Containers']:
+                try:
+                    ret['changes']['connected'] = __salt__['dockerng.connect_container_to_network'](
+                        container, name)
+                except Exception as exc:
+                    ret['comment'] = ('Failed to connect container \'{0}\' to network \'{1}\' {2}'.format(
+                        container, name, exc))
+                    result = False
+            ret['result'] = result
+
+    else:
+        try:
+            ret['changes']['created'] = __salt__['dockerng.create_network'](
+                name, driver=driver)
+        except Exception as exc:
+            ret['comment'] = ('Failed to create network \'{0}\': {1}'
+                              .format(name, exc))
+        else:
+            result = True
+            for container in containers:
+                try:
+                    ret['changes']['connected'] = __salt__['dockerng.connect_container_to_network'](
+                        container, name)
+                except Exception as exc:
+                    ret['comment'] = ('Failed to connect container \'{0}\' to network \'{1}\' {2}'.format(
+                        container, name, exc))
+                    result = False
+            ret['result'] = result
+    return ret
+
+
+def network_absent(name, driver=None):
+    '''
+    Ensure that a network is absent.
+
+    name
+        Name of the netwotk
+
+    Usage Examples:
+
+    .. code-block:: yaml
+
+        network_foo:
+          dockerng.network_absent
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    networks = __salt__['dockerng.networks'](names=[name])
+    if not networks:
+        ret['result'] = True
+        ret['comment'] = 'Network \'{0}\' already absent'.format(name)
+        return ret
+
+    for container in networks[0]['Containers']:
+        try:
+            ret['changes']['disconnected'] = __salt__['dockerng.disconnect_container_from_network'](container, name)
+        except Exception as exc:
+            ret['comment'] = ('Failed to disconnect container \'{0}\' to network \'{1}\' {2}'.format(
+                container, name, exc))
+    try:
+        ret['changes']['removed'] = __salt__['dockerng.remove_network'](name)
+        ret['result'] = True
+    except Exception as exc:
+        ret['comment'] = ('Failed to remove network \'{0}\': {1}'
+                          .format(name, exc))
     return ret
 
 
