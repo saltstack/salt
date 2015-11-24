@@ -11,6 +11,7 @@ import hashlib
 import logging
 import os
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -53,6 +54,7 @@ _INVALID_REPO = (
 
 # Import salt libs
 import salt.utils
+import salt.utils.itertools
 import salt.utils.url
 import salt.fileserver
 from salt.exceptions import FileserverConfigError
@@ -267,6 +269,35 @@ class GitProvider(object):
             log.critical(msg, exc_info_on_loglevel=logging.DEBUG)
             failhard(self.role)
 
+    def _get_envs_from_ref_paths(self, refs):
+        '''
+        Return the names of remote refs (stripped of the remote name) and tags
+        which are exposed as environments. If a branch or tag matches
+        '''
+        def _check_ref(env_set, base_ref, rname):
+            '''
+            Check the ref and resolve it as the base_ref if it matches. If the
+            resulting env is exposed via whitelist/blacklist, add it to the
+            env_set.
+            '''
+            if base_ref is not None and base_ref == rname:
+                rname = 'base'
+            if self.env_is_exposed(rname):
+                env_set.add(rname)
+
+        ret = set()
+        base_ref = getattr(self, 'base', None)
+        for ref in refs:
+            ref = re.sub('^refs/', '', ref)
+            rtype, rname = ref.split('/', 1)
+            if rtype == 'remotes':
+                parted = rname.partition('/')
+                rname = parted[2] if parted[2] else parted[0]
+                _check_ref(ret, base_ref, rname)
+            elif rtype == 'tags':
+                _check_ref(ret, base_ref, rname)
+        return ret
+
     def check_root(self):
         '''
         Check if the relative root path exists in the checked-out copy of the
@@ -421,6 +452,7 @@ class GitProvider(object):
         '''
         Override this function in a sub-class to implement auth checking.
         '''
+        self.credentials = None
         return True
 
     def write_file(self, blob, dest):
@@ -539,18 +571,8 @@ class GitPython(GitProvider):
         Check the refs and return a list of the ones which can be used as salt
         environments.
         '''
-        ret = set()
-        for ref in self.repo.refs:
-            parted = ref.name.partition('/')
-            rspec = parted[2] if parted[2] else parted[0]
-            if isinstance(ref, git.Head):
-                if hasattr(self, 'base') and self.base == rspec:
-                    rspec = 'base'
-                if self.env_is_exposed(rspec):
-                    ret.add(rspec)
-            elif isinstance(ref, git.Tag) and self.env_is_exposed(rspec):
-                ret.add(rspec)
-        return ret
+        ref_paths = [x.path for x in self.repo.refs]
+        return self._get_envs_from_ref_paths(ref_paths)
 
     def fetch(self):
         '''
@@ -682,10 +704,6 @@ class Pygit2(GitProvider):
         '''
         Checkout the configured branch/tag
         '''
-        def _log_error(exc):
-            '''
-            Log an exception caught during the checkout process
-            '''
         local_ref = 'refs/heads/' + self.branch
         remote_ref = 'refs/remotes/origin/' + self.branch
         tag_ref = 'refs/tags/' + self.branch
@@ -699,6 +717,34 @@ class Pygit2(GitProvider):
                     # No local branch for this remote, so create one and point
                     # it at the commit id of the remote ref
                     self.repo.create_reference(local_ref, oid)
+
+                # Check HEAD ref existence (checking out local_ref when HEAD
+                # ref doesn't exist will raise an exception in pygit2 >= 0.21),
+                # and create the HEAD ref if it is missing.
+                head_ref = self.repo.lookup_reference('HEAD').target
+                if head_ref not in refs and head_ref != local_ref:
+                    branch_name = head_ref.partition('refs/heads/')[-1]
+                    if not branch_name:
+                        # Shouldn't happen, but log an error if it does
+                        log.error(
+                            'pygit2 was unable to resolve branch name from '
+                            'HEAD ref \'{0}\' in {1} remote \'{2}\''.format(
+                                head_ref, self.role, self.id
+                            )
+                        )
+                        return None
+                    remote_head = 'refs/remotes/origin/' + branch_name
+                    if remote_head not in refs:
+                        log.error(
+                            'Unable to find remote ref \'{0}\' in {1} remote '
+                            '\'{2}\''.format(head_ref, self.role, self.id)
+                        )
+                        return None
+                    self.repo.create_reference(
+                        head_ref,
+                        self.repo.lookup_reference(remote_head).target
+                    )
+
                 # Point HEAD at the local ref
                 self.repo.checkout(local_ref)
                 # Reset HEAD to the commit id of the remote ref
@@ -728,7 +774,7 @@ class Pygit2(GitProvider):
         '''
         Clean stale local refs so they don't appear as fileserver environments
         '''
-        if hasattr(self, 'credentials'):
+        if self.credentials is not None:
             log.debug(
                 'pygit2 does not support detecting stale refs for '
                 'authenticated remotes, saltenvs will not reflect '
@@ -739,15 +785,28 @@ class Pygit2(GitProvider):
         if local_refs is None:
             local_refs = self.repo.listall_references()
         remote_refs = []
-        for line in subprocess.Popen(
-                'git ls-remote origin',
-                shell=True,
-                close_fds=not salt.utils.is_windows(),
-                cwd=self.repo.workdir,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT).communicate()[0].splitlines():
+        cmd_str = 'git ls-remote origin'
+        cmd = subprocess.Popen(
+            shlex.split(cmd_str),
+            close_fds=not salt.utils.is_windows(),
+            cwd=self.repo.workdir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        output = cmd.communicate()[0]
+        if cmd.returncode != 0:
+            log.warning(
+                'Failed to list remote references for {0} remote \'{1}\'. '
+                'Output from \'{2}\' follows:\n{3}'.format(
+                    self.role,
+                    self.id,
+                    cmd_str,
+                    output
+                )
+            )
+            return []
+        for line in salt.utils.itertools.split(output, '\n'):
             try:
-                # Rename heads to match the ref names from
+                # Rename heads to match the remote ref names from
                 # pygit2.Repository.listall_references()
                 remote_refs.append(
                     line.split()[-1].replace(b'refs/heads/',
@@ -756,9 +815,14 @@ class Pygit2(GitProvider):
             except IndexError:
                 continue
         cleaned = []
-        for ref in [x for x in local_refs if x not in remote_refs]:
-            self.repo.lookup_reference(ref).delete()
-            cleaned.append(ref)
+        if remote_refs:
+            for ref in local_refs:
+                if ref.startswith('refs/heads/'):
+                    # Local head, ignore it
+                    continue
+                elif ref not in remote_refs:
+                    self.repo.lookup_reference(ref).delete()
+                    cleaned.append(ref)
         if cleaned:
             log.debug('{0} cleaned the following stale refs: {1}'
                       .format(self.role, cleaned))
@@ -863,20 +927,8 @@ class Pygit2(GitProvider):
         Check the refs and return a list of the ones which can be used as salt
         environments.
         '''
-        ret = set()
-        for ref in self.repo.listall_references():
-            ref = re.sub('^refs/', '', ref)
-            rtype, rspec = ref.split('/', 1)
-            if rtype == 'remotes':
-                parted = rspec.partition('/')
-                rspec = parted[2] if parted[2] else parted[0]
-                if hasattr(self, 'base') and self.base == rspec:
-                    rspec = 'base'
-                if self.env_is_exposed(rspec):
-                    ret.add(rspec)
-            elif rtype == 'tags' and self.env_is_exposed(rspec):
-                ret.add(rspec)
-        return ret
+        ref_paths = self.repo.listall_references()
+        return self._get_envs_from_ref_paths(ref_paths)
 
     def fetch(self):
         '''
@@ -885,16 +937,15 @@ class Pygit2(GitProvider):
         '''
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
-        credentials = getattr(self, 'credentials', None)
-        if credentials is not None:
-            origin.credentials = credentials
+        if self.credentials is not None:
+            origin.credentials = self.credentials
         try:
             fetch_results = origin.fetch()
         except GitError as exc:
             # Using exc.__str__() here to avoid deprecation warning
             # when referencing exc.message
             if 'unsupported url protocol' in exc.__str__().lower() \
-                    and isinstance(credentials, pygit2.Keypair):
+                    and isinstance(self.credentials, pygit2.Keypair):
                 log.error(
                     'Unable to fetch SSH-based {0} remote \'{1}\'. '
                     'libgit2 must be compiled with libssh2 to support '
@@ -1034,11 +1085,13 @@ class Pygit2(GitProvider):
     def verify_auth(self):
         '''
         Check the username and password/keypair info for validity. If valid,
-        set a 'credentials' attribute (consisting of the appropriate
-        credentials object) to the repo config dict passed to this function.
-        Return False if a required auth param is not present. Return True if
-        the required auth parameters are present, otherwise return False.
+        set a 'credentials' attribute consisting of the appropriate Pygit2
+        credentials object. Return False if a required auth param is not
+        present. Return True if the required auth parameters are present (or
+        auth is not configured), otherwise failhard if there is a problem with
+        authenticaion.
         '''
+        self.credentials = None
         if os.path.isabs(self.url):
             # If the URL is an absolute file path, there is no authentication.
             return True
@@ -1148,7 +1201,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
     def __init__(self, opts, remote, per_remote_defaults,
                  override_params, cache_root, role='gitfs'):
         self.get_env_refs = lambda refs: [
-            x for x in refs if re.match('refs/(heads|tags)', x)
+            x for x in refs if re.match('refs/(remotes|tags)', x)
             and not x.endswith('^{}')
         ]
         self.provider = 'dulwich'
@@ -1196,18 +1249,8 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         Check the refs and return a list of the ones which can be used as salt
         environments.
         '''
-        ret = set()
-        for ref in self.get_env_refs(self.repo.get_refs()):
-            # ref will be something like 'refs/heads/master'
-            rtype, rspec = ref[5:].split('/', 1)
-            if rtype == 'heads':
-                if hasattr(self, 'base') and self.base == rspec:
-                    rspec = 'base'
-                if self.env_is_exposed(rspec):
-                    ret.add(rspec)
-            elif rtype == 'tags' and self.env_is_exposed(rspec):
-                ret.add(rspec)
-        return ret
+        ref_paths = self.get_env_refs(self.repo.get_refs())
+        return self._get_envs_from_ref_paths(ref_paths)
 
     def fetch(self):
         '''
@@ -2319,7 +2362,7 @@ class GitPillar(GitBase):
                 if repo.env:
                     env = repo.env
                 else:
-                    base_branch = self.opts['{0}_branch'.format(self.role)]
+                    base_branch = self.opts['{0}_base'.format(self.role)]
                     env = 'base' if repo.branch == base_branch else repo.branch
                 self.pillar_dirs[cachedir] = env
 
