@@ -353,7 +353,7 @@ def returner(ret):
         color = _options.get('color')
     else:
         color = 'red'
-    
+
     hipchat = _send_message(_options.get('room_id'),
                             message,
                             _options.get('from_name'),
@@ -362,8 +362,9 @@ def returner(ret):
                             _options.get('api_url'),
                             color,
                             _options.get('notify'))
-    
+
     return hipchat
+
 
 def event_return(events):
     '''
