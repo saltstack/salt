@@ -143,6 +143,7 @@ class RosterMatcher(object):
             return self.raw[minion]
         return False
 
+
 def _convert_range_to_list(tgt, range_server):
     '''
     convert a seco.range range into a list target
@@ -151,5 +152,5 @@ def _convert_range_to_list(tgt, range_server):
     try:
         return r.expand(tgt)
     except seco.range.RangeException as err:
-        print('Range server exception: {0}'.format(err))
+        log.error('Range server exception: %s', err)
         return []
