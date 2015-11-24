@@ -362,7 +362,7 @@ def set_lcm_config(config_mode=None,
                    certificate_id=None,
                    configuration_id=None,
                    allow_module_overwrite=None,
-                   debug_mode=None,
+                   debug_mode=False,
                    status_retention_days=None):
     '''
 
@@ -423,12 +423,16 @@ def set_lcm_config(config_mode=None,
     cmd += '        LocalConfigurationManager {'
     if config_mode:
         if config_mode not in ('ApplyOnly', 'ApplyAndMonitor', 'ApplyAndAutoCorrect'):
-            SaltInvocationError('config_mode must be one of ApplyOnly, '
-                                'ApplyAndMonitor, or ApplyAndAutoCorrect')
+            error = 'config_mode must be one of ApplyOnly, ApplyAndMonitor, ' \
+                    'or ApplyAndAutoCorrect. Passed {0}'.format(config_mode)
+            SaltInvocationError(error)
+            return error
         cmd += '            ConfigurationMode = "{0}"'.format(config_mode)
     if config_mode_freq:
         if isinstance(config_mode_freq, int):
             SaltInvocationError('config_mode_freq must be an integer')
+            return 'config_mode_freq must be an integer. Passed {0}'.\
+                format(config_mode_freq)
         cmd += '            ConfigurationModeFrequencyMins = {0}'.format(config_mode_freq)
     if refresh_mode:
         if refresh_mode not in ('Disabled', 'Push', 'Pull'):
@@ -468,7 +472,9 @@ def set_lcm_config(config_mode=None,
         else:
             allow_module_overwrite = '$false'
         cmd += '            AllowModuleOverwrite = {0}'.format(allow_module_overwrite)
-    if debug_mode:
+    if debug_mode is not False:
+        if debug_mode is None:
+            debug_mode = 'None'
         if debug_mode not in ('None', 'ForceModuleImport', 'All'):
             SaltInvocationError('debug_mode must be one of None, ForceModuleImport, '
                                 'ResourceScriptBreakAll, or All')
