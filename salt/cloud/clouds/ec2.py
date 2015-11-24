@@ -3881,7 +3881,7 @@ def import_keypair(kwargs=None, call=None):
     '''
     Import an SSH public key.
 
-    .. versionadded:: Boron
+    .. versionadded:: 2015.8.3
     '''
     if call != 'function':
         log.error(

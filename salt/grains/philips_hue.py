@@ -16,6 +16,8 @@
 
 '''
 Static grains for the Philips HUE lamps
+
+.. versionadded:: 2015.8.3
 '''
 
 __proxyenabled__ = ['philips_hue']
