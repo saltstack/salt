@@ -577,7 +577,7 @@ class PsTestCase(TestCase):
                                     '# Lines below here are managed by Salt, do not edit\n',
                                     '@hourly echo Hi!\n'])
         ret = cron.set_special('DUMMY_USER', '@hourly', 'echo Hi!')
-        write_cron_lines_mock.assert_has_calls(expected_write_call)
+        write_cron_lines_mock.assert_has_calls((expected_write_call,), any_order=True)
 
     def test__get_cron_date_time(self):
         ret = cron._get_cron_date_time(minute=STUB_CRON_TIMESTAMP['minute'],
