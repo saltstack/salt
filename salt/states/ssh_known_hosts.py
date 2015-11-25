@@ -25,6 +25,7 @@ import os
 
 # Import salt libs
 import salt.utils
+from salt.exceptions import CommandNotFoundError
 
 
 def present(
@@ -116,10 +117,15 @@ def present(
             ret['result'] = False
             return dict(ret, comment=comment)
 
-        result = __salt__['ssh.check_known_host'](user, name,
-                                                  key=key,
-                                                  fingerprint=fingerprint,
-                                                  config=config)
+        try:
+            result = __salt__['ssh.check_known_host'](user, name,
+                                                      key=key,
+                                                      fingerprint=fingerprint,
+                                                      config=config)
+        except CommandNotFoundError as err:
+            ret['result'] = False
+            ret['comment'] = 'ssh.check_known_host error: {0}'.format(err)
+            return ret
 
         if result == 'exists':
             comment = 'Host {0} is already in {1}'.format(name, config)
