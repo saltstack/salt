@@ -561,7 +561,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     if 'mtu' in opts:
         try:
             result['mtu'] = int(opts['mtu'])
-        except Exception:
+        except ValueError:
             _raise_error_iface(iface, 'mtu', ['integer'])
 
     if iface_type not in ['bridge']:
@@ -631,13 +631,6 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
     for opt in ['ipv6addr', 'ipv6gateway']:
         if opt in opts:
             result[opt] = opts[opt]
-
-    if 'mtu' in opts:
-        try:
-            int(opts['mtu'])
-            result['mtu'] = opts['mtu']
-        except Exception:
-            _raise_error_iface(iface, 'mtu', ['integer'])
 
     if 'ipv6_autoconf' in opts:
         result['ipv6_autoconf'] = opts['ipv6_autoconf']
