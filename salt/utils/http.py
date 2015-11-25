@@ -585,8 +585,9 @@ def get_ca_bundle(opts=None):
     # Check Salt first
     for salt_root in file_roots.get('base', []):
         for path in ('cacert.pem', 'ca-bundle.crt'):
-            if os.path.exists(path):
-                return path
+            cert_path = os.path.join(salt_root, path)
+            if os.path.exists(cert_path):
+                return cert_path
 
     locations = (
         # Debian has paths that often exist on other distros
