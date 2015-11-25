@@ -144,6 +144,13 @@ def get_elb_config(name, region=None, key=None, keyid=None, profile=None):
                 listener_dict['certificate'] = _listener.ssl_certificate_id
             listeners.append(listener_dict)
         ret['listeners'] = listeners
+        backends = []
+        for _backend in lb.backends:
+            bs_dict = {}
+            bs_dict['instance_port'] = _backend.instance_port
+            bs_dict['policies'] = [p.policy_name for p in _backend.policies]
+            backends.append(bs_dict)
+        ret['backends'] = backends
         ret['subnets'] = lb.subnets
         ret['security_groups'] = lb.security_groups
         ret['scheme'] = lb.scheme
@@ -824,6 +831,31 @@ def set_listener_policy(name, port, policies=None, region=None, key=None,
     except boto.exception.BotoServerError as e:
         log.debug(e)
         log.info('Failed to set policy {0} on ELB {1} listener {2}: {3}'.format(policies, name, port, e.message))
+        return False
+    return True
+
+
+def set_backend_policy(name, port, policies=None, region=None, key=None,
+                       keyid=None, profile=None):
+    '''
+    Set the policies of an ELB backend server.
+
+    CLI example:
+
+        salt myminion boto_elb.set_backend_policy myelb 443 "[policy1,policy2]"
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if not exists(name, region, key, keyid, profile):
+        return True
+    if policies is None:
+        policies = []
+    try:
+        conn.set_lb_policies_of_backend_server(name, port, policies)
+        log.info('Set policies {0} on ELB {1} backend server {2}'.format(policies, name, port))
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        log.info('Failed to set policy {0} on ELB {1} backend server {2}: {3}'.format(policies, name, port, e.message))
         return False
     return True
 
