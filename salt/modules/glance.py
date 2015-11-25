@@ -293,7 +293,7 @@ def image_create(name, location=None, profile=None, visibility=None,
     # in a usable fashion. Thus we have to use v1 for now.
     g_client = _auth(profile, api_version=1)
     image = g_client.images.create(name=name, **kwargs)
-    return image_show(image.id)
+    return image_show(image.id, profile=profile)
 
 
 def image_delete(id=None, name=None, profile=None):  # pylint: disable=C0103
@@ -460,13 +460,13 @@ def image_update(id=None, name=None, profile=None, **kwargs):  # pylint: disable
     - visibility ('public' or 'private')
     '''
     if id:
-        image = image_show(id=id)
+        image = image_show(id=id, profile=profile)
         if 'result' in image and not image['result']:
             return image
         elif len(image) == 1:
             image = image.values()[0]
     elif name:
-        img_list = image_list(name=name)
+        img_list = image_list(name=name, profile=profile)
         if img_list is dict and 'result' in img_list:
             return img_list
         elif len(img_list) == 0:
