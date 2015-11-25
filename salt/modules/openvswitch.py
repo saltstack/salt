@@ -398,7 +398,7 @@ def port_create_gre(br, port, id, remote):
     elif not bridge_exists(br):
         return False
     elif port in port_list(br):
-        cmd = 'sudo ovs-vsctl set interface {0} type=gre options:remote_ip={1} options:key={2}'.format(port, remote, id)
+        cmd = 'ovs-vsctl set interface {0} type=gre options:remote_ip={1} options:key={2}'.format(port, remote, id)
         result = __salt__['cmd.run_all'](cmd)
         return _retcode_to_bool(result['retcode'])
     else:
@@ -437,7 +437,7 @@ def port_create_vxlan(br, port, id, remote, dst_port=None):
     elif not bridge_exists(br):
         return False
     elif port in port_list(br):
-        cmd = 'sudo ovs-vsctl set interface {0} type=vxlan options:remote_ip={1} ' \
+        cmd = 'ovs-vsctl set interface {0} type=vxlan options:remote_ip={1} ' \
               'options:key={2}{3}'.format(port, remote, id, dst_port)
         result = __salt__['cmd.run_all'](cmd)
         return _retcode_to_bool(result['retcode'])
