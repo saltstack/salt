@@ -125,7 +125,6 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None):
             except KeyError:
                 pass
 
-
     # Check VXLAN tunnels attributes
     def _check_vxlan():
         interface_options = __salt__['openvswitch.interface_get_options'](name)
@@ -145,7 +144,6 @@ def present(name, bridge, type=None, id=None, remote=None, dst_port=None):
                     ret['comment'] = comment_vxlan_interface_exists
             except KeyError:
                 pass
-
 
     # Dry run, test=true mode
     if __opts__['test']:
