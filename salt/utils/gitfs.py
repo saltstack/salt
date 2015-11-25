@@ -697,6 +697,9 @@ class Pygit2(GitProvider):
     def __init__(self, opts, remote, per_remote_defaults,
                  override_params, cache_root, role='gitfs'):
         self.provider = 'pygit2'
+        self.use_callback = \
+            distutils.version.LooseVersion(pygit2.__version__) >= \
+            distutils.version.LooseVersion('0.23.2')
         GitProvider.__init__(self, opts, remote, per_remote_defaults,
                              override_params, cache_root, role)
 
@@ -937,22 +940,38 @@ class Pygit2(GitProvider):
         '''
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
+        fetch_kwargs = {}
         if self.credentials is not None:
-            origin.credentials = self.credentials
+            if self.use_callback:
+                fetch_kwargs['callbacks'] = \
+                    pygit2.RemoteCallbacks(credentials=self.credentials)
+            else:
+                origin.credentials = self.credentials
         try:
-            fetch_results = origin.fetch()
+            fetch_results = origin.fetch(**fetch_kwargs)
         except GitError as exc:
             # Using exc.__str__() here to avoid deprecation warning
             # when referencing exc.message
-            if 'unsupported url protocol' in exc.__str__().lower() \
+            exc_str = exc.__str__().lower()
+            if 'unsupported url protocol' in exc_str \
                     and isinstance(self.credentials, pygit2.Keypair):
                 log.error(
                     'Unable to fetch SSH-based {0} remote \'{1}\'. '
                     'libgit2 must be compiled with libssh2 to support '
                     'SSH authentication.'.format(self.role, self.id)
                 )
-                return False
-            raise
+            elif 'authentication required but no callback set' in exc_str:
+                log.error(
+                    '{0} remote \'{1}\' requires authentication, but no '
+                    'authentication configured'.format(self.role, self.id)
+                )
+            else:
+                log.error(
+                    'Error occured fetching {0} remote \'{1}\': {2}'.format(
+                        self.role, self.id, exc
+                    )
+                )
+            return False
         try:
             # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
             received_objects = fetch_results['received_objects']
@@ -1092,6 +1111,7 @@ class Pygit2(GitProvider):
         authenticaion.
         '''
         self.credentials = None
+
         if os.path.isabs(self.url):
             # If the URL is an absolute file path, there is no authentication.
             return True
