@@ -14,6 +14,7 @@ import logging
 
 # Import Salt Libs
 import salt.utils.vmware
+import salt.utils.http
 from salt.exceptions import CommandExecutionError
 
 # Import Third Party Libs
@@ -33,6 +34,106 @@ def __virtual__():
         return False, 'The vSphere module requires the pyVmomi Python module.'
 
     return __virtualname__
+
+
+def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
+                   protocol='https', port=443, certificate_verify=False):
+    '''
+
+    Upload an ssh key for root to an ESXi host via http PUT.
+    This function only works for ESXi, not vCenter.
+    Only one ssh key can be uploaded for root.  Uploading a second key will
+    replace any existing key.
+
+    :param host: The location of the ESXi Host
+    :param username: Username to connect as
+    :param password: Password for the ESXi web endpoint
+    :param ssh_key: Public SSH key, will be added to authorized_keys on ESXi
+    :param ssh_key_file: File containing the SSH key.  Use 'ssh_key' or
+                         ssh_key_file, but not both.
+    :param protocol: defaults to https, can be http if ssl is disabled on ESXi
+    :param port: defaults to 443 for https
+    :param certificate_verify: If true require that the SSL connection present
+                               a valid certificate
+    :return: Dictionary with a 'status' key, True if upload is successful.
+             If upload is unsuccessful, 'status' key will be False and
+             an 'Error' key will have an informative message.
+    '''
+    url = '{0}://{1}:{2}/host/ssh_root_authorized_keys'.format(protocol,
+                                                               host,
+                                                               port)
+    ret = {}
+    try:
+        if ssh_key:
+            result = salt.utils.http.query(url,
+                                           status=True,
+                                           text=True,
+                                           method='PUT',
+                                           username=username,
+                                           password=password,
+                                           data=ssh_key,
+                                           verify_ssl=certificate_verify)
+        elif ssh_key_file:
+            result = salt.utils.http.query(url,
+                                           status=True,
+                                           text=True,
+                                           method='PUT',
+                                           username=username,
+                                           password=password,
+                                           data_file=ssh_key_file,
+                                           data_render=False,
+                                           verify_ssl=certificate_verify)
+        if result['status'] == 200:
+            ret['status'] = True
+        else:
+            ret['status'] = False
+            ret['Error'] = result['error']
+    except Exception as msg:
+        ret['status'] = False
+        ret['Error'] = msg
+
+    return ret
+
+
+def get_ssh_key(host, username, password,
+                protocol='https', port=443, certificate_verify=False):
+    '''
+
+    Retrieve the authorized_keys entry for root.
+    This function only works for ESXi, not vCenter.
+
+    :param host: The location of the ESXi Host
+    :param username: Username to connect as
+    :param password: Password for the ESXi web endpoint
+    :param protocol: defaults to https, can be http if ssl is disabled on ESXi
+    :param port: defaults to 443 for https
+    :param certificate_verify: If true require that the SSL connection present
+                               a valid certificate
+    :return: True if upload is successful
+    '''
+    url = '{0}://{1}:{2}/host/ssh_root_authorized_keys'.format(protocol,
+                                                               host,
+                                                               port)
+    ret = {}
+    try:
+        result = salt.utils.http.query(url,
+                                       status=True,
+                                       text=True,
+                                       method='GET',
+                                       username=username,
+                                       password=password,
+                                       verify_ssl=certificate_verify)
+        if result['status'] == 200:
+            ret['status'] = True
+            ret['key'] = result['text']
+        else:
+            ret['status'] = False
+            ret['Error'] = result['error']
+    except Exception as msg:
+        ret['status'] = False
+        ret['Error'] = msg
+
+    return ret
 
 
 def get_host_datetime(host, username, password, protocol=None, port=None, host_names=None):
