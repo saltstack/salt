@@ -104,7 +104,7 @@ class MasterACLTestCase(integration.ModuleCase):
                                 {'minion1': [{'test.echo': {'args': ['TEST',
                                                                      None,
                                                                      'TEST.*']}},
-                                             {'test.empty:': {}}]}
+                                             {'test.empty': {}}]}
                                 ]
              }
         self.clear = salt.master.ClearFuncs(opts, MagicMock())
@@ -244,10 +244,7 @@ class MasterACLTestCase(integration.ModuleCase):
 
         'test_user_func':
             minion1:
-                - test.echo:
-                    args:
-                        - 'TEST'
-                        - 'TEST.*'
+                - test.empty:
         '''
         self.valid_clear_load['kwargs'].update({'username': 'test_user_func'})
         self.valid_clear_load.update({'user': 'test_user_func',
