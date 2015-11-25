@@ -14,6 +14,7 @@ import logging
 # Import Salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +33,23 @@ def _check_zpool():
 
 
 @decorators.memoize
+def _check_features():
+    '''
+    Looks to see if zpool-features is available
+    '''
+    # get man location
+    man = salt.utils.which('man')
+    if not man:
+        return False
+
+    cmd = '{man} zpool-features'.format(
+        man=man
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    return res['retcode'] == 0
+
+
+@decorators.memoize
 def _check_mkfile():
     '''
     Looks to see if mkfile is present on the system
@@ -46,6 +64,26 @@ def __virtual__():
     if _check_zpool():
         return 'zpool'
     return False
+
+
+def healthy():
+    '''
+    .. versionadded:: Boron
+    Check if all zpools are healthy
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.healthy
+    '''
+    zpool_cmd = _check_zpool()
+
+    cmd = '{zpool_cmd} status -x'.format(
+        zpool_cmd=zpool_cmd
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    return res['stdout'] == 'all pools are healthy'
 
 
 def status(name=''):
@@ -82,11 +120,24 @@ def iostat(name=''):
     return ret
 
 
-def list_():
+def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
     '''
     .. versionadded:: 2015.5.0
+    .. versionchanged:: Boron
 
-    Return a list of all pools in the system with health status and space usage
+    Return information about (all) zpools
+
+    properties : string
+        comma-separated list of properties to list
+
+    .. note::
+        the 'name' property will always be included, the 'frag' property will get removed if not available
+
+    zpool : string
+        optional zpool
+
+    .. note::
+        multiple zpools can be provded as a space seperated list
 
     CLI Example:
 
@@ -94,11 +145,40 @@ def list_():
 
         salt '*' zpool.list
     '''
-    zpool = _check_zpool()
-    cmd = [zpool, 'list']
-    res = __salt__['cmd.run'](cmd, python_shell=False)
-    pool_list = [l for l in res.splitlines()]
-    return {'pools': pool_list}
+    ret = OrderedDict()
+
+    # remove 'frag' property if not available
+    properties = properties.split(',')
+    if 'name' in properties:
+        properties.remove('name')
+    properties.insert(0, 'name')
+    if not _check_features() and 'frag' in properties:
+        properties.remove('frag')
+
+    # get zpool list data
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} list -H -o {properties}{zpool}'.format(
+        zpool_cmd=zpool_cmd,
+        properties=','.join(properties),
+        zpool=' {0}'.format(zpool) if zpool else ''
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        return ret
+
+    # parse zpool list data
+    for zp in res['stdout'].splitlines():
+        zp = zp.split("\t")
+        zp_data = {}
+
+        for prop in properties:
+            zp_data[prop] = zp[properties.index(prop)]
+
+        ret[zp_data['name']] = zp_data
+        del ret[zp_data['name']]['name']
+
+    return ret
 
 
 def zpool_list():
@@ -649,3 +729,5 @@ def offline(pool_name, *vdevs, **kwargs):
     else:
         ret[pool_name] = 'Specified devices: {0} are offline.'.format(vdevs)
     return ret
+
+# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
