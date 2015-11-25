@@ -60,9 +60,11 @@ def _refine_value(value):
         return 'off'
     return None
 
+
 def _refine_module_state(module_state):
     '''
     Return a predictable value, or allow us to error out
+    .. versionadded:: Boron
     '''
     module_state = str(module_state).lower()
     if module_state in ('1', 'on', 'yes', 'true', 'enabled'):
@@ -174,6 +176,8 @@ def module(name, module_state='Enabled', version='any'):
     version
         Defaults to no preference, set to a specified value if required.
         Currently can only alert if the version is incorrect.
+
+    .. versionadded:: Boron
     '''
     ret = {'name': name,
            'result': True,
@@ -199,12 +203,12 @@ def module(name, module_state='Enabled', version='any'):
             return ret
     current_module_state = _refine_module_state(modules[name]['Enabled'])
     if rmodule_state == current_module_state:
-            ret['comment'] = 'Module {0} is in the desired state'.format(name)
-            return ret
+        ret['comment'] = 'Module {0} is in the desired state'.format(name)
+        return ret
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Module {0} is set to be togggled to {1}'.format(
-                name, module_state)
+            name, module_state)
         return ret
 
     if __salt__['selinux.setsemod'](name, rmodule_state):

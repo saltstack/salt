@@ -192,6 +192,7 @@ def list_sebool():
                          'Description': ' '.join(comps[4:])}
     return ret
 
+
 def getsemod(module):
     '''
     Return the information on a specific selinux module
@@ -201,6 +202,8 @@ def getsemod(module):
     .. code-block:: bash
 
         salt '*' selinux.getsemod mysql
+
+    .. versionadded:: Boron
     '''
     return list_semod().get(module, {})
 
@@ -214,6 +217,8 @@ def setsemod(module, state):
     .. code-block:: bash
 
         salt '*' selinux.setsemod nagios Enabled
+
+    .. versionadded:: Boron
     '''
     if state.lower() == 'enabled':
         cmd = 'semodule -e {0}'.format(module)
@@ -232,6 +237,8 @@ def list_semod():
     .. code-block:: bash
 
         salt '*' selinux.list_semod
+
+    .. versionadded:: Boron
     '''
     mdata = __salt__['cmd.run']('semodule -l').splitlines()
     ret = {}
