@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Module for running fmadm and fmdump on Solaris
+
+:maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
+:maturity:      new
+:platform:      solaris,illumos
+
 .. versionadded:: Boron
 '''
 from __future__ import absolute_import
