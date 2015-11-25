@@ -59,7 +59,7 @@ def get_host_datetime(host, username, password, protocol=None, port=None, host_n
     host_names
         List of ESXi host names. When the host, username, and password credentials
         are provided for a vCenter Server, the host_names argument is required to tell
-        vCenter which hosts for which to get date/time information.
+        vCenter the hosts for which to get date/time information.
 
         If host_names is not provided, the date/time information will be retrieved for the
         ``host`` location instead. This is useful for when service instance connection
@@ -116,7 +116,7 @@ def get_ntp_config(host, username, password, protocol=None, port=None, host_name
     host_names
         List of ESXi host names. When the host, username, and password credentials
         are provided for a vCenter Server, the host_names argument is required to tell
-        vCenter which hosts for which to get ntp configuration information.
+        vCenter the hosts for which to get ntp configuration information.
 
         If host_names is not provided, the NTP configuration will be retrieved for the
         ``host`` location instead. This is useful for when service instance connection
@@ -148,10 +148,9 @@ def get_ntp_config(host, username, password, protocol=None, port=None, host_name
     return ret
 
 
-def get_ssh_running(host, username, password, protocol=None, port=None, host_names=None):
+def get_service_policy(host, username, password, service_name, protocol=None, port=None, host_names=None):
     '''
-    Get the SSH running status for a given host or a list of host_names. Returns True if
-    the SSH service is running, False if it is not running, per host.
+    Get the service name's policy for a given host or list of hosts.
 
     host
         The location of the host.
@@ -161,6 +160,22 @@ def get_ssh_running(host, username, password, protocol=None, port=None, host_nam
 
     password
         The password used to login to the host.
+
+    service_name
+        The name of the service for which to retrieve the policy. Supported service names are:
+          - DCUI
+          - TSM
+          - SSH
+          - lbtd
+          - lsassd
+          - lwiod
+          - netlogond
+          - ntpd
+          - sfcbd-watchdog
+          - snmpd
+          - vprobed
+          - vpxa
+          - xorg
 
     protocol
         Optionally set to alternate protocol if the host is not using the default
@@ -172,22 +187,22 @@ def get_ssh_running(host, username, password, protocol=None, port=None, host_nam
 
     host_names
         List of ESXi host names. When the host, username, and password credentials
-        are provided for a vCenter Server, the host_names argument is required to
-        tell vCenter which hosts will have SSH enabled.
+        are provided for a vCenter Server, the host_names argument is required to tell
+        vCenter the hosts for which to get service policy information.
 
-        If host_names is not provided, the SSH will be enabled for the ``host``
-        location instead. This is useful for when service instance connection
-        information is used for a single ESXi host.
+        If host_names is not provided, the service policy information will be retrieved
+        for the ``host`` location instead. This is useful for when service instance
+        connection information is used for a single ESXi host.
 
     CLI Example:
 
     .. code-block:: bash
 
         # Used for single ESXi host connection information
-        salt '*' vsphere.get_ssh_running my.esxi.host root bad-password
+        salt '*' vsphere.get_service_running my.esxi.host root bad-password 'ssh'
 
         # Used for connecting to a vCenter Server
-        salt '*' vsphere.get_ssh_running my.vcenter.location root bad-password \
+        salt '*' vsphere.get_service_policy my.vcenter.location root bad-password 'ntpd' \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
     service_instance = salt.utils.vmware.get_service_instance(host=host,
@@ -202,8 +217,110 @@ def get_ssh_running(host, username, password, protocol=None, port=None, host_nam
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         services = host_ref.configManager.serviceSystem.serviceInfo.service
         for service in services:
-            if service.label == 'SSH':
+            if service.key == service_name:
+                ret.update({host_name: service.policy})
+            elif service_name == 'ssh' or service_name == 'SSH':
+                if service.key == 'TSM-SSH':
+                    ret.update({host_name: service.policy})
+            else:
+                msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name,
+                                                                                host_name)
+                log.debug(msg)
+                ret.update({host_name: {'Error': msg}})
+
+        if ret.get(host_name) is None:
+            msg = '\'vsphere.get_service_policy\' failed for host {0}.'.format(host_name)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
+
+    return ret
+
+
+def get_service_running(host, username, password, service_name, protocol=None, port=None, host_names=None):
+    '''
+    Get the service name's running state for a given host or list of hosts.
+
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    service_name
+        The name of the service for which to retrieve the policy. Supported service names are:
+          - DCUI
+          - TSM
+          - SSH
+          - lbtd
+          - lsassd
+          - lwiod
+          - netlogond
+          - ntpd
+          - sfcbd-watchdog
+          - snmpd
+          - vprobed
+          - vpxa
+          - xorg
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    host_names
+        List of ESXi host names. When the host, username, and password credentials
+        are provided for a vCenter Server, the host_names argument is required to tell
+        vCenter the hosts for which to get the service's running state.
+
+        If host_names is not provided, the service's running state will be retrieved
+        for the ``host`` location instead. This is useful for when service instance
+        connection information is used for a single ESXi host.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for single ESXi host connection information
+        salt '*' vsphere.get_service_running my.esxi.host root bad-password 'ssh'
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.get_service_running my.vcenter.location root bad-password 'ntpd' \
+        host_names='[esxi-1.host.com, esxi-2.host.com]'
+    '''
+    service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                              username=username,
+                                                              password=password,
+                                                              protocol=protocol,
+                                                              port=port)
+    host_names = _check_hosts(service_instance, host, host_names)
+
+    ret = {}
+    for host_name in host_names:
+        host_ref = _get_host_ref(service_instance, host, host_name=host_name)
+        services = host_ref.configManager.serviceSystem.serviceInfo.service
+        for service in services:
+            if service.key == service_name:
                 ret.update({host_name: service.running})
+            elif service_name == 'SSH' or service_name == 'ssh':
+                if service.key == 'TSM-SSH':
+                    ret.update({host_name: service.running})
+            else:
+                msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name,
+                                                                                host_name)
+                log.debug(msg)
+                ret.update({host_name: {'Error': msg}})
+
+        if ret.get(host_name) is None:
+            msg = '\'vsphere.get_service_running\' failed for host {0}.'.format(host_name)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
+
     return ret
 
 
@@ -261,8 +378,9 @@ def get_vsan_enabled(host, username, password, protocol=None, port=None, host_na
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vsan_config = host_ref.config.vsanHostConfig
         if vsan_config is None:
-            log.debug('VSAN System Config Manager is unset for host \'{0}\'.'.format(host_name))
-            ret.update({host_name: None})
+            msg = 'VSAN System Config Manager is unset for host \'{0}\'.'.format(host_name)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
         else:
             ret.update({host_name: vsan_config.enabled})
 
@@ -856,12 +974,15 @@ def set_ntp_config(host, username, password, ntp_servers, protocol=None, port=No
     for host_name in host_names:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         date_time_manager = _get_date_time_mgr(host_ref)
-
         log.debug('Configuring NTP Servers \'{0}\' for host \'{1}\'.'.format(ntp_servers, host_name))
+
         try:
             date_time_manager.UpdateDateTimeConfig(config=date_config)
         except vim.fault.HostConfigFault as err:
-            raise CommandExecutionError('vsphere.ntp_configure_servers failed: {0}'.format(err))
+            msg = 'vsphere.ntp_configure_servers failed: {0}'.format(err)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
+            continue
 
         ret.update({host_name: ntp_config})
     return ret
@@ -921,12 +1042,19 @@ def ntp_restart(host, username, password, protocol=None, port=None, host_names=N
         if ntp_config:
             service_manager = _get_service_manager(host_ref)
             log.debug('Restarting \'ntpd\' service on {0}.'.format(ntp_config))
+
             try:
                 service_manager.RestartService(id='ntpd')
-            except vim.fault.HostConfigFault as msg:
-                raise CommandExecutionError('\'vsphere.ntp_restart\' failed: {0}'.format(msg))
-            except vim.fault.RestrictedVersion as msg:
-                raise CommandExecutionError(msg)
+            except vim.fault.HostConfigFault as err:
+                msg = '\'vsphere.ntp_restart\' failed: {0}'.format(err)
+                log.debug(msg)
+                ret.update({host_name: {'Error': msg}})
+                continue
+            except vim.fault.RestrictedVersion as err:
+                log.debug(err)
+                ret.update({host_name: {'Error': err}})
+                continue
+
             ret.update({host_name: ntp_config})
         else:
             log.warning('Unable to restart the \'ntpd\' service. '
@@ -990,17 +1118,25 @@ def ntp_start(host, username, password, protocol=None, port=None, host_names=Non
         if ntp_config:
             service_manager = _get_service_manager(host_ref)
             log.debug('Starting \'ntpd\' service on {0}.'.format(ntp_config))
+
             try:
                 service_manager.StartService(id='ntpd')
-            except vim.fault.HostConfigFault as msg:
-                raise CommandExecutionError('\'vsphere.ntp_start\' failed: {0}'.format(msg))
-            except vim.fault.RestrictedVersion as msg:
-                raise CommandExecutionError(msg)
+            except vim.fault.HostConfigFault as err:
+                msg = '\'vsphere.ntp_start\' failed: {0}'.format(err)
+                log.debug(msg)
+                ret.update({host_name: {'Error': msg}})
+                continue
+            except vim.fault.RestrictedVersion as err:
+                log.debug(err)
+                ret.update({host_name: {'Error': err}})
+                continue
+
             ret.update({host_name: ntp_config})
         else:
-            log.warning('Unable to start the \'ntpd\' service. '
-                        'NTP servers have not been configured for \'{0}\'.'.format(host_name))
-            ret.update({host_name: None})
+            msg = 'Unable to start the \'ntpd\' service. ' \
+                  'NTP servers have not been configured for \'{0}\'.'.format(host_name)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
 
     return ret
 
@@ -1059,18 +1195,139 @@ def ntp_stop(host, username, password, protocol=None, port=None, host_names=None
         if ntp_config:
             service_manager = _get_service_manager(host_ref)
             log.debug('Stopping \'ntpd\' service on {0}.'.format(ntp_config))
+
             try:
                 service_manager.StopService(id='ntpd')
-            except vim.fault.HostConfigFault as msg:
-                raise CommandExecutionError('\'vsphere.ntp_stop\' failed: {0}'.format(msg))
-            except vim.fault.RestrictedVersion as msg:
-                raise CommandExecutionError(msg)
+            except vim.fault.HostConfigFault as err:
+                msg = '\'vsphere.ntp_stop\' failed: {0}'.format(err)
+                log.debug(msg)
+                ret.update({host_name: {'Error': msg}})
+                continue
+            except vim.fault.RestrictedVersion as err:
+                log.debug(err)
+                ret.update({host_name: {'Error': err}})
+                continue
+
             ret.update({host_name: ntp_config})
         else:
-            log.warning('Unable to stop the \'ntpd\' service. '
-                        'NTP servers have not been configured for \'{0}\'.'.format(host_name))
-            ret.update({host_name: None})
+            msg = 'Unable to stop the \'ntpd\' service. ' \
+                  'NTP servers have not been configured for \'{0}\'.'.format(host_name)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
     
+    return ret
+
+
+def set_service_policy(host,
+                       username,
+                       password,
+                       service_name,
+                       service_policy,
+                       protocol=None,
+                       port=None,
+                       host_names=None):
+    '''
+    Set the service name's policy for a given host or list of hosts.
+
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    service_name
+        The name of the service for which to set the policy. Supported service names are:
+          - DCUI
+          - TSM
+          - SSH
+          - lbtd
+          - lsassd
+          - lwiod
+          - netlogond
+          - ntpd
+          - sfcbd-watchdog
+          - snmpd
+          - vprobed
+          - vpxa
+          - xorg
+
+    service_policy
+        The policy to set for the service. For example, 'automatic'.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    host_names
+        List of ESXi host names. When the host, username, and password credentials
+        are provided for a vCenter Server, the host_names argument is required to tell
+        vCenter the hosts for which to set the service policy.
+
+        If host_names is not provided, the service policy information will be retrieved
+        for the ``host`` location instead. This is useful for when service instance
+        connection information is used for a single ESXi host.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for single ESXi host connection information
+        salt '*' vsphere.get_host_datetime my.esxi.host root bad-password 'ntpd' 'automatic'
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.get_service_policy my.vcenter.location root bad-password 'ntpd' 'automatic' \
+        host_names='[esxi-1.host.com, esxi-2.host.com]'
+    '''
+    service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                              username=username,
+                                                              password=password,
+                                                              protocol=protocol,
+                                                              port=port)
+    host_names = _check_hosts(service_instance, host, host_names)
+    ret = {}
+    for host_name in host_names:
+        host_ref = _get_host_ref(service_instance, host, host_name=host_name)
+        service_manager = _get_service_manager(host_ref)
+        services = host_ref.configManager.serviceSystem.serviceInfo.service
+        for service in services:
+            service_key = None
+
+            # Find the service key based on the given service_name
+            if service.key == service_name:
+                service_key = service.key
+            elif service_name == 'ssh' or service_name == 'SSH':
+                if service.key == 'TSM-SSH':
+                    service_key = 'TSM-SSH'
+
+            # If we have a service_key, we've found a match. Update the policy.
+            if service_key:
+                try:
+                    service_manager.UpdateServicePolicy(id=service_key, policy=service_policy)
+                except vim.fault.NotFound:
+                    msg = 'The service name \'{0}\' was not found.'.format(service_name)
+                    log.debug(msg)
+                    ret.update({host_name: {'Error': msg}})
+                    continue
+                except vim.fault.HostConfigFault as err:
+                    msg = '\'vsphere.set_service_policy\' failed for host {0}: {1}'.format(host_name, err)
+                    log.debug(msg)
+                    ret.update({host_name: {'Error': msg}})
+                    continue
+
+                ret.update({host_name: True})
+
+            if ret.get(host_name) is None:
+                msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name, host_name)
+                log.debug(msg)
+                ret.update({host_name: {'Error': msg}})
+
     return ret
 
 
@@ -1128,11 +1385,11 @@ def ssh_disable(host, username, password, protocol=None, port=None, host_names=N
         log.debug('Disabling \'ssh\' service on {0}.'.format(host_name))
         try:
             service_manager.StopService(id='TSM-SSH')
-        except vim.fault.HostConfigFault as msg:
-            raise CommandExecutionError('\'vsphere.ssh_disable\' failed for host {0}: {1}'.format(
-                host_name,
-                msg
-            ))
+        except vim.fault.HostConfigFault as err:
+            msg = '\'vsphere.ssh_disable\' failed for host {0}: {1}'.format(host_name, err)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
+            continue
 
         ret.update({host_name: True})
 
@@ -1193,11 +1450,11 @@ def ssh_enable(host, username, password, protocol=None, port=None, host_names=No
         log.debug('Enabling \'ssh\' service on {0}.'.format(host_name))
         try:
             service_manager.StartService(id='TSM-SSH')
-        except vim.fault.HostConfigFault as msg:
-            raise CommandExecutionError('\'vsphere.ssh_enabled\' failed for host {0}: {1}'.format(
-                host_name,
-                msg
-            ))
+        except vim.fault.HostConfigFault as err:
+            msg = '\'vsphere.ssh_enabled\' failed for host {0}: {1}'.format(host_name, err)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
+            continue
 
         ret.update({host_name: True})
 
@@ -1258,11 +1515,11 @@ def ssh_restart(host, username, password, protocol=None, port=None, host_names=N
         log.debug('Restarting \'ssh\' service on {0}.'.format(host_name))
         try:
             service_manager.RestartService(id='TSM-SSH')
-        except vim.fault.HostConfigFault as msg:
-            raise CommandExecutionError('\'vsphere.ssh_restart\' failed for host {0}: {1}'.format(
-                host_name,
-                msg
-            ))
+        except vim.fault.HostConfigFault as err:
+            msg = '\'vsphere.ssh_restart\' failed for host {0}: {1}'.format(host_name, err)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
+            continue
 
         ret.update({host_name: True})
 
@@ -1324,11 +1581,12 @@ def update_host_datetime(host, username, password, protocol=None, port=None, hos
         try:
             date_time_manager.UpdateDateTime(datetime.datetime.utcnow())
         except vim.fault.HostConfigFault as err:
-            raise CommandExecutionError('\'vsphere.update_date_time\' failed for host {0}: {1}'.format(
-                host_name,
-                err
-            ))
-        ret.update({host: True})
+            msg = '\'vsphere.update_date_time\' failed for host {0}: {1}'.format(host_name, err)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
+            continue
+
+        ret.update({host_name: True})
 
     return ret
 
@@ -1441,17 +1699,16 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
     for host_name in host_names:
-        if ret.get(host_name) is None:
-            ret.update({host_name: {}})
 
         # Get VSAN System Config Manager, if available.
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vsan_system = host_ref.configManager.vsanSystem
         if vsan_system is None:
-            log.warning('VSAN System Config Manager is unset for host \'{0}\'. '
-                        'VSAN configuration cannot be changed without a configured '
-                        'VSAN System.'.format(host_name))
-            ret.update({host_name: False})
+            msg = 'VSAN System Config Manager is unset for host \'{0}\'. ' \
+                  'VSAN configuration cannot be changed without a configured ' \
+                  'VSAN System.'.format(host_name)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
             continue
 
         # Get all VSAN suitable disks for this host.
@@ -1462,8 +1719,9 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
                 suitable_disks.append(item)
 
         if not suitable_disks:
-            log.warning('The host \'{0}\' does not have any VSAN eligible disks.'.format(host_name))
-            ret.update({host_name: False})
+            msg = 'The host \'{0}\' does not have any VSAN eligible disks.'.format(host_name)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
             continue
 
         # Get disks for host and combine into one list of Disk Objects
@@ -1476,22 +1734,17 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
                 if disk.canonicalName == suitable_disk.disk.canonicalName:
                     matching.append(disk)
 
-        for disk in matching:
-            disk_name = disk.canonicalName
-            try:
-                task = vsan_system.AddDisks(disk)
-            except vim.fault.VsanFault as err:
-                log.error('\'vsphere.vsan_add_disks\' failed for host {0}: {1}'.format(host_name, err))
-                ret[host_name].update({disk_name: False})
-                continue
-            # Check if the task returned successfully or if there was an error.
-            if task.info.state == 'success':
-                log.debug('Successfully added disk \'{0}\' to the VSAN system.'.format(disk_name))
-                ret[host_name].update({disk_name: True})
-            else:
-                log.error('There was an error adding disk \'{0}\' to the '
-                          'VSAN system: {1}'.format(disk_name, task.info.error.msg))
-                ret[host_name].update({disk_name: False})
+        try:
+            task = vsan_system.AddDisks(matching)
+            salt.utils.vmware.wait_for_task(task, host_name, 'Adding disks to VSAN', sleep_seconds=3)
+        except Exception as err:
+            msg = '\'vsphere.vsan_add_disks\' failed for host {0}: {1}'.format(host_name, err)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
+            continue
+
+        log.debug('Successfully added disks to the VSAN system for host \'{0}\'.'.format(host_name))
+        ret.update({host_name: True})
 
     return ret
 
@@ -1552,19 +1805,21 @@ def vsan_disable(host, username, password, protocol=None, port=None, host_names=
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vsan_system = host_ref.configManager.vsanSystem
         if vsan_system is None:
-            log.warning('VSAN System Config Manager is unset for host \'{0}\'. '
-                        'VSAN configuration cannot be changed without a configured '
-                        'VSAN System.'.format(host_name))
-            ret.update({host_name: False})
+            msg = 'VSAN System Config Manager is unset for host \'{0}\'. ' \
+                  'VSAN configuration cannot be changed without a configured ' \
+                  'VSAN System.'.format(host_name)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
         else:
             try:
                 # Disable vsan on the host
-                vsan_system.UpdateVsan_Task(vsan_config)
-            except vim.fault.VsanFault as err:
-                raise CommandExecutionError('\'vsphere.vsan_disable\' failed for host {0}: {1}'.format(
-                    host_name,
-                    err
-                ))
+                task = vsan_system.UpdateVsan_Task(vsan_config)
+                salt.utils.vmware.wait_for_task(task, host_name, 'Disabling VSAN', sleep_seconds=3)
+            except Exception as err:
+                msg = '\'vsphere.vsan_disable\' failed for host {0}: {1}'.format(host_name, err)
+                log.debug(msg)
+                ret.update({host_name: {'Error': msg}})
+                continue
 
             ret.update({host_name: True})
 
@@ -1627,19 +1882,21 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vsan_system = host_ref.configManager.vsanSystem
         if vsan_system is None:
-            log.warning('VSAN System Config Manager is unset for host \'{0}\'. '
-                        'VSAN configuration cannot be changed without a configured '
-                        'VSAN System.'.format(host_name))
-            ret.update({host_name: False})
+            msg = 'VSAN System Config Manager is unset for host \'{0}\'. ' \
+                  'VSAN configuration cannot be changed without a configured ' \
+                  'VSAN System.'.format(host_name)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
         else:
             try:
                 # Enable vsan on the host
-                vsan_system.UpdateVsan_Task(vsan_config)
+                task = vsan_system.UpdateVsan_Task(vsan_config)
+                salt.utils.vmware.wait_for_task(task, host_name, 'Enabling VSAN', sleep_seconds=3)
             except vim.fault.VsanFault as err:
-                raise CommandExecutionError('\'vsphere.vsan_enable\' failed for host {0}: {1}'.format(
-                    host_name,
-                    err
-                ))
+                msg = '\'vsphere.vsan_enable\' failed for host {0}: {1}'.format(host_name, err)
+                log.debug(msg)
+                ret.update({host_name: {'Error': msg}})
+                continue
 
             ret.update({host_name: True})
 
