@@ -13,6 +13,7 @@ The following fields can be set in the minion conf file::
     hipchat.color (optional)
     hipchat.notify (optional)
     hipchat.profile (optional)
+    hipchat.url (optional)
 
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
@@ -109,7 +110,8 @@ def _get_options(ret=None):
     '''
 
     defaults = {'color': 'yellow',
-                'notify': False}
+                'notify': False,
+                'api_url': 'api.hipchat.com'}
 
     attrs = {'hipchat_profile': 'profile',
              'room_id': 'room_id',
@@ -118,6 +120,7 @@ def _get_options(ret=None):
              'api_version': 'api_version',
              'color': 'color',
              'notify': 'notify',
+             'api_url': 'api_url',
              }
 
     profile_attr = 'hipchat_profile'
@@ -152,7 +155,7 @@ def _query(function,
            api_key=None,
            api_version=None,
            room_id=None,
-           api_url='api.hipchat.com',
+           api_url=None,
            method='GET',
            data=None):
     '''
@@ -262,8 +265,8 @@ def _send_message(room_id,
                   from_name,
                   api_key=None,
                   api_version=None,
-                  api_url='api.hipchat.com',
-                  color='yellow',
+                  api_url=None,
+                  color=None,
                   notify=False):
     '''
     Send a message to a HipChat room.
@@ -346,14 +349,20 @@ def returner(ret):
                     ret.get('jid'),
                     pprint.pformat(ret.get('return')))
 
+    if ret.get('retcode') == 0:
+        color = _options.get('color')
+    else:
+        color = 'red'
+
     hipchat = _send_message(_options.get('room_id'),
                             message,
                             _options.get('from_name'),
                             _options.get('api_key'),
                             _options.get('api_version'),
-                            _options.get('api_url', 'api.hipchat.com'),
-                            _options.get('color'),
+                            _options.get('api_url'),
+                            color,
                             _options.get('notify'))
+
     return hipchat
 
 
@@ -373,6 +382,6 @@ def event_return(events):
                       _options.get('from_name'),
                       _options.get('api_key'),
                       _options.get('api_version'),
-                      _options.get('api_url', 'api.hipchat.com'),
+                      _options.get('api_url'),
                       _options.get('color'),
                       _options.get('notify'))
