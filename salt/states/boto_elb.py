@@ -1137,7 +1137,6 @@ def _policies_present(
         backend_policies = set(b.get('policies', []))
         actual_policies_by_backend[b['instance_port']] = backend_policies
 
-
     to_delete = []
     to_create = []
 
