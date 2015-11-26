@@ -568,7 +568,7 @@ def server_list(profile=None):
 
     .. code-block:: bash
 
-        salt '*' nova.show
+        salt '*' nova.server_list
     '''
     conn = _auth(profile)
     return conn.server_list()
