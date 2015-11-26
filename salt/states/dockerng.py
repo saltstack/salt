@@ -1218,6 +1218,8 @@ def running(name,
           ``--net=none``)
         - ``container:<name_or_id>`` - Reuses another container's network stack
         - ``host`` - Use the host's network stack inside the container
+        - Any name that identifies an existing network that might be created
+          with ``dockerng.network_present``.
 
           .. warning::
 
