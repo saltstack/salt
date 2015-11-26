@@ -1210,7 +1210,7 @@ def mod_bufsize(iface, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' network.getBuffers
+        salt '*' network.mod_bufsize tx=<val> rx=<val> rx-mini=<val> rx-jumbo=<val>
     '''
     if __grains__['kernel'] == 'Linux':
         if os.path.exists('/sbin/ethtool'):
