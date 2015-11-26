@@ -556,6 +556,8 @@ def active_tcp():
                 'remote_port': '.'.join(connection['remote-address'].split('.')[-1:])
             }
         return ret
+    else:
+        return {}
 
 
 def traceroute(host):
