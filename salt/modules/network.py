@@ -1158,13 +1158,13 @@ def _get_bufsize_linux(iface):
 
 def get_bufsize(iface):
     '''
-    Return network buffer sizes as a dict
+    Return network buffer sizes as a dict (currently linux only)
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' network.getbufsize
+        salt '*' network.ge_tbufsize
     '''
     if __grains__['kernel'] == 'Linux':
         if os.path.exists('/sbin/ethtool'):
