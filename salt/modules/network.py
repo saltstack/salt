@@ -655,6 +655,7 @@ def traceroute(host):
     return ret
 
 
+@decorators.which('dig')
 def dig(host):
     '''
     Performs a DNS lookup with dig
