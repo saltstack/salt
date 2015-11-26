@@ -1307,7 +1307,6 @@ def default_route(family=None):
     ret = []
     for route in _routes:
         if family:
-            log.info(route)
             if route['destination'] in default_route[family]:
                 if __grains__['kernel'] == 'SunOS' and route['addr_family'] != family:
                     continue
