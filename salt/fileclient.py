@@ -619,7 +619,10 @@ class Client(object):
         get_kwargs = {}
         if url_data.username is not None \
                 and url_data.scheme in ('http', 'https'):
-            _, netloc = url_data.netloc.split('@', 1)
+            netloc = url_data.netloc
+            at_sign_pos = netloc.rfind('@')
+            if at_sign_pos != -1:
+                netloc = netloc[at_sign_pos + 1:]
             fixed_url = urlunparse(
                 (url_data.scheme, netloc, url_data.path,
                  url_data.params, url_data.query, url_data.fragment))
