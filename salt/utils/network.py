@@ -47,12 +47,6 @@ def sanitize_host(host):
 def isportopen(host, port):
     '''
     Return status of a port
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' network.isportopen 127.0.0.1 22
     '''
 
     if not 1 <= int(port) <= 65535:
@@ -67,12 +61,6 @@ def isportopen(host, port):
 def host_to_ip(host):
     '''
     Returns the IP address of a given hostname
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' network.host_to_ip example.com
     '''
     try:
         family, socktype, proto, canonname, sockaddr = socket.getaddrinfo(
@@ -271,12 +259,6 @@ def generate_minion_id():
     '''
     Returns a minion id after checking multiple sources for a FQDN.
     If no FQDN is found you may get an ip address
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' network.generate_minion_id
     '''
     possible_ids = get_hostnames()
 
@@ -314,12 +296,6 @@ def get_socket(addr, type=socket.SOCK_STREAM, proto=0):
 def get_fqhostname():
     '''
     Returns the fully qualified hostname
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' network.get_fqhostname
     '''
     l = []
     l.append(socket.getfqdn())
@@ -347,12 +323,6 @@ def get_fqhostname():
 def ip_to_host(ip):
     '''
     Returns the hostname of a given IP
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' network.ip_to_host 8.8.8.8
     '''
     try:
         hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip)
