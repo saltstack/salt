@@ -528,7 +528,10 @@ def netstat():
 
 def active_tcp():
     '''
-    Return a dict containing information on all of the running TCP connections
+    Return a dict containing information on all of the running TCP connections (currently linux and solaris only)
+
+    .. versionchanged:: Boron
+        Added support for SunOS
 
     CLI Example:
 
@@ -536,7 +539,23 @@ def active_tcp():
 
         salt '*' network.active_tcp
     '''
-    return salt.utils.network.active_tcp()
+    if __grains__['kernel'] == 'Linux':
+        return salt.utils.network.active_tcp()
+    elif __grains__['kernel'] == 'SunOS':
+        # lets use netstat to mimic linux as close as possible
+        ret = {}
+        for connection in _netstat_sunos():
+            if not connection['proto'].startswith('tcp'):
+                continue
+            if connection['state'] != 'ESTABLISHED':
+                continue
+            ret[len(ret)+1] = {
+                'local_addr': '.'.join(connection['local-address'].split('.')[:-1]),
+                'local_port': '.'.join(connection['local-address'].split('.')[-1:]),
+                'remote_addr': '.'.join(connection['remote-address'].split('.')[:-1]),
+                'remote_port': '.'.join(connection['remote-address'].split('.')[-1:])
+            }
+        return ret
 
 
 def traceroute(host):
