@@ -31,6 +31,7 @@ def __virtual__():
         if [x for x in __salt__ if x.startswith('archive.')] \
         else False
 
+
 def updateChecksum(fname, target, checksum):
     lines = []
     compare_string = '{0}:{1}'.format(target, checksum)
@@ -43,6 +44,7 @@ def updateChecksum(fname, target, checksum):
             if line.startswith(target):
                 continue
             f.write(line)
+
 
 def compareChecksum(fname, target, checksum):
     if os.path.exists(fname):
@@ -57,6 +59,7 @@ def compareChecksum(fname, target, checksum):
                 if compare_string == current_line:
                     return True
     return False
+
 
 def extracted(name,
               source,
@@ -213,13 +216,13 @@ def extracted(name,
         hash = source_hash.split("=")
         source_file = '{0}.{1}'.format(os.path.basename(source), hash[0])
         hash_fname = os.path.join(__opts__['cachedir'],
-                            'files',
-                            __env__,
-                            source_file)
+            'files',
+            __env__,
+            source_file)
         if compareChecksum(hash_fname, name, hash[1]):
-                ret['result'] = True
-                ret['comment'] = 'Hash {0} has not changed'.format(hash[1])
-                return ret
+            ret['result'] = True
+            ret['comment'] = 'Hash {0} has not changed'.format(hash[1])
+            return ret
     elif (
         __salt__['file.directory_exists'](if_missing)
         or __salt__['file.file_exists'](if_missing)
@@ -337,8 +340,8 @@ def extracted(name,
         ret['comment'] = '{0} extracted in {1}'.format(source, name)
         if not keep:
             os.unlink(filename)
-	if source_hash and source_hash_update:
-            updateChecksum(hash_fname, name, hash[1])
+    if source_hash and source_hash_update:
+        updateChecksum(hash_fname, name, hash[1])
     else:
         __salt__['file.remove'](if_missing)
         ret['result'] = False
