@@ -1436,7 +1436,7 @@ def replace(path,
                                    access=mmap.ACCESS_READ)
             else:
                 # size of file in /proc is 0, but contains data
-                r_data =  "".join(r_file)
+                r_data = "".join(r_file)
             if search_only:
                 # Just search; bail as early as a match is found
                 if re.search(cpattern, r_data):
