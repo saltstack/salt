@@ -20,7 +20,7 @@ def __virtual__():
     '''
     Only runs on FreeBSD systems
     '''
-    return __virtualname__ if __grains__['os'] == 'FreeBSD' else False
+    return __virtualname__ if salt.utils.is_freebsd() else False
 
 
 def start(jail=''):
