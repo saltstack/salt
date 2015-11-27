@@ -773,8 +773,6 @@ def create(from_file=None, **kwargs):
     vmcfg = {}
     kwargs = salt.utils.clean_kwargs(**kwargs)
     for k, v in kwargs.iteritems():
-        if k.startswith('_'):
-            continue
         vmcfg[k] = v
 
     if from_file:
@@ -810,8 +808,6 @@ def update(vm, from_file=None, key='uuid', **kwargs):
     vmcfg = {}
     kwargs = salt.utils.clean_kwargs(**kwargs)
     for k, v in kwargs.iteritems():
-        if k.startswith('_'):
-            continue
         vmcfg[k] = v
 
     if key not in ['uuid', 'alias', 'hostname']:
