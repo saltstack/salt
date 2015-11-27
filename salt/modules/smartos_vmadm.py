@@ -771,6 +771,7 @@ def create(from_file=None, **kwargs):
     ret = {}
     # prepare vmcfg
     vmcfg = {}
+    kwargs = salt.utils.clean_kwargs(**kwargs)
     for k, v in kwargs.iteritems():
         if k.startswith('_'):
             continue
@@ -807,6 +808,7 @@ def update(vm, from_file=None, key='uuid', **kwargs):
     vmadm = _check_vmadm()
     # prepare vmcfg
     vmcfg = {}
+    kwargs = salt.utils.clean_kwargs(**kwargs)
     for k, v in kwargs.iteritems():
         if k.startswith('_'):
             continue
