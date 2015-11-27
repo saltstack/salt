@@ -180,6 +180,15 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
     '''
     Create a minion server
     '''
+
+    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+        # escalate signal to the process manager processes
+        self.minion.process_manager.stop_restarting()
+        self.minion.process_manager.send_signal_to_processes(signum)
+        # kill any remaining processes
+        self.minion.process_manager.kill_children()
+        super(Minion, self)._handle_signals(signum, sigframe)
+
     # pylint: disable=no-member
     def prepare(self):
         '''
