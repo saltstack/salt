@@ -192,3 +192,171 @@ class ADBBeaconTestCase(TestCase):
             ret = adb.beacon(config)
             mock.assert_called_once_with("adb devices", runas="fred")
             self.assertEqual(ret, [{"device": "HTC", "state": "device", "tag": "device"}])
+
+    def test_device_low_battery(self):
+        config = {"states": ["device"], "battery_low": 30}
+
+        out = [
+            "List of devices attached\nHTC\tdevice",
+            "25",
+        ]
+        mock = Mock(side_effect=out)
+        with patch.dict(adb.__salt__, {"cmd.run": mock}):
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
+                                   {"device": "HTC", "battery_level": 25, "tag": "battery_low"}])
+
+    def test_device_no_repeat(self):
+        config = {"states": ["device"], "battery_low": 30}
+
+        out = [
+            "List of devices attached\nHTC\tdevice",
+            "25",
+            "List of devices attached\nHTC\tdevice",
+            "25"
+        ]
+        mock = Mock(side_effect=out)
+        with patch.dict(adb.__salt__, {"cmd.run": mock}):
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
+                                   {"device": "HTC", "battery_level": 25, "tag": "battery_low"}])
+
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [])
+
+    def test_device_no_repeat_capacity_increase(self):
+        config = {"states": ["device"], "battery_low": 75}
+
+        out = [
+            "List of devices attached\nHTC\tdevice",
+            "25",
+            "List of devices attached\nHTC\tdevice",
+            "30"
+        ]
+        mock = Mock(side_effect=out)
+        with patch.dict(adb.__salt__, {"cmd.run": mock}):
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
+                                   {"device": "HTC", "battery_level": 25, "tag": "battery_low"}])
+
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [])
+
+    def test_device_no_repeat_with_not_found_state(self):
+        config = {"states": ["offline"], "battery_low": 30}
+
+        out = [
+            "List of devices attached\nHTC\tdevice",
+            "25",
+            "List of devices attached\nHTC\tdevice",
+            "25"
+        ]
+        mock = Mock(side_effect=out)
+        with patch.dict(adb.__salt__, {"cmd.run": mock}):
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{"device": "HTC", "battery_level": 25, "tag": "battery_low"}])
+
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [])
+
+    def test_device_battery_charged(self):
+        config = {"states": ["device"], "battery_low": 30}
+
+        out = [
+            "List of devices attached\nHTC\tdevice",
+            "100",
+        ]
+        mock = Mock(side_effect=out)
+        with patch.dict(adb.__salt__, {"cmd.run": mock}):
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'}])
+
+    def test_device_low_battery_equal(self):
+        config = {"states": ["device"], "battery_low": 25}
+
+        out = [
+            "List of devices attached\nHTC\tdevice",
+            "25",
+        ]
+        mock = Mock(side_effect=out)
+        with patch.dict(adb.__salt__, {"cmd.run": mock}):
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
+                                   {"device": "HTC", "battery_level": 25, "tag": "battery_low"}])
+
+    def test_device_battery_not_found(self):
+        config = {"states": ["device"], "battery_low": 25}
+
+        out = [
+            "List of devices attached\nHTC\tdevice",
+            "/system/bin/sh: cat: /sys/class/power_supply/*/capacity: No such file or directory",
+        ]
+        mock = Mock(side_effect=out)
+        with patch.dict(adb.__salt__, {"cmd.run": mock}):
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'}])
+
+    def test_device_repeat_multi(self):
+        config = {"states": ["offline"], "battery_low": 35}
+
+        out = [
+            "List of devices attached\nHTC\tdevice",
+            "25",
+            "List of devices attached\nHTC\tdevice",
+            "40",
+            "List of devices attached\nHTC\tdevice",
+            "25",
+            "List of devices attached\nHTC\tdevice",
+            "80"
+        ]
+        mock = Mock(side_effect=out)
+        with patch.dict(adb.__salt__, {"cmd.run": mock}):
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{"device": "HTC", "battery_level": 25, "tag": "battery_low"}])
+
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [])
+
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{"device": "HTC", "battery_level": 25, "tag": "battery_low"}])
+
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [])
+
+    def test_weird_batteries(self):
+        config = {"states": ["device"], "battery_low": 25}
+
+        out = [
+            "List of devices attached\nHTC\tdevice",
+            "-9000",
+        ]
+        mock = Mock(side_effect=out)
+        with patch.dict(adb.__salt__, {"cmd.run": mock}):
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'}])
+
+    def test_multiple_batteries(self):
+        config = {"states": ["device"], "battery_low": 30}
+
+        out = [
+            "List of devices attached\nHTC\tdevice",
+            "25\n40",
+        ]
+        mock = Mock(side_effect=out)
+        with patch.dict(adb.__salt__, {"cmd.run": mock}):
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
+                                   {"device": "HTC", "battery_level": 25, "tag": "battery_low"}])
+
+    def test_multiple_low_batteries(self):
+        config = {"states": ["device"], "battery_low": 30}
+
+        out = [
+            "List of devices attached\nHTC\tdevice",
+            "25\n14",
+        ]
+        mock = Mock(side_effect=out)
+        with patch.dict(adb.__salt__, {"cmd.run": mock}):
+            ret = adb.beacon(config)
+            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
+                                   {"device": "HTC", "battery_level": 25, "tag": "battery_low"}])

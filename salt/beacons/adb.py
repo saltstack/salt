@@ -62,7 +62,8 @@ def beacon(config):
                 - offline
                 - unauthorized
                 - missing
-            - no_device_event: True
+            - no_devices_event: True
+            - battery_low: 25
 
     '''
     global last_state_no_devices
@@ -83,10 +84,30 @@ def beacon(config):
         try:
             device, state = line.split("\t")
             found_devices.append(device)
-            if device not in last_state_devices or last_state[device] != state:
+            if device not in last_state_devices or \
+                    ("state" in last_state[device] and last_state[device]["state"] != state):
                 if state in config["states"]:
                     ret.append({"device": device, "state": state, 'tag': state})
-                    last_state[device] = state
+                    last_state[device] = {"state": state}
+
+            if "battery_low" in config:
+                val = last_state.get(device, {})
+                cmd = "adb -s {} shell cat /sys/class/power_supply/*/capacity".format(device)
+                battery_levels = __salt__['cmd.run'](cmd, runas=config.get("user", None)).split("\n")
+
+                for l in battery_levels:
+                    battery_level = int(l)
+                    if 0 < battery_level < 100:
+                        if "battery" not in val or battery_level != val["battery"]:
+                            if ("battery" not in val or val["battery"] > config["battery_low"]) and \
+                                            battery_level <= config["battery_low"]:
+                                ret.append({"device": device, "battery_level": battery_level, "tag": "battery_low"})
+
+                        if device not in last_state:
+                            last_state[device] = {}
+
+                        last_state[device].update({"battery": battery_level})
+
         except ValueError:
             continue
 
