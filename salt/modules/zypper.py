@@ -1198,7 +1198,7 @@ def list_products(all=False):
         p_name = p_nfo.pop('name')
         p_data[p_name] = p_nfo
         p_data[p_name]['eol'] = prd.getElementsByTagName('endoflife')[0].getAttribute('text')
-        descr = prd.getElementsByTagName('description')[0].childNodes[0].nodeValue
+        descr = _get_first_aggregate_text(prd.getElementsByTagName('description'))
         p_data[p_name]['description'] = " ".join([line.strip() for line in descr.split(os.linesep)])
         ret.append(p_data)
 
