@@ -1463,7 +1463,9 @@ def replace(path,
                 # modified
                 if show_changes or append_if_not_found or \
                    prepend_if_not_found:
-                    orig_file = r_data.read(filesize).splitlines(True)
+                    orig_file = r_data.read(filesize).splitlines(True) \
+                        if hasattr(r_data, 'read') \
+                        else r_data.splitlines(True)
                     new_file = result.splitlines(True)
 
     except (OSError, IOError) as exc:
