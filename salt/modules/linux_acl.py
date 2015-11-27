@@ -109,11 +109,12 @@ def getfacl(*args, **kwargs):
                 if entity in vals:
                     del vals[entity]
                     if acl_type == 'acl':
-                        ret[dentry][entity] = vals
+                        ret[dentry][entity] = [{"": vals}]
                     elif acl_type == 'default':
                         if 'defaults' not in ret[dentry]:
                             ret[dentry]['defaults'] = {}
-                        ret[dentry]['defaults'][entity] = vals
+                        ret[dentry]['defaults'][entity] = [{"": vals}]
+
     return ret
 
 
