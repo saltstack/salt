@@ -1429,12 +1429,12 @@ def replace(path,
         with salt.utils.fopen(path,
                               mode='rb',
                               buffering=bufsize) as r_file:
-            if filesize is not 0:
+            try:
                 # mmap throws a ValueError if the file is empty.
                 r_data = mmap.mmap(r_file.fileno(),
                                    0,
                                    access=mmap.ACCESS_READ)
-            else:
+            except ValueError:
                 # size of file in /proc is 0, but contains data
                 r_data = "".join(r_file)
             if search_only:
