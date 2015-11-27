@@ -1175,22 +1175,6 @@ def _get_first_aggregate_text(node_list):
     return '\n'.join(out)
 
 
-def _parse_suse_product(path, *info):
-    '''
-    Parse SUSE LLC product.
-    '''
-    doc = dom.parse(path)
-    product = {}
-    for nfo in info:
-        product.update(
-            {nfo: _get_first_aggregate_text(
-                doc.getElementsByTagName(nfo)
-            )}
-        )
-
-    return product
-
-
 def list_products(all=False):
     '''
     List all available or installed SUSE products.
