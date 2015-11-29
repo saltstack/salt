@@ -20,7 +20,7 @@ See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
 
        python -c "import pyVmomi" ; echo $?
 
-To use this module, set up the vCenter URL, username and password in the
+To use this module, set up the vCenter or ESX/ESXi URL, username and password in the
 cloud configuration at
 ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
 
@@ -47,6 +47,12 @@ cloud configuration at
       url: 'vcenter02.domain.com'
       protocol: 'http'
       port: 80
+
+    esx01:
+      driver: vmware
+      user: 'admin'
+      password: 'verybadpass'
+      url: 'esx01.domain.com'
 
 .. note::
 
