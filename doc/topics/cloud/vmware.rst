@@ -71,11 +71,12 @@ set up in the cloud configuration at
 .. note::
     .. versionchanged:: 2015.8.0
 
-    The ``provider`` parameter in cloud provider configuration was renamed to ``driver``. This
-    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
-    configuration. Cloud provider configuration now uses ``driver`` to refer to the salt-cloud driver that
-    provides the underlying functionality to connect to a cloud provider, while cloud profile configuration continues
-    to use ``provider`` to refer to the cloud provider configuration that you define.
+    The ``provider`` parameter in cloud provider configuration was renamed to ``driver``.
+    This change was made to avoid confusion with the ``provider`` parameter that is
+    used in cloud profile configuration. Cloud provider configuration now uses ``driver``
+    to refer to the salt-cloud driver that provides the underlying functionality to
+    connect to a cloud provider, while cloud profile configuration continues to use
+    ``provider`` to refer to the cloud provider configuration that you define.
 
 .. _vmware-cloud-profile:
 

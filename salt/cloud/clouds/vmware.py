@@ -60,6 +60,16 @@ cloud configuration at
     server is not using the defaults. Default is ``protocol: https`` and
     ``port: 443``.
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider configuration was renamed to ``        driver``.
+    This change was made to avoid confusion with the ``provider`` parameter that         is
+    used in cloud profile configuration. Cloud provider configuration now uses `        `driver``
+    to refer to the salt-cloud driver that provides the underlying functionality         to
+    connect to a cloud provider, while cloud profile configuration continues to         use
+    ``provider`` to refer to the cloud provider configuration that you define.
+
 To test the connection for ``my-vmware-config`` specified in the cloud
 configuration, run :py:func:`test_vcenter_connection`
 '''
