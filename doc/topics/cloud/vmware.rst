@@ -28,7 +28,7 @@ This package can be installed using `pip` or `easy_install`:
 Configuration
 =============
 
-The VMware cloud module needs the vCenter or ESXi URL, username and password to be
+The VMware cloud module needs the vCenter or ESX/ESXi URL, username and password to be
 set up in the cloud configuration at
 ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
 
