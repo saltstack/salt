@@ -107,7 +107,8 @@ class NetworkTestCase(TestCase):
          of the running TCP connections
         '''
         with patch.object(salt.utils.network, 'active_tcp', return_value='A'):
-            self.assertEqual(network.active_tcp(), 'A')
+            with patch.dict(network.__grains__, {'kernel': 'Linux'}):
+                self.assertEqual(network.active_tcp(), 'A')
 
     def test_traceroute(self):
         '''
