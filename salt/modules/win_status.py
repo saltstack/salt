@@ -64,7 +64,7 @@ def cpuload():
 
     .. code-block:: bash
 
-       salt '*' status.cpu_load
+       salt '*' status.cpuload
     '''
 
     # Pull in the information from WMIC
@@ -94,7 +94,7 @@ def diskusage(human_readable=False, path=None):
 
     .. code-block:: bash
 
-        salt '*' status.disk_usage path=c:/salt
+        salt '*' status.diskusage path=c:/salt
     '''
     if not path:
         path = 'c:/'
@@ -169,8 +169,8 @@ def saltmem(human_readable=False):
 
     .. code-block:: bash
 
-        salt '*' status.salt_mem
-        salt '*' status.salt_mem human_readable=True
+        salt '*' status.saltmem
+        salt '*' status.saltmem human_readable=True
     '''
     with salt.utils.winapi.Com():
         wmi_obj = wmi.WMI()
