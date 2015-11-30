@@ -50,7 +50,6 @@ config:
             - description: "My Lambda Function"
             - timeout: 3
             - memorysize: 128
-            - publish: false
             - region: us-east-1
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
@@ -79,7 +78,7 @@ def __virtual__():
 
 def present(name, runtime, role, handler, zipfile=None, s3bucket=None,
             s3key=None, s3objectversion=None, 
-            description='', timeout=3, memorysize=128, publish=False,
+            description='', timeout=3, memorysize=128,
             region=None, key=None, keyid=None, profile=None):
     '''
     Ensure Lambda Function exists.
@@ -134,10 +133,6 @@ def present(name, runtime, role, handler, zipfile=None, s3bucket=None,
         to an image processing function. The default value is 128 MB. The value must be a multiple of
         64 MB.
 
-    publish
-        This boolean parameter can be used to request AWS Lambda to create the Lambda function and publish
-        a version as an atomic operation.
-
     region
         Region to connect to.
 
@@ -172,7 +167,7 @@ def present(name, runtime, role, handler, zipfile=None, s3bucket=None,
             return ret
         r = __salt__['boto_lambda.create'](name, runtime, role, handler, 
             zipfile, s3bucket, s3key, s3objectversion,
-            description, timeout, memorysize, publish,
+            description, timeout, memorysize, 
             region, key, keyid, profile)
         if not r.get('created'):
             ret['result'] = False
@@ -193,7 +188,7 @@ def present(name, runtime, role, handler, zipfile=None, s3bucket=None,
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     _ret = _lambda_code_present(name, zipfile, s3bucket, s3key, s3objectversion,
-                                 publish, region, key, keyid, profile)
+                                 region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     return ret
@@ -236,7 +231,7 @@ def _lambda_config_present(name, role, handler, description, timeout,
 
 
 def _lambda_code_present(name, zipfile, s3bucket, s3key, s3objectversion,
-                         publish, region, key, keyid, profile):
+                         region, key, keyid, profile):
     ret = {'result': True, 'comment': '', 'changes': {}}
     lmbda = __salt__['boto_lambda.describe'](name, 
            region=region, key=key, keyid=keyid, profile=profile)['lambda']
@@ -263,7 +258,7 @@ def _lambda_code_present(name, zipfile, s3bucket, s3key, s3objectversion,
             'CodeSize': lmbda['CodeSize'],
         }
         lmbda = __salt__['boto_lambda.update_code'](name, zipfile, s3bucket,
-            s3key, s3objectversion, publish,
+            s3key, s3objectversion, 
             region=region, key=key, keyid=keyid, profile=profile)['lambda']
         if lmbda['CodeSha256'] != ret['changes']['old']['CodeSha256'] or \
                 lmbda['CodeSize'] != ret['changes']['old']['CodeSize']:
