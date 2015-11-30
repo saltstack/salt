@@ -184,6 +184,10 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
     return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
 
 
+def _zipdata(zipfile):
+    with open(zipfile, 'rb') as f:
+       return f.read()
+
 def create(name, runtime, role, handler, zipfile=None, s3bucket=None, s3key=None, s3objectversion=None,
             description="", timeout=3, memorysize=128, publish=False,
             region=None, key=None, keyid=None, profile=None):
@@ -197,7 +201,7 @@ def create(name, runtime, role, handler, zipfile=None, s3bucket=None, s3key=None
 
     .. code-block:: bash
 
-        salt myminion boto_lamba.create my_lambda python2.7 my_file.my_function my_lambda.zip
+        salt myminion boto_lamba.create my_lambda python2.7 my_role my_file.my_function my_lambda.zip
 
     '''
 
@@ -207,11 +211,9 @@ def create(name, runtime, role, handler, zipfile=None, s3bucket=None, s3key=None
         if zipfile:
             if s3bucket or s3key or s3objectversion:
                 raise SaltInvocationError('Either zipfile must be specified, or '
-                                's3bucket, and s3key must be provided.')
-            with open(zipfile, 'rb') as f:
-               zipdata = f.read()
+                                's3bucket and s3key must be provided.')
             code = {
-               'ZipFile': zipdata,
+               'ZipFile': _zipdata(zipfile),
             }
         else:
             code = {
@@ -260,47 +262,113 @@ def delete(name, version=None, region=None, key=None, keyid=None, profile=None):
         return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def describe(vpc_id=None, vpc_name=None, region=None, key=None,
+def describe(name, region=None, key=None,
              keyid=None, profile=None):
     '''
-    Given a VPC ID describe its properties.
+    Given a Lambda function name describe its properties.
 
     Returns a dictionary of interesting properties.
-
-    .. versionchanged:: 2015.8.0
-        Added vpc_name argument
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.describe vpc_id=vpc-123456
-        salt myminion boto_vpc.describe vpc_name=myvpc
+        salt myminion boto_lambda.describe myfunction
 
     '''
 
-    if not any((vpc_id, vpc_name)):
-        raise SaltInvocationError('A valid vpc id or name needs to be specified.')
-
     try:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
-        if not vpc_id:
-            return {'vpc': None}
-
-        filter_parameters = {'vpc_ids': vpc_id}
-
-        vpcs = conn.get_all_vpcs(**filter_parameters)
-
-        if vpcs:
-            vpc = vpcs[0]  # Found!
-            log.debug('Found VPC: {0}'.format(vpc.id))
-
-            keys = ('id', 'cidr_block', 'is_default', 'state', 'tags',
-                    'dhcp_options_id', 'instance_tenancy')
-            return {'vpc': dict([(k, getattr(vpc, k)) for k in keys])}
+        lmbda = _find_lambda(name,
+                             region=region, key=key, keyid=keyid, profile=profile)
+        if lmbda:
+            keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
+                'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
+                'LastModified')
+            return {'lambda': dict([(k, lmbda.get(k)) for k in keys])}
         else:
-            return {'vpc': None}
-
+            return {'lambda': None}
     except ClientError as e:
         return {'error': salt.utils.boto.get_error(e)}
+
+
+def update_config(name, role, handler, description="", timeout=3, memorysize=128,
+            region=None, key=None, keyid=None, profile=None):
+    '''
+    Update the named lambda function to the configuration.
+
+    Returns {updated: true} if the Lambda function was updated and returns
+    {updated: False} if the Lambda function was not updated.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lamba.update_config my_lambda my_role my_file.my_function "my lambda function"
+
+    '''
+
+    role_arn = _get_role_arn(role, region, key, keyid, profile)
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        r = conn.update_function_configuration(FunctionName=name, Role=role_arn, Handler=handler, 
+                                   Description=description, Timeout=timeout,
+                                   MemorySize=memorysize)
+        if r:
+            keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
+                'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
+                'LastModified')
+            return {'updated': True, 'lambda': dict([(k, r.get(k)) for k in keys])}
+        else:
+            log.warning('Lambda function was not updated')
+            return {'updated': False}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def update_code(name, zipfile=None, s3bucket=None, s3key=None,
+            s3objectversion=None, publish=False,
+            region=None, key=None, keyid=None, profile=None):
+    '''
+    Upload the given code to the named lambda function.
+
+    Returns {updated: true} if the Lambda function was updated and returns
+    {updated: False} if the Lambda function was not updated.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lamba.update_code my_lambda zipfile=lambda.zip
+
+    '''
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        if zipfile:
+            if s3bucket or s3key or s3objectversion:
+                raise SaltInvocationError('Either zipfile must be specified, or '
+                                's3bucket and s3key must be provided.')
+            r = conn.update_function_code(FunctionName=name,
+                                   ZipFile=_zipdata(zipfile),
+                                   Publish=publish)
+        else:
+            args = {
+                'S3Bucket': s3bucket, 
+                'S3Key': s3key,
+            }
+            if s3objectversion:
+              args['S3ObjectVersion'] = s3objectversion
+            r = conn.update_function_code(FunctionName=name,
+                                   Publish=publish, **args)
+        if r:
+            keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
+                'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
+                'LastModified')
+            return {'updated': True, 'lambda': dict([(k, r.get(k)) for k in keys])}
+        else:
+            log.warning('Lambda function was not updated')
+            return {'updated': False}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
