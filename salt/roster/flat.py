@@ -152,5 +152,5 @@ def _convert_range_to_list(tgt, range_server):
     try:
         return r.expand(tgt)
     except seco.range.RangeException as err:
-        log.error('Range server exception: %s', err)
+        log.error('Range server exception: {0}'.format(err))
         return []
