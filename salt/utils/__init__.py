@@ -1365,7 +1365,8 @@ def subdict_match(data,
             return fnmatch.fnmatch(str(target).lower(), pattern.lower())
 
     def _dict_match(target, pattern, regex_match=False, exact_match=False):
-        if pattern.startswith('*:'):
+        wildcard = pattern.startswith('*:')
+        if wildcard:
             pattern = pattern[2:]
 
         if pattern == '*':
@@ -1379,25 +1380,26 @@ def subdict_match(data,
                          regex_match=regex_match,
                          exact_match=exact_match):
             return True
-        for key in target.keys():
-            if _match(key,
-                      pattern,
-                      regex_match=regex_match,
-                      exact_match=exact_match):
-                return True
-            if isinstance(target[key], dict):
-                if _dict_match(target[key],
-                               pattern,
-                               regex_match=regex_match,
-                               exact_match=exact_match):
+        if wildcard:
+            for key in target.keys():
+                if _match(key,
+                          pattern,
+                          regex_match=regex_match,
+                          exact_match=exact_match):
                     return True
-            elif isinstance(target[key], list):
-                for item in target[key]:
-                    if _match(item,
-                              pattern,
-                              regex_match=regex_match,
-                              exact_match=exact_match):
+                if isinstance(target[key], dict):
+                    if _dict_match(target[key],
+                                   pattern,
+                                   regex_match=regex_match,
+                                   exact_match=exact_match):
                         return True
+                elif isinstance(target[key], list):
+                    for item in target[key]:
+                        if _match(item,
+                                  pattern,
+                                  regex_match=regex_match,
+                                  exact_match=exact_match):
+                            return True
         return False
 
     for idx in range(1, expr.count(delimiter) + 1):
