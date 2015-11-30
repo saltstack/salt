@@ -298,6 +298,30 @@ class GitProvider(object):
                 _check_ref(ret, base_ref, rname)
         return ret
 
+    def check_lock(self):
+        '''
+        Used by the provider-specific fetch() function to check the existence
+        of an update lock, and set the lock if not present. If the lock exists
+        already, or if there was a problem setting the lock, this function
+        returns False. If the lock was successfully set, return True.
+        '''
+        if os.path.exists(self.lockfile):
+            log.warning(
+                'Update lockfile is present for {0} remote \'{1}\', '
+                'skipping. If this warning persists, it is possible that the '
+                'update process was interrupted. Removing {2} or running '
+                '\'salt-run cache.clear_git_lock {0}\' will allow updates to '
+                'continue for this remote.'
+                .format(self.role, self.id, self.lockfile)
+            )
+            return False
+        errors = self.lock()[-1]
+        if errors:
+            log.error('Unable to set update lock for {0} remote \'{1}\', '
+                      'skipping.'.format(self.role, self.id))
+            return False
+        return True
+
     def check_root(self):
         '''
         Check if the relative root path exists in the checked-out copy of the
@@ -347,7 +371,10 @@ class GitProvider(object):
                 else:
                     _add_error(failed, exc)
             else:
-                msg = 'Removed lock for {0}'.format(self.url)
+                msg = 'Removed lock for {0} remote \'{1}\''.format(
+                    self.role,
+                    self.id
+                )
                 log.debug(msg)
                 success.append(msg)
         return success, failed
@@ -365,10 +392,13 @@ class GitProvider(object):
             except (IOError, OSError) as exc:
                 msg = ('Unable to set update lock for {0} ({1}): {2} '
                        .format(self.url, self.lockfile, exc))
-                log.debug(msg)
+                log.error(msg)
                 failed.append(msg)
             else:
-                msg = 'Set lock for {0}'.format(self.url)
+                msg = 'Set lock for {0} remote \'{1}\''.format(
+                    self.role,
+                    self.id
+                )
                 log.debug(msg)
                 success.append(msg)
         return success, failed
@@ -579,13 +609,44 @@ class GitPython(GitProvider):
         Fetch the repo. If the local copy was updated, return True. If the
         local copy was already up-to-date, return False.
         '''
+        if not self.check_lock():
+            return False
         origin = self.repo.remotes[0]
         try:
             fetch_results = origin.fetch()
         except AssertionError:
             fetch_results = origin.fetch()
+
+        new_objs = False
+        for fetchinfo in fetch_results:
+            if fetchinfo.old_commit is not None:
+                log.debug(
+                    '{0} has updated \'{1}\' for remote \'{2}\' '
+                    'from {3} to {4}'.format(
+                        self.role,
+                        fetchinfo.name,
+                        self.id,
+                        fetchinfo.old_commit.hexsha[:7],
+                        fetchinfo.commit.hexsha[:7]
+                    )
+                )
+                new_objs = True
+            elif fetchinfo.flags in (fetchinfo.NEW_TAG,
+                                     fetchinfo.NEW_HEAD):
+                log.debug(
+                    '{0} has fetched new {1} \'{2}\' for remote \'{3}\' '
+                    .format(
+                        self.role,
+                        'tag' if fetchinfo.flags == fetchinfo.NEW_TAG
+                            else 'head',
+                        fetchinfo.name,
+                        self.id
+                    )
+                )
+                new_objs = True
+
         cleaned = self.clean_stale_refs()
-        return bool(fetch_results or cleaned)
+        return bool(new_objs or cleaned)
 
     def file_list(self, tgt_env):
         '''
@@ -938,6 +999,8 @@ class Pygit2(GitProvider):
         Fetch the repo. If the local copy was updated, return True. If the
         local copy was already up-to-date, return False.
         '''
+        if not self.check_lock():
+            return False
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
         fetch_kwargs = {}
@@ -1277,6 +1340,8 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         Fetch the repo. If the local copy was updated, return True. If the
         local copy was already up-to-date, return False.
         '''
+        if not self.check_lock():
+            return False
         # origin is just a url here, there is no origin object
         origin = self.url
         client, path = \
@@ -1753,24 +1818,6 @@ class GitBase(object):
         '''
         changed = False
         for repo in self.remotes:
-            if os.path.exists(repo.lockfile):
-                log.warning(
-                    'Update lockfile is present for {0} remote \'{1}\', '
-                    'skipping. If this warning persists, it is possible that '
-                    'the update process was interrupted. Removing {2} or '
-                    'running \'salt-run cache.clear_git_lock {0}\' will '
-                    'allow updates to continue for this remote.'
-                    .format(self.role, repo.id, repo.lockfile)
-                )
-                continue
-            _, errors = repo.lock()
-            if errors:
-                log.error('Unable to set update lock for {0} remote \'{1}\', '
-                          'skipping.'.format(self.role, repo.id))
-                continue
-            log.debug(
-                '{0} is fetching from \'{1}\''.format(self.role, repo.id)
-            )
             try:
                 if repo.fetch():
                     # We can't just use the return value from repo.fetch()
@@ -1780,7 +1827,6 @@ class GitBase(object):
                     # this value and make it incorrect.
                     changed = True
             except Exception as exc:
-                # Do not use {0} in the error message, as exc is not a string
                 log.error(
                     'Exception \'{0}\' caught while fetching {1} remote '
                     '\'{2}\''.format(exc, self.role, repo.id),
