@@ -20,7 +20,7 @@ See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
 
        python -c "import pyVmomi" ; echo $?
 
-To use this module, set up the vCenter URL, username and password in the
+To use this module, set up the vCenter or ESX/ESXi URL, username and password in the
 cloud configuration at
 ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
 
@@ -48,11 +48,27 @@ cloud configuration at
       protocol: 'http'
       port: 80
 
+    esx01:
+      driver: vmware
+      user: 'admin'
+      password: 'verybadpass'
+      url: 'esx01.domain.com'
+
 .. note::
 
     Optionally, ``protocol`` and ``port`` can be specified if the vCenter
     server is not using the defaults. Default is ``protocol: https`` and
     ``port: 443``.
+
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider configuration was renamed to ``driver``.
+    This change was made to avoid confusion with the ``provider`` parameter that is
+    used in cloud profile configuration. Cloud provider configuration now uses ``driver``
+    to refer to the salt-cloud driver that provides the underlying functionality to
+    connect to a cloud provider, while cloud profile configuration continues to use
+    ``provider`` to refer to the cloud provider configuration that you define.
 
 To test the connection for ``my-vmware-config`` specified in the cloud
 configuration, run :py:func:`test_vcenter_connection`
@@ -214,7 +230,7 @@ def _edit_existing_hard_disk_helper(disk, size_kb):
     return disk_spec
 
 
-def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
+def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1000):
     random_key = randint(-2099, -2000)
 
     size_kb = int(size_gb * 1024.0 * 1024.0)
@@ -230,7 +246,7 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
     disk_spec.device.deviceInfo.summary = "{0} GB".format(size_gb)
     disk_spec.device.backing = vim.vm.device.VirtualDisk.FlatVer2BackingInfo()
     disk_spec.device.backing.diskMode = 'persistent'
-    disk_spec.device.controllerKey = 1000
+    disk_spec.device.controllerKey = controller_key
     disk_spec.device.unitNumber = unit_number
     disk_spec.device.capacityInKB = size_kb
 
@@ -349,16 +365,16 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     return network_spec
 
 
-def _edit_existing_scsi_adapter(scsi_adapter, bus_sharing):
-    scsi_adapter.sharedBus = bus_sharing
+def _edit_existing_scsi_controller(scsi_controller, bus_sharing):
+    scsi_controller.sharedBus = bus_sharing
     scsi_spec = vim.vm.device.VirtualDeviceSpec()
     scsi_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
-    scsi_spec.device = scsi_adapter
+    scsi_spec.device = scsi_controller
 
     return scsi_spec
 
 
-def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
+def _add_new_scsi_controller_helper(scsi_controller_label, properties, bus_number):
     random_key = randint(-1050, -1000)
     adapter_type = properties['type'].strip().lower() if 'type' in properties else None
     bus_sharing = properties['bus_sharing'].strip().lower() if 'bus_sharing' in properties else None
@@ -377,9 +393,9 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     else:
         # If type not specified or does not match, show error and return
         if not adapter_type:
-            err_msg = "The type of '{0}' has not been specified".format(scsi_adapter_label)
+            err_msg = "The type of '{0}' has not been specified".format(scsi_controller_label)
         else:
-            err_msg = "Cannot create '{0}'. Invalid/unsupported type '{1}'".format(scsi_adapter_label, adapter_type)
+            err_msg = "Cannot create '{0}'. Invalid/unsupported type '{1}'".format(scsi_controller_label, adapter_type)
         raise SaltCloudSystemExit(err_msg)
 
     scsi_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
@@ -387,7 +403,7 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     scsi_spec.device.key = random_key
     scsi_spec.device.busNumber = bus_number
     scsi_spec.device.deviceInfo = vim.Description()
-    scsi_spec.device.deviceInfo.label = scsi_adapter_label
+    scsi_spec.device.deviceInfo.label = scsi_controller_label
     scsi_spec.device.deviceInfo.summary = summary
 
     if bus_sharing == "virtual":
@@ -405,13 +421,13 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     return scsi_spec
 
 
-def _add_new_ide_adapter_helper(ide_adapter_label, properties, bus_number):
+def _add_new_ide_controller_helper(ide_controller_label, properties, bus_number):
     '''
     Helper function for adding new IDE controllers
 
     .. versionadded:: Boron
     '''
-    random_key = randint(-5050, -5000)
+    random_key = randint(-200, -250)
 
     ide_spec = vim.vm.device.VirtualDeviceSpec()
     ide_spec.device = vim.vm.device.VirtualIDEController()
@@ -421,8 +437,8 @@ def _add_new_ide_adapter_helper(ide_adapter_label, properties, bus_number):
     ide_spec.device.key = random_key
     ide_spec.device.busNumber = bus_number
     ide_spec.device.deviceInfo = vim.Description()
-    ide_spec.device.deviceInfo.label = ide_adapter_label
-    ide_spec.device.deviceInfo.summary = "IDE"
+    ide_spec.device.deviceInfo.label = ide_controller_label
+    ide_spec.device.deviceInfo.summary = ide_controller_label
 
     return ide_spec
 
@@ -519,8 +535,8 @@ def _manage_devices(devices, vm=None):
     bus_number = 0
     device_specs = []
     existing_disks_label = []
-    existing_scsi_adapters_label = []
-    existing_ide_adapters_label = []
+    existing_scsi_controllers_label = []
+    existing_ide_controllers_label = []
     existing_network_adapters_label = []
     existing_cd_drives_label = []
     ide_controllers = {}
@@ -560,20 +576,20 @@ def _manage_devices(devices, vm=None):
                         nics_map.append(adapter_mapping)
 
             elif hasattr(device, 'scsiCtlrUnitNumber'):
-                # this is a scsi adapter
+                # this is a SCSI controller
                 if 'scsi' in list(devices.keys()):
-                    # there is atleast one scsi adapter specified to be created/configured
+                    # there is atleast one SCSI controller specified to be created/configured
                     bus_number += 1
-                    existing_scsi_adapters_label.append(device.deviceInfo.label)
+                    existing_scsi_controllers_label.append(device.deviceInfo.label)
                     if device.deviceInfo.label in list(devices['scsi'].keys()):
-                        # Modify the existing SCSI adapter
-                        scsi_adapter_properties = devices['scsi'][device.deviceInfo.label]
-                        bus_sharing = scsi_adapter_properties['bus_sharing'].strip().lower() if 'bus_sharing' in scsi_adapter_properties else None
+                        # Modify the existing SCSI controller
+                        scsi_controller_properties = devices['scsi'][device.deviceInfo.label]
+                        bus_sharing = scsi_controller_properties['bus_sharing'].strip().lower() if 'bus_sharing' in scsi_controller_properties else None
                         if bus_sharing and bus_sharing in ['virtual', 'physical', 'no']:
                             bus_sharing = '{0}Sharing'.format(bus_sharing)
                             if bus_sharing != device.sharedBus:
-                                # Only edit the SCSI adapter if bus_sharing is different
-                                scsi_spec = _edit_existing_scsi_adapter(device, bus_sharing)
+                                # Only edit the SCSI controller if bus_sharing is different
+                                scsi_spec = _edit_existing_scsi_controller(device, bus_sharing)
                                 device_specs.append(scsi_spec)
 
             elif isinstance(device, vim.vm.device.VirtualCdrom):
@@ -589,7 +605,7 @@ def _manage_devices(devices, vm=None):
                         device_specs.append(cd_drive_spec)
 
             elif isinstance(device, vim.vm.device.VirtualIDEController):
-                # this is a controller to add new cd drives to
+                # this is an IDE controller to add new cd drives to
                 ide_controllers[device.key] = len(device.device)
 
     if 'network' in list(devices.keys()):
@@ -607,14 +623,24 @@ def _manage_devices(devices, vm=None):
             nics_map.append(adapter_mapping)
 
     if 'scsi' in list(devices.keys()):
-        scsi_adapters_to_create = list(set(devices['scsi'].keys()) - set(existing_scsi_adapters_label))
-        scsi_adapters_to_create.sort()
-        log.debug("SCSI devices to create: {0}".format(scsi_adapters_to_create))
-        for scsi_adapter_label in scsi_adapters_to_create:
-            # create the scsi adapter
-            scsi_adapter_properties = devices['scsi'][scsi_adapter_label]
-            scsi_spec = _add_new_scsi_adapter_helper(scsi_adapter_label, scsi_adapter_properties, bus_number)
+        scsi_controllers_to_create = list(set(devices['scsi'].keys()) - set(existing_scsi_controllers_label))
+        scsi_controllers_to_create.sort()
+        log.debug("SCSI controllers to create: {0}".format(scsi_controllers_to_create))
+        for scsi_controller_label in scsi_controllers_to_create:
+            # create the SCSI controller
+            scsi_controller_properties = devices['scsi'][scsi_controller_label]
+            scsi_spec = _add_new_scsi_controller_helper(scsi_controller_label, scsi_controller_properties, bus_number)
             device_specs.append(scsi_spec)
+            bus_number += 1
+
+    if 'ide' in list(devices.keys()):
+        ide_controllers_to_create = list(set(devices['ide'].keys()) - set(existing_ide_controllers_label))
+        ide_controllers_to_create.sort()
+        log.debug('IDE controllers to create: {0}'.format(ide_controllers_to_create))
+        for ide_controller_label in ide_controllers_to_create:
+            # create the IDE controller
+            ide_spec = _add_new_ide_controller_helper(ide_controller_label, None, bus_number)
+            device_specs.append(ide_spec)
             bus_number += 1
 
     if 'disk' in list(devices.keys()):
@@ -625,25 +651,17 @@ def _manage_devices(devices, vm=None):
             # create the disk
             size_gb = float(devices['disk'][disk_label]['size'])
             disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number)
-            # When creating both the controller and the disk at the same time we need the randomly
-            # assigned (temporary) key of the newly created controller
+
+            # when creating both SCSI controller and Hard disk at the same time we need the randomly
+            # assigned (temporary) key of the newly created SCSI controller
             if 'controller' in devices['disk'][disk_label]:
                 for spec in device_specs:
                     if spec.device.deviceInfo.label == devices['disk'][disk_label]['controller']:
                         disk_spec.device.controllerKey = spec.device.key
+                        break
 
             device_specs.append(disk_spec)
             unit_number += 1
-
-    if 'ide' in list(devices.keys()):
-        ide_adapters_to_create = list(set(devices['ide'].keys()) - set(existing_ide_adapters_label))
-        ide_adapters_to_create.sort()
-        log.debug('IDE devices to create: {0}'.format(ide_adapters_to_create))
-        for ide_adapter_label in ide_adapters_to_create:
-            # create the ide adapter
-            ide_spec = _add_new_ide_adapter_helper(ide_adapter_label, None, bus_number)
-            device_specs.append(ide_spec)
-            bus_number += 1
 
     if 'cd' in list(devices.keys()):
         cd_drives_to_create = list(set(devices['cd'].keys()) - set(existing_cd_drives_label))
@@ -654,20 +672,22 @@ def _manage_devices(devices, vm=None):
             device_type = devices['cd'][cd_drive_label]['device_type'] if 'device_type' in devices['cd'][cd_drive_label] else ''
             mode = devices['cd'][cd_drive_label]['mode'] if 'mode' in devices['cd'][cd_drive_label] else ''
             iso_path = devices['cd'][cd_drive_label]['iso_path'] if 'iso_path' in devices['cd'][cd_drive_label] else ''
-            # When creating both the controller and the disk at the same time we need the randomly
-            # assigned (temporary) key of the newly created controller
+            controller_key = None
+
+            # When creating both IDE controller and CD/DVD drive at the same time we need the randomly
+            # assigned (temporary) key of the newly created IDE controller
             if 'controller' in devices['cd'][cd_drive_label]:
                 for spec in device_specs:
                     if spec.device.deviceInfo.label == devices['cd'][cd_drive_label]['controller']:
                         controller_key = spec.device.key
                         ide_controllers[controller_key] = 0
+                        break
+            else:
+                for ide_controller_key, num_devices in six.iteritems(ide_controllers):
+                    if num_devices < 2:
+                        controller_key = ide_controller_key
+                        break
 
-            for ide_controller_key, num_devices in six.iteritems(ide_controllers):
-                if num_devices < 2:
-                    controller_key = ide_controller_key
-                    break
-                else:
-                    controller_key = None
             if not controller_key:
                 log.error("No more available controllers for '{0}'. All IDE controllers are currently in use".format(cd_drive_label))
             else:
