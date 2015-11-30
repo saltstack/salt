@@ -1831,6 +1831,14 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
                   'minions to have running')
         )
         self.add_option(
+            '--batch-wait',
+            default=0,
+            dest='batch_wait',
+            type=float,
+            help=('Wait the specified time in seconds after each job is done '
+                  'before freeing the slot in the batch for the next one')
+        )
+        self.add_option(
             '-a', '--auth', '--eauth', '--external-auth',
             default='',
             dest='eauth',
