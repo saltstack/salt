@@ -13,6 +13,7 @@ import datetime
 import logging
 
 # Import Salt Libs
+import salt.ext.six as six
 import salt.utils.vmware
 import salt.utils.http
 from salt.exceptions import CommandExecutionError
@@ -63,6 +64,7 @@ def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
                                                                host,
                                                                port)
     ret = {}
+    result = None
     try:
         if ssh_key:
             result = salt.utils.http.query(url,
@@ -83,7 +85,7 @@ def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
                                            data_file=ssh_key_file,
                                            data_render=False,
                                            verify_ssl=certificate_verify)
-        if result['status'] == 200:
+        if result.get('status') == 200:
             ret['status'] = True
         else:
             ret['status'] = False
@@ -123,7 +125,7 @@ def get_ssh_key(host, username, password,
                                        username=username,
                                        password=password,
                                        verify_ssl=certificate_verify)
-        if result['status'] == 200:
+        if result.get('status') == 200:
             ret['status'] = True
             ret['key'] = result['text']
         else:
@@ -300,7 +302,7 @@ def get_service_policy(host, username, password, service_name, protocol=None, po
     .. code-block:: bash
 
         # Used for single ESXi host connection information
-        salt '*' vsphere.get_service_running my.esxi.host root bad-password 'ssh'
+        salt '*' vsphere.get_service_policy my.esxi.host root bad-password 'ssh'
 
         # Used for connecting to a vCenter Server
         salt '*' vsphere.get_service_policy my.vcenter.location root bad-password 'ntpd' \
@@ -486,6 +488,56 @@ def get_vsan_enabled(host, username, password, protocol=None, port=None, host_na
             ret.update({host_name: vsan_config.enabled})
 
     return ret
+
+
+def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, host_names=None):
+    '''
+    Returns a list of VSAN-eligible disks for a given host or list of host_names.
+
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    host_names
+        List of ESXi host names. When the host, username, and password credentials
+        are provided for a vCenter Server, the host_names argument is required to
+        tell vCenter which hosts to check if any VSAN-eligible disks are available.
+
+        If host_names is not provided, the VSAN-eligible disks will be retrieved
+        for the ``host`` location instead. This is useful for when service instance
+        connection information is used for a single ESXi host.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for single ESXi host connection information
+        salt '*' vsphere.get_vsan_eligible_disks my.esxi.host root bad-password
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.get_vsan_eligible_disks my.vcenter.location root bad-password \
+        host_names='[esxi-1.host.com, esxi-2.host.com]'
+    '''
+    service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                              username=username,
+                                                              password=password,
+                                                              protocol=protocol,
+                                                              port=port)
+    host_names = _check_hosts(service_instance, host, host_names)
+    return _get_vsan_eligible_disks(service_instance, host, host_names)
 
 
 def system_info(host, username, password, protocol=None, port=None):
@@ -1798,54 +1850,39 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
                                                               protocol=protocol,
                                                               port=port)
     host_names = _check_hosts(service_instance, host, host_names)
-    ret = {}
-    for host_name in host_names:
+    response = _get_vsan_eligible_disks(service_instance, host, host_names)
 
-        # Get VSAN System Config Manager, if available.
+    ret = {}
+    for host_name in response:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vsan_system = host_ref.configManager.vsanSystem
-        if vsan_system is None:
-            msg = 'VSAN System Config Manager is unset for host \'{0}\'. ' \
-                  'VSAN configuration cannot be changed without a configured ' \
-                  'VSAN System.'.format(host_name)
-            log.debug(msg)
-            ret.update({host_name: {'Error': msg}})
-            continue
+        eligible = host_name.get('Eligible')
+        error = host_name.get('Error')
 
-        # Get all VSAN suitable disks for this host.
-        suitable_disks = []
-        query = vsan_system.QueryDisksForVsan()
-        for item in query:
-            if item.state == 'eligible':
-                suitable_disks.append(item)
+        if eligible and isinstance(eligible, list):
+            # If we have eligible, matching disks, add them to VSAN.
+            try:
+                task = vsan_system.AddDisks(eligible)
+                salt.utils.vmware.wait_for_task(task, host_name, 'Adding disks to VSAN', sleep_seconds=3)
+            except Exception as err:
+                msg = '\'vsphere.vsan_add_disks\' failed for host {0}: {1}'.format(host_name, err)
+                log.debug(msg)
+                ret.update({host_name: {'Error': msg}})
+                continue
 
-        if not suitable_disks:
-            msg = 'The host \'{0}\' does not have any VSAN eligible disks.'.format(host_name)
-            log.debug(msg)
-            ret.update({host_name: {'Error': msg}})
-            continue
-
-        # Get disks for host and combine into one list of Disk Objects
-        disks = _get_host_ssds(host_ref) + _get_host_non_ssds(host_ref)
-
-        # Get disks that are in both the disks list and suitable_disks lists.
-        matching = []
-        for disk in disks:
-            for suitable_disk in suitable_disks:
-                if disk.canonicalName == suitable_disk.disk.canonicalName:
-                    matching.append(disk)
-
-        try:
-            task = vsan_system.AddDisks(matching)
-            salt.utils.vmware.wait_for_task(task, host_name, 'Adding disks to VSAN', sleep_seconds=3)
-        except Exception as err:
-            msg = '\'vsphere.vsan_add_disks\' failed for host {0}: {1}'.format(host_name, err)
-            log.debug(msg)
-            ret.update({host_name: {'Error': msg}})
-            continue
-
-        log.debug('Successfully added disks to the VSAN system for host \'{0}\'.'.format(host_name))
-        ret.update({host_name: True})
+            log.debug('Successfully added disks to the VSAN system for host \'{0}\'.'.format(host_name))
+            ret.update({host_name: eligible})
+        elif eligible and isinstance(eligible, six.string_types):
+            # If we have a string type in the eligible value, we don't
+            # have any VSAN-eligible disks. Pull the message through.
+            ret.update({host_name: eligible})
+        elif error:
+            # If we hit an error, populate the Error return dict for state functions.
+            ret.update({host_name: {'Error': error}})
+        else:
+            # If we made it this far, we somehow have eligible disks, but they didn't
+            # match the disk list and just got an empty list of matching disks.
+            ret.update({host_name: 'No new VSAN-eligible disks were found to add.'})
 
     return ret
 
@@ -2106,3 +2143,58 @@ def _get_service_manager(host_reference):
     Helper function that returns a service manager object from a given host object.
     '''
     return host_reference.configManager.serviceSystem
+
+
+def _get_vsan_eligible_disks(service_instance, host, host_names):
+    '''
+    Helper function that returns a dictionary of host_name keys with either a list of eligible
+    disks that can be added to VSAN or either and 'Error' message or a message saying no
+    eligible disks were found. Possible keys/values look like so:
+
+    return = {'host_1': {'Error': 'VSAN System Config Manager is unset ...'},
+              'host_2': {'Eligible': 'The host xxx does not have any VSAN eligible disks.'},
+              'host_3': {'Eligible': [disk1, disk2, disk3, disk4],
+              'host_4': {'Eligible': []}}
+    '''
+    ret = {}
+    for host_name in host_names:
+
+        # Get VSAN System Config Manager, if available.
+        host_ref = _get_host_ref(service_instance, host, host_name=host_name)
+        vsan_system = host_ref.configManager.vsanSystem
+        if vsan_system is None:
+            msg = 'VSAN System Config Manager is unset for host \'{0}\'. ' \
+                  'VSAN configuration cannot be changed without a configured ' \
+                  'VSAN System.'.format(host_name)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
+            continue
+
+        # Get all VSAN suitable disks for this host.
+        suitable_disks = []
+        query = vsan_system.QueryDisksForVsan()
+        for item in query:
+            if item.state == 'eligible':
+                suitable_disks.append(item)
+
+        # No suitable disks were found to add. Warn and move on.
+        # This isn't an error as the state may run repeatedly after all eligible disks are added.
+        if not suitable_disks:
+            msg = 'The host \'{0}\' does not have any VSAN eligible disks.'.format(host_name)
+            log.warning(msg)
+            ret.update({host_name: {'Eligible': msg}})
+            continue
+
+        # Get disks for host and combine into one list of Disk Objects
+        disks = _get_host_ssds(host_ref) + _get_host_non_ssds(host_ref)
+
+        # Get disks that are in both the disks list and suitable_disks lists.
+        matching = []
+        for disk in disks:
+            for suitable_disk in suitable_disks:
+                if disk.canonicalName == suitable_disk.disk.canonicalName:
+                    matching.append(disk)
+
+        ret.update({host_name: {'Eligible': matching}})
+
+    return ret
