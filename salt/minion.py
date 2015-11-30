@@ -38,9 +38,11 @@ try:
     # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
     if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
         zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
+    LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
     HAS_ZMQ = True
 except ImportError:
-    # Running in local, zmq not needed
+    import tornado.ioloop
+    LOOP_CLASS = tornado.ioloop.IOLoop
     HAS_ZMQ = False
 
 HAS_RANGE = False
@@ -619,8 +621,9 @@ class MultiMinion(MinionBase):
         self.auth_wait = self.opts['acceptance_wait_time']
         self.max_auth_wait = self.opts['acceptance_wait_time_max']
 
-        zmq.eventloop.ioloop.install()
-        self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        if HAS_ZMQ:
+            zmq.eventloop.ioloop.install()
+        self.io_loop = LOOP_CLASS()
 
     def _spawn_minions(self):
         '''
@@ -699,8 +702,9 @@ class Minion(MinionBase):
         self.loaded_base_name = loaded_base_name
 
         if io_loop is None:
-            zmq.eventloop.ioloop.install()
-            self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+            if HAS_ZMQ:
+                zmq.eventloop.ioloop.install()
+            self.io_loop = LOOP_CLASS()
         else:
             self.io_loop = io_loop
 
@@ -908,7 +912,7 @@ class Minion(MinionBase):
                         salt.utils.event.TAGEND,
                         serialized_data,
                 )
-                self.event_publisher.handle_publish([event])
+                self.event_publisher.handle_publish(event, None)
 
     def _load_modules(self, force_refresh=False, notify=False, proxy=None):
         '''
@@ -1956,7 +1960,8 @@ class Syndic(Minion):
             self.sync_connect_master()
 
         # Instantiate the local client
-        self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
+        self.local = salt.client.get_local_client(
+            self.opts['_minion_conf_file'], io_loop=self.io_loop)
         self.local.event.subscribe('')
         self.local.opts['interface'] = self._syndic_interface
 
@@ -1965,8 +1970,7 @@ class Syndic(Minion):
 
         # register the event sub to the poller
         self._reset_event_aggregation()
-        self.local_event_stream = zmq.eventloop.zmqstream.ZMQStream(self.local.event.sub, io_loop=self.io_loop)
-        self.local_event_stream.on_recv(self._process_event)
+        self.local.event.set_event_handler(self._process_event)
 
         # forward events every syndic_event_forward_timeout
         self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
@@ -1991,7 +1995,8 @@ class Syndic(Minion):
         the tune_in sequence
         '''
         # Instantiate the local client
-        self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
+        self.local = salt.client.get_local_client(
+                self.opts['_minion_conf_file'], io_loop=self.io_loop)
 
         # add handler to subscriber
         self.pub_channel.on_recv(self._process_cmd_socket)
@@ -2007,7 +2012,6 @@ class Syndic(Minion):
 
     def _process_event(self, raw):
         # TODO: cleanup: Move down into event class
-        raw = raw[0]
         mtag, data = self.local.event.unpack(raw, self.local.event.serial)
         event = {'data': data, 'tag': mtag}
         log.trace('Got event {0}'.format(event['tag']))  # pylint: disable=no-member
@@ -2218,15 +2222,15 @@ class MultiSyndic(MinionBase):
         '''
         self._spawn_syndics()
         # Instantiate the local client
-        self.local = salt.client.get_local_client(self.opts['_minion_conf_file'])
+        self.local = salt.client.get_local_client(
+            self.opts['_minion_conf_file'], io_loop=self.io_loop)
         self.local.event.subscribe('')
 
         log.debug('MultiSyndic \'{0}\' trying to tune in'.format(self.opts['id']))
 
         # register the event sub to the poller
         self._reset_event_aggregation()
-        self.local_event_stream = zmq.eventloop.zmqstream.ZMQStream(self.local.event.sub, io_loop=self.io_loop)
-        self.local_event_stream.on_recv(self._process_event)
+        self.local.event.set_event_handler(self._process_event)
 
         # forward events every syndic_event_forward_timeout
         self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
@@ -2241,7 +2245,6 @@ class MultiSyndic(MinionBase):
 
     def _process_event(self, raw):
         # TODO: cleanup: Move down into event class
-        raw = raw[0]
         mtag, data = self.local.event.unpack(raw, self.local.event.serial)
         event = {'data': data, 'tag': mtag}
         log.trace('Got event {0}'.format(event['tag']))  # pylint: disable=no-member

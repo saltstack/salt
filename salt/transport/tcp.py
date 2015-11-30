@@ -297,6 +297,10 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
 
         @tornado.gen.coroutine
         def wrap_callback(body):
+            if not isinstance(body, dict):
+                # TODO: For some reason we need to decode here for things
+                #       to work. Fix this.
+                body = msgpack.loads(body)
             ret = yield self._decode_payload(body)
             callback(ret)
         return self.message_client.on_recv(wrap_callback)
