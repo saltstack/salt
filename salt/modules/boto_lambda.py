@@ -99,7 +99,7 @@ try:
     import boto
     import boto3
     #pylint: enable=unused-import
-    from boto.exception import BotoServerError
+    from botocore.exceptions import ClientError
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     HAS_BOTO = True
@@ -134,77 +134,23 @@ def __init__(opts):
         __utils__['boto3.assign_funcs'](__name__, 'lambda')
 
 
-def _find_lambda(lambda_id=None, lambda_name=None, 
+def _find_lambda(name,
                region=None, key=None, keyid=None, profile=None):
 
     '''
-    Given Lambda function properties, find and return matching Lambda information.
+    Given Lambda function name, find and return matching Lambda information.
     '''
-
-    if all((lambda_id, lambda_name)):
-        raise SaltInvocationError('Only one of lambda_name or lambda_id may be '
-                                  'provided.')
-
-    if not any((lambda_id, lambda_name)):
-        raise SaltInvocationError('At least one of the following must be '
-                                  'provided: lambda_id or lambda_name.')
-
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     lambdas = conn.list_functions()
 
-    found=False
-
-    if lambda_id:
-	for lmbda in lambdas['Functions']:
-            if lmbda['FunctionArn'] == lambda_id:
-                found=True
-                break
-
-    if lambda_name:
-	for lmbda in lambdas['Functions']:
-            if lmbda['FunctionName'] == lambda_name:
-                found=True
-                break
-    if found:
-       return lmbda
+    for lmbda in lambdas['Functions']:
+        if lmbda['FunctionName'] == name:
+            return lmbda
     return None
 
-def _get_id(lambda_name=None, region=None, key=None,
-            keyid=None, profile=None):
-    '''
-    Given Lambda function name, return the Lambda function id if a match is found.
-    '''
 
-    lambda_id = _cache_id(lambda_name, region=region,
-                       key=key, keyid=keyid,
-                       profile=profile)
-    if lambda_id:
-        return lambda_id
-    log.info('No Lambda function found.')
-    return None
-
-def get_id(name=None, region=None, key=None, keyid=None,
-           profile=None):
-    '''
-    Given Lambda function name, return the Lambda id if a match is found.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_lambda.get_id mylambda
-
-    '''
-
-    try:
-        return {'id': _get_id(lambda_name=name, region=region,
-                              key=key, keyid=keyid, profile=profile)}
-    except BotoServerError as e:
-        return {'error': salt.utils.boto.get_error(e)}
-
-
-def exists(lambda_id=None, name=None, region=None, key=None,
+def exists(name, region=None, key=None,
            keyid=None, profile=None):
     '''
     Given a Lambda function ID, check to see if the given Lambda function ID exists.
@@ -221,103 +167,96 @@ def exists(lambda_id=None, name=None, region=None, key=None,
     '''
 
     try:
-        lmbda = _find_lambda(lambda_id=lambda_id, lambda_name=name,
+        lmbda = _find_lambda(name,
                              region=region, key=key, keyid=keyid, profile=profile)
         return {'exists': bool(lmbda)}
-    except BotoServerError as e:
+    except ClientError as e:
         return {'error': salt.utils.boto.get_error(e)}
 
 
-def create(cidr_block, instance_tenancy=None, lambda_name=None,
-           enable_dns_support=None, enable_dns_hostnames=None, tags=None,
-           region=None, key=None, keyid=None, profile=None):
+def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
+    if name.startswith('arn:aws:iam:'):
+        return name
+
+    account_id = __salt__['boto_iam.get_account_id'](
+        region=region, key=key, keyid=keyid, profile=profile
+    )
+    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
+
+
+def create(name, runtime, role, handler, zipfile=None, s3bucket=None, s3key=None, s3objectversion=None,
+            description="", timeout=3, memorysize=128, publish=False,
+            region=None, key=None, keyid=None, profile=None):
     '''
-    Given a valid CIDR block, create a VPC.
+    Given a valid config, create a Lambda function.
 
-    An optional instance_tenancy argument can be provided. If provided, the
-    valid values are 'default' or 'dedicated'
-
-    An optional vpc_name argument can be provided.
-
-    Returns {created: true} if the VPC was created and returns
-    {created: False} if the VPC was not created.
+    Returns {created: true} if the Lambda function was created and returns
+    {created: False} if the Lambda function was not created.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.create '10.0.0.0/24'
+        salt myminion boto_lamba.create my_lambda python2.7 my_file.my_function my_lambda.zip
 
     '''
 
+    role_arn = _get_role_arn(role, region, key, keyid, profile)
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        vpc = conn.create_vpc(cidr_block, instance_tenancy=instance_tenancy)
-        if vpc:
-            log.info('The newly created VPC id is {0}'.format(vpc.id))
-
-            _maybe_set_name_tag(vpc_name, vpc)
-            _maybe_set_tags(tags, vpc)
-            _maybe_set_dns(conn, vpc.id, enable_dns_support, enable_dns_hostnames)
-            if vpc_name:
-                _cache_id(vpc_name, vpc.id,
-                          region=region, key=key,
-                          keyid=keyid, profile=profile)
-            return {'created': True, 'id': vpc.id}
+        if zipfile:
+            if s3bucket or s3key or s3objectversion:
+                raise SaltInvocationError('Either zipfile must be specified, or '
+                                's3bucket, and s3key must be provided.')
+            with open(zipfile, 'rb') as f:
+               zipdata = f.read()
+            code = {
+               'ZipFile': zipdata,
+            }
         else:
-            log.warning('VPC was not created')
+            code = {
+               'S3Bucket': s3bucket,
+               'S3Key': s3key,
+            }
+            if s3objectversion:
+                code['S3ObjectVersion']= s3objectversion
+        lmbda = conn.create_function(FunctionName=name, Runtime=runtime, Role=role_arn, Handler=handler, 
+                                   Code=code, Description=description, Timeout=timeout, MemorySize=memorysize, 
+                                   Publish=publish)
+        if lmbda:
+            log.info('The newly created Lambda function name is {0}'.format(lmbda['FunctionName']))
+
+            return {'created': True, 'name': lmbda['FunctionName']}
+        else:
+            log.warning('Lambda function was not created')
             return {'created': False}
-    except BotoServerError as e:
+    except ClientError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def delete(vpc_id=None, name=None, vpc_name=None, tags=None,
-           region=None, key=None, keyid=None, profile=None):
+def delete(name, version=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Given a VPC ID or VPC name, delete the VPC.
+    Given a Lambda function name and optional version, delete it.
 
-    Returns {deleted: true} if the VPC was deleted and returns
-    {deleted: false} if the VPC was not deleted.
+    Returns {deleted: true} if the Lambda function was deleted and returns
+    {deleted: false} if the Lambda function was not deleted.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_vpc.delete vpc_id='vpc-6b1fe402'
-        salt myminion boto_vpc.delete name='myvpc'
+        salt myminion boto_lambda.delete myfunction
 
     '''
 
-    if name:
-        log.warning('boto_vpc.delete: name parameter is deprecated '
-                    'use vpc_name instead.')
-        vpc_name = name
-
-    if not _exactly_one((vpc_name, vpc_id)):
-        raise SaltInvocationError('One (but not both) of vpc_name or vpc_id must be '
-                                  'provided.')
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if not vpc_id:
-            vpc_id = _get_id(vpc_name=vpc_name, tags=tags, region=region, key=key,
-                             keyid=keyid, profile=profile)
-            if not vpc_id:
-                return {'deleted': False, 'error': {'message':
-                        'VPC {0} not found'.format(vpc_name)}}
-
-        if conn.delete_vpc(vpc_id):
-            log.info('VPC {0} was deleted.'.format(vpc_id))
-            if vpc_name:
-                _cache_id(vpc_name, resource_id=vpc_id,
-                          invalidate=True,
-                          region=region,
-                          key=key, keyid=keyid,
-                          profile=profile)
-            return {'deleted': True}
+        if version:
+           conn.delete_function(FunctionName=name, Qualifier=version)
         else:
-            log.warning('VPC {0} was not deleted.'.format(vpc_id))
-            return {'deleted': False}
-    except BotoServerError as e:
+           conn.delete_function(FunctionName=name)
+        return {'deleted': True}
+    except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
 
 
@@ -363,5 +302,5 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
         else:
             return {'vpc': None}
 
-    except BotoServerError as e:
+    except ClientError as e:
         return {'error': salt.utils.boto.get_error(e)}
