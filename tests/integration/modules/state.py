@@ -866,6 +866,9 @@ class StateModuleTest(integration.ModuleCase,
         #    ret,
         #    ['A recursive requisite was found, SLS "requisites.prereq_recursion_error" ID "B" ID "A"']
         #)
+    def test_infinite_recursion_sls_prereq(self):
+        ret = self.run_function('state.sls', mods='requisites.prereq_sls_infinite_recursion')
+        self.assertSaltTrueReturn(ret)
 
     def test_requisites_use(self):
         '''
