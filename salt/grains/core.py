@@ -974,6 +974,7 @@ _OS_FAMILY_MAP = {
     'Mandrake': 'Mandriva',
     'ESXi': 'VMWare',
     'Mint': 'Debian',
+    'Devuan': 'Debian',
     'VMWareESX': 'VMWare',
     'Bluewhite64': 'Bluewhite',
     'Slamd64': 'Slackware',
