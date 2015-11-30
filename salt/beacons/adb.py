@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
 Beacon to emit adb device state changes for Android devices
+
+.. versionadded:: Boron
 '''
 
 # Import Python libs
