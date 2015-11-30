@@ -221,7 +221,11 @@ class SPMClient(object):
                     digest = ''
                 else:
                     file_hash = hashlib.sha1()
-                    digest = self.pkgfiles['{0}.hash_file'.format(self.files_prov)](out_path, file_hash, self.files_conn)
+                    digest = self.pkgfiles['{0}.hash_file'.format(self.files_prov)](
+                        os.path.join(out_path, member.name),
+                        file_hash,
+                        self.files_conn
+                    )
                 self.pkgdb['{0}.register_file'.format(self.db_prov)](
                     name,
                     member,
