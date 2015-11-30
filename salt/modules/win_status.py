@@ -217,8 +217,11 @@ def uptime(human_readable=False):
     # Get string
     startup_time = stats_line[len('Statistics Since '):]
     # Convert to struct
-    startup_time = time.strptime(startup_time, '%d/%m/%Y %H:%M:%S')
-    # eonvert to seconds since epoch
+    try:
+        startup_time = time.strptime(startup_time, '%d/%m/%Y %H:%M:%S')
+    except ValueError:
+        startup_time = time.strptime(startup_time, '%d/%m/%Y %I:%M:%S %p')
+    # Convert to seconds since epoch
     startup_time = time.mktime(startup_time)
 
     # Subtract startup time from current time to get the uptime of the system
