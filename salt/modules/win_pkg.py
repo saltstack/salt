@@ -448,7 +448,13 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
 
         if version_num in [old.get(pkg_name) for x in pkginfo]:
             # Desired version number already installed
-            continue
+            log.info('Version {0} is already installed for '
+                     'package {1}'.format(version_num, pkg_name))
+            return {
+                pkg_name: {
+                    'old': '{0} already installed'.format(version_num)
+                }
+            }
         elif version_num not in pkginfo:
             log.error('Version {0} not found for package '
                       '{1}'.format(version_num, pkg_name))
