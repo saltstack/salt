@@ -7,7 +7,7 @@ An engine that sends events to the Logentries logging service.
 :depends:     ssl, certifi
 :platform:    all
 
-.. versionadded: 2015.8.1
+.. versionadded: Boron
 
 To enable this engine the master and/or minion will need the following
 python libraries
@@ -128,7 +128,7 @@ class PlainTextSocketAppender(object):
                 return
             except Exception:
                 if self.verbose:
-                    log.warning("Unable to connect to Logentries")
+                    log.warning('Unable to connect to Logentries')
 
             root_delay *= 2
             if root_delay > self.MAX_DELAY:
@@ -198,7 +198,7 @@ def _get_appender(endpoint='data.logentries.com', port=10000):
 
 
 def _emit(token, msg):
-    return "{0} {1}".format(token, msg)
+    return '{0} {1}'.format(token, msg)
 
 
 def start(endpoint='data.logentries.com',
@@ -225,7 +225,7 @@ def start(endpoint='data.logentries.com',
     try:
         val = uuid.UUID(token)
     except ValueError:
-        log.warning('Not a valid token'.format(token))
+        log.warning('Not a valid logentries token')
 
     appender = _get_appender(endpoint, port)
     appender.reopen_connection()
@@ -233,7 +233,7 @@ def start(endpoint='data.logentries.com',
     while True:
         event = event_bus.get_event()
         if event:
-            msg = "{0} {1}".format(tag, json.dumps(event))
+            msg = '{0} {1}'.format(tag, json.dumps(event))
             appender.put(_emit(token, msg))
 
     appender.close_connection()
