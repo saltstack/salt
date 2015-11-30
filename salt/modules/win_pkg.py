@@ -446,7 +446,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
 
         version_num = options and options.get('version') or _get_latest_pkg_version(pkginfo)
 
-        if version_num in [old.get(pkginfo[x]['full_name']) for x in pkginfo]:
+        if version_num in [old.get(pkg_name) for x in pkginfo]:
             # Desired version number already installed
             continue
         elif version_num not in pkginfo:
