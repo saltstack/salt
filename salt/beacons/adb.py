@@ -92,7 +92,7 @@ def beacon(config):
 
             if "battery_low" in config:
                 val = last_state.get(device, {})
-                cmd = "adb -s {} shell cat /sys/class/power_supply/*/capacity".format(device)
+                cmd = "adb -s {0} shell cat /sys/class/power_supply/*/capacity".format(device)
                 battery_levels = __salt__['cmd.run'](cmd, runas=config.get("user", None)).split("\n")
 
                 for l in battery_levels:
@@ -115,7 +115,7 @@ def beacon(config):
     for device in last_state_devices:
         if device not in found_devices:
             if "missing" in config["states"]:
-                ret.append({"device": device,  "state": "missing", "tag": "missing"})
+                ret.append({"device": device, "state": "missing", "tag": "missing"})
 
             del last_state[device]
 
