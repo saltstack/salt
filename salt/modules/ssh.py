@@ -919,7 +919,7 @@ def set_known_host(user=None,
     if key:
         remote_host = {'hostname': hostname, 'enc': enc, 'key': key}
 
-    if hash_known_hosts or port == DEFAULT_SSH_PORT:
+    if hash_known_hosts or port == DEFAULT_SSH_PORT or ':' in remote_host['hostname']:
         line = '{hostname} {enc} {key}\n'.format(**remote_host)
     else:
         remote_host['port'] = port
