@@ -1172,14 +1172,16 @@ def _policies_present(
                 msg.append('Policy {0} added.'.format(policy))
             for policy in to_delete:
                 msg.append('Policy {0} deleted.'.format(policy))
-            for listener in listeners_to_update:
-                msg.append('Listener {0} policies updated.'.format(listener))
-            for backend in backends_to_update:
-                msg.append('Backend {0} policies updated.'.format(backend))
+            ret['result'] = None
         else:
             msg.append('Policies already set on ELB {0}.'.format(name))
+        for listener in listeners_to_update:
+            msg.append('Listener {0} policies updated.'.format(listener))
+            ret['result'] = None
+        for backend in backends_to_update:
+            msg.append('Backend {0} policies updated.'.format(backend))
+            ret['result'] = None
         ret['comment'] = ' '.join(msg)
-        ret['result'] = None
         return ret
 
     if to_create:
