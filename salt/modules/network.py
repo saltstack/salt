@@ -530,7 +530,7 @@ def active_tcp():
     '''
     Return a dict containing information on all of the running TCP connections (currently linux and solaris only)
 
-    .. versionchanged:: Boron
+    .. versionchanged:: 2015.8.4
 
         Added support for SunOS
 
