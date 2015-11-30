@@ -25,7 +25,7 @@ class ADBBeaconTestCase(TestCase):
     '''
     def setUp(self):
         adb.last_state = {}
-        adb.last_state_no_devices = False
+        adb.last_state_extra = {'no_devices': False}
 
     def test_no_adb_command(self):
         with patch('salt.utils.which') as mock:
