@@ -43,6 +43,7 @@ To test this engine
 from __future__ import absolute_import
 # Import Salt libs
 import salt.utils.event
+from salt.ext import six
 
 # Import third party libs
 try:
@@ -60,12 +61,10 @@ except ImportError:  # for systems without TLS support.
     HAS_SSL = False
 
 # Import Python libs
-import os
 import socket
 import random
 import time
 import codecs
-import ConfigParser
 import uuid
 import logging
 import json
@@ -87,11 +86,11 @@ def _to_unicode(ch):
 
 
 def _is_unicode(ch):
-    return isinstance(ch, unicode)
+    return isinstance(ch, six.text_type)
 
 
 def _create_unicode(ch):
-    return unicode(ch, 'utf-8')
+    return six.text_type(ch, 'utf-8')
 
 
 class PlainTextSocketAppender(object):
@@ -110,7 +109,7 @@ class PlainTextSocketAppender(object):
         self.INVALID_TOKEN = ("\n\nIt appears the LOGENTRIES_TOKEN "
                               "parameter you entered is incorrect!\n\n")
         # Unicode Line separator character   \u2028
-        self.LINE_SEP = _to_unicode('\u2028')
+        self.LINE_SEP = _to_unicode(r'\u2028')
 
         self.verbose = verbose
         self._conn = None
@@ -132,7 +131,7 @@ class PlainTextSocketAppender(object):
                     log.warning("Unable to connect to Logentries")
 
             root_delay *= 2
-            if (root_delay > self.MAX_DELAY):
+            if root_delay > self.MAX_DELAY:
                 root_delay = self.MAX_DELAY
 
             wait_for = root_delay + random.uniform(0, root_delay)
@@ -199,7 +198,7 @@ def _get_appender(endpoint='data.logentries.com', port=10000):
 
 
 def _emit(token, msg):
-    return "{} {}".format(token, msg)
+    return "{0} {1}".format(token, msg)
 
 
 def start(endpoint='data.logentries.com',
@@ -223,13 +222,18 @@ def start(endpoint='data.logentries.com',
             listen=True)
     log.debug('Logentries engine started')
 
+    try:
+        val = uuid.UUID(token)
+    except ValueError:
+        log.warning('Not a valid token'.format(token))
+
     appender = _get_appender(endpoint, port)
     appender.reopen_connection()
 
     while True:
         event = event_bus.get_event()
         if event:
-            msg = "{} {}".format(tag, json.dumps(event))
+            msg = "{0} {1}".format(tag, json.dumps(event))
             appender.put(_emit(token, msg))
 
     appender.close_connection()
