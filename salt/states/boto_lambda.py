@@ -41,13 +41,12 @@ config:
         boto_lmabda.present:
             - name: myfunction
             - runtime: python2.7
-            - role_name: iam_role_name
+            - role: iam_role_name
             - handler: entry_function
-            - code:
-              zipfile: code.zip
-              s3bucket: bucketname
-              s3key: keyname
-              s3objectversion: version
+            - zipfile: code.zip
+            - s3bucket: bucketname
+            - s3key: keyname
+            - s3objectversion: version
             - description: "My Lambda Function"
             - timeout: 3
             - memorysize: 128
