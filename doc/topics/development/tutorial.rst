@@ -33,7 +33,7 @@ codebase and submit the following command:
 
 .. code-block:: shell
 
-  $ git clone https://github.com/<my_account>.git
+  $ git clone https://github.com/<my_account>/salt.git
 
 where ``<my_account>`` is the name of your GitHub account.  After the clone has
 completed, add SaltStack as a second remote and fetch any changes from
