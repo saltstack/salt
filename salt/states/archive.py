@@ -23,7 +23,7 @@ from salt.utils import warn_until
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'archive2'
+__virtualname__ = 'archive'
 
 
 def __virtual__():
