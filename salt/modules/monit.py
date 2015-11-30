@@ -8,6 +8,8 @@ from __future__ import absolute_import
 # Import salt libs
 import salt.utils
 
+import re
+
 
 def __virtual__():
     if salt.utils.which('monit') is not None:
@@ -149,3 +151,105 @@ def status(svc_name=''):
     else:
         ret = entries.get(svc_name, 'No such service')
     return ret
+
+
+def reload():
+    '''
+    .. versionadded:: Boron
+
+    Reload monit configuration
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' monit.reload
+    '''
+    cmd = 'monit reload'
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
+
+
+def configtest():
+    '''
+    .. versionadded:: Boron
+
+    Test monit configuration syntax
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' monit.configtest
+    '''
+    ret = {}
+    cmd = 'monit -t'
+    out = __salt__['cmd.run_all'](cmd)
+
+    if out['retcode'] != 0:
+        ret['comment'] = 'Syntax Error'
+        ret['stderr'] = out['stderr']
+        ret['result'] = False
+        return ret
+
+    ret['comment'] = 'Syntax OK'
+    ret['stdout'] = out['stdout']
+    ret['result'] = True
+    return ret
+
+
+def version():
+    '''
+    .. versionadded:: Boron
+
+    Return version from monit -V
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' monit.version
+    '''
+    cmd = 'monit -V'
+    out = __salt__['cmd.run'](cmd).splitlines()
+    ret = out[0].split()
+    return ret[-1]
+
+
+def id(**kwargs):
+    '''
+    .. versionadded:: Boron
+
+    Return monit unique id. When called with reset=True, generate new id.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' monit.id [reset=True]
+    '''
+    if kwargs.get('reset'):
+        id_pattern = re.compile(r'Monit id (?P<id>[^ ]+)')
+        cmd = 'echo y|monit -r'
+        out = __salt__['cmd.run_all'](cmd, python_shell=True)
+        ret = id_pattern.search(out['stdout']).group('id')
+        return ret if ret else False
+    else:
+        cmd = 'monit -i'
+        out = __salt__['cmd.run'](cmd)
+        ret = out.split(':')[-1].strip()
+    return ret
+
+def validate():
+    '''
+    .. versionadded:: Boron
+
+    Check all services
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' monit.validate
+    '''
+    cmd = 'monit validate'
+    return not __salt__['cmd.retcode'](cmd, python_shell=False)
