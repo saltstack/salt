@@ -1836,7 +1836,7 @@ class SaltCMDOptionParser(six.with_metaclass(OptionParserMeta,
             dest='batch_wait',
             type=float,
             help=('Wait the specified time in seconds after each job is done '
-                  'before free the slot in the batch for the next one')
+                  'before freeing the slot in the batch for the next one')
         )
         self.add_option(
             '-a', '--auth', '--eauth', '--external-auth',
