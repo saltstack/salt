@@ -2382,7 +2382,7 @@ class GitPillar(GitBase):
                 if repo.env:
                     env = repo.env
                 else:
-                    base_branch = self.opts['{0}_base'.format(self.role)]
+                    base_branch = getattr(self, 'base', self.opts['{0}_base'.format(self.role)])
                     env = 'base' if repo.branch == base_branch else repo.branch
                 self.pillar_dirs[cachedir] = env
 
