@@ -531,6 +531,7 @@ def active_tcp():
     Return a dict containing information on all of the running TCP connections (currently linux and solaris only)
 
     .. versionchanged:: Boron
+
         Added support for SunOS
 
     CLI Example:
@@ -1186,7 +1187,7 @@ def get_bufsize(iface):
 
     .. code-block:: bash
 
-        salt '*' network.ge_tbufsize
+        salt '*' network.get_bufsize
     '''
     if __grains__['kernel'] == 'Linux':
         if os.path.exists('/sbin/ethtool'):
