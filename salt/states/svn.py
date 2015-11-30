@@ -3,7 +3,7 @@
 Manage SVN repositories
 =======================
 
-Manage repository checkouts via the svn vcs system. Note that subversion must 
+Manage repository checkouts via the svn vcs system. Note that subversion must
 be installed for these states to be available, so svn states should include a
 requisite to a pkg.installed state for the package which provides subversion
 (``subversion`` in most cases). Example:
