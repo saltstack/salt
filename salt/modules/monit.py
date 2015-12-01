@@ -215,11 +215,14 @@ def version():
     return ret[-1]
 
 
-def id(**kwargs):
+def id(reset=False):
     '''
     .. versionadded:: Boron
 
-    Return monit unique id. When called with reset=True, generate new id.
+    Return monit unique id.
+
+    reset : False
+        Reset current id and generate a new id when it's True.
 
     CLI Example:
 
@@ -227,7 +230,7 @@ def id(**kwargs):
 
         salt '*' monit.id [reset=True]
     '''
-    if kwargs.get('reset'):
+    if reset:
         id_pattern = re.compile(r'Monit id (?P<id>[^ ]+)')
         cmd = 'echo y|monit -r'
         out = __salt__['cmd.run_all'](cmd, python_shell=True)
