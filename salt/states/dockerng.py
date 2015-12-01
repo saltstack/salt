@@ -1969,7 +1969,7 @@ def network_present(name, driver=None, containers=None):
     Ensure that a network is present.
 
     name
-        Name of the netwotk
+        Name of the network
 
     driver
         Type of driver for that network.
@@ -2045,7 +2045,7 @@ def network_absent(name, driver=None):
     Ensure that a network is absent.
 
     name
-        Name of the netwotk
+        Name of the network
 
     Usage Examples:
 
