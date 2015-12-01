@@ -77,6 +77,7 @@ import salt.client
 import salt.crypt
 import salt.loader
 import salt.beacons
+import salt.engines
 import salt.payload
 import salt.syspaths
 import salt.utils
@@ -98,7 +99,9 @@ from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.executors import FUNCTION_EXECUTORS
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
-from salt.utils.process import default_signals, SignalHandlingMultiprocessingProcess
+from salt.utils.process import (default_signals,
+                                SignalHandlingMultiprocessingProcess,
+                                ProcessManager)
 from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
@@ -723,6 +726,29 @@ class Minion(MinionBase):
         # before we can get the grains.
         if not salt.utils.is_proxy():
             self.opts['grains'] = salt.loader.grains(opts)
+
+        log.info('Creating minion process manager')
+        self.process_manager = ProcessManager(name='MinionProcessManager')
+        self.io_loop.spawn_callback(self.process_manager.run, async=True)
+        self.io_loop.spawn_callback(salt.engines.start_engines, self.opts, self.process_manager)
+
+        # Install the SIGINT/SIGTERM handlers if not done so far
+        if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
+            # No custom signal handling was added, install our own
+            signal.signal(signal.SIGINT, self._handle_signals)
+
+        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
+            # No custom signal handling was added, install our own
+            signal.signal(signal.SIGINT, self._handle_signals)
+
+    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+        self._running = False
+        # escalate the signals to the process manager
+        self.process_manager.stop_restarting()
+        self.process_manager.send_signal_to_processes(signum)
+        # kill any remaining processes
+        self.process_manager.kill_children()
+        exit(0)
 
     def sync_connect_master(self, timeout=None):
         '''
@@ -1527,14 +1553,6 @@ class Minion(MinionBase):
         import salt.modules.environ as mod_environ
         return mod_environ.setenv(environ, false_unsets, clear_all)
 
-    def clean_die(self, signum, frame):
-        '''
-        Python does not handle the SIGTERM cleanly, if it is signaled exit
-        the minion process cleanly
-        '''
-        self._running = False
-        exit(0)
-
     def _pre_tune(self):
         '''
         Set the minion running flag and issue the appropriate warnings if
@@ -1712,11 +1730,6 @@ class Minion(MinionBase):
         :rtype : None
         '''
         self._pre_tune()
-
-        # Properly exit if a SIGTERM is signalled
-        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
-            # No SIGTERM installed, install ours
-            signal.signal(signal.SIGTERM, self.clean_die)
 
         # start up the event publisher, so we can see events during startup
         self.event_publisher = salt.utils.event.AsyncEventPublisher(
@@ -1936,10 +1949,6 @@ class Syndic(Minion):
         '''
         Lock onto the publisher. This is the main event loop for the syndic
         '''
-        # Properly exit if a SIGTERM is signalled
-        if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
-            # No SIGTERM installed, install ours
-            signal.signal(signal.SIGTERM, self.clean_die)
         log.debug('Syndic \'{0}\' trying to tune in'.format(self.opts['id']))
 
         if start:
