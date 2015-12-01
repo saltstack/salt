@@ -5,13 +5,16 @@ service watcher.
 '''
 from __future__ import absolute_import
 
+# Import python libs
+import re
+
 # Import salt libs
 import salt.utils
 
-import re
-
+# Function alias to make sure not to shadow built-in's
 __func_alias__ = {
     'id_': 'id',
+    'reload_': 'reload',
 }
 
 
@@ -157,7 +160,7 @@ def status(svc_name=''):
     return ret
 
 
-def reload():
+def reload_():
     '''
     .. versionadded:: Boron
 
@@ -245,6 +248,7 @@ def id_(reset=False):
         out = __salt__['cmd.run'](cmd)
         ret = out.split(':')[-1].strip()
     return ret
+
 
 def validate():
     '''
