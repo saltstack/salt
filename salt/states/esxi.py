@@ -8,6 +8,11 @@ Manage VMware ESXi Hosts.
 from __future__ import absolute_import
 import logging
 
+# Import Salt Libs
+import salt.utils
+import salt.ext.six as six
+from salt.exceptions import CommandExecutionError
+
 # Get Logging Started
 log = logging.getLogger(__name__)
 
@@ -16,10 +21,182 @@ def __virtual__():
     return 'esxi.cmd' in __salt__
 
 
+def coredump_configured(name, enabled, dump_ip, host_vnic='vmk0', dump_port=6500):
+    '''
+    Ensures a host's core dump configuration.
+
+    name
+        Name of the state.
+
+    enabled
+        Sets whether or not ESXi core dump collection should be enabled.
+        This is a boolean value set to ``True`` or ``False`` to enable
+        or disable core dumps.
+
+        Note that ESXi requires that the core dump must be enabled before
+        any other parameters may be set.
+
+    dump_ip
+        The IP address of host that will accept the dump.
+
+    host_vnic
+        Host VNic port through which to communicate. Defaults to ``vmk0``.
+
+    dump_port
+        TCP port to use for the dump. Defaults to ``6500``.
+
+    Example:
+
+    .. code-block:: yaml
+
+        configure-host-coredump:
+          esxi.coredump_configured:
+            - enabled: True
+            - dump_ip: 'my-coredump-ip.example.com`
+
+    '''
+    ret = {'name': name,
+           'result': False,
+           'changes': {},
+           'comment': ''}
+    esxi_cmd = 'esxi.cmd'
+    enabled_msg = 'ESXi requires that the core dump must be enabled ' \
+                  'before any other parameters may be set.'
+
+    current_config = __salt__[esxi_cmd]('get_coredump_network_config')
+    if isinstance(current_config, six.string_types):
+        ret['comment'] = 'Error: {0}'.format(current_config)
+        return ret
+    elif ret.get('stderr'):
+        ret['comment'] = 'Error: {0}'.format(ret.get('stderr'))
+        return ret
+    else:
+        current_enabled = current_config.get('enabled')
+
+    if current_enabled != enabled:
+        ret['changes'].update({'enabled':
+                              {'old': current_enabled,
+                               'new': enabled}})
+        # Only run the command if not using test=True
+        if not __opts__['test']:
+            ret = __salt__[esxi_cmd]('coredump_network_enable')(enabled=enabled)
+            if ret['retcode'] != 0:
+                ret['comment'] = 'Error: {0}'.format(ret['stderr'])
+                return ret
+
+            # Allow users to disable core dump, but then return since
+            # nothing else can be set if core dump is disabled.
+            if not enabled:
+                ret['result'] = True
+                ret['comment'] = enabled_msg
+                return ret
+
+    elif not enabled:
+        # If current_enabled and enabled match, but are both False,
+        # We must return before configuring anything. This isn't a
+        # failure as core dump may be disabled intentionally.
+        ret['result'] = True
+        ret['comment'] = enabled_msg
+        return ret
+
+    changes = False
+    current_ip = current_config.get('ip')
+    if current_ip != dump_ip:
+        ret['changes'].update({'dump_ip':
+                              {'old': current_ip,
+                               'new': dump_ip}})
+        changes = True
+
+    current_vnic = current_config.get('host_vnic')
+    if current_vnic != host_vnic:
+        ret['changes'].update({'host_vnic':
+                              {'old': current_vnic,
+                               'new': host_vnic}})
+        changes = True
+
+    current_port = current_config.get('port')
+    if current_port != dump_port:
+        ret['changes'].update({'dump_port':
+                              {'old': current_port,
+                               'new': dump_port}})
+        changes = True
+
+    # Only run the command if not using test=True and changes were detected.
+    if not __opts__['test'] and changes is True:
+        ret = __salt__[esxi_cmd]('set_coredump_network_config')(dump_ip=dump_ip,
+                                                                host_vnic=host_vnic,
+                                                                dump_port=dump_port)
+        if ret.get('success') is False:
+            ret['comment'] = 'Error {0}'.format(ret.get('stderr'))
+            return ret
+
+    ret['result'] = True
+    if ret['changes'] == {}:
+        ret['comment'] = 'Core Dump configuration is already in the desired state.'
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Core dump configuration will change.'
+
+    return ret
+
+
+def password_present(name, password):
+    '''
+    Ensures the given password is set on the ESXi host. Passwords cannot be obtained from
+    host, so if a password is set in this state, the ``vsphere.update_host_password``
+    function will always run (except when using test=True functionality) and the state's
+    changes dictionary will always be populated.
+
+    The username for which the password will change is the same username that is used to
+    authenticate against the ESXi host via the Proxy Minion. For example, if the pillar
+    definition for the proxy username is defined as ``root``, then the username that the
+    password will be updated for via this state is ``root``.
+
+    name
+        Name of the state.
+
+    password
+        The new password to change on the host.
+
+    Example:
+
+    .. code-block:: yaml
+
+        configure-host-password:
+          esxi.password_present:
+            - user: 'root'
+            - password: 'new-bad-password'
+    '''
+    ret = {'name': name,
+           'result': True,
+           'changes': {'old': 'unknown',
+                       'new': '********'},
+           'comment': 'Host password was updated.'}
+    esxi_cmd = 'esxi.cmd'
+    host = __pillar__['proxy']['host']
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Host password will change.'
+        return ret
+    else:
+        try:
+            __salt__[esxi_cmd]('update_host_password')(new_password=password).get(host)
+        except CommandExecutionError as err:
+            ret['result'] = False
+            ret['comment'] = 'Error: {0}'.format(err)
+            return ret
+
+    return ret
+
+
 def ntp_configured(name,
                    ntp_service,
                    ntp_servers=None,
                    ntp_service_policy=None,
+                   update_datetime=False,
                    ntp_service_restart=False):
     '''
     Ensures a host's NTP server configuration such as setting NTP servers, ensuring the
@@ -38,6 +215,11 @@ def ntp_configured(name,
 
     ntp_service_policy
         The policy to set for the NTP service.
+
+    update_datetime
+        If set to ``True``, the date/time on the given host will be updated to UTC.
+        Default setting is ``False``. This option should be used with caution since
+        network delays and execution delays can result in time skews.
 
     ntp_service_restart
         If set to ``True``, the ntp daemon will be restarted, regardless of its previous
@@ -63,7 +245,7 @@ def ntp_configured(name,
     host = __pillar__['proxy']['host']
 
     ntp_config = __salt__[esxi_cmd]('get_ntp_config').get(host)
-    ntp_running = __salt__[esxi_cmd]('get_service_running')(service_running='ntpd').get(host)
+    ntp_running = __salt__[esxi_cmd]('get_service_running')(service_name='ntpd').get(host)
     error = ntp_running.get('Error')
     if error:
         ret['comment'] = 'Error: {0}'.format(error)
@@ -125,6 +307,19 @@ def ntp_configured(name,
             ret['changes'].update({'ntp_service_policy':
                                   {'old': current_service_policy,
                                    'new': ntp_service_policy}})
+
+    # Update datetime, if requested.
+    if update_datetime:
+        # Only run the command if not using test=True
+        if not __opts__['test']:
+            response = __salt__[esxi_cmd]('update_host_datetime').get(host)
+            error = response.get('Error')
+            if error:
+                ret['comment'] = 'Error: {0}'.format(error)
+                return ret
+        ret['changes'].update({'update_datetime':
+                              {'old': '',
+                               'new': 'Host datetime was updated.'}})
 
     # Restart ntp_service if ntp_service_restart=True
     if ntp_service_restart:
@@ -300,25 +495,11 @@ def ssh_configured(name,
     esxi_cmd = 'esxi.cmd'
     host = __pillar__['proxy']['host']
 
-    ssh_running = __salt__[esxi_cmd]('get_service_running')(service_running='SSH').get(host)
+    ssh_running = __salt__[esxi_cmd]('get_service_running')(service_name='SSH').get(host)
     error = ssh_running.get('Error')
     if error:
         ret['comment'] = 'Error: {0}'.format(error)
         return ret
-
-    # If uploading an SSH key or SSH key file, see if there's a current
-    # SSH key and compare the current key to the key set in the state.
-    # TODO: Figure out how to compare keys properly
-    current_ssh_key, ssh_key_changed = None, None
-    if ssh_key or ssh_key_file:
-        current_ssh_key = __salt__[esxi_cmd]('get_ssh_key')(
-            certificate_verify=certificate_verify
-        ).get(host)
-        error = current_ssh_key.get('Error')
-        if error:
-            ret['comment'] = 'Error: {0}'.format(error)
-            return ret
-        current_ssh_key = current_ssh_key.get('key')
 
     # Configure SSH enabled state, if changed.
     if enabled != ssh_running:
@@ -342,6 +523,35 @@ def ssh_configured(name,
         ret['changes'].update({'SSH Enabled':
                               {'old': ssh_running,
                                'new': enabled}})
+
+    # If uploading an SSH key or SSH key file, see if there's a current
+    # SSH key and compare the current key to the key set in the state.
+    current_ssh_key, ssh_key_changed = None, False
+    if ssh_key or ssh_key_file:
+        current_ssh_key = __salt__[esxi_cmd]('get_ssh_key')(
+            certificate_verify=certificate_verify
+        ).get(host)
+        error = current_ssh_key.get('Error')
+        if error:
+            ret['comment'] = 'Error: {0}'.format(error)
+            return ret
+        current_ssh_key = current_ssh_key.get('key')
+        if current_ssh_key:
+            clean_current_key = _strip_key(current_ssh_key).split(' ')
+            if not ssh_key:
+                ssh_key = ''
+                # Open ssh key file and read in contents to create one key string
+                with salt.utils.fopen(ssh_key_file, 'r') as key_file:
+                    for line in key_file:
+                        if line.startswith('#'):
+                            # Commented line
+                            continue
+                        ssh_key = ssh_key + line
+
+            clean_ssh_key = _strip_key(ssh_key).split(' ')
+            # Check that the first two list items of clean key lists are equal.
+            if clean_current_key[0] != clean_ssh_key[0] or clean_current_key[1] != clean_ssh_key[1]:
+                ssh_key_changed = True
 
     # Upload SSH key, if changed.
     if ssh_key_changed:
@@ -381,3 +591,16 @@ def ssh_configured(name,
         ret['comment'] = 'SSH service state will change.'
 
     return ret
+
+
+def _strip_key(key_string):
+    '''
+    Strips an SSH key string of white space and line endings and returns the new string.
+
+    key_string
+        The string to be stripped.
+    '''
+    key_string.strip()
+    key_string.replace('\n', '')
+    key_string.replace('\r\n', '')
+    return key_string

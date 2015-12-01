@@ -19,6 +19,7 @@ import time
 # Import Salt Libs
 from salt.exceptions import SaltSystemExit
 import salt.modules.cmdmod
+import salt.utils
 
 
 # Import Third Party Libs
@@ -42,7 +43,8 @@ def __virtual__():
     else:
         return False, 'Missing dependency: The salt.utils.vmware module requires pyVmomi.'
 
-def esxcli(host, user, pwd, cmd, esxi_host=None, port=443):
+
+def esxcli(host, user, pwd, cmd, esxi_host=None):
     '''
     Shell out and call the specified esxcli commmand, parse the result
     and return something sane.
@@ -70,7 +72,7 @@ def esxcli(host, user, pwd, cmd, esxi_host=None, port=443):
         esxcmd += ' -s {0} -u {1} -p {2} {3}'.format(host, user, pwd, cmd)
     else:
         esxcmd += ' -s {0} -h {1} -u {2} -p {3} {4}'.format(host, esxi_host,
-                                                        user, pwd, cmd)
+                                                            user, pwd, cmd)
 
     ret = salt.modules.cmdmod.run_all(esxcmd)
 

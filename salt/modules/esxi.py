@@ -57,6 +57,13 @@ def cmd(command, *args, **kwargs):
     kwargs['host'] = host
     kwargs['username'] = username
     kwargs['password'] = password
-    kwargs['protocol'] = __pillar__['proxy'].get('protocol')
-    kwargs['port'] = __pillar__['proxy'].get('port')
+
+    protocol = __pillar__['proxy'].get('protocol')
+    if protocol:
+        kwargs['protocol'] = protocol
+
+    port = __pillar__['proxy'].get('port')
+    if port:
+        kwargs['port'] = port
+
     return __proxy__[proxy_cmd](command, *args, **kwargs)
