@@ -190,10 +190,20 @@ def function_present(name, runtime, role, handler, zipfile=None, s3bucket=None,
     # function exists, ensure config matches
     _ret = _function_config_present(name, role, handler, description, timeout,
                                   memorysize, region, key, keyid, profile)
+    if not _ret.get('result'):
+        ret['result'] = False
+        ret['comment'] = _ret['comment']
+        ret['changes'] = {}
+        return ret
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     _ret = _function_code_present(name, zipfile, s3bucket, s3key, s3objectversion,
                                  region, key, keyid, profile)
+    if not _ret.get('result'):
+        ret['result'] = False
+        ret['comment'] = _ret['comment']
+        ret['changes'] = {}
+        return ret
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     return ret
@@ -234,9 +244,15 @@ def _function_config_present(name, role, handler, description, timeout,
             ret['comment'] = msg
             ret['result'] = None
             return ret
-        _r = __salt__['boto_lambda.update_function_config'](name, role, handler, description,
-                                        timeout, memorysize, region=region, key=key,
+        _r = __salt__['boto_lambda.update_function_config'](name=name,
+                                        role=role, handler=handler, description=description,
+                                        timeout=timeout, memorysize=memorysize, 
+                                        region=region, key=key,
                                         keyid=keyid, profile=profile)
+        if not _r.get('updated'):
+            ret['result'] = False
+            ret['comment'] = 'Failed to update function: {0}.'.format(_r['error']['message'])
+            ret['changes'] = {}
     return ret
 
 
@@ -274,7 +290,13 @@ def _function_code_present(name, zipfile, s3bucket, s3key, s3objectversion,
         }
         func = __salt__['boto_lambda.update_function_code'](name, zipfile, s3bucket,
             s3key, s3objectversion, 
-            region=region, key=key, keyid=keyid, profile=profile)['function']
+            region=region, key=key, keyid=keyid, profile=profile)
+        if not func.get('updated'):
+            ret['result'] = False
+            ret['comment'] = 'Failed to update function: {0}.'.format(func['error']['message'])
+            ret['changes'] = {}
+            return ret
+        func = func['function']
         if func['CodeSha256'] != ret['changes']['old']['CodeSha256'] or \
                 func['CodeSize'] != ret['changes']['old']['CodeSize']:
             ret['comment'] = os.linesep.join([ret['comment'], 'Function code to be modified'])
