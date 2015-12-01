@@ -202,7 +202,13 @@ method to use, you still need to specify that the file should be backed up!).
 What is the best way to restart a Salt daemon using Salt?
 ---------------------------------------------------------
 
-Updating the salt-minion package requires a restart of the salt-minion service.
+On systemd-based systems, it should be straighforward. Having the the salt-minion 
+running using the KillMode=process option (in the salt-minion.service file)
+allows the forked salt-minion process to finish it's job (upgrading or 
+restarting the salt-minion daemon) without being killed in the middle of the
+operation.
+
+Otherwise, updating the salt-minion package requires a restart of the salt-minion service.
 But restarting the service while in the middle of a state run interrupts the
 process of the minion running states and sending results back to the master.
 It's a tricky problem to solve, and we're working on it, but in the meantime
@@ -213,6 +219,25 @@ service to be running (usually called **atd**) in order to schedule jobs.
 Here's an example of how to upgrade the salt-minion package at the end of a
 Salt run, and schedule a service restart for one minute after the package
 update completes.
+
+Linux/systemd
+*************
+
+On systemd-based systems, running:
+
+.. code-block:: bash
+    
+    salt 'minion' pkg.install pkgs="['salt-common', 'salt-minion']" refresh=True
+    
+or:
+
+.. code-block:: bash
+    
+    salt 'minion' service.restart salt-minion
+    
+should work just fine.
+
+    
 
 Linux/Unix
 **********
