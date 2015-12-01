@@ -132,9 +132,9 @@ def _parse_acl(acl, user, group):
 
     # If a user is not specified, use the owner of the file
     if comps[0] == 'user' and not comps[1]:
-        comps[1] = user
+        comps[1] = 'owner'
     elif comps[0] == 'group' and not comps[1]:
-        comps[1] = group
+        comps[1] = 'owner'
     vals[comps[0]] = comps[1]
 
     # Set the permissions fields
@@ -196,6 +196,8 @@ def _acl_prefix(acl_type):
         prefix += 'g'
     elif acl_type == 'mask' or acl_type == 'm':
         prefix += 'm'
+    elif acl_type == 'other' or acl_type == 'o':
+        prefix += 'o'
     return prefix
 
 
