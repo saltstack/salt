@@ -765,7 +765,8 @@ class TestDaemon(object):
         if sync_needed:
             # Wait for minions to "sync_all"
             for target in [self.sync_minion_modules,
-                           self.sync_minion_states]:
+                           self.sync_minion_states,
+                           self.sync_minion_grains]:
                 sync_minions = MultiprocessingProcess(
                     target=target,
                     args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
@@ -1020,6 +1021,9 @@ class TestDaemon(object):
     def sync_minion_modules(self, targets, timeout=None):
         salt.utils.appendproctitle('SyncMinionModules')
         self.sync_minion_modules_('modules', targets, timeout=timeout)
+
+    def sync_minion_grains(self, targets, timeout=None):
+        self.sync_minion_modules_('grains', targets, timeout=timeout)
 
 
 class AdaptedConfigurationTestCaseMixIn(object):
