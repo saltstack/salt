@@ -578,7 +578,7 @@ def swap(name, persist=True, config='/etc/fstab'):
 
 
 def unmounted(name,
-              device,
+              device=None,
               config='/etc/fstab',
               persist=False,
               user=None):
@@ -590,10 +590,11 @@ def unmounted(name,
     name
         The path to the location where the device is to be unmounted from
 
-    .. versionadded:: 2015.5.0
-
     device
-        The device to be unmounted.
+        The device to be unmounted.  This is optional because the device could
+        be mounted in multiple places.
+
+        .. versionadded:: 2015.5.0
 
     config
         Set an alternative location for the fstab, Default is ``/etc/fstab``

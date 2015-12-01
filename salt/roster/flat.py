@@ -8,6 +8,15 @@ from __future__ import absolute_import
 import fnmatch
 import re
 
+# Try to import range from https://github.com/ytoolshed/range
+HAS_RANGE = False
+try:
+    import seco.range
+    HAS_RANGE = True
+except ImportError:
+    pass
+# pylint: enable=import-error
+
 # Import Salt libs
 import salt.loader
 from salt.template import compile_template
@@ -107,6 +116,23 @@ class RosterMatcher(object):
                     minions[minion] = data
         return minions
 
+    def ret_range_minions(self):
+        '''
+        Return minions that are returned by a range query
+        '''
+        if HAS_RANGE is False:
+            raise RuntimeError("Python lib 'seco.range' is not available")
+
+        minions = {}
+        range_hosts = _convert_range_to_list(self.tgt, __opts__['range_server'])
+
+        for minion in self.raw:
+            if minion in range_hosts:
+                data = self.get_data(minion)
+                if data:
+                    minions[minion] = data
+        return minions
+
     def get_data(self, minion):
         '''
         Return the configured ip
@@ -116,3 +142,15 @@ class RosterMatcher(object):
         if isinstance(self.raw[minion], dict):
             return self.raw[minion]
         return False
+
+
+def _convert_range_to_list(tgt, range_server):
+    '''
+    convert a seco.range range into a list target
+    '''
+    r = seco.range.Range(range_server)
+    try:
+        return r.expand(tgt)
+    except seco.range.RangeException as err:
+        log.error('Range server exception: {0}'.format(err))
+        return []

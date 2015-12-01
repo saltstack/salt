@@ -147,17 +147,17 @@ def state(
     '''
     cmd_kw = {'arg': [], 'kwarg': {}, 'ret': ret, 'timeout': timeout}
 
-    ret = {'name': name,
-           'changes': {},
-           'comment': '',
-           'result': True}
+    state_ret = {'name': name,
+                 'changes': {},
+                 'comment': '',
+                 'result': True}
 
     try:
         allow_fail = int(allow_fail)
     except ValueError:
-        ret['result'] = False
-        ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
-        return ret
+        state_ret['result'] = False
+        state_ret['comment'] = 'Passed invalid value for \'allow_fail\', must be an int'
+        return state_ret
 
     if env is not None:
         msg = (
@@ -167,11 +167,11 @@ def state(
             'state files.'
         )
         salt.utils.warn_until('Boron', msg)
-        ret.setdefault('warnings', []).append(msg)
+        state_ret.setdefault('warnings', []).append(msg)
         # No need to set __env__ = env since that's done in the state machinery
 
     if expr_form and tgt_type:
-        ret.setdefault('warnings', []).append(
+        state_ret.setdefault('warnings', []).append(
             'Please only use \'tgt_type\' or \'expr_form\' not both. '
             'Preferring \'tgt_type\' over \'expr_form\''
         )
@@ -195,9 +195,9 @@ def state(
             sls = ','.join(sls)
         cmd_kw['arg'].append(sls)
     else:
-        ret['comment'] = 'No highstate or sls specified, no execution made'
-        ret['result'] = False
-        return ret
+        state_ret['comment'] = 'No highstate or sls specified, no execution made'
+        state_ret['result'] = False
+        return state_ret
 
     if test or __opts__.get('test'):
         cmd_kw['kwarg']['test'] = True
@@ -210,9 +210,9 @@ def state(
     if isinstance(concurrent, bool):
         cmd_kw['kwarg']['concurrent'] = concurrent
     else:
-        ret['comment'] = ('Must pass in boolean for value of \'concurrent\'')
-        ret['result'] = False
-        return ret
+        state_ret['comment'] = ('Must pass in boolean for value of \'concurrent\'')
+        state_ret['result'] = False
+        return state_ret
 
     if batch is not None:
         cmd_kw['batch'] = str(batch)
@@ -229,7 +229,7 @@ def state(
     elif isinstance(fail_minions, string_types):
         fail_minions = [minion.strip() for minion in fail_minions.split(',')]
     elif not isinstance(fail_minions, list):
-        ret.setdefault('warnings', []).append(
+        state_ret.setdefault('warnings', []).append(
             '\'fail_minions\' needs to be a list or a comma separated '
             'string. Ignored.'
         )
@@ -268,20 +268,20 @@ def state(
             no_change.add(minion)
 
     if changes:
-        ret['changes'] = {'out': 'highstate', 'ret': changes}
+        state_ret['changes'] = {'out': 'highstate', 'ret': changes}
     if len(fail) > allow_fail:
-        ret['result'] = False
-        ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
+        state_ret['result'] = False
+        state_ret['comment'] = 'Run failed on minions: {0}'.format(', '.join(fail))
     else:
-        ret['comment'] = 'States ran successfully.'
+        state_ret['comment'] = 'States ran successfully.'
         if changes:
-            ret['comment'] += ' Updating {0}.'.format(', '.join(changes))
+            state_ret['comment'] += ' Updating {0}.'.format(', '.join(changes))
         if no_change:
-            ret['comment'] += ' No changes made to {0}.'.format(', '.join(no_change))
+            state_ret['comment'] += ' No changes made to {0}.'.format(', '.join(no_change))
     if failures:
-        ret['comment'] += '\nFailures:\n'
+        state_ret['comment'] += '\nFailures:\n'
         for minion, failure in six.iteritems(failures):
-            ret['comment'] += '\n'.join(
+            state_ret['comment'] += '\n'.join(
                     (' ' * 4 + l)
                     for l in salt.output.out_format(
                         {minion: failure},
@@ -289,12 +289,12 @@ def state(
                         __opts__,
                         ).splitlines()
                     )
-            ret['comment'] += '\n'
+            state_ret['comment'] += '\n'
     if test or __opts__.get('test'):
-        if ret['changes'] and ret['result'] is True:
+        if state_ret['changes'] and state_ret['result'] is True:
             # Test mode with changes is the only case where result should ever be none
-            ret['result'] = None
-    return ret
+            state_ret['result'] = None
+    return state_ret
 
 
 def function(

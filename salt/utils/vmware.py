@@ -14,6 +14,7 @@ ESX, ESXi, and vCenter servers.
 from __future__ import absolute_import
 import atexit
 import logging
+import time
 
 # Import Salt Libs
 from salt.exceptions import SaltSystemExit
@@ -377,3 +378,43 @@ def list_vapps(service_instance):
         The Service Instance Object from which to obtain vApps.
     '''
     return list_objects(service_instance, vim.VirtualApp)
+
+
+def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='debug'):
+    '''
+    Waits for a task to be completed.
+
+    task
+        The task to wait for.
+
+    instance_name
+        The name of the ESXi host, vCenter Server, or Virtual Machine that the task is being run on.
+
+    task_type
+        The type of task being performed. Useful information for debugging purposes.
+
+    sleep_seconds
+        The number of seconds to wait before querying the task again. Defaults to ``1`` second.
+
+    log_level
+        The level at which to log task information. Default is ``debug``, but ``info`` is also supported.
+    '''
+    time_counter = 0
+    start_time = time.time()
+    while task.info.state == 'running' or task.info.state == 'queued':
+        if time_counter % sleep_seconds == 0:
+            msg = '[ {0} ] Waiting for {1} task to finish [{2} s]'.format(instance_name, task_type, time_counter)
+            if log_level == 'info':
+                log.info(msg)
+            else:
+                log.debug(msg)
+        time.sleep(1.0 - ((time.time() - start_time) % 1.0))
+        time_counter += 1
+    if task.info.state == 'success':
+        msg = '[ {0} ] Successfully completed {1} task in {2} seconds'.format(instance_name, task_type, time_counter)
+        if log_level == 'info':
+            log.info(msg)
+        else:
+            log.debug(msg)
+    else:
+        raise Exception(task.info.error)
