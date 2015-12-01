@@ -2106,6 +2106,10 @@ def wait_for_instance(
         win_deploy_auth_retry_delay = config.get_cloud_config_value(
             'win_deploy_auth_retry_delay', vm_, __opts__, default=1
         )
+        use_winrm = config.get_cloud_config_value(
+            'use_winrm', vm_, __opts__, default=false
+        )
+
         if win_passwd and win_passwd == 'auto':
             log.debug('Waiting for auto-generated Windows EC2 password')
             while True:
@@ -2142,7 +2146,8 @@ def wait_for_instance(
                                                       username,
                                                       win_passwd,
                                                       retries=win_deploy_auth_retries,
-                                                      retry_delay=win_deploy_auth_retry_delay):
+                                                      retry_delay=win_deploy_auth_retry_delay,
+                                                      winrm=use_winrm):
             raise SaltCloudSystemExit(
                 'Failed to authenticate against remote windows host'
             )

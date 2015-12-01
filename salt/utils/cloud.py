@@ -847,10 +847,16 @@ def validate_windows_cred(host,
                           username='Administrator',
                           password=None,
                           retries=10,
-                          retry_delay=1):
+                          retry_delay=1,
+                          winrm=False):
     '''
     Check if the windows credentials are valid
     '''
+    # if winrm was requested, lets use that instead of winexe
+    if(winrm and HAS_WINRM):
+        return wait_for_winrm(host,port=5986,username,password, retries * delay)
+
+    # if winrm was not requested, lets use winexe
     cmd = "winexe -U '{0}%{1}' //{2} \"hostname\"".format(
         username,
         password,
