@@ -52,6 +52,8 @@ def esxcli(host, user, pwd, cmd, esxi_host=None, port=443):
     :param pwd: Password to connect with
     :param port: TCP port
     :param cmd: esxcli command and arguments
+    :param esxi_host: If `host` is a vCenter host, then esxi_host is the
+                      ESXi machine on which to execute this command
     :return: Dictionary
     '''
 
