@@ -799,6 +799,7 @@ DEFAULT_MINION_OPTS = {
     'cache_jobs': False,
     'grains_cache': False,
     'grains_cache_expiration': 300,
+    'grains_deep_merge': False,
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'minion'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
     'backup_mode': '',
