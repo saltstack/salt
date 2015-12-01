@@ -30,12 +30,14 @@ def __virtual__():
 
 
 def _get_minor_version():
+    version = 6
     cmd = 'gluster --version'
     result = __salt__['cmd.run'](cmd).splitlines()
     for line_number in range(len(result)):
         line = result[line_number]
         if line.startswith('glusterfs'):
-            return int(line.split()[1].split('.')[1])
+            version = int(line.split()[1].split('.')[1])
+    return version
 
 
 def list_peers():
