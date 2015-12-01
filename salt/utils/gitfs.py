@@ -443,7 +443,7 @@ class GitProvider(object):
             try:
                 self.branch, self.url = self.id.split(None, 1)
             except ValueError:
-                self.branch = self.opts['{0}_branch'.format(self.role)]
+                self.branch = getattr(self, 'branch', self.opts['{0}_branch'.format(self.role)])
                 self.url = self.id
         else:
             self.url = self.id
@@ -2382,7 +2382,7 @@ class GitPillar(GitBase):
                 if repo.env:
                     env = repo.env
                 else:
-                    base_branch = getattr(self, 'base', self.opts['{0}_base'.format(self.role)])
+                    base_branch = getattr(repo, 'base', self.opts['{0}_base'.format(self.role)])
                     env = 'base' if repo.branch == base_branch else repo.branch
                 self.pillar_dirs[cachedir] = env
 
