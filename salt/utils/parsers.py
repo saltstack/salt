@@ -2943,6 +2943,12 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
             action='store_true',
             help='Default yes in answer to all confirmation questions.'
         )
+        self.add_option(
+            '-v', '--verbose',
+            default=False,
+            action='store_true',
+            help='Display more detailed information.'
+        )
 
     def _mixin_after_parsed(self):
         # spm needs arguments
