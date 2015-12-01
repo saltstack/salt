@@ -37,6 +37,74 @@ def __virtual__():
     return __virtualname__
 
 
+def get_coredump_network_config(host, user, pwd, esxi_host=None, port=443):
+
+    cmd = 'system coredump network get'
+    ret = salt.utils.vmware.esxcli(host, user, pwd, cmd, esxi_host=esxi_host, port=port)
+
+    if ret['retcode'] != 0:
+        return ret
+
+    ret_dict = {}
+
+    for line in ret['stdout'].splitlines():
+        line = line.strip().lower()
+        if line.startswith('enabled:'):
+            enabled = line.split(':')
+            if 'true' in enabled[1]:
+                ret_dict['enabled'] = True
+            else:
+                ret_dict['enabled'] = False
+                break
+        if line.startswith('host vnic:'):
+            host_vnic = line.split(':')
+            ret_dict['host_vnic'] = host_vnic[1].strip()
+        if line.startswith('network server ip:'):
+            ip = line.split(':')
+            ret_dict['ip'] = ip[1].strip()
+        if line.startswith('network server port:'):
+            ip_port = line.split(':')
+            ret_dict['port'] = ip_port[1].strip()
+
+    return ret_dict
+
+
+def coredump_network_enable(host, user, pwd, enabled, esxi_host=None, port=443):
+    '''
+    Enable or disable ESXi core dump collection
+    :param host: ESXi or vCenter host to connect to
+    :param user: User to connect as, usually root
+    :param pwd: Password to connect with
+    :param port: TCP port
+    :param enabled: Python True or False to enable or disable coredumps
+    :return: True if successful, False otherwise
+    '''
+
+    if enabled:
+        enable_it = 1
+    else:
+        enable_it = 0
+
+    cmd = 'system coredump network set -e {0}'.format(enable_it)
+
+    return salt.utils.vmware.esxcli(host, user, pwd, cmd,
+                  esxi_host=esxi_host, port=port)
+
+
+def set_coredump_network_config(host, user, pwd, ip, host_vnic='vmk0', dump_port=6500, esxi_host=None, port=443):
+
+    cmd = 'system coredump network set -v {0} -i {1} -o {2}'.format(ip,
+                                                                    host_vnic,
+                                                                    dump_port)
+    ret = salt.utils.vmware.esxcli(host, user, pwd, cmd, esxi_host=esxi_host, port=port)
+    if ret['retcode'] != 0:
+        ret['success'] = False
+    else:
+        ret['success'] = True
+
+    return ret
+
+
 def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
                    protocol='https', port=443, certificate_verify=False):
     '''
