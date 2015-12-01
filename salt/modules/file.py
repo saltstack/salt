@@ -1797,58 +1797,61 @@ def replace(path,
                                         append_if_not_found) \
                                      else repl
 
-    # mmap throws a ValueError if the file is empty, but if it is empty we
-    # should be able to skip the search anyway. NOTE: Is there a use case for
-    # searching an empty file with an empty pattern?
-    if filesize is not 0:
+    try:
         # First check the whole file, determine whether to make the replacement
         # Searching first avoids modifying the time stamp if there are no changes
         r_data = None
-        try:
-            # Use a read-only handle to open the file
-            with salt.utils.fopen(path,
-                                  mode='rb',
-                                  buffering=bufsize) as r_file:
+        # Use a read-only handle to open the file
+        with salt.utils.fopen(path,
+                              mode='rb',
+                              buffering=bufsize) as r_file:
+            try:
+                # mmap throws a ValueError if the file is empty.
                 r_data = mmap.mmap(r_file.fileno(),
                                    0,
                                    access=mmap.ACCESS_READ)
-                if search_only:
-                    # Just search; bail as early as a match is found
-                    if re.search(cpattern, r_data):
-                        return True  # `with` block handles file closure
-                else:
-                    result, nrepl = re.subn(cpattern, repl, r_data, count)
+            except ValueError:
+                # size of file in /proc is 0, but contains data
+                r_data = "".join(r_file)
+            if search_only:
+                # Just search; bail as early as a match is found
+                if re.search(cpattern, r_data):
+                    return True  # `with` block handles file closure
+            else:
+                result, nrepl = re.subn(cpattern, repl, r_data, count)
 
-                    # found anything? (even if no change)
-                    if nrepl > 0:
+                # found anything? (even if no change)
+                if nrepl > 0:
+                    found = True
+                    # Identity check the potential change
+                    has_changes = True if pattern != repl else has_changes
+
+                if prepend_if_not_found or append_if_not_found:
+                    # Search for content, to avoid pre/appending the
+                    # content if it was pre/appended in a previous run.
+                    if re.search('^{0}$'.format(re.escape(content)),
+                                 r_data,
+                                 flags=flags_num):
+                        # Content was found, so set found.
                         found = True
-                        # Identity check the potential change
-                        has_changes = True if pattern != repl else has_changes
 
-                    if prepend_if_not_found or append_if_not_found:
-                        # Search for content, to avoid pre/appending the
-                        # content if it was pre/appended in a previous run.
-                        if re.search('^{0}$'.format(re.escape(content)),
-                                     r_data,
-                                     flags=flags_num):
-                            # Content was found, so set found.
-                            found = True
+                # Keep track of show_changes here, in case the file isn't
+                # modified
+                if show_changes or append_if_not_found or \
+                   prepend_if_not_found:
+                    orig_file = r_data.read(filesize).splitlines(True) \
+                        if hasattr(r_data, 'read') \
+                        else r_data.splitlines(True)
+                    new_file = result.splitlines(True)
 
-                    # Keep track of show_changes here, in case the file isn't
-                    # modified
-                    if show_changes or append_if_not_found or \
-                       prepend_if_not_found:
-                        orig_file = r_data.read(filesize).splitlines(True)
-                        new_file = result.splitlines(True)
-
-        except (OSError, IOError) as exc:
-            raise CommandExecutionError(
-                "Unable to open file '{0}'. "
-                "Exception: {1}".format(path, exc)
-                )
-        finally:
-            if r_data and isinstance(r_data, mmap.mmap):
-                r_data.close()
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            "Unable to open file '{0}'. "
+            "Exception: {1}".format(path, exc)
+            )
+    finally:
+        if r_data and isinstance(r_data, mmap.mmap):
+            r_data.close()
 
     if has_changes and not dry_run:
         # Write the replacement text in this block.
