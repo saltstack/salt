@@ -3349,7 +3349,7 @@ def get_managed(
             file_sum = get_hash(source, form='sha256')
             source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
         elif source_hash:
-            protos = ('salt', 'http', 'https', 'ftp', 'swift', 's3')
+            protos = ('salt', 'http', 'https', 'ftp', 'swift', 's3', 'file')
             if _urlparse(source_hash).scheme in protos:
                 # The source_hash is a file on a server
                 hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
