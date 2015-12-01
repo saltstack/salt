@@ -748,28 +748,6 @@ def _wait_for_ip(vm_ref, max_wait):
     return False
 
 
-def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug'):
-    time_counter = 0
-    starttime = time.time()
-    while task.info.state == 'running' or task.info.state == 'queued':
-        if time_counter % sleep_seconds == 0:
-            message = "[ {0} ] Waiting for {1} task to finish [{2} s]".format(vm_name, task_type, time_counter)
-            if log_level == 'info':
-                log.info(message)
-            else:
-                log.debug(message)
-        time.sleep(1.0 - ((time.time() - starttime) % 1.0))
-        time_counter += 1
-    if task.info.state == 'success':
-        message = "[ {0} ] Successfully completed {1} task in {2} seconds".format(vm_name, task_type, time_counter)
-        if log_level == 'info':
-            log.info(message)
-        else:
-            log.debug(message)
-    else:
-        raise Exception(task.info.error)
-
-
 def _wait_for_host(host_ref, task_type, sleep_seconds=5, log_level='debug'):
     time_counter = 0
     starttime = time.time()
@@ -1077,7 +1055,11 @@ def _upg_tools_helper(vm, reboot=False):
             else:
                 status = 'Only Linux and Windows guests are currently supported'
                 return status
-            _wait_for_task(task, vm.name, "tools upgrade", 5, "info")
+            salt.utils.vmware.wait_for_task(task,
+                                            vm.name,
+                                            'tools upgrade',
+                                            sleep_seconds=5,
+                                            log_level='info')
         except Exception as exc:
             log.error(
                 'Error while upgrading VMware tools on VM {0}: {1}'.format(
@@ -1752,7 +1734,7 @@ def start(name, call=None):
             try:
                 log.info('Starting VM {0}'.format(name))
                 task = vm["object"].PowerOn()
-                _wait_for_task(task, name, "power on")
+                salt.utils.vmware.wait_for_task(task, name, 'power on')
             except Exception as exc:
                 log.error(
                     'Error while powering on VM {0}: {1}'.format(
@@ -1799,7 +1781,7 @@ def stop(name, call=None):
             try:
                 log.info('Stopping VM {0}'.format(name))
                 task = vm["object"].PowerOff()
-                _wait_for_task(task, name, "power off")
+                salt.utils.vmware.wait_for_task(task, name, 'power off')
             except Exception as exc:
                 log.error(
                     'Error while powering off VM {0}: {1}'.format(
@@ -1850,7 +1832,7 @@ def suspend(name, call=None):
             try:
                 log.info('Suspending VM {0}'.format(name))
                 task = vm["object"].Suspend()
-                _wait_for_task(task, name, "suspend")
+                salt.utils.vmware.wait_for_task(task, name, 'suspend')
             except Exception as exc:
                 log.error(
                     'Error while suspending VM {0}: {1}'.format(
@@ -1897,7 +1879,7 @@ def reset(name, call=None):
             try:
                 log.info('Resetting VM {0}'.format(name))
                 task = vm["object"].Reset()
-                _wait_for_task(task, name, "reset")
+                salt.utils.vmware.wait_for_task(task, name, 'reset')
             except Exception as exc:
                 log.error(
                     'Error while resetting VM {0}: {1}'.format(
@@ -1999,7 +1981,7 @@ def destroy(name, call=None):
                 try:
                     log.info('Powering Off VM {0}'.format(name))
                     task = vm["object"].PowerOff()
-                    _wait_for_task(task, name, "power off")
+                    salt.utils.vmware.wait_for_task(task, name, 'power off')
                 except Exception as exc:
                     log.error(
                         'Error while powering off VM {0}: {1}'.format(
@@ -2013,7 +1995,7 @@ def destroy(name, call=None):
             try:
                 log.info('Destroying VM {0}'.format(name))
                 task = vm["object"].Destroy_Task()
-                _wait_for_task(task, name, "destroy")
+                salt.utils.vmware.wait_for_task(task, name, 'destroy')
             except Exception as exc:
                 log.error(
                     'Error while destroying VM {0}: {1}'.format(
@@ -2361,11 +2343,11 @@ def create(vm_):
 
                 # apply storage DRS recommendations
                 task = si.content.storageResourceManager.ApplyStorageDrsRecommendation_Task(recommended_datastores.recommendations[0].key)
-                _wait_for_task(task, vm_name, "apply storage DRS recommendations", 5, 'info')
+                salt.utils.vmware.wait_for_task(task, vm_name, 'apply storage DRS recommendations', 5, 'info')
             else:
                 # clone the VM/template
                 task = object_ref.Clone(folder_ref, vm_name, clone_spec)
-                _wait_for_task(task, vm_name, "clone", 5, 'info')
+                salt.utils.vmware.wait_for_task(task, vm_name, 'clone', 5, 'info')
         else:
             log.info('Creating {0}'.format(vm_['name']))
 
@@ -2944,7 +2926,7 @@ def enter_maintenance_mode(kwargs=None, call=None):
 
     try:
         task = host_ref.EnterMaintenanceMode(timeout=0, evacuatePoweredOffVms=True)
-        _wait_for_task(task, host_name, "enter maintenance mode", 1)
+        salt.utils.vmware.wait_for_task(task, host_name, 'enter maintenance mode')
     except Exception as exc:
         log.error(
             'Error while moving host system {0} in maintenance mode: {1}'.format(
@@ -2989,7 +2971,7 @@ def exit_maintenance_mode(kwargs=None, call=None):
 
     try:
         task = host_ref.ExitMaintenanceMode(timeout=0)
-        _wait_for_task(task, host_name, "exit maintenance mode", 1)
+        salt.utils.vmware.wait_for_task(task, host_name, 'exit maintenance mode')
     except Exception as exc:
         log.error(
             'Error while moving host system {0} out of maintenance mode: {1}'.format(
@@ -3142,7 +3124,7 @@ def create_snapshot(name, kwargs=None, call=None):
 
     try:
         task = vm_ref.CreateSnapshot(snapshot_name, desc, memdump, quiesce)
-        _wait_for_task(task, name, "create snapshot", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, name, 'create snapshot', 5, 'info')
     except Exception as exc:
         log.error(
             'Error while creating snapshot of {0}: {1}'.format(
@@ -3197,7 +3179,7 @@ def revert_to_snapshot(name, kwargs=None, call=None):
 
     try:
         task = vm_ref.RevertToCurrentSnapshot(suppressPowerOn=suppress_power_on)
-        _wait_for_task(task, name, "revert to snapshot", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, name, 'revert to snapshot', 5, 'info')
 
     except Exception as exc:
         log.error(
@@ -3241,7 +3223,7 @@ def remove_all_snapshots(name, kwargs=None, call=None):
 
     try:
         task = vm_ref.RemoveAllSnapshots()
-        _wait_for_task(task, name, "remove snapshots", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, name, 'remove snapshots', 5, 'info')
     except Exception as exc:
         log.error(
             'Error while removing snapshots on VM {0}: {1}'.format(
@@ -3387,7 +3369,7 @@ def add_host(kwargs=None, call=None):
         if datacenter_name:
             task = datacenter_ref.hostFolder.AddStandaloneHost(spec=spec, addConnected=True)
             ret = 'added host system to datacenter {0}'.format(datacenter_name)
-        _wait_for_task(task, host_name, "add host system", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, host_name, 'add host system', 5, 'info')
     except Exception as exc:
         if isinstance(exc, vim.fault.SSLVerifyFault):
             log.error('Authenticity of the host\'s SSL certificate is not verified')
@@ -3441,7 +3423,7 @@ def remove_host(kwargs=None, call=None):
         else:
             # This is a host system that is part of a Cluster
             task = host_ref.Destroy_Task()
-        _wait_for_task(task, host_name, "remove host", 1, 'info')
+        salt.utils.vmware.wait_for_task(task, host_name, 'remove host', log_level='info')
     except Exception as exc:
         log.error(
             'Error while removing host {0}: {1}'.format(
@@ -3490,7 +3472,7 @@ def connect_host(kwargs=None, call=None):
 
     try:
         task = host_ref.ReconnectHost_Task()
-        _wait_for_task(task, host_name, "connect host", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, host_name, 'connect host', 5, 'info')
     except Exception as exc:
         log.error(
             'Error while connecting host {0}: {1}'.format(
@@ -3539,7 +3521,7 @@ def disconnect_host(kwargs=None, call=None):
 
     try:
         task = host_ref.DisconnectHost_Task()
-        _wait_for_task(task, host_name, "disconnect host", 1, 'info')
+        salt.utils.vmware.wait_for_task(task, host_name, 'disconnect host', log_level='info')
     except Exception as exc:
         log.error(
             'Error while disconnecting host {0}: {1}'.format(
