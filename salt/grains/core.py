@@ -24,6 +24,7 @@ import locale
 import salt.exceptions
 
 __proxyenabled__ = ['*']
+__FQDN__ = None
 
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
@@ -1467,13 +1468,16 @@ def hostname():
     #   host
     #   localhost
     #   domain
+    global __FQDN__
     grains = {}
 
     if salt.utils.is_proxy():
         return grains
 
     grains['localhost'] = socket.gethostname()
-    grains['fqdn'] = salt.utils.network.get_fqhostname()
+    if __FQDN__ is None:
+        __FQDN__ = salt.utils.network.get_fqhostname()
+    grains['fqdn'] = __FQDN__
     (grains['host'], grains['domain']) = grains['fqdn'].partition('.')[::2]
     return grains
 
@@ -1512,11 +1516,14 @@ def fqdn_ip4():
     if salt.utils.is_proxy():
         return {}
 
+    addrs = []
     try:
-        info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET)
-        addrs = list(set(item[4][0] for item in info))
+        hostname_grains = hostname()
+        if hostname_grains['domain']:
+            info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET)
+            addrs = list(set(item[4][0] for item in info))
     except socket.error:
-        addrs = []
+        pass
     return {'fqdn_ip4': addrs}
 
 
@@ -1539,11 +1546,14 @@ def fqdn_ip6():
     if salt.utils.is_proxy():
         return {}
 
+    addrs = []
     try:
-        info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET6)
-        addrs = list(set(item[4][0] for item in info))
+        hostname_grains = hostname()
+        if hostname_grains['domain']:
+            info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET6)
+            addrs = list(set(item[4][0] for item in info))
     except socket.error:
-        addrs = []
+        pass
     return {'fqdn_ip6': addrs}
 
 
