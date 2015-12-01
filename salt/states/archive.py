@@ -72,10 +72,10 @@ def extracted(name,
               group=None,
               tar_options=None,
               source_hash=None,
-              source_hash_update=None,
               if_missing=None,
               keep=False,
-              trim_output=False):
+              trim_output=False,
+              source_hash_update=None):
     '''
     .. versionadded:: 2014.1.0
 
