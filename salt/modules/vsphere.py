@@ -37,8 +37,7 @@ def __virtual__():
     return __virtualname__
 
 
-def get_coredump_network_config(host, username, password, esxi_host=None,
-                                port=443):
+def get_coredump_network_config(host, username, password, esxi_host=None):
     '''
     Retrieve information on ESXi or vCenter network dump collection and
     format it into a dictionary.
@@ -46,17 +45,27 @@ def get_coredump_network_config(host, username, password, esxi_host=None,
     :param host: ESXi or vCenter host to connect to
     :param username: User to connect as, usually root
     :param password: Password to connect with
-    :param port: TCP port
     :param esxi_host: If `host` is a vCenter host, then esxi_host is the
                       ESXi machine on which to execute this command
     :return: A dictionary with the network configuration, or, if getting
              the network config failed, a standard cmd.run_all dictionary.
              This dictionary will at least have a `retcode` key.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for ESXi host connection information
+        salt '*' vsphere.get_coredump_network_config my.esxi.host root bad-password
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.get_coredump_network_config my.vcenter.location root bad-password \
+        esxi_host='esxi-1.host.com'
+
     '''
 
     cmd = 'system coredump network get'
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                   esxi_host=esxi_host, port=port)
+    ret = salt.utils.vmware.esxcli(host, username, password, cmd, esxi_host=esxi_host)
 
     if ret['retcode'] != 0:
         return ret
@@ -85,20 +94,30 @@ def get_coredump_network_config(host, username, password, esxi_host=None,
     return ret_dict
 
 
-def coredump_network_enable(host, username, password, enabled, esxi_host=None, port=443):
+def coredump_network_enable(host, username, password, enabled, esxi_host=None):
     '''
-    Enable or disable ESXi core dump collection
+    Enable or disable ESXi core dump collection.
 
     :param host: ESXi or vCenter host to connect to
     :param username: User to connect as, usually root
     :param password: Password to connect with
-    :param port: TCP port
     :param esxi_host: If `host` is a vCenter host, then esxi_host is the
                       ESXi machine on which to execute this command
     :param enabled: Python True or False to enable or disable coredumps
     :return: A standard cmd.run_all dictionary.  This dictionary will at least
              have a `retcode` key.  If `retcode` is 0 the command was
              successful.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for ESXi host connection information
+        salt '*' vsphere.coredump_network_enable my.esxi.host root bad-password True
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.coredump_network_enable my.vcenter.location root bad-password True \
+        esxi_host='esxi-1.host.com'
     '''
 
     if enabled:
@@ -109,11 +128,10 @@ def coredump_network_enable(host, username, password, enabled, esxi_host=None, p
     cmd = 'system coredump network set -e {0}'.format(enable_it)
 
     return salt.utils.vmware.esxcli(host, username, password, cmd,
-                                    esxi_host=esxi_host, port=port)
+                                    esxi_host=esxi_host)
 
 
-def set_coredump_network_config(host, username, password, ip, host_vnic='vmk0',
-                                dump_port=6500, esxi_host=None, port=443):
+def set_coredump_network_config(host, username, password, dump_ip, host_vnic='vmk0', dump_port=6500, esxi_host=None):
     '''
 
     Set the network parameters for a network coredump collection.
@@ -123,20 +141,33 @@ def set_coredump_network_config(host, username, password, ip, host_vnic='vmk0',
     :param host: ESXi or vCenter host to connect to
     :param username: User to connect as, usually root
     :param password: Password to connect with
-    :param port: TCP port
     :param esxi_host: If `host` is a vCenter host, then esxi_host is the
                       ESXi machine on which to execute this command
-    :param ip: IP address of host that will accept the dump.
+    :return: A standard cmd.run_all dictionary.  This dictionary will at least
+             have a `retcode` key.  If `retcode` is 0 the command was
+             successful.
+    :param dump_ip: IP address of host that will accept the dump.
     :param host_vnic: Host VNic port through which to communicate
     :param dump_port: TCP port to use for the dump, defaults to 6500
     :return: A standard cmd.run_all dictionary with a `success` key added.
              `success` will be True if the set succeeded, False otherwise.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for ESXi host connection information
+        salt '*' vsphere.set_coredump_network_config my.esxi.host root bad-password 'dump_ip.host.com'
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.set_coredump_network_config my.vcenter.location root bad-password 'dump_ip.host.com' \
+        esxi_host='esxi-1.host.com'
     '''
 
-    cmd = 'system coredump network set -v {0} -i {1} -o {2}'.format(ip,
+    cmd = 'system coredump network set -v {0} -i {1} -o {2}'.format(dump_ip,
                                                                     host_vnic,
                                                                     dump_port)
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd, esxi_host=esxi_host, port=port)
+    ret = salt.utils.vmware.esxcli(host, username, password, cmd, esxi_host=esxi_host)
     if ret['retcode'] != 0:
         ret['success'] = False
     else:
@@ -145,15 +176,13 @@ def set_coredump_network_config(host, username, password, ip, host_vnic='vmk0',
     return ret
 
 
-def get_firewall_status(host, username, password,
-                        port=443, esxi_host=None):
+def get_firewall_status(host, username, password, esxi_host=None):
     '''
     Show status of all firewall rulesets.
 
     :param host: ESXi or vCenter host to connect to
     :param username: User to connect as, usually root
     :param password: Password to connect with
-    :param port: TCP port
     :param esxi_host: If `host` is a vCenter host, then esxi_host is the
                       ESXi machine on which to execute this command
     :return: Nested dictionary with two toplevel keys `rulesets` and `success`
@@ -162,13 +191,12 @@ def get_firewall_status(host, username, password,
              was true.
     '''
     cmd = 'network firewall ruleset list'
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd)
+    ret = salt.utils.vmware.esxcli(host, username, password, cmd, esxi_host=esxi_host)
     if ret['retcode'] != 0:
         return {'success': False, 'rulesets': None}
 
-    ret_dict = {}
-    ret_dict['success'] = True
-    ret_dict['rulesets'] = {}
+    ret_dict = {'success': True,
+                'rulesets': {}}
     for line in ret['stdout'].splitlines():
         if line.startswith('Name'):
             continue
@@ -180,15 +208,13 @@ def get_firewall_status(host, username, password,
     return ret_dict
 
 
-def enable_firewall_ruleset(host, username, password, ruleset_enable, ruleset_name,
-                            port=443, esxi_host=None):
+def enable_firewall_ruleset(host, username, password, ruleset_enable, ruleset_name, esxi_host=None):
     '''
     Enable or disable an ESXi firewall ruleset
 
     :param host: ESXi or vCenter host to connect to
     :param username: User to connect as, usually root
     :param password: Password to connect with
-    :param port: TCP port
     :param esxi_host: If `host` is a vCenter host, then esxi_host is the
                       ESXi machine on which to execute this command
     :param ruleset_enable: True to enable the ruleset, false to disable
@@ -199,11 +225,11 @@ def enable_firewall_ruleset(host, username, password, ruleset_enable, ruleset_na
     cmd = 'network firewall ruleset set --enabled {0} --ruleset-id={1}'.format(
         ruleset_enable, ruleset_name
     )
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd)
+    ret = salt.utils.vmware.esxcli(host, username, password, cmd, esxi_host=esxi_host)
     return ret
 
 
-def syslog_service_reload(host, username, password, esxi_host=None, port=443):
+def syslog_service_reload(host, username, password, esxi_host=None):
     '''
 
     Reload the syslog service so it will pick up any changes.
@@ -211,7 +237,6 @@ def syslog_service_reload(host, username, password, esxi_host=None, port=443):
     :param host: ESXi or vCenter host to connect to
     :param username: User to connect as, usually root
     :param password: Password to connect with
-    :param port: TCP port
     :param esxi_host: If `host` is a vCenter host, then esxi_host is the
                       ESXi machine on which to execute this command
     :return: A standard cmd.run_all dictionary.  This dictionary will at least
@@ -220,12 +245,12 @@ def syslog_service_reload(host, username, password, esxi_host=None, port=443):
 
     cmd = 'system syslog reload'
     ret = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                   esxi_host=esxi_host, port=port)
+                                   esxi_host=esxi_host)
     return ret
 
 
 def set_syslog_config(host, username, password, syslog_config, config_value, fw=True,
-                      reset_service=True, esxi_host=None, port=443):
+                      reset_service=True, esxi_host=None):
     '''
     Set the specified syslog configuration parameter.
     By default will reset the syslog service after the configuration is set.
@@ -252,7 +277,6 @@ def set_syslog_config(host, username, password, syslog_config, config_value, fw=
                          comma-separated, but without spaces before
                          or after commas
                          (reference: https://blogs.vmware.com/vsphere/2012/04/configuring-multiple-syslog-servers-for-esxi-5.html)
-    :param port: TCP port
     :param reset_service: After a successful parameter set, reset the service
     :param fw: Enable the firewall ruleset for syslog
     :param esxi_host: If `host` is a vCenter host, then esxi_host is the
@@ -273,19 +297,18 @@ def set_syslog_config(host, username, password, syslog_config, config_value, fw=
                     'default-size', 'default-timeout']
     if syslog_config not in valid_resets:
         ret_dict = {'success': False, 'message': syslog_config+' is not a valid config variable'}
-        return ret
+        return ret_dict
 
-    cmd = 'system syslog config set --{0} {1}'.format(syslog_config,
-                                                    config_value)
+    cmd = 'system syslog config set --{0} {1}'.format(syslog_config, config_value)
     ret = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                   esxi_host=esxi_host, port=port)
+                                   esxi_host=esxi_host)
     ret_dict['success'] = ret['retcode'] == 0
     if ret['retcode'] != 0:
         ret_dict['message'] = ret['stdout']
 
     if reset_service:
         reset_ret = syslog_service_reload(host, username, password,
-                                          esxi_host=esxi_host, port=port)
+                                          esxi_host=esxi_host)
         ret_dict['syslog_restart'] = reset_ret['retcode'] == 0
 
     return ret_dict
@@ -392,9 +415,8 @@ def reset_syslog_config(host, username, password, syslog_config=None,
 
 
 def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
-                   protocol='https', port=443, certificate_verify=False):
+                   protocol=None, port=None, certificate_verify=False):
     '''
-
     Upload an ssh key for root to an ESXi host via http PUT.
     This function only works for ESXi, not vCenter.
     Only one ssh key can be uploaded for root.  Uploading a second key will
@@ -413,7 +435,19 @@ def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
     :return: Dictionary with a 'status' key, True if upload is successful.
              If upload is unsuccessful, 'status' key will be False and
              an 'Error' key will have an informative message.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vsphere.upload_ssh_key my.esxi.host root bad-password ssh_key_file='/etc/salt/my_keys/my_key.pub'
+
     '''
+    if protocol is None:
+        protocol = 'https'
+    if port is None:
+        port = 443
+
     url = '{0}://{1}:{2}/host/ssh_root_authorized_keys'.format(protocol,
                                                                host,
                                                                port)
@@ -452,7 +486,7 @@ def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
 
 
 def get_ssh_key(host, username, password,
-                protocol='https', port=443, certificate_verify=False):
+                protocol=None, port=None, certificate_verify=False):
     '''
 
     Retrieve the authorized_keys entry for root.
@@ -466,7 +500,19 @@ def get_ssh_key(host, username, password,
     :param certificate_verify: If true require that the SSL connection present
                                a valid certificate
     :return: True if upload is successful
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vsphere.get_ssh_key my.esxi.host root bad-password certificate_verify=True
+
     '''
+    if protocol is None:
+        protocol = 'https'
+    if port is None:
+        port = 443
+
     url = '{0}://{1}:{2}/host/ssh_root_authorized_keys'.format(protocol,
                                                                host,
                                                                port)
@@ -2036,7 +2082,7 @@ def ssh_restart(host, username, password, protocol=None, port=None, host_names=N
 def update_host_datetime(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Update the date/time on the given host or list of host_names. This function should be
-    used with caution since network delays, execution delays can result in time skews.
+    used with caution since network delays and execution delays can result in time skews.
 
     host
         The location of the host.
