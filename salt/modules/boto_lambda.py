@@ -322,7 +322,7 @@ def update_function_config(name, role, handler, description="", timeout=3, memor
             log.warning('Function was not updated')
             return {'updated': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'updated': False, 'error': salt.utils.boto.get_error(e)}
 
 
 def update_function_code(name, zipfile=None, s3bucket=None, s3key=None,
