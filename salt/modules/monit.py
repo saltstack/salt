@@ -10,6 +10,10 @@ import salt.utils
 
 import re
 
+__func_alias__ = {
+    'id_': 'id',
+}
+
 
 def __virtual__():
     if salt.utils.which('monit') is not None:
@@ -215,7 +219,7 @@ def version():
     return ret[-1]
 
 
-def id(reset=False):
+def id_(reset=False):
     '''
     .. versionadded:: Boron
 
