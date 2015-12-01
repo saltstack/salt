@@ -350,7 +350,7 @@ class ProcessManager(object):
         '''
         Load and start all available api modules
         '''
-        log.warning('Process Manager starting!')
+        log.debug('Process Manager starting!')
         salt.utils.appendproctitle(self.name)
 
         # make sure to kill the subprocesses if the parent is killed
@@ -362,7 +362,7 @@ class ProcessManager(object):
             signal.signal(signal.SIGINT, self.kill_children)
 
         while True:
-            log.warning('Process manager iteration')
+            log.debug('Process manager iteration')
             try:
                 # in case someone died while we were waiting...
                 self.check_children()
