@@ -25,6 +25,7 @@ import os
 import ctypes
 import sys
 import time
+import datetime
 from subprocess import list2cmdline
 
 log = logging.getLogger(__name__)
@@ -216,40 +217,18 @@ def uptime(human_readable=False):
     #
     # Get string
     startup_time = stats_line[len('Statistics Since '):]
-    # Convert to struct
-    startup_time = time.strptime(startup_time, '%d/%m/%Y %H:%M:%S')
-    # eonvert to seconds since epoch
-    startup_time = time.mktime(startup_time)
+    # Convert to time struct
+    try:
+        startup_time = time.strptime(startup_time, '%d/%m/%Y %H:%M:%S')
+    except ValueError:
+        startup_time = time.strptime(startup_time, '%d/%m/%Y %I:%M:%S %p')
+    # Convert to datetime object
+    startup_time = datetime.datetime(*startup_time[:6])
 
     # Subtract startup time from current time to get the uptime of the system
-    uptime = time.time() - startup_time
+    uptime = datetime.now() - startup_time
 
-    if human_readable:
-        # Pull out the majority of the uptime tuple. h:m:s
-        uptime = int(uptime)
-        seconds = uptime % 60
-        uptime /= 60
-        minutes = uptime % 60
-        uptime /= 60
-        hours = uptime % 24
-        uptime /= 24
-
-        # Translate the h:m:s from above into HH:MM:SS format.
-        ret = '{0:0>2}:{1:0>2}:{2:0>2}'.format(hours, minutes, seconds)
-
-        # If the minion has been on for days, add that in.
-        if uptime > 0:
-            ret = 'Days: {0} {1}'.format(uptime % 365, ret)
-
-        # If you have a Windows minion that has been up for years,
-        # my hat is off to you sir.
-        if uptime > 365:
-            ret = 'Years: {0} {1}'.format(uptime / 365, ret)
-
-        return ret
-
-    else:
-        return uptime
+    return str(uptime) if human_readable else uptime.total_seconds()
 
 
 def _get_process_info(proc):
