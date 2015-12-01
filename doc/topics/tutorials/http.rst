@@ -310,7 +310,7 @@ debugging purposes, SSL verification can be turned off.
 
     salt.utils.http.query(
         'https://example.com',
-        ssl_verify=False,
+        verify_ssl=False,
     )
 
 CA Bundles

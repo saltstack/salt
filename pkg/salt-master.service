@@ -6,6 +6,7 @@ After=syslog.target network.target
 LimitNOFILE=16384
 Type=notify
 ExecStart=/usr/bin/salt-master
+KillMode=process
 
 [Install]
 WantedBy=multi-user.target
