@@ -54,11 +54,11 @@ Connection module for Amazon Lambda
         error:
           message: error message
 
-    Request methods (e.g., `describe_lambda`) return:
+    Request methods (e.g., `describe_function`) return:
 
     .. code-block:: yaml
 
-        lambda:
+        function:
           - {...}
           - {...}
 
@@ -134,42 +134,42 @@ def __init__(opts):
         __utils__['boto3.assign_funcs'](__name__, 'lambda')
 
 
-def _find_lambda(name,
+def _find_function(name,
                region=None, key=None, keyid=None, profile=None):
 
     '''
-    Given Lambda function name, find and return matching Lambda information.
+    Given function name, find and return matching Lambda information.
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    lambdas = conn.list_functions()
+    funcs = conn.list_functions()
 
-    for lmbda in lambdas['Functions']:
-        if lmbda['FunctionName'] == name:
-            return lmbda
+    for func in funcs['Functions']:
+        if func['FunctionName'] == name:
+            return func
     return None
 
 
-def exists(name, region=None, key=None,
+def function_exists(name, region=None, key=None,
            keyid=None, profile=None):
     '''
-    Given a Lambda function ID, check to see if the given Lambda function ID exists.
+    Given a function name, check to see if the given function name exists.
 
-    Returns True if the given Lambda function ID exists and returns False if the given
-    Lambda function ID does not exist.
+    Returns True if the given function exists and returns False if the given
+    function does not exist.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_lambda.exists mylambda
+        salt myminion boto_lambda.function_exists myfunction
 
     '''
 
     try:
-        lmbda = _find_lambda(name,
+        func = _find_function(name,
                              region=region, key=key, keyid=keyid, profile=profile)
-        return {'exists': bool(lmbda)}
+        return {'exists': bool(func)}
     except ClientError as e:
         return {'error': salt.utils.boto.get_error(e)}
 
@@ -188,24 +188,24 @@ def _zipdata(zipfile):
     with open(zipfile, 'rb') as f:
        return f.read()
 
-def create(name, runtime, role, handler, zipfile=None, s3bucket=None, s3key=None, s3objectversion=None,
+def create_function(name, runtime, role, handler, zipfile=None, s3bucket=None, s3key=None, s3objectversion=None,
             description="", timeout=3, memorysize=128, publish=False,
             region=None, key=None, keyid=None, profile=None):
     '''
-    Given a valid config, create a Lambda function.
+    Given a valid config, create a function.
 
-    Returns {created: true} if the Lambda function was created and returns
-    {created: False} if the Lambda function was not created.
+    Returns {created: true} if the function was created and returns
+    {created: False} if the function was not created.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_lamba.create my_lambda python2.7 my_role my_file.my_function my_lambda.zip
+        salt myminion boto_lamba.create_function my_function python2.7 my_role my_file.my_function my_function.zip
 
     '''
 
-    role_arn = _get_role_arn(role, region, key, keyid, profile)
+    role_arn = _get_role_arn(role, region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if zipfile:
@@ -222,32 +222,32 @@ def create(name, runtime, role, handler, zipfile=None, s3bucket=None, s3key=None
             }
             if s3objectversion:
                 code['S3ObjectVersion']= s3objectversion
-        lmbda = conn.create_function(FunctionName=name, Runtime=runtime, Role=role_arn, Handler=handler, 
+        func = conn.create_function(FunctionName=name, Runtime=runtime, Role=role_arn, Handler=handler, 
                                    Code=code, Description=description, Timeout=timeout, MemorySize=memorysize, 
                                    Publish=publish)
-        if lmbda:
-            log.info('The newly created Lambda function name is {0}'.format(lmbda['FunctionName']))
+        if func:
+            log.info('The newly created function name is {0}'.format(func['FunctionName']))
 
-            return {'created': True, 'name': lmbda['FunctionName']}
+            return {'created': True, 'name': func['FunctionName']}
         else:
-            log.warning('Lambda function was not created')
+            log.warning('Function was not created')
             return {'created': False}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def delete(name, version=None, region=None, key=None, keyid=None, profile=None):
+def delete_function(name, version=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Given a Lambda function name and optional version, delete it.
+    Given a function name and optional version, delete it.
 
-    Returns {deleted: true} if the Lambda function was deleted and returns
-    {deleted: false} if the Lambda function was not deleted.
+    Returns {deleted: true} if the function was deleted and returns
+    {deleted: false} if the function was not deleted.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_lambda.delete myfunction
+        salt myminion boto_lambda.delete_function myfunction
 
     '''
 
@@ -262,10 +262,10 @@ def delete(name, version=None, region=None, key=None, keyid=None, profile=None):
         return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def describe(name, region=None, key=None,
+def describe_function(name, region=None, key=None,
              keyid=None, profile=None):
     '''
-    Given a Lambda function name describe its properties.
+    Given a function name describe its properties.
 
     Returns a dictionary of interesting properties.
 
@@ -273,37 +273,37 @@ def describe(name, region=None, key=None,
 
     .. code-block:: bash
 
-        salt myminion boto_lambda.describe myfunction
+        salt myminion boto_lambda.describe_function myfunction
 
     '''
 
     try:
-        lmbda = _find_lambda(name,
+        func = _find_function(name,
                              region=region, key=key, keyid=keyid, profile=profile)
-        if lmbda:
+        if func:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
                 'LastModified')
-            return {'lambda': dict([(k, lmbda.get(k)) for k in keys])}
+            return {'function': dict([(k, func.get(k)) for k in keys])}
         else:
-            return {'lambda': None}
+            return {'function': None}
     except ClientError as e:
         return {'error': salt.utils.boto.get_error(e)}
 
 
-def update_config(name, role, handler, description="", timeout=3, memorysize=128,
+def update_function_config(name, role, handler, description="", timeout=3, memorysize=128,
             region=None, key=None, keyid=None, profile=None):
     '''
     Update the named lambda function to the configuration.
 
-    Returns {updated: true} if the Lambda function was updated and returns
-    {updated: False} if the Lambda function was not updated.
+    Returns {updated: true} if the function was updated and returns
+    {updated: False} if the function was not updated.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_lamba.update_config my_lambda my_role my_file.my_function "my lambda function"
+        salt myminion boto_lamba.update_function_config my_function my_role my_file.my_function "my lambda function"
 
     '''
 
@@ -317,28 +317,28 @@ def update_config(name, role, handler, description="", timeout=3, memorysize=128
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
                 'LastModified')
-            return {'updated': True, 'lambda': dict([(k, r.get(k)) for k in keys])}
+            return {'updated': True, 'function': dict([(k, r.get(k)) for k in keys])}
         else:
-            log.warning('Lambda function was not updated')
+            log.warning('Function was not updated')
             return {'updated': False}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def update_code(name, zipfile=None, s3bucket=None, s3key=None,
+def update_function_code(name, zipfile=None, s3bucket=None, s3key=None,
             s3objectversion=None, publish=False,
             region=None, key=None, keyid=None, profile=None):
     '''
     Upload the given code to the named lambda function.
 
-    Returns {updated: true} if the Lambda function was updated and returns
-    {updated: False} if the Lambda function was not updated.
+    Returns {updated: true} if the function was updated and returns
+    {updated: False} if the function was not updated.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_lamba.update_code my_lambda zipfile=lambda.zip
+        salt myminion boto_lamba.update_function_code my_function zipfile=function.zip
 
     '''
 
@@ -364,9 +364,196 @@ def update_code(name, zipfile=None, s3bucket=None, s3key=None,
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
                 'LastModified')
-            return {'updated': True, 'lambda': dict([(k, r.get(k)) for k in keys])}
+            return {'updated': True, 'function': dict([(k, r.get(k)) for k in keys])}
         else:
-            log.warning('Lambda function was not updated')
+            log.warning('Function was not updated')
+            return {'updated': False}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def list_function_versions(functionname, 
+            region=None, key=None, keyid=None, profile=None):
+    '''
+    List the versions available for the given function.
+
+    Returns {created: true} if the alias was created and returns
+    {created: False} if the alias was not created.
+
+    CLI Example:
+
+    .. code-block:: yaml
+
+        versions:
+          - {...}
+          - {...}
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        vers = conn.list_versions_by_function(FunctionName=functionname)
+        if vers:
+            return vers
+        else:
+            log.warning('No versions found')
+            return { 'Versions': [] }
+    except ClientError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+
+def create_alias(functionname, name, functionversion, description="",
+            region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a valid config, create an alias to a function.
+
+    Returns {created: true} if the alias was created and returns
+    {created: False} if the alias was not created.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lamba.create_alias my_function my_alias $LATEST "An alias"
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        alias = conn.create_alias(FunctionName=functionname, Name=name,
+                                   FunctionVersion=functionversion, Description=description)
+        if alias:
+            log.info('The newly created alias name is {0}'.format(alias['Name']))
+
+            return {'created': True, 'name': alias['Name']}
+        else:
+            log.warning('Alias was not created')
+            return {'created': False}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def delete_alias(functionname, name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a function name and alias name, delete the alias.
+
+    Returns {deleted: true} if the alias was deleted and returns
+    {deleted: false} if the alias was not deleted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lambda.delete_alias myfunction myalias
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.delete_alias(FunctionName=functionname, Name=name)
+        return {'deleted': True}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def _find_alias(functionname, name, functionversion=None,
+               region=None, key=None, keyid=None, profile=None):
+
+    '''
+    Given function name and alias name, find and return matching alias information.
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+    if functionversion:
+        aliases = conn.list_aliases(FunctionName=functionname,
+                        FunctionVersion=functionversion)
+    else:
+        aliases = conn.list_aliases(FunctionName=functionname)
+
+    for alias in aliases.get('Aliases'):
+        if alias['Name'] == name:
+           return alias
+    return None
+
+
+def alias_exists(functionname, name, region=None, key=None,
+           keyid=None, profile=None):
+    '''
+    Given a function name and alias name, check to see if the given alias exists.
+
+    Returns True if the given alias exists and returns False if the given
+    alias does not exist.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lambda.alias_exists myfunction myalias
+
+    '''
+
+    try:
+        alias = _find_alias(functionname, name,
+                             region=region, key=key, keyid=keyid, profile=profile)
+        return {'exists': bool(alias)}
+    except ClientError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+
+def describe_alias(functionname, name, region=None, key=None,
+             keyid=None, profile=None):
+    '''
+    Given a function name and alias name describe the properties of the alias.
+
+    Returns a dictionary of interesting properties.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lambda.describe myfunction
+
+    '''
+
+    try:
+        alias = _find_alias(functionname, name,
+                             region=region, key=key, keyid=keyid, profile=profile)
+        if alias:
+            keys = ('Name', 'FunctionVersion', 'Description')
+            return {'alias': dict([(k, alias.get(k)) for k in keys])}
+        else:
+            return {'alias': None}
+    except ClientError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+
+def update_alias(functionname, name, functionversion=None, description=None,
+            region=None, key=None, keyid=None, profile=None):
+    '''
+    Update the named alias to the configuration.
+
+    Returns {updated: true} if the alias was updated and returns
+    {updated: False} if the alias was not updated.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lamba.update_alias my_lambda my_alias $LATEST
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        args= {}
+        if functionversion:
+            args['FunctionVersion'] = functionversion
+        if description:
+            args['Description'] = description
+        r = conn.update_alias(FunctionName=functionname, Name=name, **args)
+        if r:
+            keys = ('Name', 'FunctionVersion', 'Description')
+            return {'updated': True, 'alias': dict([(k, r.get(k)) for k in keys])}
+        else:
+            log.warning('Alias was not updated')
             return {'updated': False}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
