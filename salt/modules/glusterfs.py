@@ -30,6 +30,7 @@ def __virtual__():
 
 
 def _get_minor_version():
+    # Set default version to 6 for tests
     version = 6
     cmd = 'gluster --version'
     result = __salt__['cmd.run'](cmd).splitlines()
