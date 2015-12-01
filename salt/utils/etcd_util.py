@@ -109,6 +109,8 @@ class EtcdClient(object):
             except etcd.EtcdKeyNotFound:
                 log.debug("etcd: key was not created while watching")
                 return ret
+            except ValueError:
+                return {}
             if result and getattr(result, "dir"):
                 ret['dir'] = True
             ret['value'] = getattr(result, 'value')
