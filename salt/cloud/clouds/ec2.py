@@ -2107,7 +2107,7 @@ def wait_for_instance(
             'win_deploy_auth_retry_delay', vm_, __opts__, default=1
         )
         use_winrm = config.get_cloud_config_value(
-            'use_winrm', vm_, __opts__, default=false
+            'use_winrm', vm_, __opts__, default=False
         )
 
         if win_passwd and win_passwd == 'auto':
