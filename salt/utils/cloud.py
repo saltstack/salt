@@ -854,7 +854,7 @@ def validate_windows_cred(host,
     '''
     # if winrm was requested, lets use that instead of winexe
     if(winrm and HAS_WINRM):
-        return wait_for_winrm(host,5986,username,password, retries * delay)
+        return wait_for_winrm(host,5986,username,password, retries * retry_delay)
 
     # if winrm was not requested, lets use winexe
     cmd = "winexe -U '{0}%{1}' //{2} \"hostname\"".format(
