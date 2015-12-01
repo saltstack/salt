@@ -18,6 +18,7 @@ import time
 
 # Import Salt Libs
 from salt.exceptions import SaltSystemExit
+import salt.modules.cmdmod
 
 
 # Import Third Party Libs
@@ -40,6 +41,40 @@ def __virtual__():
         return True
     else:
         return False, 'Missing dependency: The salt.utils.vmware module requires pyVmomi.'
+
+def esxcli(host, user, pwd, cmd, esxi_host=None, port=443):
+    '''
+    Shell out and call the specified esxcli commmand, parse the result
+    and return something sane.
+
+    :param host: ESXi or vCenter host to connect to
+    :param user: User to connect as, usually root
+    :param pwd: Password to connect with
+    :param port: TCP port
+    :param cmd: esxcli command and arguments
+    :param esxi_host: If `host` is a vCenter host, then esxi_host is the
+                      ESXi machine on which to execute this command
+    :return: Dictionary
+    '''
+
+    esxcli_path = salt.utils.which('esxicli')
+    if not esxcli_path:
+        esxcli_path = '/usr/lib/vmware-vcli/bin/esxcli/esxcli'
+
+    esxcmd = esxcli_path
+
+    if not esxi_host:
+        # Then we are connecting directly to an ESXi server,
+        # 'host' points at that server, and esxi_host is a reference to the
+        # ESXi instance we are manipulating
+        esxcmd += ' -s {0} -u {1} -p {2} {3}'.format(host, user, pwd, cmd)
+    else:
+        esxcmd += ' -s {0} -h {1} -u {2} -p {3} {4}'.format(host, esxi_host,
+                                                        user, pwd, cmd)
+
+    ret = salt.modules.cmdmod.run_all(esxcmd)
+
+    return ret
 
 
 def get_service_instance(host, username, password, protocol=None, port=None):
