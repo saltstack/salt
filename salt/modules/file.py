@@ -3341,13 +3341,6 @@ def get_managed(
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
                 return '', {}, 'Source file {0} not found'.format(source)
-        # if its a local file
-        elif urlparsed_source.scheme == 'file':
-            file_sum = get_hash(urlparsed_source.path, form='sha256')
-            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
-        elif source.startswith('/'):
-            file_sum = get_hash(source, form='sha256')
-            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
         elif source_hash:
             protos = ('salt', 'http', 'https', 'ftp', 'swift', 's3')
             if _urlparse(source_hash).scheme in protos:
@@ -3372,6 +3365,12 @@ def get_managed(
                                     ).format(source_hash)
                 source_sum['hsum'] = comps[1].strip()
                 source_sum['hash_type'] = comps[0].strip()
+        elif urlparsed_source.scheme == 'file':
+            file_sum = get_hash(urlparsed_source.path, form='sha256')
+            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
+        elif source.startswith('/'):
+            file_sum = get_hash(source, form='sha256')
+            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
         else:
             return '', {}, ('Unable to determine upstream hash of'
                             ' source file {0}').format(source)
