@@ -1421,10 +1421,14 @@ def _validate_input(kwargs,
                 raise SaltInvocationError(err)
 
             if not os.path.isabs(host_path):
-                raise SaltInvocationError(
-                    'Host path {0} in bind {1} is not absolute'
-                    .format(host_path, bind)
-                )
+                if os.path.sep in host_path:
+                    raise SaltInvocationError(
+                        'Host path {0} in bind {1} is not absolute'
+                        .format(container_path, bind)
+                    )
+                log.warn('Host path {0} in bind {1} is not absolute,'
+                         ' assuming it is a docker volume.'.format(host_path,
+                                                                   bind))
             if not os.path.isabs(container_path):
                 raise SaltInvocationError(
                     'Container path {0} in bind {1} is not absolute'
