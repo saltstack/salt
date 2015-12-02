@@ -135,7 +135,7 @@ def __init__(opts):
         __utils__['boto3.assign_funcs'](__name__, 'apigateway')
 
 
-def _filter_api(name, apis):
+def _filter_apis(name, apis):
     '''
     Given a name, and a list of api items, return list of api items matching 
     the given name.
@@ -257,11 +257,12 @@ def delete_api_resources(apiid, abspath,
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def _find_apis(name,
-               region=None, key=None, keyid=None, profile=None):
+def _get_apis_by_name(name,
+                     region=None, key=None, keyid=None, profile=None):
 
     '''
-    Given rest api name, find and return list of matching rest api information.
+    Given rest api name, get and return list of matching rest api information.  If
+    rest api name is "", return all apis w/o filtering by rest api name.
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     apis = []
@@ -269,12 +270,47 @@ def _find_apis(name,
 
     while True:
         if (_apis):
-            apis = apis + _filter_api(name, _apis['items'])
+            if name:
+                apis = apis + _filter_apis(name, _apis['items'])
+            else:
+                apis = apis + _apis['items']
             if not _apis.has_key('position'):
                 break
             _apis = conn.get_rest_apis(position=_apis['position'])
     return apis
 
+
+def get_apis_by_name(name,
+                     region=None, key=None, keyid=None, profile=None):
+
+    '''
+    Given rest api name, get and return list of matching rest api information.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_apis_by_name api_name
+
+    '''
+    return _get_apis_by_name(name,
+                             region=region, key=key, keyid=keyid, profile=profile)
+
+
+def get_all_apis(region=None, key=None, keyid=None, profile=None):
+
+    '''
+    returns all rest api's defined in the defined region
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateways.get_all_apis
+
+    '''
+    return _get_apis_by_name('',
+                             region=region, key=key, keyid=keyid, profile=profile)
 
 def exists(name, region=None, key=None,
            keyid=None, profile=None):
@@ -294,8 +330,8 @@ def exists(name, region=None, key=None,
     '''
 
     try:
-        apis = _find_apis(name,
-                          region=region, key=key, keyid=keyid, profile=profile)
+        apis = _get_apis_by_name(name,
+                                 region=region, key=key, keyid=keyid, profile=profile)
         return {'exists': bool(apis)}
     except ClientError as e:
         # TODO: error with utils.boto3.get_error on exception
@@ -356,10 +392,10 @@ def delete_api(name, region=None, key=None, keyid=None, profile=None):
 
     '''
     try:
-        apis = _find_apis(name,
-                          region=region, key=key, keyid=keyid, profile=profile)
+        apis = _get_apis_by_name(name,
+                                 region=region, key=key, keyid=keyid, profile=profile)
 
-        if (len(apis)):
+        if (apis):
             conn = _get_conn(region=region, key=key, 
                              keyid=keyid, profile=profile)
             for api in apis:
