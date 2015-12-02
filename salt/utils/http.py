@@ -61,7 +61,7 @@ from tornado.httpclient import HTTPClient
 try:
     import tornado.curl_httpclient
     HAS_CURL_HTTPCLIENT = True
-except:
+except ImportError:
     HAS_CURL_HTTPCLIENT = False
 
 try:
