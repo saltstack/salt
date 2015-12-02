@@ -523,7 +523,7 @@ class SPMClient(object):
         '''
         Display verbose information
         '''
-        if self.opts['verbose']:
+        if self.opts.get('verbose', False) is True:
             self.ui.status(msg)
         level(msg)
 
