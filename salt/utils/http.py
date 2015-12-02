@@ -56,8 +56,13 @@ from salt.ext.six.moves.urllib.error import URLError
 # Don't need a try/except block, since Salt depends on tornado
 import tornado.httputil
 import tornado.simple_httpclient
-import tornado.curl_httpclient
 from tornado.httpclient import HTTPClient
+
+try:
+    import tornado.curl_httpclient
+    HAS_CURL_HTTPCLIENT = True
+except:
+    HAS_CURL_HTTPCLIENT = False
 
 try:
     import requests
@@ -432,6 +437,12 @@ def query(url,
 
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
+            if HAS_CURL_HTTPCLIENT is False:
+                ret['error'] = ('proxy_host and proxy_port has been set. This requires pycurl, but the '
+                                'pycurl library does not seem to be installed')
+                log.error(ret['error'])
+                return ret
+
             tornado.httpclient.AsyncHTTPClient.configure('tornado.curl_httpclient.CurlAsyncHTTPClient')
             client_argspec = inspect.getargspec(tornado.curl_httpclient.CurlAsyncHTTPClient.initialize)
         else:
