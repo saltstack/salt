@@ -47,6 +47,6 @@ def beacon(proxies):
             - p8000: {}
             - p8001: {}
     '''
-    log.info('salt proxy beacon called')
+    log.trace('salt proxy beacon called')
 
     return _run_proxy_processes(proxies)
