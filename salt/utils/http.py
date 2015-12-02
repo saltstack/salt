@@ -425,17 +425,17 @@ def query(url,
 
         client_argspec = None
 
-        proxy_host     = opts.get('proxy_host', None)
-        proxy_port     = opts.get('proxy_port', None)
+        proxy_host = opts.get('proxy_host', None)
+        proxy_port = opts.get('proxy_port', None)
         proxy_username = opts.get('proxy_username', None)
         proxy_password = opts.get('proxy_password', None)
 
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
-          tornado.httpclient.AsyncHTTPClient.configure('tornado.curl_httpclient.CurlAsyncHTTPClient')
-          client_argspec = inspect.getargspec(tornado.curl_httpclient.CurlAsyncHTTPClient.initialize)
+            tornado.httpclient.AsyncHTTPClient.configure('tornado.curl_httpclient.CurlAsyncHTTPClient')
+            client_argspec = inspect.getargspec(tornado.curl_httpclient.CurlAsyncHTTPClient.initialize)
         else:
-          client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+            client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
 
         supports_max_body_size = 'max_body_size' in client_argspec.args
 
