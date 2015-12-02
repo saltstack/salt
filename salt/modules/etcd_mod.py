@@ -101,6 +101,59 @@ def set_(key, value, profile=None, ttl=None, directory=False):
     return client.set(key, value, ttl=ttl, directory=directory)
 
 
+def update(fields, path='', profile=None):
+    '''
+    .. versionadded:: Boron
+
+    Sets a dictionary of values in one call.  Useful for large updates
+    in syndic environments.  The dictionary can contain a mix of formats
+    such as:
+
+    .. code-block:: python
+
+        {
+          '/some/example/key': 'bar',
+          '/another/example/key': 'baz'
+        }
+
+    Or it may be a straight dictionary, which will be flattened to look
+    like the above format:
+
+    .. code-block:: python
+
+        {
+            'some': {
+                'example': {
+                    'key': 'bar'
+                }
+            },
+            'another': {
+                'example': {
+                    'key': 'baz'
+                }
+            }
+        }
+
+    You can even mix the two formats and it will be flattened to the first
+    format.  Leading and trailing '/' will be removed.
+
+    Empty directories can be created by setting the value of the key to an
+    empty dictionary.
+
+    The 'path' parameter will optionally set the root of the path to use.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion etcd.update "{'/path/to/key': 'baz', '/another/key': 'bar'}"
+        salt myminion etcd.update "{'/path/to/key': 'baz', '/another/key': 'bar'}" profile=my_etcd_config
+        salt myminion etcd.update "{'/path/to/key': 'baz', '/another/key': 'bar'}" path='/some/root'
+    '''
+    client = __utils__['etcd_util.get_conn'](__opts__, profile)
+    return client.update(fields, path)
+
+
 def watch(key, recurse=False, profile=None, timeout=0, index=None):
     '''
     .. versionadded:: Boron
