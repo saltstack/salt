@@ -528,7 +528,11 @@ def netstat():
 
 def active_tcp():
     '''
-    Return a dict containing information on all of the running TCP connections
+    Return a dict containing information on all of the running TCP connections (currently linux and solaris only)
+
+    .. versionchanged:: 2015.8.4
+
+        Added support for SunOS
 
     CLI Example:
 
@@ -536,7 +540,25 @@ def active_tcp():
 
         salt '*' network.active_tcp
     '''
-    return salt.utils.network.active_tcp()
+    if __grains__['kernel'] == 'Linux':
+        return salt.utils.network.active_tcp()
+    elif __grains__['kernel'] == 'SunOS':
+        # lets use netstat to mimic linux as close as possible
+        ret = {}
+        for connection in _netstat_sunos():
+            if not connection['proto'].startswith('tcp'):
+                continue
+            if connection['state'] != 'ESTABLISHED':
+                continue
+            ret[len(ret)+1] = {
+                'local_addr': '.'.join(connection['local-address'].split('.')[:-1]),
+                'local_port': '.'.join(connection['local-address'].split('.')[-1:]),
+                'remote_addr': '.'.join(connection['remote-address'].split('.')[:-1]),
+                'remote_port': '.'.join(connection['remote-address'].split('.')[-1:])
+            }
+        return ret
+    else:
+        return {}
 
 
 def traceroute(host):
@@ -655,6 +677,7 @@ def traceroute(host):
     return ret
 
 
+@decorators.which('dig')
 def dig(host):
     '''
     Performs a DNS lookup with dig
@@ -1158,13 +1181,13 @@ def _get_bufsize_linux(iface):
 
 def get_bufsize(iface):
     '''
-    Return network buffer sizes as a dict
+    Return network buffer sizes as a dict (currently linux only)
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' network.getbufsize
+        salt '*' network.get_bufsize
     '''
     if __grains__['kernel'] == 'Linux':
         if os.path.exists('/sbin/ethtool'):
@@ -1210,7 +1233,7 @@ def mod_bufsize(iface, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' network.getBuffers
+        salt '*' network.mod_bufsize tx=<val> rx=<val> rx-mini=<val> rx-jumbo=<val>
     '''
     if __grains__['kernel'] == 'Linux':
         if os.path.exists('/sbin/ethtool'):
@@ -1288,6 +1311,8 @@ def default_route(family=None):
     for route in _routes:
         if family:
             if route['destination'] in default_route[family]:
+                if __grains__['kernel'] == 'SunOS' and route['addr_family'] != family:
+                    continue
                 ret.append(route)
         else:
             if route['destination'] in default_route['inet'] or \
