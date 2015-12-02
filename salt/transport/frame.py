@@ -15,10 +15,6 @@ def frame_msg(body, header=None, raw_body=False):
     if header is None:
         header = {}
 
-    # if the body wasn't already msgpacked-- lets do that.
-    if not raw_body:
-        body = msgpack.dumps(body)
-
     framed_msg['head'] = header
     framed_msg['body'] = body
     return msgpack.dumps(framed_msg)

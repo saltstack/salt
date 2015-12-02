@@ -434,8 +434,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
                 unpacker.feed(wire_bytes)
                 for framed_msg in unpacker:
                     header = framed_msg['head']
-                    body = msgpack.loads(framed_msg['body'])
-                    self.io_loop.spawn_callback(self.message_handler, stream, header, body)
+                    self.io_loop.spawn_callback(self.message_handler, stream, header, framed_msg['body'])
 
         except tornado.iostream.StreamClosedError:
             log.trace('req client disconnected {0}'.format(address))
@@ -577,14 +576,13 @@ class SaltMessageClient(object):
                 for framed_msg in unpacker:
                     header = framed_msg['head']
                     message_id = header.get('mid')
-                    body = msgpack.loads(framed_msg['body'])
 
                     if message_id in self.send_future_map:
-                        self.send_future_map.pop(message_id).set_result(body)
+                        self.send_future_map.pop(message_id).set_result(framed_msg['body'])
                         self.remove_message_timeout(message_id)
                     else:
                         if self._on_recv is not None:
-                            self.io_loop.spawn_callback(self._on_recv, header, body)
+                            self.io_loop.spawn_callback(self._on_recv, header, framed_msg['body'])
                         else:
                             log.error('Got response for message_id {0} that we are not tracking'.format(message_id))
             except tornado.iostream.StreamClosedError as e:
@@ -707,7 +705,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
     @tornado.gen.coroutine
     def publish_payload(self, payload, _):
         log.debug('TCP PubServer sending payload: {0}'.format(payload))
-        payload = salt.transport.frame.frame_msg(payload['payload'], raw_body=True)
+        payload = salt.transport.frame.frame_msg(payload['payload'])
 
         to_remove = []
         for item in self.clients:
