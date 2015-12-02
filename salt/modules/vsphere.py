@@ -178,7 +178,7 @@ def set_coredump_network_config(host, username, password, dump_ip, host_vnic='vm
 
 def get_firewall_status(host, username, password, esxi_host=None):
     '''
-    Show status of all firewall rulesets.
+    Show status of all firewall rule sets.
 
     :param host: ESXi or vCenter host to connect to
     :param username: User to connect as, usually root
@@ -189,6 +189,17 @@ def get_firewall_status(host, username, password, esxi_host=None):
              `success` will be True or False depending on query success
              `rulesets` will list the rulesets and their statuses if `success`
              was true.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for ESXi host connection information
+        salt '*' vsphere.get_firewall_status my.esxi.host root bad-password
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.get_firewall_status my.vcenter.location root bad-password \
+            esxi_host='esxi-1.host.com'
     '''
     cmd = 'network firewall ruleset list'
     ret = salt.utils.vmware.esxcli(host, username, password, cmd, esxi_host=esxi_host)
@@ -210,7 +221,7 @@ def get_firewall_status(host, username, password, esxi_host=None):
 
 def enable_firewall_ruleset(host, username, password, ruleset_enable, ruleset_name, esxi_host=None):
     '''
-    Enable or disable an ESXi firewall ruleset
+    Enable or disable an ESXi firewall rule set.
 
     :param host: ESXi or vCenter host to connect to
     :param username: User to connect as, usually root
@@ -220,6 +231,17 @@ def enable_firewall_ruleset(host, username, password, ruleset_enable, ruleset_na
     :param ruleset_enable: True to enable the ruleset, false to disable
     :param ruleset_name: Name of ruleset to target
     :return: A standard cmd.run_all dictionary
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for ESXi host connection information
+        salt '*' vsphere.enable_firewall_ruleset my.esxi.host root bad-password True 'syslog'
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.enable_firewall_ruleset my.vcenter.location root bad-password True 'syslog' \
+            esxi_host='esxi-1.host.com'
     '''
 
     cmd = 'network firewall ruleset set --enabled {0} --ruleset-id={1}'.format(
@@ -231,7 +253,6 @@ def enable_firewall_ruleset(host, username, password, ruleset_enable, ruleset_na
 
 def syslog_service_reload(host, username, password, esxi_host=None):
     '''
-
     Reload the syslog service so it will pick up any changes.
 
     :param host: ESXi or vCenter host to connect to
@@ -241,6 +262,17 @@ def syslog_service_reload(host, username, password, esxi_host=None):
                       ESXi machine on which to execute this command
     :return: A standard cmd.run_all dictionary.  This dictionary will at least
              have a `retcode` key.  If `retcode` is 0 the command was successful.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for ESXi host connection information
+        salt '*' vsphere.syslog_service_reload my.esxi.host root bad-password
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.syslog_service_reload my.vcenter.location root bad-password \
+            esxi_host='esxi-1.host.com'
     '''
 
     cmd = 'system syslog reload'
@@ -249,54 +281,67 @@ def syslog_service_reload(host, username, password, esxi_host=None):
     return ret
 
 
-def set_syslog_config(host, username, password, syslog_config, config_value, fw=True,
+def set_syslog_config(host, username, password, syslog_config, config_value, firewall=True,
                       reset_service=True, esxi_host=None):
     '''
-    Set the specified syslog configuration parameter.
-    By default will reset the syslog service after the configuration is set.
+    Set the specified syslog configuration parameter. By default, this function will
+    reset the syslog service after the configuration is set.
 
-    Valid syslog_config values are `logdir`, `loghost`, `default-rotate`,
-    `default-size`, and `default-timeout`.
+    host
+        ESXi or vCenter host to connect to.
 
-    Example:
+    username
+        User to connect as, usually root.
 
-    .. code-block:: bash
+    password
+        Password to connect with.
 
-        salt esxi_host vsphere.get_syslog_config 192.168.1.1 root secret \
-            loghost ssl://localhost:5432,tcp://10.1.0.1:1514
+    syslog_config
+        Name of parameter to set (corresponds to the command line switch for
+        esxcli without the double dashes (--))
 
-    :param host: ESXi or vCenter host to connect to
-    :param username: User to connect as, usually root
-    :param password: Password to connect with
-    :param syslog_config: Name of parameter to set (corresponds to the command
-                          line switch for esxcli without the double dashes
-                          (--))
-    :param config_value: Value for the above parameter.  For `loghost`,
-                         URLs or IP addresses to use for logging.  Multiple
-                         log servers can be specified by listing them,
-                         comma-separated, but without spaces before
-                         or after commas
-                         (reference: https://blogs.vmware.com/vsphere/2012/04/configuring-multiple-syslog-servers-for-esxi-5.html)
-    :param reset_service: After a successful parameter set, reset the service
-    :param fw: Enable the firewall ruleset for syslog
-    :param esxi_host: If `host` is a vCenter host, then esxi_host is the
-                      ESXi machine on which to execute this command
+        Valid syslog_config values are ``logdir``, ``loghost``, ``default-rotate`,
+        ``default-size``, ``default-timeout``, and ``logdir-unique``.
+
+    config_value
+        Value for the above parameter. For ``loghost``, URLs or IP addresses to
+        use for logging. Multiple log servers can be specified by listing them,
+        comma-separated, but without spaces before or after commas.
+
+        (reference: https://blogs.vmware.com/vsphere/2012/04/configuring-multiple-syslog-servers-for-esxi-5.html)
+
+    firewall
+        Enable the firewall rule set for syslog. Defaults to ``True``.
+
+    reset_service
+        After a successful parameter set, reset the service. Defaults to ``True``.
+
+    esxi_host
+        If ``host`` is a vCenter server, then esxi_host is the ESXi machine on which to execute this command.
+
     :return: Dictionary with a top-level key of 'success' which indicates
              if all the parameters were reset, and individual keys
              for each parameter indicating which succeeded or failed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt esxi_host vsphere.set_syslog_config 192.168.1.1 root secret \
+            loghost ssl://localhost:5432,tcp://10.1.0.1:1514
     '''
 
-    if fw and syslog_config == 'loghost':
+    if firewall and syslog_config == 'loghost':
         ret = enable_firewall_ruleset(host, username, password, ruleset_enable=True,
                                       ruleset_name='syslog')
         if ret['retcode'] != 0:
-            return {'success':False, 'message': ret['stdout']}
+            return {'success': False, 'message': ret['stdout']}
 
     ret_dict = {}
     valid_resets = ['logdir', 'loghost', 'default-rotate',
                     'default-size', 'default-timeout']
     if syslog_config not in valid_resets:
-        ret_dict = {'success': False, 'message': syslog_config+' is not a valid config variable'}
+        ret_dict = {'success': False, 'message': '\'{0}\' is not a valid config variable.'.format(syslog_config)}
         return ret_dict
 
     cmd = 'system syslog config set --{0} {1}'.format(syslog_config, config_value)
@@ -314,7 +359,7 @@ def set_syslog_config(host, username, password, syslog_config, config_value, fw=
     return ret_dict
 
 
-def get_syslog_config(host, username, password, esxi_host=None, port=443):
+def get_syslog_config(host, username, password, esxi_host=None):
     '''
     Retrieve the syslog configuration.
 
@@ -327,18 +372,22 @@ def get_syslog_config(host, username, password, esxi_host=None, port=443):
     :param host: ESXi or vCenter host to connect to
     :param username: User to connect as, usually root
     :param password: Password to connect with
-    :param port: TCP port
     :param esxi_host: If `host` is a vCenter host, then esxi_host is the
                       ESXi machine on which to execute this command
     :return: Dictionary with a keys and values corresponding to the
              syslog configuration
-    '''
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt esxi_host vsphere.get_syslog_config 192.168.1.1 root secret \
+    '''
     ret_dict = {}
     cmd = 'system syslog config get'
 
     ret = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                   esxi_host=esxi_host, port=port)
+                                   esxi_host=esxi_host)
 
     ret_dict['success'] = ret['retcode'] == 0
     if ret['retcode'] != 0:
@@ -355,32 +404,33 @@ def get_syslog_config(host, username, password, esxi_host=None, port=443):
 
 
 def reset_syslog_config(host, username, password, syslog_config=None,
-                        esxi_host=None, port=443):
+                        esxi_host=None):
     '''
-    Return the syslog service to its default settings.
+    Reset the syslog service to its default settings.
 
-    Valid syslog_config values are `logdir`, `loghost`, `default-rotate`,
-    `default-size`, `default-timeout`, or `all` for all of these.
-
-    `syslog_config` can be passed as a quoted, comma-separated string, e.g.
-
-    .. code-block:: bash
-
-        salt esxi_host vsphere.reset_syslog_config 192.168.1.1 root \
-             secret syslog_config='logdir, loghost'
+    Valid syslog_config values are ``logdir``, ``loghost``, ``logdir-unique``,
+    ``default-rotate``, ``default-size``, ``default-timeout``,
+    or ``all`` for all of these.
 
     :param host: ESXi or vCenter host to connect to
     :param username: User to connect as, usually root
     :param password: Password to connect with
     :param syslog_config: List of parameters to reset, or 'all' to reset everything
-    :param port: TCP port
     :param esxi_host: If `host` is a vCenter host, then esxi_host is the
                       ESXi machine on which to execute this command
     :return: Dictionary with a top-level key of 'success' which indicates
              if all the parameters were reset, and individual keys
              for each parameter indicating which succeeded or failed.
-    '''
 
+    CLI Example:
+
+    ``syslog_config`` can be passed as a quoted, comma-separated string, e.g.
+
+    .. code-block:: bash
+
+        salt esxi_host vsphere.reset_syslog_config 192.168.1.1 root \
+             secret syslog_config='logdir,loghost'
+    '''
     valid_resets = ['logdir', 'loghost', 'default-rotate',
                     'default-size', 'default-timeout']
     cmd = 'system syslog config set --reset='
@@ -394,21 +444,21 @@ def reset_syslog_config(host, username, password, syslog_config=None,
     ret_dict = {}
     all_success = True
 
-    for resetparam in resets:
-        if resetparam in valid_resets:
-            ret = salt.utils.vmware.esxcli(host, username, password, cmd + resetparam,
-                                           esxi_host=esxi_host, port=port)
-            ret_dict[resetparam] = {}
-            ret_dict[resetparam]['success'] = ret['retcode'] == 0
+    for reset_param in resets:
+        if reset_param in valid_resets:
+            ret = salt.utils.vmware.esxcli(host, username, password, cmd + reset_param,
+                                           esxi_host=esxi_host)
+            ret_dict[reset_param] = {}
+            ret_dict[reset_param]['success'] = ret['retcode'] == 0
             if ret['retcode'] != 0:
                 all_success = False
-                ret_dict[resetparam]['message'] = ret['stdout']
+                ret_dict[reset_param]['message'] = ret['stdout']
         else:
             all_success = False
-            ret_dict[resetparam] = {}
-            ret_dict[resetparam]['success'] = False
-            ret_dict[resetparam]['message'] = 'Invalid syslog '\
-                                              'configuration parameter'
+            ret_dict[reset_param] = {}
+            ret_dict[reset_param]['success'] = False
+            ret_dict[reset_param]['message'] = 'Invalid syslog ' \
+                                               'configuration parameter'
 
     ret_dict['success'] = all_success
     return ret_dict

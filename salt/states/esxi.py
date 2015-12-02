@@ -461,6 +461,8 @@ def ssh_configured(name,
         as a boolean value where ``True`` indicates that SSH should be enabled and
         running and ``False`` indicates that SSH should be disabled and stopped.
 
+        In order to update SSH keys, the SSH service must be enabled.
+
     ssh_key
         Public SSH key to added to the authorized_keys file on the ESXi host. You can
         use ``ssh_key`` or ``ssh_key_file``, but not both.
@@ -591,6 +593,177 @@ def ssh_configured(name,
         ret['comment'] = 'SSH service state will change.'
 
     return ret
+
+
+def syslog_configured(name,
+                      syslog_configs,
+                      firewall=True,
+                      reset_service=True,
+                      reset_syslog_config=False,
+                      reset_configs=None):
+    '''
+    Ensures the specified syslog configuration parameters. By default,
+    this state will reset the syslog service after any new or changed
+    parameters are set successfully.
+
+    name
+        Name of the state.
+
+    syslog_config
+        Name of parameter to set (corresponds to the command line switch for
+        esxcli without the double dashes (--))
+
+        Valid syslog_config values are ``logdir``, ``loghost``, ``logdir-unique``,
+        ``default-rotate``, ``default-size``, and ``default-timeout``.
+
+        Each syslog_config option also needs a configuration value to set.
+        For example, ``loghost`` requires URLs or IP addresses to use for
+        logging. Multiple log servers can be specified by listing them,
+        comma-separated, but without spaces before or after commas
+
+        (reference: https://blogs.vmware.com/vsphere/2012/04/configuring-multiple-syslog-servers-for-esxi-5.html)
+
+    firewall
+        Enable the firewall rule set for syslog. Defaults to ``True``.
+
+    reset_service
+        After a successful parameter set, reset the service. Defaults to ``True``.
+
+    reset_syslog_config
+        Resets the syslog service to it's default settings. Defaults to ``False``.
+        If set to ``True``, default settings defined by the list of syslog configs
+        in ``reset_configs`` will be reset before running any other syslog settings.
+
+    reset_configs
+        List of parameters to reset. Only runs if ``reset_syslog_config`` is set
+        to ``True``. If ``reset_syslog_config`` is set to ``True``, but no syslog
+        configs are listed in ``reset_configs``, then ``reset_configs`` will be
+        to ``all`` by default.
+
+        See ``syslog_configs`` parameter above for a list of valid syslog_config
+        values.
+
+    Example:
+
+    .. code-block:: yaml
+
+        configure-host-syslog:
+          esxi.syslog_configured:
+            - syslog_config:
+              - loghost: ssl://localhost:5432,tcp://10.1.0.1:1514
+              - default-timeout: 120
+            - firewall: True
+            - reset_service: True
+            - reset_syslog_config: True
+            - reset_configs:
+              - loghost
+              - default-timeout
+    '''
+    ret = {'name': name,
+           'result': False,
+           'changes': {},
+           'comment': ''}
+    esxi_cmd = 'esxi.cmd'
+
+    if reset_syslog_config:
+        if not reset_configs:
+            reset_configs = 'all'
+        # Only run the command if not using test=True
+        if not __opts__['test']:
+            reset = __salt__[esxi_cmd]('reset_syslog_config')(syslog_config=reset_configs)
+            for key, val in reset.iteritems():
+                if not val.get('success'):
+                    msg = val.get('message')
+                    if not msg:
+                        msg = 'There was an error resetting a syslog config. ' \
+                              'Please check debug logs.'
+                    ret['comment'] = 'Error: {0}'.format(msg)
+                    return ret
+
+        ret['changes'].update({'reset_syslog_config':
+                              {'old': '',
+                               'new': reset_configs}})
+
+    current_firewall = __salt__[esxi_cmd]('get_firewall_status')
+    if not current_firewall.get('success'):
+        ret['comment'] = 'There was an error obtaining firewall statuses. ' \
+                         'Please check debug logs.'
+        return ret
+
+    current_firewall = current_firewall.get('rulesets').get('syslog')
+    if current_firewall != firewall:
+        # Only run the command if not using test=True
+        if not __opts__['test']:
+            enabled = __salt__[esxi_cmd]('enable_firewall_ruleset')(ruleset_enable=firewall,
+                                                                    ruleset_name='syslog')
+            if enabled.get('retcode') != 0:
+                err = enabled.get('stderr')
+                out = enabled.get('stdout')
+                ret['comment'] = 'Error: {0}'.format(err if err else out)
+                return ret
+
+        ret['changes'].update({'firewall':
+                              {'old': current_firewall,
+                               'new': firewall}})
+
+    current_syslog_config = __salt__[esxi_cmd]('get_syslog_config')
+    for key, val in syslog_configs.iteritems():
+        # The output of get_syslog_config has different keys than the keys
+        # Used to set syslog_config values. We need to look them up first.
+        try:
+            lookup_key = _lookup_syslog_config(key)
+        except KeyError:
+            ret['comment'] = '\'{0}\' is not a valid config variable.'.format(key)
+            return ret
+
+        current_val = current_syslog_config[lookup_key]
+        if current_val != val:
+            # Only run the command if not using test=True
+            if not __opts__['test']:
+                response = __salt__[esxi_cmd]('set_syslog_config')(syslog_config=key,
+                                                                   config_value=val,
+                                                                   firewall=firewall,
+                                                                   reset_service=reset_service)
+                success = response.get('success')
+                if not success:
+                    msg = response.get('message')
+                    if not msg:
+                        msg = 'There was an error setting syslog config \'{0}\'. ' \
+                              'Please check debug logs.'.format(key)
+                    ret['comment'] = msg
+                    return ret
+
+            if not ret['changes'].get('syslog_config'):
+                ret['changes'].update({'syslog_config': {}})
+            ret['changes']['syslog_config'].update({key:
+                                                   {'old': current_val,
+                                                    'new': val}})
+
+    ret['result'] = True
+    if ret['changes'] == {}:
+        ret['comment'] = 'Syslog is already in the desired state.'
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Syslog state will change.'
+
+    return ret
+
+
+def _lookup_syslog_config(config):
+    '''
+    Helper function that looks up syslog_config keys available from
+    ``vsphere.get_syslog_config``.
+    '''
+    lookup = {'default-timeout': 'Default Network Retry Timeout',
+              'logdir': 'Local Log Output',
+              'default-size': 'Local Logging Default Rotation Size',
+              'logdir-unique': 'Log To Unique Subdirectory',
+              'default-rotate': 'Local Logging Default Rotations',
+              'loghost': 'Remote Host'}
+
+    return lookup.get(config)
 
 
 def _strip_key(key_string):
