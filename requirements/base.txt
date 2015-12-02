@@ -6,3 +6,4 @@ requests>=1.0.0
 tornado>=4.2.1
 # Required by Tornado to handle threads stuff.
 futures>=2.0
+pycurl>=7.19.3
