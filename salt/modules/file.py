@@ -1434,7 +1434,7 @@ def replace(path,
                 r_data = mmap.mmap(r_file.fileno(),
                                    0,
                                    access=mmap.ACCESS_READ)
-            except ValueError:
+            except (ValueError, mmap.error):
                 # size of file in /proc is 0, but contains data
                 r_data = "".join(r_file)
             if search_only:
