@@ -839,7 +839,7 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
 
 
 def _exec(client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
-    ret = {}
+    fcn_ret = {}
     seen = 0
     if 'batch' in kwargs:
         _cmd = client.cmd_batch
@@ -856,14 +856,14 @@ def _exec(client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
         }
     cmd_kwargs.update(kwargs)
     for ret_comp in _cmd(**cmd_kwargs):
-        ret.update(ret_comp)
+        fcn_ret.update(ret_comp)
         seen += 1
-        # ret can be empty, so we cannot len the whole return dict
+        # fcn_ret can be empty, so we cannot len the whole return dict
         if expr_form == 'list' and len(tgt) == seen:
             # do not wait for timeout when explicit list matching
             # and all results are there
             break
-    return ret
+    return fcn_ret
 
 
 def cmd(tgt,
@@ -886,29 +886,30 @@ def cmd(tgt,
     '''
     cfgfile = __opts__['conf_file']
     client = _get_ssh_or_api_client(cfgfile, ssh)
-    ret = _exec(
+    fcn_ret = _exec(
         client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs)
     # if return is empty, we may have not used the right conf,
     # try with the 'minion relative master configuration counter part
     # if available
     master_cfgfile = '{0}master'.format(cfgfile[:-6])  # remove 'minion'
     if (
-        not ret
+        not fcn_ret
         and cfgfile.endswith('{0}{1}'.format(os.path.sep, 'minion'))
         and os.path.exists(master_cfgfile)
     ):
         client = _get_ssh_or_api_client(master_cfgfile, ssh)
-        ret = _exec(
+        fcn_ret = _exec(
             client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs)
+
     if 'batch' in kwargs:
-        old_ret, ret = ret, {}
+        old_ret, fcn_ret = fcn_ret, {}
         for key, value in old_ret.items():
-            ret[key] = {
+            fcn_ret[key] = {
                 'out': value.get('out', 'highstate') if isinstance(value, dict) else 'highstate',
                 'ret': value,
             }
 
-    return ret
+    return fcn_ret
 
 
 def cmd_iter(tgt,

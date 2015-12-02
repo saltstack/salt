@@ -57,11 +57,19 @@ def present(name, acl_type, acl_name='', perms='', recurse=False):
            'comment': ''}
 
     _octal = {'r': 4, 'w': 2, 'x': 1}
-    _current_perms = __salt__['acl.getfacl'](name)
 
-    if _current_perms[name].get(acl_type, None):
+    __current_perms = __salt__['acl.getfacl'](name)
+
+    if acl_type.startswith(('d:', 'default:')):
+        _acl_type = ':'.join(acl_type.split(':')[1:])
+        _current_perms = __current_perms[name].get('defaults', {})
+    else:
+        _acl_type = acl_type
+        _current_perms = __current_perms[name]
+
+    if _current_perms.get(_acl_type, None):
         try:
-            user = [i for i in _current_perms[name][acl_type] if next(six.iterkeys(i)) == acl_name].pop()
+            user = [i for i in _current_perms[_acl_type] if next(six.iterkeys(i)) == acl_name].pop()
         except (AttributeError, IndexError, StopIteration):
             user = None
 
@@ -106,11 +114,18 @@ def absent(name, acl_type, acl_name='', perms='', recurse=False):
            'changes': {},
            'comment': ''}
 
-    _current_perms = __salt__['acl.getfacl'](name)
+    __current_perms = __salt__['acl.getfacl'](name)
 
-    if _current_perms[name].get(acl_type, None):
+    if acl_type.startswith(('d:', 'default:')):
+        _acl_type = ':'.join(acl_type.split(':')[1:])
+        _current_perms = __current_perms[name].get('defaults', {})
+    else:
+        _acl_type = acl_type
+        _current_perms = __current_perms[name]
+
+    if _current_perms.get(_acl_type, None):
         try:
-            user = [i for i in _current_perms[name][acl_type] if next(six.iterkeys(i)) == acl_name].pop()
+            user = [i for i in _current_perms[_acl_type] if next(six.iterkeys(i)) == acl_name].pop()
         except IndexError:
             user = None
 

@@ -1252,54 +1252,32 @@ def _get_first_aggregate_text(node_list):
     return '\n'.join(out)
 
 
-def _parse_suse_product(path, *info):
+def list_products(all=False):
     '''
-    Parse SUSE LLC product.
-    '''
-    doc = dom.parse(path)
-    product = {}
-    for nfo in info:
-        product.update(
-            {nfo: _get_first_aggregate_text(
-                doc.getElementsByTagName(nfo)
-            )}
-        )
+    List all available or installed SUSE products.
 
-    return product
-
-
-def list_products():
-    '''
-    List all installed SUSE products.
+    all
+        List all products available or only installed. Default is False.
 
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' pkg.list_products
+        salt '*' pkg.list_products all=True
     '''
-    products_dir = '/etc/products.d'
-    if not os.path.exists(products_dir):
-        raise CommandExecutionError(
-            'Directory {0} does not exist'.format(products_dir)
-        )
-
-    p_data = {}
-    for fname in os.listdir(products_dir):
-        pth_name = os.path.join(products_dir, fname)
-        r_pth_name = os.path.realpath(pth_name)
-        p_data[r_pth_name] = r_pth_name != pth_name and 'baseproduct' or None
-
-    info = ['vendor', 'name', 'version', 'baseversion', 'patchlevel',
-            'predecessor', 'release', 'endoflife', 'arch', 'cpeid',
-            'productline', 'updaterepokey', 'summary', 'shortsummary',
-            'description']
-
-    ret = {}
-    for prod_meta, is_base_product in six.iteritems(p_data):
-        product = _parse_suse_product(prod_meta, *info)
-        product['baseproduct'] = is_base_product is not None
-        ret[product.pop('name')] = product
+    ret = list()
+    doc = dom.parseString(__salt__['cmd.run'](("zypper -x products{0}".format(not all and ' -i' or '')),
+                                              output_loglevel='trace'))
+    for prd in doc.getElementsByTagName('product-list')[0].getElementsByTagName('product'):
+        p_data = dict()
+        p_nfo = dict(prd.attributes.items())
+        p_name = p_nfo.pop('name')
+        p_data[p_name] = p_nfo
+        p_data[p_name]['eol'] = prd.getElementsByTagName('endoflife')[0].getAttribute('text')
+        descr = _get_first_aggregate_text(prd.getElementsByTagName('description'))
+        p_data[p_name]['description'] = " ".join([line.strip() for line in descr.split(os.linesep)])
+        ret.append(p_data)
 
     return ret
 

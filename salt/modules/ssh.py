@@ -854,7 +854,7 @@ def check_known_host(user=None, hostname=None, key=None, fingerprint=None,
 
     known_host = get_known_host(user, hostname, config=config, port=port)
 
-    if not known_host:
+    if not known_host or 'fingerprint' not in known_host:
         return 'add'
     if key:
         return 'exists' if key == known_host['key'] else 'update'
