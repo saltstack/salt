@@ -27,12 +27,11 @@ def _run_proxy_processes(proxies):
         if not __salt__['salt_proxy.is_running'](proxy)['result']:
             __salt__['salt_proxy.configure_proxy'](proxy, start=True)
             result[proxy] = 'Proxy {0} was started'.format(proxy)
-            ret.append(result)
         else:
             msg = 'Proxy {0} is already running'.format(proxy)
             result[proxy] = msg
-            ret.append(result)
             log.debug(msg)
+        ret.append(result)
     return ret
 
 
