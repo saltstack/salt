@@ -34,6 +34,7 @@ from salt.utils.event import tagify
 from ioflo.aid.odicting import odict  # pylint: disable=E0611,F0401
 import ioflo.base.deeding
 from ioflo.base.consoling import getConsole
+from _socket import gaierror
 console = getConsole()
 
 # Import Third Party Libs
@@ -381,12 +382,15 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                 stack.puid = stack.Uid  # reset puid so reuse same uid each time
 
                 for master in self.ushers.value:
-                    mha = master['external']
-                    stack.addRemote(RemoteEstate(stack=stack,
-                                                 fuid=0,  # vacuous join
-                                                 sid=0,  # always 0 for join
-                                                 ha=mha,
-                                                 kind=kinds.applKinds.master))
+                    try:
+                        mha = master['external']
+                        stack.addRemote(RemoteEstate(stack=stack,
+                                                     fuid=0,  # vacuous join
+                                                     sid=0,  # always 0 for join
+                                                     ha=mha,
+                                                     kind=kinds.applKinds.master))
+                    except gaierror as ex:
+                        log.warning("Unable to connect to master {0}: {1}".format(mha, ex))
 
             for remote in list(stack.remotes.values()):
                 if remote.kind == kinds.applKinds.master:
