@@ -775,9 +775,6 @@ VALID_OPTS = {
 
     # Delay in seconds before executing bootstrap (salt cloud)
     'bootstrap_delay': int,
-
-    # SPM verbosity flag
-    'verbose': bool,
 }
 
 # default configurations
@@ -1282,7 +1279,6 @@ DEFAULT_API_OPTS = {
 }
 
 DEFAULT_SPM_OPTS = {
-    'verbose': False,
     # ----- Salt master settings overridden by SPM --------------------->
     'conf_file': os.path.join(salt.syspaths.CONFIG_DIR, 'spm'),
     'formula_path': '/srv/spm/salt',
