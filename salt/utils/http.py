@@ -432,8 +432,10 @@ def query(url,
 
         client_argspec = None
 
-        proxy_host = opts.get('proxy_host', None)
-        proxy_port = opts.get('proxy_port', None)
+        proxy_host     = opts.get('proxy_host', None)
+        proxy_port     = opts.get('proxy_port', None)
+        proxy_username = opts.get('proxy_username', None)
+        proxy_password = opts.get('proxy_password', None)
 
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
@@ -460,6 +462,8 @@ def query(url,
                     request_timeout=timeout,
                     proxy_host=proxy_host,
                     proxy_port=proxy_port,
+                    proxy_username=proxy_username,
+                    proxy_password=proxy_password,
                     **req_kwargs
                 )
             else:
@@ -477,6 +481,8 @@ def query(url,
                     request_timeout=timeout,
                     proxy_host=proxy_host,
                     proxy_port=proxy_port,
+                    proxy_username=proxy_username,
+                    proxy_password=proxy_password,
                     **req_kwargs
                 )
         except tornado.httpclient.HTTPError as exc:
