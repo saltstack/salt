@@ -1,9 +1,17 @@
 # -*- coding: utf-8 -*-
 '''
-Returns event data using a tcp socket, this method of returning data can be
-used for Splunk.
+Returns event data for state execution only using a tcp socket, this method of
+returning data can be used for Splunk.
 
 State events are split out by state name.
+
+It is strongly recommended to use the ``event_return_whitelist`` so not all
+events are returned, for example:
+
+..code-block:: yaml
+
+   event_return_whitelist:
+      - salt/job/*/ret/*
 
 .. versionadded:: Boron
 
@@ -37,16 +45,14 @@ log = logging.getLogger(__name__)
 # Define virtual name
 __virtualname__ = 'tcp_return'
 
+
 def __virtual__():
     return __virtualname__
 
+
 def _get_options(ret=None):
-    '''
-    Get the tcp_return options from salt.
-    '''
     attrs = {'host': 'host',
              'port': 'port'}
-
     _options = salt.returners.get_returner_options('returner.{0}'.format
                                                    (__virtualname__),
                                                    ret,
@@ -55,13 +61,10 @@ def _get_options(ret=None):
                                                    __opts__=__opts__)
     return _options
 
-#
 
-def _return_states(data, host, port):
+def _return_states(connection, data, host, port):
     if data.get('fun') == 'state.sls' or data.get('fun') == 'state.highstate':
         for state_name, state in data.get('return').iteritems():
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((host,port))
             # Add extra data to state event
             state.update({'state_name': state_name,
                           'state_id': state_name.split('_|-')[1],
@@ -69,29 +72,20 @@ def _return_states(data, host, port):
                           'jid': data.get('jid'),
                           'event_type': 'state_return'})
             log.debug('Sending event_return using {0} returner. Settings, '
-                  'TCP_IP: {1}, '
-                  'TCP_PORT: {2}. '
-                  'Data: {3}'.format(__virtualname__, host, port, state))
-            s.send(json.dumps(state))
-            s.shutdown(socket.SHUT_RDWR)
-            s.close()
+                      'TCP_IP: {1}, '
+                      'TCP_PORT: {2}. '
+                      'Data: {3}'.format(__virtualname__, host, port, state))
+            connection.send(json.dumps(state))
 
-def _return_event(data, host, port):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((host,port))
-    log.debug('Sending event_return using {0} returner. Settings, '
-          'TCP_IP: {1}, '
-          'TCP_PORT: {2}. '
-          'Data: {3}'.format(__virtualname__, host, port, data))
-    s.send(json.dumps(data))
-    s.shutdown(socket.SHUT_RDWR)
-    s.close()
 
 def event_return(events):
     _options = _get_options()
     host = _options.get('host')
     port = _options.get('port')
+    connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    connection.connect((host, port))
     for event in events:
         data = event.get('data', {})
-        _return_states(data, host, port)
-        _return_event(data, host, port)
+        _return_states(connection, data, host, port)
+    connection.shutdown(socket.SHUT_RDWR)
+    connection.close()
