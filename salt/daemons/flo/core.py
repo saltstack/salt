@@ -12,6 +12,7 @@ import random
 import logging
 import itertools
 from collections import deque
+from _socket import gaierror
 
 # Import salt libs
 import salt.daemons.masterapi
@@ -28,6 +29,7 @@ from salt import daemons
 from salt.daemons import salting
 from salt.utils import kinds, is_windows
 from salt.utils.event import tagify
+from salt.utils.error import raise_error
 
 # Import ioflo libs
 
@@ -380,13 +382,24 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
             if refresh_all or refresh_masters:
                 stack.puid = stack.Uid  # reset puid so reuse same uid each time
 
+                ex = None
                 for master in self.ushers.value:
-                    mha = master['external']
-                    stack.addRemote(RemoteEstate(stack=stack,
-                                                 fuid=0,  # vacuous join
-                                                 sid=0,  # always 0 for join
-                                                 ha=mha,
-                                                 kind=kinds.applKinds.master))
+                    try:
+                        mha = master['external']
+                        stack.addRemote(RemoteEstate(stack=stack,
+                                                     fuid=0,  # vacuous join
+                                                     sid=0,  # always 0 for join
+                                                     ha=mha,
+                                                     kind=kinds.applKinds.master))
+                    except gaierror as ex:
+                        log.warning("Unable to connect to master {0}: {1}".format(mha, ex))
+                        if self.opts.value.get('master_type') != 'failover':
+                            raise ex
+                if not (stack.remotes):
+                    if ex is None:
+                        raise_error(name='SaltException', message='Unable to connect to any master')
+                    else:
+                        raise ex
 
             for remote in list(stack.remotes.values()):
                 if remote.kind == kinds.applKinds.master:
