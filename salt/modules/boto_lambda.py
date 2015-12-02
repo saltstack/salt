@@ -143,6 +143,7 @@ def _find_function(name,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     funcs = conn.list_functions()
+    # TODO: handle marker?
 
     for func in funcs['Functions']:
         if func['FunctionName'] == name:
@@ -392,6 +393,7 @@ def list_function_versions(functionname,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         vers = conn.list_versions_by_function(FunctionName=functionname)
+        # TODO: handle marker?
         if vers:
             return vers
         else:
@@ -465,8 +467,10 @@ def _find_alias(functionname, name, functionversion=None,
     if functionversion:
         aliases = conn.list_aliases(FunctionName=functionname,
                         FunctionVersion=functionversion)
+        # TODO: handle marker?
     else:
         aliases = conn.list_aliases(FunctionName=functionname)
+        # TODO: handle marker?
 
     for alias in aliases.get('Aliases'):
         if alias['Name'] == name:
@@ -509,7 +513,7 @@ def describe_alias(functionname, name, region=None, key=None,
 
     .. code-block:: bash
 
-        salt myminion boto_lambda.describe myfunction
+        salt myminion boto_lambda.describe_alias myalias
 
     '''
 
@@ -559,3 +563,204 @@ def update_alias(functionname, name, functionversion=None, description=None,
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
 
+def create_event_source_mapping(eventsourcearn, functionname, startingposition,
+            enabled=True, batchsize=100, 
+            region=None, key=None, keyid=None, profile=None):
+    '''
+    Identifies a stream as an event source for a Lambda function. It can be
+    either an Amazon Kinesis stream or an Amazon DynamoDB stream. AWS Lambda
+    invokes the specified function when records are posted to the stream.
+
+    Returns {created: true} if the event source mapping was created and returns
+    {created: False} if the event source mapping was not created.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lamba.create_event_source_mapping arn::::eventsource myfunction LATEST
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        obj = conn.create_event_source_mapping(EventSourceArn=eventsourcearn,
+                                               FunctionName=functionname,
+                                               Enabled=enabled,
+                                               BatchSize=batchsize,
+                                               StartingPosition=startingposition)
+        if obj:
+            log.info('The newly created event source mapping ID is {0}'.format(obj['UUID']))
+
+            return {'created': True, 'id': obj['UUID']}
+        else:
+            log.warning('Event source mapping was not created')
+            return {'created': False}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def get_event_source_mapping_ids(eventsourcearn, functionname, 
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Given an event source and function name, return a list of mapping IDs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lambda.get_event_source_mapping_ids arn:::: myfunction
+
+    '''
+
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        maps = conn.list_event_source_mappings(EventSourceArn=eventsourcearn,
+                                               FunctionName=functionname)['EventSourceMappings']
+        # TODO: handle marker?
+        return [mapping['UUID'] for mapping in maps]
+    except ClientError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+
+def _get_ids(uuid=None, eventsourcearn=None, functionname=None,
+                                region=None, key=None, keyid=None, profile=None):
+    if uuid:
+        if eventsourcearn or functionname:
+            raise SaltInvocationError('Either uuid must be specified, or '
+                                'eventsourcearn and functionname must be provided.')
+        return [ uuid ]
+    else:
+        if not eventsourcearn or not functionname:
+            raise SaltInvocationError('Either uuid must be specified, or '
+                                'eventsourcearn and functionname must be provided.')
+        return get_event_source_mapping_ids(eventsourcearn=eventsourcearn, functionname=functionname,
+                       region=region, key=key, keyid=keyid, profile=profile)
+
+
+def delete_event_source_mapping(uuid=None, eventsourcearn=None, functionname=None, 
+                                region=None, key=None, keyid=None, profile=None):
+    '''
+    Given an event source mapping ID or an event source ARN and functionname,
+    delete the event source mapping
+
+    Returns {deleted: true} if the mapping was deleted and returns
+    {deleted: false} if the mapping was not deleted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lambda.delete_event_source_mapping 260c423d-e8b5-4443-8d6a-5e91b9ecd0fa
+
+    '''
+    ids = _get_ids(uuid, eventsourcearn=eventsourcearn,
+                         functionname=functionname)
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        for id in ids:
+            conn.delete_event_source_mapping(UUID=id)
+        return {'deleted': True}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def event_source_mapping_exists(uuid=None, eventsourcearn=None,
+           functionname=None,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Given an event source mapping ID or an event source ARN and functionname,
+    check whether the mapping exists.
+
+    Returns True if the given alias exists and returns False if the given
+    alias does not exist.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lambda.alias_exists myfunction myalias
+
+    '''
+
+    desc = describe_event_source_mapping(uuid=uuid,
+                                         eventsourcearn=eventsourcearn,
+                                         functionname=functionname,
+                                         region=region, key=key,
+                                         keyid=keyid, profile=profile)
+    return {'exists': bool(desc.get('event_source_mapping'))}
+
+
+def describe_event_source_mapping(uuid=None, eventsourcearn=None,
+           functionname=None,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Given an event source mapping ID or an event source ARN and functionname,
+    obtain the current settings of that mapping.
+
+    Returns a dictionary of interesting properties.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lambda.describe_event_source_mapping uuid
+
+    '''
+
+    ids = _get_ids(uuid, eventsourcearn=eventsourcearn,
+                         functionname=functionname)
+    if len(ids) < 1:
+        return {'event_source_mapping': None}
+
+    uuid = ids[0]
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        desc = conn.get_event_source_mapping(UUID=uuid)
+        if desc:
+            keys = ('UUID', 'BatchSize', 'EventSourceArn',
+                    'FunctionArn','LastModified','LastProcessingResult',
+                    'State','StateTransitionReason')
+            return {'event_source_mapping': dict([(k, desc.get(k)) for k in keys])}
+        else:
+            return {'event_source_mapping': None}
+    except ClientError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+
+def update_event_source_mapping(uuid, 
+            functionname=None, enabled=None, batchsize=None,
+            region=None, key=None, keyid=None, profile=None):
+    '''
+    Update the event source mapping identified by the UUID.
+
+    Returns {updated: true} if the alias was updated and returns
+    {updated: False} if the alias was not updated.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_lamba.update_event_source_mapping uuid functionname=new_function
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        args= {}
+        if not functionname is None:
+            args['FunctionName'] = functionname
+        if not enabled is None:
+            args['Enabled'] = enabled
+        if not batchsize is None:
+            args['BatchSize'] = batchsize
+        r = conn.update_event_source_mapping(UUID=uuid, **args)
+        if r:
+            keys = ('UUID', 'BatchSize', 'EventSourceArn',
+                    'FunctionArn', 'LastModified', 'LastProcessingResult',
+                    'State', 'StateTransitionReason')
+            return {'updated': True, 'event_source_mapping': dict([(k, r.get(k)) for k in keys])}
+        else:
+            log.warning('Mapping was not updated')
+            return {'updated': False}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
