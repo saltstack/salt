@@ -38,7 +38,6 @@ __opts__ = {
     'reactor_path': os.path.join(_TMP_SPM, 'reactor'),
     'assume_yes': True,
     'force': False,
-    'verbose': False,
 }
 
 _F1 = {
