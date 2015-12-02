@@ -2530,7 +2530,6 @@ install_debian_8_git_deps() {
         __REQUIRED_TORNADO="$(grep tornado "${__SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             __apt_get_install_noinput python-tornado
-            __apt_get_install_noinput python-pycurl
         fi
     fi
 
@@ -2788,7 +2787,6 @@ install_fedora_git_deps() {
         __REQUIRED_TORNADO="$(grep tornado "${__SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             $FEDORA_PACKAGE_MANAGER install -y python-tornado
-            $FEDORA_PACKAGE_MANAGER install -y python-pycurl
         fi
     fi
 
@@ -3006,10 +3004,8 @@ install_centos_stable_deps() {
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             if [ "$DISTRO_MAJOR_VERSION" -eq 5 ]; then
                 yum install -y python26-tornado
-                yum install -y python26-pycurl
             else
                 yum install -y python-tornado
-                yum install -y python-pycurl
             fi
         fi
     fi
@@ -3151,10 +3147,8 @@ install_centos_git_deps() {
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             if [ "$DISTRO_MAJOR_VERSION" -eq 5 ]; then
                 yum install -y python26-tornado
-                yum install -y python26-pycurl
             else
                 yum install -y python-tornado
-                yum install -y python-pycurl
             fi
         fi
     fi
@@ -3798,7 +3792,6 @@ install_amazon_linux_ami_git_deps() {
         __REQUIRED_TORNADO="$(grep tornado "${__SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             yum install -y python-tornado
-            yum install -y python-pycurl
         fi
     fi
 
@@ -4620,7 +4613,6 @@ install_opensuse_git_deps() {
         __REQUIRED_TORNADO="$(grep tornado "${__SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             __zypper_install python-tornado
-            __zypper_install python-pycurl
         fi
 
     fi
@@ -4860,7 +4852,6 @@ install_suse_11_git_deps() {
         __REQUIRED_TORNADO="$(grep tornado "${__SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             __zypper_install python-tornado
-            __zypper_install python-pycurl
         fi
     fi
 
