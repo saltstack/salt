@@ -8,6 +8,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import uuid
 import pprint
 import logging
 try:
@@ -18,6 +19,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.syspaths
+from salt.exceptions import SaltInvocationError
 
 
 log = logging.getLogger(__name__)
@@ -41,10 +43,14 @@ def bootstrap(platform,
               root,
               img_format='dir',
               fs_format='ext2',
+              fs_opts=None,
               arch=None,
               flavor=None,
               repo_url=None,
-              static_qemu=None):
+              static_qemu=None,
+              img_size=None,
+              mount_dir=None,
+              pkg_cache=None):
     '''
     Create an image for a specific platform.
 
@@ -64,8 +70,12 @@ def bootstrap(platform,
         for ``sparse``.
 
     fs_format
-        When using a non-``dir`` img_format, which filesystem to format the
+        When using a non-``dir`` ``img_format``, which filesystem to format the
         image to. By default, ``ext2``.
+
+    fs_opts
+        When using a non-``dir`` ``img_format``, a dict of opts may be
+        specified.
 
     arch
         Architecture to install packages for, if supported by the underlying
@@ -88,6 +98,20 @@ def bootstrap(platform,
         The location of the conf files to copy into the image, to point the
         installer to the right repos and configuration.
 
+    img_size
+        If img_format is not ``dir``, then the size of the image must be
+        specified.
+
+    mount_dir
+        If img_format is not ``dir``, then the image must be mounted somewhere.
+        If the ``mount_dir`` is not specified, then it will be created at
+        ``/opt/salt-genesis.<random_uuid>``. This directory will be unmounted
+        and removed when the process is finished.
+
+    pkg_cache
+        This points to a directory containing a cache of package files to be
+        copied to the image. It does not need to be specified.
+
     CLI Examples:
 
     .. code-block:: bash
@@ -106,8 +130,18 @@ def bootstrap(platform,
             except Exception as exc:
                 return {'Error': pprint.pformat(exc)}
     elif img_format == 'sparse':
-        # TODO: Create a sparse file at the specified root
-        pass
+        if not img_size:
+            raise SaltInvocationError('An img_size must be specified for a sparse file')
+        if not mount_dir:
+            mount_dir = '/opt/salt-genesis.{0}'.format(uuid.uuid4())
+        __salt__['file.mkdir'](mount_dir, 'root', 'root', '755')
+        __salt__['cmd.run'](('fallocate', '-l', img_size, root), python_shell=False)
+        _mkfs(root, fs_format, fs_opts)
+        __salt__['mount.mount'](mount_dir, root, opts='loop')
+        _populate_cache(platform, pkg_cache, mount_dir)
+
+    if mount_dir:
+        root = mount_dir
 
     if platform in ('rpm', 'yum'):
         return _bootstrap_yum(root)
@@ -116,7 +150,43 @@ def bootstrap(platform,
             root, arch=arch, flavor=flavor, repo_url=repo_url, static_qemu=static_qemu
         )
     elif platform == 'pacman':
-        return _bootstrap_pacman(root)
+        _bootstrap_pacman(root, img_format=img_format)
+
+    if img_format != 'dir':
+        __salt__['mount.umount'](root)
+        __salt__['file.rmdir'](mount_dir)
+
+
+def _mkfs(root, fs_format, fs_opts=None):
+    '''
+    Make a filesystem using the appropriate module
+    '''
+    if fs_opts is None:
+        fs_opts = {}
+
+    if fs_format in ('ext2', 'ext3', 'ext4'):
+        __salt__['extfs.mkfs'](root, fs_format, **fs_opts)
+    elif fs_format in ('btrfs'):
+        __salt__['btrfs.mkfs'](root, **fs_opts)
+    elif fs_format in ('xfs'):
+        __salt__['xfs.mkfs'](root, **fs_opts)
+
+
+def _populate_cache(platform, pkg_cache, mount_dir):
+    '''
+    If a ``pkg_cache`` directory is specified, then use it to populate the
+    disk image.
+    '''
+    if not pkg_cache:
+        return
+    if not os.path.isdir(pkg_cache):
+        return
+
+    if platform == 'pacman':
+        cache_dir = '{0}/var/cache/pacman/pkg'.format(mount_dir)
+
+    __salt__['file.mkdir'](cache_dir, 'root', 'root', '755')
+    __salt__['file.copy'](pkg_cache, cache_dir, recurse=True, remove_existing=True)
 
 
 def _bootstrap_yum(root, pkg_confs='/etc/yum*'):
@@ -206,7 +276,7 @@ def _bootstrap_deb(
     )
 
 
-def _bootstrap_pacman(root, pkg_confs='/etc/pacman*'):
+def _bootstrap_pacman(root, pkg_confs='/etc/pacman*', img_format='dir'):
     '''
     Bootstrap an image using the pacman tools
 
@@ -217,14 +287,30 @@ def _bootstrap_pacman(root, pkg_confs='/etc/pacman*'):
     pkg_confs
         The location of the conf files to copy into the image, to point pacman
         to the right repos and configuration.
+
+    img_format
+        The image format to be used. The ``dir`` type needs no special
+        treatment, but others need special treatement.
     '''
     _make_nodes(root)
+
+    if img_format != 'dir':
+        __salt__['mount.mount']('{0}/proc'.format(root), '/proc', fstype='', opts='bind')
+        __salt__['mount.mount']('{0}/dev'.format(root), '/dev', fstype='', opts='bind')
+
     __salt__['file.mkdir'](
         '{0}/var/lib/pacman/local'.format(root), 'root', 'root', '755'
     )
     pac_files = [rf for rf in os.listdir('/etc') if rf.startswith('pacman.')]
-    __salt__['cmd.run']('cp -r {0} {1}/etc'.format(' '.join(pac_files), _cmd_quote(root)))
-    __salt__['cmd.run']('pacman --noconfirm -r {0} -Sy pacman'.format(_cmd_quote(root)))
+    for pac_file in pac_files:
+        __salt__['cmd.run']('cp -r /etc/{0} {1}/etc'.format(pac_file, _cmd_quote(root)))
+    __salt__['file.copy']('/var/lib/pacman/sync', '{0}/var/lib/pacman/sync'.format(root), recurse=True)
+
+    __salt__['cmd.run']('pacman --noconfirm -r {0} -S pacman linux'.format(_cmd_quote(root)))
+
+    if img_format != 'dir':
+        __salt__['mount.umount']('{0}/proc'.format(root))
+        __salt__['mount.umount']('{0}/dev'.format(root))
 
 
 def _make_nodes(root):
@@ -236,6 +322,7 @@ def _make_nodes(root):
     dirs = (
         ('{0}/etc'.format(root), 'root', 'root', '755'),
         ('{0}/dev'.format(root), 'root', 'root', '755'),
+        ('{0}/proc'.format(root), 'root', 'root', '755'),
         ('{0}/dev/pts'.format(root), 'root', 'root', '755'),
         ('{0}/dev/shm'.format(root), 'root', 'root', '1755'),
     )
