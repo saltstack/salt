@@ -56,6 +56,7 @@ from salt.ext.six.moves.urllib.error import URLError
 # Don't need a try/except block, since Salt depends on tornado
 import tornado.httputil
 import tornado.simple_httpclient
+import tornado.curl_httpclient
 from tornado.httpclient import HTTPClient
 
 try:
@@ -422,7 +423,18 @@ def query(url,
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
 
-        client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+        client_argspec = None
+
+        proxy_host = opts.get('proxy_host', None)
+        proxy_port = opts.get('proxy_port', None)
+
+        # We want to use curl_http if we have a proxy defined
+        if proxy_host and proxy_port:
+          tornado.httpclient.AsyncHTTPClient.configure('tornado.curl_httpclient.CurlAsyncHTTPClient')
+          client_argspec = inspect.getargspec(tornado.curl_httpclient.CurlAsyncHTTPClient.initialize)
+        else:
+          client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+
         supports_max_body_size = 'max_body_size' in client_argspec.args
 
         try:
@@ -438,6 +450,8 @@ def query(url,
                     allow_nonstandard_methods=True,
                     streaming_callback=streaming_callback,
                     request_timeout=timeout,
+                    proxy_host=proxy_host,
+                    proxy_port=proxy_port,
                     **req_kwargs
                 )
             else:
@@ -452,6 +466,8 @@ def query(url,
                     allow_nonstandard_methods=True,
                     streaming_callback=streaming_callback,
                     request_timeout=timeout,
+                    proxy_host=proxy_host,
+                    proxy_port=proxy_port,
                     **req_kwargs
                 )
         except tornado.httpclient.HTTPError as exc:
