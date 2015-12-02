@@ -443,7 +443,7 @@ def alias_present(functionname, name, functionversion, description='',
         if _describe[val] != locals()[var]:
             need_update = True
             ret['changes'].setdefault('new',{})[var] = locals()[var]
-            ret['changes'].setdefault('old',{})[var] = func[val]
+            ret['changes'].setdefault('old',{})[var] = _describe[val]
     if need_update:
         ret['comment'] = os.linesep.join([ret['comment'], 'Alias config to be modified'])
         if __opts__['test']:
@@ -455,8 +455,10 @@ def alias_present(functionname, name, functionversion, description='',
                                         functionversion=functionversion, description=description, 
                                         region=region, key=key,
                                         keyid=keyid, profile=profile)
-        ret['changes'] = dictupdate.update(ret['changes'], _r['changes'])
-        ret['comment'] = ' '.join([ret['comment'], _r['comment']])
+        if not _r.get('updated'):
+            ret['result'] = False
+            ret['comment'] = 'Failed to update mapping: {0}.'.format(_r['error']['message'])
+            ret['changes'] = {}
     return ret
 
 
@@ -512,9 +514,197 @@ def alias_absent(functionname, name, region=None, key=None, keyid=None, profile=
         ret['result'] = False
         ret['comment'] = 'Failed to delete alias: {0}.'.format(r['error']['message'])
         return ret
-    ret['changes']['old'] = {'function': name}
-    ret['changes']['new'] = {'function': None}
-    ret['comment'] = 'Function {0} deleted.'.format(name)
+    ret['changes']['old'] = {'alias': name}
+    ret['changes']['new'] = {'alias': None}
+    ret['comment'] = 'Alias {0} deleted.'.format(name)
+    return ret
+
+
+
+def event_source_mapping_present(eventsourcearn, functionname, startingposition,
+            enabled=True, batchsize=100, 
+            region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure event source mapping exists.
+
+    eventsourcearn
+        The Amazon Resource Name (ARN) of the Amazon Kinesis or the Amazon
+        DynamoDB stream that is the event source.
+
+    functionname
+        The Lambda function to invoke when AWS Lambda detects an event on the
+        stream.
+
+        You can specify an unqualified function name (for example, "Thumbnail")
+        or you can specify Amazon Resource Name (ARN) of the function (for
+        example, "arn:aws:lambda:us-west-2:account-id:function:ThumbNail"). AWS
+        Lambda also allows you to specify only the account ID qualifier (for
+        example, "account-id:Thumbnail"). Note that the length constraint
+        applies only to the ARN. If you specify only the function name, it is
+        limited to 64 character in length.
+
+    startingposition
+        The position in the stream where AWS Lambda should start reading.
+        (TRIM_HORIZON | LATEST)
+
+    enabled
+        Indicates whether AWS Lambda should begin polling the event source. By
+        default, Enabled is true.
+
+    batchsize
+        The largest number of records that AWS Lambda will retrieve from your
+        event source at the time of invoking your function. Your function
+        receives an event with all the retrieved records. The default is 100
+        records.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+    ret = {'name': None,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    r = __salt__['boto_lambda.event_source_mapping_exists'](eventsourcearn=eventsourcearn, 
+                                    functionname=functionname,
+                                    region=region, key=key, keyid=keyid, profile=profile)
+
+    if 'error' in r:
+        ret['result'] = False
+        ret['comment'] = 'Failed to create event source mapping: {0}.'.format(r['error']['message'])
+        return ret
+
+    if not r.get('exists'):
+        if __opts__['test']:
+            ret['comment'] = 'Event source mapping {0} is set to be created.'.format(name)
+            ret['result'] = None
+            return ret
+        r = __salt__['boto_lambda.create_event_source_mapping'](eventsourcearn=eventsourcearn,
+                    functionname=functionname, startingposition=startingposition,
+                    enabled=enabled, batchsize=batchsize,
+                    region=region, key=key, keyid=keyid, profile=profile)
+        if not r.get('created'):
+            ret['result'] = False
+            ret['comment'] = 'Failed to create event source mapping: {0}.'.format(r['error']['message'])
+            return ret
+        _describe = __salt__['boto_lambda.describe_event_source_mapping'](
+                                 eventsourcearn=eventsourcearn,
+                                 functionname=functionname,
+                                 region=region, key=key, keyid=keyid, profile=profile)
+        ret['name'] = _describe['event_source_mapping']['UUID']
+        ret['changes']['old'] = {'event_source_mapping': None}
+        ret['changes']['new'] = _describe
+        ret['comment'] = 'Event source mapping {0} created.'.format(ret['name'])
+        return ret
+
+    ret['comment'] = os.linesep.join([ret['comment'], 'Event source mapping is present.'])
+    ret['changes'] = {}
+    _describe = __salt__['boto_lambda.describe_event_source_mapping'](
+                                 eventsourcearn=eventsourcearn,
+                                 functionname=functionname,
+                                 region=region, key=key, keyid=keyid, profile=profile)['event_source_mapping']
+    log.warn(_describe)
+
+    need_update = False
+    for val, var in {
+        'BatchSize': 'batchsize',
+    }.iteritems():
+        if _describe[val] != locals()[var]:
+            need_update = True
+            ret['changes'].setdefault('new',{})[var] = locals()[var]
+            ret['changes'].setdefault('old',{})[var] = _describe[val]
+    # TODO verify functionname against FunctionArn
+    # TODO check for 'enabled', since it doesn't directly map to a state
+    if need_update:
+        ret['comment'] = os.linesep.join([ret['comment'], 'Event source mapping to be modified'])
+        if __opts__['test']:
+            msg = 'Event source mapping {0} set to be modified.'.format(_describe['UUID'])
+            ret['comment'] = msg
+            ret['result'] = None
+            return ret
+        _r = __salt__['boto_lambda.update_event_source_mapping'](uuid=_describe['UUID'],
+                                        functionname=functionname,
+                                        enabled=enabled,
+                                        batchsize=batchsize,
+                                        region=region, key=key,
+                                        keyid=keyid, profile=profile)
+        if not _r.get('updated'):
+            ret['result'] = False
+            ret['comment'] = 'Failed to update mapping: {0}.'.format(_r['error']['message'])
+            ret['changes'] = {}
+    return ret
+
+
+def event_source_mapping_absent(eventsourcearn, functionname,
+                           region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure event source mapping with passed properties is absent.
+
+    eventsourcearn
+        ARN of the event source.
+
+    functionname
+        Name of the lambda function.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+
+    ret = {'name': None,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    desc = __salt__['boto_lambda.describe_event_source_mapping'](eventsourcearn=eventsourcearn, 
+                                    functionname=functionname,
+                                    region=region, key=key, keyid=keyid, profile=profile)
+    if 'error' in desc:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete event source mapping: {0}.'.format(desc['error']['message'])
+        return ret
+
+    if not desc.get('event_source_mapping'):
+        ret['comment'] = 'Event source mapping does not exist.'
+        return ret
+
+    ret['name'] = desc['event_source_mapping']['UUID']
+    if __opts__['test']:
+        ret['comment'] = 'Event source mapping is set to be removed.'
+        ret['result'] = None
+        return ret
+    r = __salt__['boto_lambda.delete_event_source_mapping'](eventsourcearn=eventsourcearn,
+                                        functionname=functionname,
+                                        region=region, key=key,
+                                        keyid=keyid, profile=profile)
+    if not r['deleted']:
+        ret['result'] = False
+        ret['comment'] = 'Failed to delete event source mapping: {0}.'.format(r['error']['message'])
+        return ret
+    ret['changes']['old'] = desc
+    ret['changes']['new'] = {'event_source_mapping': None}
+    ret['comment'] = 'Event source mapping deleted.'
     return ret
 
 
