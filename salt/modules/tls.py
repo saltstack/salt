@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+-r'''
 A salt module for SSL/TLS.
 Can create a Certificate Authority (CA)
 or use Self-Signed certificates.
@@ -141,7 +141,7 @@ def __virtual__():
         if OpenSSL_version < LooseVersion('0.14'):
             X509_EXT_ENABLED = False
             log.error('You should upgrade pyOpenSSL to at least 0.14.1 '
-                     'to enable the use of X509 extensions')
+                      'to enable the use of X509 extensions')
         elif OpenSSL_version <= LooseVersion('0.15'):
             log.warn('You should upgrade pyOpenSSL to at least 0.15.1 '
                      'to enable the full use of X509 extensions')
@@ -716,7 +716,7 @@ def create_ca(ca_name,
                 issuer=ca)])
     ca.sign(key, digest)
 
-    # alway backup existing keys in case
+    # always backup existing keys in case
     keycontent = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM,
                                                 key)
     write_key = True
