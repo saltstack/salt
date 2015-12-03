@@ -33,7 +33,7 @@ def __virtual__():
     for _os in supported_os_tool:
         if cur_os == _os and salt.utils.which(supported_os_tool[cur_os]):
             return True
-    return False
+    return (False, 'The bridge module could not be loaded:  bridge utilities not found')
 
 
 def _tool_path(ostool):
