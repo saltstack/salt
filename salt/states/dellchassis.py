@@ -253,7 +253,7 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
 
         my-dell-chassis:
           dellchassis.chassis:
-            - name: my-dell-chassis
+            - chassis_name: my-dell-chassis
             - location: my-location
             - datacenter: london
             - mode: 2
@@ -375,7 +375,7 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
         return ret
 
     # Finally, set the necessary configurations on the chassis.
-    name = __salt__[chassis_cmd]('set_chassis_name', name)
+    name = __salt__[chassis_cmd]('set_chassis_name', chassis_name)
     if location:
         location = __salt__[chassis_cmd]('set_chassis_location', location)
     pw_result = True
