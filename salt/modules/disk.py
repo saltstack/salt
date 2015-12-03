@@ -24,7 +24,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if salt.utils.is_windows():
-        return False
+        return (False,'This module only works on POSIX-like systems')
     return True
 
 
