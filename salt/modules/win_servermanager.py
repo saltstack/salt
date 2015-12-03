@@ -23,7 +23,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return 'win_servermanager'
-    return False
+    return (False, 'The win_servermanager module cannot be loaded: OS not windows.')
 
 
 def _srvmgr(func):
