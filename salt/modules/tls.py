@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''
+'''
 A salt module for SSL/TLS.
 Can create a Certificate Authority (CA)
 or use Self-Signed certificates.
@@ -104,7 +104,7 @@ import os
 import time
 import calendar
 import logging
-import hashlib
+import math
 import salt.utils
 from salt._compat import string_types
 from salt.ext.six.moves import range as _range
@@ -160,6 +160,14 @@ def __virtual__():
                         'before this module can be used.'))
 
 
+def _microtime():
+    '''
+    Return a Unix timestamp as a string of digits
+    :return:
+    '''
+    return '%f%d' % math.modf(time.time())
+
+
 def cert_base_path(cacert_path=None):
     '''
     Return the base path for certs from CLI or from options
@@ -207,25 +215,21 @@ def set_ca_path(cacert_path):
     return cert_base_path()
 
 
-def _new_serial(ca_name, CN):
+def _new_serial(ca_name):
     '''
-    Return a serial number in hex using md5sum, based upon the ca_name and
-    CN values
+    Return a serial number in hex using os.urandom() and a Unix timestamp
+    in microseconds.
 
     ca_name
         name of the CA
     CN
         common name in the request
     '''
-    opts_hash_type = __opts__.get('hash_type', 'md5')
-    hashtype = getattr(hashlib, opts_hash_type)
     hashnum = int(
-        hashtype(
-            '{0}_{1}_{2}'.format(
-                ca_name,
-                CN,
-                int(calendar.timegm(time.gmtime())))
-        ).hexdigest(),
+        binascii.hexlify(
+            '{0}_{1}'.format(
+                _microtime(),
+                os.urandom(5))),
         16
     )
     log.debug('Hashnum: {0}'.format(hashnum))
@@ -679,7 +683,7 @@ def create_ca(ca_name,
 
     ca = OpenSSL.crypto.X509()
     ca.set_version(2)
-    ca.set_serial_number(_new_serial(ca_name, CN))
+    ca.set_serial_number(_new_serial(ca_name))
     ca.get_subject().C = C
     ca.get_subject().ST = ST
     ca.get_subject().L = L
@@ -1158,7 +1162,7 @@ def create_self_signed_cert(tls_dir='tls',
     cert.get_subject().CN = CN
     cert.get_subject().emailAddress = emailAddress
 
-    cert.set_serial_number(_new_serial(tls_dir, CN))
+    cert.set_serial_number(_new_serial(tls_dir))
     cert.set_issuer(cert.get_subject())
     cert.set_pubkey(key)
     cert.sign(key, digest)
@@ -1406,7 +1410,7 @@ def create_ca_signed_cert(ca_name,
     cert.set_subject(req.get_subject())
     cert.gmtime_adj_notBefore(0)
     cert.gmtime_adj_notAfter(int(days) * 24 * 60 * 60)
-    cert.set_serial_number(_new_serial(ca_name, CN))
+    cert.set_serial_number(_new_serial(ca_name))
     cert.set_issuer(ca_cert.get_subject())
     cert.set_pubkey(req.get_pubkey())
 
