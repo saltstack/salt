@@ -69,12 +69,12 @@ def _ip_ifaces():
             opts_iter = iter(opts_comps)
             ret[if_] = {
                 'flags': flags,
-                'options': dict(zip(opts_iter, opts_iter))
+                'options': dict(list(zip(opts_iter, opts_iter)))
             }
         else:
             if line.strip().startswith('link'):
                 comps = iter(line.strip().split())
-                ret[if_]['link_layer'] = dict(zip(comps, comps))
+                ret[if_]['link_layer'] = dict(list(zip(comps, comps)))
             elif line.strip().startswith('inet'):
                 comps = line.strip().split()
                 at_ = comps[0]
@@ -82,11 +82,11 @@ def _ip_ifaces():
                     last = comps.pop()
                     comps[-1] += ' {0}'.format(last)
                 ifi = iter(comps)
-                ret[if_][at_] = dict(zip(ifi, ifi))
+                ret[if_][at_] = dict(list(zip(ifi, ifi)))
             else:
                 comps = line.strip().split()
                 ifi = iter(comps)
-                ret[if_][at_].update(dict(zip(ifi, ifi)))
+                ret[if_][at_].update(dict(list(zip(ifi, ifi))))
     return ret
 
 
@@ -186,5 +186,5 @@ def _route_flags(rflags):
     }
     for item in fmap.keys():
         if rflags & item:
-            flags += fmap[item];
+            flags += fmap[item]
     return flags
