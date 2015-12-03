@@ -107,13 +107,14 @@ class IPCServer(object):
                 return return_message
             else:
                 return _null
+        unpacker = msgpack.Unpacker()
         while not stream.closed():
             try:
-                framed_msg_len = yield stream.read_until(' ')
-                framed_msg_raw = yield stream.read_bytes(int(framed_msg_len.strip()))
-                framed_msg = msgpack.loads(framed_msg_raw)
-                body = framed_msg['body']
-                self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
+                wire_bytes = yield stream.read_bytes(4096, partial=True)
+                unpacker.feed(wire_bytes)
+                for framed_msg in unpacker:
+                    body = framed_msg['body']
+                    self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
             except tornado.iostream.StreamClosedError:
                 log.trace('Client disconnected from IPC {0}'.format(self.socket_path))
                 break

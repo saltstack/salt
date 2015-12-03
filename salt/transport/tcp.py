@@ -427,14 +427,14 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
         '''
         log.trace('Req client {0} connected'.format(address))
         self.clients.append((stream, address))
+        unpacker = msgpack.Unpacker()
         try:
             while True:
-                framed_msg_len = yield stream.read_until(' ')
-                framed_msg_raw = yield stream.read_bytes(int(framed_msg_len.strip()))
-                framed_msg = msgpack.loads(framed_msg_raw)
-                header = framed_msg['head']
-                body = msgpack.loads(framed_msg['body'])
-                self.io_loop.spawn_callback(self.message_handler, stream, header, body)
+                wire_bytes = yield stream.read_bytes(4096, partial=True)
+                unpacker.feed(wire_bytes)
+                for framed_msg in unpacker:
+                    header = framed_msg['head']
+                    self.io_loop.spawn_callback(self.message_handler, stream, header, framed_msg['body'])
 
         except tornado.iostream.StreamClosedError:
             log.trace('req client disconnected {0}'.format(address))
@@ -567,24 +567,24 @@ class SaltMessageClient(object):
                 not self._connecting_future.done() or
                 self._connecting_future.result() is not True):
             yield self._connecting_future
+        unpacker = msgpack.Unpacker()
         while not self._closing:
             try:
-                self._read_until_future = self._stream.read_until(' ')
-                framed_msg_len = yield self._read_until_future
-                framed_msg_raw = yield self._stream.read_bytes(int(framed_msg_len.strip()))
-                framed_msg = msgpack.loads(framed_msg_raw)
-                header = framed_msg['head']
-                message_id = header.get('mid')
-                body = msgpack.loads(framed_msg['body'])
+                self._read_until_future = self._stream.read_bytes(4096, partial=True)
+                wire_bytes = yield self._read_until_future
+                unpacker.feed(wire_bytes)
+                for framed_msg in unpacker:
+                    header = framed_msg['head']
+                    message_id = header.get('mid')
 
-                if message_id in self.send_future_map:
-                    self.send_future_map.pop(message_id).set_result(body)
-                    self.remove_message_timeout(message_id)
-                else:
-                    if self._on_recv is not None:
-                        self.io_loop.spawn_callback(self._on_recv, header, body)
+                    if message_id in self.send_future_map:
+                        self.send_future_map.pop(message_id).set_result(framed_msg['body'])
+                        self.remove_message_timeout(message_id)
                     else:
-                        log.error('Got response for message_id {0} that we are not tracking'.format(message_id))
+                        if self._on_recv is not None:
+                            self.io_loop.spawn_callback(self._on_recv, header, framed_msg['body'])
+                        else:
+                            log.error('Got response for message_id {0} that we are not tracking'.format(message_id))
             except tornado.iostream.StreamClosedError as e:
                 log.debug('tcp stream to {0}:{1} closed, unable to recv'.format(self.host, self.port))
                 for future in self.send_future_map.itervalues():
@@ -705,7 +705,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
     @tornado.gen.coroutine
     def publish_payload(self, payload, _):
         log.debug('TCP PubServer sending payload: {0}'.format(payload))
-        payload = salt.transport.frame.frame_msg(payload['payload'], raw_body=True)
+        payload = salt.transport.frame.frame_msg(payload['payload'])
 
         to_remove = []
         for item in self.clients:
