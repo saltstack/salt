@@ -114,7 +114,7 @@ def get(name):
 
         salt '*' sysctl.get net.ipv4.ip_forward
     '''
-    cmd = 'sysctl -n {0}'.format(name)
+    cmd = '{0} -n {1}'.format(salt.utils.which('sysctl'), name)
     out = __salt__['cmd.run'](cmd, python_shell=False)
     return out
 
@@ -136,7 +136,7 @@ def assign(name, value):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
 
     ret = {}
-    cmd = 'sysctl -w {0}="{1}"'.format(name, value)
+    cmd = '{0} -w {1}="{2}"'.format(salt.utils.which('sysctl'), name, value)
     data = __salt__['cmd.run_all'](cmd, python_shell=False)
     out = data['stdout']
     err = data['stderr']
@@ -151,7 +151,7 @@ def assign(name, value):
             error = err
         else:
             error = out
-        raise CommandExecutionError('sysctl -w failed: {0}'.format(error))
+        raise CommandExecutionError('{0} -w failed: {1}'.format(salt.utils.which('sysctl'), error))
     new_name, new_value = out.split(' = ', 1)
     ret[new_name] = new_value
     return ret
