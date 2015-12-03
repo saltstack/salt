@@ -17,7 +17,7 @@ from salt.modules import augeas_cfg
 from salt.exceptions import SaltInvocationError
 # Make sure augeas python interface is installed
 HAS_AUGEAS = augeas_cfg.__virtual__()
-if HAS_AUGEAS:
+if HAS_AUGEAS == 'augeas':
     from augeas import Augeas as _Augeas
 
 
