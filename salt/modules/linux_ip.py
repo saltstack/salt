@@ -4,6 +4,7 @@ The networking module for Non-RH/Deb Linux distros
 '''
 from __future__ import absolute_import
 import salt.utils
+from salt.ext.six.moves import zip
 
 __virtualname__ = 'ip'
 
