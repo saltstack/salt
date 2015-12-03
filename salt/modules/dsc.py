@@ -201,7 +201,7 @@ def remove(name):
 
 
 def run_config(path, source=None, saltenv='base'):
-    '''
+    r'''
     Run an existing DSC configuration
 
     :param str path: Path to the directory that contains the .mof configuration
@@ -452,7 +452,7 @@ def set_lcm_config(config_mode=None,
             reboot_if_needed = '$false'
         cmd += '            RebootNodeIfNeeded = {0}'.format(reboot_if_needed)
     if action_after_reboot:
-        if action_after_reboot not in ('ContinueConfiguration, StopConfiguration'):
+        if action_after_reboot not in ('ContinueConfiguration', 'StopConfiguration'):
             SaltInvocationError('action_after_reboot must be one of '
                                 'ContinueConfiguration or StopConfiguration')
         cmd += '            ActionAfterReboot = "{0}"'.format(action_after_reboot)
@@ -484,13 +484,13 @@ def set_lcm_config(config_mode=None,
             SaltInvocationError('status_retention_days must be an integer')
         cmd += '            StatusRetentionTimeInDays = {0}'.format(status_retention_days)
     cmd += '        }}};'
-    cmd += 'SaltConfig -OutputPath "C:\DSC\SaltConfig"'
+    cmd += r'SaltConfig -OutputPath "C:\DSC\SaltConfig"'
 
     # Execute Config to create the .mof
     __salt__['cmd.shell'](cmd, shell='powershell')
 
     # Apply the config
-    cmd = 'Set-DscLocalConfigurationManager -Path "C:\DSC\SaltConfig"'
+    cmd = r'Set-DscLocalConfigurationManager -Path "C:\DSC\SaltConfig"'
     ret = _pshell(cmd)
     if not ret:
         log.info('LCM config applied successfully')
