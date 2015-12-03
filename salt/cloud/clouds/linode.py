@@ -41,6 +41,7 @@ import logging
 import pprint
 import re
 import time
+import datetime
 
 # Import Salt Libs
 import salt.config as config
@@ -57,6 +58,9 @@ import salt.utils.cloud
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+# The epoch of the last time a query was made
+LASTCALL = int(time.mktime(datetime.datetime.now().timetuple()))
 
 # Human-readable status fields (documentation: https://www.linode.com/api/linode/linode.list)
 LINODE_STATUS = {
@@ -1347,8 +1351,12 @@ def _query(action=None,
     '''
     Make a web call to the Linode API.
     '''
+    global LASTCALL
     vm_ = get_configured_provider()
 
+    ratelimit_sleep = config.get_cloud_config_value(
+        'ratelimit_sleep', vm_, __opts__, search_global=False, default=0,
+    )
     apikey = config.get_cloud_config_value(
         'apikey', vm_, __opts__, search_global=False
     )
@@ -1372,6 +1380,10 @@ def _query(action=None,
     if method == 'DELETE':
         decode = False
 
+    now = int(time.mktime(datetime.datetime.now().timetuple()))
+    if LASTCALL >= now:
+        time.sleep(ratelimit_sleep)
+
     result = salt.utils.http.query(
         url,
         method,
@@ -1385,6 +1397,7 @@ def _query(action=None,
         hide_fields=['api_key', 'rootPass'],
         opts=__opts__,
     )
+    LASTCALL = int(time.mktime(datetime.datetime.now().timetuple()))
     log.debug(
         'Linode Response Status Code: {0}'.format(
             result['status']
