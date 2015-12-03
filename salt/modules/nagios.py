@@ -21,7 +21,7 @@ def __virtual__():
     '''
     Only load if nagios-plugins are installed
     '''
-    if os.path.isdir('/usr/lib/nagios/'):
+    if os.path.isdir(PLUGINDIR):
         return 'nagios'
     return False
 
