@@ -52,7 +52,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and has_required_packages:
         return __virtualname__
-    return False
+    return (False, 'Cannot load win_status module on non-windows')
 
 
 def cpuload():
@@ -192,8 +192,7 @@ def uptime(human_readable=False):
     Return the system uptime for this machine in seconds
 
     human_readable : False
-        If ``True``, then the number of seconds will be translated into years,
-        months, days, etc.
+        If ``True``, then return uptime in years, days, and seconds.
 
     CLI Example:
 
