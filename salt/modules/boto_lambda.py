@@ -167,7 +167,7 @@ def _find_function(name,
     return None
 
 
-def function_exists(name, region=None, key=None,
+def function_exists(FunctionName, region=None, key=None,
            keyid=None, profile=None):
     '''
     Given a function name, check to see if the given function name exists.
@@ -184,7 +184,7 @@ def function_exists(name, region=None, key=None,
     '''
 
     try:
-        func = _find_function(name,
+        func = _find_function(FunctionName,
                              region=region, key=key, keyid=keyid, profile=profile)
         return {'exists': bool(func)}
     except ClientError as e:
@@ -201,12 +201,13 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
     return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
 
 
-def _zipdata(zipfile):
-    with open(zipfile, 'rb') as f:
+def _filedata(infile):
+    with open(infile, 'rb') as f:
        return f.read()
 
-def create_function(name, runtime, role, handler, zipfile=None, s3bucket=None, s3key=None, s3objectversion=None,
-            description="", timeout=3, memorysize=128, publish=False,
+def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
+                    S3Bucket=None, S3Key=None, S3ObjectVersion=None,
+                    Description="", Timeout=3, MemorySize=128, Publish=False,
             region=None, key=None, keyid=None, profile=None):
     '''
     Given a valid config, create a function.
@@ -222,26 +223,26 @@ def create_function(name, runtime, role, handler, zipfile=None, s3bucket=None, s
 
     '''
 
-    role_arn = _get_role_arn(role, region=region, key=key, keyid=keyid, profile=profile)
+    role_arn = _get_role_arn(Role, region=region, key=key, keyid=keyid, profile=profile)
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if zipfile:
-            if s3bucket or s3key or s3objectversion:
-                raise SaltInvocationError('Either zipfile must be specified, or '
-                                's3bucket and s3key must be provided.')
+        if ZipFile:
+            if S3Bucket or S3Key or S3ObjectVersion:
+                raise SaltInvocationError('Either ZipFile must be specified, or '
+                                'S3Bucket and S3Key must be provided.')
             code = {
-               'ZipFile': _zipdata(zipfile),
+               'ZipFile': _filedata(ZipFile),
             }
         else:
             code = {
-               'S3Bucket': s3bucket,
-               'S3Key': s3key,
+               'S3Bucket': S3Bucket,
+               'S3Key': S3Key,
             }
-            if s3objectversion:
-                code['S3ObjectVersion']= s3objectversion
-        func = conn.create_function(FunctionName=name, Runtime=runtime, Role=role_arn, Handler=handler, 
-                                   Code=code, Description=description, Timeout=timeout, MemorySize=memorysize, 
-                                   Publish=publish)
+            if S3ObjectVersion:
+                code['S3ObjectVersion']= S3ObjectVersion
+        func = conn.create_function(FunctionName=FunctionName, Runtime=Runtime, Role=role_arn, Handler=Handler, 
+                                   Code=code, Description=Description, Timeout=Timeout, MemorySize=MemorySize, 
+                                   Publish=Publish)
         if func:
             log.info('The newly created function name is {0}'.format(func['FunctionName']))
 
@@ -253,9 +254,9 @@ def create_function(name, runtime, role, handler, zipfile=None, s3bucket=None, s
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def delete_function(name, version=None, region=None, key=None, keyid=None, profile=None):
+def delete_function(FunctionName, Qualifier=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Given a function name and optional version, delete it.
+    Given a function name and optional version qualifier, delete it.
 
     Returns {deleted: true} if the function was deleted and returns
     {deleted: false} if the function was not deleted.
@@ -270,16 +271,16 @@ def delete_function(name, version=None, region=None, key=None, keyid=None, profi
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if version:
-           conn.delete_function(FunctionName=name, Qualifier=version)
+        if Qualifier:
+           conn.delete_function(FunctionName=FunctionName, Qualifier=Qualifier)
         else:
-           conn.delete_function(FunctionName=name)
+           conn.delete_function(FunctionName=FunctionName)
         return {'deleted': True}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def describe_function(name, region=None, key=None,
+def describe_function(FunctionName, region=None, key=None,
              keyid=None, profile=None):
     '''
     Given a function name describe its properties.
@@ -295,7 +296,7 @@ def describe_function(name, region=None, key=None,
     '''
 
     try:
-        func = _find_function(name,
+        func = _find_function(FunctionName,
                              region=region, key=key, keyid=keyid, profile=profile)
         if func:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
@@ -308,7 +309,7 @@ def describe_function(name, region=None, key=None,
         return {'error': salt.utils.boto.get_error(e)}
 
 
-def update_function_config(name, role, handler, description="", timeout=3, memorysize=128,
+def update_function_config(FunctionName, Role, Handler, Description="", Timeout=3, MemorySize=128,
             region=None, key=None, keyid=None, profile=None):
     '''
     Update the named lambda function to the configuration.
@@ -324,12 +325,13 @@ def update_function_config(name, role, handler, description="", timeout=3, memor
 
     '''
 
-    role_arn = _get_role_arn(role, region, key, keyid, profile)
+    role_arn = _get_role_arn(Role, region, key, keyid, profile)
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        r = conn.update_function_configuration(FunctionName=name, Role=role_arn, Handler=handler, 
-                                   Description=description, Timeout=timeout,
-                                   MemorySize=memorysize)
+        r = conn.update_function_configuration(FunctionName=FunctionName,
+                                               Role=role_arn, Handler=Handler, 
+                                               Description=Description, Timeout=Timeout,
+                                               MemorySize=MemorySize)
         if r:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
@@ -342,8 +344,8 @@ def update_function_config(name, role, handler, description="", timeout=3, memor
         return {'updated': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def update_function_code(name, zipfile=None, s3bucket=None, s3key=None,
-            s3objectversion=None, publish=False,
+def update_function_code(FunctionName, ZipFile=None, S3Bucket=None, S3Key=None,
+            S3ObjectVersion=None, Publish=False,
             region=None, key=None, keyid=None, profile=None):
     '''
     Upload the given code to the named lambda function.
@@ -355,28 +357,28 @@ def update_function_code(name, zipfile=None, s3bucket=None, s3key=None,
 
     .. code-block:: bash
 
-        salt myminion boto_lamba.update_function_code my_function zipfile=function.zip
+        salt myminion boto_lamba.update_function_code my_function ZipFile=function.zip
 
     '''
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        if zipfile:
-            if s3bucket or s3key or s3objectversion:
-                raise SaltInvocationError('Either zipfile must be specified, or '
-                                's3bucket and s3key must be provided.')
-            r = conn.update_function_code(FunctionName=name,
-                                   ZipFile=_zipdata(zipfile),
-                                   Publish=publish)
+        if ZipFile:
+            if S3Bucket or S3Key or S3ObjectVersion:
+                raise SaltInvocationError('Either ZipFile must be specified, or '
+                                'S3Bucket and S3Key must be provided.')
+            r = conn.update_function_code(FunctionName=FunctionName,
+                                   ZipFile=_filedata(ZipFile),
+                                   Publish=Publish)
         else:
             args = {
-                'S3Bucket': s3bucket, 
-                'S3Key': s3key,
+                'S3Bucket': S3Bucket, 
+                'S3Key': S3Key,
             }
-            if s3objectversion:
-              args['S3ObjectVersion'] = s3objectversion
-            r = conn.update_function_code(FunctionName=name,
-                                   Publish=publish, **args)
+            if S3ObjectVersion:
+              args['S3ObjectVersion'] = S3ObjectVersion
+            r = conn.update_function_code(FunctionName=FunctionName,
+                                   Publish=Publish, **args)
         if r:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
@@ -389,7 +391,7 @@ def update_function_code(name, zipfile=None, s3bucket=None, s3key=None,
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def list_function_versions(functionname, 
+def list_function_versions(FunctionName, 
             region=None, key=None, keyid=None, profile=None):
     '''
     List the versions available for the given function.
@@ -408,8 +410,8 @@ def list_function_versions(functionname,
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        vers = conn.list_versions_by_function(FunctionName=functionname)
-        # TODO: handle marker?
+        vers = _multi_call(con.list_versions_by_function, 
+                                 FunctionName=FunctionName)
         if vers:
             return vers
         else:
@@ -419,7 +421,7 @@ def list_function_versions(functionname,
         return {'error': salt.utils.boto.get_error(e)}
 
 
-def create_alias(functionname, name, functionversion, description="",
+def create_alias(FunctionName, Name, FunctionVersion, Description="",
             region=None, key=None, keyid=None, profile=None):
     '''
     Given a valid config, create an alias to a function.
@@ -436,8 +438,8 @@ def create_alias(functionname, name, functionversion, description="",
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        alias = conn.create_alias(FunctionName=functionname, Name=name,
-                                   FunctionVersion=functionversion, Description=description)
+        alias = conn.create_alias(FunctionName=FunctionName, Name=Name,
+                                   FunctionVersion=FunctionVersion, Description=Description)
         if alias:
             log.info('The newly created alias name is {0}'.format(alias['Name']))
 
@@ -449,7 +451,7 @@ def create_alias(functionname, name, functionversion, description="",
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def delete_alias(functionname, name, region=None, key=None, keyid=None, profile=None):
+def delete_alias(FunctionName, Name, region=None, key=None, keyid=None, profile=None):
     '''
     Given a function name and alias name, delete the alias.
 
@@ -466,13 +468,13 @@ def delete_alias(functionname, name, region=None, key=None, keyid=None, profile=
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        conn.delete_alias(FunctionName=functionname, Name=name)
+        conn.delete_alias(FunctionName=FunctionName, Name=Name)
         return {'deleted': True}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def _find_alias(functionname, name, functionversion=None,
+def _find_alias(FunctionName, Name, FunctionVersion=None,
                region=None, key=None, keyid=None, profile=None):
 
     '''
@@ -480,21 +482,19 @@ def _find_alias(functionname, name, functionversion=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if functionversion:
-        aliases = conn.list_aliases(FunctionName=functionname,
-                        FunctionVersion=functionversion)
-        # TODO: handle marker?
+    if FunctionVersion:
+        aliases = _multi_call(conn.list_aliases, FunctionName=FunctionName,
+                        FunctionVersion=FunctionVersion)
     else:
-        aliases = conn.list_aliases(FunctionName=functionname)
-        # TODO: handle marker?
+        aliases = _multi_call(conn.list_aliases, FunctionName=FunctionName)
 
     for alias in aliases.get('Aliases'):
-        if alias['Name'] == name:
+        if alias['Name'] == Name:
            return alias
     return None
 
 
-def alias_exists(functionname, name, region=None, key=None,
+def alias_exists(FunctionName, Name, region=None, key=None,
            keyid=None, profile=None):
     '''
     Given a function name and alias name, check to see if the given alias exists.
@@ -511,14 +511,14 @@ def alias_exists(functionname, name, region=None, key=None,
     '''
 
     try:
-        alias = _find_alias(functionname, name,
+        alias = _find_alias(FunctionName, Name,
                              region=region, key=key, keyid=keyid, profile=profile)
         return {'exists': bool(alias)}
     except ClientError as e:
         return {'error': salt.utils.boto.get_error(e)}
 
 
-def describe_alias(functionname, name, region=None, key=None,
+def describe_alias(FunctionName, Name, region=None, key=None,
              keyid=None, profile=None):
     '''
     Given a function name and alias name describe the properties of the alias.
@@ -534,7 +534,7 @@ def describe_alias(functionname, name, region=None, key=None,
     '''
 
     try:
-        alias = _find_alias(functionname, name,
+        alias = _find_alias(FunctionName, Name,
                              region=region, key=key, keyid=keyid, profile=profile)
         if alias:
             keys = ('Name', 'FunctionVersion', 'Description')
@@ -545,7 +545,7 @@ def describe_alias(functionname, name, region=None, key=None,
         return {'error': salt.utils.boto.get_error(e)}
 
 
-def update_alias(functionname, name, functionversion=None, description=None,
+def update_alias(FunctionName, Name, FunctionVersion=None, Description=None,
             region=None, key=None, keyid=None, profile=None):
     '''
     Update the named alias to the configuration.
@@ -564,11 +564,11 @@ def update_alias(functionname, name, functionversion=None, description=None,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         args= {}
-        if functionversion:
-            args['FunctionVersion'] = functionversion
-        if description:
-            args['Description'] = description
-        r = conn.update_alias(FunctionName=functionname, Name=name, **args)
+        if FunctionVersion:
+            args['FunctionVersion'] = FunctionVersion
+        if Description:
+            args['Description'] = Description
+        r = conn.update_alias(FunctionName=FunctionName, Name=Name, **args)
         if r:
             keys = ('Name', 'FunctionVersion', 'Description')
             return {'updated': True, 'alias': dict([(k, r.get(k)) for k in keys])}
@@ -579,8 +579,8 @@ def update_alias(functionname, name, functionversion=None, description=None,
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def create_event_source_mapping(eventsourcearn, functionname, startingposition,
-            enabled=True, batchsize=100, 
+def create_event_source_mapping(EventSourceArn, FunctionName, StartingPosition,
+            Enabled=True, BatchSize=100, 
             region=None, key=None, keyid=None, profile=None):
     '''
     Identifies a stream as an event source for a Lambda function. It can be
@@ -599,11 +599,11 @@ def create_event_source_mapping(eventsourcearn, functionname, startingposition,
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        obj = conn.create_event_source_mapping(EventSourceArn=eventsourcearn,
-                                               FunctionName=functionname,
-                                               Enabled=enabled,
-                                               BatchSize=batchsize,
-                                               StartingPosition=startingposition)
+        obj = conn.create_event_source_mapping(EventSourceArn=EventSourceArn,
+                                               FunctionName=FunctionName,
+                                               Enabled=Enabled,
+                                               BatchSize=BatchSize,
+                                               StartingPosition=StartingPosition)
         if obj:
             log.info('The newly created event source mapping ID is {0}'.format(obj['UUID']))
 
@@ -615,7 +615,7 @@ def create_event_source_mapping(eventsourcearn, functionname, startingposition,
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def get_event_source_mapping_ids(eventsourcearn, functionname, 
+def get_event_source_mapping_ids(EventSourceArn, FunctionName, 
            region=None, key=None, keyid=None, profile=None):
     '''
     Given an event source and function name, return a list of mapping IDs
@@ -630,33 +630,34 @@ def get_event_source_mapping_ids(eventsourcearn, functionname,
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        maps = conn.list_event_source_mappings(EventSourceArn=eventsourcearn,
-                                               FunctionName=functionname)['EventSourceMappings']
-        # TODO: handle marker?
+        maps = _multi_call(conn.list_event_source_mappings, 
+                                               EventSourceArn=EventSourceArn,
+                                               FunctionName=FunctionName)['EventSourceMappings']
         return [mapping['UUID'] for mapping in maps]
     except ClientError as e:
         return {'error': salt.utils.boto.get_error(e)}
 
 
-def _get_ids(uuid=None, eventsourcearn=None, functionname=None,
+def _get_ids(UUID=None, EventSourceArn=None, FunctionName=None,
                                 region=None, key=None, keyid=None, profile=None):
-    if uuid:
-        if eventsourcearn or functionname:
-            raise SaltInvocationError('Either uuid must be specified, or '
-                                'eventsourcearn and functionname must be provided.')
-        return [ uuid ]
+    if UUID:
+        if EventSourceArn or FunctionName:
+            raise SaltInvocationError('Either UUID must be specified, or '
+                                'EventSourceArn and FunctionName must be provided.')
+        return [ UUID ]
     else:
-        if not eventsourcearn or not functionname:
-            raise SaltInvocationError('Either uuid must be specified, or '
-                                'eventsourcearn and functionname must be provided.')
-        return get_event_source_mapping_ids(eventsourcearn=eventsourcearn, functionname=functionname,
+        if not EventSourceArn or not FunctionName:
+            raise SaltInvocationError('Either UUID must be specified, or '
+                                'EventSourceArn and FunctionName must be provided.')
+        return get_event_source_mapping_ids(EventSourceArn=EventSourceArn,
+                                            FunctionName=FunctionName,
                        region=region, key=key, keyid=keyid, profile=profile)
 
 
-def delete_event_source_mapping(uuid=None, eventsourcearn=None, functionname=None, 
+def delete_event_source_mapping(UUID=None, EventSourceArn=None, FunctionName=None, 
                                 region=None, key=None, keyid=None, profile=None):
     '''
-    Given an event source mapping ID or an event source ARN and functionname,
+    Given an event source mapping ID or an event source ARN and FunctionName,
     delete the event source mapping
 
     Returns {deleted: true} if the mapping was deleted and returns
@@ -669,8 +670,8 @@ def delete_event_source_mapping(uuid=None, eventsourcearn=None, functionname=Non
         salt myminion boto_lambda.delete_event_source_mapping 260c423d-e8b5-4443-8d6a-5e91b9ecd0fa
 
     '''
-    ids = _get_ids(uuid, eventsourcearn=eventsourcearn,
-                         functionname=functionname)
+    ids = _get_ids(UUID, EventSourceArn=EventSourceArn,
+                         FunctionName=FunctionName)
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         for id in ids:
@@ -680,11 +681,11 @@ def delete_event_source_mapping(uuid=None, eventsourcearn=None, functionname=Non
         return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
 
 
-def event_source_mapping_exists(uuid=None, eventsourcearn=None,
-           functionname=None,
+def event_source_mapping_exists(UUID=None, EventSourceArn=None,
+           FunctionName=None,
            region=None, key=None, keyid=None, profile=None):
     '''
-    Given an event source mapping ID or an event source ARN and functionname,
+    Given an event source mapping ID or an event source ARN and FunctionName,
     check whether the mapping exists.
 
     Returns True if the given alias exists and returns False if the given
@@ -698,19 +699,19 @@ def event_source_mapping_exists(uuid=None, eventsourcearn=None,
 
     '''
 
-    desc = describe_event_source_mapping(uuid=uuid,
-                                         eventsourcearn=eventsourcearn,
-                                         functionname=functionname,
+    desc = describe_event_source_mapping(UUID=UUID,
+                                         EventSourceArn=EventSourceArn,
+                                         FunctionName=FunctionName,
                                          region=region, key=key,
                                          keyid=keyid, profile=profile)
     return {'exists': bool(desc.get('event_source_mapping'))}
 
 
-def describe_event_source_mapping(uuid=None, eventsourcearn=None,
-           functionname=None,
+def describe_event_source_mapping(UUID=None, EventSourceArn=None,
+           FunctionName=None,
            region=None, key=None, keyid=None, profile=None):
     '''
-    Given an event source mapping ID or an event source ARN and functionname,
+    Given an event source mapping ID or an event source ARN and FunctionName,
     obtain the current settings of that mapping.
 
     Returns a dictionary of interesting properties.
@@ -723,15 +724,15 @@ def describe_event_source_mapping(uuid=None, eventsourcearn=None,
 
     '''
 
-    ids = _get_ids(uuid, eventsourcearn=eventsourcearn,
-                         functionname=functionname)
+    ids = _get_ids(UUID, EventSourceArn=EventSourceArn,
+                         FunctionName=FunctionName)
     if len(ids) < 1:
         return {'event_source_mapping': None}
 
-    uuid = ids[0]
+    UUID = ids[0]
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        desc = conn.get_event_source_mapping(UUID=uuid)
+        desc = conn.get_event_source_mapping(UUID=UUID)
         if desc:
             keys = ('UUID', 'BatchSize', 'EventSourceArn',
                     'FunctionArn','LastModified','LastProcessingResult',
@@ -743,8 +744,8 @@ def describe_event_source_mapping(uuid=None, eventsourcearn=None,
         return {'error': salt.utils.boto.get_error(e)}
 
 
-def update_event_source_mapping(uuid, 
-            functionname=None, enabled=None, batchsize=None,
+def update_event_source_mapping(UUID, 
+            FunctionName=None, Enabled=None, BatchSize=None,
             region=None, key=None, keyid=None, profile=None):
     '''
     Update the event source mapping identified by the UUID.
@@ -756,20 +757,20 @@ def update_event_source_mapping(uuid,
 
     .. code-block:: bash
 
-        salt myminion boto_lamba.update_event_source_mapping uuid functionname=new_function
+        salt myminion boto_lamba.update_event_source_mapping uuid FunctionName=new_function
 
     '''
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         args= {}
-        if not functionname is None:
-            args['FunctionName'] = functionname
-        if not enabled is None:
-            args['Enabled'] = enabled
-        if not batchsize is None:
-            args['BatchSize'] = batchsize
-        r = conn.update_event_source_mapping(UUID=uuid, **args)
+        if not FunctionName is None:
+            args['FunctionName'] = FunctionName
+        if not Enabled is None:
+            args['Enabled'] = Enabled
+        if not BatchSize is None:
+            args['BatchSize'] = BatchSize
+        r = conn.update_event_source_mapping(UUID=UUID, **args)
         if r:
             keys = ('UUID', 'BatchSize', 'EventSourceArn',
                     'FunctionArn', 'LastModified', 'LastProcessingResult',
