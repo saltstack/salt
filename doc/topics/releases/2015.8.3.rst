@@ -2,6 +2,16 @@
 Salt 2015.8.3 Release Notes
 ===========================
 
+Security Fix
+============
+
+CVE-2015-8034: Saving ``state.sls`` cache data to disk with insecure permissions
+
+This affects users of the ``state.sls`` function. The state run cache on the minion was being created with incorrect permissions. This file could potentially contain sensitive data that was inserted via jinja into the state SLS files. The permissions for this file are now being set correctly. Thanks to @zmalone for bringing this issue to our attention.
+
+Changes
+=======
+
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
 *Generated at: 2015-11-25T00:03:40Z*
@@ -54,7 +64,7 @@ Changes:
 
 - **PR** `#29050`_: (*terminalmage*) Make git_pillar global config option docs more prominent
 
-- **PR** `#29048`_: (*nmadhok*) Fix incorrect debug log statement 
+- **PR** `#29048`_: (*nmadhok*) Fix incorrect debug log statement
 
 - **PR** `#29024`_: (*jfindlay*) cache runner test: add new unit tests
 
@@ -142,7 +152,7 @@ Changes:
 
 - **PR** `#28782`_: (*rallytime*) Fixes to rabbitmq user state
 
-- **PR** `#28789`_: (*nmadhok*) Provide ability to enable/disable customization for newly create VMs using VMware salt-cloud driver 
+- **PR** `#28789`_: (*nmadhok*) Provide ability to enable/disable customization for newly create VMs using VMware salt-cloud driver
 
 - **PR** `#28768`_: (*mrosedale*) 2015.8
 
@@ -220,7 +230,7 @@ Changes:
 
 - **PR** `#28602`_: (*nasenbaer13*) Allow setting of custom dimensions in asg alarm specification
 
-- **PR** `#28596`_: (*rallytime*) Merge branch '2015.5' into '2015.8' 
+- **PR** `#28596`_: (*rallytime*) Merge branch '2015.5' into '2015.8'
 
 - **PR** `#28593`_: (*blueyed*) doc: fix typo with salt.states.file: s/preseve/preserve/
 
