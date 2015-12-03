@@ -33,7 +33,7 @@ DEFAULT_SSH_PORT = 22
 def __virtual__():
     # TODO: This could work on windows with some love
     if salt.utils.is_windows():
-        return False
+        return (False, 'The module cannot be loaded on windows.')
     return True
 
 
