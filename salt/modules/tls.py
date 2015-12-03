@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
--r'''
+r'''
 A salt module for SSL/TLS.
 Can create a Certificate Authority (CA)
 or use Self-Signed certificates.
@@ -166,7 +166,9 @@ def _microtime():
     Return a Unix timestamp as a string of digits
     :return:
     '''
-    return '%f%d' % math.modf(time.time())
+    val1, val2 = math.modf(time.time())
+    val2 = int(val2)
+    return '{0:f}{1}'.format(val1, val2)
 
 
 def cert_base_path(cacert_path=None):
