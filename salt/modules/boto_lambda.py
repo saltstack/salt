@@ -133,6 +133,23 @@ def __init__(opts):
     if HAS_BOTO:
         __utils__['boto3.assign_funcs'](__name__, 'lambda')
 
+def _multi_call(function, *args, **kwargs):
+    """Retrieve full set of values from a boto3 API call that may truncate
+    its results
+    """
+    ret = function(*args, **kwargs)
+    # determine the non-marker key name
+    all = ret.keys()
+    if 'NextMarker' in all:
+        all.remove('NextMarker')
+    content = all[0]
+    # handle a marker indicating the result was truncated
+    marker = getattr(ret, 'NextMarker', None)
+    while marker:
+        more = function(*args, Marker=marker, **kwargs)
+        ret[content].extend(more[content])
+        marker = getattr(funcs, 'NextMarker', None)
+    return ret
 
 def _find_function(name,
                region=None, key=None, keyid=None, profile=None):
@@ -142,8 +159,7 @@ def _find_function(name,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    funcs = conn.list_functions()
-    # TODO: handle marker?
+    funcs = _multi_call(conn.list_functions)
 
     for func in funcs['Functions']:
         if func['FunctionName'] == name:
