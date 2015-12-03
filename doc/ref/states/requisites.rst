@@ -238,6 +238,23 @@ to Salt ensuring that the service is running.
         - name: /etc/ntp.conf
         - source: salt://ntp/files/ntp.conf
 
+Or, we may want to run a state only if a previously defined state, in this case
+*Extract node package*, has run as well:
+
+.. code-block:: yaml
+
+    Extract node package:
+      archive.extracted:
+        - name: my-nodejs-package.tgz
+        - archive_format: tar
+        - if_missing: package/
+
+    Install node dependencies:
+      cmd.wait:
+        - watch:
+          - cmd: Extract node package
+        - name: npm rebuild
+
 .. _requisites-prereq:
 
 prereq
