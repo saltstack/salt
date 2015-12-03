@@ -437,6 +437,7 @@ def get_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
     CLI Example:
 
     .. code-block:: bash
+
         salt myminion boto_apigateway.get_api_key apigw_api_key
 
     '''
@@ -474,4 +475,58 @@ def get_api_keys(region=None, key=None, keyid=None, profile=None):
     except ClientError as e:
         return {'error': salt.utils.boto.get_error(e)} 
 
-# TODO: rest of the api keys related methods
+def create_api_key(name, description, enabled=True, stageKeys=[],
+                   region=None, key=None, keyid=None, profile=None):
+    '''
+    Create an API key given name and description.
+
+    An optional enabled argument can be provided.  If provided, the 
+    valid values are True|False.  This agrument defaults to True.
+
+    An optional stageKeys argument can be provided in the form of 
+    list of dictionary with 'restApiId' and 'stageName' as keys.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.create_api_key name description 
+
+        salt myminion boto_apigateway.create_api_key name description enabled=False
+
+        salt myminion boto_apigateway.create_api_key name description stageKeys='[{"restApiId": "id", "stageName": "stagename"}]'
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        response = conn.create_api_key(name=name, description=description, 
+                                       enabled=enabled, stageKeys=stageKeys)
+        if not response:
+            return {'created': False}
+
+        return {'created': True, 'apiKey': _convert_datetime_str(response)}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+def delete_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes a given apiKey
+
+    CLI Example:
+
+    .. code_block:: bash
+
+        salt myminion boto_apigateway.delete_api_key apikeystring
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        response = conn.delete_api_key(apiKey=apiKey)
+        return {'deleted': True}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto_get_error(e)}
+
+#TODO api_key update stage list
+
+
