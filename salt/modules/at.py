@@ -33,7 +33,7 @@ def __virtual__():
     Most everything has the ability to support at(1)
     '''
     if salt.utils.is_windows() or salt.utils.which('at') is None:
-        return False
+        return (False,'The at module could not be loaded: at command not found')
     return True
 
 
