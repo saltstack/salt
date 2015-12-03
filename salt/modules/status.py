@@ -24,15 +24,14 @@ from salt.utils.network import host_to_ip as _host_to_ip
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
 
-
+__virtualname__ = 'status'
 __opts__ = {}
 
 
-# TODO: Make this module support windows hosts
 def __virtual__():
     if salt.utils.is_windows():
-        return False
-    return True
+        return (False, 'Cannot load status module on windows')
+    return __virtualname__
 
 
 def _number(text):
