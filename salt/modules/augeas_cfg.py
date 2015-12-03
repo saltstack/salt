@@ -56,7 +56,7 @@ def __virtual__():
     '''
     if HAS_AUGEAS:
         return __virtualname__
-    return False
+    return (False, 'Cannot load augeas_cfg module: augeas python module not installed')
 
 
 def _recurmatch(path, aug):
