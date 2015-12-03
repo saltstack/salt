@@ -31,7 +31,7 @@ def __virtual__():
     '''
     # Disable on Windows, a specific file module exists:
     if salt.utils.is_windows():
-        return False
+        return (False, 'The mount module cannot be loaded: not a POSIX-like system.')
     return True
 
 
