@@ -58,7 +58,7 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return (False,'The module boto_cfs could not be loaded: boto libraries not found')
     return True
 
 
