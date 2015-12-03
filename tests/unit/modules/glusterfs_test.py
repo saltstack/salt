@@ -248,4 +248,4 @@ class GlusterfsTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(GlusterTestCase, needs_daemon=False)
+    run_tests(GlusterfsTestCase, needs_daemon=False)
