@@ -41,7 +41,7 @@ def __virtual__():
     cmd = _detect_os()
     if salt.utils.which(cmd):
         return 'apache'
-    return False
+    return (False, 'The apache execution module cannot be loaded: apache is not installed.')
 
 
 def _detect_os():
