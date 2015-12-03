@@ -285,7 +285,7 @@ def get_config():
         salt '*' dsc.get_config
     '''
     cmd = 'Get-DscConfiguration | ' \
-          'Select-Object -Property -ExcludeProperty Cim*'
+          'Select-Object * -ExcludeProperty Cim*'
     return _pshell(cmd)
 
 
