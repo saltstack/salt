@@ -27,9 +27,9 @@ from raet.lane.stacking import LaneStack
 
 from salt import daemons
 from salt.daemons import salting
+from salt.exceptions import SaltException
 from salt.utils import kinds, is_windows
 from salt.utils.event import tagify
-from salt.utils.error import raise_error
 
 # Import ioflo libs
 
@@ -382,7 +382,7 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
             if refresh_all or refresh_masters:
                 stack.puid = stack.Uid  # reset puid so reuse same uid each time
 
-                ex = None
+                ex = SaltException('Unable to connect to any master')
                 for master in self.ushers.value:
                     try:
                         mha = master['external']
@@ -395,11 +395,8 @@ class SaltRaetRoadStackJoiner(ioflo.base.deeding.Deed):
                         log.warning("Unable to connect to master {0}: {1}".format(mha, ex))
                         if self.opts.value.get('master_type') != 'failover':
                             raise ex
-                if not (stack.remotes):
-                    if ex is None:
-                        raise_error(name='SaltException', message='Unable to connect to any master')
-                    else:
-                        raise ex
+                if not stack.remotes:
+                    raise ex
 
             for remote in list(stack.remotes.values()):
                 if remote.kind == kinds.applKinds.master:
