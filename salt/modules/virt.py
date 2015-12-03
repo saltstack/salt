@@ -63,7 +63,7 @@ VIRT_DEFAULT_HYPER = 'kvm'
 
 def __virtual__():
     if not HAS_LIBVIRT:
-        return False
+        return (False, 'Unable to locate or import python libvirt library.')
     return 'virt'
 
 
