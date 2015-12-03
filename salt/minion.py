@@ -1229,7 +1229,8 @@ class Minion(MinionBase):
             ret,
             timeout=minion_instance._return_retry_timer()
         )
-        if data['ret']:
+        # TODO: make a list? Seems odd to split it this late :/
+        if data['ret'] and isinstance(data['ret'], six.string_types):
             if 'ret_config' in data:
                 ret['ret_config'] = data['ret_config']
             if 'ret_kwargs' in data:
