@@ -1371,6 +1371,49 @@ def delete_ipsecpolicy(ipsecpolicy, profile=None):
     conn = _auth(profile)
     return conn.delete_ipsecpolicy(ipsecpolicy)
 
+def list_firewall_rules(profile=None):
+    '''
+    Fetches a list of all firewall rules for a tenant
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.list_firewall_rules
+	:param profile: Profile to build on (Optional)
+	:return: List of firewall rules
+    '''
+    conn = _auth(profile)
+    return conn.list_firewall_rules()
+
+def show_firewall_rule(rule, profile=None):
+    '''
+    Show information of a given firewall rule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.show_firewall_rule firewall-rule-name
+
+    :param rule: ID or name of firewall rule to look up
+    :param profile: Profile to build on (Optional)
+    :return: firewall rule information
+    '''
+    conn = _auth(profile)
+    return conn.show_firewall_rule(rule)
+
+def delete_firewall_rule(rule, profile=None):
+    '''
+    Deletes the specified firewall rule
+    CLI Example:
+    .. code-block:: bash
+        salt '*' neutron.delete_firewall_rule firewall-rule-name
+    :param rule: ID or name of firewall rule to delete
+    :param profile: Profile to build on (Optional)
+    :return: firewall rule information
+    '''
+    conn = _auth(profile)
+    return conn.delete_firewall_rule(rule)
 
 # The following is a list of functions that need to be incorporated in the
 # neutron module. This list should be updated as functions are added.
