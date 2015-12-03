@@ -28,7 +28,7 @@ def __virtual__():
     '''
     if salt.utils.which('cpan'):
         return True
-    return False
+    return (False, 'Unable to locate cpan. Make sure it is installed and in the PATH.')
 
 
 def install(module):
