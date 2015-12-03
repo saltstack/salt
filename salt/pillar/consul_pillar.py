@@ -133,7 +133,6 @@ def fetch_tree(client, path):
 
     if items is None:
         return ret
-        
     for item in reversed(items):
         key = re.sub(r'^' + path + '/?', '', item['Key'])
         if key != "":
