@@ -843,7 +843,11 @@ class Key(object):
                     self.event.fire_event(eload, tagify(prefix='key'))
                 except (OSError, IOError):
                     pass
-        self.check_minion_cache(preserve_minions=matches.get('minions', []))
+        if preserve_minions:
+            preserve_minions_list = matches.get('minions', [])
+        else:
+            preserve_minions_list = []
+        self.check_minion_cache(preserve_minions=preserve_minions_list)
         if self.opts.get('rotate_aes_key'):
             salt.crypt.dropfile(self.opts['cachedir'], self.opts['user'])
         return (
