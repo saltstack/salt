@@ -105,6 +105,7 @@ import time
 import calendar
 import logging
 import math
+import binascii
 import salt.utils
 from salt._compat import string_types
 from salt.ext.six.moves import range as _range
