@@ -22,7 +22,7 @@ def __virtual__():
     if salt.utils.which('crontab'):
         return True
     else:
-        return False
+        return (False, 'Cannot load cron module: crontab command not found')
 
 
 def _encode(string):
