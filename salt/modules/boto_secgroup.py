@@ -82,9 +82,9 @@ def __virtual__():
     # a groupId attribute when a GroupOrCIDR object authorizes an IP range
     # Support for Boto < 2.4.0 can be added if needed
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_secgroup module could not be loaded: boto libraries not found')
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return False
+        return (False, 'The boto_secgroup module could not be loaded: boto library v2.4.0 not found')
     else:
         __utils__['boto.assign_funcs'](__name__, 'ec2')
         return True
