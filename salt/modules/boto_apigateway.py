@@ -108,7 +108,6 @@ except ImportError:
     HAS_BOTO = False
 # pylint: enable=import-error
 
-
 def __virtual__():
     '''
     Only load if boto libraries exist and if boto libraries are greater than
@@ -135,156 +134,51 @@ def __init__(opts):
         __utils__['boto3.assign_funcs'](__name__, 'apigateway')
 
 
+import datetime
+def _convert_datetime_str(response):
+    '''
+    modify any key-value pair where value is a datetime object to a string.
+    '''
+    if response:
+        return dict(map(lambda (k,v): (k, '{0}'.format(v)) if (isinstance(v, datetime.date)) else (k, v),
+                        response.items()))
+    return None
+
 def _filter_apis(name, apis):
     '''
-    Given a name, and a list of api items, return list of api items matching 
-    the given name.
+    Return list of api items matching the given name.
     '''
-
-    res = []
-    for api in apis:
-        if api['name'] == name:
-            res.append(api)
-    return res
-
-def get_api_resources(apiid,
-                      region=None, key=None, keyid=None, profile=None):
-    '''
-    Given rest api id, return all resources for this api.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_apigateway.get_api_resources myapi_id
-
-    '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    resources = []
-    _resources = conn.get_resources(restApiId=apiid)
-
-    while True:
-        if (_resources):
-            resources = resources + _resources['items']
-            if not _resources.has_key('position'):
-                break
-            _resources = conn.get_resources(restApiId=apiid, position=_resources['position'])
-
-    resources = sorted(resources, key=lambda k: k['path'])
-
-    return resources
-
-def get_api_resource(apiid, abspath,
-                     region=None, key=None, keyid=None, profile=None):
-    '''
-    Given rest api id, and an absolute resource path, returns the resource id for 
-    the given path.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_apigateway.get_api_resource myapi_id resource_path
-
-    '''
-    resources = get_api_resources(apiid, region=region, key=key, keyid=keyid, profile=profile)
-    if (not resources):
-        return False
-    for resource in resources:
-        if (resource['path'] == abspath):
-            return resource
-    return False
-
-def create_api_resources(apiid, abspath,
-                         region=None, key=None, keyid=None, profile=None):
-    '''
-    Given rest api id, and an absolute resource path, create all the resources and
-    return all resources in the abspath, returns False on failure.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_apigateway.create_api_resources myapi_id resource_path
-
-    '''
-    path_parts = string.split(abspath, "/")
-    created = []
-    current_path = ""
-    try:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        for path_part in path_parts:
-            current_path = '{0}/{1}'.format(current_path, path_part)
-            resource = get_api_resource(apiid, current_path, 
-                                        region=region, key=key, keyid=keyid, profile=profile)
-            if (not resource):
-                resource = conn.create_resource(restApiId=apiid, parentId=created[-1]['id'], pathPart=path_part)
-            created.append(resource)
-
-        if created:
-            return {'created': True, 'apiid': apiid, 'resources': created}
-        else:
-            return {'created': False, 'error': 'unexpected error.'}
-    except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
-
-
-def delete_api_resources(apiid, abspath,
-                         region=None, key=None, keyid=None, profile=None):
-    '''
-    Given restApiId and an absolute resource path, delete the resources starting
-    from the absoluate resource path.  If abspath is the root resource "/", 
-    the function will return False.  Returns False on failure.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_apigateway.delete_api_resources myapi_id, resource_path
-
-    '''
-    if (abspath == "/"):
-        return {'deleted': False, 'error': 'use delete_api to remove the root resource'}
-    try:
-        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        resource = get_api_resource(apiid, abspath, region=region, key=key, keyid=keyid, profile=profile)
-        if resource:
-            conn.delete_resource(restApiId=apiid, resourceId=resource['id'])
-            return {'deleted': True}
-        else:
-            return {'deleted': False, 'error': 'no resource found by {0}'.format(abspath)}
-    except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
-
+    return [api for api in apis if api['name'] == name]
 
 def _get_apis_by_name(name,
-                     region=None, key=None, keyid=None, profile=None):
+                      region=None, key=None, keyid=None, profile=None):
 
     '''
-    Given rest api name, get and return list of matching rest api information.  If
-    rest api name is "", return all apis w/o filtering by rest api name.
+    get and return list of matching rest api information by the given name. 
+    If rest api name evaluates to False, return all apis w/o filtering the name.
     '''
-    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-    apis = []
-    _apis = conn.get_rest_apis()
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        apis = []
+        _apis = conn.get_rest_apis()
 
-    while True:
-        if (_apis):
-            if name:
-                apis = apis + _filter_apis(name, _apis['items'])
-            else:
-                apis = apis + _apis['items']
-            if not _apis.has_key('position'):
-                break
-            _apis = conn.get_rest_apis(position=_apis['position'])
-    return apis
+        while True:
+            if (_apis):
+                if name:
+                    apis = apis + _filter_apis(name, _apis['items'])
+                else:
+                    apis = apis + _apis['items']
+                if not _apis.has_key('position'):
+                    break
+                _apis = conn.get_rest_apis(position=_apis['position'])
+        return {'restapi': map(_convert_datetime_str, apis)}
+    except ClientError as e:
+        return {'error': salt.utils.boto.get_error(e)} 
 
-
-def get_apis_by_name(name,
-                     region=None, key=None, keyid=None, profile=None):
+def get_apis_by_name(name, region=None, key=None, keyid=None, profile=None):
 
     '''
-    Given rest api name, get and return list of matching rest api information.
+    Returns list of matching rest apis by given name.
 
     CLI Example:
 
@@ -293,14 +187,13 @@ def get_apis_by_name(name,
         salt myminion boto_apigateway.get_apis_by_name api_name
 
     '''
-    return _get_apis_by_name(name,
-                             region=region, key=key, keyid=keyid, profile=profile)
+    return _get_apis_by_name(name, region=region, key=key, keyid=keyid, profile=profile)
 
 
 def get_all_apis(region=None, key=None, keyid=None, profile=None):
 
     '''
-    returns all rest api's defined in the defined region
+    Returns all rest apis in the defined region
 
     CLI Example:
 
@@ -309,17 +202,11 @@ def get_all_apis(region=None, key=None, keyid=None, profile=None):
         salt myminion boto_apigateways.get_all_apis
 
     '''
-    return _get_apis_by_name('',
-                             region=region, key=key, keyid=keyid, profile=profile)
+    return _get_apis_by_name('', region=region, key=key, keyid=keyid, profile=profile)
 
-def exists(name, region=None, key=None,
-           keyid=None, profile=None):
+def api_exists(name, region=None, key=None, keyid=None, profile=None):
     '''
-    Given a Rest API Name, check to see if the given Rest API Name 
-    exists.
-
-    Returns True if the given Rest API Name exists and returns False if 
-    the given Rest API Name does not exist.
+    Check to see if the given Rest API Name exists.
 
     CLI Example:
 
@@ -328,24 +215,18 @@ def exists(name, region=None, key=None,
         salt myminion boto_apigateway.exists myapi_name
 
     '''
-
-    try:
-        apis = _get_apis_by_name(name,
-                                 region=region, key=key, keyid=keyid, profile=profile)
-        return {'exists': bool(apis)}
-    except ClientError as e:
-        # TODO: error with utils.boto3.get_error on exception
-        return {'exists': False, 'error': salt.utils.boto.get_error(e)}
+    apis = _get_apis_by_name(name, region=region, key=key, keyid=keyid, profile=profile)
+    return {'exists': bool(apis.get('restapi'))}
 
 
-def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
-    if name.startswith('arn:aws:iam:'):
-        return name
-
-    account_id = __salt__['boto_iam.get_account_id'](
-        region=region, key=key, keyid=keyid, profile=profile
-    )
-    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
+#def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
+#    if name.startswith('arn:aws:iam:'):
+#        return name
+#
+#    account_id = __salt__['boto_iam.get_account_id'](
+#        region=region, key=key, keyid=keyid, profile=profile
+#    )
+#    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
 
 
 def create_api(name, description, cloneFrom=None,
@@ -353,8 +234,8 @@ def create_api(name, description, cloneFrom=None,
     '''
     Create a new REST API Service with the given name
 
-    Returns False if unable to create a new REST API, and returns True if 
-    the REST API is created.
+    Returns {created: True} if the rest api was created and returns
+    {created: False} if the rest api was not created.
 
     CLI Example:
     
@@ -370,12 +251,7 @@ def create_api(name, description, cloneFrom=None,
         else:
             api = conn.create_rest_api(name=name, description=description)
 
-        if api:
-            log.info('The newly created rest api name is {0}'.format(api['name']))
-            return {'created': True, 'api': api}
-        else:
-            log.warn('rest api {0} was not created'.format(name))
-            return {'created': False}
+        return {'created': True, 'restapi': api} if api else {'created': False}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
@@ -383,6 +259,9 @@ def create_api(name, description, cloneFrom=None,
 def delete_api(name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete all REST API Service with the given name
+
+    Returns {deleted: True, count: deleted_count} if apis were deleted, and
+    returns {deleted: False} if error or not found.
 
     CLI Example:
 
@@ -392,18 +271,207 @@ def delete_api(name, region=None, key=None, keyid=None, profile=None):
 
     '''
     try:
-        apis = _get_apis_by_name(name,
-                                 region=region, key=key, keyid=keyid, profile=profile)
-
+        r = _get_apis_by_name(name, region=region, key=key, keyid=keyid, profile=profile)
+        apis = r.get('restapi')
         if (apis):
-            conn = _get_conn(region=region, key=key, 
-                             keyid=keyid, profile=profile)
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             for api in apis:
                 conn.delete_rest_api(restApiId=api['id'])
-
             return {'deleted': True, 'count': len(apis)}  
         else:
-            log.warn('rest api name {0} was not found'.format(name))
             return {'deleted': False}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
+# rest api resource
+def get_api_resources(restApiId, region=None, key=None, keyid=None, profile=None):
+    '''
+    Given rest api id, return all resources for this api.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_resources myapi_id
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        resources = []
+        _resources = conn.get_resources(restApiId=restApiId)
+
+        while True:
+            if (_resources):
+                resources = resources + _resources['items']
+                if not _resources.has_key('position'):
+                    break
+                _resources = conn.get_resources(restApiId=restApiId, position=_resources['position'])
+
+        resources = sorted(resources, key=lambda k: k['path'])
+
+        return {'resources': resources}
+    except ClientError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+def get_api_resource(restApiId, path,
+                     region=None, key=None, keyid=None, profile=None):
+    '''
+    Given rest api id, and an absolute resource path, returns the resource id for 
+    the given path.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_resource myapi_id resource_path
+
+    '''
+    r = get_api_resources(restApiId, region=region, key=key, keyid=keyid, profile=profile)
+    resources = r.get('resources')
+    if (not resources):
+        return r
+    for resource in resources:
+        if (resource['path'] == path):
+            return {'resource': resource}
+    return {'resource': None}
+
+def create_api_resources(restApiId, path,
+                         region=None, key=None, keyid=None, profile=None):
+    '''
+    Given rest api id, and an absolute resource path, create all the resources and
+    return all resources in the resourcepath, returns False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.create_api_resources myapi_id resource_path
+
+    '''
+    path_parts = string.split(path, "/")
+    created = []
+    current_path = ""
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        for path_part in path_parts:
+            current_path = '{0}/{1}'.format(current_path, path_part)
+            r = get_api_resource(restApiId, current_path, 
+                                 region=region, key=key, keyid=keyid, profile=profile)
+            resource = r.get('resource')
+            if (not resource):
+                resource = conn.create_resource(restApiId=restApiId, parentId=created[-1]['id'], pathPart=path_part)
+            created.append(resource)
+
+        if created:
+            return {'created': True, 'restApiId': restApiId, 'resources': created}
+        else:
+            return {'created': False, 'error': 'unexpected error.'}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def delete_api_resources(restApiId, path,
+                         region=None, key=None, keyid=None, profile=None):
+    '''
+    Given restApiId and an absolute resource path, delete the resources starting
+    from the absoluate resource path.  If resourcepath is the root resource "/", 
+    the function will return False.  Returns False on failure.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.delete_api_resources myapi_id, resource_path
+
+    '''
+    if (path == "/"):
+        return {'deleted': False, 'error': 'use delete_api to remove the root resource'}
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        r = get_api_resource(restApiId, path, region=region, key=key, keyid=keyid, profile=profile)
+        resource = r.get('resource')
+        if resource:
+            conn.delete_resource(restApiId=restApiId, resourceId=resource['id'])
+            return {'deleted': True}
+        else:
+            return {'deleted': False, 'error': 'no resource found by {0}'.format(path)}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
+# resource method
+def get_api_resource_method(restApiId, resourcepath, httpMethod,
+                            region=None, key=None, keyid=None, profile=None):
+    '''
+    Given rest api id, resource path, and http method (must be one of DELETE,
+    GET, HEAD, OPTIONS, PATCH, POST, PUT), return the method for the
+    api/resource path if defined.  Return False if method is not defined.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_resource_method myapi_id resource_path httpmethod
+
+    '''
+    r = get_api_resource(restApiId, resourcepath,
+                         region=region, key=key, keyid=keyid, profile=profile)
+    resource = r.get('resource')
+    if not resource:
+        return {'error': 'no such resource'}
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        method = conn.get_method(restApiId=restApiId, resourceId=resource['id'], httpMethod=httpMethod)
+        return {'method': method}
+    except ClientError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+#TODO: rest of the api resource method related methods
+
+# API Keys
+def get_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
+    '''
+    Gets info about the given api key
+
+    CLI Example:
+
+    .. code-block:: bash
+        salt myminion boto_apigateway.get_api_key apigw_api_key
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        response = conn.get_api_key(apiKey=apiKey)
+        return {'apiKey': _convert_datetime_str(response)}
+    except ClientError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+def get_api_keys(region=None, key=None, keyid=None, profile=None):
+    '''
+    Gets information about the defined API Keys.  Return list of apiKeys.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_keys
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        apikeys = []
+        _apikeys = conn.get_api_keys()
+
+        while True:
+            if (_apikeys):
+                apikeys = apikeys + _apikeys['items']
+                if not _apikeys.has_key('position'):
+                    break
+                _apikeys = conn.get_api_keys(position=_apikeys['position'])
+
+        return {'apiKeys': map(_convert_datetime_str, apikeys)}
+    except ClientError as e:
+        return {'error': salt.utils.boto.get_error(e)} 
+
+# TODO: rest of the api keys related methods
