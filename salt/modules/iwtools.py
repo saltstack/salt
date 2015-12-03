@@ -5,7 +5,6 @@ Support for Wireless Tools for Linux
 
 from __future__ import absolute_import
 import logging
-import salt.ext.six as six
 import salt.utils
 from salt.exceptions import SaltInvocationError
 
