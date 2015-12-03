@@ -55,7 +55,7 @@ def _proxy_conf_file(proxyfile, test):
                     .format(proxyfile)
         except (OSError, IOError) as err:
             success = False
-            msg = 'Salt Proxy: Error writing proxy file {0}'.format(str(err))
+            msg = 'Salt Proxy: Error writing proxy file {0}'.format(err)
             log.error(msg)
             changes_new.append(msg)
         changes_new.append(msg)
@@ -72,7 +72,7 @@ def _is_proxy_running(proxyname):
     Check if proxy for this name is running
     '''
     cmd = ('ps ax | grep "salt-proxy --proxyid={0}" | grep -v grep'
-           .format(proxyname))
+           .format(quote(proxyname)))
     cmdout = __salt__['cmd.run_all'](
         cmd,
         timeout=5,
@@ -92,7 +92,7 @@ def _proxy_process(proxyname, test):
     if not _is_proxy_running(proxyname):
         if not test:
             __salt__['cmd.run_all'](
-                'salt-proxy --proxyid={0} -l info -d'.format(proxyname),
+                'salt-proxy --proxyid={0} -l info -d'.format(quote(proxyname)),
                 timeout=5)
             changes_new.append('Salt Proxy: Started proxy process for {0}'
                                .format(proxyname))
@@ -131,7 +131,7 @@ def configure_proxy(proxyname, start=True):
 
     # start the proxy process
     if start:
-        status_proc, msg_new, msg_old = _proxy_process(quote(proxyname), test)
+        status_proc, msg_new, msg_old = _proxy_process(proxyname, test)
         changes_old.extend(msg_old)
         changes_new.extend(msg_new)
     else:
@@ -165,4 +165,4 @@ def is_running(proxyname):
 
         salt deviceminion salt_proxy.is_running
     '''
-    return {'result': _is_proxy_running(quote(proxyname))}
+    return {'result': _is_proxy_running(proxyname)}
