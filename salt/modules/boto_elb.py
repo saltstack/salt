@@ -85,7 +85,7 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_elb module could not be loaded: boto libraries not found')
     __utils__['boto.assign_funcs'](__name__, 'elb', module='ec2.elb')
     return True
 
