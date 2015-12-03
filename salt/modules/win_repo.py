@@ -41,7 +41,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return __virtualname__
-    return False
+    return (False, 'This module only works on Windows.')
 
 
 def genrepo():
