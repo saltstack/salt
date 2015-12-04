@@ -5,6 +5,22 @@ Manage VMware vCenter servers and ESXi hosts.
 .. versionadded:: 2015.8.4
 
 :depends: pyVmomi
+
+.. note::
+
+    Be aware that some functionality in this execution module may depend on the
+    type of license attached to a vCenter Server or ESXi host(s).
+
+    For example, certain services are only available to manipulate service state
+    or policies with a VMware vSphere Enterprise or Enterprise Plus license, while
+    others are available with a Standard license. The ``ntpd`` service is restricted
+    to an Enterprise Plus license, while ``ssh`` is available via the Standard
+    license.
+
+    Please see the `vSphere Comparison`_ page for more information.
+
+.. _vSphere Comparison: https://www.vmware.com/products/vsphere/compare
+
 '''
 
 # Import Python Libs
@@ -164,8 +180,8 @@ def set_coredump_network_config(host, username, password, dump_ip, host_vnic='vm
         esxi_host='esxi-1.host.com'
     '''
 
-    cmd = 'system coredump network set -v {0} -i {1} -o {2}'.format(dump_ip,
-                                                                    host_vnic,
+    cmd = 'system coredump network set -v {0} -i {1} -o {2}'.format(host_vnic,
+                                                                    dump_ip,
                                                                     dump_port)
     ret = salt.utils.vmware.esxcli(host, username, password, cmd, esxi_host=esxi_host)
     if ret['retcode'] != 0:
@@ -535,10 +551,13 @@ def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
     return ret
 
 
-def get_ssh_key(host, username, password,
-                protocol=None, port=None, certificate_verify=False):
+def get_ssh_key(host,
+                username,
+                password,
+                protocol=None,
+                port=None,
+                certificate_verify=False):
     '''
-
     Retrieve the authorized_keys entry for root.
     This function only works for ESXi, not vCenter.
 
@@ -769,12 +788,18 @@ def get_service_policy(host, username, password, service_name, protocol=None, po
     for host_name in host_names:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         services = host_ref.configManager.serviceSystem.serviceInfo.service
+
+        # Don't require users to know that VMware lists the ssh service as TSM-SSH
+        if service_name == 'SSH' or service_name == 'ssh':
+            temp_service_name = 'TSM-SSH'
+        else:
+            temp_service_name = service_name
+
         for service in services:
-            if service.key == service_name:
-                ret.update({host_name: service.policy})
-            elif service_name == 'ssh' or service_name == 'SSH':
-                if service.key == 'TSM-SSH':
-                    ret.update({host_name: service.policy})
+            if service.key == temp_service_name:
+                ret.update({host_name:
+                           {service_name: service.running}})
+                break
             else:
                 msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name,
                                                                                 host_name)
@@ -857,12 +882,18 @@ def get_service_running(host, username, password, service_name, protocol=None, p
     for host_name in host_names:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         services = host_ref.configManager.serviceSystem.serviceInfo.service
+
+        # Don't require users to know that VMware lists the ssh service as TSM-SSH
+        if service_name == 'SSH' or service_name == 'ssh':
+            temp_service_name = 'TSM-SSH'
+        else:
+            temp_service_name = service_name
+
         for service in services:
-            if service.key == service_name:
-                ret.update({host_name: service.running})
-            elif service_name == 'SSH' or service_name == 'ssh':
-                if service.key == 'TSM-SSH':
-                    ret.update({host_name: service.running})
+            if service.key == temp_service_name:
+                ret.update({host_name:
+                           {service_name: service.running}})
+                break
             else:
                 msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name,
                                                                                 host_name)
@@ -935,7 +966,7 @@ def get_vsan_enabled(host, username, password, protocol=None, port=None, host_na
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
         else:
-            ret.update({host_name: vsan_config.enabled})
+            ret.update({host_name: {'VSAN Enabled': vsan_config.enabled}})
 
     return ret
 
@@ -1591,9 +1622,15 @@ def set_ntp_config(host, username, password, ntp_servers, protocol=None, port=No
     return ret
 
 
-def ntp_restart(host, username, password, protocol=None, port=None, host_names=None):
+def service_start(host,
+                  username,
+                  password,
+                  service_name,
+                  protocol=None,
+                  port=None,
+                  host_names=None):
     '''
-    Restart the ntp service for a given host or list of host_names.
+    Start the named service for the given host or list of hosts.
 
     host
         The location of the host.
@@ -1603,6 +1640,22 @@ def ntp_restart(host, username, password, protocol=None, port=None, host_names=N
 
     password
         The password used to login to the host.
+
+    service_name
+        The name of the service for which to set the policy. Supported service names are:
+          - DCUI
+          - TSM
+          - SSH
+          - lbtd
+          - lsassd
+          - lwiod
+          - netlogond
+          - ntpd
+          - sfcbd-watchdog
+          - snmpd
+          - vprobed
+          - vpxa
+          - xorg
 
     protocol
         Optionally set to alternate protocol if the host is not using the default
@@ -1615,21 +1668,21 @@ def ntp_restart(host, username, password, protocol=None, port=None, host_names=N
     host_names
         List of ESXi host names. When the host, username, and password credentials
         are provided for a vCenter Server, the host_names argument is required to tell
-        vCenter which hosts need to restart ntp deamons.
+        vCenter the hosts for which to start the service.
 
-        If host_names is not provided, the NTP daemon will be restarted for the
-        ``host`` location instead. This is useful for when service instance connection
-        information is used for a single ESXi host.
+        If host_names is not provided, the service will be started for the ``host``
+        location instead. This is useful for when service instance connection information
+        is used for a single ESXi host.
 
     CLI Example:
 
     .. code-block:: bash
 
         # Used for single ESXi host connection information
-        salt '*' vsphere.ntp_restart my.esxi.host root bad-password
+        salt '*' vsphere.service_start my.esxi.host root bad-password 'ntpd'
 
         # Used for connecting to a vCenter Server
-        salt '*' vsphere.ntp_restart my.vcenter.location root bad-password \
+        salt '*' vsphere.service_start my.vcenter.location root bad-password 'ntpd' \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
     service_instance = salt.utils.vmware.get_service_instance(host=host,
@@ -1639,37 +1692,43 @@ def ntp_restart(host, username, password, protocol=None, port=None, host_names=N
                                                               port=port)
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
+
+    # Don't require users to know that VMware lists the ssh service as TSM-SSH
+    if service_name == 'SSH' or service_name == 'ssh':
+        temp_service_name = 'TSM-SSH'
+    else:
+        temp_service_name = service_name
+
     for host_name in host_names:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
-        ntp_config = _get_ntp_config(host_ref)
-        if ntp_config:
-            service_manager = _get_service_manager(host_ref)
-            log.debug('Restarting \'ntpd\' service on {0}.'.format(ntp_config))
+        service_manager = _get_service_manager(host_ref)
+        log.debug('Starting the \'{0}\' service on {1}.'.format(service_name, host_name))
+        try:
+            service_manager.StartService(id=temp_service_name)
+        except vim.fault.HostConfigFault as err:
+            msg = '\'vsphere.service_start\' failed for host {0}: {1}'.format(host_name, err)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
+            continue
+        except vim.fault.RestrictedVersion as err:
+            log.debug(err)
+            ret.update({host_name: {'Error': err}})
+            continue
 
-            try:
-                service_manager.RestartService(id='ntpd')
-            except vim.fault.HostConfigFault as err:
-                msg = '\'vsphere.ntp_restart\' failed: {0}'.format(err)
-                log.debug(msg)
-                ret.update({host_name: {'Error': msg}})
-                continue
-            except vim.fault.RestrictedVersion as err:
-                log.debug(err)
-                ret.update({host_name: {'Error': err}})
-                continue
-
-            ret.update({host_name: ntp_config})
-        else:
-            log.warning('Unable to restart the \'ntpd\' service. '
-                        'NTP servers have not been configured for \'{0}\'.'.format(host_name))
-            ret.update({host_name: None})
+        ret.update({host_name: {'Service Started': True}})
 
     return ret
 
 
-def ntp_start(host, username, password, protocol=None, port=None, host_names=None):
+def service_stop(host,
+                 username,
+                 password,
+                 service_name,
+                 protocol=None,
+                 port=None,
+                 host_names=None):
     '''
-    Start the ntp service for a given host or list of host_names.
+    Stop the named service for the given host or list of hosts.
 
     host
         The location of the host.
@@ -1679,6 +1738,22 @@ def ntp_start(host, username, password, protocol=None, port=None, host_names=Non
 
     password
         The password used to login to the host.
+
+    service_name
+        The name of the service for which to set the policy. Supported service names are:
+          - DCUI
+          - TSM
+          - SSH
+          - lbtd
+          - lsassd
+          - lwiod
+          - netlogond
+          - ntpd
+          - sfcbd-watchdog
+          - snmpd
+          - vprobed
+          - vpxa
+          - xorg
 
     protocol
         Optionally set to alternate protocol if the host is not using the default
@@ -1691,21 +1766,21 @@ def ntp_start(host, username, password, protocol=None, port=None, host_names=Non
     host_names
         List of ESXi host names. When the host, username, and password credentials
         are provided for a vCenter Server, the host_names argument is required to tell
-        vCenter which hosts need to start ntp deamons.
+        vCenter the hosts for which to stop the service.
 
-        If host_names is not provided, the NTP daemon will be started for the
-        ``host`` location instead. This is useful for when service instance connection
-        information is used for a single ESXi host.
+        If host_names is not provided, the service will be stopped for the ``host``
+        location instead. This is useful for when service instance connection information
+        is used for a single ESXi host.
 
     CLI Example:
 
     .. code-block:: bash
 
         # Used for single ESXi host connection information
-        salt '*' vsphere.ntp_start my.esxi.host root bad-password
+        salt '*' vsphere.service_stop my.esxi.host root bad-password 'ssh'
 
         # Used for connecting to a vCenter Server
-        salt '*' vsphere.ntp_start my.vcenter.location root bad-password \
+        salt '*' vsphere.service_stop my.vcenter.location root bad-password 'ssh' \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
     service_instance = salt.utils.vmware.get_service_instance(host=host,
@@ -1715,38 +1790,43 @@ def ntp_start(host, username, password, protocol=None, port=None, host_names=Non
                                                               port=port)
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
+
+    # Don't require users to know that VMware lists the ssh service as TSM-SSH
+    if service_name == 'SSH' or service_name == 'ssh':
+        temp_service_name = 'TSM-SSH'
+    else:
+        temp_service_name = service_name
+
     for host_name in host_names:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
-        ntp_config = _get_ntp_config(host_ref)
-        if ntp_config:
-            service_manager = _get_service_manager(host_ref)
-            log.debug('Starting \'ntpd\' service on {0}.'.format(ntp_config))
-
-            try:
-                service_manager.StartService(id='ntpd')
-            except vim.fault.HostConfigFault as err:
-                msg = '\'vsphere.ntp_start\' failed: {0}'.format(err)
-                log.debug(msg)
-                ret.update({host_name: {'Error': msg}})
-                continue
-            except vim.fault.RestrictedVersion as err:
-                log.debug(err)
-                ret.update({host_name: {'Error': err}})
-                continue
-
-            ret.update({host_name: ntp_config})
-        else:
-            msg = 'Unable to start the \'ntpd\' service. ' \
-                  'NTP servers have not been configured for \'{0}\'.'.format(host_name)
+        service_manager = _get_service_manager(host_ref)
+        log.debug('Stopping the \'{0}\' service on {1}.'.format(service_name, host_name))
+        try:
+            service_manager.StopService(id=temp_service_name)
+        except vim.fault.HostConfigFault as err:
+            msg = '\'vsphere.service_stop\' failed for host {0}: {1}'.format(host_name, err)
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
+            continue
+        except vim.fault.RestrictedVersion as err:
+            log.debug(err)
+            ret.update({host_name: {'Error': err}})
+            continue
+
+        ret.update({host_name: {'Service Stopped': True}})
 
     return ret
 
 
-def ntp_stop(host, username, password, protocol=None, port=None, host_names=None):
+def service_restart(host,
+                    username,
+                    password,
+                    service_name,
+                    protocol=None,
+                    port=None,
+                    host_names=None):
     '''
-    Stop the ntp service for a given host or list of host_names.
+    Restart the named service for the given host or list of hosts.
 
     host
         The location of the host.
@@ -1756,6 +1836,22 @@ def ntp_stop(host, username, password, protocol=None, port=None, host_names=None
 
     password
         The password used to login to the host.
+
+    service_name
+        The name of the service for which to set the policy. Supported service names are:
+          - DCUI
+          - TSM
+          - SSH
+          - lbtd
+          - lsassd
+          - lwiod
+          - netlogond
+          - ntpd
+          - sfcbd-watchdog
+          - snmpd
+          - vprobed
+          - vpxa
+          - xorg
 
     protocol
         Optionally set to alternate protocol if the host is not using the default
@@ -1768,21 +1864,21 @@ def ntp_stop(host, username, password, protocol=None, port=None, host_names=None
     host_names
         List of ESXi host names. When the host, username, and password credentials
         are provided for a vCenter Server, the host_names argument is required to tell
-        vCenter which hosts need to stop ntp deamons.
+        vCenter the hosts for which to restart the service.
 
-        If host_names is not provided, the NTP daemon will be stopped for the
-        ``host`` location instead. This is useful for when service instance connection
-        information is used for a single ESXi host.
+        If host_names is not provided, the service will be restarted for the ``host``
+        location instead. This is useful for when service instance connection information
+        is used for a single ESXi host.
 
     CLI Example:
 
     .. code-block:: bash
 
         # Used for single ESXi host connection information
-        salt '*' vsphere.ntp_stop my.esxi.host root bad-password
+        salt '*' vsphere.service_restart my.esxi.host root bad-password 'ntpd'
 
         # Used for connecting to a vCenter Server
-        salt '*' vsphere.ntp_stop my.vcenter.location root bad-password \
+        salt '*' vsphere.service_restart my.vcenter.location root bad-password 'ntpd' \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
     service_instance = salt.utils.vmware.get_service_instance(host=host,
@@ -1792,32 +1888,31 @@ def ntp_stop(host, username, password, protocol=None, port=None, host_names=None
                                                               port=port)
     host_names = _check_hosts(service_instance, host, host_names)
     ret = {}
+
+    # Don't require users to know that VMware lists the ssh service as TSM-SSH
+    if service_name == 'SSH' or service_name == 'ssh':
+        temp_service_name = 'TSM-SSH'
+    else:
+        temp_service_name = service_name
+
     for host_name in host_names:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
-        ntp_config = _get_ntp_config(host_ref)
-        if ntp_config:
-            service_manager = _get_service_manager(host_ref)
-            log.debug('Stopping \'ntpd\' service on {0}.'.format(ntp_config))
-
-            try:
-                service_manager.StopService(id='ntpd')
-            except vim.fault.HostConfigFault as err:
-                msg = '\'vsphere.ntp_stop\' failed: {0}'.format(err)
-                log.debug(msg)
-                ret.update({host_name: {'Error': msg}})
-                continue
-            except vim.fault.RestrictedVersion as err:
-                log.debug(err)
-                ret.update({host_name: {'Error': err}})
-                continue
-
-            ret.update({host_name: ntp_config})
-        else:
-            msg = 'Unable to stop the \'ntpd\' service. ' \
-                  'NTP servers have not been configured for \'{0}\'.'.format(host_name)
+        service_manager = _get_service_manager(host_ref)
+        log.debug('Restarting the \'{0}\' service on {1}.'.format(service_name, host_name))
+        try:
+            service_manager.RestartService(id=temp_service_name)
+        except vim.fault.HostConfigFault as err:
+            msg = '\'vsphere.service_restart\' failed for host {0}: {1}'.format(host_name, err)
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
-    
+            continue
+        except vim.fault.RestrictedVersion as err:
+            log.debug(err)
+            ret.update({host_name: {'Error': err}})
+            continue
+
+        ret.update({host_name: {'Service Restarted': True}})
+
     return ret
 
 
@@ -1882,10 +1977,10 @@ def set_service_policy(host,
     .. code-block:: bash
 
         # Used for single ESXi host connection information
-        salt '*' vsphere.get_host_datetime my.esxi.host root bad-password 'ntpd' 'automatic'
+        salt '*' vsphere.set_service_policy my.esxi.host root bad-password 'ntpd' 'automatic'
 
         # Used for connecting to a vCenter Server
-        salt '*' vsphere.get_service_policy my.vcenter.location root bad-password 'ntpd' 'automatic' \
+        salt '*' vsphere.set_service_policy my.vcenter.location root bad-password 'ntpd' 'automatic' \
         host_names='[esxi-1.host.com, esxi-2.host.com]'
     '''
     service_instance = salt.utils.vmware.get_service_instance(host=host,
@@ -1930,201 +2025,6 @@ def set_service_policy(host,
                 msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name, host_name)
                 log.debug(msg)
                 ret.update({host_name: {'Error': msg}})
-
-    return ret
-
-
-def ssh_disable(host, username, password, protocol=None, port=None, host_names=None):
-    '''
-    Disable the SSH service for a given host or list of host_names.
-
-    host
-        The location of the host.
-
-    username
-        The username used to login to the host, such as ``root``.
-
-    password
-        The password used to login to the host.
-
-    protocol
-        Optionally set to alternate protocol if the host is not using the default
-        protocol. Default protocol is ``https``.
-
-    port
-        Optionally set to alternate port if the host is not using the default
-        port. Default port is ``443``.
-
-    host_names
-        List of ESXi host names. When the host, username, and password credentials
-        are provided for a vCenter Server, the host_names argument is required to
-        tell vCenter which hosts will have SSH disabled.
-
-        If host_names is not provided, the SSH will be disabled for the ``host``
-        location instead. This is useful for when service instance connection
-        information is used for a single ESXi host.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        # Used for single ESXi host connection information
-        salt '*' vsphere.ssh_disable my.esxi.host root bad-password
-
-        # Used for connecting to a vCenter Server
-        salt '*' vsphere.ssh_disable my.vcenter.location root bad-password \
-        host_names='[esxi-1.host.com, esxi-2.host.com]'
-    '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
-    host_names = _check_hosts(service_instance, host, host_names)
-    ret = {}
-    for host_name in host_names:
-        host_ref = _get_host_ref(service_instance, host, host_name=host_name)
-        service_manager = _get_service_manager(host_ref)
-        log.debug('Disabling \'ssh\' service on {0}.'.format(host_name))
-        try:
-            service_manager.StopService(id='TSM-SSH')
-        except vim.fault.HostConfigFault as err:
-            msg = '\'vsphere.ssh_disable\' failed for host {0}: {1}'.format(host_name, err)
-            log.debug(msg)
-            ret.update({host_name: {'Error': msg}})
-            continue
-
-        ret.update({host_name: True})
-
-    return ret
-
-
-def ssh_enable(host, username, password, protocol=None, port=None, host_names=None):
-    '''
-    Enable SSH for a given host or list of host_names.
-
-    host
-        The location of the host.
-
-    username
-        The username used to login to the host, such as ``root``.
-
-    password
-        The password used to login to the host.
-
-    protocol
-        Optionally set to alternate protocol if the host is not using the default
-        protocol. Default protocol is ``https``.
-
-    port
-        Optionally set to alternate port if the host is not using the default
-        port. Default port is ``443``.
-
-    host_names
-        List of ESXi host names. When the host, username, and password credentials
-        are provided for a vCenter Server, the host_names argument is required to
-        tell vCenter which hosts will have SSH enabled.
-
-        If host_names is not provided, the SSH will be enabled for the ``host``
-        location instead. This is useful for when service instance connection
-        information is used for a single ESXi host.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        # Used for single ESXi host connection information
-        salt '*' vsphere.ssh_enable my.esxi.host root bad-password
-
-        # Used for connecting to a vCenter Server
-        salt '*' vsphere.ssh_enable my.vcenter.location root bad-password \
-        host_names='[esxi-1.host.com, esxi-2.host.com]'
-    '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
-    host_names = _check_hosts(service_instance, host, host_names)
-    ret = {}
-    for host_name in host_names:
-        host_ref = _get_host_ref(service_instance, host, host_name=host_name)
-        service_manager = _get_service_manager(host_ref)
-        log.debug('Enabling \'ssh\' service on {0}.'.format(host_name))
-        try:
-            service_manager.StartService(id='TSM-SSH')
-        except vim.fault.HostConfigFault as err:
-            msg = '\'vsphere.ssh_enabled\' failed for host {0}: {1}'.format(host_name, err)
-            log.debug(msg)
-            ret.update({host_name: {'Error': msg}})
-            continue
-
-        ret.update({host_name: True})
-
-    return ret
-
-
-def ssh_restart(host, username, password, protocol=None, port=None, host_names=None):
-    '''
-    Restart the SSH service for a given host or list of host_names.
-
-    host
-        The location of the host.
-
-    username
-        The username used to login to the host, such as ``root``.
-
-    password
-        The password used to login to the host.
-
-    protocol
-        Optionally set to alternate protocol if the host is not using the default
-        protocol. Default protocol is ``https``.
-
-    port
-        Optionally set to alternate port if the host is not using the default
-        port. Default port is ``443``.
-
-    host_names
-        List of ESXi host names. When the host, username, and password credentials
-        are provided for a vCenter Server, the host_names argument is required to
-        tell vCenter which hosts should restart the SSH service.
-
-        If host_names is not provided, the SSH service will be restarted for the
-        ``host`` location instead. This is useful for when service instance connection
-        information is used for a single ESXi host.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        # Used for single ESXi host connection information
-        salt '*' vsphere.ssh_restart my.esxi.host root bad-password
-
-        # Used for connecting to a vCenter Server
-        salt '*' vsphere.ssh_restart my.vcenter.location root bad-password \
-        host_names='[esxi-1.host.com, esxi-2.host.com]'
-    '''
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
-    host_names = _check_hosts(service_instance, host, host_names)
-    ret = {}
-    for host_name in host_names:
-        host_ref = _get_host_ref(service_instance, host, host_name=host_name)
-        service_manager = _get_service_manager(host_ref)
-        log.debug('Restarting \'ssh\' service on {0}.'.format(host_name))
-        try:
-            service_manager.RestartService(id='TSM-SSH')
-        except vim.fault.HostConfigFault as err:
-            msg = '\'vsphere.ssh_restart\' failed for host {0}: {1}'.format(host_name, err)
-            log.debug(msg)
-            ret.update({host_name: {'Error': msg}})
-            continue
-
-        ret.update({host_name: True})
 
     return ret
 
@@ -2409,7 +2309,7 @@ def vsan_disable(host, username, password, protocol=None, port=None, host_names=
                 ret.update({host_name: {'Error': msg}})
                 continue
 
-            ret.update({host_name: True})
+            ret.update({host_name: {'VSAN Disabled': True}})
 
     return ret
 
@@ -2486,7 +2386,7 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
                 ret.update({host_name: {'Error': msg}})
                 continue
 
-            ret.update({host_name: True})
+            ret.update({host_name: {'VSAN Enabled': True}})
 
     return ret
 
