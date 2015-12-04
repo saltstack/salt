@@ -31,19 +31,19 @@ To install using the SaltStack repository:
 
    .. code-block:: bash
 
-       rpm --import https://repo.saltstack.com/yum/redhat/7/x86_64/SALTSTACK-GPG-KEY.pub
+       rpm --import https://repo.saltstack.com/yum/redhat/7/x86_64/latest/SALTSTACK-GPG-KEY.pub
 
    Version 6:
 
    .. code-block:: bash
 
-       rpm --import https://repo.saltstack.com/yum/redhat/6/x86_64/SALTSTACK-GPG-KEY.pub
+       rpm --import https://repo.saltstack.com/yum/redhat/6/x86_64/latest/SALTSTACK-GPG-KEY.pub
 
    Version 5:
 
    .. code-block:: bash
 
-       wget https://repo.saltstack.com/yum/redhat/5/x86_64/SALTSTACK-EL5-GPG-KEY.pub
+       wget https://repo.saltstack.com/yum/redhat/5/x86_64/latest/SALTSTACK-EL5-GPG-KEY.pub
        rpm --import SALTSTACK-EL5-GPG-KEY.pub
        rm -f SALTSTACK-EL5-GPG-KEY.pub
 
