@@ -3,6 +3,24 @@
 Manage VMware ESXi Hosts.
 
 .. versionadded:: 2015.8.4
+
+:depends: pyVmomi
+
+.. note::
+
+    Be aware that some functionality in this state module may depend on the
+    type of license attached to the ESXi host.
+
+    For example, certain services are only available to manipulate service state
+    or policies with a VMware vSphere Enterprise or Enterprise Plus license, while
+    others are available with a Standard license. The ``ntpd`` service is restricted
+    to an Enterprise Plus license, while ``ssh`` is available via the Standard
+    license.
+
+    Please see the `vSphere Comparison`_ page for more information.
+
+.. _vSphere Comparison: https://www.vmware.com/products/vsphere/compare
+
 '''
 # Import Python Libs
 from __future__ import absolute_import
@@ -34,7 +52,14 @@ def coredump_configured(name, enabled, dump_ip, host_vnic='vmk0', dump_port=6500
         or disable core dumps.
 
         Note that ESXi requires that the core dump must be enabled before
-        any other parameters may be set.
+        any other parameters may be set. This also affects the ``changes``
+        results in the state return dictionary. If ``enabled`` is ``False``,
+        we can't obtain any previous settings to compare other state variables,
+        resulting in many ``old`` references returning ``None``.
+
+        Once ``enabled`` is ``True`` the ``changes`` dictionary comparisons
+        will be more accurate. This is due to the way the system coredemp
+        network configuration command returns data.
 
     dump_ip
         The IP address of host that will accept the dump.
@@ -74,13 +99,11 @@ def coredump_configured(name, enabled, dump_ip, host_vnic='vmk0', dump_port=6500
         current_enabled = current_config.get('enabled')
 
     if current_enabled != enabled:
-        ret['changes'].update({'enabled':
-                              {'old': current_enabled,
-                               'new': enabled}})
         # Only run the command if not using test=True
         if not __opts__['test']:
-            ret = __salt__[esxi_cmd]('coredump_network_enable')(enabled=enabled)
-            if ret['retcode'] != 0:
+            response = __salt__[esxi_cmd]('coredump_network_enable',
+                                          enabled=enabled)
+            if response['retcode'] != 0:
                 ret['comment'] = 'Error: {0}'.format(ret['stderr'])
                 return ret
 
@@ -90,6 +113,10 @@ def coredump_configured(name, enabled, dump_ip, host_vnic='vmk0', dump_port=6500
                 ret['result'] = True
                 ret['comment'] = enabled_msg
                 return ret
+
+        ret['changes'].update({'enabled':
+                              {'old': current_enabled,
+                               'new': enabled}})
 
     elif not enabled:
         # If current_enabled and enabled match, but are both False,
@@ -115,19 +142,23 @@ def coredump_configured(name, enabled, dump_ip, host_vnic='vmk0', dump_port=6500
         changes = True
 
     current_port = current_config.get('port')
-    if current_port != dump_port:
+    if current_port != str(dump_port):
         ret['changes'].update({'dump_port':
                               {'old': current_port,
-                               'new': dump_port}})
+                               'new': str(dump_port)}})
         changes = True
 
     # Only run the command if not using test=True and changes were detected.
     if not __opts__['test'] and changes is True:
-        ret = __salt__[esxi_cmd]('set_coredump_network_config')(dump_ip=dump_ip,
-                                                                host_vnic=host_vnic,
-                                                                dump_port=dump_port)
-        if ret.get('success') is False:
-            ret['comment'] = 'Error {0}'.format(ret.get('stderr'))
+        response = __salt__[esxi_cmd]('set_coredump_network_config',
+                                      dump_ip=dump_ip,
+                                      host_vnic=host_vnic,
+                                      dump_port=dump_port)
+        if response.get('success') is False:
+            msg = response.get('stderr')
+            if not msg:
+                msg = response.get('stdout')
+            ret['comment'] = 'Error: {0}'.format(msg)
             return ret
 
     ret['result'] = True
@@ -166,7 +197,6 @@ def password_present(name, password):
 
         configure-host-password:
           esxi.password_present:
-            - user: 'root'
             - password: 'new-bad-password'
     '''
     ret = {'name': name,
@@ -175,7 +205,6 @@ def password_present(name, password):
                        'new': '********'},
            'comment': 'Host password was updated.'}
     esxi_cmd = 'esxi.cmd'
-    host = __pillar__['proxy']['host']
 
     if __opts__['test']:
         ret['result'] = None
@@ -183,7 +212,8 @@ def password_present(name, password):
         return ret
     else:
         try:
-            __salt__[esxi_cmd]('update_host_password')(new_password=password).get(host)
+            __salt__[esxi_cmd]('update_host_password',
+                               new_password=password)
         except CommandExecutionError as err:
             ret['result'] = False
             ret['comment'] = 'Error: {0}'.format(err)
@@ -193,11 +223,11 @@ def password_present(name, password):
 
 
 def ntp_configured(name,
-                   ntp_service,
+                   service_running,
                    ntp_servers=None,
-                   ntp_service_policy=None,
-                   update_datetime=False,
-                   ntp_service_restart=False):
+                   service_policy=None,
+                   service_restart=False,
+                   update_datetime=False):
     '''
     Ensures a host's NTP server configuration such as setting NTP servers, ensuring the
     NTP daemon is running or stopped, or restarting the NTP daemon for the ESXi host.
@@ -205,7 +235,7 @@ def ntp_configured(name,
     name
         Name of the state.
 
-    ntp_service
+    service_running
         Ensures the running state of the ntp deamon for the host. Boolean value where
         ``True`` indicates that ntpd should be running and ``False`` indicates that it
         should be stopped.
@@ -213,17 +243,17 @@ def ntp_configured(name,
     ntp_servers
         A list of servers that should be added to the ESXi host's NTP configuration.
 
-    ntp_service_policy
+    service_policy
         The policy to set for the NTP service.
+
+    service_restart
+        If set to ``True``, the ntp daemon will be restarted, regardless of its previous
+        running state. Default is ``False``.
 
     update_datetime
         If set to ``True``, the date/time on the given host will be updated to UTC.
         Default setting is ``False``. This option should be used with caution since
         network delays and execution delays can result in time skews.
-
-    ntp_service_restart
-        If set to ``True``, the ntp daemon will be restarted, regardless of its previous
-        running state. Default is ``False``.
 
     Example:
 
@@ -231,10 +261,10 @@ def ntp_configured(name,
 
         configure-host-ntp:
           esxi.ntp_configured:
-            - ntp_service: True
+            - service_running: True
             - ntp_servers: [192.174.1.100, 192.174.1.200]
-            - ntp_service_policy: 'automatic'
-            - ntp_service_restart: True
+            - service_policy: 'automatic'
+            - service_restart: True
 
     '''
     ret = {'name': name,
@@ -245,7 +275,8 @@ def ntp_configured(name,
     host = __pillar__['proxy']['host']
 
     ntp_config = __salt__[esxi_cmd]('get_ntp_config').get(host)
-    ntp_running = __salt__[esxi_cmd]('get_service_running')(service_name='ntpd').get(host)
+    ntp_running = __salt__[esxi_cmd]('get_service_running',
+                                     service_name='ntpd').get(host)
     error = ntp_running.get('Error')
     if error:
         ret['comment'] = 'Error: {0}'.format(error)
@@ -255,7 +286,8 @@ def ntp_configured(name,
     if ntp_servers and set(ntp_servers) != set(ntp_config):
         # Only run the command if not using test=True
         if not __opts__['test']:
-            response = __salt__[esxi_cmd]('set_ntp_config')(ntp_servers=ntp_servers).get(host)
+            response = __salt__[esxi_cmd]('set_ntp_config',
+                                          ntp_servers=ntp_servers).get(host)
             error = response.get('Error')
             if error:
                 ret['comment'] = 'Error: {0}'.format(error)
@@ -265,48 +297,52 @@ def ntp_configured(name,
                               {'old': ntp_config,
                                'new': ntp_servers}})
 
-    # Configure ntp_service state
-    if ntp_service != ntp_running:
+    # Configure service_running state
+    if service_running != ntp_running:
         # Only run the command if not using test=True
         if not __opts__['test']:
-            # Start ntdp if ntp_service=True
+            # Start ntdp if service_running=True
             if ntp_running is True:
-                response = __salt__[esxi_cmd]('ntp_start')().get(host)
+                response = __salt__[esxi_cmd]('service_start',
+                                              service_name='ntpd').get(host)
                 error = response.get('Error')
                 if error:
                     ret['comment'] = 'Error: {0}'.format(error)
                     return ret
-            # Stop ntpd if ntp_service=False
+            # Stop ntpd if service_running=False
             else:
-                response = __salt__[esxi_cmd]('ntp_stop')().get(host)
+                response = __salt__[esxi_cmd]('service_stop',
+                                              service_name='ntpd').get(host)
                 error = response.get('Error')
                 if error:
                     ret['comment'] = 'Error: {0}'.format(error)
                     return ret
-        ret['changes'].update({'ntp_service':
+        ret['changes'].update({'service_running':
                               {'old': ntp_running,
-                               'new': ntp_service}})
+                               'new': service_running}})
 
-    # Configure ntp_service_policy
-    if ntp_service_policy:
-        current_service_policy = __salt__[esxi_cmd]('get_service_policy')(service_name='ntpd').get(host)
+    # Configure service_policy
+    if service_policy:
+        current_service_policy = __salt__[esxi_cmd]('get_service_policy',
+                                                    service_name='ntpd').get(host)
         error = current_service_policy.get('Error')
         if error:
             ret['comment'] = 'Error: {0}'.format(error)
             return ret
 
-        if ntp_service_policy != current_service_policy:
+        if service_policy != current_service_policy:
             # Only run the command if not using test=True
             if not __opts__['test']:
-                response = __salt__[esxi_cmd]('set_service_policy')(service_name='ntpd',
-                                                                    service_policy=ntp_service_policy).get(host)
+                response = __salt__[esxi_cmd]('set_service_policy',
+                                              service_name='ntpd',
+                                              service_policy=service_policy).get(host)
                 error = response.get('Error')
                 if error:
                     ret['comment'] = 'Error: {0}'.format(error)
                     return ret
-            ret['changes'].update({'ntp_service_policy':
+            ret['changes'].update({'service_policy':
                                   {'old': current_service_policy,
-                                   'new': ntp_service_policy}})
+                                   'new': service_policy}})
 
     # Update datetime, if requested.
     if update_datetime:
@@ -321,16 +357,17 @@ def ntp_configured(name,
                               {'old': '',
                                'new': 'Host datetime was updated.'}})
 
-    # Restart ntp_service if ntp_service_restart=True
-    if ntp_service_restart:
+    # Restart ntp_service if service_restart=True
+    if service_restart:
         # Only run the command if not using test=True
         if not __opts__['test']:
-            response = __salt__[esxi_cmd]('ntp_restart')().get(host)
+            response = __salt__[esxi_cmd]('service_restart',
+                                          service_name='ntpd').get(host)
             error = response.get('Error')
             if error:
                 ret['comment'] = 'Error: {0}'.format(error)
                 return ret
-        ret['changes'].update({'ntp_service_restart':
+        ret['changes'].update({'service_restart':
                               {'old': ntp_running,
                                'new': 'NTP Deamon Restarted.'}})
 
@@ -369,7 +406,7 @@ def vsan_configured(name, enabled, add_disks_to_vsan=False):
 
         configure-host-vsan:
           esxi.vsan_configured:
-            - vsan_enabled: True
+            - enabled: True
             - add_disks_to_vsan: True
 
     '''
@@ -385,6 +422,7 @@ def vsan_configured(name, enabled, add_disks_to_vsan=False):
     if error:
         ret['comment'] = 'Error: {0}'.format(error)
         return ret
+    current_vsan_enabled = current_vsan_enabled.get('VSAN Enabled')
 
     # Configure VSAN Enabled state, if changed.
     if enabled != current_vsan_enabled:
@@ -392,14 +430,14 @@ def vsan_configured(name, enabled, add_disks_to_vsan=False):
         if not __opts__['test']:
             # Enable VSAN if enabled=True
             if enabled is True:
-                response = __salt__[esxi_cmd]('vsan_enable')().get(host)
+                response = __salt__[esxi_cmd]('vsan_enable').get(host)
                 error = response.get('Error')
                 if error:
                     ret['comment'] = 'Error: {0}'.format(error)
                     return ret
             # Disable VSAN if enabled=False
             else:
-                response = __salt__[esxi_cmd]('vsan_disable')().get(host)
+                response = __salt__[esxi_cmd]('vsan_disable').get(host)
                 error = response.get('Error')
                 if error:
                     ret['comment'] = 'Error: {0}'.format(error)
@@ -424,7 +462,7 @@ def vsan_configured(name, enabled, add_disks_to_vsan=False):
 
             # Only run the command if not using test=True
             if not __opts__['test']:
-                response = __salt__[esxi_cmd]('vsan_add_disks')().get(host)
+                response = __salt__[esxi_cmd]('vsan_add_disks').get(host)
                 error = response.get('Error')
                 if error:
                     ret['comment'] = 'Error: {0}'.format(error)
@@ -443,25 +481,26 @@ def vsan_configured(name, enabled, add_disks_to_vsan=False):
 
 
 def ssh_configured(name,
-                   enabled,
+                   service_running,
                    ssh_key=None,
                    ssh_key_file=None,
-                   certificate_verify=False,
-                   ssh_service_restart=False):
+                   service_policy=None,
+                   service_restart=False,
+                   certificate_verify=False):
     '''
-    Manage the SSH configuration for a host including whether or not SSH is enabled and
-    running, or the presence of a given SSH key. Note: Only one ssh key can be uploaded
-    for root. Uploading a second key will replace any existing key.
+    Manage the SSH configuration for a host including whether or not SSH is running or
+    the presence of a given SSH key. Note: Only one ssh key can be uploaded for root.
+    Uploading a second key will replace any existing key.
 
     name
         Name of the state.
 
-    enabled
-        Ensures whether or not the SSH service should be enabled and running on a host
-        as a boolean value where ``True`` indicates that SSH should be enabled and
-        running and ``False`` indicates that SSH should be disabled and stopped.
+    service_running
+        Ensures whether or not the SSH service should be running on a host. Represented
+        as a boolean value where ``True`` indicates that SSH should be running and
+        ``False`` indicates that SSH should stopped.
 
-        In order to update SSH keys, the SSH service must be enabled.
+        In order to update SSH keys, the SSH service must be running.
 
     ssh_key
         Public SSH key to added to the authorized_keys file on the ESXi host. You can
@@ -471,13 +510,16 @@ def ssh_configured(name,
         File containing the public SSH key to be added to the authorized_keys file on
         the ESXi host. You can use ``ssh_key_file`` or ``ssh_key``, but not both.
 
+    service_policy
+        The policy to set for the NTP service.
+
+    service_restart
+        If set to ``True``, the SSH service will be restarted, regardless of its
+        previous running state. Default is ``False``.
+
     certificate_verify
         If set to ``True``, the SSL connection must present a valid certificate.
         Default is ``False``.
-
-    ssh_service_restart
-        If set to ``True``, the SSH service will be restarted, regardless of its
-        previous running state. Default is ``False``.
 
     Example:
 
@@ -485,8 +527,10 @@ def ssh_configured(name,
 
         configure-host-ssh:
           esxi.ssh_configured:
-            - enabled: True
+            - service_running: True
             - ssh_key_file: /etc/salt/ssh_keys/my_key.pub
+            - service_policy: 'automatic'
+            - service_restart: True
             - certificate_verify: True
 
     '''
@@ -497,42 +541,45 @@ def ssh_configured(name,
     esxi_cmd = 'esxi.cmd'
     host = __pillar__['proxy']['host']
 
-    ssh_running = __salt__[esxi_cmd]('get_service_running')(service_name='SSH').get(host)
+    ssh_running = __salt__[esxi_cmd]('get_service_running',
+                                     service_name='SSH').get(host)
     error = ssh_running.get('Error')
     if error:
         ret['comment'] = 'Error: {0}'.format(error)
         return ret
+    ssh_running = ssh_running.get('SSH')
 
-    # Configure SSH enabled state, if changed.
-    if enabled != ssh_running:
+    # Configure SSH service_running state, if changed.
+    if service_running != ssh_running:
         # Only actually run the command if not using test=True
         if not __opts__['test']:
-            # Enable SSH if enabled=True
-            if enabled is True:
-                enable = __salt__[esxi_cmd]('ssh_enable')().get(host)
+            # Start SSH if service_running=True
+            if service_running is True:
+                enable = __salt__[esxi_cmd]('service_start',
+                                            service_name='SSH').get(host)
                 error = enable.get('Error')
                 if error:
                     ret['comment'] = 'Error: {0}'.format(error)
                     return ret
-            # Disable SSH if enabled=False
+            # Disable SSH if service_running=False
             else:
-                disable = __salt__[esxi_cmd]('ssh_disable')().get(host)
+                disable = __salt__[esxi_cmd]('service_stop',
+                                             service_name='SSH').get(host)
                 error = disable.get('Error')
                 if error:
                     ret['comment'] = 'Error: {0}'.format(error)
                     return ret
 
-        ret['changes'].update({'SSH Enabled':
+        ret['changes'].update({'service_running':
                               {'old': ssh_running,
-                               'new': enabled}})
+                               'new': service_running}})
 
     # If uploading an SSH key or SSH key file, see if there's a current
     # SSH key and compare the current key to the key set in the state.
     current_ssh_key, ssh_key_changed = None, False
     if ssh_key or ssh_key_file:
-        current_ssh_key = __salt__[esxi_cmd]('get_ssh_key')(
-            certificate_verify=certificate_verify
-        ).get(host)
+        current_ssh_key = __salt__[esxi_cmd]('get_ssh_key',
+                                             certificate_verify=certificate_verify)
         error = current_ssh_key.get('Error')
         if error:
             ret['comment'] = 'Error: {0}'.format(error)
@@ -559,9 +606,10 @@ def ssh_configured(name,
     if ssh_key_changed:
         if not __opts__['test']:
             # Upload key
-            response = __salt__[esxi_cmd]('upload_ssh_key')(ssh_key=ssh_key,
-                                                            ssh_key_file=ssh_key_file,
-                                                            certificate_verify=certificate_verify).get(host)
+            response = __salt__[esxi_cmd]('upload_ssh_key',
+                                          ssh_key=ssh_key,
+                                          ssh_key_file=ssh_key_file,
+                                          certificate_verify=certificate_verify)
             error = response.get('Error')
             if error:
                 ret['comment'] = 'Error: {0}'.format(error)
@@ -570,16 +618,40 @@ def ssh_configured(name,
                               {'old': current_ssh_key,
                                'new': ssh_key if ssh_key else ssh_key_file}})
 
-    # Restart ssh_service if ssh_service_restart=True
-    if ssh_service_restart:
+    # Configure service_policy
+    if service_policy:
+        current_service_policy = __salt__[esxi_cmd]('get_service_policy',
+                                                    service_name='ssh').get(host)
+        error = current_service_policy.get('Error')
+        if error:
+            ret['comment'] = 'Error: {0}'.format(error)
+            return ret
+
+        if service_policy != current_service_policy:
+            # Only run the command if not using test=True
+            if not __opts__['test']:
+                response = __salt__[esxi_cmd]('set_service_policy',
+                                              service_name='ssh',
+                                              service_policy=service_policy).get(host)
+                error = response.get('Error')
+                if error:
+                    ret['comment'] = 'Error: {0}'.format(error)
+                    return ret
+            ret['changes'].update({'service_policy':
+                                  {'old': current_service_policy,
+                                   'new': service_policy}})
+
+    # Restart ssh_service if service_restart=True
+    if service_restart:
         # Only run the command if not using test=True
         if not __opts__['test']:
-            response = __salt__[esxi_cmd]('ssh_restart')().get(host)
+            response = __salt__[esxi_cmd]('service_restart',
+                                          service_name='SSH').get(host)
             error = response.get('Error')
             if error:
                 ret['comment'] = 'Error: {0}'.format(error)
                 return ret
-        ret['changes'].update({'ssh_service_restart':
+        ret['changes'].update({'service_restart':
                               {'old': ssh_running,
                                'new': 'SSH service restarted.'}})
 
@@ -670,7 +742,8 @@ def syslog_configured(name,
             reset_configs = 'all'
         # Only run the command if not using test=True
         if not __opts__['test']:
-            reset = __salt__[esxi_cmd]('reset_syslog_config')(syslog_config=reset_configs)
+            reset = __salt__[esxi_cmd]('reset_syslog_config',
+                                       syslog_config=reset_configs)
             for key, val in reset.iteritems():
                 if not val.get('success'):
                     msg = val.get('message')
@@ -694,8 +767,9 @@ def syslog_configured(name,
     if current_firewall != firewall:
         # Only run the command if not using test=True
         if not __opts__['test']:
-            enabled = __salt__[esxi_cmd]('enable_firewall_ruleset')(ruleset_enable=firewall,
-                                                                    ruleset_name='syslog')
+            enabled = __salt__[esxi_cmd]('enable_firewall_ruleset',
+                                         ruleset_enable=firewall,
+                                         ruleset_name='syslog')
             if enabled.get('retcode') != 0:
                 err = enabled.get('stderr')
                 out = enabled.get('stdout')
@@ -720,10 +794,11 @@ def syslog_configured(name,
         if current_val != val:
             # Only run the command if not using test=True
             if not __opts__['test']:
-                response = __salt__[esxi_cmd]('set_syslog_config')(syslog_config=key,
-                                                                   config_value=val,
-                                                                   firewall=firewall,
-                                                                   reset_service=reset_service)
+                response = __salt__[esxi_cmd]('set_syslog_config',
+                                              syslog_config=key,
+                                              config_value=val,
+                                              firewall=firewall,
+                                              reset_service=reset_service)
                 success = response.get('success')
                 if not success:
                     msg = response.get('message')
