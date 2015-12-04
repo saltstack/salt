@@ -82,7 +82,7 @@ import socket
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
-import salt.utils.boto
+import salt.utils.boto3
 import salt.utils.compat
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 # from salt.utils import exactly_one
@@ -148,7 +148,7 @@ def _multi_call(function, *args, **kwargs):
     while marker:
         more = function(*args, Marker=marker, **kwargs)
         ret[content].extend(more[content])
-        marker = getattr(funcs, 'NextMarker', None)
+        marker = getattr(ret, 'NextMarker', None)
     return ret
 
 def _find_function(name,
@@ -188,7 +188,7 @@ def function_exists(FunctionName, region=None, key=None,
                              region=region, key=key, keyid=keyid, profile=profile)
         return {'exists': bool(func)}
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
@@ -251,7 +251,7 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
             log.warning('Function was not created')
             return {'created': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 def delete_function(FunctionName, Qualifier=None, region=None, key=None, keyid=None, profile=None):
@@ -277,7 +277,7 @@ def delete_function(FunctionName, Qualifier=None, region=None, key=None, keyid=N
            conn.delete_function(FunctionName=FunctionName)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 def describe_function(FunctionName, region=None, key=None,
@@ -306,7 +306,7 @@ def describe_function(FunctionName, region=None, key=None,
         else:
             return {'function': None}
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def update_function_config(FunctionName, Role, Handler, Description="", Timeout=3, MemorySize=128,
@@ -341,7 +341,7 @@ def update_function_config(FunctionName, Role, Handler, Description="", Timeout=
             log.warning('Function was not updated')
             return {'updated': False}
     except ClientError as e:
-        return {'updated': False, 'error': salt.utils.boto.get_error(e)}
+        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 def update_function_code(FunctionName, ZipFile=None, S3Bucket=None, S3Key=None,
@@ -388,7 +388,7 @@ def update_function_code(FunctionName, ZipFile=None, S3Bucket=None, S3Key=None,
             log.warning('Function was not updated')
             return {'updated': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 def list_function_versions(FunctionName, 
@@ -418,7 +418,7 @@ def list_function_versions(FunctionName,
             log.warning('No versions found')
             return { 'Versions': [] }
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def create_alias(FunctionName, Name, FunctionVersion, Description="",
@@ -448,7 +448,7 @@ def create_alias(FunctionName, Name, FunctionVersion, Description="",
             log.warning('Alias was not created')
             return {'created': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 def delete_alias(FunctionName, Name, region=None, key=None, keyid=None, profile=None):
@@ -471,7 +471,7 @@ def delete_alias(FunctionName, Name, region=None, key=None, keyid=None, profile=
         conn.delete_alias(FunctionName=FunctionName, Name=Name)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 def _find_alias(FunctionName, Name, FunctionVersion=None,
@@ -515,7 +515,7 @@ def alias_exists(FunctionName, Name, region=None, key=None,
                              region=region, key=key, keyid=keyid, profile=profile)
         return {'exists': bool(alias)}
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def describe_alias(FunctionName, Name, region=None, key=None,
@@ -542,7 +542,7 @@ def describe_alias(FunctionName, Name, region=None, key=None,
         else:
             return {'alias': None}
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def update_alias(FunctionName, Name, FunctionVersion=None, Description=None,
@@ -576,7 +576,7 @@ def update_alias(FunctionName, Name, FunctionVersion=None, Description=None,
             log.warning('Alias was not updated')
             return {'updated': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 def create_event_source_mapping(EventSourceArn, FunctionName, StartingPosition,
@@ -612,7 +612,7 @@ def create_event_source_mapping(EventSourceArn, FunctionName, StartingPosition,
             log.warning('Event source mapping was not created')
             return {'created': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 def get_event_source_mapping_ids(EventSourceArn, FunctionName, 
@@ -635,7 +635,7 @@ def get_event_source_mapping_ids(EventSourceArn, FunctionName,
                                                FunctionName=FunctionName)['EventSourceMappings']
         return [mapping['UUID'] for mapping in maps]
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def _get_ids(UUID=None, EventSourceArn=None, FunctionName=None,
@@ -678,7 +678,7 @@ def delete_event_source_mapping(UUID=None, EventSourceArn=None, FunctionName=Non
             conn.delete_event_source_mapping(UUID=id)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto.get_error(e)}
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 def event_source_mapping_exists(UUID=None, EventSourceArn=None,
@@ -741,7 +741,7 @@ def describe_event_source_mapping(UUID=None, EventSourceArn=None,
         else:
             return {'event_source_mapping': None}
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def update_event_source_mapping(UUID, 
@@ -780,4 +780,4 @@ def update_event_source_mapping(UUID,
             log.warning('Mapping was not updated')
             return {'updated': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
