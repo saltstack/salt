@@ -30,6 +30,8 @@ CMD_MAP = {
     'pacman': ('pacman',),
 }
 
+EPEL_URL = 'http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm'
+
 
 def __virtual__():
     '''
@@ -39,18 +41,23 @@ def __virtual__():
     return True
 
 
-def bootstrap(platform,
-              root,
-              img_format='dir',
-              fs_format='ext2',
-              fs_opts=None,
-              arch=None,
-              flavor=None,
-              repo_url=None,
-              static_qemu=None,
-              img_size=None,
-              mount_dir=None,
-              pkg_cache=None):
+def bootstrap(
+        platform,
+        root,
+        img_format='dir',
+        fs_format='ext2',
+        fs_opts=None,
+        arch=None,
+        flavor=None,
+        repo_url=None,
+        static_qemu=None,
+        img_size=None,
+        mount_dir=None,
+        pkg_cache=None,
+        pkgs=None,
+        exclude_pkgs=None,
+        epel_url=EPEL_URL,
+    ):
     '''
     Create an image for a specific platform.
 
@@ -112,6 +119,17 @@ def bootstrap(platform,
         This points to a directory containing a cache of package files to be
         copied to the image. It does not need to be specified.
 
+    pkgs
+        A list of packages to be installed on this image. For RedHat, this
+        will include ``yum``, ``centos-release`` and ``iputils`` by default.
+
+    exclude_pkgs
+        A list of packages to be excluded. If you do not want to install the
+        defaults, you need to include them in this list.
+
+    epel_url
+        The URL to download the EPEL release package from.
+
     CLI Examples:
 
     .. code-block:: bash
@@ -143,14 +161,36 @@ def bootstrap(platform,
     if mount_dir:
         root = mount_dir
 
+    if pkgs is None:
+        pkgs = []
+
+    if exclude_pkgs is None:
+        exclude_pkgs = []
+
     if platform in ('rpm', 'yum'):
-        return _bootstrap_yum(root)
+        _bootstrap_yum(
+            root,
+            pkgs=pkgs,
+            exclude_pkgs=exclude_pkgs,
+            epel_url=epel_url,
+        )
     elif platform == 'deb':
-        return _bootstrap_deb(
-            root, arch=arch, flavor=flavor, repo_url=repo_url, static_qemu=static_qemu
+        _bootstrap_deb(
+            root,
+            arch=arch,
+            flavor=flavor,
+            repo_url=repo_url,
+            static_qemu=static_qemu,
+            pkgs=pkgs,
+            exclude_pkgs=exclude_pkgs,
         )
     elif platform == 'pacman':
-        _bootstrap_pacman(root, img_format=img_format)
+        _bootstrap_pacman(
+            root,
+            img_format=img_format,
+            pkgs=pkgs,
+            exclude_pkgs=exclude_pkgs,
+        )
 
     if img_format != 'dir':
         __salt__['mount.umount'](root)
@@ -189,7 +229,13 @@ def _populate_cache(platform, pkg_cache, mount_dir):
     __salt__['file.copy'](pkg_cache, cache_dir, recurse=True, remove_existing=True)
 
 
-def _bootstrap_yum(root, pkg_confs='/etc/yum*'):
+def _bootstrap_yum(
+        root,
+        pkg_confs='/etc/yum*',
+        pkgs=None,
+        exclude_pkgs=None,
+        epel_url=EPEL_URL,
+    ):
     '''
     Bootstrap an image using the yum tools
 
@@ -201,16 +247,48 @@ def _bootstrap_yum(root, pkg_confs='/etc/yum*'):
         The location of the conf files to copy into the image, to point yum
         to the right repos and configuration.
 
+    pkgs
+        A list of packages to be installed on this image. For RedHat, this
+        will include ``yum``, ``centos-release`` and ``iputils`` by default.
+
+    exclude_pkgs
+        A list of packages to be excluded. If you do not want to install the
+        defaults, you need to include them in this list.
+
+    epel_url
+        The URL to download the EPEL release package from.
+
     TODO: Set up a pre-install overlay, to copy files into /etc/ and so on,
         which are required for the install to work.
     '''
+    if pkgs is None:
+        pkgs = []
+
+    default_pkgs = ('yum', 'centos-release', 'iputils')
+    for pkg in default_pkgs:
+        if pkg not in pkgs:
+            pkgs.append(pkg)
+
+    if exclude_pkgs is None:
+        exclude_pkgs = []
+
+    for pkg in exclude_pkgs:
+        pkgs.remove(pkg)
+
     _make_nodes(root)
     release_files = [rf for rf in os.listdir('/etc') if rf.endswith('release')]
     __salt__['cmd.run']('cp /etc/resolv/conf {rfs} {root}/etc'.format(root=_cmd_quote(root), rfs=' '.join(release_files)))
     __salt__['cmd.run']('cp -r {rfs} {root}/etc'.format(root=_cmd_quote(root), rfs=' '.join(release_files)))
     __salt__['cmd.run']('cp -r {confs} {root}/etc'.format(root=_cmd_quote(root), confs=_cmd_quote(pkg_confs)))
-    __salt__['cmd.run']('yum install --installroot={0} -y yum centos-release iputils'.format(_cmd_quote(root)))
-    __salt__['cmd.run']('rpm --root={0} -Uvh http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm'.format(_cmd_quote(root)))
+
+    yum_args = ['yum', 'install', '--installroot={0}'.format(_cmd_quote(root)), '-y'] + pkgs
+    __salt__['cmd.run'](yum_args, python_shell=False)
+
+    if 'epel-release' not in exclude_pkgs:
+        __salt__['cmd.run'](
+            ('rpm', '--root={0}'.format(_cmd_quote(root), '-Uvh', epel_url)),
+            python_shell=False
+        )
 
 
 def _bootstrap_deb(
@@ -218,7 +296,9 @@ def _bootstrap_deb(
         arch,
         flavor,
         repo_url=None,
-        static_qemu=None
+        static_qemu=None,
+        pkgs=None,
+        exclude_pkgs=None,
     ):
     '''
     Bootstrap an image using the Debian tools
@@ -240,19 +320,33 @@ def _bootstrap_deb(
     static_qemu
         Local path to the static qemu binary required for this arch.
         (e.x.: /usr/bin/qemu-amd64-static)
+
+    pkgs
+        A list of packages to be installed on this image.
+
+    exclude_pkgs
+        A list of packages to be excluded.
     '''
 
     if repo_url is None:
         repo_url = 'http://ftp.debian.org/debian/'
 
-    __salt__['cmd.run'](
-        'debootstrap --foreign --arch {arch} {flavor} {root} {url}'.format(
-            arch=_cmd_quote(arch),
-            flavor=_cmd_quote(flavor),
-            root=_cmd_quote(root),
-            url=_cmd_quote(repo_url)
-        )
-    )
+    deb_args = [
+        'debootstrap',
+        '--foreign',
+        '--arch',
+        _cmd_quote(arch),
+        '--include',
+    ] + pkgs + [
+        '--exclude',
+    ] + exclude_pkgs + [
+        _cmd_quote(flavor),
+        _cmd_quote(root),
+        _cmd_quote(repo_url),
+    ]
+
+    __salt__['cmd.run'](deb_args, python_shell=False)
+
     __salt__['cmd.run'](
         'cp {qemu} {root}/usr/bin/'.format(
             qemu=_cmd_quote(static_qemu), root=_cmd_quote(root)
@@ -271,12 +365,20 @@ def _bootstrap_deb(
         env=env
     )
     __salt__['cmd.run'](
-        'chroot {root} dpkg --configure -a'.format(root=_cmd_quote(root)),
+        'chroot {root} dpkg --configure -a'.format(
+            root=_cmd_quote(root)
+        ),
         env=env
     )
 
 
-def _bootstrap_pacman(root, pkg_confs='/etc/pacman*', img_format='dir'):
+def _bootstrap_pacman(
+        root,
+        pkg_confs='/etc/pacman*',
+        img_format='dir',
+        pkgs=None,
+        exclude_pkgs=None,
+    ):
     '''
     Bootstrap an image using the pacman tools
 
@@ -291,8 +393,30 @@ def _bootstrap_pacman(root, pkg_confs='/etc/pacman*', img_format='dir'):
     img_format
         The image format to be used. The ``dir`` type needs no special
         treatment, but others need special treatement.
+
+    pkgs
+        A list of packages to be installed on this image. For Arch Linux, this
+        will include ``pacman`` and ``linux`` by default.
+
+    exclude_pkgs
+        A list of packages to be excluded. If you do not want to install the
+        defaults, you need to include them in this list.
     '''
     _make_nodes(root)
+
+    if pkgs is None:
+        pkgs = []
+
+    default_pkgs = ('pacman', 'linux')
+    for pkg in default_pkgs:
+        if pkg not in pkgs:
+            pkgs.append(pkg)
+
+    if exclude_pkgs is None:
+        exclude_pkgs = []
+
+    for pkg in exclude_pkgs:
+        pkgs.remove(pkg)
 
     if img_format != 'dir':
         __salt__['mount.mount']('{0}/proc'.format(root), '/proc', fstype='', opts='bind')
@@ -306,7 +430,8 @@ def _bootstrap_pacman(root, pkg_confs='/etc/pacman*', img_format='dir'):
         __salt__['cmd.run']('cp -r /etc/{0} {1}/etc'.format(pac_file, _cmd_quote(root)))
     __salt__['file.copy']('/var/lib/pacman/sync', '{0}/var/lib/pacman/sync'.format(root), recurse=True)
 
-    __salt__['cmd.run']('pacman --noconfirm -r {0} -S pacman linux'.format(_cmd_quote(root)))
+    pacman_args = ['pacman', '--noconfirm', '-r', _cmd_quote(root), '-S'] + pkgs
+    __salt__['cmd.run'](pacman_args, python_shell=False)
 
     if img_format != 'dir':
         __salt__['mount.umount']('{0}/proc'.format(root))
