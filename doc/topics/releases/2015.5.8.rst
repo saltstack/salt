@@ -2,6 +2,16 @@
 Salt 2015.5.8 Release Notes
 ===========================
 
+Security Fix
+============
+
+CVE-2015-8034: Saving ``state.sls`` cache data to disk with insecure permissions
+
+This affects users of the ``state.sls`` function. The state run cache on the minion was being created with incorrect permissions. This file could potentially contain sensitive data that was inserted via jinja into the state SLS files. The permissions for this file are now being set correctly. Thanks to @zmalone for bringing this issue to our attention.
+
+Changes
+=======
+
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
 *Generated at: 2015-11-23T23:16:23Z*
@@ -126,7 +136,7 @@ Changes:
 
 - **PR** `#28263`_: (*cachedout*) New channel for event.send
 
-- **PR** `#28293`_: (*cachedout*) Minor grammar changes 
+- **PR** `#28293`_: (*cachedout*) Minor grammar changes
 
 - **PR** `#28271`_: (*gwaters*) Update tutorial documentation
 
