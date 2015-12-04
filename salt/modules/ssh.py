@@ -764,7 +764,8 @@ def recv_known_host(hostname,
                     enc=None,
                     port=None,
                     hash_hostname=True,
-                    hash_known_hosts=True):
+                    hash_known_hosts=True,
+                    timeout=5):
     '''
     Retrieve information about host public key from remote server
 
@@ -789,6 +790,14 @@ def recv_known_host(hostname,
 
     hash_known_hosts : True
         Hash all hostnames and addresses in the known hosts file.
+
+    timeout : int
+        Set the timeout for connection attempts.  If ``timeout`` seconds have
+        elapsed since a connection was initiated to a host or since the last
+        time anything was read from that host, then the connection is closed
+        and the host in question considered unavailable.  Default is 5 seconds.
+
+        .. versionadded:: Boron
 
     CLI Example:
 
@@ -818,6 +827,7 @@ def recv_known_host(hostname,
         cmd.extend(['-t', 'rsa'])
     if hash_known_hosts:
         cmd.append('-H')
+    cmd.extend(['-T', str(timeout)])
     cmd.append(hostname)
     lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     known_hosts = list(_parse_openssh_output(lines))
@@ -906,7 +916,8 @@ def set_known_host(user=None,
                    enc=None,
                    hash_hostname=True,
                    config=None,
-                   hash_known_hosts=True):
+                   hash_known_hosts=True,
+                   timeout=5):
     '''
     Download SSH public key from remote host "hostname", optionally validate
     its fingerprint against "fingerprint" variable and save the record in the
@@ -953,6 +964,14 @@ def set_known_host(user=None,
     hash_known_hosts : True
         Hash all hostnames and addresses in the known hosts file.
 
+    timeout : int
+        Set the timeout for connection attempts.  If ``timeout`` seconds have
+        elapsed since a connection was initiated to a host or since the last
+        time anything was read from that host, then the connection is closed
+        and the host in question considered unavailable.  Default is 5 seconds.
+
+        .. versionadded:: Boron
+
     CLI Example:
 
     .. code-block:: bash
@@ -996,7 +1015,8 @@ def set_known_host(user=None,
         remote_host = recv_known_host(hostname,
                                       enc=enc,
                                       port=port,
-                                      hash_known_hosts=hash_known_hosts)
+                                      hash_known_hosts=hash_known_hosts,
+                                      timeout=timeout)
         if not remote_host:
             return {'status': 'error',
                     'error': 'Unable to receive remote host key'}
