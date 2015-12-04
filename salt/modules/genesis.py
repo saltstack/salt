@@ -286,7 +286,7 @@ def _bootstrap_yum(
 
     if 'epel-release' not in exclude_pkgs:
         __salt__['cmd.run'](
-            ('rpm', '--root={0}'.format(_cmd_quote(root), '-Uvh', epel_url)),
+            ('rpm', '--root={0}'.format(_cmd_quote(root)), '-Uvh', epel_url),
             python_shell=False
         )
 
