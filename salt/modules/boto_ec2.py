@@ -83,7 +83,7 @@ def __virtual__():
     if not HAS_BOTO:
         return (False, 'The boto_ec2 module could not be loaded: boto libraries not found')
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return False
+        return (False, "The boto_ec2 module cannot be loaded: boto library verion incorrect ")
     return True
 
 
