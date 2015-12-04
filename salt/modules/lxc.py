@@ -1395,7 +1395,7 @@ def init(name,
     # If using a volume group then set up to make snapshot cow clones
     if vgname and not clone_from:
         try:
-            clone_from = _get_base(vgname=vgname, profile=profile, **kwargs)
+            clone_from = _get_base(profile=profile, **kwargs)
         except (SaltInvocationError, CommandExecutionError) as exc:
             ret['comment'] = exc.strerror
             if changes:
@@ -2098,7 +2098,7 @@ def clone(name,
         cmd += ' -B {0}'.format(backing)
         if backing not in ('dir', 'overlayfs'):
             if size:
-                cmd += ' --fssize {0}'.format(size)
+                cmd += ' -L {0}'.format(size)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     # please do not merge extra conflicting stuff
     # inside those two line (ret =, return)
