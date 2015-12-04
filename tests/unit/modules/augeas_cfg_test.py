@@ -21,7 +21,7 @@ if HAS_AUGEAS == 'augeas':
     from augeas import Augeas as _Augeas
 
 
-@skipIf(not HAS_AUGEAS=='augeas', "augeas python is required for this test case")
+@skipIf(HAS_AUGEAS != 'augeas', "augeas python is required for this test case")
 class AugeasCfgTestCase(TestCase):
     '''
     Test cases for salt.modules.augeas_cfg
