@@ -72,9 +72,6 @@ def present(name, ip):  # pylint: disable=C0103
             if __opts__['test']:
                 comments.append('Host {0} ({1}) needs to be added/updated'.format(name, _ip))
             else:
-                current_ip = __salt__['hosts.get_ip'](name)
-                if current_ip and current_ip not in ip:
-                    __salt__['hosts.rm_host'](current_ip, name)
                 if salt.utils.validate.net.ipv4_addr(_ip) or salt.utils.validate.net.ipv6_addr(_ip):
                     if __salt__['hosts.add_host'](_ip, name):
                         ret['changes'] = {'host': name}
