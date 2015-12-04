@@ -158,7 +158,7 @@ class ChildContextDict(collections.MutableMapping):
         self.parent._state.data = None
 
 
-class NamespacedDictWrapper(collections.MutableMapping, dict):
+class NamespacedDictWrapper(dict):
     '''
     Create a dict which wraps another dict with a specific prefix of key(s)
 
