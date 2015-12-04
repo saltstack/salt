@@ -72,12 +72,30 @@ configured this way so you can have a regular password and the password you
 may be updating for an ESXi host either via the
 :doc:`vsphere.update_host_password </ref/modules/all/salt.modules.vsphere>`
 function or via an :doc:`ESXi state </ref/modules/all/salt.states.esxi>`
-function. This way, after the is changed, you should not need to restart
-the proxy minion--it should just pick up the the new password provided in
+function. This way, after the password is changed, you should not need to
+restart the proxy minion--it should just pick up the the new password provided in
 the list. You can then change pillar at will to move that password to the
 front and retire the unused ones.
 
 This also allows you to use any number of potential fallback passwords.
+
+.. note::
+
+    When a password is changed on the host to one in the list of possible
+    passwords, the further down on the list the password is, the longer
+    individual commands will take to return. This is due to the nature of
+    pyVmomi's login system. We have to wait for the first attempt to fail
+    before trying the next password on the list.
+
+    This scenario is especially true, and even slower, when the proxy
+    minion first starts. If the correct password is not the first password
+    on the list, it may take up to a minute for ``test.ping`` to respond
+    with a ``True`` result. Once the initial authorization is complete, the
+    responses for commands will be faster.
+
+    To avoid these longer waiting periods, SaltStack recommends moving
+    correct password to the top of the list and restarting the proxy minion
+    at your earliest convenience.
 
 protocol
 ^^^^^^^^

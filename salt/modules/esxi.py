@@ -18,11 +18,14 @@ parameter in :doc:`salt.modules.vsphere </ref/modules/all/salt.modules.vsphere>`
 and calls it.
 
 To execute commands with an ESXi Proxy Minion using the vSphere Execution Module,
-use the ``esxi.cmd <vsphere-function-name`` syntax:
+use the ``esxi.cmd <vsphere-function-name>`` syntax. Both args and kwargs needed
+for various vsphere execution module functions must be passed through in a kwarg-
+type manor.
 
 .. code-block:: bash
 
     salt 'esxi-proxy' esxi.cmd system_info
+    salt 'exsi-proxy' esxi.cmd get_service_policy service_name='ssh'
 
 '''
 from __future__ import absolute_import
