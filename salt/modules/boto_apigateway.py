@@ -529,4 +529,31 @@ def delete_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
 
 #TODO api_key update stage list
 
+# API Deployments
 
+def get_api_deployments(apiId, region=None, key=None, keyid=None, profile=None):
+    '''
+    Gets information about the defined API Deployments.  Return list of api deployments.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_deployments
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        deployments = []
+        _deployments = conn.get_deployments(restApiId=apiId)
+
+        while True:
+            if(_deployments):
+                deployments = deployments + _deployments['items'];
+                if not _deployments.has_key('position'):
+                    break;
+                _deployments = conn.get_deployments(restApiId=apiId, position=_deployments['position'])
+
+        return {'deployments': deployments}
+    except ClientError as e:
+        return {'error': salt.utils.boto.get_error(e)}
