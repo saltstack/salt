@@ -810,7 +810,7 @@ def recv_known_host(hostname,
         salt.utils.warn_until(
             'Carbon',
             'The hash_hostname parameter is misleading as ssh-keygen can only '
-            'hash the whole known hosts file, not entries for individual'
+            'hash the whole known hosts file, not entries for individual '
             'hosts. Please use hash_known_hosts=False instead.')
         hash_known_hosts = hash_hostname
 
@@ -986,7 +986,7 @@ def set_known_host(user=None,
         salt.utils.warn_until(
             'Carbon',
             'The hash_hostname parameter is misleading as ssh-keygen can only '
-            'hash the whole known hosts file, not entries for individual'
+            'hash the whole known hosts file, not entries for individual '
             'hosts. Please use hash_known_hosts=False instead.')
         hash_known_hosts = hash_hostname
 
