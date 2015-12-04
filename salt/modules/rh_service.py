@@ -64,19 +64,20 @@ def __virtual__():
             if str(__grains__['osrelease']).startswith('11'):
                 return __virtualname__
             else:
-                return False
+                return (False, 'Cannot load rh_service module: on SUSE >= 11')
         try:
             osrelease = float(__grains__.get('osrelease', 0))
         except ValueError:
-            return False
+            return (False, 'Cannot load rh_service module: '
+                           'osrelease grain, {0}, not a float,'.format(osrelease))
         if __grains__['os'] == 'Fedora':
             if osrelease > 15:
-                return False
+                return (False, 'Cannot load rh_service module on Fedora >= 15')
         if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux', 'OEL'):
             if osrelease >= 7:
-                return False
+                return (False, 'Cannot load rh_service module on RedHat >= 7')
         return __virtualname__
-    return False
+    return (False, 'Cannot load rh_service module: OS not in {0}'.format(enable))
 
 
 def _runlevel():
