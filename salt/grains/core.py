@@ -1028,9 +1028,9 @@ def _parse_os_release():
 
     data = dict()
     with salt.utils.fopen(filename) as ifile:
-        regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?\\s*$')
+        regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?$')
         for line in ifile:
-            match = regex.match(line.strip('\n'))
+            match = regex.match(line.strip())
             if match:
                 # Shell special characters ("$", quotes, backslash, backtick)
                 # are escaped with backslashes
