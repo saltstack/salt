@@ -83,7 +83,7 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 import string
 
 # Import Salt libs
-import salt.utils.boto
+import salt.utils.boto3
 import salt.utils.compat
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 # from salt.utils import exactly_one
@@ -150,6 +150,20 @@ def _filter_apis(name, apis):
     '''
     return [api for api in apis if api['name'] == name]
 
+def _multi_call(function, contentkey, *args, **kwargs):
+    '''
+    Retrieve full list of values for the contentkey from a boto3 ApiGateway 
+    client function that may be paged via "position"
+    '''
+    ret = function(*args, **kwargs)
+    position = ret.get('position')
+
+    while position:
+        more = function(*args, position=position, **kwargs)
+        ret[contentkey].extend(more[contentkey])
+        position = more.get('position')
+    return ret.get(contentkey)
+
 def _get_apis_by_name(name,
                       region=None, key=None, keyid=None, profile=None):
 
@@ -159,21 +173,10 @@ def _get_apis_by_name(name,
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        apis = []
-        _apis = conn.get_rest_apis()
-
-        while True:
-            if (_apis):
-                if name:
-                    apis = apis + _filter_apis(name, _apis['items'])
-                else:
-                    apis = apis + _apis['items']
-                if not _apis.has_key('position'):
-                    break
-                _apis = conn.get_rest_apis(position=_apis['position'])
+        apis = _multi_call(conn.get_rest_apis, 'items')
         return {'restapi': map(_convert_datetime_str, apis)}
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)} 
+        return {'error': salt.utils.boto3.get_error(e)} 
 
 def get_apis_by_name(name, region=None, key=None, keyid=None, profile=None):
 
@@ -253,7 +256,7 @@ def create_api(name, description, cloneFrom=None,
 
         return {'created': True, 'restapi': api} if api else {'created': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 def delete_api(name, region=None, key=None, keyid=None, profile=None):
@@ -297,21 +300,12 @@ def get_api_resources(restApiId, region=None, key=None, keyid=None, profile=None
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        resources = []
-        _resources = conn.get_resources(restApiId=restApiId)
-
-        while True:
-            if (_resources):
-                resources = resources + _resources['items']
-                if not _resources.has_key('position'):
-                    break
-                _resources = conn.get_resources(restApiId=restApiId, position=_resources['position'])
-
-        resources = sorted(resources, key=lambda k: k['path'])
+        resources = sorted(_multi_call(conn.get_resources, 'items', restApiId=restApiId),
+                           key=lambda k: k['path'])
 
         return {'resources': resources}
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': salt.utils.boto3.get_error(e)}
 
 def get_api_resource(restApiId, path,
                      region=None, key=None, keyid=None, profile=None):
@@ -367,7 +361,7 @@ def create_api_resources(restApiId, path,
         else:
             return {'created': False, 'error': 'unexpected error.'}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 def delete_api_resources(restApiId, path,
@@ -396,7 +390,7 @@ def delete_api_resources(restApiId, path,
         else:
             return {'deleted': False, 'error': 'no resource found by {0}'.format(path)}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 # resource method
@@ -425,7 +419,7 @@ def get_api_resource_method(restApiId, resourcepath, httpMethod,
         method = conn.get_method(restApiId=restApiId, resourceId=resource['id'], httpMethod=httpMethod)
         return {'method': method}
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': salt.utils.boto3.get_error(e)}
 
 #TODO: rest of the api resource method related methods
 
@@ -446,7 +440,7 @@ def get_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
         response = conn.get_api_key(apiKey=apiKey)
         return {'apiKey': _convert_datetime_str(response)}
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': salt.utils.boto3.get_error(e)}
 
 def get_api_keys(region=None, key=None, keyid=None, profile=None):
     '''
@@ -461,19 +455,12 @@ def get_api_keys(region=None, key=None, keyid=None, profile=None):
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        apikeys = []
-        _apikeys = conn.get_api_keys()
-
-        while True:
-            if (_apikeys):
-                apikeys = apikeys + _apikeys['items']
-                if not _apikeys.has_key('position'):
-                    break
-                _apikeys = conn.get_api_keys(position=_apikeys['position'])
+        apikeys = _multi_call(conn.get_api_keys, 'items')
 
         return {'apiKeys': map(_convert_datetime_str, apikeys)}
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)} 
+        return {'error': salt.utils.boto3.get_error(e)} 
+
 
 def create_api_key(name, description, enabled=True, stageKeys=[],
                    region=None, key=None, keyid=None, profile=None):
@@ -507,7 +494,7 @@ def create_api_key(name, description, enabled=True, stageKeys=[],
 
         return {'created': True, 'apiKey': _convert_datetime_str(response)}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 def delete_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
     '''
@@ -525,7 +512,23 @@ def delete_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
         response = conn.delete_api_key(apiKey=apiKey)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto_get_error(e)}
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
+def disassociate_api_key_stagekeys(apiKey, stageKeys, region=None, key=None, keyid=None, profile=None):
+    '''
+    Remove given stageKeys from the given apiKey
+
+    CLI Example:
+
+    .. code_block:: bash
+
+        salt myminion boto_apigateway.disassociate_api_key_stagekeys apikeystring stageKeys='[{"restApiId": "id", "stageName": "stagename"}]'
+
+    '''
+    try:
+        return None
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
 #TODO api_key update stage list
 
