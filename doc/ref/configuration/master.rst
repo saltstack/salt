@@ -608,27 +608,28 @@ minion IDs for which keys will automatically be rejected. Will override both
 membership in the :conf_master:`autosign_file` and the
 :conf_master:`auto_accept` setting.
 
-.. conf_master:: client_acl
+.. conf_master:: publisher_acl
 
-``client_acl``
---------------
+``publisher_acl``
+-----------------
 
 Default: ``{}``
 
 Enable user accounts on the master to execute specific modules. These modules
-can be expressed as regular expressions.
+can be expressed as regular expressions. Note that client_acl option is
+deprecated by publisher_acl option and will be removed in future releases.
 
 .. code-block:: yaml
 
-    client_acl:
+    publisher_acl:
       fred:
         - test.ping
         - pkg.*
 
-.. conf_master:: client_acl_blacklist
+.. conf_master:: publisher_acl_blacklist
 
-``client_acl_blacklist``
-------------------------
+``publisher_acl_blacklist``
+---------------------------
 
 Default: ``{}``
 
@@ -636,13 +637,14 @@ Blacklist users or modules
 
 This example would blacklist all non sudo users, including root from
 running any commands. It would also blacklist any use of the "cmd"
-module.
+module. Note that client_acl_blacklist option is deprecated by
+publisher_acl_blacklist option and will be removed in future releases.
 
 This is completely disabled by default.
 
 .. code-block:: yaml
 
-    client_acl_blacklist:
+    publisher_acl_blacklist:
       users:
         - root
         - '^(?!sudo_).*$'   #  all non sudo users

@@ -128,6 +128,9 @@ def get_locale():
     elif 'Suse' in __grains__['os_family']:
         cmd = 'grep "^RC_LANG" /etc/sysconfig/language'
     elif 'Debian' in __grains__['os_family']:
+        if salt.utils.which('localectl'):
+            return _locale_get()
+
         cmd = 'grep "^LANG=" /etc/default/locale'
     elif 'Gentoo' in __grains__['os_family']:
         cmd = 'eselect --brief locale show'
@@ -170,6 +173,9 @@ def set_locale(locale):
             append_if_not_found=True
         )
     elif 'Debian' in __grains__['os_family']:
+        if salt.utils.which('localectl'):
+            return _localectl_set(locale)
+
         update_locale = salt.utils.which('update-locale')
         if update_locale is None:
             raise CommandExecutionError(

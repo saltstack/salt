@@ -170,7 +170,7 @@ def ext_pillar(minion_id,
         DELIM = '='
         if DELIM not in extraopt:
             log.error('Incorrectly formatted extra parameter. '
-                      'Missing {0!r}: {1}'.format(DELIM, extraopt))
+                      'Missing \'{0}\': {1}'.format(DELIM, extraopt))
         key, val = _extract_key_val(extraopt, DELIM)
         if key == 'root':
             root = val

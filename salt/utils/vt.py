@@ -29,9 +29,10 @@ import errno
 import signal
 import select
 import logging
-import subprocess
 
-if subprocess.mswindows:
+mswindows = (sys.platform == "win32")
+
+if mswindows:
     # pylint: disable=F0401,W0611
     from win32file import ReadFile, WriteFile
     from win32pipe import PeekNamedPipe
@@ -176,7 +177,7 @@ class Terminal(object):
             self.stream_stdout = stream_stdout
         else:
             raise TerminalException(
-                'Don\'t know how to handle {0!r} as the VT\'s '
+                'Don\'t know how to handle \'{0}\' as the VT\'s '
                 '\'stream_stdout\' parameter.'.format(stream_stdout)
             )
 
@@ -195,7 +196,7 @@ class Terminal(object):
             self.stream_stderr = stream_stderr
         else:
             raise TerminalException(
-                'Don\'t know how to handle {0!r} as the VT\'s '
+                'Don\'t know how to handle \'{0}\' as the VT\'s '
                 '\'stream_stderr\' parameter.'.format(stream_stderr)
             )
         # <---- Direct Streaming Setup ---------------------------------------
@@ -349,7 +350,7 @@ class Terminal(object):
     # <---- Context Manager Methods ------------------------------------------
 
 # ----- Platform Specific Methods ------------------------------------------->
-    if subprocess.mswindows:
+    if mswindows:
         # ----- Windows Methods --------------------------------------------->
         def _execute(self):
             raise NotImplementedError

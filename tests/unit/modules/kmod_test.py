@@ -72,21 +72,29 @@ class KmodTestCase(TestCase):
 
     # 'load' function tests: 1
 
-    @patch('salt.modules.kmod._set_persistent_module',
-           MagicMock(return_value=set(['lp'])))
     def test_load(self):
         '''
         Tests to loads specified kernel module.
         '''
-        mock_ret = [{'size': 100, 'module': None, 'depcount': 10, 'deps': None}]
-        with patch('salt.modules.kmod.lsmod', MagicMock(return_value=mock_ret)):
-            mock = MagicMock(return_value={'retcode': 0})
-            with patch.dict(kmod.__salt__, {'cmd.run_all': mock}):
-                self.assertEqual(['lp'], kmod.load('lp', True))
+        mod = 'cheese'
+        err_msg = 'Module too moldy, refusing to load'
+        mock_persist = MagicMock(return_value=set([mod]))
+        mock_lsmod = MagicMock(return_value=[{'size': 100,
+                                              'module': None,
+                                              'depcount': 10,
+                                              'deps': None}])
+        mock_run_all_0 = MagicMock(return_value={'retcode': 0})
+        mock_run_all_1 = MagicMock(return_value={'retcode': 1,
+                                                 'stderr': err_msg})
 
-            mock = MagicMock(return_value={'retcode': 1})
-            with patch.dict(kmod.__salt__, {'cmd.run_all': mock}):
-                self.assertEqual('Module abc not found', kmod.load('abc'))
+        with patch('salt.modules.kmod._set_persistent_module', mock_persist):
+            with patch('salt.modules.kmod.lsmod', mock_lsmod):
+                with patch.dict(kmod.__salt__, {'cmd.run_all': mock_run_all_0}):
+                    self.assertEqual([mod], kmod.load(mod, True))
+
+                with patch.dict(kmod.__salt__, {'cmd.run_all': mock_run_all_1}):
+                    self.assertEqual('Error loading module {0}: {1}'.format(mod, err_msg),
+                                     kmod.load(mod))
 
     # 'is_loaded' function tests: 1
 
@@ -99,19 +107,31 @@ class KmodTestCase(TestCase):
 
     # 'remove' function tests: 1
 
-    @patch('salt.modules.kmod._remove_persistent_module',
-           MagicMock(return_value=set(['lp'])))
     def test_remove(self):
         '''
         Tests to remove the specified kernel module
         '''
-        mock_ret = [{'size': 100, 'module': None, 'depcount': 10, 'deps': None}]
-        with patch('salt.modules.kmod.lsmod', MagicMock(return_value=mock_ret)):
-            mock = MagicMock(return_value=0)
-            with patch.dict(kmod.__salt__, {'cmd.run_all': mock}):
-                self.assertEqual(['lp'], kmod.remove('lp', True))
+        mod = 'cheese'
+        err_msg = 'Cannot find module: it has been eaten'
+        mock_persist = MagicMock(return_value=set([mod]))
+        mock_lsmod = MagicMock(return_value=[{'size': 100,
+                                              'module': None,
+                                              'depcount': 10,
+                                              'deps': None}])
+        mock_run_all_0 = MagicMock(return_value={'retcode': 0})
+        mock_run_all_1 = MagicMock(return_value={'retcode': 1,
+                                                 'stderr': err_msg})
 
-                self.assertEqual([], kmod.remove('lp'))
+        with patch('salt.modules.kmod._remove_persistent_module', mock_persist):
+            with patch('salt.modules.kmod.lsmod', mock_lsmod):
+                with patch.dict(kmod.__salt__, {'cmd.run_all': mock_run_all_0}):
+                    self.assertEqual([mod], kmod.remove(mod, True))
+
+                    self.assertEqual([], kmod.remove(mod))
+
+                with patch.dict(kmod.__salt__, {'cmd.run_all': mock_run_all_1}):
+                    self.assertEqual('Error removing module {0}: {1}'.format(mod, err_msg),
+                                     kmod.remove(mod, True))
 
 
 if __name__ == '__main__':

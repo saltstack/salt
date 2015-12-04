@@ -705,6 +705,8 @@ def _get_client(timeout=None):
             client_kwargs['base_url'] = os.environ.get('DOCKER_HOST')
 
         if 'version' not in client_kwargs:
+            # Let docker-py auto detect docker version incase
+            # it's not defined by user.
             client_kwargs['version'] = 'auto'
 
         __context__['docker.client'] = docker.Client(**client_kwargs)
@@ -1153,7 +1155,7 @@ def _validate_input(kwargs,
         if isinstance(kwargs['command'], six.string_types):
             # Translate command into a list of strings
             try:
-                kwargs['command'] = shlex.split(kwargs['command'])
+                kwargs['command'] = salt.utils.shlex_split(kwargs['command'])
             except AttributeError:
                 pass
         try:
@@ -1297,7 +1299,7 @@ def _validate_input(kwargs,
         if isinstance(kwargs['entrypoint'], six.string_types):
             # Translate entrypoint into a list of strings
             try:
-                kwargs['entrypoint'] = shlex.split(kwargs['entrypoint'])
+                kwargs['entrypoint'] = salt.utils.shlex_split(kwargs['entrypoint'])
             except AttributeError:
                 pass
         try:
@@ -1333,7 +1335,7 @@ def _validate_input(kwargs,
                         )
                     if not isinstance(val, six.string_types):
                         raise SaltInvocationError(
-                            'Environment values must be strings {key}={val!r}'
+                            'Environment values must be strings {key}=\'{val}\''
                             .format(key=key, val=val))
                     repacked_env[key] = val
             kwargs['environment'] = repacked_env
@@ -1341,7 +1343,7 @@ def _validate_input(kwargs,
             for key, val in six.iteritems(kwargs['environment']):
                 if not isinstance(val, six.string_types):
                     raise SaltInvocationError(
-                        'Environment values must be strings {key}={val!r}'
+                        'Environment values must be strings {key}=\'{val}\''
                         .format(key=key, val=val))
         elif not isinstance(kwargs['environment'], dict):
             raise SaltInvocationError(
@@ -2202,7 +2204,10 @@ def list_containers(**kwargs):
     '''
     ret = set()
     for item in six.itervalues(ps_(all=kwargs.get('all', False))):
-        for c_name in [x.lstrip('/') for x in item.get('Names', []) or []]:
+        names = item.get('Names')
+        if not names:
+            continue
+        for c_name in [x.lstrip('/') for x in names or []]:
             ret.add(c_name)
     return sorted(ret)
 
@@ -2370,7 +2375,7 @@ def ps_(filters=None, **kwargs):
             continue
         for item in container:
             c_state = 'running' \
-                if container['Status'].lower().startswith('up ') \
+                if container.get('Status', '').lower().startswith('up ') \
                 else 'stopped'
             bucket = context_data.setdefault(c_state, {})
             c_key = key_map.get(item, item)
@@ -4881,8 +4886,12 @@ def _script(name,
         try:
             os.remove(path)
         except (IOError, OSError) as exc:
-            log.error('cmd.script: Unable to clean tempfile {0!r}: {1}'
-                      .format(path, exc))
+            log.error(
+                'cmd.script: Unable to clean tempfile \'{0}\': {1}'.format(
+                    path,
+                    exc
+                )
+            )
 
     path = salt.utils.mkstemp(dir='/tmp',
                               prefix='salt',

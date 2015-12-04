@@ -72,7 +72,7 @@ class SaltCacheLoader(BaseLoader):
             self.searchpath = opts['file_roots'][saltenv]
         else:
             self.searchpath = [path.join(opts['cachedir'], 'files', saltenv)]
-        log.debug('Jinja search path: {0!r}'.format(self.searchpath))
+        log.debug('Jinja search path: \'{0}\''.format(self.searchpath))
         self._file_client = None
         self.cached = []
         self.pillar_rend = pillar_rend
@@ -116,7 +116,7 @@ class SaltCacheLoader(BaseLoader):
             tpldir = path.dirname(template).replace('\\', '/')
             tpldata = {
                 'tplfile': template,
-                'tpldir': tpldir,
+                'tpldir': '.' if tpldir == '' else tpldir,
                 'tpldot': tpldir.replace('/', '.'),
             }
             environment.globals.update(tpldata)
@@ -163,16 +163,18 @@ class PrintableDict(OrderedDict):
         for key, value in six.iteritems(self):
             if isinstance(value, six.string_types):
                 # keeps quotes around strings
-                output.append('{0!r}: {1!r}'.format(key, value))
+                output.append('\'{0}\': \'{1}\''.format(key, value))
             else:
                 # let default output
-                output.append('{0!r}: {1!s}'.format(key, value))
+                output.append('\'{0}\': {1!s}'.format(key, value))
         return '{' + ', '.join(output) + '}'
 
     def __repr__(self):  # pylint: disable=W0221
         output = []
         for key, value in six.iteritems(self):
-            output.append('{0!r}: {1!r}'.format(key, value))
+            # Raw string formatter required here because this is a repr
+            # function.
+            output.append('\'{0}\': {1!r}'.format(key, value))
         return '{' + ', '.join(output) + '}'
 
 

@@ -309,6 +309,12 @@ line:
 
     salt '*' state.sls my_sls_file pillar='{"hello": "world"}'
 
+Nested pillar values can also be set via the command line:
+
+.. code-block:: bash
+
+   salt '*' state.sls my_sls_file pillar='{"foo": {"bar": "baz"}}'
+
 .. note::
 
     If a key is passed on the command line that already exists on the minion,

@@ -18,5 +18,6 @@ Full list of builtin auth modules
     pam
     pki
     rest
+    sharedsecret
     stormpath
     yubico

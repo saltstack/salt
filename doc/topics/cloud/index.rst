@@ -167,6 +167,7 @@ Cloud Provider Specifics
         Getting Started With Joyent <joyent>
         Getting Started With LXC <lxc>
         Getting Started With Linode <linode>
+        Getting Started With OpenNebula <opennebula>
         Getting Started With OpenStack <openstack>
         Getting Started With Parallels <parallels>
         Getting Started With Proxmox <proxmox>

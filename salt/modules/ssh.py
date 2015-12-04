@@ -33,7 +33,7 @@ DEFAULT_SSH_PORT = 22
 def __virtual__():
     # TODO: This could work on windows with some love
     if salt.utils.is_windows():
-        return False
+        return (False, 'The module cannot be loaded on windows.')
     return True
 
 
@@ -64,7 +64,7 @@ def _refine_enc(enc):
         return 'ssh-ed25519'
     else:
         raise CommandExecutionError(
-            'Incorrect encryption key type {0!r}.'.format(enc)
+            'Incorrect encryption key type \'{0}\'.'.format(enc)
         )
 
 
@@ -114,7 +114,7 @@ def _get_config_file(user, config):
     '''
     uinfo = __salt__['user.info'](user)
     if not uinfo:
-        raise CommandExecutionError('User {0!r} does not exist'.format(user))
+        raise CommandExecutionError('User \'{0}\' does not exist'.format(user))
     home = uinfo['home']
     if not os.path.isabs(config):
         config = os.path.join(home, config)
@@ -751,8 +751,9 @@ def get_known_host(user, hostname, config=None, port=None):
         return full
 
     ssh_hostname = _hostname_and_port_to_ssh_hostname(hostname, port)
-    cmd = 'ssh-keygen -F "{0}" -f "{1}"'.format(ssh_hostname, full)
-    lines = __salt__['cmd.run'](cmd, ignore_retcode=True,
+    cmd = ['ssh-keygen', '-F', ssh_hostname, '-f', full]
+    lines = __salt__['cmd.run'](cmd,
+                                ignore_retcode=True,
                                 python_shell=False).splitlines()
     known_hosts = list(_parse_openssh_output(lines))
     return known_hosts[0] if known_hosts else None
@@ -806,19 +807,18 @@ def recv_known_host(hostname,
 
     # The following list of OSes have an old version of openssh-clients
     # and thus require the '-t' option for ssh-keyscan
-    need_dash_t = ['CentOS-5']
+    need_dash_t = ('CentOS-5',)
 
-    chunks = ['ssh-keyscan']
+    cmd = ['ssh-keyscan']
     if port:
-        chunks += ['-p', str(port)]
+        cmd.extend(['-p', port])
     if enc:
-        chunks += ['-t', str(enc)]
+        cmd.extend(['-t', enc])
     if not enc and __grains__.get('osfinger') in need_dash_t:
-        chunks += ['-t', 'rsa']
+        cmd.extend(['-t', 'rsa'])
     if hash_known_hosts:
-        chunks.append('-H')
-    chunks.append(str(hostname))
-    cmd = ' '.join(chunks)
+        cmd.append('-H')
+    cmd.append(hostname)
     lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     known_hosts = list(_parse_openssh_output(lines))
     return known_hosts[0] if known_hosts else None
@@ -889,7 +889,7 @@ def rm_known_host(user=None, hostname=None, config=None, port=None):
                 'error': 'Known hosts file {0} does not exist'.format(full)}
 
     ssh_hostname = _hostname_and_port_to_ssh_hostname(hostname, port)
-    cmd = 'ssh-keygen -R "{0}" -f "{1}"'.format(ssh_hostname, full)
+    cmd = ['ssh-keygen', '-R', ssh_hostname, '-f', full]
     cmd_result = __salt__['cmd.run'](cmd, python_shell=False)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0 and user:
@@ -1022,7 +1022,7 @@ def set_known_host(user=None,
     if key:
         remote_host = {'hostname': hostname, 'enc': enc, 'key': key}
 
-    if hash_known_hosts or port == DEFAULT_SSH_PORT:
+    if hash_known_hosts or port == DEFAULT_SSH_PORT or ':' in remote_host['hostname']:
         line = '{hostname} {enc} {key}\n'.format(**remote_host)
     else:
         remote_host['port'] = port
@@ -1174,7 +1174,7 @@ def hash_known_hosts(user=None, config=None):
     if not os.path.isfile(full):
         return {'status': 'error',
                 'error': 'Known hosts file {0} does not exist'.format(full)}
-    cmd = 'ssh-keygen -H -f "{0}"'.format(full)
+    cmd = ['ssh-keygen', '-H', '-f', full]
     cmd_result = __salt__['cmd.run'](cmd, python_shell=False)
     # ssh-keygen creates a new file, thus a chown is required.
     if os.geteuid() == 0 and user:

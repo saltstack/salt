@@ -636,7 +636,8 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
                'modules': '.salt.loader.modules',
                'grain_time': '.salt.var.grain_time',
                'module_refresh': '.salt.var.module_refresh',
-               'returners': '.salt.loader.returners'}
+               'returners': '.salt.loader.returners',
+               'module_executors': '.salt.loader.executors'}
 
     def _prepare(self):
         self._load_modules()
@@ -678,10 +679,12 @@ class SaltLoadModules(ioflo.base.deeding.Deed):
         self.utils.value = salt.loader.utils(self.opts.value)
         self.modules.value = salt.loader.minion_mods(self.opts.value, utils=self.utils.value)
         self.returners.value = salt.loader.returners(self.opts.value, self.modules.value)
+        self.module_executors.value = salt.loader.executors(self.opts.value, self.modules.value)
 
         self.utils.value.clear()
         self.modules.value.clear()
         self.returners.value.clear()
+        self.module_executors.value.clear()
 
         # we're done, reset the limits!
         if modules_max_memory is True:

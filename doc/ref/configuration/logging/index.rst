@@ -56,7 +56,7 @@ Examples:
 ``log_level``
 -------------
 
-Default: ``warning``
+Default: ``info``
 
 The level of log record messages to send to the console.
 One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
@@ -73,7 +73,7 @@ One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
 ``log_level_logfile``
 ---------------------
 
-Default: ``warning``
+Default: ``info``
 
 The level of messages to send to the log file.
 One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,

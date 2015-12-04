@@ -35,6 +35,7 @@ Full list of builtin pillar modules
     s3
     sql_base
     sqlite3
+    stack
     svn_pillar
     varstack_pillar
     virtkey

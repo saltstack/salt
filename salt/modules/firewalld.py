@@ -405,7 +405,7 @@ def get_masquerade(zone):
     '''
     zone_info = list_all(zone)
 
-    if [zone_info[i]['masquerade'][0] for i in zone_info.keys()] == 'no':
+    if 'no' in [zone_info[i]['masquerade'][0] for i in zone_info.keys()]:
         return False
 
     return True

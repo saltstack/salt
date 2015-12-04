@@ -4,6 +4,7 @@ Create ssh executor system
 '''
 # Import python libs
 from __future__ import absolute_import, print_function
+import base64
 import copy
 import getpass
 import json
@@ -115,32 +116,66 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 # 1. Identify a suitable python
 # 2. Jump to python
 
-SSH_SH_SHIM = r'''/bin/sh << 'EOF'
+# Note the list-comprehension syntax to define SSH_SH_SHIM is needed
+# to be able to define the string with indentation for readability but
+# still strip the white space for compactness and to avoid issues with
+# some multi-line embedded python code having indentation errors
+SSH_SH_SHIM = \
+    '\n'.join(
+        [s.strip() for s in r'''/bin/sh << 'EOF'
 set -e
 set -u
 DEBUG="{{DEBUG}}"
 if [ -n "$DEBUG" ]
-then set -x
+    then set -x
 fi
 SUDO=""
 if [ -n "{{SUDO}}" ]
-then SUDO="sudo "
+    then SUDO="sudo "
 fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
-PYTHON_CMDS="python27 python2.7 python26 python2.6 python2 python"
+PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
-do if "$py_cmd" -c "import sys; sys.exit(not (sys.hexversion >= 0x02060000 and sys.version_info[0] == {{HOST_PY_MAJOR}}));" >/dev/null 2>&1
-then py_cmd_path=`"$py_cmd" -c 'from __future__ import print_function; import sys; print(sys.executable);'`
-exec $SUDO "$py_cmd_path" -c 'import base64; exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
-exit 0
-else continue
-fi
+do
+    if "$py_cmd" -c \
+        "import sys; sys.exit(not (sys.version_info >= (2, 6)
+                              and sys.version_info[0] == {{HOST_PY_MAJOR}}));"
+    then
+        py_cmd_path=`"$py_cmd" -c \
+                   'from __future__ import print_function;
+                   import sys; print(sys.executable);'`
+        cmdpath=$(which $py_cmd 2>&1)
+        if [[ "$(file $cmdpath)" == *"shell script"* ]]
+        then
+            ex_vars="'PATH', 'LD_LIBRARY_PATH', 'MANPATH', \
+                   'XDG_DATA_DIRS', 'PKG_CONFIG_PATH'"
+            export $($py_cmd -c \
+                  "from __future__ import print_function;
+                  import sys;
+                  import os;
+                  map(sys.stdout.write, ['{{{{0}}}}={{{{1}}}} ' \
+                  .format(x, os.environ[x]) for x in [$ex_vars]])")
+            exec $SUDO PATH=$PATH LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
+                     MANPATH=$MANPATH XDG_DATA_DIRS=$XDG_DATA_DIRS \
+                     PKG_CONFIG_PATH=$PKG_CONFIG_PATH \
+                     "$py_cmd_path" -c \
+                   'import base64;
+                   exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
+        else
+            exec $SUDO "$py_cmd_path" -c \
+                   'import base64;
+                   exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
+        fi
+        exit 0
+    else
+        continue
+    fi
 done
 echo "ERROR: Unable to locate appropriate python command" >&2
 exit $EX_PYTHON_INVALID
 EOF'''.format(
-    EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
-)
+            EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
+            ).split('\n')])
 
 if not is_windows():
     shim_file = os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')
@@ -201,7 +236,13 @@ class SSH(object):
                 try:
                     salt.client.ssh.shell.gen_key(priv)
                 except OSError:
-                    raise salt.exceptions.SaltClientError('salt-ssh could not be run because it could not generate keys.\n\nYou can probably resolve this by executing this script with increased permissions via sudo or by running as root.\nYou could also use the \'-c\' option to supply a configuration directory that you have permissions to read and write to.')
+                    raise salt.exceptions.SaltClientError(
+                        'salt-ssh could not be run because it could not generate keys.\n\n'
+                        'You can probably resolve this by executing this script with '
+                        'increased permissions via sudo or by running as root.\n'
+                        'You could also use the \'-c\' option to supply a configuration '
+                        'directory that you have permissions to read and write to.'
+                    )
         self.defaults = {
             'user': self.opts.get(
                 'ssh_user',
@@ -240,7 +281,9 @@ class SSH(object):
         self.serial = salt.payload.Serial(opts)
         self.returners = salt.loader.returners(self.opts, {})
         self.fsclient = salt.fileclient.FSClient(self.opts)
-        self.thin = salt.utils.thin.gen_thin(self.opts['cachedir'])
+        self.thin = salt.utils.thin.gen_thin(self.opts['cachedir'],
+                                             python2_bin=self.opts['python2_bin'],
+                                             python3_bin=self.opts['python3_bin'])
         self.mods = mod_data(self.fsclient)
 
     def get_pubkey(self):
@@ -438,7 +481,7 @@ class SSH(object):
             if len(running) >= self.opts.get('ssh_max_procs', 25) or len(self.targets) >= len(running):
                 time.sleep(0.1)
 
-    def run_iter(self, mine=False):
+    def run_iter(self, mine=False, jid=None):
         '''
         Execute and yield returns as they come in, do not print to the display
 
@@ -448,7 +491,7 @@ class SSH(object):
             will modify the argv with the arguments from mine_functions
         '''
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-        jid = self.returners[fstr]()
+        jid = self.returners[fstr](passed_jid=jid or self.opts.get('jid', None))
 
         # Save the invocation information
         argv = self.opts['argv']
@@ -492,12 +535,12 @@ class SSH(object):
                                                                               'return': ret,
                                                                               'fun': fun})
 
-    def run(self):
+    def run(self, jid=None):
         '''
         Execute the overall routine, print results via outputters
         '''
         fstr = '{0}.prep_jid'.format(self.opts['master_job_cache'])
-        jid = self.returners[fstr]()
+        jid = self.returners[fstr](passed_jid=jid or self.opts.get('jid', None))
 
         # Save the invocation information
         argv = self.opts['argv']
@@ -520,11 +563,14 @@ class SSH(object):
 
         # save load to the master job cache
         try:
+            if isinstance(jid, bytes):
+                jid = jid.decode('utf-8')
             if self.opts['master_job_cache'] == 'local_cache':
                 self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load, minions=self.targets.keys())
             else:
                 self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
         except Exception as exc:
+            log.exception(exc)
             log.error('Could not save load with returner {0}: {1}'.format(self.opts['master_job_cache'], exc))
 
         if self.opts.get('verbose'):
@@ -920,8 +966,10 @@ ARGS = {9}\n'''.format(self.minion_config,
                          self.tty,
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
-        py_code_enc = py_code.encode('base64')
-
+        if six.PY2:
+            py_code_enc = py_code.encode('base64')
+        else:
+            py_code_enc = base64.encodebytes(py_code.encode('utf-8')).decode('utf-8')
         cmd = SSH_SH_SHIM.format(
             DEBUG=debug,
             SUDO=sudo,
@@ -1247,9 +1295,16 @@ def ssh_version():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE).communicate()
     try:
-        return ret[1].split(b',')[0].split(b'_')[1]
+        version_parts = ret[1].split(b',')[0].split(b'_')[1]
+        parts = []
+        for part in version_parts:
+            try:
+                parts.append(int(part))
+            except ValueError:
+                return tuple(parts)
+        return tuple(parts)
     except IndexError:
-        return '2.0'
+        return (2, 0)
 
 
 def _convert_args(args):

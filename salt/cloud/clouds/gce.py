@@ -49,7 +49,6 @@ Example Provider Configuration
 from __future__ import absolute_import
 import os
 import re
-import stat
 import pprint
 import logging
 import msgpack
@@ -120,30 +119,9 @@ def __virtual__():
 
         parameters = details['gce']
         pathname = os.path.expanduser(parameters['service_account_private_key'])
-
-        if not os.path.exists(pathname):
-            log.error(
-                'The GCE service account private key {0!r} used in '
-                'the {1!r} provider configuration does not exist\n'.format(
-                    parameters['service_account_private_key'],
-                    provider
-                )
-            )
-            return False
-
-        key_mode = str(
-            oct(stat.S_IMODE(os.stat(pathname).st_mode))
-        )
-
-        if key_mode not in ('0400', '0600'):
-            log.error(
-                'The GCE service account private key {0!r} used in '
-                'the {1!r} provider configuration needs to be set to '
-                'mode 0400 or 0600\n'.format(
-                    parameters['service_account_private_key'],
-                    provider
-                )
-            )
+        if salt.utils.cloud.check_key_path_and_mode(
+                provider, pathname
+        ) is False:
             return False
 
     return __virtualname__
@@ -323,21 +301,34 @@ def avail_sizes(conn=None):
 def avail_images(conn=None):
     '''
     Return a dict of all available VM images on the cloud provider with
-    relevant data
+    relevant data.
 
     Note that for GCE, there are custom images within the project, but the
     generic images are in other projects.  This returns a dict of images in
-    the project plus images in 'debian-cloud' and 'centos-cloud' (If there is
-    overlap in names, the one in the current project is used.)
+    the project plus images in well-known public projects that provide supported
+    images, as listed on this page:
+    https://cloud.google.com/compute/docs/operating-systems/
+
+    If image names overlap, the image in the current project is used.
     '''
     if not conn:
         conn = get_conn()
 
-    project_images = conn.list_images()
-    debian_images = conn.list_images('debian-cloud')
-    centos_images = conn.list_images('centos-cloud')
+    all_images = []
+    # The list of public image projects can be found via:
+    #   % gcloud compute images list
+    # and looking at the "PROJECT" column in the output.
+    public_image_projects = (
+        'centos-cloud', 'coreos-cloud', 'debian-cloud', 'google-containers',
+        'opensuse-cloud', 'rhel-cloud', 'suse-cloud', 'ubuntu-os-cloud',
+        'windows-cloud'
+    )
+    for project in public_image_projects:
+        all_images.extend(conn.list_images(project))
 
-    all_images = debian_images + centos_images + project_images
+    # Finally, add the images in this current project last so that it overrides
+    # any image that also exists in any public project.
+    all_images.extend(conn.list_images())
 
     ret = {}
     for img in all_images:
@@ -2006,15 +1997,10 @@ def destroy(vm_name, call=None):
     return inst_deleted
 
 
-def create(vm_=None, call=None):
+def request_instance(vm_):
     '''
-    Create a single GCE instance from a data dict.
+    Request a single GCE instance from a data dict.
     '''
-    if call:
-        raise SaltCloudSystemExit(
-            'You cannot create an instance with -a or -f.'
-        )
-
     if not GCE_VM_NAME_REGEX.match(vm_['name']):
         raise SaltCloudSystemExit(
             'VM names must start with a letter, only contain letters, numbers, or dashes '
@@ -2117,14 +2103,34 @@ def create(vm_=None, call=None):
         # node_data is a libcloud Node which is unsubscriptable
         node_dict = show_instance(node_data.name, 'action')
 
+    return node_dict, node_data
+
+
+def create(vm_=None, call=None):
+    '''
+    Create a single GCE instance from a data dict.
+    '''
+    if call:
+        raise SaltCloudSystemExit(
+            'You cannot create an instance with -a or -f.'
+        )
+
+    node_info = request_instance(vm_)
+    if isinstance(node_info, bool):
+        raise SaltCloudSystemExit(
+            'There was an error creating the GCE instance.'
+        )
+    node_dict = node_info[0]
+    node_data = node_info[1]
+
     ssh_user, ssh_key = __get_ssh_credentials(vm_)
     vm_['ssh_host'] = __get_host(node_data, vm_)
     vm_['key_filename'] = ssh_key
     salt.utils.cloud.bootstrap(vm_, __opts__)
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.trace(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(node_dict)
         )
     )

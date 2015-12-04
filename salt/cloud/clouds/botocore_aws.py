@@ -32,14 +32,12 @@ If this driver is still needed, set up the cloud configuration at
 
 # Import python libs
 from __future__ import absolute_import
-import os
-import stat
 import logging
 
 # Import salt.cloud libs
+import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 import salt.ext.six as six
 
 # Import libcloudfuncs and libcloud_aws, required to latter patch __opts__
@@ -87,29 +85,14 @@ def __virtual__():
         return False
 
     for provider, details in six.iteritems(__opts__['providers']):
-        if 'provider' not in details or details['provider'] != 'aws':
+        if 'aws' not in details:
             continue
 
-        if not os.path.exists(details['private_key']):
-            raise SaltCloudException(
-                'The AWS key file {0!r} used in the {1!r} provider '
-                'configuration does not exist\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
-
-        keymode = str(
-            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
-        )
-        if keymode not in ('0400', '0600'):
-            raise SaltCloudException(
-                'The AWS key file {0!r} used in the {1!r} provider '
-                'configuration needs to be set to mode 0400 or 0600\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
+        parameters = details['aws']
+        if salt.utils.cloud.check_key_path_and_mode(
+                provider, parameters['private_key']
+        ) is False:
+            return False
 
     # Let's bring the functions imported from libcloud_aws to the current
     # namespace.

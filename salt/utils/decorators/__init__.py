@@ -101,7 +101,7 @@ class Depends(object):
                     )
                     continue
 
-                if dependency in dir(frame):
+                if dependency in frame.f_globals:
                     log.trace(
                         'Dependency ({0}) already loaded inside {1}, '
                         'skipping'.format(
@@ -181,7 +181,7 @@ def which(exe):
         def wrapped(*args, **kwargs):
             if salt.utils.which(exe) is None:
                 raise CommandNotFoundError(
-                    'The {0!r} binary was not found in $PATH.'.format(exe)
+                    'The \'{0}\' binary was not found in $PATH.'.format(exe)
                 )
             return function(*args, **kwargs)
         return identical_signature_wrapper(function, wrapped)
@@ -198,7 +198,7 @@ def which_bin(exes):
                 raise CommandNotFoundError(
                     'None of provided binaries({0}) was not found '
                     'in $PATH.'.format(
-                        ['{0!r}'.format(exe) for exe in exes]
+                        ['\'{0}\''.format(exe) for exe in exes]
                     )
                 )
             return function(*args, **kwargs)

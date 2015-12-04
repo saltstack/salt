@@ -837,6 +837,27 @@ def ip_in_subnet(ip_addr, cidr):
     return salt.utils.network.in_subnet(cidr, ip_addr)
 
 
+def convert_cidr(cidr):
+    '''
+    returns the network and subnet mask of a cidr addr
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' network.convert_cidr 172.31.0.0/16
+    '''
+    ret = {'network': None,
+           'netmask': None}
+    cidr = calc_net(cidr)
+    network_info = salt.ext.ipaddress.ip_network(cidr)
+    ret['network'] = str(network_info.network_address)
+    ret['netmask'] = str(network_info.netmask)
+    return ret
+
+
 def calc_net(ip_addr, netmask=None):
     '''
     Returns the CIDR of a subnet based on

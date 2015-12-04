@@ -50,6 +50,23 @@ class EnvironTestCase(TestCase):
         with patch.dict(os.environ, mock_environ):
             self.assertFalse(environ.setval('key', True))
 
+    @patch('salt.utils.is_windows', MagicMock(return_value=True))
+    def test_set_val_permanent(self):
+        with patch.dict(os.environ, {}):
+            environ.__salt__['reg.set_value'] = MagicMock()
+            environ.__salt__['reg.delete_value'] = MagicMock()
+
+            environ.setval('key', 'Test', permanent=True)
+            environ.__salt__['reg.set_value'].assert_called_with('HKCU', 'Environment', 'key', 'Test')
+
+            environ.setval('key', False, false_unsets=True, permanent=True)
+            environ.__salt__['reg.set_value'].asset_not_called()
+            environ.__salt__['reg.delete_value'].assert_called_with('HKCU', 'Environment', 'key')
+
+            key = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+            environ.setval('key', 'Test', permanent='HKLM')
+            environ.__salt__['reg.set_value'].assert_called_with('HKLM', key, 'key', 'Test')
+
     def test_setenv(self):
         '''
         Set multiple salt process environment variables from a dict.

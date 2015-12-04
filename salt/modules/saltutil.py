@@ -96,14 +96,14 @@ def _sync(form, saltenv=None):
     mod_dir = os.path.join(__opts__['extension_modules'], '{0}'.format(form))
     cumask = os.umask(0o77)
     if not os.path.isdir(mod_dir):
-        log.info('Creating module dir {0!r}'.format(mod_dir))
+        log.info('Creating module dir \'{0}\''.format(mod_dir))
         try:
             os.makedirs(mod_dir)
         except (IOError, OSError):
             msg = 'Cannot create cache module directory {0}. Check permissions.'
             log.error(msg.format(mod_dir))
     for sub_env in saltenv:
-        log.info('Syncing {0} for environment {1!r}'.format(form, sub_env))
+        log.info('Syncing {0} for environment \'{1}\''.format(form, sub_env))
         cache = []
         log.info('Loading cache from {0}, for {1})'.format(source, sub_env))
         # Grab only the desired files (.py, .pyx, .so)
@@ -118,13 +118,13 @@ def _sync(form, saltenv=None):
                 sub_env,
                 '_{0}'.format(form)
                 )
-        log.debug('Local cache dir: {0!r}'.format(local_cache_dir))
+        log.debug('Local cache dir: \'{0}\''.format(local_cache_dir))
         for fn_ in cache:
             relpath = os.path.relpath(fn_, local_cache_dir)
             relname = os.path.splitext(relpath)[0].replace(os.sep, '.')
             remote.add(relpath)
             dest = os.path.join(mod_dir, relpath)
-            log.info('Copying {0!r} to {1!r}'.format(fn_, dest))
+            log.info('Copying \'{0}\' to \'{1}\''.format(fn_, dest))
             if os.path.isfile(dest):
                 # The file is present, if the sum differs replace it
                 hash_type = __opts__.get('hash_type', 'md5')
@@ -498,7 +498,7 @@ def sync_all(saltenv=None, refresh=True):
     grains, returners, output modules, renderers, and utils.
 
     refresh : True
-        Also refresh the execution modules available to the minion.
+        Also refresh the execution modules and pillar data available to the minion.
 
     .. important::
 
@@ -538,6 +538,7 @@ def sync_all(saltenv=None, refresh=True):
     ret['proxymodules'] = sync_proxymodules(saltenv, False)
     if refresh:
         refresh_modules()
+        refresh_pillar()
     return ret
 
 
@@ -685,7 +686,8 @@ def find_job(jid):
 
 def find_cached_job(jid):
     '''
-    Return the data for a specific cached job id
+    Return the data for a specific cached job id. Note this only works if
+    cache_jobs has previously been set to True on the minion.
 
     CLI Example:
 
@@ -839,8 +841,21 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
 def _exec(client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
     fcn_ret = {}
     seen = 0
-    for ret_comp in client.cmd_iter(
-            tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs):
+    if 'batch' in kwargs:
+        _cmd = client.cmd_batch
+        cmd_kwargs = {
+            'tgt': tgt, 'fun': fun, 'arg': arg, 'expr_form': expr_form,
+            'ret': ret, 'kwarg': kwarg, 'batch': kwargs['batch'],
+        }
+        del kwargs['batch']
+    else:
+        _cmd = client.cmd_iter
+        cmd_kwargs = {
+            'tgt': tgt, 'fun': fun, 'arg': arg, 'timeout': timeout,
+            'expr_form': expr_form, 'ret': ret, 'kwarg': kwarg,
+        }
+    cmd_kwargs.update(kwargs)
+    for ret_comp in _cmd(**cmd_kwargs):
         fcn_ret.update(ret_comp)
         seen += 1
         # fcn_ret can be empty, so we cannot len the whole return dict
@@ -885,6 +900,15 @@ def cmd(tgt,
         client = _get_ssh_or_api_client(master_cfgfile, ssh)
         fcn_ret = _exec(
             client, tgt, fun, arg, timeout, expr_form, ret, kwarg, **kwargs)
+
+    if 'batch' in kwargs:
+        old_ret, fcn_ret = fcn_ret, {}
+        for key, value in old_ret.items():
+            fcn_ret[key] = {
+                'out': value.get('out', 'highstate') if isinstance(value, dict) else 'highstate',
+                'ret': value,
+            }
+
     return fcn_ret
 
 

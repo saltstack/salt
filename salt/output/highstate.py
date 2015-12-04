@@ -118,6 +118,7 @@ def _format_host(host, data):
                           .format(hcolor, err, colors)))
     if isinstance(data, dict):
         # Verify that the needed data is present
+        data_tmp = {}
         for tname, info in six.iteritems(data):
             if isinstance(info, dict) and '__run_num__' not in info:
                 err = (u'The State execution failed to record the order '
@@ -125,6 +126,9 @@ def _format_host(host, data):
                        'return missing data is:')
                 hstrs.insert(0, pprint.pformat(info))
                 hstrs.insert(0, err)
+            if isinstance(info, dict) and 'result' in info:
+                data_tmp[tname] = info
+        data = data_tmp
         # Everything rendered as it should display the output
         for tname in sorted(
                 data,
@@ -438,14 +442,24 @@ def _format_terse(tcolor, comps, ret, colors, tabular):
     elif ret['result'] is None:
         result = u'Differs'
     if tabular is True:
-        fmt_string = u'{0}'
+        fmt_string = ''
+        if 'warnings' in ret:
+            fmt_string += u'{c[LIGHT_RED]}Warnings:\n{w}{c[ENDC]}\n'.format(
+                c=colors, w='\n'.join(ret['warnings'])
+            )
+        fmt_string += u'{0}'
         if __opts__.get('state_output_profile', False):
             fmt_string += u'{6[start_time]!s} [{6[duration]!s} ms] '
         fmt_string += u'{2:>10}.{3:<10} {4:7}   Name: {1}{5}'
     elif isinstance(tabular, str):
         fmt_string = tabular
     else:
-        fmt_string = u' {0} Name: {1} - Function: {2}.{3} - Result: {4}'
+        fmt_string = ''
+        if 'warnings' in ret:
+            fmt_string += u'{c[LIGHT_RED]}Warnings:\n{w}{c[ENDC]}'.format(
+                c=colors, w='\n'.join(ret['warnings'])
+            )
+        fmt_string += u' {0} Name: {1} - Function: {2}.{3} - Result: {4}'
         if __opts__.get('state_output_profile', False):
             fmt_string += u' Started: - {6[start_time]!s} Duration: {6[duration]!s} ms'
         fmt_string += u'{5}'

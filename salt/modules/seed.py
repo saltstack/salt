@@ -268,7 +268,7 @@ def _check_install(root):
         sh_ = '/bin/bash'
 
     cmd = ('if ! type salt-minion; then exit 1; fi')
-    cmd = 'chroot \'{0}\' {1} -c {2!r}'.format(
+    cmd = 'chroot \'{0}\' {1} -c \'{2}\''.format(
         root,
         sh_,
         cmd)

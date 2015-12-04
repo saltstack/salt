@@ -15,6 +15,12 @@
 # resolved, then the minion will fail to start.
 #master: salt
 
+# Set http proxy information for the minion when doing requests
+#proxy_host:
+#proxy_port:
+#proxy_username:
+#proxy_password:
+
 # If multiple masters are specified in the 'master' setting, the default behavior
 # is to always try to connect to them in the order they are listed. If random_master is
 # set to True, the order will be randomized instead. This can be helpful in distributing
@@ -243,6 +249,12 @@
 # sane 60 seconds, but if the minion scheduler needs to be evaluated more
 # often lower this value
 #loop_interval: 60
+
+# The grains can be merged, instead of overridden, using this option.
+# This allows custom grains to defined different subvalues of a dictionary
+# grain. By default this feature is disabled, to enable set grains_deep_merge
+# to ``True``.
+#grains_deep_merge: False
 
 # The grains_refresh_every setting allows for a minion to periodically check
 # its grains to see if they have changed and, if so, to inform the master
@@ -651,3 +663,9 @@
 ############################################
 # Which returner(s) will be used for minion's result:
 #return: mysql
+
+
+######    Miscellaneous  settings     ######
+############################################
+# Default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
+#event_match_type: startswith

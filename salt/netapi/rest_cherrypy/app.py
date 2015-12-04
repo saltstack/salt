@@ -19,33 +19,46 @@ A REST API for Salt
 :client_libraries:
     - Java: https://github.com/SUSE/saltstack-netapi-client-java
     - Python: https://github.com/saltstack/pepper
+:setup:
+    All steps below are performed on the machine running the Salt Master
+    daemon. Configuration goes into the Master configuration file.
+
+    1.  Install ``salt-api``. (This step varies between OS and Linux distros.
+        Some package systems have a split package, others include salt-api in
+        the main Salt package. Ensure the ``salt-api --version`` output matches
+        the ``salt --version`` output.)
+    2.  Install CherryPy. (Read the version caveat in the section above.)
+    3.  Optional: generate self-signed SSL certificates.
+
+        Using a secure HTTPS connection is strongly recommended since Salt
+        eauth authentication credentials will be sent over the wire.
+
+        1.  Install the PyOpenSSL package.
+        2.  Generate a self-signed certificate using the
+            :py:func:`~salt.modules.tls.create_self_signed_cert` execution
+            function.
+
+            .. code-block:: bash
+
+                salt-call --local tls.create_self_signed_cert
+
+    4.  Edit the master config to create at least one external auth user or
+        group following the :ref:`full external auth instructions <acl-eauth>`.
+    5.  Edit the master config with the following production-ready example to
+        enable the ``rest_cherrypy`` module. (Adjust cert paths as needed, or
+        disable SSL (not recommended!).)
+
+        .. code-block:: yaml
+
+            rest_cherrypy:
+              port: 8000
+              ssl_crt: /etc/pki/tls/certs/localhost.crt
+              ssl_key: /etc/pki/tls/certs/localhost.key
+
+    6.  Restart the ``salt-master`` daemon.
+    7.  Start the ``salt-api`` daemon.
+
 :configuration:
-    All authentication is done through Salt's :ref:`external auth
-    <acl-eauth>` system which requires additional configuration not described
-    here.
-
-    Example production-ready configuration; add to the Salt master config file
-    and restart the ``salt-master`` and ``salt-api`` daemons:
-
-    .. code-block:: yaml
-
-        rest_cherrypy:
-          port: 8000
-          ssl_crt: /etc/pki/tls/certs/localhost.crt
-          ssl_key: /etc/pki/tls/certs/localhost.key
-
-    Using only a secure HTTPS connection is strongly recommended since Salt
-    authentication credentials will be sent over the wire.
-
-    A self-signed certificate can be generated using the
-    :py:func:`~salt.modules.tls.create_self_signed_cert` execution function.
-    Running this function requires pyOpenSSL and the ``salt-call`` script is
-    available in the ``salt-minion`` package.
-
-    .. code-block:: bash
-
-        salt-call --local tls.create_self_signed_cert
-
     All available configuration options are detailed below. These settings
     configure the CherryPy HTTP server and do not apply when using an external
     server such as Apache or Nginx.

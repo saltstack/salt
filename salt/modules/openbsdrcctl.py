@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import re
 
 # Import salt libs
 import salt.utils
@@ -91,13 +90,10 @@ def get_all():
 
         salt '*' service.get_all
     '''
-    badvar = ("_timeout", "_user")
     ret = []
     service = _cmd()
-    for svc in __salt__['cmd.run']('{0} getall'.format(service)).splitlines():
-        svc = re.sub('(_flags|)=.*$', '', svc)
-        if not svc.endswith(badvar):
-            ret.append(svc)
+    for svc in __salt__['cmd.run']('{0} ls all'.format(service)).splitlines():
+        ret.append(svc)
     return sorted(ret)
 
 
@@ -111,14 +107,10 @@ def get_disabled():
 
         salt '*' service.get_disabled
     '''
-    badvar = ("_timeout", "_user")
     ret = []
     service = _cmd()
-    for svc in __salt__['cmd.run']('{0} getall'.format(service)).splitlines():
-        if svc.endswith("=NO"):
-            svc = re.sub('(_flags|)=.*$', '', svc)
-            if not svc.endswith(badvar):
-                ret.append(svc)
+    for svc in __salt__['cmd.run']('{0} ls off'.format(service)).splitlines():
+        ret.append(svc)
     return sorted(ret)
 
 
@@ -132,14 +124,10 @@ def get_enabled():
 
         salt '*' service.get_enabled
     '''
-    badvar = ("_timeout", "_user")
     ret = []
     service = _cmd()
-    for svc in __salt__['cmd.run']('{0} getall'.format(service)).splitlines():
-        if not svc.endswith("=NO"):
-            svc = re.sub('(_flags|)=.*$', '', svc)
-            if not svc.endswith(badvar):
-                ret.append(svc)
+    for svc in __salt__['cmd.run']('{0} ls on'.format(service)).splitlines():
+        ret.append(svc)
     return sorted(ret)
 
 

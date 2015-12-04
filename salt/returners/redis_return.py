@@ -35,6 +35,15 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return redis --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: Boron
+
+.. code-block:: bash
+
+    salt '*' test.ping --return redis --return_kwargs '{"db": "another-salt"}'
+
 '''
 from __future__ import absolute_import
 
@@ -162,7 +171,12 @@ def get_jids():
     Return a list of all job ids
     '''
     serv = _get_serv(ret=None)
-    return list(serv.smembers('jids'))
+    ret = {}
+    for s in serv.mget(serv.smembers('jids')):
+        load = json.loads(s)
+        jid = load['jid']
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
+    return ret
 
 
 def get_minions():

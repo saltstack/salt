@@ -465,45 +465,53 @@ class Pillar(object):
         fn_ = self.client.get_state(sls, saltenv).get('dest', False)
         if not fn_:
             if sls in self.ignored_pillars.get(saltenv, []):
-                log.debug('Skipping ignored and missing SLS {0!r} in'
-                          ' environment {1!r}'.format(sls, saltenv))
+                log.debug('Skipping ignored and missing SLS \'{0}\' in'
+                          ' environment \'{1}\''.format(sls, saltenv))
                 return None, mods, errors
             elif self.opts['pillar_roots'].get(saltenv):
-                msg = ('Specified SLS {0!r} in environment {1!r} is not'
+                msg = ('Specified SLS \'{0}\' in environment \'{1}\' is not'
                        ' available on the salt master').format(sls, saltenv)
                 log.error(msg)
                 errors.append(msg)
             else:
-                log.debug('Specified SLS {0!r} in environment {1!r} is not'
-                          ' found, which might be due to environment {1!r}'
+                log.debug('Specified SLS \'{0}\' in environment \'{1}\' is not'
+                          ' found, which might be due to environment \'{1}\''
                           ' not being present in "pillar_roots" yet!'
                           .format(sls, saltenv))
                 # return state, mods, errors
                 return None, mods, errors
         state = None
         try:
-            state = compile_template(
-                fn_, self.rend, self.opts['renderer'], saltenv, sls, _pillar_rend=True, **defaults)
+            state = compile_template(fn_,
+                                     self.rend,
+                                     self.opts['renderer'],
+                                     saltenv,
+                                     sls,
+                                     _pillar_rend=True,
+                                     **defaults)
         except Exception as exc:
-            msg = 'Rendering SLS {0!r} failed, render error:\n{1}'.format(
+            msg = 'Rendering SLS \'{0}\' failed, render error:\n{1}'.format(
                 sls, exc
             )
             log.critical(msg)
             if self.opts.get('pillar_safe_render_error', True):
-                errors.append('Rendering SLS \'{0}\' failed. Please see master log for details.'.format(sls))
+                errors.append(
+                    'Rendering SLS \'{0}\' failed. Please see master log for '
+                    'details.'.format(sls)
+                )
             else:
                 errors.append(msg)
         mods.add(sls)
         nstate = None
         if state:
             if not isinstance(state, dict):
-                msg = 'SLS {0!r} does not render to a dictionary'.format(sls)
+                msg = 'SLS \'{0}\' does not render to a dictionary'.format(sls)
                 log.error(msg)
                 errors.append(msg)
             else:
                 if 'include' in state:
                     if not isinstance(state['include'], list):
-                        msg = ('Include Declaration in SLS {0!r} is not '
+                        msg = ('Include Declaration in SLS \'{0}\' is not '
                                'formed as a list'.format(sls))
                         log.error(msg)
                         errors.append(msg)
@@ -556,12 +564,14 @@ class Pillar(object):
                 if pstate is not None:
                     if not isinstance(pstate, dict):
                         log.error(
-                            'The rendered pillar sls file, {0!r} state did '
+                            'The rendered pillar sls file, \'{0}\' state did '
                             'not return the expected data format. This is '
                             'a sign of a malformed pillar sls file. Returned '
                             'errors: {1}'.format(
                                 sls,
-                                ', '.join(['{0!r}'.format(e) for e in errors])
+                                ', '.join(
+                                    ['\'{0}\''.format(e) for e in errors]
+                                )
                             )
                         )
                         continue

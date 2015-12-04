@@ -56,7 +56,7 @@ version
 The version of the package. While it is up to the organization that manages this
 package, it is suggested that this version is specified in a ``YYYYMM`` format.
 For instance, if this version was released in June 2015, the package version
-should be ``201506``. If multiple released are made in a month, the ``releasee``
+should be ``201506``. If multiple releases are made in a month, the ``release``
 field should be used.
 
 minimum_version

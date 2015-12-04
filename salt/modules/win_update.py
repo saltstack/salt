@@ -398,7 +398,7 @@ def _search(quidditch, retries=5):
             passed = False
     if clean:
         # bragging rights.
-        comment += 'Search was done with out an error.\n'
+        comment += 'Search was done without error.\n'
 
     return (comment, True, retries)
 

@@ -85,7 +85,7 @@ def returner(ret):
     client, path = _get_conn(__opts__)
 
     # Make a note of this minion for the external job cache
-    client.write(
+    client.set(
         '/'.join((path, 'minions', ret['id'])),
         ret['jid'],
     )
@@ -99,7 +99,7 @@ def returner(ret):
             ret['id'],
             field
         ))
-        client.write(dest, json.dumps(ret[field]))
+        client.set(dest, json.dumps(ret[field]))
 
 
 def save_load(jid, load):
@@ -107,7 +107,7 @@ def save_load(jid, load):
     Save the load to the specified jid
     '''
     client, path = _get_conn(__opts__)
-    client.write(
+    client.set(
         '/'.join((path, 'jobs', jid, '.load.p')),
         json.dumps(load)
     )
@@ -127,7 +127,7 @@ def get_jid(jid):
     '''
     client, path = _get_conn(__opts__)
     jid_path = '/'.join((path, 'jobs', jid))
-    return salt.utils.etcd_util.tree(client, jid_path)
+    return client.tree(jid_path)
 
 
 def get_fun():
@@ -147,13 +147,14 @@ def get_jids():
     '''
     Return a list of all job ids
     '''
-    ret = []
+    ret = {}
     client, path = _get_conn(__opts__)
     items = client.get('/'.join((path, 'jobs')))
     for item in items.children:
         if item.dir is True:
-            comps = str(item.key).split('/')
-            ret.append(comps[-1])
+            jid = str(item.key).split('/')[-1]
+            load = client.get('/'.join((item.key, '.load.p'))).value
+            ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
     return ret
 
 

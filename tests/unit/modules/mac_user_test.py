@@ -64,10 +64,11 @@ class MacUserTestCase(TestCase):
             with patch.dict(mac_user.__grains__,
                             {'kernel': 'Darwin', 'osrelease': '10.9.1',
                              'osrelease_info': (10, 9, 1)}):
-                self.assertEqual(mac_user._dscl('username'), {'pid': 4948,
-                                                              'retcode': 0,
-                                                              'stderr': '',
-                                                              'stdout': ''})
+                self.assertEqual(mac_user._dscl(['username', 'UniqueID', 501]),
+                                 {'pid': 4948,
+                                  'retcode': 0,
+                                  'stderr': '',
+                                  'stdout': ''})
 
     @patch('pwd.getpwall', MagicMock(return_value=mock_pwall))
     def test_first_avail_uid(self):

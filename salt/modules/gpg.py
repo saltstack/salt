@@ -35,6 +35,11 @@ from salt.exceptions import (
     SaltInvocationError
 )
 
+try:
+    from shlex import quote as _cmd_quote  # pylint: disable=E0611
+except ImportError:
+    from pipes import quote as _cmd_quote
+
 # Set up logging
 log = logging.getLogger(__name__)
 
@@ -191,18 +196,20 @@ def search_keys(text, keyserver=None, user=None):
 
         _keys = []
         for _key in _search_keys(text, keyserver, user):
-            tmp = {}
-            tmp['keyid'] = _key['keyid']
-            tmp['uids'] = _key['uids']
-            if 'expires' in _key:
-                if _key['expires']:
-                    tmp['expires'] = time.strftime('%Y-%m-%d',
-                                                   time.localtime(float(_key['expires'])))
-            if 'date' in _key:
-                if _key['date']:
-                    tmp['created'] = time.strftime('%Y-%m-%d',
-                                                   time.localtime(float(_key['date'])))
-            if 'length' in _key:
+            tmp = {'keyid': _key['keyid'],
+                   'uids': _key['uids']}
+
+            expires = _key.get('expires', None)
+            date = _key.get('date', None)
+            length = _key.get('length', None)
+
+            if expires:
+                tmp['expires'] = time.strftime('%Y-%m-%d',
+                                               time.localtime(float(_key['expires'])))
+            if date:
+                tmp['created'] = time.strftime('%Y-%m-%d',
+                                               time.localtime(float(_key['date'])))
+            if length:
                 tmp['keyLength'] = _key['length']
             _keys.append(tmp)
         return _keys
@@ -228,26 +235,28 @@ def list_keys(user=None, gnupghome=None):
     '''
     _keys = []
     for _key in _list_keys(user, gnupghome):
-        tmp = {}
-        tmp['keyid'] = _key['keyid']
-        tmp['fingerprint'] = _key['fingerprint']
-        tmp['uids'] = _key['uids']
-        if 'expires' in _key:
-            if _key['expires']:
-                tmp['expires'] = time.strftime('%Y-%m-%d',
-                                               time.localtime(float(_key['expires'])))
-        if 'date' in _key:
-            if _key['date']:
-                tmp['created'] = time.strftime('%Y-%m-%d',
-                                               time.localtime(float(_key['date'])))
-        if 'length' in _key:
+        tmp = {'keyid': _key['keyid'],
+               'fingerprint': _key['fingerprint'],
+               'uids': _key['uids']}
+
+        expires = _key.get('expires', None)
+        date = _key.get('date', None)
+        length = _key.get('length', None)
+        owner_trust = _key.get('ownertrust', None)
+        trust = _key.get('trust', None)
+
+        if expires:
+            tmp['expires'] = time.strftime('%Y-%m-%d',
+                                           time.localtime(float(_key['expires'])))
+        if date:
+            tmp['created'] = time.strftime('%Y-%m-%d',
+                                           time.localtime(float(_key['date'])))
+        if length:
             tmp['keyLength'] = _key['length']
-        if 'ownertrust' in _key:
-            if _key['ownertrust']:
-                tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
-        if 'trust' in _key:
-            if _key['trust']:
-                tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
+        if owner_trust:
+            tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
+        if trust:
+            tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
         _keys.append(tmp)
     return _keys
 
@@ -271,26 +280,28 @@ def list_secret_keys(user=None, gnupghome=None):
     '''
     _keys = []
     for _key in _list_keys(user, gnupghome, secret=True):
-        tmp = {}
-        tmp['keyid'] = _key['keyid']
-        tmp['fingerprint'] = _key['fingerprint']
-        tmp['uids'] = _key['uids']
-        if 'expires' in _key:
-            if _key['expires']:
-                tmp['expires'] = time.strftime('%Y-%m-%d',
-                                               time.localtime(float(_key['expires'])))
-        if 'date' in _key:
-            if _key['date']:
-                tmp['created'] = time.strftime('%Y-%m-%d',
-                                               time.localtime(float(_key['date'])))
-        if 'length' in _key:
+        tmp = {'keyid': _key['keyid'],
+               'fingerprint': _key['fingerprint'],
+               'uids': _key['uids']}
+
+        expires = _key.get('expires', None)
+        date = _key.get('date', None)
+        length = _key.get('length', None)
+        owner_trust = _key.get('ownertrust', None)
+        trust = _key.get('trust', None)
+
+        if expires:
+            tmp['expires'] = time.strftime('%Y-%m-%d',
+                                           time.localtime(float(_key['expires'])))
+        if date:
+            tmp['created'] = time.strftime('%Y-%m-%d',
+                                           time.localtime(float(_key['date'])))
+        if length:
             tmp['keyLength'] = _key['length']
-        if 'ownertrust' in _key:
-            if _key['ownertrust']:
-                tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
-        if 'trust' in _key:
-            if _key['trust']:
-                tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
+        if owner_trust:
+            tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
+        if trust:
+            tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
         _keys.append(tmp)
     return _keys
 
@@ -475,10 +486,10 @@ def delete_key(keyid=None,
             ret['res'] = False
             ret['message'] = 'Secret key exists, delete first or pass delete_secret=True.'
             return ret
-        elif skey and delete_secret:
+        elif skey and delete_secret and str(gpg.delete_keys(fingerprint, True)) == 'ok':
             # Delete the secret key
-            if str(gpg.delete_keys(fingerprint, True)) == 'ok':
-                ret['message'] = 'Secret key for {0} deleted\n'.format(fingerprint)
+            ret['message'] = 'Secret key for {0} deleted\n'.format(fingerprint)
+
         # Delete the public key
         if str(gpg.delete_keys(fingerprint)) == 'ok':
             ret['message'] += 'Public key for {0} deleted'.format(fingerprint)
@@ -524,22 +535,25 @@ def get_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
             tmp['keyid'] = _key['keyid']
             tmp['fingerprint'] = _key['fingerprint']
             tmp['uids'] = _key['uids']
-            if 'expires' in _key:
-                if _key['expires']:
-                    tmp['expires'] = time.strftime('%Y-%m-%d',
-                                                   time.localtime(float(_key['expires'])))
-            if 'date' in _key:
-                if _key['date']:
-                    tmp['created'] = time.strftime('%Y-%m-%d',
-                                                   time.localtime(float(_key['date'])))
-            if 'length' in _key:
+
+            expires = _key.get('expires', None)
+            date = _key.get('date', None)
+            length = _key.get('length', None)
+            owner_trust = _key.get('ownertrust', None)
+            trust = _key.get('trust', None)
+
+            if expires:
+                tmp['expires'] = time.strftime('%Y-%m-%d',
+                                               time.localtime(float(_key['expires'])))
+            if date:
+                tmp['created'] = time.strftime('%Y-%m-%d',
+                                               time.localtime(float(_key['date'])))
+            if length:
                 tmp['keyLength'] = _key['length']
-            if 'ownertrust' in _key:
-                if _key['ownertrust']:
-                    tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
-            if 'trust' in _key:
-                if _key['trust']:
-                    tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
+            if owner_trust:
+                tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
+            if trust:
+                tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
     if not tmp:
         return False
     else:
@@ -573,7 +587,6 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
 
         salt '*' gpg.get_secret_key keyid=3FAD9F1E user=username
 
-
     '''
     tmp = {}
     for _key in _list_keys(user, gnupghome, secret=True):
@@ -581,22 +594,25 @@ def get_secret_key(keyid=None, fingerprint=None, user=None, gnupghome=None):
             tmp['keyid'] = _key['keyid']
             tmp['fingerprint'] = _key['fingerprint']
             tmp['uids'] = _key['uids']
-            if 'expires' in _key:
-                if _key['expires']:
-                    tmp['expires'] = time.strftime('%Y-%m-%d',
-                                                   time.localtime(float(_key['expires'])))
-            if 'date' in _key:
-                if _key['date']:
-                    tmp['created'] = time.strftime('%Y-%m-%d',
-                                                   time.localtime(float(_key['date'])))
-            if 'length' in _key:
+
+            expires = _key.get('expires', None)
+            date = _key.get('date', None)
+            length = _key.get('length', None)
+            owner_trust = _key.get('ownertrust', None)
+            trust = _key.get('trust', None)
+
+            if expires:
+                tmp['expires'] = time.strftime('%Y-%m-%d',
+                                               time.localtime(float(_key['expires'])))
+            if date:
+                tmp['created'] = time.strftime('%Y-%m-%d',
+                                               time.localtime(float(_key['date'])))
+            if length:
                 tmp['keyLength'] = _key['length']
-            if 'ownertrust' in _key:
-                if _key['ownertrust']:
-                    tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
-            if 'trust' in _key:
-                if _key['trust']:
-                    tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
+            if owner_trust:
+                tmp['ownerTrust'] = LETTER_TRUST_DICT[_key['ownertrust']]
+            if trust:
+                tmp['trust'] = LETTER_TRUST_DICT[_key['trust']]
     if not tmp:
         return False
     else:
@@ -830,9 +846,9 @@ def trust_key(keyid=None,
     if trust_level not in _VALID_TRUST_LEVELS:
         return 'ERROR: Valid trust levels - {0}'.format(','.join(_VALID_TRUST_LEVELS))
 
-    cmd = 'echo {0}:{1} | {2} --import-ownertrust'.format(_cmd_quote(fingerprint),
-                                                          _cmd_quote(NUM_TRUST_DICT[trust_level]),
-                                                          _cmd_quote(_check_gpg()))
+    cmd = 'echo "{0}:{1}" | {2} --import-ownertrust'.format(_cmd_quote(fingerprint),
+                                                            _cmd_quote(NUM_TRUST_DICT[trust_level]),
+                                                            _cmd_quote(_check_gpg()))
     _user = user
     if user == 'salt':
         homeDir = os.path.join(salt.syspaths.CONFIG_DIR, 'gpgkeys')

@@ -9,6 +9,7 @@ Run-time utilities
 # Import Python libs
 from __future__ import absolute_import
 import re
+import os
 import logging
 
 # Import Salt libs
@@ -58,6 +59,7 @@ def _get_mounts(fs_type=None):
     return mounts
 
 
+# TODO: Due to "blkid -o export" strongly differs from system to system, this must go away in favor of _blkid() below!
 def _blkid_output(out, fs_type=None):
     '''
     Parse blkid output.
@@ -73,6 +75,34 @@ def _blkid_output(out, fs_type=None):
             if 'type' in dev and fs_type:
                 dev.pop('type')
             data[dev.pop('devname')] = dev
+
+    if fs_type:
+        mounts = _get_mounts(fs_type)
+        for device in six.iterkeys(mounts):
+            if data.get(device):
+                data[device]['mounts'] = mounts[device]
+
+    return data
+
+
+def _blkid(fs_type=None):
+    '''
+    Return available media devices.
+
+    :param fs_type: Filter only devices that are formatted by that file system.
+    '''
+    flt = lambda data: [el for el in data if el.strip()]
+    data = dict()
+    for dev_meta in flt(os.popen("blkid -o full").read().split(os.linesep)):  # No __salt__ around at this point.
+        dev_meta = dev_meta.strip()
+        if not dev_meta:
+            continue
+        device = dev_meta.split(" ")
+        dev_name = device.pop(0)[:-1]
+        data[dev_name] = dict()
+        for k_set in device:
+            ks_key, ks_value = [elm.replace('"', '') for elm in k_set.split("=")]
+            data[dev_name][ks_key.lower()] = ks_value
 
     if fs_type:
         mounts = _get_mounts(fs_type)

@@ -150,8 +150,11 @@ def __virtual__():
         return (False, 'Cannot load {0} state: boto_iam module unavailable'.format(__virtualname__))
 
 
-def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profile=None):
+def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=True, region=None, key=None, keyid=None, profile=None):
     '''
+
+    .. versionadded:: 2015.8
+
     Ensure the IAM user is absent. User cannot be deleted if it has keys.
 
     name (string)
@@ -159,6 +162,16 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
 
     delete_keys (bool)
         Delete all keys from user.
+
+    delete_mfa_devices (bool)
+        Delete all mfa devices from user.
+
+        .. versionadded:: Boron
+
+    delete_profile (bool)
+        Delete profile from user.
+
+        .. versionadded:: Boron
 
     region (string)
         Region to connect to.
@@ -178,7 +191,8 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
         ret['result'] = True
         ret['comment'] = 'IAM User {0} does not exist.'.format(name)
         return ret
-    if 'true' == str(delete_keys).lower:
+    # delete the user's access keys
+    if delete_keys:
         keys = __salt__['boto_iam.get_all_access_keys'](user_name=name, region=region, key=key,
                                                         keyid=keyid, profile=profile)
         log.debug('Keys for user {0} are {1}.'.format(name, keys))
@@ -186,14 +200,36 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
             keys = keys['list_access_keys_response']['list_access_keys_result']['access_key_metadata']
             for k in keys:
                 if __opts__['test']:
-                    ret['comment'] = 'Access key {0} is set to be deleted.'.format(k['access_key_id'])
+                    ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} is set to be deleted.'.format(k['access_key_id'])])
                     ret['result'] = None
-                    return ret
-                if _delete_key(k['access_key_id'], name, region, key, keyid, profile):
-                    ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} has been deleted.'.format(k['access_key_id'])])
-                    ret['changes'][k['access_key_id']] = 'deleted'
+                else:
+                    if _delete_key(ret, k['access_key_id'], name, region, key, keyid, profile):
+                        ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} has been deleted.'.format(k['access_key_id'])])
+                        ret['changes'][k['access_key_id']] = 'deleted'
+    # delete the user's MFA tokens
+    if delete_mfa_devices:
+        devices = __salt__['boto_iam.get_all_mfa_devices'](user_name=name, region=region, key=key, keyid=keyid, profile=profile)
+        for d in devices:
+            serial = d['serial_number']
+            if __opts__['test']:
+                ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} MFA device {1} is set to be deleted.'.format(name, serial)])
+                ret['result'] = None
+            else:
+                mfa_deleted = __salt__['boto_iam.deactivate_mfa_device'](user_name=name, serial=serial, region=region, key=key, keyid=keyid, profile=profile)
+                if mfa_deleted:
+                    ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} MFA device {1} are deleted.'.format(name, serial)])
+    # delete the user's login profile
+    if delete_profile:
+        if __opts__['test']:
+            ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} login profile is set to be deleted.'.format(name)])
+            ret['result'] = None
+        else:
+            profile_deleted = __salt__['boto_iam.delete_login_profile'](name, region, key, keyid, profile)
+            if profile_deleted:
+                ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} login profile is deleted.'.format(name)])
+    # finally, actually delete the user
     if __opts__['test']:
-        ret['comment'] = 'IAM user {0} is set to be deleted.'.format(name)
+        ret['comment'] = os.linesep.join([ret['comment'], 'IAM user {0} is set to be deleted.'.format(name)])
         ret['result'] = None
         return ret
     deleted = __salt__['boto_iam.delete_user'](name, region, key, keyid, profile)
@@ -209,6 +245,9 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
 
 def keys_present(name, number, save_dir, region=None, key=None, keyid=None, profile=None):
     '''
+
+    .. versionadded:: 2015.8
+
     Ensure the IAM access keys are present.
 
     name (string)
@@ -294,6 +333,9 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
 
 def keys_absent(access_keys, user_name, region=None, key=None, keyid=None, profile=None):
     '''
+
+    .. versionadded:: 2015.8
+
     Ensure the IAM user access_key_id is absent.
 
     access_key_id (list)
@@ -356,6 +398,9 @@ def _delete_key(ret, access_key_id, user_name, region=None, key=None, keyid=None
 def user_present(name, policies=None, policies_from_pillars=None, password=None, path=None, region=None, key=None,
                  keyid=None, profile=None):
     '''
+
+    .. versionadded:: 2015.8
+
     Ensure the IAM user is present
 
     name (string)
@@ -507,15 +552,18 @@ def _case_password(ret, name, password, region=None, key=None, keyid=None, profi
             ret['comment'] = os.linesep.join([ret['comment'], 'Login profile for user {0} exists.'.format(name)])
         else:
             ret['comment'] = os.linesep.join([ret['comment'], 'Password has been added to User {0}.'.format(name)])
-            ret['changes']['password'] = password
+            ret['changes']['password'] = 'REDACTED'
     else:
         ret['result'] = False
         ret['comment'] = os.linesep.join([ret['comment'], 'Password for user {0} could not be set.\nPlease check your password policy.'.format(name)])
     return ret
 
 
-def group_present(name, policies=None, policies_from_pillars=None, users=None, region=None, key=None, keyid=None, profile=None, path='/'):
+def group_present(name, policies=None, policies_from_pillars=None, users=None, path='/', region=None, key=None, keyid=None, profile=None):
     '''
+
+    .. versionadded:: 2015.8
+
     Ensure the IAM group is present
 
     name (string)
@@ -588,14 +636,14 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, r
         return ret
     if users:
         log.debug('Users are : {0}.'.format(users))
-        group_result = __salt__['boto_iam.get_group'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
-        ret = _case_group(ret, users, name, group_result, region, key, keyid, profile)
+        existing_users = __salt__['boto_iam.get_group_members'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
+        ret = _case_group(ret, users, name, existing_users, region, key, keyid, profile)
     return ret
 
 
-def _case_group(ret, users, group_name, group_result, region, key, keyid, profile):
+def _case_group(ret, users, group_name, existing_users, region, key, keyid, profile):
     _users = []
-    for user in group_result['get_group_response']['get_group_result']['users']:
+    for user in existing_users:
         _users.append(user['user_name'])
     log.debug('upstream users are {0}'.format(_users))
     for user in users:
@@ -610,7 +658,7 @@ def _case_group(ret, users, group_name, group_result, region, key, keyid, profil
                 ret['comment'] = 'User {0} is set to be added to group {1}.'.format(user, group_name)
                 ret['result'] = None
             else:
-                addret = __salt__['boto_iam.add_user_to_group'](user, group_name, region=region, key=key, keyid=keyid, profile=profile)
+                __salt__['boto_iam.add_user_to_group'](user, group_name, region, key, keyid, profile)
                 ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been added to group {1}.'.format(user, group_name)])
                 ret['changes'][user] = group_name
     for user in _users:
@@ -619,8 +667,8 @@ def _case_group(ret, users, group_name, group_result, region, key, keyid, profil
                 ret['comment'] = os.linesep.join([ret['comment'], 'User {0} is set to be removed from group {1}.'.format(user, group_name)])
                 ret['result'] = None
             else:
-                remret = __salt__['boto_iam.remove_user_from_group'](group_name=group_name, user_name=user, region=region,
-                                                                     key=key, keyid=keyid, profile=profile)
+                __salt__['boto_iam.remove_user_from_group'](group_name=group_name, user_name=user, region=region,
+                                                            key=key, keyid=keyid, profile=profile)
                 ret['comment'] = os.linesep.join([ret['comment'], 'User {0} has been removed from group {1}.'.format(user, group_name)])
                 ret['changes'][user] = 'Removed from group {0}.'.format(group_name)
     return ret
@@ -709,6 +757,8 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
     '''
     Change account policy.
 
+    .. versionadded:: 2015.8
+
     allow_users_to_change_password (bool)
         Allows all IAM users in your account to
         use the AWS Management Console to change their own passwords.
@@ -796,6 +846,8 @@ def server_cert_absent(name, region=None, key=None, keyid=None, profile=None):
     '''
     Deletes a server certificate.
 
+    .. versionadded:: 2015.8
+
     name (string)
         The name for the server certificate. Do not include the path in this value.
 
@@ -834,6 +886,8 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
                         region=None, key=None, keyid=None, profile=None):
     '''
     Crete server certificate.
+
+    .. versionadded:: 2015.8
 
     name (string)
         The name for the server certificate. Do not include the path in this value.

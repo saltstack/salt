@@ -81,9 +81,10 @@ class ScheduleTestCase(TestCase):
         '''
         Tests adding a job to the schedule
         '''
-        data = {'foo': 'bar'}
-        ret = {'schedule': {'foo': 'bar', 'hello': 'world'}}
-        self.schedule.opts = {'schedule': {'hello': 'world'},
+        data = {'foo': {'bar': 'baz'}}
+        ret = {'schedule': {'foo': {'bar': 'baz', 'enabled': True},
+                            'hello': {'world': 'peace', 'enabled': True}}}
+        self.schedule.opts = {'schedule': {'hello': {'world': 'peace', 'enabled': True}},
                               'sock_dir': SOCK_DIR}
         Schedule.add_job(self.schedule, data)
         del self.schedule.opts['sock_dir']

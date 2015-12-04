@@ -59,6 +59,12 @@ import tornado.simple_httpclient
 from tornado.httpclient import HTTPClient
 
 try:
+    import tornado.curl_httpclient
+    HAS_CURL_HTTPCLIENT = True
+except ImportError:
+    HAS_CURL_HTTPCLIENT = False
+
+try:
     import requests
     HAS_REQUESTS = True
 except ImportError:
@@ -222,12 +228,12 @@ def query(url,
         # proper cookie jar. Unfortunately, since session cookies do not
         # contain expirations, they can't be stored in a proper cookie jar.
         if os.path.isfile(session_cookie_jar):
-            with salt.utils.fopen(session_cookie_jar, 'r') as fh_:
+            with salt.utils.fopen(session_cookie_jar, 'rb') as fh_:
                 session_cookies = msgpack.load(fh_)
             if isinstance(session_cookies, dict):
                 header_dict.update(session_cookies)
         else:
-            with salt.utils.fopen(session_cookie_jar, 'w') as fh_:
+            with salt.utils.fopen(session_cookie_jar, 'wb') as fh_:
                 msgpack.dump('', fh_)
 
     for header in header_list:
@@ -308,7 +314,7 @@ def query(url,
 
         result_status_code = result.status_code
         result_headers = result.headers
-        result_text = result.text
+        result_text = result.content
         result_cookies = result.cookies
         ret['body'] = result.content
     elif backend == 'urllib2':
@@ -413,13 +419,35 @@ def query(url,
                 log.error('The client-side certificate path that was passed is '
                           'not valid: {0}'.format(cert))
 
+        if isinstance(data, dict):
+            data = urllib.urlencode(data)
+
         if verify_ssl:
             req_kwargs['ca_certs'] = ca_bundle
 
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
 
-        client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+        client_argspec = None
+
+        proxy_host = opts.get('proxy_host', None)
+        proxy_port = opts.get('proxy_port', None)
+        proxy_username = opts.get('proxy_username', None)
+        proxy_password = opts.get('proxy_password', None)
+
+        # We want to use curl_http if we have a proxy defined
+        if proxy_host and proxy_port:
+            if HAS_CURL_HTTPCLIENT is False:
+                ret['error'] = ('proxy_host and proxy_port has been set. This requires pycurl, but the '
+                                'pycurl library does not seem to be installed')
+                log.error(ret['error'])
+                return ret
+
+            tornado.httpclient.AsyncHTTPClient.configure('tornado.curl_httpclient.CurlAsyncHTTPClient')
+            client_argspec = inspect.getargspec(tornado.curl_httpclient.CurlAsyncHTTPClient.initialize)
+        else:
+            client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+
         supports_max_body_size = 'max_body_size' in client_argspec.args
 
         try:
@@ -435,6 +463,10 @@ def query(url,
                     allow_nonstandard_methods=True,
                     streaming_callback=streaming_callback,
                     request_timeout=timeout,
+                    proxy_host=proxy_host,
+                    proxy_port=proxy_port,
+                    proxy_username=proxy_username,
+                    proxy_password=proxy_password,
                     **req_kwargs
                 )
             else:
@@ -449,6 +481,10 @@ def query(url,
                     allow_nonstandard_methods=True,
                     streaming_callback=streaming_callback,
                     request_timeout=timeout,
+                    proxy_host=proxy_host,
+                    proxy_port=proxy_port,
+                    proxy_username=proxy_username,
+                    proxy_password=proxy_password,
                     **req_kwargs
                 )
         except tornado.httpclient.HTTPError as exc:
@@ -503,7 +539,7 @@ def query(url,
     if persist_session is True and HAS_MSGPACK:
         # TODO: See persist_session above
         if 'set-cookie' in result_headers:
-            with salt.utils.fopen(session_cookie_jar, 'w') as fh_:
+            with salt.utils.fopen(session_cookie_jar, 'wb') as fh_:
                 session_cookies = result_headers.get('set-cookie', None)
                 if session_cookies is not None:
                     msgpack.dump({'Cookie': session_cookies}, fh_)

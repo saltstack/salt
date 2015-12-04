@@ -52,6 +52,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
       private_networking: True
       backups_enabled: True
       ipv6: True
+      create_dns_record: True
 
 Locations can be obtained using the ``--list-locations`` option for the ``salt-cloud``
 command:
@@ -166,10 +167,15 @@ Miscellaneous Information
 
 .. note::
 
-    If your domain's DNS is managed with DigitalOcean, you can automatically
-    create A-records for newly created droplets. Use ``create_dns_record: True``
-    in your config to enable this. Add ``delete_dns_record: True`` to also
-    delete records when a droplet is destroyed.
+    If your domain's DNS is managed with DigitalOcean, and your minion name
+    matches your DigitalOcean managed DNS domain, you can automatically create
+    A and AAA records for newly created droplets. Use ``create_dns_record: True``
+    in your config to enable this. Adding ``delete_dns_record: True`` to also
+    delete records when a droplet is destroyed is optional. Due to limitations
+    in salt-cloud design, the destroy code does not have access to the VM config
+    data. WHETHER YOU ADD ``create_dns_record: True`` OR NOT, salt-cloud WILL
+    attempt to delete your DNS records if the minion name matches. This will
+    prevent advertising any recycled IP addresses for destroyed minions.
 
 .. note::
 

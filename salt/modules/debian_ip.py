@@ -360,9 +360,9 @@ def __within2(value, within=None, errmsg=None, dtype=None):
             typename = getattr(dtype, '__name__',
                                hasattr(dtype, '__class__')
                                and getattr(dtype.__class__, 'name', dtype))
-            errmsg = '{0} within {1!r}'.format(typename, within)
+            errmsg = '{0} within \'{1}\''.format(typename, within)
         else:
-            errmsg = 'within {0!r}'.format(within)
+            errmsg = 'within \'{0}\''.format(within)
     return (valid, _value, errmsg)
 
 
@@ -833,9 +833,12 @@ def _parse_settings_bond_0(opts, iface, bond_def):
     if 'arp_ip_target' in opts:
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
-                bond.update({'arp_ip_target': []})
+                bond.update({'arp_ip_target': ''})
                 for ip in opts['arp_ip_target']:  # pylint: disable=C0103
-                    bond['arp_ip_target'].append(ip)
+                    if len(bond['arp_ip_target']) > 0:
+                        bond['arp_ip_target'] = bond['arp_ip_target'] + ',' + ip
+                    else:
+                        bond['arp_ip_target'] = ip
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
         else:
@@ -906,9 +909,12 @@ def _parse_settings_bond_2(opts, iface, bond_def):
     if 'arp_ip_target' in opts:
         if isinstance(opts['arp_ip_target'], list):
             if 1 <= len(opts['arp_ip_target']) <= 16:
-                bond.update({'arp_ip_target': []})
+                bond.update({'arp_ip_target': ''})
                 for ip in opts['arp_ip_target']:  # pylint: disable=C0103
-                    bond['arp_ip_target'].append(ip)
+                    if len(bond['arp_ip_target']) > 0:
+                        bond['arp_ip_target'] = bond['arp_ip_target'] + ',' + ip
+                    else:
+                        bond['arp_ip_target'] = ip
             else:
                 _raise_error_iface(iface, 'arp_ip_target', valid)
         else:
@@ -1259,7 +1265,11 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
                 _optname, valuestr, addrfam=addrfam)
 
             if not valid:
-                _raise_error_iface(iface, '{0!r} {1!r}'.format(opt, valuestr), [errmsg])  # TODO
+                _raise_error_iface(
+                    iface,
+                    '\'{0}\' \'{1}\''.format(opt, valuestr),
+                    [errmsg]
+                )
 
             # replace dashes with underscores for jinja
             _optname = _optname.replace('-', '_')
@@ -1543,14 +1553,10 @@ def build_bond(iface, **settings):
     _write_file(iface, data, _DEB_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     path = os.path.join(_DEB_NETWORK_CONF_FILES, '{0}.conf'.format(iface))
     if deb_major == '5':
-        __salt__['cmd.run'](
-            'sed -i -e "/^alias\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
-            python_shell=False
-        )
-        __salt__['cmd.run'](
-            'sed -i -e "/^options\\s{0}.*/d" /etc/modprobe.conf'.format(iface),
-            python_shell=False
-        )
+        for line_type in ('alias', 'options'):
+            cmd = ['sed', '-i', '-e', r'/^{0}\s{1}.*/d'.format(line_type, iface),
+                   '/etc/modprobe.conf']
+            __salt__['cmd.run'](cmd, python_shell=False)
         __salt__['file.append']('/etc/modprobe.conf', path)
 
     # Load kernel module
@@ -1606,7 +1612,10 @@ def build_interface(iface, iface_type, enabled, **settings):
 
     elif iface_type == 'bridge':
         if 'ports' not in settings:
-            msg = 'ports is a required setting for bridge interfaces on Debian or Ubuntu based systems'
+            msg = (
+                'ports is a required setting for bridge interfaces on Debian '
+                'or Ubuntu based systems'
+            )
             log.error(msg)
             raise AttributeError(msg)
         __salt__['pkg.install']('bridge-utils')
@@ -1648,17 +1657,27 @@ def build_routes(iface, **settings):
         log.error('Could not load template route_eth.jinja')
         return ''
 
-    add_routecfg = template.render(route_type='add', routes=opts['routes'], iface=iface)
+    add_routecfg = template.render(route_type='add',
+                                   routes=opts['routes'],
+                                   iface=iface)
 
-    del_routecfg = template.render(route_type='del', routes=opts['routes'], iface=iface)
+    del_routecfg = template.render(route_type='del',
+                                   routes=opts['routes'],
+                                   iface=iface)
 
     if 'test' in settings and settings['test']:
         return _read_temp(add_routecfg + del_routecfg)
 
-    filename = _write_file_routes(iface, add_routecfg, _DEB_NETWORK_UP_DIR, 'route-{0}')
+    filename = _write_file_routes(iface,
+                                  add_routecfg,
+                                  _DEB_NETWORK_UP_DIR,
+                                  'route-{0}')
     results = _read_file(filename)
 
-    filename = _write_file_routes(iface, del_routecfg, _DEB_NETWORK_DOWN_DIR, 'route-{0}')
+    filename = _write_file_routes(iface,
+                                  del_routecfg,
+                                  _DEB_NETWORK_DOWN_DIR,
+                                  'route-{0}')
     results += _read_file(filename)
 
     return results
@@ -1677,7 +1696,7 @@ def down(iface, iface_type):
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought down.
     if iface_type not in ['slave', 'source']:
-        return __salt__['cmd.run']('ifdown {0}'.format(iface))
+        return __salt__['cmd.run'](['ifdown', iface])
     return None
 
 
@@ -1737,8 +1756,8 @@ def up(iface, iface_type):  # pylint: disable=C0103
     '''
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought up.
-    if iface_type not in ['slave', 'source']:
-        return __salt__['cmd.run']('ifup {0}'.format(iface))
+    if iface_type not in ('slave', 'source'):
+        return __salt__['cmd.run'](['ifup', iface])
     return None
 
 

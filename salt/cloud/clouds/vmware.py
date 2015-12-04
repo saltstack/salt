@@ -20,7 +20,7 @@ See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
 
        python -c "import pyVmomi" ; echo $?
 
-To use this module, set up the vCenter URL, username and password in the
+To use this module, set up the vCenter or ESX/ESXi URL, username and password in the
 cloud configuration at
 ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
 
@@ -48,11 +48,27 @@ cloud configuration at
       protocol: 'http'
       port: 80
 
+    esx01:
+      driver: vmware
+      user: 'admin'
+      password: 'verybadpass'
+      url: 'esx01.domain.com'
+
 .. note::
 
     Optionally, ``protocol`` and ``port`` can be specified if the vCenter
     server is not using the defaults. Default is ``protocol: https`` and
     ``port: 443``.
+
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider configuration was renamed to ``driver``.
+    This change was made to avoid confusion with the ``provider`` parameter that is
+    used in cloud profile configuration. Cloud provider configuration now uses ``driver``
+    to refer to the salt-cloud driver that provides the underlying functionality to
+    connect to a cloud provider, while cloud profile configuration continues to use
+    ``provider`` to refer to the cloud provider configuration that you define.
 
 To test the connection for ``my-vmware-config`` specified in the cloud
 configuration, run :py:func:`test_vcenter_connection`
@@ -214,7 +230,7 @@ def _edit_existing_hard_disk_helper(disk, size_kb):
     return disk_spec
 
 
-def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
+def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1000):
     random_key = randint(-2099, -2000)
 
     size_kb = int(size_gb * 1024.0 * 1024.0)
@@ -230,7 +246,7 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
     disk_spec.device.deviceInfo.summary = "{0} GB".format(size_gb)
     disk_spec.device.backing = vim.vm.device.VirtualDisk.FlatVer2BackingInfo()
     disk_spec.device.backing.diskMode = 'persistent'
-    disk_spec.device.controllerKey = 1000
+    disk_spec.device.controllerKey = controller_key
     disk_spec.device.unitNumber = unit_number
     disk_spec.device.capacityInKB = size_kb
 
@@ -259,7 +275,9 @@ def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_ty
         edited_network_adapter.backing.deviceName = new_network_name
         edited_network_adapter.backing.network = network_ref
     elif switch_type == 'distributed':
-        network_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.dvs.DistributedVirtualPortgroup, new_network_name)
+        network_ref = salt.utils.vmware.get_mor_by_property(_get_si(),
+                                                            vim.dvs.DistributedVirtualPortgroup,
+                                                            new_network_name)
         dvs_port_connection = vim.dvs.PortConnection(
             portgroupKey=network_ref.key,
             switchUuid=network_ref.config.distributedVirtualSwitch.uuid
@@ -347,16 +365,16 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     return network_spec
 
 
-def _edit_existing_scsi_adapter(scsi_adapter, bus_sharing):
-    scsi_adapter.sharedBus = bus_sharing
+def _edit_existing_scsi_controller(scsi_controller, bus_sharing):
+    scsi_controller.sharedBus = bus_sharing
     scsi_spec = vim.vm.device.VirtualDeviceSpec()
     scsi_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
-    scsi_spec.device = scsi_adapter
+    scsi_spec.device = scsi_controller
 
     return scsi_spec
 
 
-def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
+def _add_new_scsi_controller_helper(scsi_controller_label, properties, bus_number):
     random_key = randint(-1050, -1000)
     adapter_type = properties['type'].strip().lower() if 'type' in properties else None
     bus_sharing = properties['bus_sharing'].strip().lower() if 'bus_sharing' in properties else None
@@ -375,9 +393,9 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     else:
         # If type not specified or does not match, show error and return
         if not adapter_type:
-            err_msg = "The type of '{0}' has not been specified".format(scsi_adapter_label)
+            err_msg = "The type of '{0}' has not been specified".format(scsi_controller_label)
         else:
-            err_msg = "Cannot create '{0}'. Invalid/unsupported type '{1}'".format(scsi_adapter_label, adapter_type)
+            err_msg = "Cannot create '{0}'. Invalid/unsupported type '{1}'".format(scsi_controller_label, adapter_type)
         raise SaltCloudSystemExit(err_msg)
 
     scsi_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
@@ -385,7 +403,7 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     scsi_spec.device.key = random_key
     scsi_spec.device.busNumber = bus_number
     scsi_spec.device.deviceInfo = vim.Description()
-    scsi_spec.device.deviceInfo.label = scsi_adapter_label
+    scsi_spec.device.deviceInfo.label = scsi_controller_label
     scsi_spec.device.deviceInfo.summary = summary
 
     if bus_sharing == "virtual":
@@ -401,6 +419,28 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
         scsi_spec.device.sharedBus = vim.vm.device.VirtualSCSIController.Sharing.noSharing
 
     return scsi_spec
+
+
+def _add_new_ide_controller_helper(ide_controller_label, properties, bus_number):
+    '''
+    Helper function for adding new IDE controllers
+
+    .. versionadded:: Boron
+    '''
+    random_key = randint(-200, -250)
+
+    ide_spec = vim.vm.device.VirtualDeviceSpec()
+    ide_spec.device = vim.vm.device.VirtualIDEController()
+
+    ide_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
+
+    ide_spec.device.key = random_key
+    ide_spec.device.busNumber = bus_number
+    ide_spec.device.deviceInfo = vim.Description()
+    ide_spec.device.deviceInfo.label = ide_controller_label
+    ide_spec.device.deviceInfo.summary = ide_controller_label
+
+    return ide_spec
 
 
 def _set_cd_or_dvd_backing_type(drive, device_type, mode, iso_path):
@@ -490,91 +530,83 @@ def _set_network_adapter_mapping(adapter_specs):
     return adapter_mapping
 
 
-def _manage_devices(devices, vm):
+def _manage_devices(devices, vm=None):
     unit_number = 0
     bus_number = 0
     device_specs = []
     existing_disks_label = []
-    existing_scsi_adapters_label = []
+    existing_scsi_controllers_label = []
+    existing_ide_controllers_label = []
     existing_network_adapters_label = []
     existing_cd_drives_label = []
     ide_controllers = {}
     nics_map = []
 
-    # loop through all the devices the vm/template has
-    # check if the device needs to be created or configured
-    for device in vm.config.hardware.device:
-        if isinstance(device, vim.vm.device.VirtualDisk):
-            # this is a hard disk
-            if 'disk' in list(devices.keys()):
-                # there is atleast one disk specified to be created/configured
-                unit_number += 1
-                existing_disks_label.append(device.deviceInfo.label)
-                if device.deviceInfo.label in list(devices['disk'].keys()):
-                    size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
-                    size_kb = int(size_gb * 1024.0 * 1024.0)
-                    if device.capacityInKB < size_kb:
-                        # expand the disk
-                        disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
-                        device_specs.append(disk_spec)
+    # this would be None when we aren't cloning a VM
+    if vm:
+        # loop through all the devices the vm/template has
+        # check if the device needs to be created or configured
+        for device in vm.config.hardware.device:
+            if isinstance(device, vim.vm.device.VirtualDisk):
+                # this is a hard disk
+                if 'disk' in list(devices.keys()):
+                    # there is atleast one disk specified to be created/configured
+                    unit_number += 1
+                    existing_disks_label.append(device.deviceInfo.label)
+                    if device.deviceInfo.label in list(devices['disk'].keys()):
+                        size_gb = float(devices['disk'][device.deviceInfo.label]['size'])
+                        size_kb = int(size_gb * 1024.0 * 1024.0)
+                        if device.capacityInKB < size_kb:
+                            # expand the disk
+                            disk_spec = _edit_existing_hard_disk_helper(device, size_kb)
+                            device_specs.append(disk_spec)
 
-        elif isinstance(device.backing, vim.vm.device.VirtualEthernetCard.NetworkBackingInfo) or isinstance(device.backing, vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
-            # this is a network adapter
-            if 'network' in list(devices.keys()):
-                # there is atleast one network adapter specified to be created/configured
-                existing_network_adapters_label.append(device.deviceInfo.label)
-                if device.deviceInfo.label in list(devices['network'].keys()):
-                    network_name = devices['network'][device.deviceInfo.label]['name']
-                    adapter_type = devices['network'][device.deviceInfo.label]['adapter_type'] if 'adapter_type' in devices['network'][device.deviceInfo.label] else ''
-                    switch_type = devices['network'][device.deviceInfo.label]['switch_type'] if 'switch_type' in devices['network'][device.deviceInfo.label] else ''
-                    network_spec = _edit_existing_network_adapter(device, network_name, adapter_type, switch_type)
-                    adapter_mapping = _set_network_adapter_mapping(devices['network'][device.deviceInfo.label])
-                    device_specs.append(network_spec)
-                    nics_map.append(adapter_mapping)
+            elif isinstance(device.backing, vim.vm.device.VirtualEthernetCard.NetworkBackingInfo) or isinstance(device.backing, vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo):
+                # this is a network adapter
+                if 'network' in list(devices.keys()):
+                    # there is atleast one network adapter specified to be created/configured
+                    existing_network_adapters_label.append(device.deviceInfo.label)
+                    if device.deviceInfo.label in list(devices['network'].keys()):
+                        network_name = devices['network'][device.deviceInfo.label]['name']
+                        adapter_type = devices['network'][device.deviceInfo.label]['adapter_type'] if 'adapter_type' in devices['network'][device.deviceInfo.label] else ''
+                        switch_type = devices['network'][device.deviceInfo.label]['switch_type'] if 'switch_type' in devices['network'][device.deviceInfo.label] else ''
+                        network_spec = _edit_existing_network_adapter(device, network_name, adapter_type, switch_type)
+                        adapter_mapping = _set_network_adapter_mapping(devices['network'][device.deviceInfo.label])
+                        device_specs.append(network_spec)
+                        nics_map.append(adapter_mapping)
 
-        elif hasattr(device, 'scsiCtlrUnitNumber'):
-            # this is a scsi adapter
-            if 'scsi' in list(devices.keys()):
-                # there is atleast one scsi adapter specified to be created/configured
-                bus_number += 1
-                existing_scsi_adapters_label.append(device.deviceInfo.label)
-                if device.deviceInfo.label in list(devices['scsi'].keys()):
-                    # Modify the existing SCSI adapter
-                    scsi_adapter_properties = devices['scsi'][device.deviceInfo.label]
-                    bus_sharing = scsi_adapter_properties['bus_sharing'].strip().lower() if 'bus_sharing' in scsi_adapter_properties else None
-                    if bus_sharing and bus_sharing in ['virtual', 'physical', 'no']:
-                        bus_sharing = '{0}Sharing'.format(bus_sharing)
-                        if bus_sharing != device.sharedBus:
-                            # Only edit the SCSI adapter if bus_sharing is different
-                            scsi_spec = _edit_existing_scsi_adapter(device, bus_sharing)
-                            device_specs.append(scsi_spec)
+            elif hasattr(device, 'scsiCtlrUnitNumber'):
+                # this is a SCSI controller
+                if 'scsi' in list(devices.keys()):
+                    # there is atleast one SCSI controller specified to be created/configured
+                    bus_number += 1
+                    existing_scsi_controllers_label.append(device.deviceInfo.label)
+                    if device.deviceInfo.label in list(devices['scsi'].keys()):
+                        # Modify the existing SCSI controller
+                        scsi_controller_properties = devices['scsi'][device.deviceInfo.label]
+                        bus_sharing = scsi_controller_properties['bus_sharing'].strip().lower() if 'bus_sharing' in scsi_controller_properties else None
+                        if bus_sharing and bus_sharing in ['virtual', 'physical', 'no']:
+                            bus_sharing = '{0}Sharing'.format(bus_sharing)
+                            if bus_sharing != device.sharedBus:
+                                # Only edit the SCSI controller if bus_sharing is different
+                                scsi_spec = _edit_existing_scsi_controller(device, bus_sharing)
+                                device_specs.append(scsi_spec)
 
-        elif isinstance(device, vim.vm.device.VirtualCdrom):
-            # this is a cd/dvd drive
-            if 'cd' in list(devices.keys()):
-                # there is atleast one cd/dvd drive specified to be created/configured
-                existing_cd_drives_label.append(device.deviceInfo.label)
-                if device.deviceInfo.label in list(devices['cd'].keys()):
-                    device_type = devices['cd'][device.deviceInfo.label]['device_type'] if 'device_type' in devices['cd'][device.deviceInfo.label] else ''
-                    mode = devices['cd'][device.deviceInfo.label]['mode'] if 'mode' in devices['cd'][device.deviceInfo.label] else ''
-                    iso_path = devices['cd'][device.deviceInfo.label]['iso_path'] if 'iso_path' in devices['cd'][device.deviceInfo.label] else ''
-                    cd_drive_spec = _edit_existing_cd_or_dvd_drive(device, device_type, mode, iso_path)
-                    device_specs.append(cd_drive_spec)
+            elif isinstance(device, vim.vm.device.VirtualCdrom):
+                # this is a cd/dvd drive
+                if 'cd' in list(devices.keys()):
+                    # there is atleast one cd/dvd drive specified to be created/configured
+                    existing_cd_drives_label.append(device.deviceInfo.label)
+                    if device.deviceInfo.label in list(devices['cd'].keys()):
+                        device_type = devices['cd'][device.deviceInfo.label]['device_type'] if 'device_type' in devices['cd'][device.deviceInfo.label] else ''
+                        mode = devices['cd'][device.deviceInfo.label]['mode'] if 'mode' in devices['cd'][device.deviceInfo.label] else ''
+                        iso_path = devices['cd'][device.deviceInfo.label]['iso_path'] if 'iso_path' in devices['cd'][device.deviceInfo.label] else ''
+                        cd_drive_spec = _edit_existing_cd_or_dvd_drive(device, device_type, mode, iso_path)
+                        device_specs.append(cd_drive_spec)
 
-        elif isinstance(device, vim.vm.device.VirtualIDEController):
-            # this is a controller to add new cd drives to
-            ide_controllers[device.key] = len(device.device)
-
-    if 'disk' in list(devices.keys()):
-        disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
-        disks_to_create.sort()
-        log.debug("Hard disks to create: {0}".format(disks_to_create))
-        for disk_label in disks_to_create:
-            # create the disk
-            size_gb = float(devices['disk'][disk_label]['size'])
-            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number)
-            device_specs.append(disk_spec)
-            unit_number += 1
+            elif isinstance(device, vim.vm.device.VirtualIDEController):
+                # this is an IDE controller to add new cd drives to
+                ide_controllers[device.key] = len(device.device)
 
     if 'network' in list(devices.keys()):
         network_adapters_to_create = list(set(devices['network'].keys()) - set(existing_network_adapters_label))
@@ -591,15 +623,45 @@ def _manage_devices(devices, vm):
             nics_map.append(adapter_mapping)
 
     if 'scsi' in list(devices.keys()):
-        scsi_adapters_to_create = list(set(devices['scsi'].keys()) - set(existing_scsi_adapters_label))
-        scsi_adapters_to_create.sort()
-        log.debug("SCSI devices to create: {0}".format(scsi_adapters_to_create))
-        for scsi_adapter_label in scsi_adapters_to_create:
-            # create the scsi adapter
-            scsi_adapter_properties = devices['scsi'][scsi_adapter_label]
-            scsi_spec = _add_new_scsi_adapter_helper(scsi_adapter_label, scsi_adapter_properties, bus_number)
+        scsi_controllers_to_create = list(set(devices['scsi'].keys()) - set(existing_scsi_controllers_label))
+        scsi_controllers_to_create.sort()
+        log.debug("SCSI controllers to create: {0}".format(scsi_controllers_to_create))
+        for scsi_controller_label in scsi_controllers_to_create:
+            # create the SCSI controller
+            scsi_controller_properties = devices['scsi'][scsi_controller_label]
+            scsi_spec = _add_new_scsi_controller_helper(scsi_controller_label, scsi_controller_properties, bus_number)
             device_specs.append(scsi_spec)
             bus_number += 1
+
+    if 'ide' in list(devices.keys()):
+        ide_controllers_to_create = list(set(devices['ide'].keys()) - set(existing_ide_controllers_label))
+        ide_controllers_to_create.sort()
+        log.debug('IDE controllers to create: {0}'.format(ide_controllers_to_create))
+        for ide_controller_label in ide_controllers_to_create:
+            # create the IDE controller
+            ide_spec = _add_new_ide_controller_helper(ide_controller_label, None, bus_number)
+            device_specs.append(ide_spec)
+            bus_number += 1
+
+    if 'disk' in list(devices.keys()):
+        disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
+        disks_to_create.sort()
+        log.debug("Hard disks to create: {0}".format(disks_to_create))
+        for disk_label in disks_to_create:
+            # create the disk
+            size_gb = float(devices['disk'][disk_label]['size'])
+            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number)
+
+            # when creating both SCSI controller and Hard disk at the same time we need the randomly
+            # assigned (temporary) key of the newly created SCSI controller
+            if 'controller' in devices['disk'][disk_label]:
+                for spec in device_specs:
+                    if spec.device.deviceInfo.label == devices['disk'][disk_label]['controller']:
+                        disk_spec.device.controllerKey = spec.device.key
+                        break
+
+            device_specs.append(disk_spec)
+            unit_number += 1
 
     if 'cd' in list(devices.keys()):
         cd_drives_to_create = list(set(devices['cd'].keys()) - set(existing_cd_drives_label))
@@ -610,12 +672,22 @@ def _manage_devices(devices, vm):
             device_type = devices['cd'][cd_drive_label]['device_type'] if 'device_type' in devices['cd'][cd_drive_label] else ''
             mode = devices['cd'][cd_drive_label]['mode'] if 'mode' in devices['cd'][cd_drive_label] else ''
             iso_path = devices['cd'][cd_drive_label]['iso_path'] if 'iso_path' in devices['cd'][cd_drive_label] else ''
-            for ide_controller_key, num_devices in six.iteritems(ide_controllers):
-                if num_devices < 2:
-                    controller_key = ide_controller_key
-                    break
-                else:
-                    controller_key = None
+            controller_key = None
+
+            # When creating both IDE controller and CD/DVD drive at the same time we need the randomly
+            # assigned (temporary) key of the newly created IDE controller
+            if 'controller' in devices['cd'][cd_drive_label]:
+                for spec in device_specs:
+                    if spec.device.deviceInfo.label == devices['cd'][cd_drive_label]['controller']:
+                        controller_key = spec.device.key
+                        ide_controllers[controller_key] = 0
+                        break
+            else:
+                for ide_controller_key, num_devices in six.iteritems(ide_controllers):
+                    if num_devices < 2:
+                        controller_key = ide_controller_key
+                        break
+
             if not controller_key:
                 log.error("No more available controllers for '{0}'. All IDE controllers are currently in use".format(cd_drive_label))
             else:
@@ -2041,6 +2113,9 @@ def create(vm_):
     hardware_version = config.get_cloud_config_value(
         'hardware_version', vm_, __opts__, search_global=False, default=None
     )
+    guest_id = config.get_cloud_config_value(
+        'image', vm_, __opts__, search_global=False, default=None
+    )
     customization = config.get_cloud_config_value(
         'customization', vm_, __opts__, search_global=False, default=True
     )
@@ -2054,49 +2129,61 @@ def create(vm_):
             raise SaltCloudSystemExit(
                 'The VM/template that you have specified under clonefrom does not exist.'
             )
+    else:
+        clone_type = None
+        object_ref = None
 
-        # Either a cluster, or a resource pool must be specified when cloning from template.
-        if resourcepool:
-            resourcepool_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ResourcePool, resourcepool)
-            if not resourcepool_ref:
-                log.error("Specified resource pool: '{0}' does not exist".format(resourcepool))
-                if clone_type == "template":
-                    raise SaltCloudSystemExit('You must specify a resource pool that exists.')
-        elif cluster:
-            cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ClusterComputeResource, cluster)
-            if not cluster_ref:
-                log.error("Specified cluster: '{0}' does not exist".format(cluster))
-                if clone_type == "template":
-                    raise SaltCloudSystemExit('You must specify a cluster that exists.')
-            else:
-                resourcepool_ref = cluster_ref.resourcePool
-        elif clone_type == "template":
-            raise SaltCloudSystemExit(
-                'You must either specify a cluster or a resource pool when cloning from a template.'
-            )
+    # Either a cluster, or a resource pool must be specified when cloning from template or creating.
+    if resourcepool:
+        resourcepool_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ResourcePool, resourcepool)
+        if not resourcepool_ref:
+            log.error("Specified resource pool: '{0}' does not exist".format(resourcepool))
+            if not clone_type or clone_type == "template":
+                raise SaltCloudSystemExit('You must specify a resource pool that exists.')
+    elif cluster:
+        cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ClusterComputeResource, cluster)
+        if not cluster_ref:
+            log.error("Specified cluster: '{0}' does not exist".format(cluster))
+            if not clone_type or clone_type == "template":
+                raise SaltCloudSystemExit('You must specify a cluster that exists.')
         else:
-            log.debug("Using resource pool used by the {0} {1}".format(clone_type, vm_['clonefrom']))
+            resourcepool_ref = cluster_ref.resourcePool
+    elif clone_type == "template":
+        raise SaltCloudSystemExit(
+            'You must either specify a cluster or a resource pool when cloning from a template.'
+        )
+    elif not clone_type:
+        raise SaltCloudSystemExit(
+            'You must either specify a cluster or a resource pool when creating.'
+        )
+    else:
+        log.debug("Using resource pool used by the {0} {1}".format(clone_type, vm_['clonefrom']))
 
-        # Either a datacenter or a folder can be optionally specified
-        # If not specified, the existing VM/template\'s parent folder is used.
-        if folder:
-            folder_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Folder, folder)
-            if not folder_ref:
-                log.error("Specified folder: '{0}' does not exist".format(folder))
-                log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
-                folder_ref = object_ref.parent
-        elif datacenter:
-            datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
-            if not datacenter_ref:
-                log.error("Specified datacenter: '{0}' does not exist".format(datacenter))
-                log.debug("Using datacenter folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
-                folder_ref = object_ref.parent
-            else:
-                folder_ref = datacenter_ref.vmFolder
-        else:
+    # Either a datacenter or a folder can be optionally specified when cloning, required when creating.
+    # If not specified when cloning, the existing VM/template\'s parent folder is used.
+    if folder:
+        folder_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Folder, folder)
+        if not folder_ref:
+            log.error("Specified folder: '{0}' does not exist".format(folder))
             log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
             folder_ref = object_ref.parent
+    elif datacenter:
+        datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
+        if not datacenter_ref:
+            log.error("Specified datacenter: '{0}' does not exist".format(datacenter))
+            log.debug("Using datacenter folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
+            folder_ref = object_ref.parent
+        else:
+            folder_ref = datacenter_ref.vmFolder
+    elif not clone_type:
+        raise SaltCloudSystemExit(
+            'You must either specify a folder or a datacenter when creating not cloning.'
+        )
+    else:
+        log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
+        folder_ref = object_ref.parent
 
+    if 'clonefrom' in vm_:
         # Create the relocation specs
         reloc_spec = vim.vm.RelocateSpec()
 
@@ -2125,52 +2212,62 @@ def create(vm_):
                 reloc_spec.host = host_ref
             else:
                 log.error("Specified host: '{0}' does not exist".format(host))
+    else:
+        if not datastore:
+            raise SaltCloudSystemExit(
+                'You must specify a datastore when creating not cloning.'
+            )
+        else:
+            datastore_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datastore, datastore)
+            if not datastore_ref:
+                raise SaltCloudSystemExit("Specified datastore: '{0}' does not exist".format(datastore))
 
-        # Create the config specs
-        config_spec = vim.vm.ConfigSpec()
+    # Create the config specs
+    config_spec = vim.vm.ConfigSpec()
 
-        # If the hardware version is specified and if it is different from the current
-        # hardware version, then schedule a hardware version upgrade
-        if hardware_version:
-            hardware_version = "vmx-{0}".format(str(hardware_version).zfill(2))
-            if hardware_version != object_ref.config.version:
-                log.debug("Scheduling hardware version upgrade from {0} to {1}".format(object_ref.config.version, hardware_version))
-                scheduled_hardware_upgrade = vim.vm.ScheduledHardwareUpgradeInfo()
-                scheduled_hardware_upgrade.upgradePolicy = 'always'
-                scheduled_hardware_upgrade.versionKey = hardware_version
-                config_spec.scheduledHardwareUpgradeInfo = scheduled_hardware_upgrade
+    # If the hardware version is specified and if it is different from the current
+    # hardware version, then schedule a hardware version upgrade
+    if hardware_version:
+        hardware_version = "vmx-{0}".format(str(hardware_version).zfill(2))
+        if hardware_version != object_ref.config.version:
+            log.debug("Scheduling hardware version upgrade from {0} to {1}".format(object_ref.config.version, hardware_version))
+            scheduled_hardware_upgrade = vim.vm.ScheduledHardwareUpgradeInfo()
+            scheduled_hardware_upgrade.upgradePolicy = 'always'
+            scheduled_hardware_upgrade.versionKey = hardware_version
+            config_spec.scheduledHardwareUpgradeInfo = scheduled_hardware_upgrade
+        else:
+            log.debug("Virtual hardware version already set to {0}".format(hardware_version))
+
+    if num_cpus:
+        log.debug("Setting cpu to: {0}".format(num_cpus))
+        config_spec.numCPUs = int(num_cpus)
+
+    if memory:
+        try:
+            memory_num, memory_unit = findall(r"[^\W\d_]+|\d+.\d+|\d+", memory)
+            if memory_unit.lower() == "mb":
+                memory_mb = int(memory_num)
+            elif memory_unit.lower() == "gb":
+                memory_mb = int(float(memory_num)*1024.0)
             else:
-                log.debug("Virtual hardware version already set to {0}".format(hardware_version))
+                err_msg = "Invalid memory type specified: '{0}'".format(memory_unit)
+                log.error(err_msg)
+                return {'Error': err_msg}
+        except (TypeError, ValueError):
+            memory_mb = int(memory)
+        log.debug("Setting memory to: {0} MB".format(memory_mb))
+        config_spec.memoryMB = memory_mb
 
-        if num_cpus:
-            log.debug("Setting cpu to: {0}".format(num_cpus))
-            config_spec.numCPUs = int(num_cpus)
+    if devices:
+        specs = _manage_devices(devices, object_ref)
+        config_spec.deviceChange = specs['device_specs']
 
-        if memory:
-            try:
-                memory_num, memory_unit = findall(r"[^\W\d_]+|\d+.\d+|\d+", memory)
-                if memory_unit.lower() == "mb":
-                    memory_mb = int(memory_num)
-                elif memory_unit.lower() == "gb":
-                    memory_mb = int(float(memory_num)*1024.0)
-                else:
-                    err_msg = "Invalid memory type specified: '{0}'".format(memory_unit)
-                    log.error(err_msg)
-                    return {'Error': err_msg}
-            except (TypeError, ValueError):
-                memory_mb = int(memory)
-            log.debug("Setting memory to: {0} MB".format(memory_mb))
-            config_spec.memoryMB = memory_mb
+    if extra_config:
+        for key, value in six.iteritems(extra_config):
+            option = vim.option.OptionValue(key=key, value=value)
+            config_spec.extraConfig.append(option)
 
-        if devices:
-            specs = _manage_devices(devices, object_ref)
-            config_spec.deviceChange = specs['device_specs']
-
-        if extra_config:
-            for key, value in six.iteritems(extra_config):
-                option = vim.option.OptionValue(key=key, value=value)
-                config_spec.extraConfig.append(option)
-
+    if 'clonefrom' in vm_:
         # Create the clone specs
         clone_spec = vim.vm.CloneSpec(
             template=template,
@@ -2203,16 +2300,27 @@ def create(vm_):
         log.debug('clone_spec set to:\n{0}'.format(
             pprint.pformat(clone_spec))
         )
+    else:
+        config_spec.name = vm_name
+        config_spec.files = vim.vm.FileInfo()
+        config_spec.files.vmPathName = '[{0}] {1}/{1}.vmx'.format(datastore, vm_name)
+        config_spec.guestId = guest_id
 
-        try:
+        log.debug('config_spec set to:\n{0}'.format(
+            pprint.pformat(config_spec))
+        )
+
+    try:
+        salt.utils.cloud.fire_event(
+            'event',
+            'requesting instance',
+            'salt/cloud/{0}/requesting'.format(vm_['name']),
+            {'kwargs': vm_},
+            transport=__opts__['transport']
+        )
+
+        if 'clonefrom' in vm_:
             log.info("Creating {0} from {1}({2})".format(vm_['name'], clone_type, vm_['clonefrom']))
-            salt.utils.cloud.fire_event(
-                'event',
-                'requesting instance',
-                'salt/cloud/{0}/requesting'.format(vm_['name']),
-                {'kwargs': vm_},
-                transport=__opts__['transport']
-            )
 
             if datastore and not datastore_ref and datastore_cluster_ref:
                 # datastore cluster has been specified so apply Storage DRS recomendations
@@ -2240,48 +2348,53 @@ def create(vm_):
                 # clone the VM/template
                 task = object_ref.Clone(folder_ref, vm_name, clone_spec)
                 salt.utils.vmware.wait_for_task(task, vm_name, 'clone', 5, 'info')
-        except Exception as exc:
-            err_msg = 'Error creating {0}: {1}'.format(vm_['name'], exc)
-            log.error(
-                err_msg,
-                # Show the traceback if the debug logging level is enabled
-                exc_info_on_loglevel=logging.DEBUG
-            )
-            return {'Error': err_msg}
+        else:
+            log.info('Creating {0}'.format(vm_['name']))
 
-        new_vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_name)
-
-        # If it a template or if it does not need to be powered on then do not wait for the IP
-        if not template and power:
-            ip = _wait_for_ip(new_vm_ref, wait_for_ip_timeout)
-            if ip:
-                log.info("[ {0} ] IPv4 is: {1}".format(vm_name, ip))
-                # ssh or smb using ip and install salt only if deploy is True
-                if deploy:
-                    vm_['key_filename'] = key_filename
-                    vm_['ssh_host'] = ip
-
-                    salt.utils.cloud.bootstrap(vm_, __opts__)
-
-        data = show_instance(vm_name, call='action')
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'created instance',
-            'salt/cloud/{0}/created'.format(vm_['name']),
-            {
-                'name': vm_['name'],
-                'profile': vm_['profile'],
-                'provider': vm_['driver'],
-            },
-            transport=__opts__['transport']
+            task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref)
+            salt.utils.vmware.wait_for_task(task, vm_name, "create", 5, 'info')
+    except Exception as exc:
+        err_msg = 'Error creating {0}: {1}'.format(vm_['name'], exc)
+        log.error(
+            err_msg,
+            # Show the traceback if the debug logging level is enabled
+            exc_info_on_loglevel=logging.DEBUG
         )
-        return data
-
-    else:
-        err_msg = "clonefrom option hasn\'t been specified. Exiting."
-        log.error(err_msg)
         return {'Error': err_msg}
+
+    new_vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_name)
+
+    # Find how to power on in CreateVM_Task (if possible), for now this will do
+    if not clone_type and power:
+        task = new_vm_ref.PowerOn()
+        salt.utils.vmware.wait_for_task(task, vm_name, 'power', 5, 'info')
+
+    # If it a template or if it does not need to be powered on then do not wait for the IP
+    if not template and power:
+        ip = _wait_for_ip(new_vm_ref, wait_for_ip_timeout)
+        if ip:
+            log.info("[ {0} ] IPv4 is: {1}".format(vm_name, ip))
+            # ssh or smb using ip and install salt only if deploy is True
+            if deploy:
+                vm_['key_filename'] = key_filename
+                vm_['ssh_host'] = ip
+
+                salt.utils.cloud.bootstrap(vm_, __opts__)
+
+    data = show_instance(vm_name, call='action')
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'created instance',
+        'salt/cloud/{0}/created'.format(vm_['name']),
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['driver'],
+        },
+        transport=__opts__['transport']
+    )
+    return data
 
 
 def create_datacenter(kwargs=None, call=None):
@@ -3023,7 +3136,8 @@ def create_snapshot(name, kwargs=None, call=None):
         )
         return 'failed to create snapshot'
 
-    return {'Snapshot created successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList, vm_ref.snapshot.currentSnapshot)}
+    return {'Snapshot created successfully': _get_snapshots(vm_ref.snapshot.rootSnapshotList,
+                                                            vm_ref.snapshot.currentSnapshot)}
 
 
 def revert_to_snapshot(name, kwargs=None, call=None):

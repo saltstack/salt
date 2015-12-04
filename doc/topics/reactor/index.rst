@@ -54,7 +54,7 @@ and each event tag has a list of reactor SLS files to be run.
         - /srv/reactor/start.sls        # Things to do when a minion starts
         - /srv/reactor/monitor.sls      # Other things to do
 
-      - 'salt/cloud/*/destroyed':       # Globs can be used to matching tags
+      - 'salt/cloud/*/destroyed':       # Globs can be used to match tags
         - /srv/reactor/destroy/*.sls    # Globs can be used to match file names
 
       - 'myco/custom/event/tag':        # React to custom event tags
@@ -290,8 +290,8 @@ For example:
     clear_the_grains_cache_for_all_minions:
       runner.cache.clear_grains
 
-If :py:func:`the runner takes arguments <salt.runners.cache.clear_grains>` then
-they can be specified as well:
+If the :py:func:`the runner takes arguments <salt.runners.cloud.profile>` then
+they must be specified as keyword arguments.
 
 .. code-block:: yaml
 
@@ -301,6 +301,9 @@ they can be specified as well:
         - instances:
           - web11       # These VM names would be generated via Jinja in a
           - web12       # real-world example.
+
+To determine the proper names for the arguments, check the documentation
+or source code for the runner function you wish to call.
 
 Passing event data to Minions or Orchestrate as Pillar
 ------------------------------------------------------

@@ -1084,7 +1084,11 @@ def symlink(src, link):
         return True
     except pywinerror as exc:
         raise CommandExecutionError(
-            'Could not create {0!r} - [{1}] {2}'.format(link, exc.winerror, exc.strerror)
+            'Could not create \'{0}\' - [{1}] {2}'.format(
+                link,
+                exc.winerror,
+                exc.strerror
+            )
         )
 
 
@@ -1108,7 +1112,7 @@ def _is_reparse_point(path):
 
 def is_link(path):
     '''
-    Return the path that a symlink points to
+    Check if the path is a symlink
 
     This is only supported on Windows Vista or later.
 

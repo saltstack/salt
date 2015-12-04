@@ -361,6 +361,7 @@ class IptablesTestCase(TestCase):
     # 'append' function tests: 1
 
     @patch.object(iptables, '_has_option', MagicMock(return_value=True))
+    @patch.object(iptables, 'check', MagicMock(return_value=False))
     def test_append(self):
         '''
         Test if it append a rule to the specified table/chain.
@@ -387,6 +388,7 @@ class IptablesTestCase(TestCase):
     # 'insert' function tests: 1
 
     @patch.object(iptables, '_has_option', MagicMock(return_value=True))
+    @patch.object(iptables, 'check', MagicMock(return_value=False))
     def test_insert(self):
         '''
         Test if it insert a rule into the specified table/chain,

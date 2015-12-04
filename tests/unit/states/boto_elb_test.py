@@ -64,7 +64,8 @@ class BotoElbTestCase(TestCase):
         with patch.dict(boto_elb.__salt__,
                         {'config.option': mock,
                          'boto_elb.exists': mock_false_bool,
-                         'boto_elb.create': mock_false_bool}):
+                         'boto_elb.create': mock_false_bool,
+                         'pillar.get': MagicMock(return_value={})}):
             with patch.dict(boto_elb.__opts__, {'test': False}):
                 ret = boto_elb.present(
                     name,
@@ -76,14 +77,20 @@ class BotoElbTestCase(TestCase):
                 self.assertIn('Failed to create myelb ELB.', ret['comment'])
                 self.assertFalse(ret['result'])
 
+        def mock_config_option(*args, **kwargs):
+            if args[0] == 'boto_elb_policies':
+                return []
+            return {}
+
         mock = MagicMock(return_value={})
         with patch.dict(boto_elb.__salt__,
-                        {'config.option': mock,
+                        {'config.option': MagicMock(side_effect=mock_config_option),
                          'boto_elb.exists': mock_false_bool,
                          'boto_elb.create': mock_true_bool,
                          'boto_elb.get_attributes': mock_attributes,
                          'boto_elb.get_health_check': mock_health_check,
-                         'boto_elb.get_elb_config': mock}):
+                         'boto_elb.get_elb_config': MagicMock(side_effect=[mock, MagicMock()]),
+                         'pillar.get': MagicMock(return_value={})}):
             with patch.dict(boto_elb.__opts__, {'test': False}):
                 with patch.dict(boto_elb.__states__, {'boto_cloudwatch_alarm.present': MagicMock(return_value=ret1)}):
                     ret = boto_elb.present(
@@ -103,17 +110,20 @@ class BotoElbTestCase(TestCase):
                         boto_elb.__salt__['boto_elb.get_health_check'].called
                     )
                     self.assertIn('ELB myelb created.', ret['comment'])
+                    import pprint
+                    pprint.pprint(ret)
                     self.assertTrue(ret['result'])
 
         mock = MagicMock(return_value={})
-        mock_elb = MagicMock(return_value={'dns_name': 'myelb.amazon.com'})
+        mock_elb = MagicMock(return_value={'dns_name': 'myelb.amazon.com', 'policies': [], 'listeners': [], 'backends': []})
         with patch.dict(boto_elb.__salt__,
-                        {'config.option': mock,
+                        {'config.option': MagicMock(side_effect=mock_config_option),
                          'boto_elb.exists': mock_false_bool,
                          'boto_elb.create': mock_true_bool,
                          'boto_elb.get_attributes': mock_attributes,
                          'boto_elb.get_health_check': mock_health_check,
-                         'boto_elb.get_elb_config': mock_elb}):
+                         'boto_elb.get_elb_config': mock_elb,
+                         'pillar.get': MagicMock(return_value={})}):
             with patch.dict(boto_elb.__opts__, {'test': False}):
                 with patch.dict(boto_elb.__states__, {'boto_route53.present': MagicMock(return_value=ret1)}):
                     ret = boto_elb.present(

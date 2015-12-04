@@ -53,13 +53,25 @@ class IPCServer(object):
 
         Blocks until socket is established
 
-        :param str socket_path: Path on the filesystem for the socket to bind to.
-                                This socket does not need to exist prior to calling
-                                this method, but parent directories should.
+        :param str/int socket_path: Path on the filesystem for the
+                                    socket to bind to. This socket does
+                                    not need to exist prior to calling
+                                    this method, but parent directories
+                                    should.
+                                    It may also be of type 'int', in
+                                    which case it is used as the port
+                                    for a tcp localhost connection.
         '''
         # Start up the ioloop
         log.trace('IPCServer: binding to socket: {0}'.format(self.socket_path))
-        self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
+        if isinstance(self.socket_path, int):
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.sock.setblocking(0)
+            self.sock.bind(('127.0.0.1', self.socket_path))
+            self.sock.listen(128)
+        else:
+            self.sock = tornado.netutil.bind_unix_socket(self.socket_path)
 
         tornado.netutil.add_accept_handler(
             self.sock,
@@ -95,13 +107,14 @@ class IPCServer(object):
                 return return_message
             else:
                 return _null
+        unpacker = msgpack.Unpacker()
         while not stream.closed():
             try:
-                framed_msg_len = yield stream.read_until(' ')
-                framed_msg_raw = yield stream.read_bytes(int(framed_msg_len.strip()))
-                framed_msg = msgpack.loads(framed_msg_raw)
-                body = framed_msg['body']
-                self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
+                wire_bytes = yield stream.read_bytes(4096, partial=True)
+                unpacker.feed(wire_bytes)
+                for framed_msg in unpacker:
+                    body = framed_msg['body']
+                    self.io_loop.spawn_callback(self.payload_handler, body, write_callback(stream, framed_msg['head']))
             except tornado.iostream.StreamClosedError:
                 log.trace('Client disconnected from IPC {0}'.format(self.socket_path))
                 break
@@ -144,9 +157,12 @@ class IPCClient(object):
     server/client implementation.
 
     :param IOLoop io_loop: A Tornado ioloop to handle scheduling
-    :param str socket_path: A path on the filesystem where a socket
-                            belonging to a running IPCServer can be
-                            found.
+    :param str/int socket_path: A path on the filesystem where a socket
+                                belonging to a running IPCServer can be
+                                found.
+                                It may also be of type 'int', in which
+                                case it is used as the port for a tcp
+                                localhost connection.
     '''
 
     # Create singleton map between two sockets
@@ -159,7 +175,7 @@ class IPCClient(object):
         loop_instance_map = IPCClient.instance_map[io_loop]
 
         # FIXME
-        key = socket_path
+        key = str(socket_path)
 
         if key not in loop_instance_map:
             log.debug('Initializing new IPCClient for path: {0}'.format(key))
@@ -214,8 +230,15 @@ class IPCClient(object):
         '''
         Connect to a running IPCServer
         '''
+        if isinstance(self.socket_path, int):
+            sock_type = socket.AF_INET
+            sock_addr = ('127.0.0.1', self.socket_path)
+        else:
+            sock_type = socket.AF_UNIX
+            sock_addr = self.socket_path
+
         self.stream = IOStream(
-            socket.socket(socket.AF_UNIX, socket.SOCK_STREAM),
+            socket.socket(sock_type, socket.SOCK_STREAM),
             io_loop=self.io_loop,
         )
         while True:
@@ -223,7 +246,7 @@ class IPCClient(object):
                 break
             try:
                 log.trace('IPCClient: Connecting to socket: {0}'.format(self.socket_path))
-                yield self.stream.connect(self.socket_path)
+                yield self.stream.connect(sock_addr)
                 self._connecting_future.set_result(True)
                 break
             except Exception as e:

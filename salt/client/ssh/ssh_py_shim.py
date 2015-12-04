@@ -214,8 +214,9 @@ def main(argv):  # pylint: disable=W0613
     # Yes, the flush() is necessary.
     sys.stdout.write(OPTIONS.delimiter + '\n')
     sys.stdout.flush()
-    sys.stderr.write(OPTIONS.delimiter + '\n')
-    sys.stderr.flush()
+    if not OPTIONS.tty:
+        sys.stderr.write(OPTIONS.delimiter + '\n')
+        sys.stderr.flush()
     old_umask = os.umask(0o077)
     if OPTIONS.tty:
         stdout, _ = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()

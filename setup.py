@@ -62,6 +62,9 @@ BOOTSTRAP_SCRIPT_DISTRIBUTED_VERSION = os.environ.get(
 # Store a reference to the executing platform
 IS_WINDOWS_PLATFORM = sys.platform.startswith('win')
 
+# Store a reference wether if we're running under Python 3 and above
+IS_PY3 = sys.version_info > (3,)
+
 # Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
 # Or if setuptools was previously imported (which is the case when using
 # 'distribute')
@@ -137,6 +140,10 @@ def _parse_requirements_file(requirements_file):
                     # In Windows, we're installing M2CryptoWin{32,64} which comes
                     # compiled
                     continue
+            if IS_PY3 and 'futures' in line.lower():
+                # Python 3 already has futures, installing it will only break
+                # the current python installation whenever futures is imported
+                continue
             parsed_requirements.append(line)
     return parsed_requirements
 # <---- Helper Functions ---------------------------------------------------------------------------------------------
@@ -992,6 +999,7 @@ class SaltDistribution(distutils.dist.Distribution):
                                  'doc/man/salt-minion.1',
                                  'doc/man/salt-proxy.1',
                                  'doc/man/salt-run.1',
+                                 'doc/man/spm.1',
                                  'doc/man/salt-ssh.1',
                                  'doc/man/salt-syndic.1',
                                  'doc/man/salt-unity.1'])
@@ -1198,7 +1206,7 @@ class SaltDistribution(distutils.dist.Distribution):
         if self.salt_transport not in ('zeromq', 'raet', 'both', 'ssh', 'none'):
             raise DistutilsArgError(
                 'The value of --salt-transport needs be \'zeromq\', '
-                '\'raet\', \'both\', \'ssh\' or \'none\' not {0!r}'.format(
+                '\'raet\', \'both\', \'ssh\' or \'none\' not \'{0}\''.format(
                     self.salt_transport
                 )
             )

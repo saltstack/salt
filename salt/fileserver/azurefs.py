@@ -97,6 +97,7 @@ def find_file(path, saltenv='base', env=None, **kwargs):
                                                             __opts__, full):
         fnd['path'] = full
         fnd['rel'] = path
+        fnd['stat'] = list(os.stat(full))
     return fnd
 
 

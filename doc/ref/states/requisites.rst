@@ -452,7 +452,7 @@ The state altering system is used to make sure that states are evaluated exactly
 as the user expects. It can be used to double check that a state preformed
 exactly how it was expected to, or to make 100% sure that a state only runs
 under certain conditions. The use of unless or onlyif options help make states
-even more stateful. The check_cmds option helps ensure that the result of a
+even more stateful. The ``check_cmd`` option helps ensure that the result of a
 state is evaluated correctly.
 
 Unless
@@ -602,15 +602,18 @@ same privileges as the salt-minion.
         - pattern: ^enabled=0
         - repl: enabled=1
         - check_cmd:
-          - grep 'enabled=0' /etc/yum.repos.d/fedora.repo && return 1 || return 0
+          - ! grep 'enabled=0' /etc/yum.repos.d/fedora.repo
 
-This will attempt to do a replace on all enabled=0 in the .repo file, and
-replace them with enabled=1. The check_cmd is just a bash command. It will do
-a grep for enabled=0 in the file, and if it finds any, it will return a 0, which
-will prompt the && portion of the command to return a 1, causing check_cmd to
-set the state as failed. If it returns a 1, meaning it didn't find any
-'enabled=0' it will hit the || portion of the command, returning a 0, and
+This will attempt to do a replace on all ``enabled=0`` in the .repo file, and
+replace them with ``enabled=1``. The ``check_cmd`` is just a bash command. It
+will do a grep for ``enabled=0`` in the file, and if it finds any, it will
+return a 0, which will be inverted by the leading ``!``, causing ``check_cmd``
+to set the state as failed. If it returns a 1, meaning it didn't find any
+``enabled=0``, it will be inverted by the leading ``!``, returning a 0, and
 declaring the function succeeded.
+
+**NOTE**: This requisite ``check_cmd`` functions differently than the ``check_cmd``
+of the ``file.managed`` state.
 
 Overriding Checks
 -----------------

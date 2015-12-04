@@ -178,6 +178,9 @@ def mod_list(only_persist=False):
     '''
     Return a list of the loaded module names
 
+    only_persist
+        Only return the list of loaded persistent modules
+
     CLI Example:
 
     .. code-block:: bash
@@ -220,9 +223,8 @@ def load(mod, persist=False):
         salt '*' kmod.load kvm
     '''
     pre_mods = lsmod()
-    response = __salt__['cmd.run_all']('modprobe {0}'.format(mod),
-                                       python_shell=False)
-    if response['retcode'] == 0:
+    res = __salt__['cmd.run_all']('modprobe {0}'.format(mod), python_shell=False)
+    if res['retcode'] == 0:
         post_mods = lsmod()
         mods = _new_mods(pre_mods, post_mods)
         persist_mods = set()
@@ -230,7 +232,7 @@ def load(mod, persist=False):
             persist_mods = _set_persistent_module(mod)
         return sorted(list(mods | persist_mods))
     else:
-        return 'Module {0} not found'.format(mod)
+        return 'Error loading module {0}: {1}'.format(mod, res['stderr'])
 
 
 def is_loaded(mod):
@@ -267,10 +269,13 @@ def remove(mod, persist=False, comment=True):
         salt '*' kmod.remove kvm
     '''
     pre_mods = lsmod()
-    __salt__['cmd.run_all']('rmmod {0}'.format(mod), python_shell=False)
-    post_mods = lsmod()
-    mods = _rm_mods(pre_mods, post_mods)
-    persist_mods = set()
-    if persist:
-        persist_mods = _remove_persistent_module(mod, comment)
-    return sorted(list(mods | persist_mods))
+    res = __salt__['cmd.run_all']('rmmod {0}'.format(mod), python_shell=False)
+    if res['retcode'] == 0:
+        post_mods = lsmod()
+        mods = _rm_mods(pre_mods, post_mods)
+        persist_mods = set()
+        if persist:
+            persist_mods = _remove_persistent_module(mod, comment)
+        return sorted(list(mods | persist_mods))
+    else:
+        return 'Error removing module {0}: {1}'.format(mod, res['stderr'])

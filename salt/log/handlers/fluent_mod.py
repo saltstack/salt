@@ -62,10 +62,6 @@ import salt.utils.network
 
 # Import Third party libs
 import salt.ext.six as six
-try:
-    import simplejson as json
-except ImportError:
-    import json
 
 log = logging.getLogger(__name__)
 
@@ -218,7 +214,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
                 continue
 
             message_dict['@fields'][key] = repr(value)
-        return json.dumps(message_dict)
+        return message_dict
 
     def format_v1(self, record):
         message_dict = {
@@ -262,7 +258,7 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
                 continue
 
             message_dict[key] = repr(value)
-        return json.dumps(message_dict)
+        return message_dict
 
 
 class FluentHandler(logging.Handler):

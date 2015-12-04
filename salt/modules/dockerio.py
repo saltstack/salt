@@ -252,7 +252,7 @@ def _valid(m, id_=NOTSET, comment=VALID_RESPONSE, out=None):
     return _set_status(m, status=True, id_=id_, comment=comment, out=out)
 
 
-def _get_client(version=None, timeout=None):
+def _get_client(timeout=None):
     '''
     Get a connection to a docker API (socket or URL)
     based on config.get mechanism (pillar -> grains)
@@ -279,14 +279,16 @@ def _get_client(version=None, timeout=None):
         # only if defined by user.
         kwargs['timeout'] = timeout
 
+    if 'version' not in kwargs:
+        # Let docker-py auto detect docker version incase
+        # it's not defined by user.
+        kwargs['version'] = 'auto'
+
     if 'base_url' not in kwargs and 'DOCKER_HOST' in os.environ:
         # Check if the DOCKER_HOST environment variable has been set
         kwargs['base_url'] = os.environ.get('DOCKER_HOST')
 
     client = docker.Client(**kwargs)
-    if not version:
-        # set version that match docker daemon
-        client._version = client.version()['ApiVersion']
 
     # try to authenticate the client using credentials
     # found in pillars
@@ -329,7 +331,7 @@ def _get_image_infos(image):
     if not status['id']:
         _invalid(status)
         raise CommandExecutionError(
-            'ImageID {0!r} could not be resolved to '
+            'ImageID \'{0}\' could not be resolved to '
             'an existing Image'.format(image)
         )
     return status['out']
@@ -857,8 +859,8 @@ def kill(container, signal=None):
                 # no need to check if container is running
                 # because some signals might not stop the container.
                 _valid(status,
-                       comment='Kill signal {0!r} successfully'
-                       ' sent to the container {1!r}'.format(signal, container),
+                       comment='Kill signal \'{0}\' successfully'
+                       ' sent to the container \'{1}\''.format(signal, container),
                        id_=container)
             else:
                 if not is_running(dcontainer):
@@ -1856,7 +1858,7 @@ def _run_wrapper(status, container, func, cmd, *args, **kwargs):
             )
     else:
         raise NotImplementedError(
-            'Unknown docker ExecutionDriver {0!r}. Or didn\'t find command'
+            'Unknown docker ExecutionDriver \'{0}\'. Or didn\'t find command'
             ' to attach to the container'.format(driver))
 
     # now execute the command

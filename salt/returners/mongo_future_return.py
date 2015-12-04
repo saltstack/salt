@@ -53,6 +53,15 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return mongo --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: Boron
+
+.. code-block:: bash
+
+    salt '*' test.ping --return mongo --return_kwargs '{"db": "another-salt"}'
+
 '''
 from __future__ import absolute_import
 
@@ -105,7 +114,7 @@ def _get_options(ret=None):
     attrs = {'host': 'host',
              'port': 'port',
              'db': 'db',
-             'username': 'username',
+             'user': 'user',
              'password': 'password',
              'indexes': 'indexes'}
 
@@ -254,9 +263,13 @@ def get_jids():
     Return a list of job ids
     '''
     conn, mdb = _get_conn(ret=None)
-    ret = []
-    name = mdb.jobs.distinct('jid')
-    ret.append(name)
+    map = "function() { emit(this.jid, this); }"
+    reduce = "function (key, values) { return values[0]; }"
+    result = mdb.jobs.inline_map_reduce(map, reduce)
+    ret = {}
+    for r in result:
+        jid = r['_id']
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, r['value'])
     return ret
 
 

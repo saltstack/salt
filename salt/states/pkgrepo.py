@@ -249,6 +249,13 @@ def managed(name, **kwargs):
                              'and the "ppa" argument.'
             return ret
         kwargs['repo'] = kwargs['name']
+
+    if 'key_url' in kwargs and ('keyid' in kwargs or 'keyserver' in kwargs):
+        ret['result'] = False
+        ret['comment'] = 'You may not use both "keyid"/"keyserver" and ' \
+                         '"key_url" argument.'
+        return ret
+
     if 'ppa' in kwargs and __grains__['os'] in ('Ubuntu', 'Mint'):
         # overload the name/repo value for PPAs cleanly
         # this allows us to have one code-path for PPAs

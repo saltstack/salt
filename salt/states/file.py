@@ -238,24 +238,20 @@ A more complex ``recurse`` example:
 from __future__ import absolute_import
 import difflib
 import itertools
-import json
 import logging
 import os
-import pprint
 import shutil
 import traceback
-import yaml
 from collections import Iterable, Mapping
 
 # Import salt libs
+import salt.loader
 import salt.payload
 import salt.utils
 import salt.utils.templates
 import salt.utils.url
 from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError
-from salt.serializers import yaml as yaml_serializer
-from salt.serializers import json as json_serializer
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -470,7 +466,7 @@ def _check_directory(name,
     if recurse:
         if not set(['user', 'group', 'mode']) >= set(recurse):
             return False, 'Types for "recurse" limited to "user", ' \
-                          '"group" and "mode"'
+                          '"group" and "mode"', changes
         if 'user' not in recurse:
             user = None
         if 'group' not in recurse:
@@ -526,8 +522,8 @@ def _check_directory(name,
         for fn_ in changes:
             for key, val in six.iteritems(changes[fn_]):
                 comments.append('{0}: {1} - {2}\n'.format(fn_, key, val))
-        return None, ''.join(comments)
-    return True, 'The directory {0} is in the correct state'.format(name)
+        return None, ''.join(comments), changes
+    return True, 'The directory {0} is in the correct state'.format(name), changes
 
 
 def _check_dir_meta(name,
@@ -601,32 +597,36 @@ def _symlink_check(name, target, force, user, group):
     '''
     Check the symlink function
     '''
+    pchanges = {}
     if not os.path.exists(name) and not __salt__['file.is_link'](name):
+        pchanges['new'] = name
         return None, 'Symlink {0} to {1} is set for creation'.format(
             name, target
-        )
+        ), pchanges
     if __salt__['file.is_link'](name):
         if __salt__['file.readlink'](name) != target:
+            pchanges['change'] = name
             return None, 'Link {0} target is set to be changed to {1}'.format(
                 name, target
-            )
+            ), pchanges
         else:
             result = True
             msg = 'The symlink {0} is present'.format(name)
             if not _check_symlink_ownership(name, user, group):
                 result = None
+                pchanges['ownership'] = '{0}:{1}'.format(*_get_symlink_ownership(name))
                 msg += (
                     ', but the ownership of the symlink would be changed '
                     'from {2}:{3} to {0}:{1}'
                 ).format(user, group, *_get_symlink_ownership(name))
-            return result, msg
+            return result, msg, pchanges
     else:
         if force:
             return None, ('The file or directory {0} is set for removal to '
                           'make way for a new symlink targeting {1}'
-                          .format(name, target))
+                          .format(name, target)), pchanges
         return False, ('File or directory exists where the symlink {0} '
-                       'should be. Did you mean to use force?'.format(name))
+                       'should be. Did you mean to use force?'.format(name)), pchanges
 
 
 def _test_owner(kwargs, user=None):
@@ -858,9 +858,14 @@ def symlink(
             msg += '.'
         return _error(ret, msg)
 
+    presult, pcomment, ret['pchanges'] = _symlink_check(name,
+                                                        target,
+                                                        force,
+                                                        user,
+                                                        group)
     if __opts__['test']:
-        ret['result'], ret['comment'] = _symlink_check(name, target, force,
-                                                       user, group)
+        ret['result'] = presult
+        ret['comment'] = pcomment
         return ret
 
     if not os.path.isdir(os.path.dirname(name)):
@@ -972,6 +977,7 @@ def absent(name):
 
     ret = {'name': name,
            'changes': {},
+           'pchanges': {},
            'result': True,
            'comment': ''}
     if not name:
@@ -983,6 +989,7 @@ def absent(name):
     if name == '/':
         return _error(ret, 'Refusing to make "/" absent')
     if os.path.isfile(name) or os.path.islink(name):
+        ret['pchanges']['removed'] = name
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'File {0} is set for removal'.format(name)
@@ -996,6 +1003,7 @@ def absent(name):
             return _error(ret, '{0}'.format(exc))
 
     elif os.path.isdir(name):
+        ret['pchanges']['removed'] = name
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Directory {0} is set for removal'.format(name)
@@ -1026,6 +1034,7 @@ def exists(name):
 
     ret = {'name': name,
            'changes': {},
+           'pchanges': {},
            'result': True,
            'comment': ''}
     if not name:
@@ -1049,6 +1058,7 @@ def missing(name):
 
     ret = {'name': name,
            'changes': {},
+           'pchanges': {},
            'result': True,
            'comment': ''}
     if not name:
@@ -1317,13 +1327,19 @@ def managed(name,
     check_cmd
         .. versionadded:: 2014.7.0
 
-        The specified command will be run with the managed file as an argument.
-        If the command exits with a nonzero exit code, the command will not be
-        run.
+        The specified command will be run with an appended argument of a *temporary*
+        file containing the new managed contents.  If the command exits with a zero
+        status the new managed contents will be written to the managed destination.
+        If the command exits with a nonzero exit code, the new managed contents will
+        be discarded.
+
+        **NOTE**: This ``check_cmd`` functions differently than the requisite
+        ``check_cmd``.
     '''
     name = os.path.expanduser(name)
 
     ret = {'changes': {},
+           'pchanges': {},
            'comment': '',
            'name': name,
            'result': True}
@@ -1433,27 +1449,31 @@ def managed(name,
         if not context:
             context = {}
         context['accumulator'] = accum_data[name]
+    if 'file.check_managed_changes' in __salt__:
+        ret['pchanges'] = __salt__['file.check_managed_changes'](
+            name,
+            source,
+            source_hash,
+            user,
+            group,
+            mode,
+            template,
+            context,
+            defaults,
+            __env__,
+            contents,
+            **kwargs
+        )
+    else:
+        ret['pchanges'] = {}
 
     try:
         if __opts__['test']:
-            ret['changes'] = __salt__['file.check_managed_changes'](
-                name,
-                source,
-                source_hash,
-                user,
-                group,
-                mode,
-                template,
-                context,
-                defaults,
-                __env__,
-                contents,
-                **kwargs
-            )
-
-            if ret['changes']:
+            if ret['pchanges']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
+                if show_diff and 'diff' in ret['pchanges']:
+                    ret['changes']['diff'] = ret['pchanges']['diff']
                 if not show_diff:
                     ret['changes']['diff'] = '<show_diff=False>'
             else:
@@ -1718,6 +1738,7 @@ def directory(name,
     name = os.path.expanduser(name)
     ret = {'name': name,
            'changes': {},
+           'pchanges': {},
            'result': True,
            'comment': ''}
     if not name:
@@ -1791,17 +1812,19 @@ def directory(name,
                 return _error(
                     ret,
                     'Specified location {0} exists and is a symlink'.format(name))
+    presult, pcomment, ret['pchanges'] = _check_directory(
+        name,
+        user,
+        group,
+        recurse or [],
+        dir_mode,
+        clean,
+        require,
+        exclude_pat)
 
     if __opts__['test']:
-        ret['result'], ret['comment'] = _check_directory(
-            name,
-            user,
-            group,
-            recurse or [],
-            dir_mode,
-            clean,
-            require,
-            exclude_pat)
+        ret['result'] = presult
+        ret['comment'] = pcomment
         return ret
 
     if not os.path.isdir(name):
@@ -2098,6 +2121,7 @@ def recurse(name,
     ret = {
         'name': name,
         'changes': {},
+        'pchanges': {},
         'result': True,
         'comment': {}  # { path: [comment, ...] }
     }
@@ -2426,7 +2450,11 @@ def line(name, content, match=None, mode=None, location=None,
            - before: somekey.*?
     '''
     name = os.path.expanduser(name)
-    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret = {'name': name,
+           'changes': {},
+           'pchanges': {},
+           'result': True,
+           'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.line')
 
@@ -2438,6 +2466,7 @@ def line(name, content, match=None, mode=None, location=None,
                                     before=before, after=after, show_changes=show_changes,
                                     backup=backup, quiet=quiet, indent=indent)
     if changes:
+        ret['pchanges']['diff'] = changes
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Changes would have been made:\ndiff:\n{0}'.format(changes)
@@ -2543,7 +2572,11 @@ def replace(name,
     '''
     name = os.path.expanduser(name)
 
-    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+    ret = {'name': name,
+           'changes': {},
+           'pchanges': {},
+           'result': True,
+           'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.replace')
 
@@ -2565,6 +2598,7 @@ def replace(name,
                                        show_changes=show_changes)
 
     if changes:
+        ret['pchanges']['diff'] = changes
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Changes would have been made:\ndiff:\n{0}'.format(changes)
@@ -2793,7 +2827,11 @@ def blockreplace(
     '''
     name = os.path.expanduser(name)
 
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    ret = {'name': name,
+           'changes': {},
+           'pchanges': {},
+           'result': False,
+           'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.blockreplace')
 
@@ -2856,11 +2894,12 @@ def blockreplace(
     )
 
     if changes:
-        ret['changes'] = {'diff': changes}
+        ret['pchanges'] = {'diff': changes}
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Changes would be made'
         else:
+            ret['changes'] = {'diff': changes}
             ret['result'] = True
             ret['comment'] = 'Changes were made'
     else:
@@ -2909,6 +2948,7 @@ def comment(name, regex, char='#', backup='.bak'):
 
     ret = {'name': name,
            'changes': {},
+           'pchanges': {},
            'result': False,
            'comment': ''}
     if not name:
@@ -2929,6 +2969,7 @@ def comment(name, regex, char='#', backup='.bak'):
         else:
             return _error(ret, '{0}: Pattern not found'.format(unanchor_regex))
 
+    ret['pchanges'][name] = 'updated'
     if __opts__['test']:
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
@@ -3000,6 +3041,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
 
     ret = {'name': name,
            'changes': {},
+           'pchanges': {},
            'result': False,
            'comment': ''}
     if not name:
@@ -3026,6 +3068,7 @@ def uncomment(name, regex, char='#', backup='.bak'):
     else:
         return _error(ret, '{0}: Pattern not found'.format(regex))
 
+    ret['pchanges'][name] = 'updated'
     if __opts__['test']:
         ret['comment'] = 'File {0} is set to be updated'.format(name)
         ret['result'] = None
@@ -3214,7 +3257,12 @@ def append(name,
     '''
     name = os.path.expanduser(name)
 
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    ret = {
+            'name': name,
+            'changes': {},
+            'pchanges': {},
+            'result': False,
+            'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.append')
 
@@ -3238,17 +3286,15 @@ def append(name,
         dirname = os.path.dirname(name)
         if not __salt__['file.directory_exists'](dirname):
             __salt__['file.makedirs'](name)
-            check_res, check_msg = _check_directory(
+            check_res, check_msg, ret['pchanges'] = _check_directory(
                 dirname, None, None, False, None, False, False, None
             )
             if not check_res:
                 return _error(ret, check_msg)
 
-        # Make sure that we have a file
-        __salt__['file.touch'](name)
-
     check_res, check_msg = _check_file(name)
     if not check_res:
+        # Try to create the file
         touch(name, makedirs=makedirs)
         retry_res, retry_msg = _check_file(name)
         if not retry_res:
@@ -3384,7 +3430,11 @@ def prepend(name,
     '''
     name = os.path.expanduser(name)
 
-    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+    ret = {'name': name,
+           'changes': {},
+           'pchanges': {},
+           'result': False,
+           'comment': ''}
     if not name:
         return _error(ret, 'Must provide name to file.prepend')
 
@@ -3408,18 +3458,19 @@ def prepend(name,
         dirname = os.path.dirname(name)
         if not __salt__['file.directory_exists'](dirname):
             __salt__['file.makedirs'](name)
-            check_res, check_msg = _check_directory(
+            check_res, check_msg, ret['pchanges'] = _check_directory(
                 dirname, None, None, False, None, False, False, None
             )
             if not check_res:
                 return _error(ret, check_msg)
 
-        # Make sure that we have a file
-        __salt__['file.touch'](name)
-
     check_res, check_msg = _check_file(name)
     if not check_res:
-        return _error(ret, check_msg)
+        # Try to create the file
+        touch(name, makedirs=makedirs)
+        retry_res, retry_msg = _check_file(name)
+        if not retry_res:
+            return _error(ret, check_msg)
 
     # Follow the original logic and re-assign 'text' if using source(s)...
     if sl_:
@@ -3758,7 +3809,7 @@ def copy(
         'comment': 'Copied "{0}" to "{1}"'.format(source, name),
         'result': True}
     if not name:
-        return _error(ret, 'Must provide name to file.comment')
+        return _error(ret, 'Must provide name to file.copy')
 
     changed = True
     if not os.path.isabs(name):
@@ -4252,49 +4303,31 @@ def serialize(name,
         return _error(
             ret, 'Neither \'dataset\' nor \'dataset_pillar\' was defined')
 
-    if merge_if_exists:
-        if os.path.isfile(name):
-            if formatter == 'yaml':
-                with salt.utils.fopen(name, 'r') as fhr:
-                    existing_data = yaml.safe_load(fhr)
-            elif formatter == 'json':
-                with salt.utils.fopen(name, 'r') as fhr:
-                    existing_data = json.load(fhr)
-            else:
-                return {'changes': {},
-                        'comment': ('{0} format is not supported for merging'
-                                    .format(formatter.capitalize())),
-                        'name': name,
-                        'result': False}
+    serializer_name = '{0}.serialize'.format(formatter)
+    if serializer_name in __serializers__:
+        serializer = __serializers__[serializer_name]
+        if merge_if_exists:
+            if os.path.isfile(name):
+                if '{0}.deserialize'.format(formatter) in __serializers__:
+                    with salt.utils.fopen(name, 'r') as fhr:
+                        existing_data = serializer.deserialize(fhr)
+                else:
+                    return {'changes': {},
+                            'comment': ('{0} format is not supported for merging'
+                                        .format(formatter.capitalize())),
+                            'name': name,
+                            'result': False}
 
-            if existing_data is not None:
-                for k, v in six.iteritems(dataset):
-                    if k in existing_data:
-                        ret['changes'].update(_merge_dict(existing_data, k, v))
-                    else:
-                        ret['changes'][k] = v
-                        existing_data[k] = v
-                dataset = existing_data
+                if existing_data is not None:
+                    for k, v in six.iteritems(dataset):
+                        if k in existing_data:
+                            ret['changes'].update(_merge_dict(existing_data, k, v))
+                        else:
+                            ret['changes'][k] = v
+                            existing_data[k] = v
+                    dataset = existing_data
 
-    if formatter == 'yaml':
-        contents = yaml_serializer.serialize(dataset,
-                                             default_flow_style=False)
-    elif formatter == 'json':
-        contents = json_serializer.serialize(dataset,
-                                             indent=2,
-                                             separators=(',', ': '),
-                                             sort_keys=True)
-    elif formatter == 'python':
-        # round-trip this through JSON to avoid OrderedDict types
-        # there's probably a more performant way to do this...
-        # TODO remove json round-trip when all dataset will use
-        # serializers
-        contents = pprint.pformat(
-            json.loads(
-                json.dumps(dataset),
-                object_hook=salt.utils.decode_dict
-            )
-        )
+        contents = __serializers__[serializer_name](dataset)
     else:
         return {'changes': {},
                 'comment': '{0} format is not supported'.format(
@@ -4589,3 +4622,116 @@ def mod_run_check_cmd(cmd, filename, **check_cmd_opts):
 
     # No reason to stop, return True
     return True
+
+
+def decode(name,
+        encoded_data=None,
+        contents_pillar=None,
+        encoding_type='base64',
+        checksum='md5'):
+    '''
+    Decode an encoded file and write it to disk
+
+    .. versionadded:: Boron
+
+    name
+        Path of the file to be written.
+    encoded_data
+        The encoded file. Either this option or ``contents_pillar`` must be
+        specified.
+    contents_pillar
+        A Pillar path to the encoded file. Uses the same path syntax as
+        :py:func:`pillar.get <salt.modules.pillar.get>`. The
+        :py:func:`hashutil.base64_encodefile
+        <salt.modules.hashutil.base64_encodefile>` function can load encoded
+        content into Pillar. Either this option or ``encoded_data`` must be
+        specified.
+    encoding_type : ``base64``
+        The type of encoding.
+    checksum : ``md5``
+        The hashing algorithm to use to generate checksums. Wraps the
+        :py:func:`hashutil.digest <salt.modules.hashutil.digest>` execution
+        function.
+
+    Usage:
+
+    .. code-block:: yaml
+
+        write_base64_encoded_string_to_a_file:
+          file.decode:
+            - name: /tmp/new_file
+            - encoding_type: base64
+            - contents_pillar: mypillar:thefile
+
+        # or
+
+        write_base64_encoded_string_to_a_file:
+          file.decode:
+            - name: /tmp/new_file
+            - encoding_type: base64
+            - encoded_data: |
+                Z2V0IHNhbHRlZAo=
+
+    Be careful with multi-line strings that the YAML indentation is correct.
+    E.g.,
+
+    .. code-block:: yaml
+
+        write_base64_encoded_string_to_a_file:
+          file.decode:
+            - name: /tmp/new_file
+            - encoding_type: base64
+            - encoded_data: |
+                {{ salt.pillar.get('path:to:data') | indent(8) }}
+    '''
+    ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+
+    if not (encoded_data or contents_pillar):
+        raise CommandExecutionError("Specify either the 'encoded_data' or "
+            "'contents_pillar' argument.")
+    elif encoded_data and contents_pillar:
+        raise CommandExecutionError("Specify only one 'encoded_data' or "
+            "'contents_pillar' argument.")
+    elif encoded_data:
+        content = encoded_data
+    elif contents_pillar:
+        content = __salt__['pillar.get'](contents_pillar, False)
+        if content is False:
+            raise CommandExecutionError('Pillar data not found.')
+    else:
+        raise CommandExecutionError('No contents given.')
+
+    dest_exists = __salt__['file.file_exists'](name)
+    if dest_exists:
+        instr = __salt__['hashutil.base64_decodestring'](content)
+        insum = __salt__['hashutil.digest'](instr, checksum)
+        del instr  # no need to keep in-memory after we have the hash
+        outsum = __salt__['hashutil.digest_file'](name, checksum)
+
+        if insum != outsum:
+            ret['changes'] = {
+                'old': outsum,
+                'new': insum,
+            }
+
+        if not ret['changes']:
+            ret['comment'] = 'File is in the correct state.'
+            ret['result'] = True
+
+            return ret
+
+    if __opts__['test'] is True:
+        ret['comment'] = 'File is set to be updated.'
+        ret['result'] = None
+        return ret
+
+    ret['result'] = __salt__['hashutil.base64_decodefile'](content, name)
+    ret['comment'] = 'File was updated.'
+
+    if not ret['changes']:
+        ret['changes'] = {
+            'old': None,
+            'new': __salt__['hashutil.digest_file'](name, checksum),
+        }
+
+    return ret

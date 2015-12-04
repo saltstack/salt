@@ -17,6 +17,7 @@ options
           prefix: somewhere/overthere
           verify_ssl: True
           service_url: s3.amazonaws.com
+          kms_keyid: 01234567-89ab-cdef-0123-4567890abcde
           s3_cache_expire: 30
           s3_sync_on_update: True
 
@@ -48,6 +49,9 @@ must be set to False else an invalid certificate error will be thrown (issue
 
 The ``service_url`` parameter defaults to 's3.amazonaws.com'. It specifies the
 base url to use for accessing S3.
+
+The ``kms_keyid`` parameter is optional. It specifies the ID of the Key
+Management Service (KMS) master key that was used to encrypt the object.
 
 The ``s3_cache_expire`` parameter defaults to 30s. It specifies expiration
 time of S3 metadata cache file.
@@ -101,10 +105,11 @@ log = logging.getLogger(__name__)
 
 
 class S3Credentials(object):
-    def __init__(self, key, keyid, bucket, service_url, verify_ssl,
-                 location):
+    def __init__(self, key, keyid, bucket, service_url, verify_ssl=True,
+                 kms_keyid=None, location=None):
         self.key = key
         self.keyid = keyid
+        self.kms_keyid = kms_keyid
         self.bucket = bucket
         self.service_url = service_url
         self.verify_ssl = verify_ssl
@@ -122,6 +127,7 @@ def ext_pillar(minion_id,
                environment='base',
                prefix='',
                service_url=None,
+               kms_keyid=None,
                s3_cache_expire=30,  # cache for 30 seconds
                s3_sync_on_update=True):  # sync cache on update rather than jit
 
@@ -130,7 +136,7 @@ def ext_pillar(minion_id,
     '''
 
     s3_creds = S3Credentials(key, keyid, bucket, service_url, verify_ssl,
-                             location)
+                             kms_keyid, location)
 
     # normpath is needed to remove appended '/' if root is empty string.
     pillar_dir = os.path.normpath(os.path.join(_get_cache_dir(), environment,
@@ -254,6 +260,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
         return s3.query(
             key=creds.key,
             keyid=creds.keyid,
+            kms_keyid=creds.kms_keyid,
             bucket=creds.bucket,
             service_url=creds.service_url,
             verify_ssl=creds.verify_ssl,
@@ -395,6 +402,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
     s3.query(
         key=creds.key,
         keyid=creds.keyid,
+        kms_keyid=creds.kms_keyid,
         bucket=bucket,
         service_url=creds.service_url,
         path=_quote(path),

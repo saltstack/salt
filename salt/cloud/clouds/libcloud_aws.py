@@ -34,7 +34,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import stat
 import uuid
 import pprint
 import logging
@@ -101,29 +100,14 @@ def __virtual__():
         return False
 
     for provider, details in six.iteritems(__opts__['providers']):
-        if 'provider' not in details or details['provider'] != 'aws':
+        if 'aws' not in details:
             continue
 
-        if not os.path.exists(details['private_key']):
-            raise SaltCloudException(
-                'The AWS key file {0!r} used in the {1!r} provider '
-                'configuration does not exist\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
-
-        keymode = str(
-            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
-        )
-        if keymode not in ('0400', '0600'):
-            raise SaltCloudException(
-                'The AWS key file {0!r} used in the {1!r} provider '
-                'configuration needs to be set to mode 0400 or 0600\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
+        parameters = details['aws']
+        if salt.utils.cloud.check_key_path_and_mode(
+            provider, parameters['private_key']
+        ) is False:
+            return False
 
     global avail_images, avail_sizes, script, list_nodes
     global avail_locations, list_nodes_full, list_nodes_select, get_image
@@ -334,7 +318,7 @@ def create(vm_):
     )
     if key_filename is not None and not os.path.isfile(key_filename):
         raise SaltCloudConfigError(
-            'The defined key_filename {0!r} does not exist'.format(
+            'The defined key_filename \'{0}\' does not exist'.format(
                 key_filename
             )
         )
@@ -566,9 +550,9 @@ def create(vm_):
 
     ret.update(data.__dict__)
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )

@@ -5,7 +5,7 @@ Reference
 
     auth/all/index
     cli/index
-    clientacl
+    publisheracl
     clients/index
     clouds/all/index
     configuration/*

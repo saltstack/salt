@@ -29,6 +29,15 @@ def managed(name, value, **kwargs):
         (optional) The rc file to add the variable to.
     jail
         (option) the name or JID of the jail to set the value in.
+
+    Example:
+
+    .. code-block:: yaml
+
+        syslogd:
+          sysrc.managed:
+            - name: syslogd_flags
+            - value: -ss
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}

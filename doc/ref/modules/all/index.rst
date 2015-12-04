@@ -149,6 +149,7 @@ Full list of builtin execution modules
     kmod
     launchctl
     layman
+    ldap3
     ldapmod
     linux_acl
     linux_lvm
@@ -179,6 +180,7 @@ Full list of builtin execution modules
     nacl
     nagios
     nagios_rpc
+    netaddress
     netbsd_sysctl
     netbsdservice
     netscaler
@@ -274,6 +276,7 @@ Full list of builtin execution modules
     solarispkg
     solr
     splay
+    splunk
     splunk_search
     sqlite3
     ssh
@@ -292,6 +295,7 @@ Full list of builtin execution modules
     system_profiler
     system_rest_sample
     systemd
+    telemetry
     temp
     test
     test_virtual
@@ -340,6 +344,7 @@ Full list of builtin execution modules
     xmpp
     yumpkg
     zcbuildout
+    zenoss
     zfs
     zk_concurrency
     znc

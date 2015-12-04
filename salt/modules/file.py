@@ -562,7 +562,7 @@ def check_hash(path, file_hash):
         # Support "=" for backward compatibility.
         hash_parts = file_hash.split('=', 1)
         if len(hash_parts) != 2:
-            raise ValueError('Bad hash format: {0!r}'.format(file_hash))
+            raise ValueError('Bad hash format: \'{0}\''.format(file_hash))
     hash_form, hash_value = hash_parts
     return get_hash(path, hash_form) == hash_value
 
@@ -777,19 +777,19 @@ def sed(path,
     if sys.platform == 'darwin':
         options = options.replace('-r', '-E')
 
-    cmd = (
-        r'''sed {backup}{options} '{limit}{negate_match}s/{before}/{after}/{flags}' {path}'''
-        .format(
-            backup='-i{0} '.format(backup) if backup else '-i ',
-            options=options,
+    cmd = ['sed']
+    cmd.append('-i{0}'.format(backup) if backup else '-i')
+    cmd.extend(salt.utils.shlex_split(options))
+    cmd.append(
+        r'{limit}{negate_match}s/{before}/{after}/{flags}'.format(
             limit='/{0}/ '.format(limit) if limit else '',
+            negate_match='!' if negate_match else '',
             before=before,
             after=after,
-            flags=flags,
-            path=path,
-            negate_match='!' if negate_match else '',
+            flags=flags
         )
     )
+    cmd.append(path)
 
     return __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -825,12 +825,16 @@ def sed_contains(path,
     if sys.platform == 'darwin':
         options = options.replace('-r', '-E')
 
-    cmd = r"sed {options} '{limit}s/{before}/$/{flags}' {path}".format(
-        options=options,
-        limit='/{0}/ '.format(limit) if limit else '',
-        before=before,
-        flags='p{0}'.format(flags),
-        path=path)
+    cmd = ['sed']
+    cmd.extend(salt.utils.shlex_split(options))
+    cmd.append(
+        r'{limit}s/{before}/$/{flags}'.format(
+            limit='/{0}/ '.format(limit) if limit else '',
+            before=before,
+            flags='p{0}'.format(flags)
+        )
+    )
+    cmd.append(path)
 
     result = __salt__['cmd.run'](cmd, python_shell=False)
 
@@ -1684,7 +1688,7 @@ def replace(path,
         .. versionadded:: 2014.7.0
 
         If pattern is not found and set to ``True``
-        then, the content will be appended to the file.
+        then, the content will be prepended to the file.
         Default is ``False``
     not_found_content
         .. versionadded:: 2014.7.0
@@ -1810,7 +1814,7 @@ def replace(path,
                 r_data = mmap.mmap(r_file.fileno(),
                                    0,
                                    access=mmap.ACCESS_READ)
-            except ValueError:
+            except (ValueError, mmap.error):
                 # size of file in /proc is 0, but contains data
                 r_data = "".join(r_file)
             if search_only:
@@ -2244,20 +2248,22 @@ def patch(originalfile, patchfile, options='', dry_run=False):
 
         salt '*' file.patch /opt/file.txt /tmp/file.txt.patch
     '''
-    if dry_run:
-        if __grains__['kernel'] in ('FreeBSD', 'OpenBSD'):
-            dry_run_opt = ' -C'
-        else:
-            dry_run_opt = ' --dry-run'
-    else:
-        dry_run_opt = ''
-
     patchpath = salt.utils.which('patch')
     if not patchpath:
-        raise CommandExecutionError('patch executable not found. Is the distribution\'s patch package installed?')
+        raise CommandExecutionError(
+            'patch executable not found. Is the distribution\'s patch '
+            'package installed?'
+        )
 
-    cmd = '{0} {1}{2} "{3}" "{4}"'.format(
-        patchpath, options, dry_run_opt, originalfile, patchfile)
+    cmd = [patchpath]
+    cmd.extend(salt.utils.shlex_split(options))
+    if dry_run:
+        if __grains__['kernel'] in ('FreeBSD', 'OpenBSD'):
+            cmd.append('-C')
+        else:
+            cmd.append('--dry-run')
+    cmd.extend([originalfile, patchfile])
+
     return __salt__['cmd.run_all'](cmd, python_shell=False)
 
 
@@ -2705,7 +2711,7 @@ def link(src, path):
         os.link(src, path)
         return True
     except (OSError, IOError):
-        raise CommandExecutionError('Could not create {0!r}'.format(path))
+        raise CommandExecutionError('Could not create \'{0}\''.format(path))
     return False
 
 
@@ -2746,7 +2752,7 @@ def symlink(src, path):
         os.symlink(src, path)
         return True
     except (OSError, IOError):
-        raise CommandExecutionError('Could not create {0!r}'.format(path))
+        raise CommandExecutionError('Could not create \'{0}\''.format(path))
     return False
 
 
@@ -2771,7 +2777,7 @@ def rename(src, dst):
         return True
     except OSError:
         raise CommandExecutionError(
-            'Could not rename {0!r} to {1!r}'.format(src, dst)
+            'Could not rename \'{0}\' to \'{1}\''.format(src, dst)
         )
     return False
 
@@ -2822,7 +2828,7 @@ def copy(src, dst, recurse=False, remove_existing=False):
             shutil.copyfile(src, dst)
     except OSError:
         raise CommandExecutionError(
-            'Could not copy {0!r} to {1!r}'.format(src, dst)
+            'Could not copy \'{0}\' to \'{1}\''.format(src, dst)
         )
 
     if not salt.utils.is_windows():
@@ -2970,7 +2976,7 @@ def statvfs(path):
             'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
             'f_frsize', 'f_namemax'))
     except (OSError, IOError):
-        raise CommandExecutionError('Could not statvfs {0!r}'.format(path))
+        raise CommandExecutionError('Could not statvfs \'{0}\''.format(path))
     return False
 
 
@@ -3082,7 +3088,7 @@ def remove(path):
             return True
     except (OSError, IOError) as exc:
         raise CommandExecutionError(
-            'Could not remove {0!r}: {1}'.format(path, exc)
+            'Could not remove \'{0}\': {1}'.format(path, exc)
         )
     return False
 
@@ -3144,9 +3150,9 @@ def restorecon(path, recursive=False):
          salt '*' file.restorecon /home/user/.ssh/authorized_keys
     '''
     if recursive:
-        cmd = 'restorecon -FR {0}'.format(path)
+        cmd = ['restorecon', '-FR', path]
     else:
-        cmd = 'restorecon -F {0}'.format(path)
+        cmd = ['restorecon', '-F', path]
     return not __salt__['cmd.retcode'](cmd, python_shell=False)
 
 
@@ -3160,12 +3166,14 @@ def get_selinux_context(path):
 
         salt '*' file.get_selinux_context /etc/hosts
     '''
-    out = __salt__['cmd.run']('ls -Z {0}'.format(path), python_shell=False)
+    out = __salt__['cmd.run'](['ls', '-Z', path], python_shell=False)
 
     try:
         ret = re.search(r'\w+:\w+:\w+:\w+', out).group(0)
     except AttributeError:
-        ret = 'No selinux context information is available for {0}'.format(path)
+        ret = (
+            'No selinux context information is available for {0}'.format(path)
+        )
 
     return ret
 
@@ -3187,17 +3195,17 @@ def set_selinux_context(path,
     if not any((user, role, type, range)):
         return False
 
-    cmd = 'chcon '
+    cmd = ['chcon']
     if user:
-        cmd += '-u {0} '.format(user)
+        cmd.extend(['-u', user])
     if role:
-        cmd += '-r {0} '.format(role)
+        cmd.extend(['-r', role])
     if type:
-        cmd += '-t {0} '.format(type)
+        cmd.extend(['-t', type])
     if range:
-        cmd += '-l {0} '.format(range)
+        cmd.extend(['-l', range])
+    cmd.append(path)
 
-    cmd += path
     ret = not __salt__['cmd.retcode'](cmd, python_shell=False)
     if ret:
         return get_selinux_context(path)
@@ -3397,7 +3405,7 @@ def get_managed(
         # exists doesn't play nice with sfn as bool
         # but if cache failed, sfn == False
         if not sfn or not os.path.exists(sfn):
-            return sfn, {}, 'Source file {0!r} not found'.format(source)
+            return sfn, {}, 'Source file \'{0}\' not found'.format(source)
         if sfn == name:
             raise SaltInvocationError(
                 'Source file cannot be the same as destination'
@@ -4002,7 +4010,7 @@ def manage_file(name,
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
-                    ret, 'Source file {0!r} not found'.format(source))
+                    ret, 'Source file \'{0}\' not found'.format(source))
             # If the downloaded file came from a non salt server or local source
             #  verify that it matches the intended sum value
             if _urlparse(source).scheme not in ('salt', ''):
@@ -4095,7 +4103,7 @@ def manage_file(name,
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
-                    ret, 'Source file {0!r} not found'.format(source))
+                    ret, 'Source file \'{0}\' not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
             if _urlparse(source).scheme != 'salt':
@@ -4164,7 +4172,7 @@ def manage_file(name,
                 sfn = __salt__['cp.cache_file'](source, saltenv)
             if not sfn:
                 return _error(
-                    ret, 'Source file {0!r} not found'.format(source))
+                    ret, 'Source file \'{0}\' not found'.format(source))
             # If the downloaded file came from a non salt server source verify
             # that it matches the intended sum value
             if _urlparse(source).scheme != 'salt':
@@ -4318,12 +4326,12 @@ def makedirs_(path,
 
     if os.path.isdir(dirname):
         # There's nothing for us to do
-        msg = 'Directory {0!r} already exists'.format(dirname)
+        msg = 'Directory \'{0}\' already exists'.format(dirname)
         log.debug(msg)
         return msg
 
     if os.path.exists(dirname):
-        msg = 'The path {0!r} already exists and is not a directory'.format(
+        msg = 'The path \'{0}\' already exists and is not a directory'.format(
             dirname
         )
         log.debug(msg)
@@ -4653,7 +4661,7 @@ def mknod(name,
         ret = mknod_fifo(name, user, group, mode)
     else:
         raise SaltInvocationError(
-            'Node type unavailable: {0!r}. Available node types are '
+            'Node type unavailable: \'{0}\'. Available node types are '
             'character (\'c\'), block (\'b\'), and pipe (\'p\').'.format(ntype)
         )
     return ret
@@ -4906,7 +4914,7 @@ remove_backup = salt.utils.alias_function(delete_backup, 'remove_backup')
 
 def grep(path,
          pattern,
-         *args):
+         *opts):
     '''
     Grep for a string in the specified file
 
@@ -4915,40 +4923,52 @@ def grep(path,
         versions of Salt
 
     path
-        A file path
+        Path to the file to be searched
+
+        .. note::
+            Globbing is supported (i.e. ``/var/log/foo/*.log``, but if globbing
+            is being used then the path should be quoted to keep the shell from
+            attempting to expand the glob expression.
+
     pattern
-        A string. For example:
-        ``test``
-        ``a[0-5]``
-    args
-        grep options. For example:
-        ``" -v"``
-        ``" -i -B2"``
+        Pattern to match. For example: ``test``, or ``a[0-5]``
+
+    opts
+        Additional command-line flags to pass to the grep command. For example:
+        ``-v``, or ``-i -B2``
+
+        .. note::
+            The options should come after a double-dash (as shown in the
+            examples below) to keep Salt's own argument parser from
+            interpreting them.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' file.grep /etc/passwd nobody
-        salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr " -i"
-        salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr " -i -B2"
-        salt '*' file.grep "/etc/sysconfig/network-scripts/*" ipaddr " -i -l"
+        salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr -- -i
+        salt '*' file.grep /etc/sysconfig/network-scripts/ifcfg-eth0 ipaddr -- -i -B2
+        salt '*' file.grep "/etc/sysconfig/network-scripts/*" ipaddr -- -i -l
     '''
     path = os.path.expanduser(path)
 
-    if args:
-        options = ' '.join(args)
-    else:
-        options = ''
-    cmd = (
-        r'''grep  {options} {pattern} {path}'''
-        .format(
-            options=options,
-            pattern=pattern,
-            path=path,
-        )
-    )
+    split_opts = []
+    for opt in opts:
+        try:
+            opt = salt.utils.shlex_split(opt)
+        except AttributeError:
+            opt = salt.utils.shlex_split(str(opt))
+        if len(opt) > 1:
+            salt.utils.warn_until(
+                'Carbon',
+                'Additional command line options for file.grep should be '
+                'passed one at a time, please do not pass more than one in a '
+                'single argument.'
+            )
+        split_opts.extend(opt)
 
+    cmd = ['grep'] + split_opts + [pattern, path]
     try:
         ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     except (IOError, OSError) as exc:

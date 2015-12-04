@@ -9,7 +9,6 @@ import os
 import re
 import sys
 import uuid
-import shlex
 import string
 
 # Import salt libs
@@ -774,6 +773,9 @@ def append(table='filter', chain=None, rule=None, family='ipv4'):
         return 'Error: Rule needs to be specified'
 
     wait = '--wait' if _has_option('--wait', family) else ''
+    returnCheck = check(table, chain, rule, family)
+    if isinstance(returnCheck, bool) and returnCheck:
+        return False
     cmd = '{0} {1} -t {2} -A {3} {4}'.format(
             _iptables_cmd(family), wait, table, chain, rule)
     out = __salt__['cmd.run'](cmd)
@@ -824,6 +826,9 @@ def insert(table='filter', chain=None, position=None, rule=None, family='ipv4'):
             position = 1
 
     wait = '--wait' if _has_option('--wait', family) else ''
+    returnCheck = check(table, chain, rule, family)
+    if isinstance(returnCheck, bool) and returnCheck:
+        return False
     cmd = '{0} {1} -t {2} -I {3} {4} {5}'.format(
             _iptables_cmd(family), wait, table, chain, position, rule)
     out = __salt__['cmd.run'](cmd)
@@ -926,7 +931,7 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
             ret[table][chain]['rules'] = []
             ret[table][chain]['rules_comment'] = {}
         elif line.startswith('-A'):
-            args = shlex.split(line)
+            args = salt.utils.shlex_split(line)
             index = 0
             while index + 1 < len(args):
                 swap = args[index] == '!' and args[index + 1].startswith('-')
@@ -1231,7 +1236,7 @@ def _parser():
     ## sctp
     add_arg('--chunk-types', dest='chunk-types', action='append')
     ## set
-    add_arg('--match-set', dest='match-set', action='append', nargs=2)
+    add_arg('--match-set', dest='match-set', action='append')
     add_arg('--return-nomatch', dest='return-nomatch', action='append')
     add_arg('--update-counters', dest='update-counters', action='append')
     add_arg('--update-subcounters', dest='update-subcounters', action='append')

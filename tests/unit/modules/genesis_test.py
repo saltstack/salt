@@ -48,8 +48,11 @@ class GenesisTestCase(TestCase):
         with patch.object(genesis, '_bootstrap_deb', return_value='A'):
             self.assertEqual(genesis.bootstrap('deb', 'root', 'dir1'), 'A')
 
-        with patch.object(genesis, '_bootstrap_pacman', return_value='A'):
-            self.assertEqual(genesis.bootstrap('pacman', 'root', 'dir1'), 'A')
+        with patch.object(genesis, '_bootstrap_pacman', return_value='A') as pacman_patch:
+            with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(return_value=True)}):
+                with patch.dict(genesis.__salt__, {'file.rmdir': MagicMock(return_value=True)}):
+                    genesis.bootstrap('pacman', 'root', 'dir1')
+                    pacman_patch.assert_called_with('root', img_format='dir1')
 
     @patch('salt.utils.which', MagicMock(return_value=False))
     def test_avail_platforms(self):

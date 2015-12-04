@@ -12,6 +12,7 @@ import logging
 import salt
 import salt.loader
 import salt.utils
+from salt.utils.process import SignalHandlingMultiprocessingProcess
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +48,8 @@ def start_engines(opts, proc_mgr):
             engine_opts = None
         fun = '{0}.start'.format(engine)
         if fun in engines:
+            start_func = engines[fun]
+            name = '{0}.Engine({1})'.format(__name__, start_func.__module__)
             proc_mgr.add_process(
                     Engine,
                     args=(
@@ -55,19 +58,20 @@ def start_engines(opts, proc_mgr):
                         engine_opts,
                         funcs,
                         runners
-                        )
+                        ),
+                    name=name
                     )
 
 
-class Engine(multiprocessing.Process):
+class Engine(SignalHandlingMultiprocessingProcess):
     '''
     Execute the given engine in a new process
     '''
-    def __init__(self, opts, fun, config, funcs, runners):
+    def __init__(self, opts, fun, config, funcs, runners, **kwargs):
         '''
         Set up the process executor
         '''
-        super(Engine, self).__init__()
+        super(Engine, self).__init__(**kwargs)
         self.opts = opts
         self.config = config
         self.fun = fun

@@ -28,7 +28,8 @@ log = logging.getLogger(__name__)
 def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
           path='', return_bin=False, action=None, local_file=None,
-          verify_ssl=True, location=None, full_headers=False, role_arn=None):
+          verify_ssl=True, full_headers=False, kms_keyid=None,
+          location=None, role_arn=None):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -91,6 +92,10 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not keyid:
         keyid = salt.utils.aws.IROLE_CODE
 
+    if kms_keyid is not None and method in ('PUT', 'POST'):
+        headers['x-amz-server-side-encryption'] = 'aws:kms'
+        headers['x-amz-server-side-encryption-aws-kms-key-id'] = kms_keyid
+
     data = ''
     if method == 'PUT':
         if local_file:
@@ -110,6 +115,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
             location=location,
             product='s3',
             requesturl=requesturl,
+            headers=headers,
         )
 
     log.debug('S3 Request: {0}'.format(requesturl))

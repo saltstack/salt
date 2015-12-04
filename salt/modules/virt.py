@@ -16,6 +16,9 @@ import shutil
 import subprocess
 import string  # pylint: disable=deprecated-module
 import logging
+import time
+import datetime
+from xml.etree import ElementTree
 
 # Import third party libs
 import yaml
@@ -60,7 +63,7 @@ VIRT_DEFAULT_HYPER = 'kvm'
 
 def __virtual__():
     if not HAS_LIBVIRT:
-        return False
+        return (False, 'Unable to locate or import python libvirt library.')
     return 'virt'
 
 
@@ -156,14 +159,31 @@ def __get_conn():
     return conn
 
 
-def _get_dom(vm_):
+def _get_domain(*vms, **kwargs):
     '''
-    Return a domain object for the named vm
+    Return a domain object for the named VM or return domain object for all VMs.
     '''
+    ret = list()
+    lookup_vms = list()
     conn = __get_conn()
-    if vm_ not in list_vms():
-        raise CommandExecutionError('The specified vm is not present')
-    return conn.lookupByName(vm_)
+
+    all_vms = list_domains()
+    if not all_vms:
+        raise CommandExecutionError('No virtual machines found.')
+
+    if vms:
+        for vm in vms:
+            if vm not in all_vms:
+                raise CommandExecutionError('The VM "{name}" is not present'.format(name=vm))
+            else:
+                lookup_vms.append(vm)
+    else:
+        lookup_vms = list(all_vms)
+
+    for vm in lookup_vms:
+        ret.append(conn.lookupByName(vm))
+
+    return len(ret) == 1 and not kwargs.get('iterable') and ret[0] or ret
 
 
 def _libvirt_creds():
@@ -623,20 +643,20 @@ def init(name,
                            config=kwargs.get('config'),
                            install=install)
     if start:
-        create(name)
+        _get_domain(name).create()
 
     return True
 
 
-def list_vms():
+def list_domains():
     '''
-    Return a list of virtual machine names on the minion
+    Return a list of available domains.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' virt.list_vms
+        salt '*' virt.list_domains
     '''
     vms = []
     vms.extend(list_active_vms())
@@ -706,7 +726,7 @@ def vm_info(vm_=None):
         salt '*' virt.vm_info
     '''
     def _info(vm_):
-        dom = _get_dom(vm_)
+        dom = _get_domain(vm_)
         raw = dom.info()
         return {'cpu': raw[3],
                 'cputime': int(raw[4]),
@@ -720,7 +740,7 @@ def vm_info(vm_=None):
     if vm_:
         info[vm_] = _info(vm_)
     else:
-        for vm_ in list_vms():
+        for vm_ in list_domains():
             info[vm_] = _info(vm_)
     return info
 
@@ -736,11 +756,11 @@ def vm_state(vm_=None):
 
     .. code-block:: bash
 
-        salt '*' virt.vm_state <vm name>
+        salt '*' virt.vm_state <domain>
     '''
     def _info(vm_):
         state = ''
-        dom = _get_dom(vm_)
+        dom = _get_domain(vm_)
         raw = dom.info()
         state = VIRT_STATE_NAME_MAP.get(raw[0], 'unknown')
         return state
@@ -748,7 +768,7 @@ def vm_state(vm_=None):
     if vm_:
         info[vm_] = _info(vm_)
     else:
-        for vm_ in list_vms():
+        for vm_ in list_domains():
             info[vm_] = _info(vm_)
     return info
 
@@ -784,7 +804,7 @@ def get_nics(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.get_nics <vm name>
+        salt '*' virt.get_nics <domain>
     '''
     nics = {}
     doc = minidom.parse(_StringIO(get_xml(vm_)))
@@ -828,7 +848,7 @@ def get_macs(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.get_macs <vm name>
+        salt '*' virt.get_macs <domain>
     '''
     macs = []
     doc = minidom.parse(_StringIO(get_xml(vm_)))
@@ -848,7 +868,7 @@ def get_graphics(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.get_graphics <vm name>
+        salt '*' virt.get_graphics <domain>
     '''
     out = {'autoport': 'None',
            'keymap': 'None',
@@ -874,7 +894,7 @@ def get_disks(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.get_disks <vm name>
+        salt '*' virt.get_disks <domain>
     '''
     disks = {}
     doc = minidom.parse(_StringIO(get_xml(vm_)))
@@ -972,12 +992,13 @@ def setmem(vm_, memory, config=False):
 
     .. code-block:: bash
 
-        salt '*' virt.setmem myvm 768
+        salt '*' virt.setmem <domain> <size>
+        salt '*' virt.setmem my_domain 768
     '''
     if vm_state(vm_) != 'shutdown':
         return False
 
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
 
     # libvirt has a funny bitwise system for the flags in that the flag
     # to affect the "current" setting is 0, which means that to set the
@@ -1005,12 +1026,13 @@ def setvcpus(vm_, vcpus, config=False):
 
     .. code-block:: bash
 
-        salt '*' virt.setvcpus myvm 2
+        salt '*' virt.setvcpus <domain> <amount>
+        salt '*' virt.setvcpus my_domain 4
     '''
     if vm_state(vm_) != 'shutdown':
         return False
 
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
 
     # see notes in setmem
     flags = libvirt.VIR_DOMAIN_VCPU_MAXIMUM
@@ -1038,8 +1060,8 @@ def freemem():
     mem = conn.getInfo()[1]
     # Take off just enough to sustain the hypervisor
     mem -= 256
-    for vm_ in list_vms():
-        dom = _get_dom(vm_)
+    for vm_ in list_domains():
+        dom = _get_domain(vm_)
         if dom.ID() > 0:
             mem -= dom.info()[2] / 1024
     return mem
@@ -1058,8 +1080,8 @@ def freecpu():
     '''
     conn = __get_conn()
     cpus = conn.getInfo()[2]
-    for vm_ in list_vms():
-        dom = _get_dom(vm_)
+    for vm_ in list_domains():
+        dom = _get_domain(vm_)
         if dom.ID() > 0:
             cpus -= dom.info()[3]
     return cpus
@@ -1089,9 +1111,9 @@ def get_xml(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.get_xml <vm name>
+        salt '*' virt.get_xml <domain>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.XMLDesc(0)
 
 
@@ -1135,9 +1157,9 @@ def shutdown(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.shutdown <vm name>
+        salt '*' virt.shutdown <domain>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.shutdown() == 0
 
 
@@ -1149,9 +1171,9 @@ def pause(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.pause <vm name>
+        salt '*' virt.pause <domain>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.suspend() == 0
 
 
@@ -1163,13 +1185,13 @@ def resume(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.resume <vm name>
+        salt '*' virt.resume <domain>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.resume() == 0
 
 
-def create(vm_):
+def start(name):
     '''
     Start a defined domain
 
@@ -1177,39 +1199,25 @@ def create(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.create <vm name>
+        salt '*' virt.start <domain>
     '''
-    dom = _get_dom(vm_)
-    return dom.create() == 0
+    return _get_domain(name).create() == 0
 
 
-def start(vm_):
+def stop(name):
     '''
-    Alias for the obscurely named 'create' function
+    Hard power down the virtual machine, this is equivalent to pulling the power.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' virt.start <vm name>
+        salt '*' virt.stop <domain>
     '''
-    return create(vm_)
+    return _get_domain(name).destroy() == 0
 
 
-def stop(vm_):
-    '''
-    Alias for the obscurely named 'destroy' function
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.stop <vm name>
-    '''
-    return destroy(vm_)
-
-
-def reboot(vm_):
+def reboot(name):
     '''
     Reboot a domain via ACPI request
 
@@ -1217,13 +1225,9 @@ def reboot(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.reboot <vm name>
+        salt '*' virt.reboot <domain>
     '''
-    dom = _get_dom(vm_)
-
-    # reboot has a few modes of operation, passing 0 in means the
-    # hypervisor will pick the best method for rebooting
-    return dom.reboot(0) == 0
+    return _get_domain(name).reboot(libvirt.VIR_DOMAIN_REBOOT_DEFAULT) == 0
 
 
 def reset(vm_):
@@ -1234,9 +1238,9 @@ def reset(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.reset <vm name>
+        salt '*' virt.reset <domain>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
 
     # reset takes a flag, like reboot, but it is not yet used
     # so we just pass in 0
@@ -1252,9 +1256,9 @@ def ctrl_alt_del(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.ctrl_alt_del <vm name>
+        salt '*' virt.ctrl_alt_del <domain>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.sendKey(0, 0, [29, 56, 111], 3, 0) == 0
 
 
@@ -1395,7 +1399,7 @@ def migrate(vm_, target, ssh=False):
 
     .. code-block:: bash
 
-        salt '*' virt.migrate <vm name> <target hypervisor>
+        salt '*' virt.migrate <domain> <target hypervisor>
     '''
     cmd = _get_migrate_command() + ' ' + vm_\
         + _get_target(target, ssh)
@@ -1451,10 +1455,10 @@ def set_autostart(vm_, state='on'):
 
     .. code-block:: bash
 
-        salt "*" virt.set_autostart <vm name> <on | off>
+        salt "*" virt.set_autostart <domain> <on | off>
     '''
 
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
 
     if state == 'on':
         return dom.setAutostart(1) == 0
@@ -1467,21 +1471,6 @@ def set_autostart(vm_, state='on'):
         return False
 
 
-def destroy(vm_):
-    '''
-    Hard power down the virtual machine, this is equivalent to pulling the
-    power
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' virt.destroy <vm name>
-    '''
-    dom = _get_dom(vm_)
-    return dom.destroy() == 0
-
-
 def undefine(vm_):
     '''
     Remove a defined vm, this does not purge the virtual machine image, and
@@ -1491,9 +1480,9 @@ def undefine(vm_):
 
     .. code-block:: bash
 
-        salt '*' virt.undefine <vm name>
+        salt '*' virt.undefine <domain>
     '''
-    dom = _get_dom(vm_)
+    dom = _get_domain(vm_)
     return dom.undefine() == 0
 
 
@@ -1507,11 +1496,11 @@ def purge(vm_, dirs=False):
 
     .. code-block:: bash
 
-        salt '*' virt.purge <vm name>
+        salt '*' virt.purge <domain>
     '''
     disks = get_disks(vm_)
     try:
-        if not destroy(vm_):
+        if not stop(vm_):
             return False
     except libvirt.libvirtError:
         # This is thrown if the machine is already shut down
@@ -1626,7 +1615,7 @@ def vm_cputime(vm_=None):
     host_cpus = __get_conn().getInfo()[2]
 
     def _info(vm_):
-        dom = _get_dom(vm_)
+        dom = _get_domain(vm_)
         raw = dom.info()
         vcpus = int(raw[3])
         cputime = int(raw[4])
@@ -1642,7 +1631,7 @@ def vm_cputime(vm_=None):
     if vm_:
         info[vm_] = _info(vm_)
     else:
-        for vm_ in list_vms():
+        for vm_ in list_domains():
             info[vm_] = _info(vm_)
     return info
 
@@ -1678,7 +1667,7 @@ def vm_netstats(vm_=None):
         salt '*' virt.vm_netstats
     '''
     def _info(vm_):
-        dom = _get_dom(vm_)
+        dom = _get_domain(vm_)
         nics = get_nics(vm_)
         ret = {
                 'rx_bytes': 0,
@@ -1708,7 +1697,7 @@ def vm_netstats(vm_=None):
     if vm_:
         info[vm_] = _info(vm_)
     else:
-        for vm_ in list_vms():
+        for vm_ in list_domains():
             info[vm_] = _info(vm_)
     return info
 
@@ -1750,7 +1739,7 @@ def vm_diskstats(vm_=None):
         return disks
 
     def _info(vm_):
-        dom = _get_dom(vm_)
+        dom = _get_domain(vm_)
         # Do not use get_disks, since it uses qemu-img and is very slow
         # and unsuitable for any sort of real time statistics
         disks = get_disk_devs(vm_)
@@ -1777,3 +1766,229 @@ def vm_diskstats(vm_=None):
         for vm_ in list_active_vms():
             info[vm_] = _info(vm_)
     return info
+
+
+def _parse_snapshot_description(snapshot, unix_time=False):
+    '''
+    Parse XML doc and return a dict with the status values.
+
+    :param xmldoc:
+    :return:
+    '''
+    ret = dict()
+    tree = ElementTree.fromstring(snapshot.getXMLDesc())
+    for node in tree:
+        if node.tag == 'name':
+            ret['name'] = node.text
+        elif node.tag == 'creationTime':
+            ret['created'] = not unix_time and datetime.datetime.fromtimestamp(
+                float(node.text)).isoformat(' ') or float(node.text)
+        elif node.tag == 'state':
+            ret['running'] = node.text == 'running'
+
+    ret['current'] = snapshot.isCurrent() == 1
+
+    return ret
+
+
+def list_snapshots(domain=None):
+    '''
+    List available snapshots for certain vm or for all.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.list_snapshots
+        salt '*' virt.list_snapshots <domain>
+    '''
+    ret = dict()
+    for vm_domain in _get_domain(*(domain and [domain] or list()), iterable=True):
+        ret[vm_domain.name()] = [_parse_snapshot_description(snap) for snap in vm_domain.listAllSnapshots()] or 'N/A'
+
+    return ret
+
+
+def snapshot(domain, name=None, suffix=None):
+    '''
+    Create a snapshot of a VM.
+
+    Options:
+
+    * **name**: Name of the snapshot. If the name is omitted, then will be used original domain name with
+                ISO 8601 time as a suffix.
+
+    * **suffix**: Add suffix for the new name. Useful in states, where such snapshots
+                  can be distinguished from manually created.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.snapshot <domain>
+    '''
+    if name and name.lower() == domain.lower():
+        raise CommandExecutionError('Virtual Machine {name} is already defined. '
+                                    'Please choose another name for the snapshot'.format(name=name))
+    if not name:
+        name = "{domain}-{tsnap}".format(domain=domain, tsnap=time.strftime('%Y%m%d-%H%M%S', time.localtime()))
+
+    if suffix:
+        name = "{name}-{suffix}".format(name=name, suffix=suffix)
+
+    doc = ElementTree.Element('domainsnapshot')
+    n_name = ElementTree.SubElement(doc, 'name')
+    n_name.text = name
+
+    _get_domain(domain).snapshotCreateXML(ElementTree.tostring(doc))
+
+    return {'name': name}
+
+
+def delete_snapshots(name, *names, **kwargs):
+    '''
+    Delete one or more snapshots of the given VM.
+
+    Options:
+
+    * **all**: Remove all snapshots. Values: True or False (default False).
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.delete_snapshots <domain> all=True
+        salt '*' virt.delete_snapshots <domain> <snapshot>
+        salt '*' virt.delete_snapshots <domain> <snapshot1> <snapshot2> ...
+    '''
+    deleted = dict()
+    for snap in _get_domain(name).listAllSnapshots():
+        if snap.getName() in names or not names:
+            deleted[snap.getName()] = _parse_snapshot_description(snap)
+            snap.delete()
+
+    return {'available': list_snapshots(name), 'deleted': deleted}
+
+
+def revert_snapshot(name, snapshot=None, cleanup=False):
+    '''
+    Revert snapshot to the previous from current (if available) or to the specific.
+
+    Options:
+
+    * **cleanup**: Remove all newer than reverted snapshots. Values: True or False (default False).
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.revert <domain>
+        salt '*' virt.revert <domain> <snapshot>
+    '''
+    ret = dict()
+    domain = _get_domain(name)
+    snapshots = domain.listAllSnapshots()
+
+    _snapshots = list()
+    for snap_obj in snapshots:
+        _snapshots.append({'idx': _parse_snapshot_description(snap_obj, unix_time=True)['created'], 'ptr': snap_obj})
+    snapshots = [w_ptr['ptr'] for w_ptr in sorted(_snapshots, key=lambda item: item['idx'], reverse=True)]
+    del _snapshots
+
+    if not snapshots:
+        raise CommandExecutionError('No snapshots found')
+    elif len(snapshots) == 1:
+        raise CommandExecutionError('Cannot revert to itself: only one snapshot is available.')
+
+    snap = None
+    for p_snap in snapshots:
+        if not snapshot:
+            if p_snap.isCurrent() and snapshots[snapshots.index(p_snap) + 1:]:
+                snap = snapshots[snapshots.index(p_snap) + 1:][0]
+                break
+        elif p_snap.getName() == snapshot:
+            snap = p_snap
+            break
+
+    if not snap:
+        raise CommandExecutionError(
+            snapshot and 'Snapshot "{0}" not found'.format(snapshot) or 'No more previous snapshots available')
+    elif snap.isCurrent():
+        raise CommandExecutionError('Cannot revert to the currently running snapshot.')
+
+    domain.revertToSnapshot(snap)
+    ret['reverted'] = snap.getName()
+
+    if cleanup:
+        delete = list()
+        for p_snap in snapshots:
+            if p_snap.getName() != snap.getName():
+                delete.append(p_snap.getName())
+                p_snap.delete()
+            else:
+                break
+        ret['deleted'] = delete
+    else:
+        ret['deleted'] = 'N/A'
+
+    return ret
+
+
+# Deprecated aliases
+def create(domain):
+    '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.start` instead.
+
+    Start a defined domain
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.create <domain>
+    '''
+    salt.utils.warn_until('Nitrogen', 'Use "virt.start" instead.')
+    return start(domain)
+
+
+def destroy(domain):
+    '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.stop` instead.
+
+    Power off a defined domain
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.destroy <domain>
+    '''
+    salt.utils.warn_until('Nitrogen', 'Use "virt.stop" instead.')
+    return stop(domain)
+
+
+def list_vms():
+    '''
+    .. deprecated:: Boron
+       Use :py:func:`~salt.modules.virt.list_domains` instead.
+
+    List all virtual machines.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.list_vms <domain>
+    '''
+    salt.utils.warn_until('Nitrogen', 'Use "virt.list_domains" instead.')
+    return list_domains()

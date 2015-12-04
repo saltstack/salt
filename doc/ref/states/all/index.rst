@@ -88,6 +88,7 @@ Full list of builtin state modules
     keystone
     kmod
     layman
+    ldap
     libvirt
     linux_acl
     locale
@@ -148,6 +149,7 @@ Full list of builtin state modules
     rdp
     redismod
     reg
+    rsync
     rvm
     saltmod
     schedule
@@ -156,7 +158,9 @@ Full list of builtin state modules
     service
     slack
     smtp
+    splunk
     splunk_search
+    sqlite3
     ssh_auth
     ssh_known_hosts
     stateconf
@@ -167,6 +171,7 @@ Full list of builtin state modules
     sysctl
     syslog_ng
     sysrc
+    telemetry_alert
     test
     timezone
     tls
@@ -191,4 +196,5 @@ Full list of builtin state modules
     x509
     xmpp
     zcbuildout
+    zenoss
     zk_concurrency

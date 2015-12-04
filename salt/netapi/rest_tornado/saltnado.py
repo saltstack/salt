@@ -31,7 +31,7 @@ add the following to the Salt master config file.
         debug: False
         disable_ssl: False
         webhook_disable_auth: False
-
+        cors_origin: null
 
 .. _rest_tornado-auth:
 
@@ -48,6 +48,42 @@ The token may be sent in one of two ways:
   automatically handle cookie support (such as browsers).
 
 .. seealso:: You can bypass the session handling via the :py:class:`RunSaltAPIHandler` URL.
+
+CORS
+----
+
+rest_tornado supports Cross-site HTTP requests out of the box. It is by default
+deactivated and controlled by the `cors_origin` config key.
+
+You can allow all origins by settings `cors_origin` to `*`.
+
+You can allow only one origin with this configuration:
+
+.. code-block:: yaml
+
+    rest_tornado:
+        cors_origin: http://salt.yourcompany.com
+
+You can also be more specific and select only a few allowed origins by using
+a list. For example:
+
+.. code-block:: yaml
+
+    rest_tornado:
+        cors_origin:
+            - http://salt.yourcompany.com
+            - http://salt-preprod.yourcampany.com
+
+The format for origin are full URL, with both scheme and port if not standard.
+
+In this case, rest_tornado will check if the Origin header is in the allowed
+list if it's the case allow the origin. Else it will returns nothing,
+effectively preventing the origin to make request.
+
+For reference, CORS is a mechanism used by browser to allow (or disallow)
+requests made from browser from a different origin than salt-api. It's
+complementary to Authentication and mandatory only if you plan to use
+a salt client developed as a Javascript browser application.
 
 Usage
 -----
@@ -161,6 +197,7 @@ from copy import copy
 from collections import defaultdict
 
 # pylint: disable=import-error
+import cgi
 import yaml
 import tornado.httpserver
 import tornado.ioloop
@@ -428,15 +465,22 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         Run before get/posts etc. Pre-flight checks:
             - verify that we can speak back to them (compatible accept header)
         '''
-        # verify the content type
-        found = False
-        for content_type, dumper in self.ct_out_map:
-            if fnmatch.fnmatch(content_type, self.request.headers.get('Accept', '*/*')):
-                found = True
-                break
+        # Find an acceptable content-type
+        accept_header = self.request.headers.get('Accept', '*/*')
+        # Ignore any parameter, including q (quality) one
+        parsed_accept_header = [cgi.parse_header(h)[0] for h in accept_header.split(',')]
+
+        def find_acceptable_content_type(parsed_accept_header):
+            for media_range in parsed_accept_header:
+                for content_type, dumper in self.ct_out_map:
+                    if fnmatch.fnmatch(content_type, media_range):
+                        return content_type, dumper
+            return None, None
+
+        content_type, dumper = find_acceptable_content_type(parsed_accept_header)
 
         # better return message?
-        if not found:
+        if not content_type:
             self.send_error(406)
 
         self.content_type = content_type
@@ -503,7 +547,10 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         }
 
         try:
-            return ct_in_map[self.request.headers['Content-Type']](data)
+            # Use cgi.parse_header to correctly separate parameters from value
+            header = cgi.parse_header(self.request.headers['Content-Type'])
+            value, parameters = header
+            return ct_in_map[value](data)
         except KeyError:
             self.send_error(406)
         except ValueError:
@@ -525,6 +572,42 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
         else:
             lowstate = data
         return lowstate
+
+    def set_default_headers(self):
+        '''
+        Set default CORS headers
+        '''
+        mod_opts = self.application.mod_opts
+
+        if mod_opts.get('cors_origin'):
+            origin = self.request.headers.get('Origin')
+
+            allowed_origin = _check_cors_origin(origin, mod_opts['cors_origin'])
+
+            if allowed_origin:
+                self.set_header("Access-Control-Allow-Origin", allowed_origin)
+
+    def options(self, *args, **kwargs):
+        '''
+        Return CORS headers for preflight requests
+        '''
+        # Allow X-Auth-Token in requests
+        request_headers = self.request.headers.get('Access-Control-Request-Headers')
+        allowed_headers = request_headers.split(',')
+
+        # Filter allowed header here if needed.
+
+        # Allow request headers
+        self.set_header('Access-Control-Allow-Headers', ','.join(allowed_headers))
+
+        # Allow X-Auth-Token in responses
+        self.set_header('Access-Control-Expose-Headers', 'X-Auth-Token')
+
+        # Allow all methods
+        self.set_header('Access-Control-Allow-Methods', 'OPTIONS, GET, POST')
+
+        self.set_status(204)
+        self.finish()
 
 
 class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
@@ -636,12 +719,18 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             }}
         '''
         try:
-            creds = {'username': self.get_arguments('username')[0],
-                     'password': self.get_arguments('password')[0],
-                     'eauth': self.get_arguments('eauth')[0],
+            request_payload = self.deserialize(self.request.body)
+
+            if not isinstance(request_payload, dict):
+                self.send_error(400)
+                return
+
+            creds = {'username': request_payload['username'],
+                     'password': request_payload['password'],
+                     'eauth': request_payload['eauth'],
                      }
         # if any of the args are missing, its a bad request
-        except IndexError:
+        except KeyError:
             self.send_error(400)
             return
 
@@ -1621,3 +1710,17 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         }, tag)
 
         self.write(self.serialize({'success': ret}))
+
+
+def _check_cors_origin(origin, allowed_origins):
+    """
+    Check if an origin match cors allowed origins
+    """
+    if isinstance(allowed_origins, list):
+        if origin in allowed_origins:
+            return origin
+    elif allowed_origins == '*':
+        return allowed_origins
+    elif allowed_origins == origin:
+        # Cors origin is either * or specific origin
+        return allowed_origins

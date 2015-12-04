@@ -365,7 +365,7 @@ def cache_file(path, saltenv='base', env=None):
     result = __context__['cp.fileclient'].cache_file(path, saltenv)
     if not result:
         log.error(
-            'Unable to cache file {0!r} from saltenv {1!r}.'.format(
+            'Unable to cache file \'{0}\' from saltenv \'{1}\'.'.format(
                 path, saltenv
             )
         )
@@ -685,7 +685,7 @@ def push(path, keep_symlinks=False, upload_path=None):
         salt '*' cp.push /etc/system-release keep_symlinks=True
         salt '*' cp.push /etc/fstab upload_path='/new/path/fstab'
     '''
-    log.debug('Trying to copy {0!r} to master'.format(path))
+    log.debug('Trying to copy \'{0}\' to master'.format(path))
     if '../' in path or not os.path.isabs(path):
         log.debug('Path must be absolute, returning False')
         return False
@@ -761,7 +761,7 @@ def push_dir(path, glob=None, upload_path=None):
         for root, dirs, files in os.walk(path):
             filelist += [os.path.join(root, tmpfile) for tmpfile in files]
         if glob is not None:
-            filelist = [fi for fi in filelist if fnmatch.fnmatch(fi, glob)]
+            filelist = [fi for fi in filelist if fnmatch.fnmatch(os.path.basename(fi), glob)]
         for tmpfile in filelist:
             if upload_path and tmpfile.startswith(path):
                 tmpupload_path = os.path.join(os.path.sep,

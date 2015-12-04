@@ -7,17 +7,12 @@ Define some generic socket functions for network modules
 from __future__ import absolute_import
 import os
 import re
-import shlex
 import socket
 import logging
 from string import ascii_letters, digits
 
 # Import 3rd-party libs
 import salt.ext.six as six
-if six.PY3:
-    import ipaddress
-else:
-    import salt.ext.ipaddress as ipaddress
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 # Attempt to import wmi
 try:
@@ -28,7 +23,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
-from salt._compat import subprocess
+from salt._compat import subprocess, ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -1147,7 +1142,7 @@ def _freebsd_remotes_on(port, which_end):
     remotes = set()
 
     try:
-        cmd = shlex.split('sockstat -4 -c -p {0}'.format(port))
+        cmd = salt.utils.shlex_split('sockstat -4 -c -p {0}'.format(port))
         data = subprocess.check_output(cmd)  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError as ex:
         log.error('Failed "sockstat" with returncode = {0}'.format(ex.returncode))

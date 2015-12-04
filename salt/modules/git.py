@@ -10,7 +10,6 @@ import errno
 import logging
 import os
 import re
-import shlex
 from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
@@ -32,7 +31,11 @@ def __virtual__():
     '''
     Only load if git exists on the system
     '''
-    return True if salt.utils.which('git') else False
+    if salt.utils.which('git') is None:
+        return (False,
+                'The git execution module cannot be loaded: git unavailable.')
+    else:
+        return True
 
 
 def _config_getter(get_opt,
@@ -114,7 +117,7 @@ def _format_opts(opts):
         if not isinstance(opts, six.string_types):
             opts = [str(opts)]
         else:
-            opts = shlex.split(opts)
+            opts = salt.utils.shlex_split(opts)
     try:
         if opts[-1] == '--':
             # Strip the '--' if it was passed at the end of the opts string,
@@ -150,6 +153,17 @@ def _git_run(command, cwd=None, runas=None, identity=None,
 
         # try each of the identities, independently
         for id_file in identity:
+            if 'salt://' in id_file:
+                _id_file = id_file
+                id_file = __salt__['cp.cache_file'](id_file)
+                if not id_file:
+                    log.error('identity {0} does not exist.'.format(_id_file))
+                    continue
+            else:
+                if not __salt__['file.file_exists'](id_file):
+                    log.error('identity {0} does not exist.'.format(id_file))
+                    continue
+
             env = {
                 'GIT_IDENTITY': id_file
             }
@@ -668,6 +682,10 @@ def clone(cwd,
             remote side in the ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -1361,6 +1379,10 @@ def fetch(cwd,
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
+
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
@@ -1811,6 +1833,10 @@ def ls_remote(cwd=None,
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
+
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
 
@@ -2227,6 +2253,10 @@ def pull(cwd, opts='', user=None, identity=None, ignore_retcode=False):
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
 
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
+
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
         returns a nonzero exit status.
@@ -2306,6 +2336,10 @@ def push(cwd,
             remote side in the ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -2401,7 +2435,7 @@ def rebase(cwd, rev='master', opts='', user=None, ignore_retcode=False):
     command.extend(opts)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
-    command.extend(shlex.split(rev))
+    command.extend(salt.utils.shlex_split(rev))
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
@@ -2502,6 +2536,10 @@ def remote_refs(url,
             remote side in the ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
 
     https_user
         Set HTTP Basic Auth username. Only accepted for HTTPS URLs.
@@ -3074,6 +3112,10 @@ def submodule(cwd,
             remote side in the ``authorized_keys`` file.
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE%20FORMAT
+
+        Key can also be specified as a SaltStack file server URL, eg. salt://location/identity_file
+
+        .. versionadded:: Boron
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command

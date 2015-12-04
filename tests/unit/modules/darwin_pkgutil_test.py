@@ -26,7 +26,10 @@ class DarwingPkgutilTestCase(TestCase):
             output = darwin_pkgutil.list_()
 
         # Then
-        mock_cmd.assert_called_with("/usr/sbin/pkgutil --pkgs")
+        mock_cmd.assert_called_with(
+            ['/usr/sbin/pkgutil', '--pkgs'],
+            python_shell=False
+        )
 
     def test_list_installed_output(self):
         # Given

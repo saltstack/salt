@@ -143,6 +143,10 @@ A State Module must return a dict containing the following keys/values:
 
 - **comment:** A string containing a summary of the result.
 
+The return data can also, include the **pchanges** key, this statnds for
+`predictive changes`. The **pchanges** key informs the State system what
+changes are predicted to occur.
+
 Test State
 ==========
 
@@ -297,7 +301,13 @@ Example state module
         bar : True
             An argument with a default value
         '''
-        ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+        ret = {
+            'name': name,
+            'changes': {},
+            'result': False,
+            'comment': '',
+            'pchanges': {},
+            }
 
         # Start with basic error-checking. Do all the passed parameters make sense
         # and agree with each-other?
@@ -317,7 +327,7 @@ Example state module
         # in ``test=true`` mode.
         if __opts__['test'] == True:
             ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
-            ret['changes'] = {
+            ret['pchanges'] = {
                 'old': current_state,
                 'new': 'Description, diff, whatever of the new state',
             }

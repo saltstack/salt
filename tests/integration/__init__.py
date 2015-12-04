@@ -57,9 +57,11 @@ import salt.output
 import salt.version
 import salt.utils
 import salt.utils.process
+import salt.log.setup as salt_log_setup
 from salt.utils import fopen, get_colors
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
+from salt.utils.process import MultiprocessingProcess
 from salt.exceptions import SaltClientError
 
 try:
@@ -182,6 +184,9 @@ class TestDaemon(object):
         '''
         Start a master and minion
         '''
+        # Setup the multiprocessing logging queue listener
+        salt_log_setup.setup_multiprocessing_logging_listener()
+
         # Set up PATH to mockbin
         self._enter_mockbin()
 
@@ -239,6 +244,7 @@ class TestDaemon(object):
 
     def start_daemon(self, cls, opts, start_fun):
         def start(cls, opts, start_fun):
+            salt.utils.appendproctitle('{0}-{1}'.format(self.__class__.__name__, cls.__name__))
             daemon = cls(opts)
             getattr(daemon, start_fun)()
         process = multiprocessing.Process(target=start,
@@ -493,7 +499,7 @@ class TestDaemon(object):
         if os.path.isdir(TMP_CONF_DIR):
             shutil.rmtree(TMP_CONF_DIR)
         os.makedirs(TMP_CONF_DIR)
-        print(' * Transplanting configuration files to {0!r}'.format(TMP_CONF_DIR))
+        print(' * Transplanting configuration files to \'{0}\''.format(TMP_CONF_DIR))
         if salt.utils.is_windows():
             running_tests_user = win32api.GetUserName()
         else:
@@ -697,6 +703,9 @@ class TestDaemon(object):
             pass
         self._exit_mockbin()
         self._exit_ssh()
+        # Shutdown the multiprocessing logging queue listener
+        salt_log_setup.shutdown_multiprocessing_logging()
+        salt_log_setup.shutdown_multiprocessing_logging_listener()
 
     def pre_setup_minions(self):
         '''
@@ -705,7 +714,7 @@ class TestDaemon(object):
 
     def setup_minions(self):
         # Wait for minions to connect back
-        wait_minion_connections = multiprocessing.Process(
+        wait_minion_connections = MultiprocessingProcess(
             target=self.wait_for_minion_connections,
             args=(self.minion_targets, self.MINIONS_CONNECT_TIMEOUT)
         )
@@ -756,8 +765,9 @@ class TestDaemon(object):
         if sync_needed:
             # Wait for minions to "sync_all"
             for target in [self.sync_minion_modules,
-                           self.sync_minion_states]:
-                sync_minions = multiprocessing.Process(
+                           self.sync_minion_states,
+                           self.sync_minion_grains]:
+                sync_minions = MultiprocessingProcess(
                     target=target,
                     args=(self.minion_targets, self.MINIONS_SYNC_TIMEOUT)
                 )
@@ -862,6 +872,7 @@ class TestDaemon(object):
         ]
 
     def wait_for_minion_connections(self, targets, timeout):
+        salt.utils.appendproctitle('WaitForMinionConnections')
         sys.stdout.write(
             ' {LIGHT_BLUE}*{ENDC} Waiting at most {0} for minions({1}) to '
             'connect back\n'.format(
@@ -1004,10 +1015,15 @@ class TestDaemon(object):
         return True
 
     def sync_minion_states(self, targets, timeout=None):
+        salt.utils.appendproctitle('SyncMinionStates')
         self.sync_minion_modules_('states', targets, timeout=timeout)
 
     def sync_minion_modules(self, targets, timeout=None):
+        salt.utils.appendproctitle('SyncMinionModules')
         self.sync_minion_modules_('modules', targets, timeout=timeout)
+
+    def sync_minion_grains(self, targets, timeout=None):
+        self.sync_minion_modules_('grains', targets, timeout=timeout)
 
 
 class AdaptedConfigurationTestCaseMixIn(object):
@@ -1174,7 +1190,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixIn):
                 job_kill = self.run_function('saltutil.kill_job', [jid])
                 msg = (
                     'A running state.single was found causing a state lock. '
-                    'Job details: {0!r}  Killing Job Returned: {1!r}'.format(
+                    'Job details: \'{0}\'  Killing Job Returned: \'{1}\''.format(
                         job_data, job_kill
                     )
                 )
@@ -1211,6 +1227,12 @@ class ShellCase(AdaptedConfigurationTestCaseMixIn, ShellTestCase):
     _code_dir_ = CODE_DIR
     _script_dir_ = SCRIPT_DIR
     _python_executable_ = PYEXEC
+
+    def chdir(self, dirname):
+        try:
+            os.chdir(dirname)
+        except OSError:
+            os.chdir(INTEGRATION_TEST_DIR)
 
     def run_salt(self, arg_str, with_retcode=False, catch_stderr=False):
         '''
@@ -1318,7 +1340,7 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
         if not out:
             self.skipTest(
                 'Failed to get the output of \'git describe\'. '
-                'Error: {0!r}'.format(
+                'Error: \'{0}\''.format(
                     salt.utils.to_str(err)
                 )
             )
@@ -1328,7 +1350,7 @@ class ShellCaseCommonTestsMixIn(CheckShellBinaryNameAndVersionMixIn):
         if parsed_version.info < __version_info__:
             self.skipTest(
                 'We\'re likely about to release a new version. This test '
-                'would fail. Parsed({0!r}) < Expected({1!r})'.format(
+                'would fail. Parsed(\'{0}\') < Expected(\'{1}\')'.format(
                     parsed_version.info, __version_info__
                 )
             )
@@ -1404,7 +1426,7 @@ class SaltReturnAssertsMixIn(object):
             except (KeyError, TypeError):
                 raise AssertionError(
                     'Could not get ret{0} from salt\'s return: {1}'.format(
-                        ''.join(['[{0!r}]'.format(k) for k in keys]), part
+                        ''.join(['[\'{0}\']'.format(k) for k in keys]), part
                     )
                 )
             while okeys:
@@ -1413,7 +1435,7 @@ class SaltReturnAssertsMixIn(object):
                 except (KeyError, TypeError):
                     raise AssertionError(
                         'Could not get ret{0} from salt\'s return: {1}'.format(
-                            ''.join(['[{0!r}]'.format(k) for k in keys]), part
+                            ''.join(['[\'{0}\']'.format(k) for k in keys]), part
                         )
                     )
             return ret_item

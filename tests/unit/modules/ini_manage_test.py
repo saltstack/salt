@@ -99,14 +99,14 @@ empty_option=
                 'test_set_option2': 'test_set_value1'
             }
         })
-        self.assertEqual(result['changes'], {
+        self.assertEqual(result, {
             'SectionB': {'test3': {'after': 'new value 3B',
                                    'before': 'value 3B'},
                          'test_set_option': {'after': 'test_set_value',
                                              'before': None}
             },
-            'SectionD': {'test_set_option2': {'after': 'test_set_value1',
-                                              'before': None}
+            'SectionD': {'after': {'test_set_option2': 'test_set_value1'},
+                         'before': None
             }
         })
         # Check existing option updated
@@ -124,7 +124,7 @@ empty_option=
         })
         with salt.utils.fopen(self.tfile.name, 'r') as fp:
             file_content = fp.read()
-        self.assertIn('\nempty_option=\n', file_content,
+        self.assertIn('\nempty_option = \n', file_content,
                       'empty_option was not preserved')
 
     def test_empty_lines_preserved_after_edit(self):
@@ -137,28 +137,26 @@ empty_option=
 # Comment on the first line
 
 # First main option
-option1=main1
+option1 = main1
 
 # Second main option
-option2=main2
-
+option2 = main2
 
 [main]
 # Another comment
-test1=value 1
+test1 = value 1
 
-test2=value 2
+test2 = value 2
 
 [SectionB]
-test1=value 1B
+test1 = value 1B
 
 # Blank line should be above
-test3=new value 3B
+test3 = new value 3B
 
 [SectionC]
 # The following option is empty
-empty_option=
-
+empty_option = 
 ''', file_content)
 
     def test_empty_lines_preserved_after_multiple_edits(self):

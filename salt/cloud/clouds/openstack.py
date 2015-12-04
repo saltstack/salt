@@ -367,7 +367,7 @@ def ignore_cidr(vm_, ip):
     )
     if cidr != '' and all_matching_cidrs(ip, [cidr]):
         log.warning(
-            'IP {0!r} found within {1!r}; ignoring it.'.format(ip, cidr)
+            'IP \'{0}\' found within \'{1}\'; ignoring it.'.format(ip, cidr)
         )
         return True
 
@@ -574,7 +574,7 @@ def create(vm_):
         key_filename = os.path.expanduser(key_filename)
         if not os.path.isfile(key_filename):
             raise SaltCloudConfigError(
-                'The defined ssh_key_file {0!r} does not exist'.format(
+                'The defined ssh_key_file \'{0}\' does not exist'.format(
                     key_filename
                 )
             )
@@ -599,7 +599,7 @@ def create(vm_):
         # This was probably created via another process, and doesn't have
         # things like salt keys created yet, so let's create them now.
         if 'pub_key' not in vm_ and 'priv_key' not in vm_:
-            log.debug('Generating minion keys for {0[name]!r}'.format(vm_))
+            log.debug('Generating minion keys for \'{0[name]}\''.format(vm_))
             vm_['priv_key'], vm_['pub_key'] = salt.utils.cloud.gen_keys(
                 salt.config.get_cloud_config_value(
                     'keysize',
@@ -672,7 +672,7 @@ def create(vm_):
                 ip = floating[0].ip_address
                 conn.ex_attach_floating_ip_to_node(data, ip)
                 log.info(
-                    'Attaching floating IP {0!r} to node {1!r}'.format(
+                    'Attaching floating IP \'{0}\' to node \'{1}\''.format(
                         ip, name
                     )
                 )
@@ -776,9 +776,9 @@ def create(vm_):
     if hasattr(data, 'extra') and 'password' in data.extra:
         del data.extra['password']
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(data.__dict__)
         )
     )
@@ -825,7 +825,7 @@ def _assign_floating_ips(vm_, conn, kwargs):
                         # A future enhancement might be to allow salt-cloud
                         # to dynamically allocate new address but that might
                         raise SaltCloudSystemExit(
-                            'Floating pool {0!r} does not have any more '
+                            'Floating pool \'{0}\' does not have any more '
                             'please create some more or use a different '
                             'pool.'.format(net['floating'])
                         )

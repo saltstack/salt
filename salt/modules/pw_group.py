@@ -132,6 +132,51 @@ def chgid(name, gid):
     return False
 
 
+def adduser(name, username):
+    '''
+    Add a user in the group.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+         salt '*' group.adduser foo bar
+
+    Verifies if a valid username 'bar' as a member of an existing group 'foo',
+    if not then adds it.
+    '''
+    # Note: pw exits with code 65 if group is unknown
+    retcode = __salt__['cmd.retcode']('pw groupmod {0} -m {1}'.format(
+        name, username), python_shell=False)
+
+    return not retcode
+
+
+def deluser(name, username):
+    '''
+    Remove a user from the group.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+         salt '*' group.deluser foo bar
+
+    Removes a member user 'bar' from a group 'foo'. If group is not present
+    then returns True.
+    '''
+    grp_info = __salt__['group.info'](name)
+
+    if username not in grp_info['members']:
+        return True
+
+    # Note: pw exits with code 65 if group is unknown
+    retcode = __salt__['cmd.retcode']('pw groupmod {0} -d {1}'.format(
+        name, username), python_shell=False)
+
+    return not retcode
+
+
 def members(name, members_list):
     '''
     Replaces members of the group with a provided list.

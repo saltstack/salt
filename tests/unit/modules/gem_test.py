@@ -18,14 +18,18 @@ gem.__salt__ = {}
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestGemModule(TestCase):
 
-    def test__gem(self):
+    def test_gem(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(gem.__salt__,
                         {'rvm.is_installed': MagicMock(return_value=False),
                          'rbenv.is_installed': MagicMock(return_value=False),
                          'cmd.run_all': mock}):
-            gem._gem('install rails')
-            mock.assert_called_once_with('gem install rails', runas=None, python_shell=True)
+            gem._gem(['install', 'rails'])
+            mock.assert_called_once_with(
+                ['gem', 'install', 'rails'],
+                runas=None,
+                python_shell=False
+            )
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         rvm_mock = MagicMock()
@@ -33,18 +37,28 @@ class TestGemModule(TestCase):
                         {'rvm.is_installed': rvm_mock,
                          'rbenv.is_installed': rvm_mock,
                          'cmd.run_all': mock}):
-            gem._gem('install rails', gem_bin="/usr/local/bin/gem")
-            self.assertEqual(False, rvm_mock.called, "Should never call rvm.is_installed if gem_bin provided")
-            mock.assert_called_once_with('/usr/local/bin/gem install rails', runas=None, python_shell=True)
+            gem._gem(['install', 'rails'], gem_bin='/usr/local/bin/gem')
+            self.assertEqual(
+                False,
+                rvm_mock.called,
+                'Should never call rvm.is_installed if gem_bin provided'
+            )
+            mock.assert_called_once_with(
+                ['/usr/local/bin/gem', 'install', 'rails'],
+                runas=None,
+                python_shell=False
+            )
 
         mock = MagicMock(return_value=None)
         with patch.dict(gem.__salt__,
                         {'rvm.is_installed': MagicMock(return_value=True),
                          'rbenv.is_installed': MagicMock(return_value=False),
                          'rvm.do': mock}):
-            gem._gem('install rails', ruby='1.9.3')
+            gem._gem(['install', 'rails'], ruby='1.9.3')
             mock.assert_called_once_with(
-                '1.9.3', 'gem install rails', runas=None
+                '1.9.3',
+                ['gem', 'install', 'rails'],
+                runas=None
             )
 
         mock = MagicMock(return_value=None)
@@ -52,9 +66,10 @@ class TestGemModule(TestCase):
                         {'rvm.is_installed': MagicMock(return_value=False),
                          'rbenv.is_installed': MagicMock(return_value=True),
                          'rbenv.do': mock}):
-            gem._gem('install rails')
+            gem._gem(['install', 'rails'])
             mock.assert_called_once_with(
-                'gem install rails', runas=None
+                ['gem', 'install', 'rails'],
+                runas=None
             )
 
     def test_install_pre(self):
@@ -65,7 +80,9 @@ class TestGemModule(TestCase):
                          'cmd.run_all': mock}):
             gem.install('rails', pre_releases=True)
             mock.assert_called_once_with(
-                'gem install rails --no-rdoc --no-ri --pre', runas=None, python_shell=True
+                ['gem', 'install', 'rails', '--no-rdoc', '--no-ri', '--pre'],
+                runas=None,
+                python_shell=False
             )
 
     def test_list(self):

@@ -131,12 +131,21 @@ def __init__(opts):
         __utils__['boto.assign_funcs'](__name__, 'vpc')
 
 
-def _check_vpc(vpc_id, vpc_name, region, key, keyid, profile):
+def check_vpc(vpc_id=None, vpc_name=None, region=None, key=None,
+              keyid=None, profile=None):
     '''
     Check whether a VPC with the given name or id exists.
     Returns the vpc_id or None. Raises SaltInvocationError if
     both vpc_id and vpc_name are None. Optionally raise a
     CommandExecutionError if the VPC does not exist.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.check_vpc vpc_name=myvpc profile=awsprofile
     '''
 
     if not _exactly_one((vpc_name, vpc_id)):
@@ -633,7 +642,7 @@ def describe(vpc_id=None, vpc_name=None, region=None, key=None,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
         if not vpc_id:
             return {'vpc': None}
 
@@ -768,16 +777,16 @@ def create_subnet(vpc_id=None, cidr_block=None, vpc_name=None,
     '''
 
     try:
-        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
         if not vpc_id:
             return {'created': False, 'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
     except BotoServerError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
-    return _create_resource('subnet', name=subnet_name, tags=tags,
-                            vpc_id=vpc_id, cidr_block=cidr_block,
-                            region=region, key=key, keyid=keyid,
-                            profile=profile, availability_zone=availability_zone)
+    return _create_resource('subnet', name=subnet_name, tags=tags, vpc_id=vpc_id,
+                            availability_zone=availability_zone,
+                            cidr_block=cidr_block, region=region, key=key,
+                            keyid=keyid, profile=profile)
 
 
 def delete_subnet(subnet_id=None, subnet_name=None, region=None, key=None,
@@ -1027,7 +1036,7 @@ def create_internet_gateway(internet_gateway_name=None, vpc_id=None,
 
     try:
         if vpc_id or vpc_name:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+            vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
             if not vpc_id:
                 return {'created': False,
                         'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
@@ -1197,7 +1206,7 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
 
     try:
         if vpc_id or vpc_name:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+            vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
             if not vpc_id:
                 return {'created': False,
                         'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
@@ -1216,6 +1225,45 @@ def create_dhcp_options(domain_name=None, domain_name_servers=None, ntp_servers=
         return r
     except BotoServerError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
+
+
+def get_dhcp_options(dhcp_options_name=None, dhcp_options_id=None,
+                     region=None, key=None, keyid=None, profile=None):
+    '''
+    Return a dict with the current values of the requested DHCP options set
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_vpc.get_dhcp_options 'myfunnydhcpoptionsname'
+
+    .. versionadded:: Boron
+    '''
+    if not any((dhcp_options_name, dhcp_options_id)):
+        raise SaltInvocationError('At least one of the following must be specified: '
+                                  'dhcp_options_name, dhcp_options_id.')
+
+    if not dhcp_options_id and dhcp_options_name:
+        dhcp_options_id = _get_resource_id('dhcp_options', dhcp_options_name,
+                                            region=region, key=key,
+                                            keyid=keyid, profile=profile)
+    if not dhcp_options_id:
+        return {'dhcp_options': {}}
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        r = conn.get_all_dhcp_options(dhcp_options_ids=[dhcp_options_id])
+    except BotoServerError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+    if not r:
+        return {'dhcp_options': None}
+
+    keys = ('domain_name', 'domain_name_servers', 'ntp_servers',
+            'netbios_name_servers', 'netbios_node_type')
+
+    return {'dhcp_options': dict((k, r[0].options.get(k)) for k in keys)}
 
 
 def delete_dhcp_options(dhcp_options_id=None, dhcp_options_name=None,
@@ -1255,7 +1303,7 @@ def associate_dhcp_options_to_vpc(dhcp_options_id, vpc_id=None, vpc_name=None,
 
     '''
     try:
-        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
         if not vpc_id:
             return {'associated': False,
                     'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
@@ -1353,7 +1401,7 @@ def create_network_acl(vpc_id=None, vpc_name=None, network_acl_name=None,
     _id = vpc_name or vpc_id
 
     try:
-        vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+        vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
     except BotoServerError as e:
         return {'created': False, 'error': salt.utils.boto.get_error(e)}
 
@@ -1564,7 +1612,7 @@ def disassociate_network_acl(subnet_id=None, vpc_id=None, subnet_name=None, vpc_
                         'error': {'message': 'Subnet {0} does not exist.'.format(subnet_name)}}
 
         if vpc_name or vpc_id:
-            vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+            vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
 
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         association_id = conn.disassociate_network_acl(subnet_id, vpc_id=vpc_id)
@@ -1726,7 +1774,7 @@ def create_route_table(vpc_id=None, vpc_name=None, route_table_name=None,
         salt myminion boto_vpc.create_route_table vpc_name='myvpc' \\
                 route_table_name='myroutetable'
     '''
-    vpc_id = _check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
+    vpc_id = check_vpc(vpc_id, vpc_name, region, key, keyid, profile)
     if not vpc_id:
         return {'created': False, 'error': {'message': 'VPC {0} does not exist.'.format(vpc_name or vpc_id)}}
 

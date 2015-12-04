@@ -58,6 +58,32 @@ def _porttree():
     return portage.db[portage.root]['porttree']
 
 
+def _get_config_file(conf, atom):
+    '''
+    Parse the given atom, allowing access to its parts
+    Success does not mean that the atom exists, just that it
+    is in the correct format.
+    Returns none if the atom is invalid.
+    '''
+    if '*' in atom:
+        parts = portage.dep.Atom(atom, allow_wildcard=True)
+        if not parts:
+            return
+        if parts.cp == '*/*':
+            # parts.repo will be empty if there is no repo part
+            relative_path = parts.repo or "gentoo"
+        else:
+            relative_path = os.path.join(*[x for x in os.path.split(parts.cp) if x != '*'])
+    else:
+        relative_path = _p_to_cp(atom)
+        if not relative_path:
+            return
+
+    complete_file_path = BASE_PATH.format(conf) + '/' + relative_path
+
+    return complete_file_path
+
+
 def _p_to_cp(p):
     '''
     Convert a package name or a DEPEND atom to category/package format.
@@ -321,17 +347,10 @@ def append_to_package_conf(conf, atom='', flags=None, string='', overwrite=False
         # boost
         new_flags.sort(cmp=lambda x, y: cmp(x.lstrip('-'), y.lstrip('-')))
 
-        package_file = _p_to_cp(atom)
-        if not package_file:
-            return
-
-        psplit = package_file.split('/')
-        if len(psplit) == 2:
-            pdir = BASE_PATH.format(conf) + '/' + psplit[0]
-            if not os.path.exists(pdir):
-                os.mkdir(pdir, 0o755)
-
-        complete_file_path = BASE_PATH.format(conf) + '/' + package_file
+        complete_file_path = _get_config_file(conf, atom)
+        pdir = os.path.dirname(complete_file_path)
+        if not os.path.exists(pdir):
+            os.makedirs(pdir, 0o755)
 
         try:
             shutil.copy(complete_file_path, complete_file_path + '.bak')
@@ -421,13 +440,19 @@ def get_flags_from_package_conf(conf, atom):
         salt '*' portage_config.get_flags_from_package_conf license salt
     '''
     if conf in SUPPORTED_CONFS:
-        package_file = '{0}/{1}'.format(BASE_PATH.format(conf), _p_to_cp(atom))
+        package_file = _get_config_file(conf, atom)
         if '/' not in atom:
             atom = _p_to_cp(atom)
-        try:
-            match_list = set(_porttree().dbapi.xmatch("match-all", atom))
-        except AttributeError:
-            return []
+
+        has_wildcard = '*' in atom
+        if has_wildcard:
+            match_list = set(atom)
+        else:
+            try:
+                match_list = set(_porttree().dbapi.xmatch("match-all", atom))
+            except AttributeError:
+                return []
+
         flags = []
         try:
             file_handler = salt.utils.fopen(package_file)
@@ -437,8 +462,15 @@ def get_flags_from_package_conf(conf, atom):
             for line in file_handler:
                 line = line.strip()
                 line_package = line.split()[0]
-                line_list = _porttree().dbapi.xmatch("match-all", line_package)
-                if match_list.issubset(line_list):
+
+                found_match = False
+                if has_wildcard:
+                    found_match = line_package == atom
+                else:
+                    line_list = _porttree().dbapi.xmatch("match-all", line_package)
+                    found_match = match_list.issubset(line_list)
+
+                if found_match:
                     f_tmp = [flag for flag in line.strip().split(' ') if flag][1:]
                     if f_tmp:
                         flags.extend(f_tmp)
@@ -509,8 +541,18 @@ def is_present(conf, atom):
         salt '*' portage_config.is_present unmask salt
     '''
     if conf in SUPPORTED_CONFS:
-        package_file = '{0}/{1}'.format(BASE_PATH.format(conf), _p_to_cp(atom))
-        match_list = set(_porttree().dbapi.xmatch("match-all", atom))
+        if not isinstance(atom, portage.dep.Atom):
+            atom = portage.dep.Atom(atom, allow_wildcard=True)
+        has_wildcard = '*' in atom
+
+        package_file = _get_config_file(conf, str(atom))
+
+        # wildcards are valid in confs
+        if has_wildcard:
+            match_list = set(atom)
+        else:
+            match_list = set(_porttree().dbapi.xmatch("match-all", atom))
+
         try:
             file_handler = salt.utils.fopen(package_file)
         except IOError:
@@ -519,9 +561,14 @@ def is_present(conf, atom):
             for line in file_handler:
                 line = line.strip()
                 line_package = line.split()[0]
-                line_list = _porttree().dbapi.xmatch("match-all", line_package)
-                if match_list.issubset(line_list):
-                    return True
+
+                if has_wildcard:
+                    if line_package == str(atom):
+                        return True
+                else:
+                    line_list = _porttree().dbapi.xmatch("match-all", line_package)
+                    if match_list.issubset(line_list):
+                        return True
             return False
 
 

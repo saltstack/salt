@@ -18,6 +18,7 @@ import logging
 # Import salt libs
 import salt.crypt
 import salt.utils
+import salt.client
 import salt.exceptions
 import salt.utils.event
 import salt.daemons.masterapi
@@ -124,7 +125,7 @@ class KeyCLI(object):
             keys[self.key.REJ] = matches[self.key.REJ]
         if not keys:
             msg = (
-                'The key glob {0!r} does not match any unaccepted {1}keys.'
+                'The key glob \'{0}\' does not match any unaccepted {1}keys.'
                 .format(match, 'or rejected ' if include_rejected else '')
             )
             print(msg)
@@ -189,7 +190,7 @@ class KeyCLI(object):
         matches = self.key.name_match(match)
         if not matches:
             print(
-                'The key glob {0!r} does not match any accepted, unaccepted '
+                'The key glob \'{0}\' does not match any accepted, unaccepted '
                 'or rejected keys.'.format(match)
             )
             raise salt.exceptions.SaltSystemExit(code=1)
@@ -206,7 +207,7 @@ class KeyCLI(object):
             if veri.lower().startswith('y'):
                 _print_deleted(
                     matches,
-                    self.key.delete_key(match_dict=matches)
+                    self.key.delete_key(match_dict=matches, revoke_auth=True)
                 )
         else:
             print('Deleting the following keys:')
@@ -230,7 +231,8 @@ class KeyCLI(object):
         Reject the matched keys
 
         :param str match: A string to match against. i.e. 'web*'
-        :param bool include_accepted: Whether or not to accept a matched key that was formerly accepted
+        :param bool include_accepted: Whether or not to accept a matched key
+        that was formerly accepted
         '''
         def _print_rejected(matches, after_match):
             if self.key.REJ in after_match:
@@ -249,7 +251,7 @@ class KeyCLI(object):
         if include_accepted and bool(matches.get(self.key.ACC)):
             keys[self.key.ACC] = matches[self.key.ACC]
         if not keys:
-            msg = 'The key glob {0!r} does not match any {1} keys.'.format(
+            msg = 'The key glob \'{0}\' does not match any {1} keys.'.format(
                 match,
                 'accepted or unaccepted' if include_accepted else 'unaccepted'
             )
@@ -801,7 +803,11 @@ class Key(object):
                 pass
         return self.list_keys()
 
-    def delete_key(self, match=None, match_dict=None, preserve_minions=False):
+    def delete_key(self,
+                    match=None,
+                    match_dict=None,
+                    preserve_minions=False,
+                    revoke_auth=False):
         '''
         Delete public keys. If "match" is passed, it is evaluated as a glob.
         Pre-gathered matches can also be passed via "match_dict".
@@ -817,6 +823,19 @@ class Key(object):
         for status, keys in six.iteritems(matches):
             for key in keys:
                 try:
+                    if revoke_auth:
+                        if self.opts.get('rotate_aes_key') is False:
+                            print('Immediate auth revocation specified but AES key rotation not allowed. '
+                                     'Minion will not be disconnected until the master AES key is rotated.')
+                        else:
+                            try:
+                                client = salt.client.get_local_client(mopts=self.opts)
+                                client.cmd(key, 'saltutil.revoke_auth')
+                            except salt.exceptions.SaltClientError:
+                                print('Cannot contact Salt master. '
+                                      'Connection for {0} will remain up until '
+                                      'master AES key is rotated or auth is revoked '
+                                      'with \'saltutil.revoke_auth\'.'.format(key))
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                     eload = {'result': True,
                              'act': 'delete',
@@ -831,6 +850,24 @@ class Key(object):
             self.name_match(match) if match is not None
             else self.dict_match(matches)
         )
+
+    def delete_den(self):
+        '''
+        Delete all denied keys
+        '''
+        keys = self.list_keys()
+        for status, keys in six.iteritems(self.list_keys()):
+            for key in keys[self.DEN]:
+                try:
+                    os.remove(os.path.join(self.opts['pki_dir'], status, key))
+                    eload = {'result': True,
+                                 'act': 'delete',
+                                 'id': key}
+                    self.event.fire_event(eload, tagify(prefix='key'))
+                except (OSError, IOError):
+                    pass
+        self.check_minion_cache()
+        return self.list_keys()
 
     def delete_all(self):
         '''
@@ -1223,7 +1260,11 @@ class RaetKey(Key):
                 pass
         return self.list_keys()
 
-    def delete_key(self, match=None, match_dict=None, preserve_minions=False):
+    def delete_key(self,
+                   match=None,
+                   match_dict=None,
+                   preserve_minions=False,
+                   revoke_auth=False):
         '''
         Delete public keys. If "match" is passed, it is evaluated as a glob.
         Pre-gathered matches can also be passed via "match_dict".
@@ -1236,6 +1277,19 @@ class RaetKey(Key):
             matches = {}
         for status, keys in six.iteritems(matches):
             for key in keys:
+                if revoke_auth:
+                    if self.opts.get('rotate_aes_key') is False:
+                        print('Immediate auth revocation specified but AES key rotation not allowed. '
+                                 'Minion will not be disconnected until the master AES key is rotated.')
+                    else:
+                        try:
+                            client = salt.client.get_local_client(mopts=self.opts)
+                            client.cmd(key, 'saltutil.revoke_auth')
+                        except salt.exceptions.SaltClientError:
+                            print('Cannot contact Salt master. '
+                                  'Connection for {0} will remain up until '
+                                  'master AES key is rotated or auth is revoked '
+                                  'with \'saltutil.revoke_auth\'.'.format(key))
                 try:
                     os.remove(os.path.join(self.opts['pki_dir'], status, key))
                 except (OSError, IOError):

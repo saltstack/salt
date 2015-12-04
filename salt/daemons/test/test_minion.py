@@ -73,6 +73,7 @@ def test():
             master='127.0.0.1',
             transport='raet',
             client_acl=dict(),
+            publisher_acl=dict(),
             pki_dir=pkiDirpath,
             sock_dir=sockDirpath,
             cachedir=cacheDirpath,

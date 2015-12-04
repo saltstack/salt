@@ -9,7 +9,7 @@ Changes:
 
 - The ``cron.present`` state now correctly defaults to state ID as identifier.
 
-- When querying for VMs in ``ditigal_ocean_v2.py``, the number of VMs to include in a page was changed from 20
+- When querying for VMs in ``digital_ocean_v2.py``, the number of VMs to include in a page was changed from 20
   (default) to 200 to reduce the number of API calls to Digital Ocean.
 
 - The ``vmware`` Salt-Cloud driver was back-ported from the develop branch in order for installations of Salt

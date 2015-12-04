@@ -94,6 +94,7 @@ class TestOptsSetup(ioflo.base.deeding.Deed):
             raet_port=self.raet_port,
             transport='raet',
             client_acl=dict(),
+            publisher_acl = dict(),
             pki_dir=pkiDirpath,
             sock_dir=sockDirpath,
             cachedir=cacheDirpath,

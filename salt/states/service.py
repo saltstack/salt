@@ -474,6 +474,19 @@ def mod_watch(name,
 
     sig
         The string to search for when looking for the service process with ps
+
+    reload
+        Use reload instead of the default restart (exclusive option with full_restart,
+        defaults to reload if both are used)
+
+    full_restart
+        Use service.full_restart instead of restart (exclusive option with reload)
+
+    force
+        Use service.force_reload instead of reload (needs reload to be set to True)
+
+    init_delay
+        Add a sleep command (in seconds) before the service is restarted/reloaded
     '''
     ret = {'name': name,
            'changes': {},

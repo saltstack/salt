@@ -519,7 +519,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         if ret is None:
             ret = merge
         else:
-            salt.utils.dictupdate.update(ret, merge)
+            salt.utils.dictupdate.update(ret, copy.deepcopy(merge))
 
     return ret
 

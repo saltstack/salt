@@ -195,7 +195,7 @@ class LocalClient(object):
         # Looks like the timeout is invalid, use config
         return self.opts['timeout']
 
-    def gather_job_info(self, jid, tgt, tgt_type):
+    def gather_job_info(self, jid, tgt, tgt_type, **kwargs):
         '''
         Return the information about a given job
         '''
@@ -207,6 +207,7 @@ class LocalClient(object):
                                 arg=[jid],
                                 expr_form=tgt_type,
                                 timeout=timeout,
+                                **kwargs
                                )
 
         if 'jid' in pub_data:
@@ -359,7 +360,7 @@ class LocalClient(object):
             >>> SLC.cmd_subset('*', 'test.ping', sub=1)
             {'jerry': True}
         '''
-        group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form)
+        group = self.cmd(tgt, 'sys.list_functions', expr_form=expr_form, **kwargs)
         f_tgt = []
         for minion, ret in six.iteritems(group):
             if len(f_tgt) >= sub:
@@ -934,7 +935,7 @@ class LocalClient(object):
             # re-do the ping
             if time.time() > timeout_at and minions_running:
                 # since this is a new ping, no one has responded yet
-                jinfo = self.gather_job_info(jid, tgt, tgt_type)
+                jinfo = self.gather_job_info(jid, tgt, tgt_type, **kwargs)
                 minions_running = False
                 # if we weren't assigned any jid that means the master thinks
                 # we have nothing to send
@@ -1252,7 +1253,8 @@ class LocalClient(object):
                                          timeout=timeout,
                                          tgt=tgt,
                                          tgt_type=tgt_type,
-                                         expect_minions=(verbose or show_timeout)
+                                         expect_minions=(verbose or show_timeout),
+                                         **kwargs
                                          ):
             return_count = return_count + 1
             if progress:

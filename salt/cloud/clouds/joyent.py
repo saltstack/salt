@@ -143,7 +143,7 @@ def get_image(vm_):
         return images[vm_image]
 
     raise SaltCloudNotFound(
-        'The specified image, {0!r}, could not be found.'.format(vm_image)
+        'The specified image, \'{0}\', could not be found.'.format(vm_image)
     )
 
 
@@ -160,7 +160,7 @@ def get_size(vm_):
         return sizes[vm_size]
 
     raise SaltCloudNotFound(
-        'The specified size, {0!r}, could not be found.'.format(vm_size)
+        'The specified size, \'{0}\', could not be found.'.format(vm_size)
     )
 
 
@@ -583,7 +583,7 @@ def has_method(obj, method_name):
         return True
 
     log.error(
-        'Method {0!r} not yet supported!'.format(
+        'Method \'{0}\' not yet supported!'.format(
             method_name
         )
     )
@@ -1038,7 +1038,7 @@ def query(action=None,
     if command:
         path += '/{0}'.format(command)
 
-    log.debug('User: {0!r} on PATH: {1}'.format(user, path))
+    log.debug('User: \'{0}\' on PATH: {1}'.format(user, path))
 
     timenow = datetime.datetime.utcnow()
     timestamp = timenow.strftime('%a, %d %b %Y %H:%M:%S %Z').strip()

@@ -967,12 +967,14 @@ def rename(name, new_name):
     # Load information for the current name
     current_info = info(name)
     if not current_info:
-        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
 
     # Look for an existing user with the new name
     new_info = info(new_name)
     if new_info:
-        raise CommandExecutionError('User {0!r} already exists'.format(new_name))
+        raise CommandExecutionError(
+            'User \'{0}\' already exists'.format(new_name)
+        )
 
     # Rename the user account
     # Connect to WMI
@@ -983,7 +985,7 @@ def rename(name, new_name):
     try:
         user = c.Win32_UserAccount(Name=name)[0]
     except IndexError:
-        raise CommandExecutionError('User {0!r} does not exist'.format(name))
+        raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
 
     # Rename the user
     result = user.Rename(new_name)[0]
@@ -1002,16 +1004,12 @@ def rename(name, new_name):
                       8: 'Operation is not allowed on specified special groups: user, admin, local, or guest',
                       9: 'Other API error',
                       10: 'Internal error'}
-        raise CommandExecutionError('There was an error renaming {0!r} to {1!r}. Error: {2}'.format(name, new_name, error_dict[result]))
+        raise CommandExecutionError(
+            'There was an error renaming \'{0}\' to \'{1}\'. Error: {2}'
+            .format(name, new_name, error_dict[result])
+        )
 
-    # Load information for the new name
-    post_info = info(new_name)
-
-    # Verify that the name has changed
-    if post_info['name'] != current_info['name']:
-        return post_info['name'] == new_name
-
-    return False
+    return info(new_name).get('name') == new_name
 
 
 def current(sam=False):

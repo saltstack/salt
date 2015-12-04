@@ -24,7 +24,7 @@ def __virtual__():
     Only load if chef is installed
     '''
     if not salt.utils.which('chef-client'):
-        return False
+        return (False, 'Cannot load chef module: chef-client not found')
     return True
 
 

@@ -275,7 +275,7 @@ def show_notification(name, text=None, **kwargs):
 
 
 def mod_watch(name, sfun=None, **kwargs):
-    ''''
+    '''
     Call this function via a watch statement
 
     .. versionadded:: 2014.7.0

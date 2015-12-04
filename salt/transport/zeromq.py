@@ -5,10 +5,11 @@ Zeromq transport classes
 
 # Import Python Libs
 from __future__ import absolute_import
-import logging
 import os
+import copy
 import errno
 import hashlib
+import logging
 import weakref
 from random import randint
 
@@ -42,6 +43,7 @@ import tornado.gen
 import tornado.concurrent
 
 # Import third party libs
+import salt.ext.six as six
 from Crypto.Cipher import PKCS1_OAEP
 
 log = logging.getLogger(__name__)
@@ -63,7 +65,10 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         '''
 
         # do we have any mapping for this io_loop
-        io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
+        io_loop = kwargs.get('io_loop')
+        if io_loop is None:
+            zmq.eventloop.ioloop.install()
+            io_loop = tornado.ioloop.IOLoop.current()
         if io_loop not in cls.instance_map:
             cls.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = cls.instance_map[io_loop]
@@ -91,6 +96,27 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             loop_instance_map[key] = new_obj
             return loop_instance_map[key]
 
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls, copy.deepcopy(self.opts, memo))  # pylint: disable=too-many-function-args
+        memo[id(self)] = result
+        for key in self.__dict__:
+            if key in ('_io_loop',):
+                continue
+                # The _io_loop has a thread Lock which will fail to be deep
+                # copied. Skip it because it will just be recreated on the
+                # new copy.
+            if key == 'message_client':
+                # Recreate the message client because it will fail to be deep
+                # copied. The reason is the same as the io_loop skip above.
+                setattr(result, key,
+                        AsyncReqMessageClient(result.opts,
+                                              self.master_uri,
+                                              io_loop=result._io_loop))
+                continue
+            setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
+        return result
+
     @classmethod
     def __key(cls, opts, **kwargs):
         return (opts['pki_dir'],     # where the keys are stored
@@ -114,7 +140,10 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         if 'master_uri' in kwargs:
             self.opts['master_uri'] = kwargs['master_uri']
 
-        self._io_loop = kwargs.get('io_loop') or tornado.ioloop.IOLoop.current()
+        self._io_loop = kwargs.get('io_loop')
+        if self._io_loop is None:
+            zmq.eventloop.ioloop.install()
+            self._io_loop = tornado.ioloop.IOLoop.current()
 
         if self.crypt != 'clear':
             # we don't need to worry about auth as a kwarg, since its a singleton
@@ -243,12 +272,12 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         self.opts = opts
         self.ttype = 'zeromq'
 
-        if 'io_loop' in kwargs:
-            self.io_loop = kwargs['io_loop']
-        else:
-            self.io_loop = tornado.ioloop.IOLoop()
+        self.io_loop = kwargs.get('io_loop')
+        if self.io_loop is None:
+            zmq.eventloop.ioloop.install()
+            self.io_loop = tornado.ioloop.IOLoop.current()
 
-        self.hexid = hashlib.sha1(self.opts['id']).hexdigest()
+        self.hexid = hashlib.sha1(six.b(self.opts['id'])).hexdigest()
 
         self.auth = salt.crypt.AsyncAuth(self.opts, io_loop=self.io_loop)
 
@@ -723,7 +752,11 @@ class AsyncReqMessageClient(object):
         self.opts = opts
         self.addr = addr
         self.linger = linger
-        self.io_loop = io_loop or zmq.eventloop.ioloop.ZMQIOLoop.current()
+        if io_loop is None:
+            zmq.eventloop.ioloop.install()
+            tornado.ioloop.IOLoop.current()
+        else:
+            self.io_loop = io_loop
 
         self.serial = salt.payload.Serial(self.opts)
 
@@ -808,7 +841,7 @@ class AsyncReqMessageClient(object):
     def _internal_send_recv(self):
         while len(self.send_queue) > 0:
             message = self.send_queue.pop(0)
-            future = self.send_future_map[message]
+            future = self.send_future_map.pop(message)
 
             # send
             def mark_future(msg):
@@ -837,20 +870,23 @@ class AsyncReqMessageClient(object):
 
         :raises: SaltReqTimeoutError
         '''
-        future = self.send_future_map.pop(message)
-        del self.send_timeout_map[message]
-        if future.attempts < future.tries:
-            future.attempts += 1
-            log.debug('SaltReqTimeoutError, retrying. ({0}/{1})'.format(future.attempts, future.tries))
-            self.send(
-                message,
-                timeout=future.timeout,
-                tries=future.tries,
-                future=future,
-            )
+        future = self.send_future_map.pop(message, None)
+        # In a race condition the message might have been sent by the time
+        # we're timing it out. Make sure the future is not None
+        if future is not None:
+            del self.send_timeout_map[message]
+            if future.attempts < future.tries:
+                future.attempts += 1
+                log.debug('SaltReqTimeoutError, retrying. ({0}/{1})'.format(future.attempts, future.tries))
+                self.send(
+                    message,
+                    timeout=future.timeout,
+                    tries=future.tries,
+                    future=future,
+                )
 
-        else:
-            future.set_exception(SaltReqTimeoutError('Message timed out'))
+            else:
+                future.set_exception(SaltReqTimeoutError('Message timed out'))
 
     def send(self, message, timeout=None, tries=3, future=None, callback=None):
         '''

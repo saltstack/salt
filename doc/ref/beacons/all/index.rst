@@ -16,6 +16,7 @@ Full list of builtin beacon modules
     journald
     load
     network_info
+    pkg
     ps
     service
     sh

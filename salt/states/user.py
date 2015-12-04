@@ -100,12 +100,10 @@ def _changes(name,
 
     change = {}
     wanted_groups = sorted(set((groups or []) + (optional_groups or [])))
-    if uid:
-        if lusr['uid'] != uid:
-            change['uid'] = uid
-    if gid is not None:
-        if lusr['gid'] not in (gid, __salt__['file.group_to_gid'](gid)):
-            change['gid'] = gid
+    if uid and lusr['uid'] != uid:
+        change['uid'] = uid
+    if gid is not None and lusr['gid'] not in (gid, __salt__['file.group_to_gid'](gid)):
+        change['gid'] = gid
     default_grp = __salt__['file.gid_to_group'](
         gid if gid is not None else lusr['gid']
     )
@@ -120,16 +118,14 @@ def _changes(name,
         wanted_groups.remove(default_grp)
     if _group_changes(lusr['groups'], wanted_groups, remove_groups):
         change['groups'] = wanted_groups
-    if home:
-        if lusr['home'] != home and createhome:
-            change['home'] = home
+    if home and lusr['home'] != home and createhome:
+        change['home'] = home
     if createhome:
         newhome = home if home else lusr['home']
         if newhome is not None and not os.path.isdir(newhome):
             change['homeDoesNotExist'] = newhome
-    if shell:
-        if lusr['shell'] != shell:
-            change['shell'] = shell
+    if shell and lusr['shell'] != shell:
+        change['shell'] = shell
     if 'shadow.info' in __salt__ and 'shadow.default_hash' in __salt__:
         if password:
             default_hash = __salt__['shadow.default_hash']()
@@ -152,32 +148,31 @@ def _changes(name,
     # GECOS fields
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
-    if win_homedrive:
-        if lusr['homedrive'] != win_homedrive:
-            change['homedrive'] = win_homedrive
-    if win_profile:
-        if lusr['profile'] != win_profile:
-            change['profile'] = win_profile
-    if win_logonscript:
-        if lusr['logonscript'] != win_logonscript:
-            change['logonscript'] = win_logonscript
-    if win_description:
-        if lusr['description'] != win_description:
-            change['description'] = win_description
+    if win_homedrive and lusr['homedrive'] != win_homedrive:
+        change['homedrive'] = win_homedrive
+    if win_profile and lusr['profile'] != win_profile:
+        change['profile'] = win_profile
+    if win_logonscript and lusr['logonscript'] != win_logonscript:
+        change['logonscript'] = win_logonscript
+    if win_description and lusr['description'] != win_description:
+        change['description'] = win_description
 
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.
-    if 'user.chroomnumber' in __salt__:
-        if roomnumber is not None and lusr['roomnumber'] != roomnumber:
-            change['roomnumber'] = roomnumber
-    if 'user.chworkphone' in __salt__:
-        if workphone is not None and lusr['workphone'] != workphone:
-            change['workphone'] = workphone
-    if 'user.chhomephone' in __salt__:
-        if homephone is not None and lusr['homephone'] != homephone:
-            change['homephone'] = homephone
-    # OpenBSD login class
-    if __grains__['kernel'] == 'OpenBSD':
+    if 'user.chroomnumber' in __salt__ \
+            and roomnumber is not None \
+            and lusr['roomnumber'] != roomnumber:
+        change['roomnumber'] = roomnumber
+    if 'user.chworkphone' in __salt__ \
+            and workphone is not None \
+            and lusr['workphone'] != workphone:
+        change['workphone'] = workphone
+    if 'user.chhomephone' in __salt__ \
+            and homephone is not None \
+            and lusr['homephone'] != homephone:
+        change['homephone'] = homephone
+    # OpenBSD/FreeBSD login class
+    if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
         if loginclass:
             if __salt__['user.get_loginclass'](name) != loginclass:
                 change['loginclass'] = loginclass
@@ -252,7 +247,7 @@ def present(name,
 
     home
         The custom login directory of user. Uses default value of underlying
-        system if not set. Notice that this directory does not have to exists.
+        system if not set. Notice that this directory does not have to exist.
         This also the location of the home directory to create if createhome is
         set to True.
 
@@ -266,6 +261,7 @@ def present(name,
         Linux, FreeBSD, NetBSD, OpenBSD, and Solaris. If the ``empty_password``
         argument is set to ``True`` then ``password`` is ignored.
         For Windows this is the plain text password.
+        For Linux, the hash can be generated with ``openssl passwd -1``.
 
     .. versionchanged:: 0.16.0
        BSD support added.
@@ -381,6 +377,14 @@ def present(name,
            'result': True,
            'comment': 'User {0} is present and up to date'.format(name)}
 
+    # the comma is used to separate field in GECOS, thus resulting into
+    # salt adding the end of fullname each time this function is called
+    for gecos_field in ['fullname', 'roomnumber', 'workphone', 'homephone']:
+        if isinstance(gecos_field, six.string_types) and ',' in gecos_field:
+            ret['comment'] = "Unsupported char ',' in {0}".format(gecos_field)
+            ret['result'] = False
+            return ret
+
     if groups:
         missing_groups = [x for x in groups if not __salt__['group.info'](x)]
         if missing_groups:
@@ -453,7 +457,7 @@ def present(name,
         # The user is present
         if 'shadow.info' in __salt__:
             lshad = __salt__['shadow.info'](name)
-        if __grains__['kernel'] == 'OpenBSD':
+        if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
             lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
         for key, val in six.iteritems(changes):
@@ -508,10 +512,9 @@ def present(name,
 
         post = __salt__['user.info'](name)
         spost = {}
-        if 'shadow.info' in __salt__:
-            if lshad['passwd'] != password:
-                spost = __salt__['shadow.info'](name)
-        if __grains__['kernel'] == 'OpenBSD':
+        if 'shadow.info' in __salt__ and lshad['passwd'] != password:
+            spost = __salt__['shadow.info'](name)
+        if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
             lcpost = __salt__['user.get_loginclass'](name)
         # See if anything changed
         for key in post:
@@ -521,9 +524,8 @@ def present(name,
             for key in spost:
                 if lshad[key] != spost[key]:
                     ret['changes'][key] = spost[key]
-        if __grains__['kernel'] == 'OpenBSD':
-            if lcpre != lcpost:
-                ret['changes']['loginclass'] = lcpost
+        if __grains__['kernel'] in ('OpenBSD', 'FreeBSD') and lcpost != lcpre:
+            ret['changes']['loginclass'] = lcpost
         if ret['changes']:
             ret['comment'] = 'Updated user {0}'.format(name)
         changes = _changes(name,
@@ -670,14 +672,13 @@ def present(name,
                                          ' {1}'.format(name, expire)
                         ret['result'] = False
                     ret['changes']['expire'] = expire
-            elif salt.utils.is_windows():
-                if password and not empty_password:
-                    if not __salt__['user.setpassword'](name, password):
-                        ret['comment'] = 'User {0} created but failed to set' \
-                                         ' password to' \
-                                         ' {1}'.format(name, 'XXX-REDACTED-XXX')
-                        ret['result'] = False
-                    ret['changes']['passwd'] = 'XXX-REDACTED-XXX'
+            elif salt.utils.is_windows() and password and not empty_password:
+                if not __salt__['user.setpassword'](name, password):
+                    ret['comment'] = 'User {0} created but failed to set' \
+                                     ' password to' \
+                                     ' {1}'.format(name, 'XXX-REDACTED-XXX')
+                    ret['result'] = False
+                ret['changes']['passwd'] = 'XXX-REDACTED-XXX'
         else:
             ret['comment'] = 'Failed to create new user {0}'.format(name)
             ret['result'] = False

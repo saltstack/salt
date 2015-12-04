@@ -9,6 +9,9 @@ import salt.fileclient
 import salt.utils
 import salt.utils.url
 
+from salt.utils import dictupdate
+
+
 __virtualname__ = 'defaults'
 
 
@@ -97,3 +100,19 @@ def get(key, default=''):
         return salt.utils.traverse_dict_and_list(defaults, key, default)
     else:
         return defaults
+
+
+def merge(dest, upd):
+    '''
+    defaults.merge
+        Allows deep merging of dicts in formulas.
+
+        CLI Example:
+        .. code-block:: bash
+
+        salt '*' default.merge a=b d=e
+
+    It is more typical to use this in a templating language in formulas,
+    instead of directly on the command-line.
+    '''
+    return dictupdate.update(dest, upd)
