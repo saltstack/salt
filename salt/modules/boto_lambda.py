@@ -133,24 +133,6 @@ def __init__(opts):
     if HAS_BOTO:
         __utils__['boto3.assign_funcs'](__name__, 'lambda')
 
-def _multi_call(function, *args, **kwargs):
-    """Retrieve full set of values from a boto3 API call that may truncate
-    its results
-    """
-    ret = function(*args, **kwargs)
-    # determine the non-marker key name
-    all = ret.keys()
-    if 'NextMarker' in all:
-        all.remove('NextMarker')
-    content = all[0]
-    # handle a marker indicating the result was truncated
-    marker = getattr(ret, 'NextMarker', None)
-    while marker:
-        more = function(*args, Marker=marker, **kwargs)
-        ret[content].extend(more[content])
-        marker = getattr(ret, 'NextMarker', None)
-    return ret
-
 def _find_function(name,
                region=None, key=None, keyid=None, profile=None):
 
@@ -159,11 +141,10 @@ def _find_function(name,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    funcs = _multi_call(conn.list_functions)
-
-    for func in funcs['Functions']:
-        if func['FunctionName'] == name:
-            return func
+    for funcs in salt.utils.boto3.paged_call(conn.list_functions):
+        for func in funcs['Functions']:
+            if func['FunctionName'] == name:
+                return func
     return None
 
 
@@ -410,13 +391,13 @@ def list_function_versions(FunctionName,
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        vers = _multi_call(con.list_versions_by_function, 
-                                 FunctionName=FunctionName)
-        if vers:
-            return vers
-        else:
+        vers = []
+        for ret in salt.utils.boto3.paged_call(con.list_versions_by_function, 
+                                 FunctionName=FunctionName):
+            vers.extend(ret['Versions'])
+        if not bool(vers):
             log.warning('No versions found')
-            return { 'Versions': [] }
+        return { 'Versions': vers }
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
@@ -482,15 +463,16 @@ def _find_alias(FunctionName, Name, FunctionVersion=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
+    args = {
+        'FunctionName': FunctionName
+    }
     if FunctionVersion:
-        aliases = _multi_call(conn.list_aliases, FunctionName=FunctionName,
-                        FunctionVersion=FunctionVersion)
-    else:
-        aliases = _multi_call(conn.list_aliases, FunctionName=FunctionName)
+        args['FunctionVersion'] = FunctionVersion
 
-    for alias in aliases.get('Aliases'):
-        if alias['Name'] == Name:
-           return alias
+    for aliases in salt.utils.boto3.paged_call(conn.list_aliases, *args):
+        for alias in aliases.get('Aliases'):
+            if alias['Name'] == Name:
+                return alias
     return None
 
 
@@ -630,10 +612,12 @@ def get_event_source_mapping_ids(EventSourceArn, FunctionName,
 
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        maps = _multi_call(conn.list_event_source_mappings, 
+        mappings = []
+        for maps in salt.utils.boto3.paged_call(conn.list_event_source_mappings, 
                                                EventSourceArn=EventSourceArn,
-                                               FunctionName=FunctionName)['EventSourceMappings']
-        return [mapping['UUID'] for mapping in maps]
+                                               FunctionName=FunctionName)['EventSourceMappings']:
+            mappings.extend([mapping['UUID'] for mapping in maps])
+        return mappings
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
