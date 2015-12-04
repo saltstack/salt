@@ -221,6 +221,13 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
                 rule.append('--name {0}'.format(kwargs['name']))
         del kwargs['match']
 
+    if 'match-set' in kwargs:
+        if not isinstance(kwargs['match-set'], list):
+            kwargs['match-set'] = kwargs['match-set'].split(',')
+        for match_s in kwargs['match-set']:
+            rule += '-m set --match-set {0} '.format(match_s)
+        del kwargs['match-set']
+
     if 'connstate' in kwargs:
         if '-m state' not in rule:
             rule.append('-m state')
