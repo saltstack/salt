@@ -73,7 +73,7 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_kms module could not be loaded: boto libraries not found')
     return True
 
 
