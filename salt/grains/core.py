@@ -1028,7 +1028,7 @@ def _parse_os_release():
 
     data = dict()
     with salt.utils.fopen(filename) as ifile:
-        regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?$')
+        regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?\\s*$')
         for line in ifile:
             match = regex.match(line.strip('\n'))
             if match:
