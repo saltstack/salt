@@ -24,6 +24,7 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 import salt.ext.six as six
 from tempfile import NamedTemporaryFile
 import logging
+import os
 
 # Import Mock libraries
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
@@ -99,20 +100,17 @@ class BotoLambdaTestCaseBase(TestCase):
         self.conn = MagicMock()
         session_instance.client.return_value = self.conn
 
+class TempZipFile:
+    def __enter__(self):
+        with NamedTemporaryFile(suffix='.zip', prefix='salt_test_', delete=False) as tmp:
+            tmp.write('###\n')
+            self.zipfile = tmp.name
+        return self.zipfile
+    def __exit__(self, type, value, traceback):
+        os.remove(self.zipfile)
 
 class BotoLambdaTestCaseMixin(object):
-    zipfile = None
-
-    def _create_zipfile(self):
-        '''
-        Helper function to create an example zipfile
-        '''
-        if not self.zipfile:
-            with NamedTemporaryFile(suffix='.zip', prefix='salt_test_', delete=False) as tmp:
-            	tmp.write('###\n')
-            	self.zipfile = tmp.name
-
-        return self.zipfile
+    pass
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -158,11 +156,12 @@ class BotoLambdaTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             self.conn.create_function.return_value={'FunctionName': 'testfunction'}
-            lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
+            with TempZipFile() as zipfile:
+                lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
                                                     Runtime='python2.7',
                                                     Role='myrole',
                                                     Handler='file.method',
-                                                    ZipFile=self._create_zipfile(),
+                                                    ZipFile=zipfile,
                                                     **conn_parameters)
 
         self.assertTrue(lambda_creation_result['created'])
@@ -173,11 +172,12 @@ class BotoLambdaTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             self.conn.create_function.side_effect=ClientError(error_content, 'create_function')
-            lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
+            with TempZipFile() as zipfile:
+                lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
                                                     Runtime='python2.7',
                                                     Role='myrole',
                                                     Handler='file.method',
-                                                    ZipFile=self._create_zipfile(),
+                                                    ZipFile=zipfile,
                                                     **conn_parameters)
         self.assertEqual(lambda_creation_result.get('error',{}).get('message'), error_message.format('create_function'))
 
