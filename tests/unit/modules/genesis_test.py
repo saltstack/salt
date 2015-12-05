@@ -43,16 +43,20 @@ class GenesisTestCase(TestCase):
                                  {'Error': "Exception('foo',)"})
 
         with patch.object(genesis, '_bootstrap_yum', return_value='A'):
-            self.assertEqual(genesis.bootstrap('rpm', 'root', 'dir1'), 'A')
+            with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(),
+                                               'file.rmdir': MagicMock()}):
+                self.assertEqual(genesis.bootstrap('rpm', 'root', 'dir1'), None)
 
         with patch.object(genesis, '_bootstrap_deb', return_value='A'):
-            self.assertEqual(genesis.bootstrap('deb', 'root', 'dir1'), 'A')
+            with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(),
+                                               'file.rmdir': MagicMock()}):
+                self.assertEqual(genesis.bootstrap('deb', 'root', 'dir1'), None)
 
         with patch.object(genesis, '_bootstrap_pacman', return_value='A') as pacman_patch:
             with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(return_value=True)}):
                 with patch.dict(genesis.__salt__, {'file.rmdir': MagicMock(return_value=True)}):
                     genesis.bootstrap('pacman', 'root', 'dir1')
-                    pacman_patch.assert_called_with('root', img_format='dir1')
+                    pacman_patch.assert_called_with('root', img_format='dir1', exclude_pkgs=[], pkgs=[])
 
     @patch('salt.utils.which', MagicMock(return_value=False))
     def test_avail_platforms(self):
