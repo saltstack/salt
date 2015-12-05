@@ -101,7 +101,7 @@ def __virtual__():
         # Build dynamic functions and allow loading module
         _build_zfs_cmd_list()
         return 'zfs'
-    return (False,"The zfs module cannot be loaded: zfs not found")
+    return (False, "The zfs module cannot be loaded: zfs not found")
 
 
 def _add_doc(func, doc, prefix='\n\n    '):
