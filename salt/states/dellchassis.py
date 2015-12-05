@@ -54,25 +54,25 @@ data in pillar. Here's an example pillar structure:
             idrac_password: saltstack1
             ipmi_over_lan: True
             ip: 172.17.17.1
-            subnet: 255.255.0.0
+            gateway: 255.255.0.0
             netmask: 172.17.255.255
           blade2:
             idrac_password: saltstack1
             ipmi_over_lan: True
             ip: 172.17.17.2
-            subnet: 255.255.0.0
+            gateway: 255.255.0.0
             netmask: 172.17.255.255
           blade3:
             idrac_password: saltstack1
             ipmi_over_lan: True
             ip: 172.17.17.2
-            subnet: 255.255.0.0
+            gateway: 255.255.0.0
             netmask: 172.17.255.255
           blade4:
             idrac_password: saltstack1
             ipmi_over_lan: True
             ip: 172.17.17.2
-            subnet: 255.255.0.0
+            gateway: 255.255.0.0
             netmask: 172.17.255.255
 
         switches:
