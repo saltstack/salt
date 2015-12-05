@@ -1,4 +1,6 @@
 # encoding: utf-8
+from __future__ import absolute_import, print_function
+
 '''
 A non-blocking REST API for Salt
 ================================
@@ -188,7 +190,6 @@ a return like::
 # pylint: disable=W0232
 
 # Import Python libs
-from __future__ import absolute_import
 import time
 import math
 import fnmatch
