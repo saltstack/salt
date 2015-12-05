@@ -178,34 +178,26 @@ def _get_apis_by_name(name,
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)} 
 
-def get_apis_by_name(name, region=None, key=None, keyid=None, profile=None):
+def get_apis(name=None, region=None, key=None, keyid=None, profile=None):
 
     '''
-    Returns list of matching rest apis by given name.
+    Returns all rest apis in the defined region.  If optional parameter name is included,
+    returns all rest apis matching the name in the defined region.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.get_apis_by_name api_name
+        salt myminion boto_apigateways.get_apis
+
+        salt myminion boto_apigateways.get_apis name='api name' 
 
     '''
-    return _get_apis_by_name(name, region=region, key=key, keyid=keyid, profile=profile)
 
-
-def get_all_apis(region=None, key=None, keyid=None, profile=None):
-
-    '''
-    Returns all rest apis in the defined region
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt myminion boto_apigateways.get_all_apis
-
-    '''
-    return _get_apis_by_name('', region=region, key=key, keyid=keyid, profile=profile)
+    if name:
+        return _get_apis_by_name(name, region=None, key=None, keyid=None, profile=None)
+    else:
+        return _get_apis_by_name('', region=region, key=key, keyid=keyid, profile=profile)
 
 def api_exists(name, region=None, key=None, keyid=None, profile=None):
     '''
@@ -514,22 +506,126 @@ def delete_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
-def disassociate_api_key_stagekeys(apiKey, stageKeys, region=None, key=None, keyid=None, profile=None):
+def _api_key_patch_replace(conn, apiKey, path, value):
     '''
-    Remove given stageKeys from the given apiKey
+    the replace patch operation on an ApiKey resource
+    '''
+    response = conn.update_api_key(apiKey=apiKey, 
+                                   patchOperations=[{'op': 'replace', 'path': path, 'value': value}])
+    return response
+
+def _api_key_patchops(op, pvlist):
+    return [{'op': op, 'path': p, 'value': v} for (p, v) in pvlist]
+
+def _api_key_patch_add(conn, apiKey, pvlist):
+    '''
+    the add patch operation for a list of (path, value) tuples on an ApiKey resource list path
+    '''
+    response = conn.update_api_key(apiKey=apiKey,
+                                   patchOperations=_api_key_patchops('add', pvlist))
+    return response
+
+def _api_key_patch_remove(conn, apiKey, pvlist):
+    '''
+    the remove patch operation for a list of (path, value) tuples on an ApiKey resource list path
+    '''
+    response = conn.update_api_key(apiKey=apiKey,
+                                   patchOperations=_api_key_patchops('remove', pvlist))
+
+
+def update_api_key_description(apiKey, description, region=None, key=None, keyid=None, profile=None):
+    '''
+    update the given apiKey with the given description.
 
     CLI Example:
 
     .. code_block:: bash
 
-        salt myminion boto_apigateway.disassociate_api_key_stagekeys apikeystring stageKeys='[{"restApiId": "id", "stageName": "stagename"}]'
+        salt myminion boto_apigateway.update_api_key_description api_key description
 
     '''
     try:
-        return None
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        response = _api_key_patch_replace(conn, apiKey, '/description', description)
+        return {'updated': True, 'apiKey': response}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
 
-#TODO api_key update stage list
+def enable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
+    '''
+    enable the given apiKey.
+
+    CLI Example:
+
+    .. code_block:: bash
+        
+        salt myminion boto_apigateway.enable_api_key api_key
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        response = _api_key_patch_replace(conn, apiKey, '/enabled', 'True')
+        return {'apiKey': response}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+def disable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
+    '''
+    disable the given apiKey.
+
+    CLI Example:
+
+    .. code_block:: bash
+        
+        salt myminion boto_apigateway.enable_api_key api_key
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        response = _api_key_patch_replace(conn, apiKey, '/enabled', 'False')
+        return {'apiKey': response}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+
+def associate_api_key_stagekeys(apiKey, stagekeyslist, region=None, key=None, keyid=None, profile=None):
+    '''
+    associate the given stagekeyslist to the given apiKey.
+
+    CLI Example:
+
+    .. code_block:: bash
+    
+        salt myminion boto_apigateway.associate_stagekeys_api_key api_key '["restapi id/stage name", ...]'
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        pvlist = [('/stages', stagekey) for stagekey in stagekeyslist]
+        response = _api_key_patch_add(conn, apiKey, pvlist)
+        return {'associated': True, 'apiKey': response}
+    except ClientError as e:
+        return {'associated': False, 'error': salt.utils.boto3.get_error(e)}
+
+def disassociate_api_key_stagekeys(apiKey, stagekeyslist, region=None, key=None, keyid=None, profile=None):
+    '''
+    disassociate the given stagekeyslist to the given apiKey.
+
+    CLI Example:
+
+    .. code_block:: bash
+    
+        salt myminion boto_apigateway.disassociate_stagekeys_api_key api_key '["restapi id/stage name", ...]'
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        pvlist = [('/stages', stagekey) for stagekey in stagekeyslist]
+        response = _api_key_patch_remove(conn, apiKey, pvlist)
+        return {'disassociated': True}
+    except ClientError as e:
+        return {'disassociated': False, 'error': salt.utils.boto3.get_error(e)}
+
+
 
 
