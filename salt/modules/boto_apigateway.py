@@ -547,7 +547,7 @@ def update_api_key_description(apiKey, description, region=None, key=None, keyid
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         response = _api_key_patch_replace(conn, apiKey, '/description', description)
-        return {'updated': True, 'apiKey': response}
+        return {'updated': True, 'apiKey': _convert_datetime_str(response)}
     except ClientError as e:
         return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
 
@@ -565,7 +565,7 @@ def enable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         response = _api_key_patch_replace(conn, apiKey, '/enabled', 'True')
-        return {'apiKey': response}
+        return {'apiKey': _convert_datetime_str(response)}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
@@ -583,7 +583,7 @@ def disable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         response = _api_key_patch_replace(conn, apiKey, '/enabled', 'False')
-        return {'apiKey': response}
+        return {'apiKey': _convert_datetime_str(response)}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
@@ -603,7 +603,7 @@ def associate_api_key_stagekeys(apiKey, stagekeyslist, region=None, key=None, ke
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         pvlist = [('/stages', stagekey) for stagekey in stagekeyslist]
         response = _api_key_patch_add(conn, apiKey, pvlist)
-        return {'associated': True, 'apiKey': response}
+        return {'associated': True, 'apiKey': _convert_datetime_str(response)}
     except ClientError as e:
         return {'associated': False, 'error': salt.utils.boto3.get_error(e)}
 
