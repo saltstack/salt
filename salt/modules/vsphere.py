@@ -798,12 +798,11 @@ def get_service_policy(host, username, password, service_name, protocol=None, po
         for service in services:
             if service.key == temp_service_name:
                 ret.update({host_name:
-                           {service_name: service.running}})
+                           {service_name: service.policy}})
                 break
             else:
                 msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name,
                                                                                 host_name)
-                log.debug(msg)
                 ret.update({host_name: {'Error': msg}})
 
         if ret.get(host_name) is None:
@@ -897,7 +896,6 @@ def get_service_running(host, username, password, service_name, protocol=None, p
             else:
                 msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name,
                                                                                 host_name)
-                log.debug(msg)
                 ret.update({host_name: {'Error': msg}})
 
         if ret.get(host_name) is None:
@@ -1618,7 +1616,7 @@ def set_ntp_config(host, username, password, ntp_servers, protocol=None, port=No
             ret.update({host_name: {'Error': msg}})
             continue
 
-        ret.update({host_name: ntp_config})
+        ret.update({host_name: {'NTP Servers': ntp_config}})
     return ret
 
 
@@ -2089,7 +2087,7 @@ def update_host_datetime(host, username, password, protocol=None, port=None, hos
             ret.update({host_name: {'Error': msg}})
             continue
 
-        ret.update({host_name: True})
+        ret.update({host_name: {'Datetime Updated': True}})
 
     return ret
 
