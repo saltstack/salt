@@ -459,7 +459,7 @@ def _bootstrap_pacman(
     if pkgs is None:
         pkgs = []
 
-    default_pkgs = ('pacman', 'linux', 'systemd-sysvcompat')
+    default_pkgs = ('pacman', 'linux', 'systemd-sysvcompat', 'grub')
     for pkg in default_pkgs:
         if pkg not in pkgs:
             pkgs.append(pkg)
