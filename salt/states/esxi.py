@@ -262,7 +262,9 @@ def ntp_configured(name,
         configure-host-ntp:
           esxi.ntp_configured:
             - service_running: True
-            - ntp_servers: [192.174.1.100, 192.174.1.200]
+            - ntp_servers:
+              - 192.174.1.100
+              - 192.174.1.200
             - service_policy: 'automatic'
             - service_restart: True
 
@@ -273,14 +275,16 @@ def ntp_configured(name,
            'comment': ''}
     esxi_cmd = 'esxi.cmd'
     host = __pillar__['proxy']['host']
+    ntpd = 'ntpd'
 
     ntp_config = __salt__[esxi_cmd]('get_ntp_config').get(host)
     ntp_running = __salt__[esxi_cmd]('get_service_running',
-                                     service_name='ntpd').get(host)
+                                     service_name=ntpd).get(host)
     error = ntp_running.get('Error')
     if error:
         ret['comment'] = 'Error: {0}'.format(error)
         return ret
+    ntp_running = ntp_running.get(ntpd)
 
     # Configure NTP Servers for the Host
     if ntp_servers and set(ntp_servers) != set(ntp_config):
@@ -304,7 +308,7 @@ def ntp_configured(name,
             # Start ntdp if service_running=True
             if ntp_running is True:
                 response = __salt__[esxi_cmd]('service_start',
-                                              service_name='ntpd').get(host)
+                                              service_name=ntpd).get(host)
                 error = response.get('Error')
                 if error:
                     ret['comment'] = 'Error: {0}'.format(error)
@@ -312,7 +316,7 @@ def ntp_configured(name,
             # Stop ntpd if service_running=False
             else:
                 response = __salt__[esxi_cmd]('service_stop',
-                                              service_name='ntpd').get(host)
+                                              service_name=ntpd).get(host)
                 error = response.get('Error')
                 if error:
                     ret['comment'] = 'Error: {0}'.format(error)
@@ -324,17 +328,18 @@ def ntp_configured(name,
     # Configure service_policy
     if service_policy:
         current_service_policy = __salt__[esxi_cmd]('get_service_policy',
-                                                    service_name='ntpd').get(host)
+                                                    service_name=ntpd).get(host)
         error = current_service_policy.get('Error')
         if error:
             ret['comment'] = 'Error: {0}'.format(error)
             return ret
+        current_service_policy = current_service_policy.get(ntpd)
 
         if service_policy != current_service_policy:
             # Only run the command if not using test=True
             if not __opts__['test']:
                 response = __salt__[esxi_cmd]('set_service_policy',
-                                              service_name='ntpd',
+                                              service_name=ntpd,
                                               service_policy=service_policy).get(host)
                 error = response.get('Error')
                 if error:
@@ -362,7 +367,7 @@ def ntp_configured(name,
         # Only run the command if not using test=True
         if not __opts__['test']:
             response = __salt__[esxi_cmd]('service_restart',
-                                          service_name='ntpd').get(host)
+                                          service_name=ntpd).get(host)
             error = response.get('Error')
             if error:
                 ret['comment'] = 'Error: {0}'.format(error)
@@ -540,14 +545,15 @@ def ssh_configured(name,
            'comment': ''}
     esxi_cmd = 'esxi.cmd'
     host = __pillar__['proxy']['host']
+    ssh = 'ssh'
 
     ssh_running = __salt__[esxi_cmd]('get_service_running',
-                                     service_name='SSH').get(host)
+                                     service_name=ssh).get(host)
     error = ssh_running.get('Error')
     if error:
         ret['comment'] = 'Error: {0}'.format(error)
         return ret
-    ssh_running = ssh_running.get('SSH')
+    ssh_running = ssh_running.get(ssh)
 
     # Configure SSH service_running state, if changed.
     if service_running != ssh_running:
@@ -556,7 +562,7 @@ def ssh_configured(name,
             # Start SSH if service_running=True
             if service_running is True:
                 enable = __salt__[esxi_cmd]('service_start',
-                                            service_name='SSH').get(host)
+                                            service_name=ssh).get(host)
                 error = enable.get('Error')
                 if error:
                     ret['comment'] = 'Error: {0}'.format(error)
@@ -564,7 +570,7 @@ def ssh_configured(name,
             # Disable SSH if service_running=False
             else:
                 disable = __salt__[esxi_cmd]('service_stop',
-                                             service_name='SSH').get(host)
+                                             service_name=ssh).get(host)
                 error = disable.get('Error')
                 if error:
                     ret['comment'] = 'Error: {0}'.format(error)
@@ -621,17 +627,18 @@ def ssh_configured(name,
     # Configure service_policy
     if service_policy:
         current_service_policy = __salt__[esxi_cmd]('get_service_policy',
-                                                    service_name='ssh').get(host)
+                                                    service_name=ssh).get(host)
         error = current_service_policy.get('Error')
         if error:
             ret['comment'] = 'Error: {0}'.format(error)
             return ret
+        current_service_policy = current_service_policy.get(ssh)
 
         if service_policy != current_service_policy:
             # Only run the command if not using test=True
             if not __opts__['test']:
                 response = __salt__[esxi_cmd]('set_service_policy',
-                                              service_name='ssh',
+                                              service_name=ssh,
                                               service_policy=service_policy).get(host)
                 error = response.get('Error')
                 if error:
@@ -646,7 +653,7 @@ def ssh_configured(name,
         # Only run the command if not using test=True
         if not __opts__['test']:
             response = __salt__[esxi_cmd]('service_restart',
-                                          service_name='SSH').get(host)
+                                          service_name=ssh).get(host)
             error = response.get('Error')
             if error:
                 ret['comment'] = 'Error: {0}'.format(error)
@@ -681,7 +688,7 @@ def syslog_configured(name,
     name
         Name of the state.
 
-    syslog_config
+    syslog_configs
         Name of parameter to set (corresponds to the command line switch for
         esxcli without the double dashes (--))
 
@@ -707,13 +714,12 @@ def syslog_configured(name,
         in ``reset_configs`` will be reset before running any other syslog settings.
 
     reset_configs
-        List of parameters to reset. Only runs if ``reset_syslog_config`` is set
-        to ``True``. If ``reset_syslog_config`` is set to ``True``, but no syslog
-        configs are listed in ``reset_configs``, then ``reset_configs`` will be
-        to ``all`` by default.
+        A comma-delimited list of parameters to reset. Only runs if
+        ``reset_syslog_config`` is set to ``True``. If ``reset_syslog_config`` is set
+        to ``True``, but no syslog configs are listed in ``reset_configs``, then
+        ``reset_configs`` will be set to ``all`` by default.
 
-        See ``syslog_configs`` parameter above for a list of valid syslog_config
-        values.
+        See ``syslog_configs`` parameter above for a list of valid options.
 
     Example:
 
@@ -721,15 +727,13 @@ def syslog_configured(name,
 
         configure-host-syslog:
           esxi.syslog_configured:
-            - syslog_config:
-              - loghost: ssl://localhost:5432,tcp://10.1.0.1:1514
-              - default-timeout: 120
+            - syslog_configs:
+                loghost: ssl://localhost:5432,tcp://10.1.0.1:1514
+                default-timeout: 120
             - firewall: True
             - reset_service: True
             - reset_syslog_config: True
-            - reset_configs:
-              - loghost
-              - default-timeout
+            - reset_configs: loghost,default-timeout
     '''
     ret = {'name': name,
            'result': False,
@@ -745,11 +749,13 @@ def syslog_configured(name,
             reset = __salt__[esxi_cmd]('reset_syslog_config',
                                        syslog_config=reset_configs)
             for key, val in reset.iteritems():
+                if isinstance(val, bool):
+                    continue
                 if not val.get('success'):
                     msg = val.get('message')
                     if not msg:
-                        msg = 'There was an error resetting a syslog config. ' \
-                              'Please check debug logs.'
+                        msg = 'There was an error resetting a syslog config \'{0}\'.' \
+                              'Please check debug logs.'.format(val)
                     ret['comment'] = 'Error: {0}'.format(msg)
                     return ret
 
