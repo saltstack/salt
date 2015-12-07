@@ -809,4 +809,30 @@ def flush_api_stage_cache(apiId, stageName, region=None, key=None, keyid=None, p
         return {'flushed': False, 'error': salt.utils.boto3.get_error(e)}
 
 
- 
+# API Methods
+
+def create_api_method(apiId, resourcePath, httpMethod, authorizationType, apiKeyRequired=False, requestParameters={}, requestModels={},
+                      region=None, key=None, keyid=None, profile=None):
+    '''
+    Creates API method for a resource in the given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.create_api_method apiId resourcePath, httpMethod, authorizationType, 
+                                                        apiKeyRequired=False, requestParameters='{"name", "value"}', requestModels='{"content-type", "value"}'
+
+    '''
+    try:
+        resource = get_api_resource(apiId, resourcePath, region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        log.info(resource)
+        if resource: 
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            method = conn.put_method(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, authorizationType=str(authorizationType),
+                           apiKeyRequired=apiKeyRequired, requestParameters=requestParameters, requestModels=requestModels)
+            return {'created': True, 'method': method}            
+        return {'created': False, 'error': 'Failed to create method'}
+        
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)} 
