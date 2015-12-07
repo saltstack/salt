@@ -26,7 +26,7 @@ def __virtual__():
     '''
     if __grains__['os'] == 'proxy':
         return __virtualname__
-    return False
+    return (False, 'ssh_service module cannot be loaded: only available on proxy minions.')
 
 
 def get_all():
