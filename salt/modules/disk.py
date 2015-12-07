@@ -19,8 +19,8 @@ from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
-HAS_HDPARM = salt.utils.which_bin(['hdparm']) is not None
-HAS_SMARTCTL = salt.utils.which_bin(['smartctl']) is not None
+HAS_HDPARM = salt.utils.which('hdparm') is not None
+HAS_SMARTCTL = salt.utils.which('smartctl') is not None
 
 
 def __virtual__():
