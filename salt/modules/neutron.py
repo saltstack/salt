@@ -1387,7 +1387,6 @@ def list_firewall_rules(profile=None):
     return conn.list_firewall_rules()
 
 
-
 # The following is a list of functions that need to be incorporated in the
 # neutron module. This list should be updated as functions are added.
 #
