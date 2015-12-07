@@ -6,6 +6,8 @@
 # Import Python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import datetime
+from dateutil.tz import tzlocal
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -139,6 +141,55 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         api_exists_result = boto_apigateway.api_exists(name='myapi123', **conn_parameters)
         
         self.assertFalse(api_exists_result['exists'])                                                
+
+    def test_that_when_getting_rest_apis_and_no_name_option_the_function_get_apis_returns_list_of_all_rest_apis(self):
+        '''
+        Tests that all rest apis defined for a region is returned
+        '''
+        self.conn.get_rest_apis.return_value={u'items': [{u'description': u'A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()), 
+                                                          u'id': u'2ut6i4vyle', 
+                                                          u'name': u'Swagger Petstore'}, 
+                                                         {u'description': u'testingabcd', 
+                                                          u'createdDate': datetime.datetime(2015, 12, 3, 21, 57, 58, tzinfo=tzlocal()), 
+                                                          u'id': u'g41ls77hz0', 
+                                                          u'name': u'testingabc'}, 
+                                                         {u'description': u'a simple food delivery service test', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 4, 23, 57, 28, tzinfo=tzlocal()), 
+                                                          u'id': u'h7pbwydho9', 
+                                                          u'name': u'Food Delivery Service'}, 
+                                                         {u'description': u'Created by AWS Lambda', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 4, 17, 55, 41, tzinfo=tzlocal()), 
+                                                          u'id': u'i2yyd1ldvj', 
+                                                          u'name': u'LambdaMicroservice'}, 
+                                                         {u'description': u'cloud tap service with combination of API GW and Lambda', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 17, 22, 3, 18, tzinfo=tzlocal()), 
+                                                          u'id': u'rm06h9oac4', 
+                                                          u'name': u'API Gateway Cloudtap Service'}, 
+                                                         {u'description': u'testing1234', 
+                                                          u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44, tzinfo=tzlocal()), 
+                                                          u'id': u'vtir6ssxvd', 
+                                                          u'name': u'testing123'}], 
+                                              'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
+        items = self.conn.get_rest_apis.return_value['items']
+        get_apis_result = boto_apigateway.get_apis()
+        items_dt = map(boto_apigateway._convert_datetime_str, items)
+        apis = get_apis_result.get('restapi')
+        
+        # turn the list of dictionaries into list of list of (k,v) items.
+        diff = False;
+        if (len(apis) != len(items) or len(apis) != len(items_dt)):
+            diff = True
+        else:
+            # compare individual items.
+            items_dt_sorted = sorted(items_dt, key=lambda x: x['id'])
+            apis_sorted = sorted(apis, key=lambda x: x['id'])
+            for api, item in zip(apis_sorted, items_dt_sorted):
+                if (len(set(api) & set(item)) != len(set(item))):
+                    diff = True
+                    break
+
+        self.assertTrue(apis and not diff)
 
 #    def test_that_when_creating_a_function_succeeds_the_create_function_method_returns_true(self):
 #        '''
