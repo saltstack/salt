@@ -655,7 +655,26 @@ def get_api_deployments(apiId, region=None, key=None, keyid=None, profile=None):
 
         return {'deployments': map(_convert_datetime_str, deployments)}
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'error': salt.utils.boto3.get_error(e)}
+
+def get_api_deployment(apiId, deploymentId, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get API deployment for a given apiId and deploymentId.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_deployent apiId deploymentId
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        deployment = conn.get_deployment(restApiId=apiId, deploymentId=deploymentId)
+        return {'deployment': _convert_datetime_str(deployment)}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
 
 def create_api_deployment(apiId, stageName, stageDescription = "", description = "", cacheClusterEnabled = False, cacheClusterSize = "0.5", variables = {},
                           region=None, key=None, keyid=None, profile=None):
@@ -674,6 +693,24 @@ def create_api_deployment(apiId, stageName, stageDescription = "", description =
         deployment = conn.create_deployment(restApiId=apiId, stageName=stageName, stageDescription=stageDescription, description=description, cacheClusterEnabled=cacheClusterEnabled, cacheClusterSize=cacheClusterSize, variables=variables)
         return {'created': True, 'deployment': _convert_datetime_str(deployment)}
     except ClientError as e:
-        return {'error': salt.utils.boto.get_error(e)}
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+
+def delete_api_deployment(apiId, deploymentId, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes API deployment for a given apiID and deploymentID
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.delete_api_deployent apiId deploymentId 
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        response = conn.delete_deployment(restApiId=apiId, deploymentId=deploymentId);
+        return {'deleted': True}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e) }
 
 
