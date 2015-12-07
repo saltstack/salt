@@ -713,4 +713,98 @@ def delete_api_deployment(apiId, deploymentId, region=None, key=None, keyid=None
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e) }
 
+# API Stages
 
+def get_api_stage(apiId, stageName, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get API stage for a given apiID and stage name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_stage apiId stageName
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        stage = conn.get_stage(restApiId=apiId, stageName=stageName);
+        return {'stage': stage}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+def get_api_stages(apiId, deploymentId, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get all API stages for a given apiID and deploymentID
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_stages apiId deploymentId
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        stages = conn.get_stages(restApiId=apiId, deploymentId=deploymentId);
+        return {'stages': map(_convert_datetime_str, stages['item'])}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+def create_api_stage(apiId, stageName, deploymentId, description="", cacheClusterEnabled = False, cacheClusterSize = "0.5", variables = {},
+                     region=None, key=None, keyid=None, profile=None):
+    '''
+    Creates a new API stage for a given apiId and deploymentId.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.create_api_stage apiId stagename deploymentId description="" cacheClusterEnabled=True|False cacheClusterSize=0.5 variables='{"name": "value"}'
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        stage = conn.create_stage(restApiId=apiId, stageName=stageName, deploymentId=deploymentId, description=description, cacheClusterEnabled=cacheClusterEnabled, cacheClusterSize=cacheClusterSize, variables=variables);
+        return {'created': True, 'stage': _convert_datetime_str(stage)}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+
+def delete_api_stage(apiId, stageName, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes stage identified by stageName from API identified by apiId
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.delete_api_stage apiId stageName
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.delete_stage(restApiId=apiId, stageName=stageName);
+        return {'deleted': True}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
+def flush_api_stage_cache(apiId, stageName, region=None, key=None, keyid=None, profile=None):
+    '''
+    Flushes cache for the stage identified by stageName from API identified by apiId
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.flush_api_stage_cache apiId stageName
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.flush_stage_cache(restApiId=apiId, stageName=stageName);
+        return {'flushed': True}
+    except ClientError as e:
+        return {'flushed': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+ 
