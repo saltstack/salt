@@ -19,6 +19,8 @@ def __virtual__():
         return False
     if __grains__['os_family'] == 'Debian':
         return False
+    if not salt.utils.which('ip'):
+        return False
     return __virtualname__
 
 
