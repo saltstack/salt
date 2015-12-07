@@ -40,7 +40,7 @@ def __virtual__():
     '''
     if __grains__['os_family'] == 'RedHat':
         return __virtualname__
-    return False
+    return (False, 'The rh_ip execution module cannot be loaded: this module is only available on RHEL/Fedora based distributions.')
 
 
 # Setup networking attributes
