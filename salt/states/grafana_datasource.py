@@ -30,9 +30,6 @@ import requests
 from salt.ext.six import string_types
 
 
-__virtualname__ = 'grafana_datasource'
-
-
 def __virtual__():
     '''Only load if grafana v2.0 is configured.'''
     if __salt__['config.get']('grafana_version', 1) == 2:
