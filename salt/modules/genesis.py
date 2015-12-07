@@ -584,3 +584,48 @@ def _compress(compress):
         ext = 'xz'
 
     return compression, ext
+
+
+def ldd_deps(filename, ret=None):
+    '''
+    Recurse through a set of dependencies reported by ``ldd``, to find
+    associated dependencies.
+
+    Please note that this does not necessarily resolve all (non-package)
+    dependencies for a file; but it does help.
+
+    CLI Example:
+
+        salt myminion genesis.ldd_deps bash
+        salt myminion genesis.ldd_deps /bin/bash
+    '''
+    if not os.path.exists(filename):
+        filename = salt.utils.which(filename)
+
+    if ret is None:
+        ret = []
+
+    out = __salt__['cmd.run'](('ldd', filename), python_shell=False)
+    for line in out.splitlines():
+        if not line.strip():
+            continue
+        dep_path = ''
+        if '=>' in line:
+            comps = line.split(' => ')
+            dep_comps = comps[1].strip().split()
+            if os.path.exists(dep_comps[0]):
+                dep_path = dep_comps[0]
+        else:
+            dep_comps = line.strip().split()
+            if os.path.exists(dep_comps[0]):
+                dep_path = dep_comps[0]
+
+        if dep_path:
+            if dep_path not in ret:
+                ret.append(dep_path)
+                new_deps = ldd_deps(dep_path, ret)
+                for dep in new_deps:
+                    if dep not in ret:
+                        ret.append(dep)
+
+    return ret
