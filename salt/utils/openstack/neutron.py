@@ -742,6 +742,11 @@ class SaltNeutron(NeutronShell):
         ret = self.network_conn.delete_ipsecpolicy(ipseecpolicy_id)
         return ret if ret else True
 
+    def list_firewall_rules(self):
+        '''
+        Fetches a list of all configured firewall rules for a tenant
+        '''
+        return self.network_conn.list_firewall_rules()
 
 # The following is a list of functions that need to be incorporated in the
 # neutron module. This list should be updated as functions are added.
