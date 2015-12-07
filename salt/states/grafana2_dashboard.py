@@ -14,7 +14,7 @@ Manage Grafana v2.0 Dashboards
 .. code-block:: yaml
 
     Ensure minimum dashboard is managed:
-      grafana.dashboard_present:
+      grafana_dashboard.present:
         - name: insightful-dashboard
         - base_dashboards_from_pillar:
           - default_dashboard
@@ -49,7 +49,7 @@ from salt.ext.six import string_types
 from salt.utils.dictdiffer import DictDiffer
 
 
-__virtualname__ = 'grafana'
+__virtualname__ = 'grafana_dashboard'
 
 
 def __virtual__():
@@ -66,13 +66,12 @@ _DEFAULT_ROW_PILLAR = 'grafana_rows:default'
 _PINNED_ROWS_PILLAR = 'grafana_pinned_rows'
 
 
-def dashboard_present(
-        name,
-        base_dashboards_from_pillar=None,
-        base_panels_from_pillar=None,
-        base_rows_from_pillar=None,
-        dashboard=None,
-        profile='grafana'):
+def present(name,
+            base_dashboards_from_pillar=None,
+            base_panels_from_pillar=None,
+            base_rows_from_pillar=None,
+            dashboard=None,
+            profile='grafana'):
     """
     Ensure the grafana dashboard exists and is managed.
 
@@ -195,9 +194,7 @@ def dashboard_present(
     return ret
 
 
-def dashboard_absent(
-        name,
-        profile='grafana'):
+def absent(name, profile='grafana'):
     """
     Ensure the named grafana dashboard is absent.
 
