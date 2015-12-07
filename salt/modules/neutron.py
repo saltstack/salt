@@ -1379,8 +1379,8 @@ def list_firewall_rules(profile=None):
     .. code-block:: bash
 
         salt '*' neutron.list_firewall_rules
-	:param profile: Profile to build on (Optional)
-	:return: List of firewall rules
+    :param profile: Profile to build on (Optional)
+    :return: List of firewall rules
     '''
     conn = _auth(profile)
     return conn.list_firewall_rules()

@@ -125,10 +125,6 @@ class SaltNeutron(NeutronShell):
         resource = self._fetch_ipsecpolicy(resource)
         return resource['id']
 
-    def _find_firewall_rule_id(self, resource):
-        resource = self._fetch_firewall_rule(resource)
-        return resource['id']
-
     def _fetch_port(self, name_or_id):
         resources = self.list_ports()['ports']
         return self._fetch(resources, name_or_id)
@@ -164,10 +160,6 @@ class SaltNeutron(NeutronShell):
 
     def _fetch_ipsecpolicy(self, name_or_id):
         resources = self.list_ipsecpolicies()['ipsecpolicies']
-        return self._fetch(resources, name_or_id)
-
-    def _fetch_firewall_rule(self, name_or_id):
-        resources = self.list_firewall_rule()['firewall_rules']
         return self._fetch(resources, name_or_id)
 
     def get_quotas_tenant(self):
@@ -749,25 +741,12 @@ class SaltNeutron(NeutronShell):
         ipseecpolicy_id = self._find_ipsecpolicy_id(ipseecpolicy)
         ret = self.network_conn.delete_ipsecpolicy(ipseecpolicy_id)
         return ret if ret else True
+
     def list_firewall_rules(self):
 	    '''
         Fetches a list of all configured firewall rules for a tenant
-		'''
+        '''
         return self.network_conn.list_firewall_rules()
-    
-    def show_firewall_rule(self, rule):
-	    '''
-        Fetches information of a specific firewall rule
-        '''
-        return self._fetch_firewall_rule(rule)
-	
-    def delete_firewall_rule(self, rule):
-        '''
-        Deletes the specified firewall rule
-        '''
-        firewall_rule_id = self._find_firewall_rule_id(rule)
-        ret = self.network_conn.delete_firewall_rule(firewall_rule_id)
-        return ret if ret else True
 
 # The following is a list of functions that need to be incorporated in the
 # neutron module. This list should be updated as functions are added.
