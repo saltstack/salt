@@ -78,9 +78,16 @@ config:
             - routes:
               - destination_cidr_block: 0.0.0.0/0
                 instance_id: i-123456
+<<<<<<< HEAD
             - subnets:
               - name: subnet1
               - name: subnet2
+=======
+                interface_id: eni-123456
+            - subnet_names:
+              - subnet1
+              - subnet2
+>>>>>>> upstream/2015.8
             - region: us-east-1
             - profile:
                 keyid: GKTADJGHEIQSXMKKRBJ08H

@@ -215,7 +215,10 @@ The resulting pillar will be as follows:
             9.9.5
 
 .. note::
-       Remember: conflicting keys will be overwritten in a non-deterministic manner!
+    Pillar files are applied in the order they are listed in the top file.
+    Therefore conflicting keys will be overwritten in a 'last one wins' manner!
+    For example, in the above scenario conflicting key values in ``services``
+    will overwrite those in ``packages`` because it's at the bottom of the list.
 
 Including Other Pillars
 =======================

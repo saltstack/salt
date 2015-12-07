@@ -1423,10 +1423,14 @@ def _validate_input(kwargs,
                 raise SaltInvocationError(err)
 
             if not os.path.isabs(host_path):
-                raise SaltInvocationError(
-                    'Host path {0} in bind {1} is not absolute'
-                    .format(host_path, bind)
-                )
+                if os.path.sep in host_path:
+                    raise SaltInvocationError(
+                        'Host path {0} in bind {1} is not absolute'
+                        .format(container_path, bind)
+                    )
+                log.warn('Host path {0} in bind {1} is not absolute,'
+                         ' assuming it is a docker volume.'.format(host_path,
+                                                                   bind))
             if not os.path.isabs(container_path):
                 raise SaltInvocationError(
                     'Container path {0} in bind {1} is not absolute'
@@ -4309,6 +4313,7 @@ def networks(names=None, ids=None):
 
 
 @_api_version(1.21)
+@_client_version('1.5.0')
 def create_network(name, driver=None):
     '''
     Create a new network
@@ -4420,6 +4425,107 @@ def disconnect_container_from_network(container, network_id):
     response = _client_wrapper('disconnect_container_from_network',
                                container,
                                network_id)
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+# Volume Management
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def volumes(filters=None):
+    '''
+    List existing volumes
+
+    .. versionadded:: 2015.8.4
+
+    filters
+      There is one available filter: dangling=true
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.volumes filters="{'dangling': True}"
+    '''
+    response = _client_wrapper('volumes', filters=filters)
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def create_volume(name, driver=None, driver_opts=None):
+    '''
+    Create a new volume
+
+    .. versionadded:: 2015.8.4
+
+    name
+        name of volume
+
+    driver
+        Driver of the volume
+
+    driver_opts
+        Options for the driver volume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.create_volume my_volume driver=local
+    '''
+    response = _client_wrapper('create_volume', name, driver=driver,
+                               driver_opts=driver_opts)
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def remove_volume(name):
+    '''
+    Remove a volume
+
+    .. versionadded:: 2015.8.4
+
+    name
+        Name of volume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.remove_volume my_volume
+    '''
+    response = _client_wrapper('remove_volume', name)
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def inspect_volume(name):
+    '''
+    Inspect Volume
+
+    .. versionadded:: 2015.8.4
+
+    name
+      Name of volume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.inspect_volume my_volume
+    '''
+    response = _client_wrapper('inspect_volume', name)
     _clear_context()
     # Only non-error return case is a True return, so just return the response
     return response
