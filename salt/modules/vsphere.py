@@ -2852,7 +2852,6 @@ def _get_host_disks(host_reference):
             has_ssd_attr = disk.ssd
         except AttributeError:
             has_ssd_attr = False
-            pass
         if has_ssd_attr:
             ssds.append(disk)
         else:
