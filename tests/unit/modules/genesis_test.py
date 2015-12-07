@@ -45,18 +45,21 @@ class GenesisTestCase(TestCase):
         with patch.object(genesis, '_bootstrap_yum', return_value='A'):
             with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(),
                                                'file.rmdir': MagicMock()}):
-                self.assertEqual(genesis.bootstrap('rpm', 'root', 'dir1'), None)
+                with patch.dict(genesis.__salt__, {'disk.blkid': MagicMock(return_value={})}):
+                    self.assertEqual(genesis.bootstrap('rpm', 'root', 'dir1'), None)
 
         with patch.object(genesis, '_bootstrap_deb', return_value='A'):
             with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(),
                                                'file.rmdir': MagicMock()}):
-                self.assertEqual(genesis.bootstrap('deb', 'root', 'dir1'), None)
+                with patch.dict(genesis.__salt__, {'disk.blkid': MagicMock(return_value={})}):
+                    self.assertEqual(genesis.bootstrap('deb', 'root', 'dir1'), None)
 
         with patch.object(genesis, '_bootstrap_pacman', return_value='A') as pacman_patch:
             with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(return_value=True)}):
                 with patch.dict(genesis.__salt__, {'file.rmdir': MagicMock(return_value=True)}):
-                    genesis.bootstrap('pacman', 'root', 'dir1')
-                    pacman_patch.assert_called_with('root', img_format='dir1', exclude_pkgs=[], pkgs=[])
+                    with patch.dict(genesis.__salt__, {'disk.blkid': MagicMock(return_value={})}):
+                        genesis.bootstrap('pacman', 'root', 'dir1')
+                        pacman_patch.assert_called_with('root', img_format='dir1', exclude_pkgs=[], pkgs=[])
 
     @patch('salt.utils.which', MagicMock(return_value=False))
     def test_avail_platforms(self):
