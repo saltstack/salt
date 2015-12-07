@@ -87,22 +87,12 @@ def present(name,
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)
 
-    ret = {}
-    datasource = _get_datasource(name=name, profile)
+    ret = {'result': None, 'comment': None, 'changes': None}
+    datasource = _get_datasource(profile, name)
     data = _get_json_data(name, type, url, access, user, password, database,
         basic_auth, basic_auth_user, basic_auth_password, is_default, json_data)
 
-    if not datasource:
-        requests.post(
-            '{0}/api/datasources'.format(profile.get('grafana_url')),
-            data,
-            headers=_get_headers(profile),
-            timeout=profile.get('grafana_timeout', 3),
-        )
-        ret['result'] = True
-        ret['comment'] = 'New data source {0} added'.format(name)
-        ret['changes'] = data
-    else:
+    if datasource:
         requests.put(
             _get_url(profile, datasource['id']),
             data,
@@ -110,8 +100,22 @@ def present(name,
             timeout=profile.get('grafana_timeout', 3),
         )
         ret['result'] = True
-        ret['comment'] = 'Data source {0} updated'.format(name)
         ret['changes'] = _diff(datasource, data)
+        if ret['changes']['new'] or ret['changes']['old']:
+            ret['comment'] = 'Data source {0} updated'.format(name)
+        else:
+            ret['changes'] = None
+            ret['comment'] = 'Data source {0} already up-to-date'.format(name)
+    else:
+        requests.post(
+            '{0}/api/datasources'.format(profile['grafana_url']),
+            data,
+            headers=_get_headers(profile),
+            timeout=profile.get('grafana_timeout', 3),
+        )
+        ret['result'] = True
+        ret['comment'] = 'New data source {0} added'.format(name)
+        ret['changes'] = data
 
     return ret
 
@@ -126,10 +130,13 @@ def absent(name, profile='grafana'):
     if isinstance(profile, string_types):
         profile = __salt__['config.option'](profile)
 
-    datasource = _get_datasource(name=name, profile)
+    ret = {'result': None, 'comment': None, 'changes': None}
+    datasource = _get_datasource(profile, name)
+
     if not datasource:
         ret['result'] = True
         ret['comment'] = 'Data source {0} already absent'.format(name)
+        return ret
 
     requests.delete(
         _get_url(profile, datasource['id']),
@@ -145,14 +152,14 @@ def absent(name, profile='grafana'):
 
 def _get_url(profile, datasource_id):
     return '{0}/api/datasources/{1}'.format(
-        profile.get('grafana_url'),
+        profile['grafana_url'],
         datasource_id
     )
 
 
 def _get_datasource(profile, name):
     response = requests.get(
-        '{0}/api/datasources'.format(profile.get('grafana_url')),
+        '{0}/api/datasources'.format(profile['grafana_url']),
         headers=_get_headers(profile),
         timeout=profile.get('grafana_timeout', 3),
     )
@@ -166,29 +173,29 @@ def _get_datasource(profile, name):
 def _get_headers(profile):
     return {
         'Accept': 'application/json',
-        'Authorization': 'Bearer {0}'.format(profile.get('grafana_token'))
+        'Authorization': 'Bearer {0}'.format(profile['grafana_token'])
     }
 
 
 def _get_json_data(name,
                    type,
                    url,
-                   access,
-                   user,
-                   password,
-                   database,
-                   basic_auth,
-                   basic_auth_user,
-                   basic_auth_password,
-                   is_default,
-                   json_data):
+                   access='proxy',
+                   user='',
+                   password='',
+                   database='',
+                   basic_auth=False,
+                   basic_auth_user='',
+                   basic_auth_password='',
+                   is_default=False,
+                   json_data=None):
     return {
         'name': name,
         'type': type,
-        'access': url,
-        'url': access,
-        'password': user,
-        'user': password,
+        'url': url,
+        'access': access,
+        'user': user,
+        'password': password,
         'database': database,
         'basicAuth': basic_auth,
         'basicAuthUser': basic_auth_user,
@@ -199,10 +206,13 @@ def _get_json_data(name,
 
 
 def _diff(old, new):
-    for key in old.keys():
+    old_keys = old.keys()
+    old = old.copy()
+    new = new.copy()
+    for key in old_keys:
         if key == 'id' or key == 'orgId':
-            continue
-        if old[key] == new[key]:
+            del old[key]
+        elif old[key] == new[key]:
             del old[key]
             del new[key]
     return {'old': old, 'new': new}
