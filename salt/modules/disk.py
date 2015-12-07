@@ -621,11 +621,11 @@ def _iostat_fbsd(interval, count, disks):
     Tested on FreeBSD, quite likely other BSD's only need small changes in cmd syntax
     '''
     if disks is None:
-        iostat_cmd = 'iostat -xC -w {} -c {} '.format(interval, count)
+        iostat_cmd = 'iostat -xC -w {0} -c {1} '.format(interval, count)
     elif isinstance(disks, six.string_types):
-        iostat_cmd = 'iostat -x -w {} -c {} {}'.format(interval, count, disks)
+        iostat_cmd = 'iostat -x -w {0} -c {1} {2}'.format(interval, count, disks)
     else:
-        iostat_cmd = 'iostat -x -w {} -c {} {}'.format(interval, count, ' '.join(disks))
+        iostat_cmd = 'iostat -x -w {0} -c {1} {2}'.format(interval, count, ' '.join(disks))
 
     sys_stats = []
     dev_stats = collections.defaultdict(list)
@@ -674,11 +674,11 @@ def _iostat_fbsd(interval, count, disks):
 
 def _iostat_linux(interval, count, disks):
     if disks is None:
-        iostat_cmd = 'iostat -x {} {} '.format(interval, count)
+        iostat_cmd = 'iostat -x {0} {1} '.format(interval, count)
     elif isinstance(disks, six.string_types):
-        iostat_cmd = 'iostat -xd {} {} {}'.format(interval, count, disks)
+        iostat_cmd = 'iostat -xd {0} {1} {2}'.format(interval, count, disks)
     else:
-        iostat_cmd = 'iostat -xd {} {} {}'.format(interval, count, ' '.join(disks))
+        iostat_cmd = 'iostat -xd {0} {1} {2}'.format(interval, count, ' '.join(disks))
 
     sys_stats = []
     dev_stats = collections.defaultdict(list)
