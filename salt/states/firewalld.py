@@ -263,6 +263,8 @@ def bind(name,
     '''
     Ensure a zone is bound to specific interfaces or sources.
 
+    .. versionadded:: Boron
+
     .. note::
 
         This state does not enforce the existence of the zone. To ensure that
