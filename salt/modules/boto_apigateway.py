@@ -653,6 +653,27 @@ def get_api_deployments(apiId, region=None, key=None, keyid=None, profile=None):
                     break;
                 _deployments = conn.get_deployments(restApiId=apiId, position=_deployments['position'])
 
-        return {'deployments': deployments}
+        return {'deployments': map(_convert_datetime_str, deployments)}
     except ClientError as e:
         return {'error': salt.utils.boto.get_error(e)}
+
+def create_api_deployment(apiId, stageName, stageDescription = "", description = "", cacheClusterEnabled = False, cacheClusterSize = "0.5", variables = {},
+                          region=None, key=None, keyid=None, profile=None):
+    '''
+    Creates a new API deployment.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.create_api_deployent apiId stagename stageDescription="" description="" cacheClusterEnabled=True|False cacheClusterSize=0.5 variables='{"name": "value"}'
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        deployment = conn.create_deployment(restApiId=apiId, stageName=stageName, stageDescription=stageDescription, description=description, cacheClusterEnabled=cacheClusterEnabled, cacheClusterSize=cacheClusterSize, variables=variables)
+        return {'created': True, 'deployment': _convert_datetime_str(deployment)}
+    except ClientError as e:
+        return {'error': salt.utils.boto.get_error(e)}
+
+
