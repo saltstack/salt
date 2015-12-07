@@ -7,7 +7,13 @@ Connection library for VMWare
 This is a base library used by a number of VMWare services such as VMWare
 ESX, ESXi, and vCenter servers.
 
-:depends: pyVmomi Python Module
+Dependencies
+~~~~~~~~~~~~
+
+- pyVmomi Python Module
+- ESXCLI: This dependency is only needed to use the ``esxcli`` function. No other
+  functions in this module rely on ESXCLI.
+
 '''
 
 # Import Python Libs
@@ -44,7 +50,7 @@ def __virtual__():
         return False, 'Missing dependency: The salt.utils.vmware module requires pyVmomi.'
 
 
-def esxcli(host, user, pwd, cmd, esxi_host=None):
+def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
     '''
     Shell out and call the specified esxcli commmand, parse the result
     and return something sane.
@@ -59,22 +65,31 @@ def esxcli(host, user, pwd, cmd, esxi_host=None):
     :return: Dictionary
     '''
 
-    esxcli_path = salt.utils.which('esxicli')
-    if not esxcli_path:
-        esxcli_path = '/usr/lib/vmware-vcli/bin/esxcli/esxcli'
-
-    esxcmd = esxcli_path
+    esx_cmd = salt.utils.which('esxicli')
+    if not esx_cmd:
+        log.error('Missing dependency: The salt.utils.vmware.esxcli function requires ESXCLI.')
+        return False
 
     if not esxi_host:
         # Then we are connecting directly to an ESXi server,
         # 'host' points at that server, and esxi_host is a reference to the
         # ESXi instance we are manipulating
-        esxcmd += ' -s {0} -u {1} -p {2} {3}'.format(host, user, pwd, cmd)
+        esx_cmd += ' -s {0} -u {1} -p {2} --protocol={3} --portnumber={4} {5}'.format(host,
+                                                                                      user,
+                                                                                      pwd,
+                                                                                      protocol,
+                                                                                      port,
+                                                                                      cmd)
     else:
-        esxcmd += ' -s {0} -h {1} -u {2} -p {3} {4}'.format(host, esxi_host,
-                                                            user, pwd, cmd)
+        esx_cmd += ' -s {0} -h {1} -u {2} -p {3} --protocol={4} --portnumber={5} {6}'.format(host,
+                                                                                             esxi_host,
+                                                                                             user,
+                                                                                             pwd,
+                                                                                             protocol,
+                                                                                             port,
+                                                                                             cmd)
 
-    ret = salt.modules.cmdmod.run_all(esxcmd)
+    ret = salt.modules.cmdmod.run_all(esx_cmd)
 
     return ret
 

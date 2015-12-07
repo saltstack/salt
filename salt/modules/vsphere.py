@@ -4,7 +4,11 @@ Manage VMware vCenter servers and ESXi hosts.
 
 .. versionadded:: 2015.8.4
 
-:depends: pyVmomi
+Dependencies
+~~~~~~~~~~~~
+
+- pyVmomi Python Module
+- ESXCLI
 
 .. note::
 
@@ -48,21 +52,41 @@ __virtualname__ = 'vsphere'
 
 def __virtual__():
     if not HAS_PYVMOMI:
-        return False, 'The vSphere module requires the pyVmomi Python module.'
+        return False, 'Missing dependency: The vSphere module requires the pyVmomi Python module.'
+
+    esx_cli = salt.utils.which('esxicli')
+    if not esx_cli:
+        return False, 'Missing dependency: The vSphere module requires ESXCLI.'
 
     return __virtualname__
 
 
-def get_coredump_network_config(host, username, password, esxi_host=None):
+def get_coredump_network_config(host, username, password, protocol=None, port=None, esxi_host=None):
     '''
     Retrieve information on ESXi or vCenter network dump collection and
     format it into a dictionary.
 
-    :param host: ESXi or vCenter host to connect to
-    :param username: User to connect as, usually root
-    :param password: Password to connect with
-    :param esxi_host: If `host` is a vCenter host, then esxi_host is the
-                      ESXi machine on which to execute this command
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    esxi_host
+        If `host` is a vCenter host, then esxi_host is the ESXi machine on
+        which to execute this command.
+
     :return: A dictionary with the network configuration, or, if getting
              the network config failed, a standard cmd.run_all dictionary.
              This dictionary will at least have a `retcode` key.
@@ -81,7 +105,9 @@ def get_coredump_network_config(host, username, password, esxi_host=None):
     '''
 
     cmd = 'system coredump network get'
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd, esxi_host=esxi_host)
+    ret = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                   protocol=protocol, port=port,
+                                   esxi_host=esxi_host)
 
     if ret['retcode'] != 0:
         return ret
@@ -110,16 +136,34 @@ def get_coredump_network_config(host, username, password, esxi_host=None):
     return ret_dict
 
 
-def coredump_network_enable(host, username, password, enabled, esxi_host=None):
+def coredump_network_enable(host, username, password, enabled, protocol=None, port=None, esxi_host=None):
     '''
     Enable or disable ESXi core dump collection.
 
-    :param host: ESXi or vCenter host to connect to
-    :param username: User to connect as, usually root
-    :param password: Password to connect with
-    :param esxi_host: If `host` is a vCenter host, then esxi_host is the
-                      ESXi machine on which to execute this command
-    :param enabled: Python True or False to enable or disable coredumps
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    enabled
+        Python True or False to enable or disable coredumps.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    esxi_host
+        If `host` is a vCenter host, then esxi_host is the ESXi machine on which to
+        execute this command.
+
     :return: A standard cmd.run_all dictionary.  This dictionary will at least
              have a `retcode` key.  If `retcode` is 0 the command was
              successful.
@@ -144,27 +188,55 @@ def coredump_network_enable(host, username, password, enabled, esxi_host=None):
     cmd = 'system coredump network set -e {0}'.format(enable_it)
 
     return salt.utils.vmware.esxcli(host, username, password, cmd,
+                                    protocol=protocol, port=port,
                                     esxi_host=esxi_host)
 
 
-def set_coredump_network_config(host, username, password, dump_ip, host_vnic='vmk0', dump_port=6500, esxi_host=None):
+def set_coredump_network_config(host,
+                                username,
+                                password,
+                                dump_ip,
+                                protocol=None,
+                                port=None,
+                                host_vnic='vmk0',
+                                dump_port=6500,
+                                esxi_host=None):
     '''
 
     Set the network parameters for a network coredump collection.
     Note that ESXi requires that the dumps first be enabled (see
     `coredump_network_enable`) before these parameters may be set.
 
-    :param host: ESXi or vCenter host to connect to
-    :param username: User to connect as, usually root
-    :param password: Password to connect with
-    :param esxi_host: If `host` is a vCenter host, then esxi_host is the
-                      ESXi machine on which to execute this command
-    :return: A standard cmd.run_all dictionary.  This dictionary will at least
-             have a `retcode` key.  If `retcode` is 0 the command was
-             successful.
-    :param dump_ip: IP address of host that will accept the dump.
-    :param host_vnic: Host VNic port through which to communicate
-    :param dump_port: TCP port to use for the dump, defaults to 6500
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    dump_ip
+        IP address of host that will accept the dump.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    esxi_host
+        If `host` is a vCenter host, then esxi_host is the ESXi machine on
+        which to execute this command.
+
+    host_vnic
+        Host VNic port through which to communicate. Defaults to ``vmk0``.
+
+    dump_port
+        TCP port to use for the dump, defaults to ``6500``.
+
     :return: A standard cmd.run_all dictionary with a `success` key added.
              `success` will be True if the set succeeded, False otherwise.
 
@@ -183,7 +255,9 @@ def set_coredump_network_config(host, username, password, dump_ip, host_vnic='vm
     cmd = 'system coredump network set -v {0} -i {1} -o {2}'.format(host_vnic,
                                                                     dump_ip,
                                                                     dump_port)
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd, esxi_host=esxi_host)
+    ret = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                   protocol=protocol, port=port,
+                                   esxi_host=esxi_host)
     if ret['retcode'] != 0:
         ret['success'] = False
     else:
@@ -192,18 +266,34 @@ def set_coredump_network_config(host, username, password, dump_ip, host_vnic='vm
     return ret
 
 
-def get_firewall_status(host, username, password, esxi_host=None):
+def get_firewall_status(host, username, password, protocol=None, port=None, esxi_host=None):
     '''
     Show status of all firewall rule sets.
 
-    :param host: ESXi or vCenter host to connect to
-    :param username: User to connect as, usually root
-    :param password: Password to connect with
-    :param esxi_host: If `host` is a vCenter host, then esxi_host is the
-                      ESXi machine on which to execute this command
-    :return: Nested dictionary with two toplevel keys `rulesets` and `success`
-             `success` will be True or False depending on query success
-             `rulesets` will list the rulesets and their statuses if `success`
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    esxi_host
+        If `host` is a vCenter host, then esxi_host is the ESXi machine on
+        which to execute this command.
+
+    :return: Nested dictionary with two toplevel keys ``rulesets`` and ``success``
+             ``success`` will be True or False depending on query success
+             ``rulesets`` will list the rulesets and their statuses if ``success``
              was true.
 
     CLI Example:
@@ -218,7 +308,9 @@ def get_firewall_status(host, username, password, esxi_host=None):
             esxi_host='esxi-1.host.com'
     '''
     cmd = 'network firewall ruleset list'
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd, esxi_host=esxi_host)
+    ret = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                   protocol=protocol, port=port,
+                                   esxi_host=esxi_host)
     if ret['retcode'] != 0:
         return {'success': False, 'rulesets': None}
 
@@ -235,17 +327,44 @@ def get_firewall_status(host, username, password, esxi_host=None):
     return ret_dict
 
 
-def enable_firewall_ruleset(host, username, password, ruleset_enable, ruleset_name, esxi_host=None):
+def enable_firewall_ruleset(host,
+                            username,
+                            password,
+                            ruleset_enable,
+                            ruleset_name,
+                            protocol=None,
+                            port=None,
+                            esxi_host=None):
     '''
     Enable or disable an ESXi firewall rule set.
 
-    :param host: ESXi or vCenter host to connect to
-    :param username: User to connect as, usually root
-    :param password: Password to connect with
-    :param esxi_host: If `host` is a vCenter host, then esxi_host is the
-                      ESXi machine on which to execute this command
-    :param ruleset_enable: True to enable the ruleset, false to disable
-    :param ruleset_name: Name of ruleset to target
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    ruleset_enable
+        True to enable the ruleset, false to disable.
+
+    ruleset_name
+        Name of ruleset to target.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    esxi_host
+        If `host` is a vCenter host, then esxi_host is the ESXi machine on
+        which to execute this command.
+
     :return: A standard cmd.run_all dictionary
 
     CLI Example:
@@ -263,19 +382,37 @@ def enable_firewall_ruleset(host, username, password, ruleset_enable, ruleset_na
     cmd = 'network firewall ruleset set --enabled {0} --ruleset-id={1}'.format(
         ruleset_enable, ruleset_name
     )
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd, esxi_host=esxi_host)
+    ret = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                   protocol=protocol, port=port,
+                                   esxi_host=esxi_host)
     return ret
 
 
-def syslog_service_reload(host, username, password, esxi_host=None):
+def syslog_service_reload(host, username, password, protocol=None, port=None, esxi_host=None):
     '''
     Reload the syslog service so it will pick up any changes.
 
-    :param host: ESXi or vCenter host to connect to
-    :param username: User to connect as, usually root
-    :param password: Password to connect with
-    :param esxi_host: If `host` is a vCenter host, then esxi_host is the
-                      ESXi machine on which to execute this command
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    esxi_host
+        If `host` is a vCenter host, then esxi_host is the ESXi machine on
+        which to execute this command.
+
     :return: A standard cmd.run_all dictionary.  This dictionary will at least
              have a `retcode` key.  If `retcode` is 0 the command was successful.
 
@@ -293,12 +430,21 @@ def syslog_service_reload(host, username, password, esxi_host=None):
 
     cmd = 'system syslog reload'
     ret = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                   protocol=protocol, port=port,
                                    esxi_host=esxi_host)
     return ret
 
 
-def set_syslog_config(host, username, password, syslog_config, config_value, firewall=True,
-                      reset_service=True, esxi_host=None):
+def set_syslog_config(host,
+                      username,
+                      password,
+                      syslog_config,
+                      config_value,
+                      protocol=None,
+                      port=None,
+                      firewall=True,
+                      reset_service=True,
+                      esxi_host=None):
     '''
     Set the specified syslog configuration parameter. By default, this function will
     reset the syslog service after the configuration is set.
@@ -326,6 +472,14 @@ def set_syslog_config(host, username, password, syslog_config, config_value, fir
 
         (reference: https://blogs.vmware.com/vsphere/2012/04/configuring-multiple-syslog-servers-for-esxi-5.html)
 
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
     firewall
         Enable the firewall rule set for syslog. Defaults to ``True``.
 
@@ -348,20 +502,23 @@ def set_syslog_config(host, username, password, syslog_config, config_value, fir
     '''
 
     if firewall and syslog_config == 'loghost':
-        ret = enable_firewall_ruleset(host, username, password, ruleset_enable=True,
-                                      ruleset_name='syslog')
+        ret = enable_firewall_ruleset(host, username, password,
+                                      ruleset_enable=True, ruleset_name='syslog',
+                                      protocol=protocol, port=port,
+                                      esxi_host=esxi_host)
         if ret['retcode'] != 0:
             return {'success': False, 'message': ret['stdout']}
 
     ret_dict = {}
     valid_resets = ['logdir', 'loghost', 'default-rotate',
-                    'default-size', 'default-timeout']
+                    'default-size', 'default-timeout', 'logdir-unique']
     if syslog_config not in valid_resets:
         ret_dict = {'success': False, 'message': '\'{0}\' is not a valid config variable.'.format(syslog_config)}
         return ret_dict
 
     cmd = 'system syslog config set --{0} {1}'.format(syslog_config, config_value)
     ret = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                   protocol=protocol, port=port,
                                    esxi_host=esxi_host)
     ret_dict['success'] = ret['retcode'] == 0
     if ret['retcode'] != 0:
@@ -369,27 +526,38 @@ def set_syslog_config(host, username, password, syslog_config, config_value, fir
 
     if reset_service:
         reset_ret = syslog_service_reload(host, username, password,
+                                          protocol=protocol, port=port,
                                           esxi_host=esxi_host)
         ret_dict['syslog_restart'] = reset_ret['retcode'] == 0
 
     return ret_dict
 
 
-def get_syslog_config(host, username, password, esxi_host=None):
+def get_syslog_config(host, username, password, protocol=None, port=None, esxi_host=None):
     '''
     Retrieve the syslog configuration.
 
-    Example:
+    host
+        The location of the host.
 
-    .. code-block:: bash
+    username
+        The username used to login to the host, such as ``root``.
 
-        salt esxi_host vsphere.get_syslog_config 192.168.1.1 root secret
+    password
+        The password used to login to the host.
 
-    :param host: ESXi or vCenter host to connect to
-    :param username: User to connect as, usually root
-    :param password: Password to connect with
-    :param esxi_host: If `host` is a vCenter host, then esxi_host is the
-                      ESXi machine on which to execute this command
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    esxi_host
+        If `host` is a vCenter host, then esxi_host is the ESXi machine on
+        which to execute this command.
+
     :return: Dictionary with a keys and values corresponding to the
              syslog configuration
 
@@ -397,12 +565,13 @@ def get_syslog_config(host, username, password, esxi_host=None):
 
     .. code-block:: bash
 
-        salt esxi_host vsphere.get_syslog_config 192.168.1.1 root secret \
+        salt esxi_host vsphere.get_syslog_config 192.168.1.1 root secret
     '''
     ret_dict = {}
     cmd = 'system syslog config get'
 
     ret = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                   protocol=protocol, port=port,
                                    esxi_host=esxi_host)
 
     ret_dict['success'] = ret['retcode'] == 0
@@ -419,7 +588,7 @@ def get_syslog_config(host, username, password, esxi_host=None):
     return ret_dict
 
 
-def reset_syslog_config(host, username, password, syslog_config=None,
+def reset_syslog_config(host, username, password, protocol=None, port=None, syslog_config=None,
                         esxi_host=None):
     '''
     Reset the syslog service to its default settings.
@@ -428,12 +597,30 @@ def reset_syslog_config(host, username, password, syslog_config=None,
     ``default-rotate``, ``default-size``, ``default-timeout``,
     or ``all`` for all of these.
 
-    :param host: ESXi or vCenter host to connect to
-    :param username: User to connect as, usually root
-    :param password: Password to connect with
-    :param syslog_config: List of parameters to reset, or 'all' to reset everything
-    :param esxi_host: If `host` is a vCenter host, then esxi_host is the
-                      ESXi machine on which to execute this command
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    syslog_config
+        List of parameters to reset, or 'all' to reset everything.
+
+    esxi_host
+        If `host` is a vCenter host, then esxi_host is the ESXi machine on
+        which to execute this command.
+
     :return: Dictionary with a top-level key of 'success' which indicates
              if all the parameters were reset, and individual keys
              for each parameter indicating which succeeded or failed.
@@ -448,7 +635,7 @@ def reset_syslog_config(host, username, password, syslog_config=None,
              secret syslog_config='logdir,loghost'
     '''
     valid_resets = ['logdir', 'loghost', 'default-rotate',
-                    'default-size', 'default-timeout']
+                    'default-size', 'default-timeout', 'logdir-unique']
     cmd = 'system syslog config set --reset='
     if ',' in syslog_config:
         resets = [ind_reset.strip() for ind_reset in syslog_config.split(',')]
@@ -463,6 +650,7 @@ def reset_syslog_config(host, username, password, syslog_config=None,
     for reset_param in resets:
         if reset_param in valid_resets:
             ret = salt.utils.vmware.esxcli(host, username, password, cmd + reset_param,
+                                           protocol=protocol, port=port,
                                            esxi_host=esxi_host)
             ret_dict[reset_param] = {}
             ret_dict[reset_param]['success'] = ret['retcode'] == 0
@@ -714,7 +902,7 @@ def get_ntp_config(host, username, password, protocol=None, port=None, host_name
     ret = {}
     for host_name in host_names:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
-        ntp_config = _get_ntp_config(host_ref)
+        ntp_config = host_ref.configManager.dateTimeSystem.dateTimeInfo.ntpConfig.server
         ret.update({host_name: ntp_config})
 
     return ret
@@ -902,6 +1090,66 @@ def get_service_running(host, username, password, service_name, protocol=None, p
             msg = '\'vsphere.get_service_running\' failed for host {0}.'.format(host_name)
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
+
+    return ret
+
+
+def get_vmotion_enabled(host, username, password, protocol=None, port=None, host_names=None):
+    '''
+    Get the VMotion enabled status for a given host or a list of host_names. Returns ``True``
+    if VMotion is enabled, ``False`` if it is not enabled.
+
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    host_names
+        List of ESXi host names. When the host, username, and password credentials
+        are provided for a vCenter Server, the host_names argument is required to
+        tell vCenter which hosts to check if VMotion is enabled.
+
+        If host_names is not provided, the VMotion status will be retrieved for the
+        ``host`` location instead. This is useful for when service instance
+        connection information is used for a single ESXi host.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for single ESXi host connection information
+        salt '*' vsphere.get_vmotion_enabled my.esxi.host root bad-password
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.get_vmotion_enabled my.vcenter.location root bad-password \
+        host_names='[esxi-1.host.com, esxi-2.host.com]'
+    '''
+    service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                              username=username,
+                                                              password=password,
+                                                              protocol=protocol,
+                                                              port=port)
+    host_names = _check_hosts(service_instance, host, host_names)
+    ret = {}
+    for host_name in host_names:
+        host_ref = _get_host_ref(service_instance, host, host_name=host_name)
+        vmotion_vnic = host_ref.configManager.vmotionSystem.netConfig.selectedVnic
+        if vmotion_vnic:
+            ret.update({host_name: {'VMotion Enabled': True}})
+        else:
+            ret.update({host_name: {'VMotion Enabled': False}})
 
     return ret
 
@@ -2150,6 +2398,140 @@ def update_host_password(host, username, password, new_password, protocol=None, 
     return True
 
 
+def vmotion_disable(host, username, password, protocol=None, port=None, host_names=None):
+    '''
+    Disable vMotion for a given host or list of host_names.
+
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    host_names
+        List of ESXi host names. When the host, username, and password credentials
+        are provided for a vCenter Server, the host_names argument is required to
+        tell vCenter which hosts should disable VMotion.
+
+        If host_names is not provided, VMotion will be disabled for the ``host``
+        location instead. This is useful for when service instance connection
+        information is used for a single ESXi host.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for single ESXi host connection information
+        salt '*' vsphere.vmotion_disable my.esxi.host root bad-password
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.vmotion_disable my.vcenter.location root bad-password \
+        host_names='[esxi-1.host.com, esxi-2.host.com]'
+    '''
+    service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                              username=username,
+                                                              password=password,
+                                                              protocol=protocol,
+                                                              port=port)
+    host_names = _check_hosts(service_instance, host, host_names)
+    ret = {}
+    for host_name in host_names:
+        host_ref = _get_host_ref(service_instance, host, host_name=host_name)
+        vmotion_system = host_ref.configManager.vmotionSystem
+        try:
+            vmotion_system.DeselectVnic()
+        except vim.fault.HostConfigFault as err:
+            msg = 'vsphere.vmotion_disable failed: {0}'.format(err)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg,
+                                    'VMotion Disabled': False}})
+            continue
+
+        ret.update({host_name: {'VMotion Disabled': True}})
+
+    return ret
+
+
+def vmotion_enable(host, username, password, protocol=None, port=None, host_names=None, device='vmk0'):
+    '''
+    Enable vMotion for a given host or list of host_names.
+
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    host_names
+        List of ESXi host names. When the host, username, and password credentials
+        are provided for a vCenter Server, the host_names argument is required to
+        tell vCenter which hosts should enable VMotion.
+
+        If host_names is not provided, VMotion will be enabled for the ``host``
+        location instead. This is useful for when service instance connection
+        information is used for a single ESXi host.
+
+    device
+        The device that uniquely identifies the VirtualNic that will be used for
+        VMotion for each host. Defaults to ``vmk0``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for single ESXi host connection information
+        salt '*' vsphere.vmotion_enable my.esxi.host root bad-password
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.vmotion_enable my.vcenter.location root bad-password \
+        host_names='[esxi-1.host.com, esxi-2.host.com]'
+    '''
+    service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                              username=username,
+                                                              password=password,
+                                                              protocol=protocol,
+                                                              port=port)
+    host_names = _check_hosts(service_instance, host, host_names)
+    ret = {}
+    for host_name in host_names:
+        host_ref = _get_host_ref(service_instance, host, host_name=host_name)
+        vmotion_system = host_ref.configManager.vmotionSystem
+        try:
+            vmotion_system.SelectVnic(device)
+        except vim.fault.HostConfigFault as err:
+            msg = 'vsphere.vmotion_disable failed: {0}'.format(err)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg,
+                                    'VMotion Enabled': False}})
+            continue
+
+        ret.update({host_name: {'VMotion Enabled': True}})
+
+    return ret
+
+
 def vsan_add_disks(host, username, password, protocol=None, port=None, host_names=None):
     '''
     Add any VSAN-eligible disks to the VSAN System for the given host or list of host_names.
@@ -2237,7 +2619,7 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
 
 def vsan_disable(host, username, password, protocol=None, port=None, host_names=None):
     '''
-    Enable VSAN for a given host or list of host_names.
+    Disable VSAN for a given host or list of host_names.
 
     host
         The location of the host.
@@ -2477,13 +2859,6 @@ def _get_host_disks(host_reference):
             non_ssds.append(disk)
 
     return {'SSDs': ssds, 'Non-SSDs': non_ssds}
-
-
-def _get_ntp_config(host_reference):
-    '''
-    Helper function that returns ntp_config information.
-    '''
-    return host_reference.configManager.dateTimeSystem.dateTimeInfo.ntpConfig.server
 
 
 def _get_service_manager(host_reference):
