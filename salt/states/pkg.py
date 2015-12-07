@@ -1821,8 +1821,8 @@ def group_installed(name, skip=None, include=None, **kwargs):
     '''
     .. versionadded:: 2015.8.0
 
-    Ensure that an entire package group is installed. This state is only
-    supported for the :mod:`yum <salt.modules.yumpkg>` package manager.
+    Ensure that an entire package group is installed. This state is currentl
+    only supported for the :mod:`yum <salt.modules.yumpkg>` package manager.
 
     skip
         Packages that would normally be installed by the package group
@@ -1840,7 +1840,6 @@ def group_installed(name, skip=None, include=None, **kwargs):
         installed by a ``yum groupinstall`` ("optional" packages). Note that
         this will not enforce group membership; if you include packages which
         are not members of the specified groups, they will still be installed.
-        Can be passed either as a comma-separated list or a python list.
 
         .. code-block:: yaml
 
@@ -1849,12 +1848,15 @@ def group_installed(name, skip=None, include=None, **kwargs):
                 - include:
                   - haproxy
 
-    .. note::
+        .. versionchanged:: Boron
+            This option can no longer be passed as a comma-separated list, it
+            must now be passed as a list (as shown in the above example).
 
+    .. note::
         Because this is essentially a wrapper around :py:func:`pkg.install
         <salt.modules.yumpkg.install>`, any argument which can be passed to
-        pkg.install may also be included here, and it will be passed along
-        wholesale.
+        pkg.install may also be included here, and it will be passed on to the
+        call to :py:func:`pkg.install <salt.modules.yumpkg.install>`.
     '''
     ret = {'name': name,
            'changes': {},
@@ -1862,47 +1864,32 @@ def group_installed(name, skip=None, include=None, **kwargs):
            'comment': ''}
 
     if 'pkg.group_diff' not in __salt__:
-        ret['comment'] = 'pkg.group_install not implemented for this platform'
+        ret['comment'] = 'pkg.group_install not available for this platform'
         return ret
 
-    if skip is not None:
-        if isinstance(skip, six.string_types):
-            skip = skip.split(',')
-        elif isinstance(skip, (float, six.integer_types)):
-            skip = [str(skip)]
+    if skip is None:
+        skip = []
+    else:
         if not isinstance(skip, list):
             ret['comment'] = 'skip must be formatted as a list'
             return ret
         for idx, item in enumerate(skip):
-            if isinstance(item, (float, six.integer_types)):
+            if not isinstance(item, six.string_types):
                 skip[idx] = str(item)
-            if not isinstance(skip[idx], six.string_types):
-                ret['comment'] = 'Invalid \'skip\' item {0}'.format(skip[idx])
-                return ret
-    else:
-        skip = []
 
-    if include is not None:
-        if isinstance(include, six.string_types):
-            include = include.split(',')
-        elif isinstance(include, (float, six.integer_types)):
-            include = [str(include)]
+    if include is None:
+        include = []
+    else:
         if not isinstance(include, list):
             ret['comment'] = 'include must be formatted as a list'
             return ret
         for idx, item in enumerate(include):
-            if isinstance(item, (float, six.integer_types)):
+            if not isinstance(item, six.string_types):
                 include[idx] = str(item)
-            if not isinstance(include[idx], six.string_types):
-                ret['comment'] = \
-                    'Invalid \'include\' item {0}'.format(include[idx])
-                return ret
-    else:
-        include = []
 
     diff = __salt__['pkg.group_diff'](name)
-    mandatory = diff['mandatory packages']['installed'] + \
-        diff['mandatory packages']['not installed']
+    mandatory = diff['mandatory']['installed'] + \
+        diff['mandatory']['not installed']
 
     invalid_skip = [x for x in mandatory if x in skip]
     if invalid_skip:
@@ -1912,8 +1899,8 @@ def group_installed(name, skip=None, include=None, **kwargs):
         )
         return ret
 
-    targets = diff['mandatory packages']['not installed']
-    targets.extend([x for x in diff['default packages']['not installed']
+    targets = diff['mandatory']['not installed']
+    targets.extend([x for x in diff['default']['not installed']
                     if x not in skip])
     targets.extend(include)
 
@@ -1922,9 +1909,9 @@ def group_installed(name, skip=None, include=None, **kwargs):
         ret['comment'] = 'Group \'{0}\' is already installed'.format(name)
         return ret
 
-    partially_installed = diff['mandatory packages']['installed'] \
-        or diff['default packages']['installed'] \
-        or diff['optional packages']['installed']
+    partially_installed = diff['mandatory']['installed'] \
+        or diff['default']['installed'] \
+        or diff['optional']['installed']
 
     if __opts__['test']:
         ret['result'] = None
