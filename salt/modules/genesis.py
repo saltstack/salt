@@ -140,6 +140,9 @@ def bootstrap(
             flavor=wheezy static_qemu=/usr/bin/qemu-x86_64-static
 
     '''
+    if img_format not in ('dir', 'sparse'):
+        raise SaltInvocationError('The img_format must be "sparse" or "dir"')
+
     if img_format == 'dir':
         # We can just use the root as the root
         if not __salt__['file.directory_exists'](root):
