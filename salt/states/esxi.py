@@ -4,7 +4,11 @@ Manage VMware ESXi Hosts.
 
 .. versionadded:: 2015.8.4
 
-:depends: pyVmomi
+Dependencies
+~~~~~~~~~~~~
+
+- pyVmomi Python Module
+- ESXCLI
 
 .. note::
 
@@ -384,6 +388,77 @@ def ntp_configured(name,
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'NTP state will change.'
+
+    return ret
+
+
+def vmotion_configured(name, enabled, device='vmk0'):
+    '''
+    Configures a host's VMotion properties such as enabling VMotion and setting
+    the device VirtualNic that VMotion will use.
+
+    name
+        Name of the state.
+
+    enabled
+        Ensures whether or not VMotion should be enabled on a host as a boolean
+        value where ``True`` indicates that VSAN should be enabled and ``False``
+        indicates that VMotion should be disabled.
+
+    device
+        The device that uniquely identifies the VirtualNic that will be used for
+        VMotion for the host. Defaults to ``vmk0``.
+
+    Example:
+
+    .. code-block:: yaml
+
+        configure-vmotion:
+          esxi.vmotion_configured:
+            - enabled: True
+
+    '''
+    ret = {'name': name,
+           'result': False,
+           'changes': {},
+           'comment': ''}
+    esxi_cmd = 'esxi.cmd'
+    host = __pillar__['proxy']['host']
+
+    current_vmotion_enabled = __salt__[esxi_cmd]('get_vmotion_enabled').get(host)
+    current_vmotion_enabled = current_vmotion_enabled.get('VMotion Enabled')
+
+    # Configure VMotion Enabled state, if changed.
+    if enabled != current_vmotion_enabled:
+        # Only run the command if not using test=True
+        if not __opts__['test']:
+            # Enable VMotion if enabled=True
+            if enabled is True:
+                response = __salt__[esxi_cmd]('vmotion_enable',
+                                              device=device).get(host)
+                error = response.get('Error')
+                if error:
+                    ret['comment'] = 'Error: {0}'.format(error)
+                    return ret
+            # Disable VMotion if enabled=False
+            else:
+                response = __salt__[esxi_cmd]('vmotion_disable').get(host)
+                error = response.get('Error')
+                if error:
+                    ret['comment'] = 'Error: {0}'.format(error)
+                    return ret
+        ret['changes'].update({'enabled':
+                              {'old': current_vmotion_enabled,
+                               'new': enabled}})
+
+    ret['result'] = True
+    if ret['changes'] == {}:
+        ret['comment'] = 'VMotion configuration is already in the desired state.'
+        return ret
+
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'VMotion configuration will change.'
 
     return ret
 
