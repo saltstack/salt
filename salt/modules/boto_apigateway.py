@@ -174,6 +174,8 @@ def _get_apis_by_name(name,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         apis = _multi_call(conn.get_rest_apis, 'items')
+        if name:
+            apis = _filter_apis(name, apis)
         return {'restapi': map(_convert_datetime_str, apis)}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)} 
@@ -195,7 +197,7 @@ def get_apis(name=None, region=None, key=None, keyid=None, profile=None):
     '''
 
     if name:
-        return _get_apis_by_name(name, region=None, key=None, keyid=None, profile=None)
+        return _get_apis_by_name(name, region=region, key=key, keyid=keyid, profile=profile)
     else:
         return _get_apis_by_name('', region=region, key=key, keyid=keyid, profile=profile)
 
