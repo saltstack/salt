@@ -71,7 +71,7 @@ config:
               - destination_cidr_block: 0.0.0.0/0
                 instance_id: i-123456
                 interface_id: eni-123456
-            - subnets:
+            - subnet_names:
               - name: subnet1
               - name: subnet2
             - region: us-east-1
