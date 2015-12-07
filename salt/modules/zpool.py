@@ -63,7 +63,7 @@ def __virtual__():
     '''
     if _check_zpool():
         return 'zpool'
-    return False
+    return (False, "Module zpool: zpool not found")
 
 
 def healthy():
