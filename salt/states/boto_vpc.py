@@ -72,8 +72,8 @@ config:
                 instance_id: i-123456
                 interface_id: eni-123456
             - subnet_names:
-              - name: subnet1
-              - name: subnet2
+              - subnet1
+              - subnet2
             - region: us-east-1
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
