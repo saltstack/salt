@@ -303,12 +303,12 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
           SubnetId: subnet-813d4bbf
           SecurityGroupId:
             - sg-750af413
+      del_root_vol_on_destroy: True
+      del_all_vol_on_destroy: True
       volumes:
         - { size: 10, device: /dev/sdf }
         - { size: 10, device: /dev/sdg, type: io1, iops: 1000 }
         - { size: 10, device: /dev/sdh, type: io1, iops: 1000 }
-      del_root_vol_on_destroy: True
-      del_all_vol_on_destroy: True
       tag: {'Environment': 'production', 'Role': 'database'}
       sync_after_install: grains
 
@@ -353,6 +353,16 @@ The following settings are always required for EC2:
 
 Optional Settings
 =================
+
+EC2 allows a userdata file to be passed to the instance to be created. This
+functionality was added to Salt in the 2015.5.0 release.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      # Pass userdata to the instance to be created
+      userdata_file: /etc/salt/my-userdata-file
+
 
 EC2 allows a location to be set for servers to be deployed in. Availability
 zones exist inside regions, and may be added to increase specificity.
