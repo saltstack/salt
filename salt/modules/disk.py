@@ -639,7 +639,7 @@ def _iostat_fbsd(interval, count, disks):
             continue
         elif not len(dev_header):
             dev_header = line.split()[1:]
-        while True:
+        while line is not False:
             line = next(ret, False)
             if not line or not line[0].isalnum():
                 break
@@ -695,7 +695,7 @@ def _iostat_linux(interval, count, disks):
         elif line.startswith('Device:'):
             if not len(dev_header):
                 dev_header = tuple(line.split()[1:])
-            while True:
+            while line is not False:
                 line = next(ret, False)
                 if not line or not line[0].isalnum():
                     break
