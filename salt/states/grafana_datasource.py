@@ -24,6 +24,7 @@ Manage Grafana v2.0 data sources
         - basic_auth_password: mypass
         - is_default: true
 '''
+from __future__ import absolute_import
 
 import requests
 
