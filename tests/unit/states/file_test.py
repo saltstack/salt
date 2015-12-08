@@ -229,14 +229,6 @@ class FileTestCase(TestCase):
                                               group=group, backupname='SALT'),
                                              ret)
 
-                        comt = ('Something exists where the backup target'
-                                ' SALTshould go')
-                        ret.update({'comment': comt, 'result': False})
-                        self.assertDictEqual(filestate.symlink
-                                            (name, target, user=user,
-                                            group=group, backupname='SALT',
-                                            force=True), ret)
-
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
