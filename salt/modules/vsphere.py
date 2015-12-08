@@ -34,6 +34,7 @@ import logging
 
 # Import Salt Libs
 import salt.ext.six as six
+import salt.utils
 import salt.utils.vmware
 import salt.utils.http
 from salt.exceptions import CommandExecutionError
@@ -54,7 +55,7 @@ def __virtual__():
     if not HAS_PYVMOMI:
         return False, 'Missing dependency: The vSphere module requires the pyVmomi Python module.'
 
-    esx_cli = salt.utils.which('esxicli')
+    esx_cli = salt.utils.which('esxcli')
     if not esx_cli:
         return False, 'Missing dependency: The vSphere module requires ESXCLI.'
 
