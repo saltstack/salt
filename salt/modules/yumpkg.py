@@ -59,7 +59,7 @@ def __virtual__():
     Confine this module to yum based systems
     '''
     if __opts__.get('yum_provider') == 'yumpkg_api':
-        return (False, "Module yumpkg: yumpkg_api provider not avalible")
+        return (False, "Module yumpkg: yumpkg_api provider not available")
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
