@@ -16,6 +16,7 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=n
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin
 import salt.ext.six as six
+from salt.ext.six.moves import zip
 
 try:
     import yum
