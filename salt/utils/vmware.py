@@ -7,7 +7,13 @@ Connection library for VMWare
 This is a base library used by a number of VMWare services such as VMWare
 ESX, ESXi, and vCenter servers.
 
-:depends: pyVmomi Python Module
+Dependencies
+~~~~~~~~~~~~
+
+- pyVmomi Python Module
+- ESXCLI: This dependency is only needed to use the ``esxcli`` function. No other
+  functions in this module rely on ESXCLI.
+
 '''
 
 # Import Python Libs
@@ -18,6 +24,8 @@ import time
 
 # Import Salt Libs
 from salt.exceptions import SaltSystemExit
+import salt.modules.cmdmod
+import salt.utils
 
 
 # Import Third Party Libs
@@ -40,6 +48,50 @@ def __virtual__():
         return True
     else:
         return False, 'Missing dependency: The salt.utils.vmware module requires pyVmomi.'
+
+
+def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
+    '''
+    Shell out and call the specified esxcli commmand, parse the result
+    and return something sane.
+
+    :param host: ESXi or vCenter host to connect to
+    :param user: User to connect as, usually root
+    :param pwd: Password to connect with
+    :param port: TCP port
+    :param cmd: esxcli command and arguments
+    :param esxi_host: If `host` is a vCenter host, then esxi_host is the
+                      ESXi machine on which to execute this command
+    :return: Dictionary
+    '''
+
+    esx_cmd = salt.utils.which('esxicli')
+    if not esx_cmd:
+        log.error('Missing dependency: The salt.utils.vmware.esxcli function requires ESXCLI.')
+        return False
+
+    if not esxi_host:
+        # Then we are connecting directly to an ESXi server,
+        # 'host' points at that server, and esxi_host is a reference to the
+        # ESXi instance we are manipulating
+        esx_cmd += ' -s {0} -u {1} -p {2} --protocol={3} --portnumber={4} {5}'.format(host,
+                                                                                      user,
+                                                                                      pwd,
+                                                                                      protocol,
+                                                                                      port,
+                                                                                      cmd)
+    else:
+        esx_cmd += ' -s {0} -h {1} -u {2} -p {3} --protocol={4} --portnumber={5} {6}'.format(host,
+                                                                                             esxi_host,
+                                                                                             user,
+                                                                                             pwd,
+                                                                                             protocol,
+                                                                                             port,
+                                                                                             cmd)
+
+    ret = salt.modules.cmdmod.run_all(esx_cmd)
+
+    return ret
 
 
 def get_service_instance(host, username, password, protocol=None, port=None):
