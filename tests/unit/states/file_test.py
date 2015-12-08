@@ -717,7 +717,8 @@ class FileTestCase(TestCase):
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
                                              'file.stats': mock_f,
-                                             'file.check_perms': mock_perms}):
+                                             'file.check_perms': mock_perms,
+                                             'file.mkdir': mock_t}):
             if salt.utils.is_windows():
                 comt = ('User salt is not available Group salt'
                         ' is not available')
