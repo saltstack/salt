@@ -533,7 +533,7 @@ def describe_alias(FunctionName, Name, region=None, key=None,
         alias = _find_alias(FunctionName, Name,
                              region=region, key=key, keyid=keyid, profile=profile)
         if alias:
-            keys = ('Name', 'FunctionVersion', 'Description')
+            keys = ('AliasArn', 'Name', 'FunctionVersion', 'Description')
             return {'alias': dict([(k, alias.get(k)) for k in keys])}
         else:
             return {'alias': None}
@@ -629,8 +629,8 @@ def get_event_source_mapping_ids(EventSourceArn, FunctionName,
         mappings = []
         for maps in salt.utils.boto3.paged_call(conn.list_event_source_mappings, 
                                                EventSourceArn=EventSourceArn,
-                                               FunctionName=FunctionName)['EventSourceMappings']:
-            mappings.extend([mapping['UUID'] for mapping in maps])
+                                               FunctionName=FunctionName):
+            mappings.extend([mapping['UUID'] for mapping in maps['EventSourceMappings']])
         return mappings
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
@@ -702,6 +702,8 @@ def event_source_mapping_exists(UUID=None, EventSourceArn=None,
                                          FunctionName=FunctionName,
                                          region=region, key=key,
                                          keyid=keyid, profile=profile)
+    if 'error' in desc:
+        return desc
     return {'exists': bool(desc.get('event_source_mapping'))}
 
 
