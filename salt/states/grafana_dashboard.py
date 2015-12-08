@@ -50,7 +50,7 @@ from salt.utils.dictdiffer import DictDiffer
 
 
 def __virtual__():
-    """Only load if grafana v2.0 is configured."""
+    '''Only load if grafana v2.0 is configured.'''
     return __salt__['config.get']('grafana_version', 1) == 2
 
 
@@ -66,7 +66,7 @@ def present(name,
             base_rows_from_pillar=None,
             dashboard=None,
             profile='grafana'):
-    """
+    '''
     Ensure the grafana dashboard exists and is managed.
 
     name
@@ -86,7 +86,7 @@ def present(name,
 
     profile
         A pillar key or dict that contains grafana information
-    """
+    '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     base_dashboards_from_pillar = base_dashboards_from_pillar or []
@@ -189,7 +189,7 @@ def present(name,
 
 
 def absent(name, profile='grafana'):
-    """
+    '''
     Ensure the named grafana dashboard is absent.
 
     name
@@ -197,7 +197,7 @@ def absent(name, profile='grafana'):
 
     profile
         A pillar key or dict that contains grafana information
-    """
+    '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
     if isinstance(profile, string_types):
@@ -237,7 +237,7 @@ _IGNORED_TARGET_FIELDS = [
 
 
 def _cleaned(_dashboard):
-    """Return a copy without fields that can differ."""
+    '''Return a copy without fields that can differ.'''
     dashboard = copy.deepcopy(_dashboard)
 
     for ignored_dashboard_field in _IGNORED_DASHBOARD_FIELDS:
@@ -257,7 +257,7 @@ def _cleaned(_dashboard):
 
 
 def _inherited_dashboard(dashboard, base_dashboards_from_pillar, ret):
-    """Return a dashboard with properties from parents."""
+    '''Return a dashboard with properties from parents.'''
     base_dashboards = []
     for base_dashboard_from_pillar in base_dashboards_from_pillar:
         base_dashboard = __salt__['pillar.get'](base_dashboard_from_pillar)
@@ -281,7 +281,7 @@ def _inherited_dashboard(dashboard, base_dashboards_from_pillar, ret):
 
 
 def _inherited_row(row, base_rows_from_pillar, ret):
-    """Return a row with properties from parents."""
+    '''Return a row with properties from parents.'''
     base_rows = []
     for base_row_from_pillar in base_rows_from_pillar:
         base_row = __salt__['pillar.get'](base_row_from_pillar)
@@ -302,7 +302,7 @@ def _inherited_row(row, base_rows_from_pillar, ret):
 
 
 def _inherited_panel(panel, base_panels_from_pillar, ret):
-    """Return a panel with properties from parents."""
+    '''Return a panel with properties from parents.'''
     base_panels = []
     for base_panel_from_pillar in base_panels_from_pillar:
         base_panel = __salt__['pillar.get'](base_panel_from_pillar)
@@ -327,11 +327,11 @@ _DEFAULT_PANEL_SPAN = 2.5
 
 
 def _auto_adjust_panel_spans(dashboard):
-    """Adjust panel spans to take up the available width.
+    '''Adjust panel spans to take up the available width.
 
     For each group of panels that would be laid out on the same level, scale up
     the unspecified panel spans to fill up the level.
-    """
+    '''
     for row in dashboard.get('rows', []):
         levels = []
         current_level = []
@@ -361,7 +361,7 @@ def _auto_adjust_panel_spans(dashboard):
 
 
 def _ensure_pinned_rows(dashboard):
-    """Pin rows to the top of the dashboard."""
+    '''Pin rows to the top of the dashboard.'''
     pinned_row_titles = __salt__['pillar.get'](_PINNED_ROWS_PILLAR)
     if not pinned_row_titles:
         return
@@ -379,7 +379,7 @@ def _ensure_pinned_rows(dashboard):
 
 
 def _ensure_panel_ids(dashboard):
-    """Assign panels auto-incrementing IDs."""
+    '''Assign panels auto-incrementing IDs.'''
     panel_id = 1
     for row in dashboard.get('rows', []):
         for panel in row.get('panels', []):
@@ -388,7 +388,7 @@ def _ensure_panel_ids(dashboard):
 
 
 def _ensure_annotations(dashboard):
-    """Explode annotation_tags into annotations."""
+    '''Explode annotation_tags into annotations.'''
     if 'annotation_tags' not in dashboard:
         return
     tags = dashboard['annotation_tags']
@@ -412,7 +412,7 @@ def _ensure_annotations(dashboard):
 
 
 def _get(url, profile):
-    """Get a specific dashboard."""
+    '''Get a specific dashboard.'''
     request_url = "{0}/api/dashboards/{1}".format(profile.get('grafana_url'),
                                                   url)
     response = requests.get(
@@ -432,7 +432,7 @@ def _get(url, profile):
 
 
 def _delete(url, profile):
-    """Delete a specific dashboard."""
+    '''Delete a specific dashboard.'''
     request_url = "{0}/api/dashboards/{1}".format(profile.get('grafana_url'),
                                                   url)
     response = requests.delete(
@@ -448,7 +448,7 @@ def _delete(url, profile):
 
 
 def _update(dashboard, profile):
-    """Update a specific dashboard."""
+    '''Update a specific dashboard.'''
     payload = {
         'dashboard': dashboard,
         'overwrite': True
@@ -465,7 +465,7 @@ def _update(dashboard, profile):
 
 
 def _dashboard_diff(_new_dashboard, _old_dashboard):
-    """Return a dictionary of changes between dashboards."""
+    '''Return a dictionary of changes between dashboards.'''
     diff = {}
 
     # Dashboard diff
@@ -536,7 +536,7 @@ def _dashboard_diff(_new_dashboard, _old_dashboard):
 
 
 def _stripped(d):
-    """Strip falsey entries."""
+    '''Strip falsey entries.'''
     ret = {}
     for k, v in d.iteritems():
         if v:
