@@ -27,7 +27,7 @@ def __virtual__():
     '''
     if salt.utils.which('htpasswd'):
         return __virtualname__
-    return False
+    return (False, 'The htpasswd execution mdule cannot be loaded: htpasswd binary not in path.')
 
 
 def useradd_all(pwfile, user, password, opts='', runas=None):
