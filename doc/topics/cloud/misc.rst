@@ -150,6 +150,7 @@ can tweak.
 
 .. admonition:: Note
 
+    All settings should be provided in lowercase
     All values should be provided in seconds
 
 
