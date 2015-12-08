@@ -49,15 +49,9 @@ from salt.ext.six import string_types
 from salt.utils.dictdiffer import DictDiffer
 
 
-__virtualname__ = 'grafana_dashboard'
-
-
 def __virtual__():
     """Only load if grafana v2.0 is configured."""
-    if __salt__['config.get']('grafana_version', 1) == 2:
-        return __virtualname__
-    else:
-        return False
+    return __salt__['config.get']('grafana_version', 1) == 2
 
 
 _DEFAULT_DASHBOARD_PILLAR = 'grafana_dashboards:default'
