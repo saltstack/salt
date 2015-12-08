@@ -5,7 +5,11 @@ Salt 2015.8.2 Release Notes
 .. note::
 
     A significant orchestrate issue `#29110`_ was discovered during the release
-    process of 2015.8.2, so it has not been officially released.
+    process of 2015.8.2, so it has not been officially released.  Please use
+    `2015.8.3
+    <https://docs.saltstack.com/en/latest/topics/releases/2015.8.3.html>`_
+    instead.
+
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
