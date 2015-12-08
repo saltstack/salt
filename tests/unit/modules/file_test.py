@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import tempfile
 import textwrap
@@ -52,7 +53,7 @@ class FileReplaceTestCase(TestCase):
         ''')
 
     def setUp(self):
-        self.tfile = tempfile.NamedTemporaryFile(delete=False)
+        self.tfile = tempfile.NamedTemporaryFile(delete=False, mode='w+')
         self.tfile.write(self.MULTILINE_STRING)
         self.tfile.close()
 
@@ -62,7 +63,7 @@ class FileReplaceTestCase(TestCase):
     def test_replace(self):
         filemod.replace(self.tfile.name, r'Etiam', 'Salticus', backup=False)
 
-        with salt.utils.fopen(self.tfile.name, 'rb') as fp:
+        with salt.utils.fopen(self.tfile.name, 'r') as fp:
             self.assertIn('Salticus', fp.read())
 
     def test_replace_append_if_not_found(self):
@@ -77,26 +78,26 @@ class FileReplaceTestCase(TestCase):
         base = 'foo=1\nbar=2'
         expected = '{base}\n{repl}\n'.format(base=base, **args)
         # File ending with a newline, no match
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             tfile.write(base + '\n')
             tfile.flush()
             filemod.replace(tfile.name, **args)
             with salt.utils.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), expected)
         # File not ending with a newline, no match
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile('w+') as tfile:
             tfile.write(base)
             tfile.flush()
             filemod.replace(tfile.name, **args)
             with salt.utils.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), expected)
         # A newline should not be added in empty files
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile('w+') as tfile:
             filemod.replace(tfile.name, **args)
             with salt.utils.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), args['repl'] + '\n')
         # Using not_found_content, rather than repl
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile('w+') as tfile:
             args['not_found_content'] = 'baz=3'
             expected = '{base}\n{not_found_content}\n'.format(base=base, **args)
             tfile.write(base)
@@ -105,7 +106,7 @@ class FileReplaceTestCase(TestCase):
             with salt.utils.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), expected)
         # not appending if matches
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile('w+') as tfile:
             base = 'foo=1\n#baz=42\nbar=2\n'
             expected = 'foo=1\nbaz=42\nbar=2\n'
             tfile.write(base)
@@ -202,7 +203,8 @@ class FileBlockReplaceTestCase(TestCase):
 
     def setUp(self):
         self.tfile = tempfile.NamedTemporaryFile(delete=False,
-                                                 prefix='blockrepltmp')
+                                                 prefix='blockrepltmp',
+                                                 mode='w+')
         self.tfile.write(self.MULTILINE_STRING)
         self.tfile.close()
         manage_mode_mock = MagicMock()
@@ -223,7 +225,7 @@ class FileBlockReplaceTestCase(TestCase):
                              new_multiline_content,
                              backup=False)
 
-        with salt.utils.fopen(self.tfile.name, 'rb') as fp:
+        with salt.utils.fopen(self.tfile.name, 'r') as fp:
             filecontent = fp.read()
         self.assertIn('#-- START BLOCK 1'
                       + "\n" + new_multiline_content
@@ -245,7 +247,7 @@ class FileBlockReplaceTestCase(TestCase):
             append_if_not_found=False,
             backup=False
         )
-        with salt.utils.fopen(self.tfile.name, 'rb') as fp:
+        with salt.utils.fopen(self.tfile.name, 'r') as fp:
             self.assertNotIn('#-- START BLOCK 2'
                              + "\n" + new_content + "\n"
                              + '#-- END BLOCK 2', fp.read())
@@ -257,7 +259,7 @@ class FileBlockReplaceTestCase(TestCase):
                              backup=False,
                              append_if_not_found=True)
 
-        with salt.utils.fopen(self.tfile.name, 'rb') as fp:
+        with salt.utils.fopen(self.tfile.name, 'r') as fp:
             self.assertIn('#-- START BLOCK 2'
                           + "\n" + new_content
                           + "\n" + '#-- END BLOCK 2', fp.read())
@@ -277,21 +279,21 @@ class FileBlockReplaceTestCase(TestCase):
         block = '{marker_start}\n{content}\n{marker_end}\n'.format(**args)
         expected = base + '\n' + block
         # File ending with a newline
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             tfile.write(base + '\n')
             tfile.flush()
             filemod.blockreplace(tfile.name, **args)
             with salt.utils.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), expected)
         # File not ending with a newline
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             tfile.write(base)
             tfile.flush()
             filemod.blockreplace(tfile.name, **args)
             with salt.utils.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), expected)
         # A newline should not be added in empty files
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             filemod.blockreplace(tfile.name, **args)
             with salt.utils.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), block)
@@ -309,7 +311,7 @@ class FileBlockReplaceTestCase(TestCase):
             prepend_if_not_found=False,
             backup=False
         )
-        with salt.utils.fopen(self.tfile.name, 'rb') as fp:
+        with salt.utils.fopen(self.tfile.name, 'r') as fp:
             self.assertNotIn(
                 '#-- START BLOCK 2' + "\n"
                 + new_content + "\n" + '#-- END BLOCK 2',
@@ -321,7 +323,7 @@ class FileBlockReplaceTestCase(TestCase):
                              backup=False,
                              prepend_if_not_found=True)
 
-        with salt.utils.fopen(self.tfile.name, 'rb') as fp:
+        with salt.utils.fopen(self.tfile.name, 'r') as fp:
             self.assertTrue(
                 fp.read().startswith(
                     '#-- START BLOCK 2'
@@ -335,7 +337,7 @@ class FileBlockReplaceTestCase(TestCase):
                              'new content 1',
                              backup=False)
 
-        with salt.utils.fopen(self.tfile.name, 'rb') as fp:
+        with salt.utils.fopen(self.tfile.name, 'r') as fp:
             filecontent = fp.read()
         self.assertIn('new content 1', filecontent)
         self.assertNotIn('to be removed', filecontent)
@@ -425,7 +427,7 @@ class FileBlockReplaceTestCase(TestCase):
 
 class FileModuleTestCase(TestCase):
     def test_sed_limit_escaped(self):
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             tfile.write(SED_CONTENT)
             tfile.seek(0, 0)
 
@@ -436,7 +438,7 @@ class FileModuleTestCase(TestCase):
 
             filemod.sed(path, before, after, limit=limit)
 
-            with salt.utils.fopen(path, 'rb') as newfile:
+            with salt.utils.fopen(path, 'r') as newfile:
                 self.assertEqual(
                     SED_CONTENT.replace(before, ''),
                     newfile.read()
@@ -448,21 +450,21 @@ class FileModuleTestCase(TestCase):
         newlines at end of file.
         '''
         # File ending with a newline
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             tfile.write('foo\n')
             tfile.flush()
             filemod.append(tfile.name, 'bar')
             with salt.utils.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), 'foo\nbar\n')
         # File not ending with a newline
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             tfile.write('foo')
             tfile.flush()
             filemod.append(tfile.name, 'bar')
             with salt.utils.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), 'foo\nbar\n')
         # A newline should not be added in empty files
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             filemod.append(tfile.name, 'bar')
             with salt.utils.fopen(tfile.name) as tfile2:
                 self.assertEqual(tfile2.read(), 'bar\n')
@@ -472,7 +474,7 @@ class FileModuleTestCase(TestCase):
         Check various hash file formats.
         '''
         # With file name
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             tfile.write('rc.conf ef6e82e4006dee563d98ada2a2a80a27\n')
             tfile.write(
                 'ead48423703509d37c4a90e6a0d53e143b6fc268 example.tar.gz\n')
@@ -489,7 +491,7 @@ class FileModuleTestCase(TestCase):
                 'hash_type': 'sha1'
             })
         # Solohash - no file name (Maven repo checksum file format)
-        with tempfile.NamedTemporaryFile() as tfile:
+        with tempfile.NamedTemporaryFile(mode='w+') as tfile:
             tfile.write('ead48423703509d37c4a90e6a0d53e143b6fc268\n')
             tfile.flush()
             result = filemod.extract_hash(tfile.name, '', '/testfile')

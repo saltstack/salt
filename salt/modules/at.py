@@ -15,8 +15,8 @@ import datetime
 # Import 3rd-party libs
 # pylint: disable=import-error,redefined-builtin
 from salt.ext.six.moves import map
-from salt.ext.six.moves import shlex_quote as _cmd_quote
 # pylint: enable=import-error,redefined-builtin
+from salt.exceptions import CommandNotFoundError
 
 # Import salt libs
 import salt.utils
@@ -33,7 +33,7 @@ def __virtual__():
     Most everything has the ability to support at(1)
     '''
     if salt.utils.is_windows() or salt.utils.which('at') is None:
-        return False
+        return (False, 'The at module could not be loaded: at command not found')
     return True
 
 
@@ -41,11 +41,12 @@ def _cmd(binary, *args):
     '''
     Wrapper to run at(1) or return None.
     '''
-    # TODO: Use CommandNotFoundException for this
     binary = salt.utils.which(binary)
-    if binary:
-        return __salt__['cmd.run_stdout']('{0} {1}'.format(binary,
-            ' '.join(args)))
+    if not binary:
+        raise CommandNotFoundError('{0}: command not found'.format(binary))
+    cmd = [binary] + list(args)
+    return __salt__['cmd.run_stdout']([binary] + list(args),
+                                      python_shell=False)
 
 
 def atq(tag=None):
@@ -206,28 +207,16 @@ def at(*args, **kwargs):  # pylint: disable=C0103
     if not binary:
         return '\'at.at\' is not available.'
 
-    if __grains__['os_family'] == 'RedHat':
-        echo_cmd = 'echo -e'
-    else:
-        echo_cmd = 'echo'
-
     if 'tag' in kwargs:
-        cmd = '{4} "### SALT: {0}\n{1}" | {2} {3}'.format(_cmd_quote(kwargs['tag']),
-                                                          _cmd_quote(' '.join(args[1:])),
-                                                          binary,
-                                                          _cmd_quote(args[0]),
-                                                          echo_cmd)
+        stdin = '### SALT: {0}\n{1}'.format(kwargs['tag'], ' '.join(args[1:]))
     else:
-        cmd = '{3} "{1}" | {2} {0}'.format(_cmd_quote(args[0]),
-                                           _cmd_quote(' '.join(args[1:])),
-                                           binary,
-                                           echo_cmd)
+        stdin = ' '.join(args[1:])
+    cmd = [binary, args[0]]
 
-    # Can't use _cmd here since we need to prepend 'echo_cmd'
+    cmd_kwargs = {'stdin': stdin, 'python_shell': False}
     if 'runas' in kwargs:
-        output = __salt__['cmd.run']('{0}'.format(cmd), python_shell=True, runas=kwargs['runas'])
-    else:
-        output = __salt__['cmd.run']('{0}'.format(cmd), python_shell=True)
+        cmd_kwargs['runas'] = kwargs['runas']
+    output = __salt__['cmd.run'](cmd, **cmd_kwargs)
 
     if output is None:
         return '\'at.at\' is not available.'
@@ -268,7 +257,7 @@ def atc(jobid):
     if output is None:
         return '\'at.atc\' is not available.'
     elif output == '':
-        return {'error': 'invalid job id {0!r}'.format(jobid)}
+        return {'error': 'invalid job id \'{0}\''.format(jobid)}
 
     return output
 

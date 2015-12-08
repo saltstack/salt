@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-# -*- coding: utf-8 -*-
 '''
     :codeauthor: :email:`Pedro Algarvio (pedro@algarvio.me)`
 
@@ -12,6 +10,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import re
 
 # Import Salt Testing libs

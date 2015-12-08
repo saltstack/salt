@@ -31,9 +31,9 @@ will set the desired branch method. Possible values are: ``branches``,
 :depends:   - mercurial
             - python bindings for mercurial (``python-hglib``)
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import errno
 import fnmatch
@@ -43,23 +43,25 @@ import logging
 import os
 import shutil
 from datetime import datetime
-from salt._compat import text_type as _text_type
 from salt.exceptions import FileserverConfigError
 
 VALID_BRANCH_METHODS = ('branches', 'bookmarks', 'mixed')
-PER_REMOTE_PARAMS = ('base', 'branch_method', 'mountpoint', 'root')
+PER_REMOTE_OVERRIDES = ('base', 'branch_method', 'mountpoint', 'root')
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import hglib
     HAS_HG = True
 except ImportError:
     HAS_HG = False
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils
+import salt.utils.url
 import salt.fileserver
-from salt.ext.six import string_types
 from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
@@ -80,7 +82,7 @@ def __virtual__():
         return False
     if __opts__['hgfs_branch_method'] not in VALID_BRANCH_METHODS:
         log.error(
-            'Invalid hgfs_branch_method {0!r}. Valid methods are: {1}'
+            'Invalid hgfs_branch_method \'{0}\'. Valid methods are: {1}'
             .format(__opts__['hgfs_branch_method'], VALID_BRANCH_METHODS)
         )
         return False
@@ -188,17 +190,17 @@ def init():
     repos = []
 
     per_remote_defaults = {}
-    for param in PER_REMOTE_PARAMS:
+    for param in PER_REMOTE_OVERRIDES:
         per_remote_defaults[param] = \
-            _text_type(__opts__['hgfs_{0}'.format(param)])
+            six.text_type(__opts__['hgfs_{0}'.format(param)])
 
     for remote in __opts__['hgfs_remotes']:
         repo_conf = copy.deepcopy(per_remote_defaults)
         if isinstance(remote, dict):
             repo_url = next(iter(remote))
             per_remote_conf = dict(
-                [(key, _text_type(val)) for key, val in
-                 salt.utils.repack_dictlist(remote[repo_url]).items()]
+                [(key, six.text_type(val)) for key, val in
+                 six.iteritems(salt.utils.repack_dictlist(remote[repo_url]))]
             )
             if not per_remote_conf:
                 log.error(
@@ -215,7 +217,7 @@ def init():
                                     per_remote_defaults['branch_method'])
             if branch_method not in VALID_BRANCH_METHODS:
                 log.error(
-                    'Invalid branch_method {0!r} for remote {1}. Valid '
+                    'Invalid branch_method \'{0}\' for remote {1}. Valid '
                     'branch methods are: {2}. This remote will be ignored.'
                     .format(branch_method, repo_url,
                             ', '.join(VALID_BRANCH_METHODS))
@@ -224,12 +226,12 @@ def init():
 
             per_remote_errors = False
             for param in (x for x in per_remote_conf
-                          if x not in PER_REMOTE_PARAMS):
+                          if x not in PER_REMOTE_OVERRIDES):
                 log.error(
-                    'Invalid configuration parameter {0!r} for remote {1}. '
+                    'Invalid configuration parameter \'{0}\' for remote {1}. '
                     'Valid parameters are: {2}. See the documentation for '
                     'further information.'.format(
-                        param, repo_url, ', '.join(PER_REMOTE_PARAMS)
+                        param, repo_url, ', '.join(PER_REMOTE_OVERRIDES)
                     )
                 )
                 per_remote_errors = True
@@ -240,7 +242,7 @@ def init():
         else:
             repo_url = remote
 
-        if not isinstance(repo_url, string_types):
+        if not isinstance(repo_url, six.string_types):
             log.error(
                 'Invalid hgfs remote {0}. Remotes must be strings, you may '
                 'need to enclose the URL in quotes'.format(repo_url)
@@ -248,7 +250,7 @@ def init():
             _failhard()
 
         try:
-            repo_conf['mountpoint'] = salt.utils.strip_proto(
+            repo_conf['mountpoint'] = salt.utils.url.strip_proto(
                 repo_conf['mountpoint']
             )
         except TypeError:
@@ -430,7 +432,7 @@ def clear_lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if not fnmatch.fnmatch(repo['url'], _text_type(remote)):
+                if not fnmatch.fnmatch(repo['url'], six.text_type(remote)):
                     continue
         success, failed = _do_clear_lock(repo)
         cleared.extend(success)
@@ -476,7 +478,7 @@ def lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if not fnmatch.fnmatch(repo['url'], _text_type(remote)):
+                if not fnmatch.fnmatch(repo['url'], six.text_type(remote)):
                     continue
         success, failed = _do_lock(repo)
         locked.extend(success)
@@ -685,6 +687,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             pass
         fnd['rel'] = path
         fnd['path'] = dest
+        fnd['stat'] = list(os.stat(dest))
         repo['repo'].close()
         return fnd
     return fnd

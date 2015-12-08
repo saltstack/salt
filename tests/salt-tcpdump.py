@@ -34,6 +34,8 @@ For Port 4506
 tcpdump "tcp[tcpflags] & tcp-syn != 0" and port 4506 and "tcp[tcpflags] & tcp-ack == 0"
 '''
 
+# Import Python Libs
+from __future__ import absolute_import, print_function
 import socket
 from struct import unpack
 import pcapy
@@ -122,19 +124,19 @@ class PCAPParser(object):
                            'tcp': {}
                           }
 
-            (header, packet) = cap.next()
+            (header, packet) = cap.next()  # pylint: disable=W1699
 
             eth_length, eth_protocol = self.parse_ether(packet)
 
             # Parse IP packets, IP Protocol number = 8
             if eth_protocol == 8:
-                #Parse IP header
-                #take first 20 characters for the ip header
+                # Parse IP header
+                # take first 20 characters for the ip header
                 version_ihl, version, ihl, iph_length, ttl, protocol, s_addr, d_addr = self.parse_ip(packet, eth_length)
                 packet_data['ip']['s_addr'] = s_addr
                 packet_data['ip']['d_addr'] = d_addr
 
-                #TCP protocol
+                # TCP protocol
                 if protocol == 6:
 
                     source_port, dest_port, flags, data = self.parse_tcp(packet, iph_length, eth_length)
@@ -159,11 +161,11 @@ class PCAPParser(object):
         '''
         parse ip_header and return all ip data fields
         '''
-        #Parse IP header
-        #take first 20 characters for the ip header
+        # Parse IP header
+        # take first 20 characters for the ip header
         ip_header = packet[eth_length:20+eth_length]
 
-        #now unpack them:)
+        # now unpack them:)
         iph = unpack('!BBHHHBBH4s4s', ip_header)
 
         version_ihl = iph[0]
@@ -194,7 +196,7 @@ class PCAPParser(object):
         p_len = iph_length + eth_length
         tcp_header = packet[p_len:p_len+20]
 
-        #now unpack them:)
+        # now unpack them:)
         tcph = unpack('!H HLLBBHHH', tcp_header)
         #  H     H     L   L   B   B      H   H   H
         #  2b    2b    4b  4b  1b  1b     2b  2b  2b
@@ -320,7 +322,7 @@ def filter_new_cons(packet):
     elif packet['tcp']['flags'] & TCP_CWK:
         flags.append('CWK')
     else:
-        print "UNKNOWN PACKET"
+        print("UNKNOWN PACKET")
 
     if packet['tcp']['d_port'] == 4505:
         # track new connections
@@ -355,7 +357,7 @@ def main():
     # the ports we want to monitor
     ports = [4505, 4506]
 
-    print "Sniffing device {0}".format(args['iface'])
+    print("Sniffing device {0}".format(args['iface']))
 
     stat = {
               '4506/new': 0,
@@ -384,7 +386,7 @@ def main():
         while 1:
             s_time = int(time.time())
 
-            packet = PCAPParser(args['iface']).run().next()
+            packet = next(PCAPParser(args['iface']).run())
 
             p_state = filter_new_cons(packet)
 
@@ -412,7 +414,7 @@ def main():
             # get the established connections to 4505 and 4506
             # these would only show up in tcpdump if data is transferred
             # but then with different flags (PSH, etc.)
-            stat['4505/est'], stat['4506/est'] = SaltNetstat().run().next()
+            stat['4505/est'], stat['4506/est'] = next(SaltNetstat().run())
 
             # print only in intervals
             if (s_time % args['ival']) == 0:
@@ -430,7 +432,7 @@ def main():
                         msg += "new: {0}/s, ".format(stat['4506/new'] / args['ival'])
                         msg += "fin: {0}/s ]".format(stat['4506/fin'] / args['ival'])
 
-                    print msg
+                    print(msg)
 
                     # reset the so far collected stats
                     for item in stat:

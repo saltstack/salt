@@ -1,3 +1,5 @@
+.. _salt-ssh:
+
 ========
 Salt SSH
 ========
@@ -33,7 +35,6 @@ Salt SSH Roster
 The roster system in Salt allows for remote minions to be easily defined.
 
 .. note::
-
     See the :doc:`Roster documentation </topics/ssh/roster>` for more details.
 
 Simply create the roster file, the default location is `/etc/salt/roster`:
@@ -56,7 +57,6 @@ address. A more elaborate roster can be created:
       host: 192.168.42.2
 
 .. note::
-
     sudo works only if NOPASSWD is set for user in /etc/sudoers:
     ``fred ALL=(ALL) NOPASSWD: ALL``
 
@@ -70,9 +70,9 @@ You can use ssh-copy-id, (the OpenSSH key deployment tool) to deploy keys to you
 
 .. code-block:: bash
 
-   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa user@server.demo.com
+   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa.pub user@server.demo.com
 
-One could also create e a simple shell script, named salt-ssh-copy-id.sh as follows:
+One could also create a simple shell script, named salt-ssh-copy-id.sh as follows:
 
 .. code-block:: bash
 
@@ -81,12 +81,11 @@ One could also create e a simple shell script, named salt-ssh-copy-id.sh as foll
       echo $0 user@host.com
       exit 0
    fi
-   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa $1
+   ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa.pub $1
 
 
 .. note::
-
-Be certain to chmod +x salt-ssh-copy-id.sh.
+    Be certain to chmod +x salt-ssh-copy-id.sh.
 
 .. code-block:: bash
 
@@ -141,6 +140,13 @@ Due to the fact that the targeting approach differs in salt-ssh, only glob
 and regex targets are supported as of this writing, the remaining target
 systems still need to be implemented.
 
+.. note::
+    By default, Grains are settable through ``salt-ssh``. By
+    default, these grains will *not* be persisted across reboots. 
+
+    See the "thin_dir" setting in :doc:`Roster documentation </topics/ssh/roster>`
+    for more details.
+
 Configuring Salt SSH
 ====================
 
@@ -176,15 +182,15 @@ If you are commonly passing in CLI options to ``salt-ssh``, you can create
 a ``Saltfile`` to automatically use these options. This is common if you're
 managing several different salt projects on the same server.
 
-So if you ``cd`` into a directory with a ``Saltfile`` with the following
+So you can ``cd`` into a directory that has a ``Saltfile`` with the following
 YAML contents:
 
 .. code-block:: yaml
 
     salt-ssh:
       config_dir: path/to/config/dir
-      max_prox: 30
-      wipe_ssh: true
+      max_procs: 30
+      wipe_ssh: True
 
 Instead of having to call
 ``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe \* test.ping`` you
@@ -200,4 +206,4 @@ Boolean-style options should be specified in their YAML representation.
    case of the ``--wipe`` command line option, its ``dest`` is configured to
    be ``wipe_ssh`` and thus this is what should be configured in the
    ``Saltfile``.  Using the names of flags for this option, being ``wipe:
-   true`` or ``w: true``, will not work.
+   True`` or ``w: True``, will not work.

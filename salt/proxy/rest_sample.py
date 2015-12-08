@@ -33,12 +33,11 @@ def __virtual__():
     log.debug('rest_sample proxy __virtual__() called...')
     return True
 
+# Every proxy module needs an 'init', though you can
+# just put a 'pass' here if it doesn't need to do anything.
+
 
 def init(opts):
-    '''
-    Every proxy module needs an 'init', though you can
-    just put a 'pass' here if it doesn't need to do anything.
-    '''
     log.debug('rest_sample proxy init() called...')
 
     # Save the REST URL

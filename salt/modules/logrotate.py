@@ -41,8 +41,9 @@ def _parse_conf(conf_file=default_conf):
     '''
     ret = {}
     mode = 'single'
-    multi_name = ''
+    multi_names = []
     multi = {}
+    prev_comps = None
     with salt.utils.fopen(conf_file, 'r') as ifile:
         for line in ifile:
             line = line.strip()
@@ -54,12 +55,17 @@ def _parse_conf(conf_file=default_conf):
             comps = line.split()
             if '{' in line and '}' not in line:
                 mode = 'multi'
-                multi_name = comps[0]
+                if len(comps) == 1 and prev_comps:
+                    multi_names = prev_comps
+                else:
+                    multi_names = comps
+                    multi_names.pop()
                 continue
             if '}' in line:
                 mode = 'single'
-                ret[multi_name] = multi
-                multi_name = ''
+                for multi_name in multi_names:
+                    ret[multi_name] = multi
+                multi_names = []
                 multi = {}
                 continue
 
@@ -80,6 +86,7 @@ def _parse_conf(conf_file=default_conf):
                         ret[file_key] = include_conf[file_key]
                         ret['include files'][include].append(file_key)
 
+            prev_comps = comps
             if len(comps) > 1:
                 key[comps[0]] = ' '.join(comps[1:])
             else:

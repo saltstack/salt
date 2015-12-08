@@ -21,6 +21,7 @@ import jinja2.ext
 # Import salt libs
 import salt.utils
 import salt.utils.yamlencoding
+import salt.utils.locales
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
@@ -140,7 +141,7 @@ def wrap_tmpl_func(render_str):
                 tpldir = os.path.dirname(template).replace('\\', '/')
                 tpldata = {
                     'tplfile': template,
-                    'tpldir': tpldir,
+                    'tpldir': '.' if tpldir == '' else tpldir,
                     'tpldot': tpldir.replace('/', '.'),
                 }
                 context.update(tpldata)
@@ -182,6 +183,7 @@ def wrap_tmpl_func(render_str):
                 output = os.linesep.join(output.splitlines())
 
         except SaltRenderError as exc:
+            log.error("Rendering exception occurred :{0}".format(exc))
             #return dict(result=False, data=str(exc))
             raise
         except Exception:
@@ -350,13 +352,15 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     jinja_env.globals['odict'] = OrderedDict
     jinja_env.globals['show_full_context'] = show_full_context
 
+    jinja_env.tests['list'] = salt.utils.is_list
+
     decoded_context = {}
     for key, value in six.iteritems(context):
         if not isinstance(value, string_types):
             decoded_context[key] = value
             continue
 
-        decoded_context[key] = salt.utils.sdecode(value)
+        decoded_context[key] = salt.utils.locales.sdecode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)
@@ -398,6 +402,13 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             tmplstr = ''
         else:
             tmplstr += '\n{0}'.format(tracestr)
+        log.debug("Jinja Error")
+        log.debug("Exception: {0}".format(exc))
+        log.debug("Out: {0}".format(out))
+        log.debug("Line: {0}".format(line))
+        log.debug("TmplStr: {0}".format(tmplstr))
+        log.debug("TraceStr: {0}".format(tracestr))
+
         raise SaltRenderError('Jinja error: {0}{1}'.format(exc, out),
                               line,
                               tmplstr,

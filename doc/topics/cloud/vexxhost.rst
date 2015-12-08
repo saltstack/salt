@@ -2,13 +2,13 @@
 Getting Started with VEXXHOST
 =============================
 
-`VEXXHOST <http://vexxhost.com>`_ is an cloud computing provider which provides
+`VEXXHOST <http://vexxhost.com>`_ is a cloud computing host which provides
 `Canadian cloud computing <http://vexxhost.com/cloud-computing>`_ services
-which are based in Monteral and uses the libcloud OpenStack driver.  VEXXHOST
+which are based in Monteral and use the libcloud OpenStack driver.  VEXXHOST
 currently runs the Havana release of OpenStack.  When provisioning new
 instances, they automatically get a public IP and private IP address.
 Therefore, you do not need to assign a floating IP to access your instance
-once it's booted.
+after it's booted.
 
 
 Cloud Provider Configuration
@@ -24,7 +24,7 @@ driver.
 
 .. code-block:: yaml
 
-    vexxhost:
+    my-vexxhost-config:
       # Set the location of the salt-master
       #
       minion:
@@ -50,8 +50,16 @@ driver.
       ssh_key_name: yourkey
       ssh_key_file: /path/to/key/yourkey.priv
 
-      provider: openstack
+      driver: openstack
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Authentication
 ==============
@@ -80,9 +88,9 @@ profile will build an Ubuntu 12.04 LTS `nb.2G` instance.
 .. code-block:: yaml
 
     vh_ubuntu1204_2G:
-        provider: vexxhost
-        image: 4051139f-750d-4d72-8ef0-074f2ccc7e5a
-        size: nb.2G
+      provider: my-vexxhost-config
+      image: 4051139f-750d-4d72-8ef0-074f2ccc7e5a
+      size: nb.2G
 
 Provision an instance
 =====================

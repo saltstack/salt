@@ -25,7 +25,7 @@ def __virtual__():
 
     if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
         return __virtualname__
-    return False
+    return (False, 'The brew module could not be loaded: brew not found or grain os != MacOS')
 
 
 def _list_taps():
@@ -38,14 +38,14 @@ def _list_taps():
 
 def _tap(tap, runas=None):
     '''
-    Add unofficial Github repos to the list of formulas that brew tracks,
+    Add unofficial GitHub repos to the list of formulas that brew tracks,
     updates, and installs from.
     '''
     if tap in _list_taps():
         return True
 
     cmd = 'brew tap {0}'.format(tap)
-    if __salt__['cmd.retcode'](cmd, python_shell=False, runas=runas):
+    if _call_brew(cmd)['retcode']:
         log.error('Failed to tap "{0}"'.format(tap))
         return False
 
@@ -63,11 +63,12 @@ def _homebrew_bin():
 
 def _call_brew(cmd):
     '''
-    Calls the brew command with the user user account of brew
+    Calls the brew command with the user account of brew
     '''
     user = __salt__['file.get_user'](_homebrew_bin())
+    runas = user if user != __opts__['user'] else None
     return __salt__['cmd.run_all'](cmd,
-                                   runas=user,
+                                   runas=runas,
                                    output_loglevel='trace',
                                    python_shell=False)
 
@@ -163,7 +164,7 @@ def latest_version(*names, **kwargs):
         return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -244,7 +245,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
             salt '*' pkg.install <package name>
 
     taps
-        Unofficial Github repos to use when updating and installing formulas.
+        Unofficial GitHub repos to use when updating and installing formulas.
 
         CLI Example:
 

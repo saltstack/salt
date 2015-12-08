@@ -4,6 +4,8 @@
 # either in source code form or as a compiled binary, for any purpose,
 # commercial or non-commercial, and by any means.
 
+from __future__ import absolute_import
+
 import socket
 import ctypes
 import os

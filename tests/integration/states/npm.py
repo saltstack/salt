@@ -4,6 +4,8 @@
     tests.integration.states.npm
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
+# Import Python libs
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -27,6 +29,16 @@ class NpmStateTest(integration.ModuleCase, integration.SaltReturnAssertsMixIn):
         ret = self.run_state('npm.installed', name='pm2')
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('npm.removed', name='pm2')
+        self.assertSaltTrueReturn(ret)
+
+    @destructiveTest
+    def test_npm_install_url_referenced_package(self):
+        '''
+        Determine if URL-referenced NPM module can be successfully installed.
+        '''
+        ret = self.run_state('npm.installed', name='git://github.com/Unitech/pm2')
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state('npm.removed', name='git://github.com/Unitech/pm2')
         self.assertSaltTrueReturn(ret)
 
     @destructiveTest

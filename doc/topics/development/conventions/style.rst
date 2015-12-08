@@ -28,6 +28,20 @@ pylint_ program as follows:
 
 .. _pylint: http://www.pylint.org
 
+Variables
+=========
+
+Variables should be a minimum of three characters and should provide an
+easy-to-understand name of the object being represented.
+
+When keys and values are iterated over, descriptive names should be used
+to represent the temporary variables.
+
+Multi-word variables should be separated by an underscore.
+
+Variables which are two-letter words should have an underscore appended
+to them to pad them to three characters.
+
 Strings
 =======
 

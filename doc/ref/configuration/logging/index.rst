@@ -56,7 +56,7 @@ Examples:
 ``log_level``
 -------------
 
-Default: ``warning``
+Default: ``info``
 
 The level of log record messages to send to the console.
 One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
@@ -73,7 +73,7 @@ One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
 ``log_level_logfile``
 ---------------------
 
-Default: ``warning``
+Default: ``info``
 
 The level of messages to send to the log file.
 One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
@@ -124,8 +124,22 @@ formatting can be seen on :func:`time.strftime <python2:time.strftime>`.
 
 Default: ``[%(levelname)-8s] %(message)s``
 
-The format of the console logging messages. Allowed formatting options can
-be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
+The format of the console logging messages. All standard python logging
+:ref:`LogRecord attributes <python2:logrecord-attributes>` can be used.  Salt
+also provides these custom LogRecord attributes to colorize console log output:
+
+.. code-block:: python
+
+    '%(colorlevel)s'   # log level name colorized by level
+    '%(colorname)s'    # colorized module name
+    '%(colorprocess)s' # colorized process number
+    '%(colormsg)s'     # log message colorized by level
+
+.. note::
+    The ``%(colorlevel)s``, ``%(colorname)s``, and ``%(colorprocess)``
+    LogRecord attributes also include padding and enclosing brackets, ``[`` and
+    ``]`` to match the default values of their collateral non-colorized
+    LogRecord attributes.
 
 .. code-block:: yaml
 
@@ -140,8 +154,16 @@ be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
 
 Default: ``%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s``
 
-The format of the log file logging messages. Allowed formatting options can
-be seen on the :ref:`LogRecord attributes <python2:logrecord-attributes>`.
+The format of the log file logging messages. All standard python logging
+:ref:`LogRecord attributes <python2:logrecord-attributes>` can be used.  Salt
+also provides these custom LogRecord attributes that include padding and
+enclosing brackets ``[`` and ``]``:
+
+.. code-block:: python
+
+    '%(bracketlevel)s'   # equivalent to [%(levelname)-8s]
+    '%(bracketname)s'    # equivalent to [%(name)-17s]
+    '%(bracketprocess)s' # equivalent to [%(process)5s]
 
 .. code-block:: yaml
 

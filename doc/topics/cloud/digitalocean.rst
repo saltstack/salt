@@ -2,29 +2,16 @@
 Getting Started With DigitalOcean
 =================================
 
-DigitalOcean is a public cloud provider that specializes in Linux instances.
+DigitalOcean is a public cloud host that specializes in Linux instances.
 
 
 Configuration
 =============
-Starting in Salt 2015.5.0, a new DigitalOcean driver was added to Salt Cloud to support
-DigitalOcean's new API, APIv2. The original driver, referred to ``digital_ocean`` will
-be supported throughout the 2015.5.x releases of Salt, but will then be removed in Salt
-Beryllium in favor of the APIv2 driver, ``digital_ocean_v2``. The following documentation
-is relevant to the new driver, ``digital_ocean_v2``. To see documentation related to the
-original ``digital_ocean`` driver, please see the
-:mod:`DigitalOcean Salt Cloud Driver <salt.cloud.clouds.digital_ocean>`
-
-.. note::
-
-    When Salt Beryllium is released, the original ``digital_ocean`` driver will no longer
-    be supported and the ``digital_ocean_v2`` driver will become the ``digital_ocean``
-    driver.
-
 Using Salt for DigitalOcean requires a ``personal_access_token``, an ``ssh_key_file``,
-and at least one SSH key name in ``ssh_key_names``. More can be added by separating each key
-with a comma. The ``personal_access_token`` can be found in the DigitalOcean web interface
-in the "Apps & API" section. The SSH key name can be found under the "SSH Keys" section.
+and at least one SSH key name in ``ssh_key_names``. More ``ssh_key_names`` can be added
+by separating each key with a comma. The ``personal_access_token`` can be found in the
+DigitalOcean web interface in the "Apps & API" section. The SSH key name can be found
+under the "SSH Keys" section.
 
 .. code-block:: yaml
 
@@ -32,12 +19,20 @@ in the "Apps & API" section. The SSH key name can be found under the "SSH Keys" 
     # /etc/salt/cloud.providers.d/ directory.
 
     my-digitalocean-config:
-      provider: digital_ocean
+      driver: digital_ocean
       personal_access_token: xxx
       ssh_key_file: /path/to/ssh/key/file
       ssh_key_names: my-key-name,my-key-name-2
       location: New York 1
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Profiles
 ========
@@ -50,13 +45,14 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
 .. code-block:: yaml
 
     digitalocean-ubuntu:
-        provider: my-digitalocean-config
-        image: Ubuntu 14.04 x32
-        size: 512MB
-        location: New York 1
-        private_networking: True
-        backups_enabled: True
-        ipv6: True
+      provider: my-digitalocean-config
+      image: 14.04 x64
+      size: 512MB
+      location: New York 1
+      private_networking: True
+      backups_enabled: True
+      ipv6: True
+      create_dns_record: True
 
 Locations can be obtained using the ``--list-locations`` option for the ``salt-cloud``
 command:
@@ -122,19 +118,43 @@ command:
         ----------
         digital_ocean:
             ----------
-            Arch Linux 2013.05 x64:
+            10.1:
                 ----------
+                created_at:
+                    2015-01-20T20:04:34Z
                 distribution:
-                    Arch Linux
+                    FreeBSD
                 id:
-                    350424
+                    10144573
+                min_disk_size:
+                    20
                 name:
-                    Arch Linux 2013.05 x64
+                    10.1
                 public:
                     True
-                slug:
-                    None
     ...SNIP...
+
+
+Profile Specifics:
+------------------
+
+ssh_username
+------------
+
+If using a FreeBSD image from Digital Ocean, you'll need to set the ``ssh_username``
+setting to ``freebsd`` in your profile configuration.
+
+.. code-block:: yaml
+
+    digitalocean-freebsd:
+      provider: my-digitalocean-config
+      image: 10.2
+      size: 512MB
+      ssh_username: freebsd
+
+
+Miscellaneous Information
+=========================
 
 .. note::
 
@@ -147,10 +167,15 @@ command:
 
 .. note::
 
-    If your domain's DNS is managed with DigitalOcean, you can automatically
-    create A-records for newly created droplets. Use ``create_dns_record: True``
-    in your config to enable this. Add ``delete_dns_record: True`` to also
-    delete records when a droplet is destroyed.
+    If your domain's DNS is managed with DigitalOcean, and your minion name
+    matches your DigitalOcean managed DNS domain, you can automatically create
+    A and AAA records for newly created droplets. Use ``create_dns_record: True``
+    in your config to enable this. Adding ``delete_dns_record: True`` to also
+    delete records when a droplet is destroyed is optional. Due to limitations
+    in salt-cloud design, the destroy code does not have access to the VM config
+    data. WHETHER YOU ADD ``create_dns_record: True`` OR NOT, salt-cloud WILL
+    attempt to delete your DNS records if the minion name matches. This will
+    prevent advertising any recycled IP addresses for destroyed minions.
 
 .. note::
 

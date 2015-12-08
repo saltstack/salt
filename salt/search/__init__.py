@@ -2,15 +2,17 @@
 '''
 Set up the correct search system
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import salt libs
 import salt.minion
 import salt.loader
 import salt.utils
+
+# Import 3rd-party libs
 import salt.ext.six as six
 
 
@@ -76,7 +78,7 @@ def iter_roots(roots):
      'saltenv': <saltenv>,
      'cont': <contents>}
     '''
-    for saltenv, dirs in roots.items():
+    for saltenv, dirs in six.iteritems(roots):
         for dir_ in dirs:
             if not os.path.isdir(dir_):
                 continue

@@ -56,6 +56,8 @@ and then:
     --
     -- Table structure for table 'salt_returns'
     --
+    -- note that 'success' must not have NOT NULL constraint, since
+    -- some functions don't provide it.
 
     DROP TABLE IF EXISTS salt_returns;
     CREATE TABLE salt_returns (
@@ -74,8 +76,9 @@ and then:
 
 Required python modules: psycopg2
 '''
-from __future__ import absolute_import
+
 # Import python libs
+from __future__ import absolute_import
 import json
 import logging
 import re
@@ -84,6 +87,8 @@ import sys
 # Import salt libs
 import salt.utils
 import salt.utils.jid
+import salt.ext.six as six
+
 # Import third party libs
 try:
     import psycopg2
@@ -106,7 +111,7 @@ OUT_P = 'out.p'
 
 def __virtual__():
     if not HAS_POSTGRES:
-        log.info("Could not import psycopg2, postges_local_cache disabled.")
+        log.info("Could not import psycopg2, postgres_local_cache disabled.")
         return False
     return 'postgres_local_cache'
 
@@ -200,12 +205,6 @@ def returner(load):
     '''
     Return data to a postgres server
     '''
-    # salt guarantees that there will be 'fun', 'jid', 'return' and 'id' but not
-    # 'success'
-    success = 'Unknown'
-    if 'success' in load:
-        success = load['success']
-
     conn = _get_conn()
     if conn is None:
         return None
@@ -217,9 +216,9 @@ def returner(load):
         sql, (
             load['fun'],
             load['jid'],
-            json.dumps(unicode(str(load['return']), 'utf-8', 'replace')),
+            json.dumps(six.text_type(str(load['return']), 'utf-8', 'replace')),
             load['id'],
-            success
+            load.get('success'),
         )
     )
     _close_conn(conn)

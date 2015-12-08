@@ -8,8 +8,6 @@ service. To use Salt Cloud with GoGrid log into the GoGrid web interface and
 create an api key. Do this by clicking on "My Account" and then going to the
 API Keys tab.
 
-:depends: libcloud >= 0.13.2
-
 Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/gogrid.conf``:
 
@@ -20,8 +18,15 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       apikey: asdff7896asdh789
       # The apikey's shared secret
       sharedsecret: saltybacon
+      driver: gogrid
 
-      provider: gogrid
+.. note::
+
+    A Note about using Map files with GoGrid:
+
+    Due to limitations in the GoGrid API, instances cannot be provisioned in parallel
+    with the GoGrid driver. Map files will work with GoGrid, but the ``-P``
+    argument should not be used on maps referencing GoGrid instances.
 
 .. note::
 
@@ -34,52 +39,32 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 '''
 from __future__ import absolute_import
 
-# The import section is mostly libcloud boilerplate
-
 # Import python libs
-import copy
 import pprint
 import logging
-
-# Import generic libcloud functions
-from salt.cloud.libcloudfuncs import *   # pylint: disable=W0614,W0401
+import time
+import hashlib
 
 # Import salt cloud libs
 import salt.config as config
-from salt.utils import namespaced_function
-from salt.exceptions import SaltCloudSystemExit
+import salt.utils.cloud
+from salt.exceptions import SaltCloudSystemExit, SaltCloudException
 
 # Get logging started
 log = logging.getLogger(__name__)
 
-# Some of the libcloud functions need to be in the same namespace as the
-# functions defined in the module, so we create new function objects inside
-# this module namespace
-get_size = namespaced_function(get_size, globals())
-get_image = namespaced_function(get_image, globals())
-avail_images = namespaced_function(avail_images, globals())
-avail_sizes = namespaced_function(avail_sizes, globals())
-avail_locations = namespaced_function(avail_locations, globals())
-script = namespaced_function(script, globals())
-destroy = namespaced_function(destroy, globals())
-list_nodes = namespaced_function(list_nodes, globals())
-list_nodes_full = namespaced_function(list_nodes_full, globals())
-list_nodes_select = namespaced_function(list_nodes_select, globals())
-show_instance = namespaced_function(show_instance, globals())
-reboot = namespaced_function(reboot, globals())
-get_node = namespaced_function(get_node, globals())
-get_salt_interface = namespaced_function(get_salt_interface, globals())
+__virtualname__ = 'gogrid'
 
 
-# Only load in this module is the GOGRID configurations are in place
+# Only load in this module if the GoGrid configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud functions and check for GOGRID configs
+    Check for GoGrid configs
     '''
     if get_configured_provider() is False:
         return False
 
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -88,24 +73,8 @@ def get_configured_provider():
     '''
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'gogrid',
+        __active_provider_name__ or __virtualname__,
         ('apikey', 'sharedsecret')
-    )
-
-
-def get_conn():
-    '''
-    Return a conn object for the passed VM data
-    '''
-    driver = get_driver(Provider.GOGRID)
-    vm_ = get_configured_provider()
-    return driver(
-        config.get_cloud_config_value(
-            'apikey', vm_, __opts__, search_global=False
-        ),
-        config.get_cloud_config_value(
-            'sharedsecret', vm_, __opts__, search_global=False
-        )
     )
 
 
@@ -113,6 +82,20 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'gogrid',
+                                                           vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -120,35 +103,45 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
 
+    if len(vm_['name']) > 20:
+        raise SaltCloudException('VM names must not be longer than 20 characters')
+
     log.info('Creating Cloud VM {0}'.format(vm_['name']))
-    conn = get_conn()
-    kwargs = {
+    image_id = avail_images()[vm_['image']]['id']
+    if 'assign_public_ip' in vm_:
+        host_ip = vm_['assign_public_ip']
+    else:
+        public_ips = list_public_ips()
+        if len(public_ips.keys()) < 1:
+            raise SaltCloudException('No more IPs available')
+        host_ip = public_ips.keys()[0]
+
+    create_kwargs = {
         'name': vm_['name'],
-        'image': get_image(conn, vm_),
-        'size': get_size(conn, vm_)
+        'image': image_id,
+        'ram': vm_['size'],
+        'ip': host_ip,
     }
 
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
-        {'kwargs': {'name': kwargs['name'],
-                    'image': kwargs['image'].name,
-                    'size': kwargs['size'].name}},
+        {'kwargs': create_kwargs},
         transport=__opts__['transport']
     )
 
     try:
-        data = conn.create_node(**kwargs)
+        data = _query('grid', 'server/add', args=create_kwargs)
     except Exception:
         log.error(
             'Error creating {0} on GOGRID\n\n'
-            'The following exception was thrown by libcloud when trying to '
+            'The following exception was thrown when trying to '
             'run the initial deployment:\n'.format(
                 vm_['name']
             ),
@@ -161,118 +154,32 @@ def create(vm_):
         'ssh_username', vm_, __opts__, default='root'
     )
 
-    ret = {}
-    if config.get_cloud_config_value('deploy', vm_, __opts__) is True:
-        deploy_script = script(vm_)
-        deploy_kwargs = {
-            'opts': __opts__,
-            'host': data.public_ips[0],
-            'username': ssh_username,
-            'password': data.extra['password'],
-            'script': deploy_script.script,
-            'name': vm_['name'],
-            'tmp_dir': config.get_cloud_config_value(
-                'tmp_dir', vm_, __opts__, default='/tmp/.saltcloud'
-            ),
-            'deploy_command': config.get_cloud_config_value(
-                'deploy_command', vm_, __opts__,
-                default='/tmp/.saltcloud/deploy.sh',
-            ),
-            'start_action': __opts__['start_action'],
-            'parallel': __opts__['parallel'],
-            'sock_dir': __opts__['sock_dir'],
-            'conf_file': __opts__['conf_file'],
-            'minion_pem': vm_['priv_key'],
-            'minion_pub': vm_['pub_key'],
-            'keep_tmp': __opts__['keep_tmp'],
-            'preseed_minion_keys': vm_.get('preseed_minion_keys', None),
-            'sudo': config.get_cloud_config_value(
-                'sudo', vm_, __opts__, default=(ssh_username != 'root')
-            ),
-            'sudo_password': config.get_cloud_config_value(
-                'sudo_password', vm_, __opts__, default=None
-            ),
-            'tty': config.get_cloud_config_value(
-                'tty', vm_, __opts__, default=False
-            ),
-            'display_ssh_output': config.get_cloud_config_value(
-                'display_ssh_output', vm_, __opts__, default=True
-            ),
-            'script_args': config.get_cloud_config_value(
-                'script_args', vm_, __opts__
-            ),
-            'script_env': config.get_cloud_config_value('script_env', vm_, __opts__),
-            'minion_conf': salt.utils.cloud.minion_config(__opts__, vm_)
-        }
+    def wait_for_apipass():
+        '''
+        Wait for the password to become available, via the API
+        '''
+        try:
+            passwords = list_passwords()
+            return passwords[vm_['name']][0]['password']
+        except KeyError:
+            pass
+        time.sleep(5)
+        return False
 
-        # Deploy salt-master files, if necessary
-        if config.get_cloud_config_value('make_master', vm_, __opts__) is True:
-            deploy_kwargs['make_master'] = True
-            deploy_kwargs['master_pub'] = vm_['master_pub']
-            deploy_kwargs['master_pem'] = vm_['master_pem']
-            master_conf = salt.utils.cloud.master_config(__opts__, vm_)
-            deploy_kwargs['master_conf'] = master_conf
+    vm_['password'] = salt.utils.cloud.wait_for_fun(
+        wait_for_apipass,
+        timeout=config.get_cloud_config_value(
+            'wait_for_fun_timeout', vm_, __opts__, default=15 * 60),
+    )
 
-            if master_conf.get('syndic_master', None):
-                deploy_kwargs['make_syndic'] = True
-
-        deploy_kwargs['make_minion'] = config.get_cloud_config_value(
-            'make_minion', vm_, __opts__, default=True
-        )
-
-        # Check for Windows install params
-        win_installer = config.get_cloud_config_value('win_installer', vm_, __opts__)
-        if win_installer:
-            deploy_kwargs['win_installer'] = win_installer
-            minion = salt.utils.cloud.minion_config(__opts__, vm_)
-            deploy_kwargs['master'] = minion['master']
-            deploy_kwargs['username'] = config.get_cloud_config_value(
-                'win_username', vm_, __opts__, default='Administrator'
-            )
-            deploy_kwargs['password'] = config.get_cloud_config_value(
-                'win_password', vm_, __opts__, default=''
-            )
-
-        # Store what was used to the deploy the VM
-        event_kwargs = copy.deepcopy(deploy_kwargs)
-        del event_kwargs['minion_pem']
-        del event_kwargs['minion_pub']
-        del event_kwargs['sudo_password']
-        if 'password' in event_kwargs:
-            del event_kwargs['password']
-        ret['deploy_kwargs'] = event_kwargs
-
-        salt.utils.cloud.fire_event(
-            'event',
-            'executing deploy script',
-            'salt/cloud/{0}/deploying'.format(vm_['name']),
-            {'kwargs': event_kwargs},
-            transport=__opts__['transport']
-        )
-
-        if win_installer:
-            deployed = salt.utils.cloud.deploy_windows(**deploy_kwargs)
-        else:
-            deployed = salt.utils.cloud.deploy_script(**deploy_kwargs)
-
-        if deployed:
-            log.info('Salt installed on {0}'.format(vm_['name']))
-        else:
-            log.error(
-                'Failed to start Salt on Cloud VM {0}'.format(
-                    vm_['name']
-                )
-            )
-
+    vm_['ssh_host'] = host_ip
+    ret = salt.utils.cloud.bootstrap(vm_, __opts__)
     ret.update(data)
 
-    if 'password' in data.extra:
-        del data.extra['password']
-
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
-            vm_, pprint.pformat(data.__dict__)
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
+            vm_, pprint.pformat(data)
         )
     )
 
@@ -283,9 +190,386 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
 
     return ret
+
+
+def list_nodes(full=False, call=None):
+    '''
+    List of nodes, keeping only a brief listing
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -Q
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called with -f or --function.'
+        )
+
+    ret = {}
+    nodes = list_nodes_full('function')
+    if full:
+        return nodes
+
+    for node in nodes:
+        ret[node] = {}
+        for item in ('id', 'image', 'size', 'public_ips', 'private_ips', 'state'):
+            ret[node][item] = nodes[node][item]
+
+    return ret
+
+
+def list_nodes_full(call=None):
+    '''
+    List nodes, with all available information
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -F
+    '''
+    response = _query('grid', 'server/list')
+
+    ret = {}
+    for item in response['list']:
+        name = item['name']
+        ret[name] = item
+
+        ret[name]['image_info'] = item['image']
+        ret[name]['image'] = item['image']['friendlyName']
+        ret[name]['size'] = item['ram']['name']
+        ret[name]['public_ips'] = [item['ip']['ip']]
+        ret[name]['private_ips'] = []
+        ret[name]['state_info'] = item['state']
+        if 'active' in item['state']['description']:
+            ret[name]['state'] = 'RUNNING'
+
+    return ret
+
+
+def list_nodes_select(call=None):
+    '''
+    Return a list of the VMs that are on the provider, with select fields
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -S
+    '''
+    return salt.utils.cloud.list_nodes_select(
+        list_nodes_full('function'), __opts__['query.selection'], call,
+    )
+
+
+def avail_locations():
+    '''
+    Available locations
+    '''
+    response = list_common_lookups(kwargs={'lookup': 'ip.datacenter'})
+
+    ret = {}
+    for item in response['list']:
+        name = item['name']
+        ret[name] = item
+
+    return ret
+
+
+def avail_sizes():
+    '''
+    Available sizes
+    '''
+    response = list_common_lookups(kwargs={'lookup': 'server.ram'})
+
+    ret = {}
+    for item in response['list']:
+        name = item['name']
+        ret[name] = item
+
+    return ret
+
+
+def avail_images():
+    '''
+    Available images
+    '''
+    response = _query('grid', 'image/list')
+
+    ret = {}
+    for item in response['list']:
+        name = item['friendlyName']
+        ret[name] = item
+
+    return ret
+
+
+def list_passwords(kwargs=None, call=None):
+    '''
+    List all password on the account
+
+    .. versionadded:: 2015.8.0
+    '''
+    response = _query('support', 'password/list')
+
+    ret = {}
+    for item in response['list']:
+        server = item['server']['name']
+        if server not in ret:
+            ret[server] = []
+        ret[server].append(item)
+
+    return ret
+
+
+def list_public_ips(kwargs=None, call=None):
+    '''
+    List all available public IPs.
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt-cloud -f list_public_ips <provider>
+
+    To list unavailable (assigned) IPs, use:
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt-cloud -f list_public_ips <provider> state=assigned
+
+    .. versionadded:: 2015.8.0
+    '''
+    if kwargs is None:
+        kwargs = {}
+
+    args = {}
+    if 'state' in kwargs:
+        if kwargs['state'] == 'assigned':
+            args['ip.state'] = 'Assigned'
+        else:
+            args['ip.state'] = 'Unassigned'
+    else:
+        args['ip.state'] = 'Unassigned'
+
+    args['ip.type'] = 'Public'
+
+    response = _query('grid', 'ip/list', args=args)
+
+    ret = {}
+    for item in response['list']:
+        name = item['ip']
+        ret[name] = item
+
+    return ret
+
+
+def list_common_lookups(kwargs=None, call=None):
+    '''
+    List common lookups for a particular type of item
+
+    .. versionadded:: 2015.8.0
+    '''
+    if kwargs is None:
+        kwargs = {}
+
+    args = {}
+    if 'lookup' in kwargs:
+        args['lookup'] = kwargs['lookup']
+
+    response = _query('common', 'lookup/list', args=args)
+
+    return response
+
+
+def destroy(name, call=None):
+    '''
+    Destroy a machine by name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -d vm_name
+    '''
+    if call == 'function':
+        raise SaltCloudSystemExit(
+            'The destroy action must be called with -d, --destroy, '
+            '-a or --action.'
+        )
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'destroying instance',
+        'salt/cloud/{0}/destroying'.format(name),
+        {'name': name},
+        transport=__opts__['transport']
+    )
+
+    response = _query('grid', 'server/delete', args={'name': name})
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'destroyed instance',
+        'salt/cloud/{0}/destroyed'.format(name),
+        {'name': name},
+        transport=__opts__['transport']
+    )
+
+    if __opts__.get('update_cachedir', False) is True:
+        salt.utils.cloud.delete_minion_cachedir(name, __active_provider_name__.split(':')[0], __opts__)
+
+    return response
+
+
+def reboot(name, call=None):
+    '''
+    Reboot a machine by name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a reboot vm_name
+
+    .. versionadded:: 2015.8.0
+    '''
+    return _query('grid', 'server/power', args={'name': name, 'power': 'restart'})
+
+
+def stop(name, call=None):
+    '''
+    Stop a machine by name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a stop vm_name
+
+    .. versionadded:: 2015.8.0
+    '''
+    return _query('grid', 'server/power', args={'name': name, 'power': 'stop'})
+
+
+def start(name, call=None):
+    '''
+    Start a machine by name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a start vm_name
+
+    .. versionadded:: 2015.8.0
+    '''
+    return _query('grid', 'server/power', args={'name': name, 'power': 'start'})
+
+
+def show_instance(name, call=None):
+    '''
+    Start a machine by name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a show_instance vm_name
+
+    .. versionadded:: 2015.8.0
+    '''
+    response = _query('grid', 'server/get', args={'name': name})
+    ret = {}
+    for item in response['list']:
+        name = item['name']
+        ret[name] = item
+
+        ret[name]['image_info'] = item['image']
+        ret[name]['image'] = item['image']['friendlyName']
+        ret[name]['size'] = item['ram']['name']
+        ret[name]['public_ips'] = [item['ip']['ip']]
+        ret[name]['private_ips'] = []
+        ret[name]['state_info'] = item['state']
+        if 'active' in item['state']['description']:
+            ret[name]['state'] = 'RUNNING'
+    return ret
+
+
+def _query(action=None,
+           command=None,
+           args=None,
+           method='GET',
+           header_dict=None,
+           data=None):
+    '''
+    Make a web call to GoGrid
+
+    .. versionadded:: 2015.8.0
+    '''
+    vm_ = get_configured_provider()
+    apikey = config.get_cloud_config_value(
+        'apikey', vm_, __opts__, search_global=False
+    )
+    sharedsecret = config.get_cloud_config_value(
+        'sharedsecret', vm_, __opts__, search_global=False
+    )
+
+    path = 'https://api.gogrid.com/api/'
+
+    if action:
+        path += action
+
+    if command:
+        path += '/{0}'.format(command)
+
+    log.debug('GoGrid URL: {0}'.format(path))
+
+    if not isinstance(args, dict):
+        args = {}
+
+    epoch = str(int(time.time()))
+    hashtext = ''.join((apikey, sharedsecret, epoch))
+    args['sig'] = hashlib.md5(hashtext).hexdigest()
+    args['format'] = 'json'
+    args['v'] = '1.0'
+    args['api_key'] = apikey
+
+    if header_dict is None:
+        header_dict = {}
+
+    if method != 'POST':
+        header_dict['Accept'] = 'application/json'
+
+    decode = True
+    if method == 'DELETE':
+        decode = False
+
+    return_content = None
+    result = salt.utils.http.query(
+        path,
+        method,
+        params=args,
+        data=data,
+        header_dict=header_dict,
+        decode=decode,
+        decode_type='json',
+        text=True,
+        status=True,
+        opts=__opts__,
+    )
+    log.debug(
+        'GoGrid Response Status Code: {0}'.format(
+            result['status']
+        )
+    )
+
+    return result['dict']

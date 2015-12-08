@@ -18,6 +18,7 @@ try:
         ForceRetryError
     )
     import kazoo.recipe.lock
+    import kazoo.recipe.party
     from kazoo.exceptions import CancelledError
     from kazoo.exceptions import NoNodeError
 
@@ -93,7 +94,7 @@ __virtualname__ = 'zk_concurrency'
 
 def __virtual__():
     if not HAS_DEPS:
-        return False
+        return (False, "Module zk_concurrency: dependencies failed")
 
     return __virtualname__
 
@@ -271,3 +272,26 @@ def unlock(path,
     else:
         logging.error('Unable to find lease for path {0}'.format(path))
         return False
+
+
+def party_members(path,
+                  zk_hosts,
+                  ):
+    '''
+    Get the List of identifiers in a particular party
+
+    path
+        The path in zookeeper where the lock is
+
+    zk_hosts
+        zookeeper connect string
+
+    Example:
+
+    ... code-block: bash
+
+        salt minion zk_concurrency.party_members /lock/path host1:1234,host2:1234
+    '''
+    zk = _get_zk_conn(zk_hosts)
+    party = kazoo.recipe.party.ShallowParty(zk, path)
+    return list(party)

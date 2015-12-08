@@ -12,6 +12,12 @@ import salt.utils
 import salt.utils.master
 import salt.payload
 from salt.ext.six import string_types
+from salt.exceptions import SaltInvocationError
+from salt.fileserver import clear_lock as _clear_lock
+from salt.fileserver.gitfs import PER_REMOTE_OVERRIDES as __GITFS_OVERRIDES
+from salt.pillar.git_pillar \
+    import PER_REMOTE_OVERRIDES as __GIT_PILLAR_OVERRIDES
+from salt.runners.winrepo import PER_REMOTE_OVERRIDES as __WINREPO_OVERRIDES
 
 log = logging.getLogger(__name__)
 
@@ -230,3 +236,90 @@ def clear_all(tgt=None, expr_form='glob'):
                         clear_pillar_flag=True,
                         clear_grains_flag=True,
                         clear_mine_flag=True)
+
+
+def clear_git_lock(role, remote=None):
+    '''
+    .. versionadded:: 2015.8.2
+
+    Remove the update locks for Salt components (gitfs, git_pillar, winrepo)
+    which use gitfs backend code from salt.utils.gitfs.
+
+    .. note::
+        Running :py:func:`cache.clear_all <salt.runners.cache.clear_all>` will
+        not include this function as it does for pillar, grains, and mine.
+
+        Additionally, executing this function with a ``role`` of ``gitfs`` is
+        equivalent to running ``salt-run fileserver.clear_lock backend=git``.
+
+    role
+        Which type of lock to remove (``gitfs``, ``git_pillar``, or
+        ``winrepo``)
+
+    remote
+        If specified, then any remotes which contain the passed string will
+        have their lock cleared. For example, a ``remote`` value of **github**
+        will remove the lock from all github.com remotes.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cache.clear_git_lock git_pillar
+    '''
+    if role == 'gitfs':
+        git_objects = [salt.utils.gitfs.GitFS(__opts__)]
+        git_objects[0].init_remotes(__opts__['gitfs_remotes'],
+                                    __GITFS_OVERRIDES)
+    elif role == 'git_pillar':
+        git_objects = []
+        for ext_pillar in __opts__['ext_pillar']:
+            key = next(iter(ext_pillar))
+            if key == 'git':
+                if not isinstance(ext_pillar['git'], list):
+                    continue
+                obj = salt.utils.gitfs.GitPillar(__opts__)
+                obj.init_remotes(ext_pillar['git'], __GIT_PILLAR_OVERRIDES)
+                git_objects.append(obj)
+    elif role == 'winrepo':
+        if 'win_repo' in __opts__:
+            salt.utils.warn_until(
+                'Nitrogen',
+                'The \'win_repo\' config option is deprecated, please use '
+                '\'winrepo_dir\' instead.'
+            )
+            winrepo_dir = __opts__['win_repo']
+        else:
+            winrepo_dir = __opts__['winrepo_dir']
+
+        if 'win_gitrepos' in __opts__:
+            salt.utils.warn_until(
+                'Nitrogen',
+                'The \'win_gitrepos\' config option is deprecated, please use '
+                '\'winrepo_remotes\' instead.'
+            )
+            winrepo_remotes = __opts__['win_gitrepos']
+        else:
+            winrepo_remotes = __opts__['winrepo_remotes']
+
+        git_objects = []
+        for remotes, base_dir in (
+            (winrepo_remotes, winrepo_dir),
+            (__opts__['winrepo_remotes_ng'], __opts__['winrepo_dir_ng'])
+        ):
+            obj = salt.utils.gitfs.WinRepo(__opts__, base_dir)
+            obj.init_remotes(remotes, __WINREPO_OVERRIDES)
+            git_objects.append(obj)
+    else:
+        raise SaltInvocationError('Invalid role \'{0}\''.format(role))
+
+    ret = {}
+    for obj in git_objects:
+        cleared, errors = _clear_lock(obj.clear_lock, role, remote)
+        if cleared:
+            ret.setdefault('cleared', []).extend(cleared)
+        if errors:
+            ret.setdefault('errors', []).extend(errors)
+    if not ret:
+        ret = 'No locks were removed'
+    salt.output.display_output(ret, 'nested', opts=__opts__)

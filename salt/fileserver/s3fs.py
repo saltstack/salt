@@ -56,9 +56,9 @@ structure::
 .. note:: This fileserver back-end requires the use of the MD5 hashing algorithm.
     MD5 may not be compliant with all security policies.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import datetime
 import os
 import time
@@ -76,7 +76,7 @@ import salt.utils.s3 as s3
 import salt.ext.six as six
 from salt.ext.six.moves import filter
 from salt.ext.six.moves.urllib.parse import quote as _quote
-# pylint: disable=import-error,no-name-in-module,redefined-builtin
+# pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -320,11 +320,12 @@ def _get_s3_key():
     verify_ssl = __opts__['s3.verify_ssl'] \
         if 's3.verify_ssl' in __opts__ \
         else None
+    kms_keyid = __opts__['aws.kmw.keyid'] if 'aws.kms.keyid' in __opts__ else None
     location = __opts__['s3.location'] \
         if 's3.location' in __opts__ \
         else None
 
-    return key, keyid, service_url, verify_ssl, location
+    return key, keyid, service_url, verify_ssl, kms_keyid, location
 
 
 def _init():
@@ -394,7 +395,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     log.debug('Refreshing buckets cache file')
 
-    key, keyid, service_url, verify_ssl, location = _get_s3_key()
+    key, keyid, service_url, verify_ssl, kms_keyid, location = _get_s3_key()
     metadata = {}
 
     # helper s3 query function
@@ -402,6 +403,7 @@ def _refresh_buckets_cache_file(cache_file):
         return s3.query(
                 key=key,
                 keyid=keyid,
+                kms_keyid=keyid,
                 bucket=bucket,
                 service_url=service_url,
                 verify_ssl=verify_ssl,
@@ -410,7 +412,7 @@ def _refresh_buckets_cache_file(cache_file):
 
     if _is_env_per_bucket():
         # Single environment per bucket
-        for saltenv, buckets in _get_buckets().items():
+        for saltenv, buckets in six.iteritems(_get_buckets()):
             bucket_files = {}
             for bucket_name in buckets:
                 s3_meta = __get_s3_meta(bucket_name)
@@ -586,7 +588,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
     Checks the local cache for the file, if it's old or missing go grab the
     file from S3 and update the cache
     '''
-    key, keyid, service_url, verify_ssl, location = _get_s3_key()
+    key, keyid, service_url, verify_ssl, kms_keyid, location = _get_s3_key()
 
     # check the local cache...
     if os.path.isfile(cached_file_path):
@@ -617,6 +619,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
                     ret = s3.query(
                         key=key,
                         keyid=keyid,
+                        kms_keyid=keyid,
                         method='HEAD',
                         bucket=bucket_name,
                         service_url=service_url,
@@ -647,6 +650,7 @@ def _get_file_from_s3(metadata, saltenv, bucket_name, path, cached_file_path):
     s3.query(
         key=key,
         keyid=keyid,
+        kms_keyid=keyid,
         bucket=bucket_name,
         service_url=service_url,
         verify_ssl=verify_ssl,

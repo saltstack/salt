@@ -4,8 +4,8 @@ from __future__ import absolute_import
 # Import python libs
 import fnmatch
 import glob
+import signal
 import logging
-import multiprocessing
 
 import yaml
 
@@ -16,23 +16,50 @@ import salt.utils
 import salt.utils.cache
 import salt.utils.event
 import salt.utils.process
+import salt.defaults.exitcodes
+from salt.ext.six import string_types, iterkeys
 from salt._compat import string_types
 log = logging.getLogger(__name__)
 
 
-class Reactor(multiprocessing.Process, salt.state.Compiler):
+class Reactor(salt.utils.process.MultiprocessingProcess, salt.state.Compiler):
     '''
     Read in the reactor configuration variable and compare it to events
     processed on the master.
     The reactor has the capability to execute pre-programmed executions
     as reactions to events
     '''
-    def __init__(self, opts):
-        multiprocessing.Process.__init__(self)
+    def __init__(self, opts, log_queue=None):
+        salt.utils.process.MultiprocessingProcess.__init__(
+            self, log_queue=log_queue)
         local_minion_opts = opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
         salt.state.Compiler.__init__(self, opts, self.minion.rend)
+
+    # We need __setstate__ and __getstate__ to avoid pickling errors since
+    # 'self.rend' (from salt.state.Compiler) contains a function reference
+    # which is not picklable.
+    # These methods are only used when pickling so will not be used on
+    # non-Windows platforms.
+    def __setstate__(self, state):
+        Reactor.__init__(
+            self, state['opts'],
+            log_queue=state['log_queue'])
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'log_queue': self.log_queue}
+
+    def sig_stop(self, signum, frame):
+        msg = 'Received a '
+        if signum == signal.SIGINT:
+            msg += 'SIGINT'
+        elif signum == signal.SIGTERM:
+            msg += 'SIGTERM'
+        msg += '. Exiting {0}.'.format(self.__class__.__name__)
+        log.info(msg)
+        exit(salt.defaults.exitcodes.EX_GENERIC)
 
     def render_reaction(self, glob_ref, tag, data):
         '''
@@ -91,7 +118,7 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 continue
             if len(ropt) != 1:
                 continue
-            key = ropt.iterkeys().next()
+            key = next(iterkeys(ropt))
             val = ropt[key]
             if fnmatch.fnmatch(tag, key):
                 if isinstance(val, string_types):
@@ -99,6 +126,58 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
                 elif isinstance(val, list):
                     reactors.extend(val)
         return reactors
+
+    def list_all(self):
+        '''
+        Return a list of the reactors
+        '''
+        if isinstance(self.minion.opts['reactor'], string_types):
+            log.debug('Reading reactors from yaml {0}'.format(self.opts['reactor']))
+            try:
+                with salt.utils.fopen(self.opts['reactor']) as fp_:
+                    react_map = yaml.safe_load(fp_.read())
+            except (OSError, IOError):
+                log.error(
+                    'Failed to read reactor map: "{0}"'.format(
+                        self.opts['reactor']
+                        )
+                    )
+            except Exception:
+                log.error(
+                    'Failed to parse YAML in reactor map: "{0}"'.format(
+                        self.opts['reactor']
+                        )
+                    )
+        else:
+            log.debug('Not reading reactors from yaml')
+            react_map = self.minion.opts['reactor']
+        return react_map
+
+    def add_reactor(self, tag, reaction):
+        '''
+        Add a reactor
+        '''
+        reactors = self.list_all()
+        for reactor in reactors:
+            _tag = next(iterkeys(reactor))
+            if _tag == tag:
+                return {'status': False, 'comment': 'Reactor already exists.'}
+
+        self.minion.opts['reactor'].append({tag: reaction})
+        return {'status': True, 'comment': 'Reactor added.'}
+
+    def delete_reactor(self, tag):
+        '''
+        Delete a reactor
+        '''
+        reactors = self.list_all()
+        for reactor in reactors:
+            _tag = next(iterkeys(reactor))
+            if _tag == tag:
+                self.minion.opts['reactor'].remove(reactor)
+                return {'status': True, 'comment': 'Reactor deleted.'}
+
+        return {'status': False, 'comment': 'Reactor does not exists.'}
 
     def reactions(self, tag, data, reactors):
         '''
@@ -133,22 +212,50 @@ class Reactor(multiprocessing.Process, salt.state.Compiler):
         '''
         Enter into the server loop
         '''
+        # Properly exit if a SIGTERM/SIGINT is signalled
+        signal.signal(signal.SIGTERM, self.sig_stop)
+        signal.signal(signal.SIGINT, self.sig_stop)
+
         salt.utils.appendproctitle(self.__class__.__name__)
 
         # instantiate some classes inside our new process
-        self.event = salt.utils.event.SaltEvent('master', self.opts['sock_dir'])
+        self.event = salt.utils.event.get_event(
+                'master',
+                self.opts['sock_dir'],
+                self.opts['transport'],
+                opts=self.opts,
+                listen=True)
         self.wrap = ReactWrap(self.opts)
 
         for data in self.event.iter_events(full=True):
             # skip all events fired by ourselves
             if data['data'].get('user') == self.wrap.event_user:
                 continue
-            reactors = self.list_reactors(data['tag'])
-            if not reactors:
-                continue
-            chunks = self.reactions(data['tag'], data['data'], reactors)
-            if chunks:
-                self.call_reactions(chunks)
+            if data['tag'].endswith('salt/reactors/manage/add'):
+                _data = data['data']
+                res = self.add_reactor(_data['event'], _data['reactors'])
+                self.event.fire_event({'reactors': self.list_all(),
+                                       'result': res},
+                                      'salt/reactors/manage/add-complete')
+            elif data['tag'].endswith('salt/reactors/manage/delete'):
+                _data = data['data']
+                res = self.delete_reactor(_data['event'])
+                self.event.fire_event({'reactors': self.list_all(),
+                                       'result': res},
+                                      'salt/reactors/manage/delete-complete')
+            elif data['tag'].endswith('salt/reactors/manage/list'):
+                self.event.fire_event({'reactors': self.list_all()},
+                                      'salt/reactors/manage/list-results')
+            else:
+                reactors = self.list_reactors(data['tag'])
+                if not reactors:
+                    continue
+                chunks = self.reactions(data['tag'], data['data'], reactors)
+                if chunks:
+                    try:
+                        self.call_reactions(chunks)
+                    except SystemExit:
+                        log.warning('Exit ignored by reactor')
 
 
 class ReactWrap(object):

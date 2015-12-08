@@ -2,18 +2,21 @@
 '''
 Salt module to manage unix mounts and the fstab file
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import re
 import logging
 
 # Import salt libs
 import salt.utils
-from salt.ext.six import string_types
 from salt.utils import which as _which
 from salt.exceptions import CommandNotFoundError, CommandExecutionError
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import filter, zip  # pylint: disable=import-error,redefined-builtin
 
 # Set up logger
 log = logging.getLogger(__name__)
@@ -28,7 +31,7 @@ def __virtual__():
     '''
     # Disable on Windows, a specific file module exists:
     if salt.utils.is_windows():
-        return False
+        return (False, 'The mount module cannot be loaded: not a POSIX-like system.')
     return True
 
 
@@ -61,7 +64,7 @@ def _active_mountinfo(ret):
             device = comps[2].split(':')
             # each line can have any number of
             # optional parameters, we use the
-            # location of the seperator field to
+            # location of the separator field to
             # determine the location of the elements
             # after it.
             _sep = comps.index('-')
@@ -77,11 +80,11 @@ def _active_mountinfo(ret):
                              'major': device[0],
                              'minor': device[1],
                              'root': comps[3],
-                             'opts': comps[5].split(','),
+                             'opts': _resolve_user_group_names(comps[5].split(',')),
                              'fstype': comps[_sep + 1],
                              'device': device_name,
                              'alt_device': _list.get(comps[4], None),
-                             'superopts': comps[_sep + 3].split(','),
+                             'superopts': _resolve_user_group_names(comps[_sep + 3].split(',')),
                              'device_uuid': device_uuid,
                              'device_label': device_label}
     return ret
@@ -103,7 +106,7 @@ def _active_mounts(ret):
             ret[comps[1]] = {'device': comps[0],
                              'alt_device': _list.get(comps[1], None),
                              'fstype': comps[2],
-                             'opts': comps[3].split(',')}
+                             'opts': _resolve_user_group_names(comps[3].split(','))}
     return ret
 
 
@@ -115,7 +118,7 @@ def _active_mounts_freebsd(ret):
         comps = re.sub(r"\s+", " ", line).split()
         ret[comps[1]] = {'device': comps[0],
                          'fstype': comps[2],
-                         'opts': comps[3].split(',')}
+                         'opts': _resolve_user_group_names(comps[3].split(','))}
     return ret
 
 
@@ -127,7 +130,7 @@ def _active_mounts_solaris(ret):
         comps = re.sub(r"\s+", " ", line).split()
         ret[comps[2]] = {'device': comps[0],
                          'fstype': comps[4],
-                         'opts': comps[5].split('/')}
+                         'opts': _resolve_user_group_names(comps[5].split('/'))}
     return ret
 
 
@@ -142,7 +145,7 @@ def _active_mounts_openbsd(ret):
         parens = re.findall(r'\((.*?)\)', line, re.DOTALL)
         ret[comps[3]] = {'device': comps[0],
                          'fstype': comps[5],
-                         'opts': parens[1].split(", "),
+                         'opts': _resolve_user_group_names(parens[1].split(", ")),
                          'major': str(nod[4].strip(",")),
                          'minor': str(nod[5]),
                          'device_uuid': parens[0]}
@@ -158,8 +161,27 @@ def _active_mounts_darwin(ret):
         parens = re.findall(r'\((.*?)\)', line, re.DOTALL)[0].split(", ")
         ret[comps[2]] = {'device': comps[0],
                          'fstype': parens[0],
-                         'opts': parens[1:]}
+                         'opts': _resolve_user_group_names(parens[1:])}
     return ret
+
+
+def _resolve_user_group_names(opts):
+    '''
+    Resolve user and group names in related opts
+    '''
+    name_id_opts = {'uid': 'user.info',
+                    'gid': 'group.info'}
+    for ind, opt in enumerate(opts):
+        if opt.split('=')[0] in name_id_opts:
+            _givenid = opt.split('=')[1]
+            _param = opt.split('=')[0]
+            _id = _givenid
+            if not re.match('[0-9]+$', _givenid):
+                _info = __salt__[name_id_opts[_param]](_givenid)
+                if _info and _param in _info:
+                    _id = _info[_param]
+            opts[ind] = _param + '=' + str(_id)
+    return opts
 
 
 def active(extended=False):
@@ -242,13 +264,13 @@ class _fstab_entry(object):
 
     def pick(self, keys):
         '''returns an instance with just those keys'''
-        subset = dict(map(lambda key: (key, self.criteria[key]), keys))
+        subset = dict([(key, self.criteria[key]) for key in keys])
         return self.__class__(**subset)
 
     def __init__(self, **criteria):
         '''Store non-empty, non-null values to use as filter'''
-        items = filter(lambda (key, value): value is not None, criteria.items())
-        items = map(lambda (key, value): (key, str(value)), items)
+        items = [key_value for key_value in six.iteritems(criteria) if key_value[1] is not None]
+        items = [(key_value1[0], str(key_value1[1])) for key_value1 in items]
         self.criteria = dict(items)
 
     @staticmethod
@@ -259,7 +281,7 @@ class _fstab_entry(object):
     def match(self, line):
         '''compare potentially partial criteria against line'''
         entry = self.dict_from_line(line)
-        for key, value in self.criteria.items():
+        for key, value in six.iteritems(self.criteria):
             if entry[key] != value:
                 return False
         return True
@@ -364,8 +386,14 @@ def set_fstab(
         opts = ','.join(opts)
 
     # preserve arguments for updating
-    entry_args = dict(vars())
-    map(entry_args.pop, ['test', 'config', 'match_on', 'kwargs'])
+    entry_args = {
+        'name': name,
+        'device': device,
+        'fstype': fstype,
+        'opts': opts,
+        'dump': dump,
+        'pass_num': pass_num,
+    }
 
     lines = []
     ret = None
@@ -373,7 +401,7 @@ def set_fstab(
     # Transform match_on into list--items will be checked later
     if isinstance(match_on, list):
         pass
-    elif not isinstance(match_on, string_types):
+    elif not isinstance(match_on, six.string_types):
         msg = 'match_on must be a string or list of strings'
         raise CommandExecutionError(msg)
     elif match_on == 'auto':
@@ -685,7 +713,7 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
     if 'defaults' in opts and __grains__['os'] in ['MacOS', 'Darwin']:
         opts = None
 
-    if isinstance(opts, string_types):
+    if isinstance(opts, six.string_types):
         opts = opts.split(',')
 
     if not os.path.exists(name) and mkmnt:
@@ -722,7 +750,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
         if fstype == 'smbfs':
             force_mount = True
 
-    if isinstance(opts, string_types):
+    if isinstance(opts, six.string_types):
         opts = opts.split(',')
     mnts = active()
     if name in mnts:

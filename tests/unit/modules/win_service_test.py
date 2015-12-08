@@ -119,21 +119,16 @@ class WinServiceTestCase(TestCase):
         '''
             Test to restart the named service
         '''
-        mock = MagicMock(side_effect=[True, True, False])
-        with patch.object(win_service, 'has_powershell', mock):
-            mock_true = MagicMock(return_value=True)
-            with patch.object(win_service, 'create_win_salt_restart_task',
+        mock_true = MagicMock(return_value=True)
+        with patch.object(win_service, 'create_win_salt_restart_task',
+                          mock_true):
+            with patch.object(win_service, 'execute_salt_restart_task',
                               mock_true):
-                with patch.object(win_service, 'execute_salt_restart_task',
-                                  mock_true):
-                    self.assertTrue(win_service.restart("salt-minion"))
+                self.assertTrue(win_service.restart("salt-minion"))
 
-            with patch.dict(win_service.__salt__, {'cmd.retcode': mock_true}):
-                self.assertFalse(win_service.restart("salt"))
-
-            with patch.object(win_service, 'stop', mock_true):
-                with patch.object(win_service, 'start', mock_true):
-                    self.assertTrue(win_service.restart("salt"))
+        with patch.object(win_service, 'stop', mock_true):
+            with patch.object(win_service, 'start', mock_true):
+                self.assertTrue(win_service.restart("salt"))
 
     def test_createwin_saltrestart_task(self):
         '''
@@ -141,7 +136,7 @@ class WinServiceTestCase(TestCase):
             scheduler to enable restarting the salt-minion
         '''
         mock_true = MagicMock(return_value=True)
-        with patch.dict(win_service.__salt__, {'cmd.shell': mock_true}):
+        with patch.dict(win_service.__salt__, {'task.create_task': mock_true}):
             self.assertTrue(win_service.create_win_salt_restart_task())
 
     def test_execute_salt_restart_task(self):
@@ -149,7 +144,7 @@ class WinServiceTestCase(TestCase):
             Test to run the Windows Salt restart task
         '''
         mock_true = MagicMock(return_value=True)
-        with patch.dict(win_service.__salt__, {'cmd.shell': mock_true}):
+        with patch.dict(win_service.__salt__, {'task.run': mock_true}):
             self.assertTrue(win_service.execute_salt_restart_task())
 
     def test_status(self):
@@ -168,9 +163,9 @@ class WinServiceTestCase(TestCase):
         '''
             Test to return the sid for this windows service
         '''
-        mock = MagicMock(side_effect=["SERVICE SID:2", "SERVICE SID"])
+        mock = MagicMock(side_effect=["SERVICE SID:S-1-5-80-1956725871-603941828-2318551034-3950094706-3826225633", "SERVICE SID"])
         with patch.dict(win_service.__salt__, {'cmd.run': mock}):
-            self.assertEqual(win_service.getsid("salt"), '2')
+            self.assertEqual(win_service.getsid("salt"), 'S-1-5-80-1956725871-603941828-2318551034-3950094706-3826225633')
 
             self.assertEqual(win_service.getsid("salt"), None)
 

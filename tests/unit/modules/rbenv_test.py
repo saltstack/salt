@@ -122,26 +122,6 @@ class RbenvTestCase(TestCase):
         with patch.object(rbenv, '_rbenv_exec', return_value=None):
             self.assertTrue(rbenv.rehash())
 
-    def test_do(self):
-        '''
-        Test for execute a ruby command with rbenv's shims from
-        the user or the system.
-        '''
-        with patch.object(rbenv, '_rbenv_path', return_value='A'):
-            with patch.dict(rbenv.__salt__,
-                            {'cmd.run_all':
-                             MagicMock(return_value={'retcode': 0,
-                                                     'stdout': 'stdout'})}):
-                with patch.object(rbenv, 'rehash', return_value=None):
-                    self.assertEqual(rbenv.do(), 'stdout')
-
-            with patch.dict(rbenv.__salt__,
-                            {'cmd.run_all':
-                             MagicMock(return_value={'retcode': 1,
-                                                     'stdout': 'stdout'})}):
-                with patch.object(rbenv, 'rehash', return_value=None):
-                    self.assertFalse(rbenv.do(), 'stdout')
-
     def test_do_with_ruby(self):
         '''
         Test for execute a ruby command with rbenv's shims using a

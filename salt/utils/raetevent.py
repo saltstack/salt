@@ -4,9 +4,9 @@ Manage events
 
 This module is used to manage events via RAET
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
 import time
@@ -17,12 +17,15 @@ import salt.payload
 import salt.loader
 import salt.state
 import salt.utils.event
-from salt import transport
 from salt.utils import kinds
+from salt import transport
 from salt import syspaths
 from raet import raeting, nacling
 from raet.lane.stacking import LaneStack
 from raet.lane.yarding import RemoteYard
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -37,26 +40,26 @@ class RAETEvent(object):
         '''
         self.node = node  # application kind see kinds.APPL_KIND_NAMES
         self.sock_dir = sock_dir
-        self.listen = listen
         if opts is None:
             opts = {}
         self.opts = opts
         self.stack = None
         self.ryn = 'manor'  # remote yard name
         self.connected = False
-        self.__prep_stack()
+        self.__prep_stack(listen)
 
-    def __prep_stack(self):
+    def __prep_stack(self, listen):
         '''
         Prepare the stack objects
         '''
         if not self.stack:
-            if transport.jobber_stack:
+            if hasattr(transport, 'jobber_stack') and transport.jobber_stack:
                 self.stack = transport.jobber_stack
             else:
                 self.stack = transport.jobber_stack = self._setup_stack(ryn=self.ryn)
         log.debug("RAETEvent Using Jobber Stack at = {0}\n".format(self.stack.ha))
-        self.connect_pub()
+        if listen:
+            self.subscribe()
 
     def _setup_stack(self, ryn='manor'):
         kind = self.opts.get('__role', '')  # opts optional for master
@@ -109,7 +112,8 @@ class RAETEvent(object):
         '''
         Included for compat with zeromq events, not required
         '''
-        return
+        if not self.connected:
+            self.connect_pub()
 
     def unsubscribe(self, tag=None):
         '''
@@ -121,16 +125,15 @@ class RAETEvent(object):
         '''
         Establish the publish connection
         '''
-        if not self.connected and self.listen:
-            try:
-                route = {'dst': (None, self.ryn, 'event_req'),
-                         'src': (None, self.stack.local.name, None)}
-                msg = {'route': route}
-                self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
-                self.stack.serviceAll()
-                self.connected = True
-            except Exception:
-                pass
+        try:
+            route = {'dst': (None, self.ryn, 'event_req'),
+                     'src': (None, self.stack.local.name, None)}
+            msg = {'route': route}
+            self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
+            self.stack.serviceAll()
+            self.connected = True
+        except Exception:
+            pass
 
     def connect_pull(self, timeout=1000):
         '''
@@ -145,7 +148,7 @@ class RAETEvent(object):
         '''
         return raw
 
-    def get_event(self, wait=5, tag='', full=False):
+    def get_event(self, wait=5, tag='', match_type=None, full=False, no_block=None):
         '''
         Get a single publication.
         IF no publication available THEN block for up to wait seconds
@@ -153,7 +156,8 @@ class RAETEvent(object):
 
         IF wait is 0 then block forever.
         '''
-        self.connect_pub()
+        if not self.connected:
+            self.connect_pub()
         start = time.time()
         while True:
             self.stack.serviceAll()
@@ -177,7 +181,8 @@ class RAETEvent(object):
         '''
         Get the raw event msg without blocking or any other niceties
         '''
-        self.connect_pub()
+        if not self.connected:
+            self.connect_pub()
         self.stack.serviceAll()
         if self.stack.rxMsgs:
             msg, sender = self.stack.rxMsgs.popleft()
@@ -201,13 +206,12 @@ class RAETEvent(object):
         Send a single event into the publisher with paylod dict "data" and event
         identifier "tag"
         '''
-        self.connect_pub()
         # Timeout is retained for compat with zeromq events
         if not str(tag):  # no empty tags allowed
             raise ValueError('Empty tag.')
 
         if not isinstance(data, MutableMapping):  # data must be dict
-            raise ValueError('Dict object expected, not "{0!r}".'.format(data))
+            raise ValueError('Dict object expected, not \'{0}\'.'.format(data))
         route = {'dst': (None, self.ryn, 'event_fire'),
                  'src': (None, self.stack.local.name, None)}
         msg = {'route': route, 'tag': tag, 'data': data}
@@ -222,7 +226,7 @@ class RAETEvent(object):
             # Minion fired a bad retcode, fire an event
             if load['fun'] in salt.utils.event.SUB_EVENT:
                 try:
-                    for tag, data in load.get('return', {}).items():
+                    for tag, data in six.iteritems(load.get('return', {})):
                         data['retcode'] = load['retcode']
                         tags = tag.split('_|-')
                         if data.get('result') is False:
@@ -261,17 +265,44 @@ class MasterEvent(RAETEvent):
 
 class PresenceEvent(MasterEvent):
 
+    def __init__(self, opts, sock_dir, listen=True, state=None):
+        self.state = state
+        super(PresenceEvent, self).__init__(opts=opts, sock_dir=sock_dir, listen=listen)
+
     def connect_pub(self):
         '''
         Establish the publish connection
         '''
-        if not self.connected and self.listen:
-            try:
-                route = {'dst': (None, self.ryn, 'presence_req'),
-                         'src': (None, self.stack.local.name, None)}
-                msg = {'route': route}
-                self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
-                self.stack.serviceAll()
-                self.connected = True
-            except Exception:
-                pass
+        try:
+            route = {'dst': (None, self.ryn, 'presence_req'),
+                     'src': (None, self.stack.local.name, None)}
+            msg = {'route': route}
+            if self.state:
+                msg['data'] = {'state': self.state}
+            self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
+            self.stack.serviceAll()
+            self.connected = True
+        except Exception:
+            pass
+
+
+class StatsEvent(MasterEvent):
+
+    def __init__(self, opts, sock_dir, tag, estate=None, listen=True):
+        super(StatsEvent, self).__init__(opts=opts, sock_dir=sock_dir, listen=listen)
+        self.tag = tag
+        self.estate = estate
+
+    def connect_pub(self):
+        '''
+        Establish the publish connection
+        '''
+        try:
+            route = {'dst': (self.estate, None, 'stats_req'),
+                     'src': (None, self.stack.local.name, None)}
+            msg = {'route': route, 'tag': self.tag}
+            self.stack.transmit(msg, self.stack.nameRemotes[self.ryn].uid)
+            self.stack.serviceAll()
+            self.connected = True
+        except Exception:
+            pass

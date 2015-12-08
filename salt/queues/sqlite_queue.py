@@ -19,6 +19,7 @@ from __future__ import absolute_import
 import glob
 import logging
 import os
+import re
 import sqlite3 as lite
 from salt.exceptions import SaltInvocationError
 
@@ -120,6 +121,17 @@ def list_length(queue):
     return len(items)
 
 
+def _quote_escape(item):
+    '''
+    Make sure single quotes are escaped properly in sqlite3 fashion.
+    e.g.: ' becomes ''
+    '''
+
+    rex_sqlquote = re.compile("'", re.M)
+
+    return rex_sqlquote.sub("''", item)
+
+
 def insert(queue, items):
     '''
     Add an item or items to a queue
@@ -128,7 +140,8 @@ def insert(queue, items):
     with con:
         cur = con.cursor()
         if isinstance(items, str):
-            cmd = 'INSERT INTO {0}(name) VALUES("{1}")'.format(queue, items)
+            items = _quote_escape(items)
+            cmd = '''INSERT INTO {0}(name) VALUES('{1}')'''.format(queue, items)
             log.debug('SQL Query: {0}'.format(cmd))
             try:
                 cur.execute(cmd)
@@ -136,7 +149,8 @@ def insert(queue, items):
                 return('Item already exists in this queue. '
                        'sqlite error: {0}'.format(esc))
         if isinstance(items, list):
-            cmd = 'INSERT INTO {0}(name) VALUES(?)'.format(queue)
+            items = [_quote_escape(el) for el in items]
+            cmd = "INSERT INTO {0}(name) VALUES(?)".format(queue)
             log.debug('SQL Query: {0}'.format(cmd))
             newitems = []
             for item in items:
@@ -146,7 +160,7 @@ def insert(queue, items):
                 cur.executemany(cmd, newitems)
             except lite.IntegrityError as esc:
                 return('One or more items already exists in this queue. '
-                      'sqlite error: {0}'.format(esc))
+                       'sqlite error: {0}'.format(esc))
     return True
 
 
@@ -158,11 +172,13 @@ def delete(queue, items):
     with con:
         cur = con.cursor()
         if isinstance(items, str):
-            cmd = 'DELETE FROM {0} WHERE name = "{1}"'.format(queue, items)
+            items = _quote_escape(items)
+            cmd = """DELETE FROM {0} WHERE name = '{1}'""".format(queue, items)
             log.debug('SQL Query: {0}'.format(cmd))
             cur.execute(cmd)
             return True
         if isinstance(items, list):
+            items = [_quote_escape(el) for el in items]
             cmd = 'DELETE FROM {0} WHERE name = ?'.format(queue)
             log.debug('SQL Query: {0}'.format(cmd))
             newitems = []
@@ -195,9 +211,12 @@ def pop(queue, quantity=1):
         if len(result) > 0:
             items = [item[0] for item in result]
             itemlist = '","'.join(items)
-            del_cmd = 'DELETE FROM {0} WHERE name IN ("{1}")'.format(
-                                                               queue, itemlist)
+            _quote_escape(itemlist)
+            del_cmd = '''DELETE FROM {0} WHERE name IN ("{1}")'''.format(
+                queue, itemlist)
+
             log.debug('SQL Query: {0}'.format(del_cmd))
+
             cur.execute(del_cmd)
         con.commit()
     log.info(items)

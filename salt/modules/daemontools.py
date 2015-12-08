@@ -15,16 +15,21 @@ so it can be used to maintain services using the ``provider`` argument:
 from __future__ import absolute_import
 
 # Import python libs
+import logging
 import os
+import os.path
 import re
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError
 
 # Function alias to not shadow built-ins.
 __func_alias__ = {
     'reload_': 'reload'
 }
+
+log = logging.getLogger(__name__)
 
 VALID_SERVICE_DIRS = [
     '/service',
@@ -36,6 +41,12 @@ for service_dir in VALID_SERVICE_DIRS:
     if os.path.exists(service_dir):
         SERVICE_DIR = service_dir
         break
+
+
+def __virtual__():
+    # Ensure that daemontools is installed properly.
+    BINS = frozenset(('svc', 'supervise', 'svok'))
+    return all(salt.utils.which(b) for b in BINS)
 
 
 def _service_path(name):
@@ -201,3 +212,50 @@ def get_all():
         raise CommandExecutionError("Could not find service directory.")
     #- List all daemontools services in
     return sorted(os.listdir(SERVICE_DIR))
+
+
+def enabled(name, **kwargs):
+    '''
+    Return True if the named service is enabled, false otherwise
+    A service is considered enabled if in your service directory:
+    - an executable ./run file exist
+    - a file named "down" does not exist
+
+    .. versionadded:: 2015.5.7
+
+    name
+        Service name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' daemontools.enabled <service name>
+    '''
+    if not available(name):
+        log.error('Service {0} not found'.format(name))
+        return False
+
+    run_file = os.path.join(SERVICE_DIR, name, 'run')
+    down_file = os.path.join(SERVICE_DIR, name, 'down')
+
+    return (
+        os.path.isfile(run_file) and
+        os.access(run_file, os.X_OK) and not
+        os.path.isfile(down_file)
+    )
+
+
+def disabled(name):
+    '''
+    Return True if the named service is enabled, false otherwise
+
+    .. versionadded:: 2015.5.6
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' daemontools.disabled <service name>
+    '''
+    return not enabled(name)

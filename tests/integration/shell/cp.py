@@ -8,6 +8,7 @@
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import yaml
 import pipes
@@ -20,6 +21,9 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -35,7 +39,9 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             if not line:
                 continue
             data = yaml.load(line)
-            minions.extend(data.keys())
+            minions.extend(data.keys())     # pylint: disable=incompatible-py3-code
+                                            #   since we're extending a list, the Py3 dict_keys view will behave
+                                            #   as expected.
 
         self.assertNotEqual(minions, [])
 
@@ -70,14 +76,14 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
                 integration.TMP, 'cp_{0}_testfile'.format(idx)
             )
 
-            ret = self.run_cp('{0} {1} {2}'.format(
+            ret = self.run_cp('--out pprint {0} {1} {2}'.format(
                 pipes.quote(minion),
                 pipes.quote(testfile),
                 pipes.quote(minion_testfile)
             ))
 
             data = yaml.load('\n'.join(ret))
-            for part in data.values():
+            for part in six.itervalues(data):
                 self.assertTrue(part[minion_testfile])
 
             ret = self.run_salt(
@@ -132,7 +138,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
         ret = self.run_script(
             self._call_binary_,
-            '--config-dir {0} \'*\' foo {0}/foo'.format(
+            '--out pprint --config-dir {0} \'*\' foo {0}/foo'.format(
                 config_dir
             ),
             catch_stderr=True,
@@ -153,7 +159,7 @@ class CopyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             self.assertEqual(ret[2], 2)
         finally:
             if old_cwd is not None:
-                os.chdir(old_cwd)
+                self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 

@@ -10,14 +10,15 @@ from __future__ import absolute_import
 # import sys  # Use if sys is commented out below
 import logging
 import gc
+import datetime
 
 # Import salt libs
 import salt.log
-import salt.ext.six as six
-
+import salt.crypt
 from salt.exceptions import SaltReqTimeoutError
 
 # Import third party libs
+import salt.ext.six as six
 try:
     import zmq
 except ImportError:
@@ -151,12 +152,42 @@ class Serial(object):
                     for idx, entry in enumerate(obj):
                         obj[idx] = verylong_encoder(entry)
                     return obj
-                if isinstance(obj, long) and long > pow(2, 64):
+                if six.PY2 and isinstance(obj, long) and long > pow(2, 64):  # pylint: disable=incompatible-py3-code
+                    return str(obj)
+                elif six.PY3 and isinstance(obj, int) and int > pow(2, 64):
                     return str(obj)
                 else:
                     return obj
             return msgpack.dumps(verylong_encoder(msg))
-        except TypeError:
+        except TypeError as e:
+            # msgpack doesn't support datetime.datetime datatype
+            # So here we have converted datetime.datetime to custom datatype
+            # This is msgpack Extended types numbered 78
+            def default(obj):
+                return msgpack.ExtType(78, obj)
+
+            def dt_encode(obj):
+                datetime_str = obj.strftime("%Y%m%dT%H:%M:%S.%f")
+                return msgpack.packb(datetime_str, default=default)
+
+            def datetime_encoder(obj):
+                if isinstance(obj, dict):
+                    for key, value in six.iteritems(obj.copy()):
+                        obj[key] = datetime_encoder(value)
+                    return dict(obj)
+                elif isinstance(obj, (list, tuple)):
+                    obj = list(obj)
+                    for idx, entry in enumerate(obj):
+                        obj[idx] = datetime_encoder(entry)
+                    return obj
+                if isinstance(obj, datetime.datetime):
+                    return dt_encode(obj)
+                else:
+                    return obj
+
+            if "datetime.datetime" in str(e):
+                return msgpack.dumps(datetime_encoder(msg))
+
             if msgpack.version >= (0, 2, 0):
                 # Should support OrderedDict serialization, so, let's
                 # raise the exception
@@ -180,7 +211,7 @@ class Serial(object):
                     return obj
                 return obj
             return msgpack.dumps(odict_encoder(msg))
-        except SystemError as exc:
+        except (SystemError, TypeError) as exc:
             log.critical('Unable to serialize message! Consider upgrading msgpack. '
                          'Message which failed was {failed_message} '
                          'with exception {exception_message}').format(msg, exc)

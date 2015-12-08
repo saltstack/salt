@@ -19,33 +19,46 @@ A REST API for Salt
 :client_libraries:
     - Java: https://github.com/SUSE/saltstack-netapi-client-java
     - Python: https://github.com/saltstack/pepper
+:setup:
+    All steps below are performed on the machine running the Salt Master
+    daemon. Configuration goes into the Master configuration file.
+
+    1.  Install ``salt-api``. (This step varies between OS and Linux distros.
+        Some package systems have a split package, others include salt-api in
+        the main Salt package. Ensure the ``salt-api --version`` output matches
+        the ``salt --version`` output.)
+    2.  Install CherryPy. (Read the version caveat in the section above.)
+    3.  Optional: generate self-signed SSL certificates.
+
+        Using a secure HTTPS connection is strongly recommended since Salt
+        eauth authentication credentials will be sent over the wire.
+
+        1.  Install the PyOpenSSL package.
+        2.  Generate a self-signed certificate using the
+            :py:func:`~salt.modules.tls.create_self_signed_cert` execution
+            function.
+
+            .. code-block:: bash
+
+                salt-call --local tls.create_self_signed_cert
+
+    4.  Edit the master config to create at least one external auth user or
+        group following the :ref:`full external auth instructions <acl-eauth>`.
+    5.  Edit the master config with the following production-ready example to
+        enable the ``rest_cherrypy`` module. (Adjust cert paths as needed, or
+        disable SSL (not recommended!).)
+
+        .. code-block:: yaml
+
+            rest_cherrypy:
+              port: 8000
+              ssl_crt: /etc/pki/tls/certs/localhost.crt
+              ssl_key: /etc/pki/tls/certs/localhost.key
+
+    6.  Restart the ``salt-master`` daemon.
+    7.  Start the ``salt-api`` daemon.
+
 :configuration:
-    All authentication is done through Salt's :ref:`external auth
-    <acl-eauth>` system which requires additional configuration not described
-    here.
-
-    Example production-ready configuration; add to the Salt master config file
-    and restart the ``salt-master`` and ``salt-api`` daemons:
-
-    .. code-block:: yaml
-
-        rest_cherrypy:
-          port: 8000
-          ssl_crt: /etc/pki/tls/certs/localhost.crt
-          ssl_key: /etc/pki/tls/certs/localhost.key
-
-    Using only a secure HTTPS connection is strongly recommended since Salt
-    authentication credentials will be sent over the wire.
-
-    A self-signed certificate can be generated using the
-    :py:func:`~salt.modules.tls.create_self_signed_cert` execution function.
-    Running this function requires pyOpenSSL and the ``salt-call`` script is
-    available in the ``salt-minion`` package.
-
-    .. code-block:: bash
-
-        salt-call --local tls.create_self_signed_cert
-
     All available configuration options are detailed below. These settings
     configure the CherryPy HTTP server and do not apply when using an external
     server such as Apache or Nginx.
@@ -238,9 +251,8 @@ command sent to minions as well as a runner function on the master::
 # We need a custom pylintrc here...
 # pylint: disable=W0212,E1101,C0103,R0201,W0221,W0613
 
-from __future__ import absolute_import
-
 # Import Python libs
+from __future__ import absolute_import
 import collections
 import itertools
 import functools
@@ -252,9 +264,13 @@ import time
 from multiprocessing import Process, Pipe
 
 # Import third-party libs
+# pylint: disable=import-error
 import cherrypy
 from cherrypy.lib import cpstats
 import yaml
+import salt.ext.six as six
+# pylint: enable=import-error
+
 
 # Import Salt libs
 import salt
@@ -325,6 +341,75 @@ def salt_token_tool():
     # X-Auth-Token header trumps session cookie
     if x_auth:
         cherrypy.request.cookie['session_id'] = x_auth
+
+
+def salt_api_acl_tool(username, request):
+    '''
+    ..versionadded:: Boron
+
+    Verifies user requests against the API whitelist. (User/IP pair)
+    in order to provide whitelisting for the API similar to the
+    master, but over the API.
+
+    ..code-block:: yaml
+
+        rest_cherrypy:
+            api_acl:
+                users:
+                    '*':
+                        - 1.1.1.1
+                        - 1.1.1.2
+                    foo:
+                        - 8.8.4.4
+                    bar:
+                        - '*'
+
+    :param username: Username to check against the API.
+    :type username: str
+    :param request: Cherrypy request to check against the API.
+    :type request: cherrypy.request
+    '''
+    failure_str = ("[api_acl] Authentication failed for "
+                   "user {0} from IP {1}")
+    success_str = ("[api_acl] Authentication sucessful for "
+                   "user {0} from IP {1}")
+    pass_str = ("[api_acl] Authentication not checked for "
+                "user {0} from IP {1}")
+
+    acl = None
+    # Salt Configuration
+    salt_config = cherrypy.config.get('saltopts', None)
+    if salt_config:
+        # Cherrypy Config.
+        cherrypy_conf = salt_config.get('rest_cherrypy', None)
+        if cherrypy_conf:
+            # ACL Config.
+            acl = cherrypy_conf.get('api_acl', None)
+
+    ip = request.remote.ip
+    if acl:
+        users = acl.get('users', {})
+        if users:
+            if username in users:
+                if ip in users[username] or '*' in users[username]:
+                    logger.info(success_str.format(username, ip))
+                    return True
+                else:
+                    logger.info(failure_str.format(username, ip))
+                    return False
+            elif username not in users and '*' in users:
+                if ip in users['*'] or '*' in users['*']:
+                    logger.info(success_str.format(username, ip))
+                    return True
+                else:
+                    logger.info(failure_str.format(username, ip))
+                    return False
+            else:
+                logger.info(failure_str.format(username, ip))
+                return False
+    else:
+        logger.info(pass_str.format(username, ip))
+        return True
 
 
 def salt_ip_verify_tool():
@@ -608,7 +693,7 @@ def lowdata_fmt():
     # if the data was sent as urlencoded, we need to make it a list.
     # this is a very forgiving implementation as different clients set different
     # headers for form encoded data (including charset or something similar)
-    if not isinstance(data, list):
+    if data and not isinstance(data, list):
         # Make the 'arg' param a list if not already
         if 'arg' in data and not isinstance(data['arg'], list):
             data['arg'] = [data['arg']]
@@ -627,7 +712,7 @@ cherrypy.tools.salt_auth = cherrypy.Tool('before_request_body',
         salt_auth_tool, priority=60)
 cherrypy.tools.hypermedia_in = cherrypy.Tool('before_request_body',
         hypermedia_in)
-cherrypy.tools.cors_tool = cherrypy.Tool('before_handler',
+cherrypy.tools.cors_tool = cherrypy.Tool('before_request_body',
         cors_tool, priority=30)
 cherrypy.tools.lowdata_fmt = cherrypy.Tool('before_handler',
         lowdata_fmt, priority=40)
@@ -986,7 +1071,7 @@ class Jobs(LowDataAdapter):
         'tools.salt_auth.on': True,
     })
 
-    def GET(self, jid=None):
+    def GET(self, jid=None, timeout=''):
         '''
         A convenience URL for getting lists of previously run jobs or getting
         the return from a single job
@@ -1108,6 +1193,7 @@ class Keys(LowDataAdapter):
     module <salt.wheel.key>` functions.
     '''
 
+    @cherrypy.config(**{'tools.salt_token.on': True})
     def GET(self, mid=None):
         '''
         Show the list of minion keys or detail on a specific key
@@ -1175,8 +1261,6 @@ class Keys(LowDataAdapter):
               minions:
                 jerry: 51:93:b3:d0:9f:3a:6d:e5:28:67:c2:4b:27:d6:cd:2b
         '''
-        self._cp_config['tools.salt_token.on'] = True
-
         if mid:
             lowstate = [{
                 'client': 'wheel',
@@ -1194,11 +1278,13 @@ class Keys(LowDataAdapter):
 
         return {'return': next(result, {}).get('data', {}).get('return', {})}
 
-    def POST(self, mid, keysize=None, force=None, **kwargs):
+    @cherrypy.config(**{'tools.hypermedia_out.on': False, 'tools.sessions.on': False})
+    def POST(self, **kwargs):
         r'''
         Easily generate keys for a minion and auto-accept the new key
 
-        .. versionadded:: 2014.7.0
+        Accepts all the same parameters as the :py:func:`key.gen_accept
+        <salt.wheel.key.gen_accept>`.
 
         Example partial kickstart script to bootstrap a new minion:
 
@@ -1254,24 +1340,15 @@ class Keys(LowDataAdapter):
 
             jerry.pub0000644000000000000000000000070300000000000010730 0ustar  00000000000000
         '''
-        self._cp_config['tools.hypermedia_out.on'] = False
-        self._cp_config['tools.sessions.on'] = False
-
-        lowstate = [{
+        lowstate = cherrypy.request.lowstate
+        lowstate[0].update({
             'client': 'wheel',
             'fun': 'key.gen_accept',
-            'id_': mid,
-        }]
+        })
 
-        if keysize:
-            lowstate[0]['keysize'] = keysize
+        if 'mid' in lowstate[0]:
+            lowstate[0]['id_'] = lowstate[0].pop('mid')
 
-        if force:
-            lowstate[0]['force'] = force
-
-        lowstate[0].update(kwargs)
-
-        cherrypy.request.lowstate = lowstate
         result = self.exec_lowstate()
         ret = next(result, {}).get('data', {}).get('return', {})
 
@@ -1290,7 +1367,7 @@ class Keys(LowDataAdapter):
         tarball.close()
 
         headers = cherrypy.response.headers
-        headers['Content-Disposition'] = 'attachment; filename="saltkeys-{0}.tar"'.format(mid)
+        headers['Content-Disposition'] = 'attachment; filename="saltkeys-{0}.tar"'.format(lowstate[0]['id_'])
         headers['Content-Type'] = 'application/x-tar'
         headers['Content-Length'] = fileobj.len
         headers['Cache-Control'] = 'no-cache'
@@ -1421,6 +1498,12 @@ class Login(LowDataAdapter):
         else:
             creds = cherrypy.serving.request.lowstate
 
+        username = creds.get('username', None)
+        # Validate against the whitelist.
+        if not salt_api_acl_tool(username, cherrypy.request):
+            raise cherrypy.HTTPError(401)
+
+        # Mint token.
         token = self.auth.mk_token(creds)
         if 'token' not in token:
             raise cherrypy.HTTPError(401,
@@ -1779,7 +1862,8 @@ class Events(object):
                     'master',
                     sock_dir=self.opts['sock_dir'],
                     transport=self.opts['transport'],
-                    opts=self.opts)
+                    opts=self.opts,
+                    listen=True)
             stream = event.iter_events(full=True)
 
             yield u'retry: {0}\n'.format(400)
@@ -1829,21 +1913,21 @@ class WebsocketEndpoint(object):
 
         .. http:get:: /ws/(token)
 
-            :query format_events: The event stream will undergo server-side
-                formatting if the ``format_events`` URL parameter is included
-                in the request. This can be useful to avoid formatting on the
-                client-side:
+        :query format_events: The event stream will undergo server-side
+            formatting if the ``format_events`` URL parameter is included
+            in the request. This can be useful to avoid formatting on the
+            client-side:
 
-                .. code-block:: bash
+            .. code-block:: bash
 
-                    curl -NsS <...snip...> localhost:8000/ws?format_events
+                curl -NsS <...snip...> localhost:8000/ws?format_events
 
-            :reqheader X-Auth-Token: an authentication token from
-                :py:class:`~Login`.
+        :reqheader X-Auth-Token: an authentication token from
+            :py:class:`~Login`.
 
-            :status 101: switching to the websockets protocol
-            :status 401: |401|
-            :status 406: |406|
+        :status 101: switching to the websockets protocol
+        :status 401: |401|
+        :status 406: |406|
 
         **Example request:**
 
@@ -1952,7 +2036,8 @@ class WebsocketEndpoint(object):
                     'master',
                     sock_dir=self.opts['sock_dir'],
                     transport=self.opts['transport'],
-                    opts=self.opts)
+                    opts=self.opts,
+                    listen=True)
             stream = event.iter_events(full=True)
             SaltInfo = event_processor.SaltInfo(handler)
             while True:
@@ -2132,7 +2217,9 @@ class Webhook(object):
         '''
         tag = '/'.join(itertools.chain(self.tag_base, args))
         data = cherrypy.serving.request.unserialized_data
-        raw_body = cherrypy.serving.request.raw_body
+        if not data:
+            data = {}
+        raw_body = getattr(cherrypy.serving.request, 'raw_body', '')
         headers = dict(cherrypy.request.headers)
 
         ret = self.event.fire_event({
@@ -2221,7 +2308,7 @@ class API(object):
 
         CherryPy uses class attributes to resolve URLs.
         '''
-        for url, cls in self.url_map.items():
+        for url, cls in six.iteritems(self.url_map):
             setattr(self, url, cls())
 
     def _update_url_map(self):

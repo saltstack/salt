@@ -42,6 +42,7 @@ Module for handling OpenStack Neutron calls
 '''
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 
 # Import salt libs
@@ -372,7 +373,7 @@ def show_network(network, profile=None):
     return conn.show_network(network)
 
 
-def create_network(name, router_ext=False, profile=None):
+def create_network(name, router_ext=None, admin_state_up=True, network_type=None, physical_network=None, segmentation_id=None, shared=None, profile=None):
     '''
     Creates a new network
 
@@ -384,13 +385,18 @@ def create_network(name, router_ext=False, profile=None):
         salt '*' neutron.create_network network-name profile=openstack1
 
     :param name: Name of network to create
-    :param router_ext: True then if create the external network,
-            default: False (Optional)
+    :param admin_state_up: should the state of the network be up?
+            default: True (Optional)
+    :param router_ext: True then if create the external network (Optional)
+    :param network_type: the Type of network that the provider is such as GRE, VXLAN, VLAN, FLAT, or LOCAL (Optional)
+    :param physical_network: the name of the physical network as neutron knows it (Optional)
+    :param segmentation_id: the vlan id or GRE id (Optional)
+    :param shared: is the network shared or not (Optional)
     :param profile: Profile to build on (Optional)
     :return: Created network information
     '''
     conn = _auth(profile)
-    return conn.create_network(name, router_ext)
+    return conn.create_network(name, admin_state_up, router_ext, network_type, physical_network, segmentation_id, shared)
 
 
 def update_network(network, name, profile=None):
@@ -1364,6 +1370,21 @@ def delete_ipsecpolicy(ipsecpolicy, profile=None):
     '''
     conn = _auth(profile)
     return conn.delete_ipsecpolicy(ipsecpolicy)
+
+
+def list_firewall_rules(profile=None):
+    '''
+    Fetches a list of all firewall rules for a tenant
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.list_firewall_rules
+    :param profile: Profile to build on (Optional)
+    :return: List of firewall rules
+    '''
+    conn = _auth(profile)
+    return conn.list_firewall_rules()
 
 
 # The following is a list of functions that need to be incorporated in the

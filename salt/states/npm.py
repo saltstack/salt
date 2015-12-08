@@ -18,10 +18,13 @@ for the package which provides npm (simply ``npm`` in most cases). Example:
         - require:
           - pkg: npm
 '''
-from __future__ import absolute_import
 
 # Import salt libs
+from __future__ import absolute_import
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -103,7 +106,7 @@ def installed(name,
         return ret
     else:
         installed_pkgs = dict((p, info)
-                for p, info in installed_pkgs.items())
+                for p, info in six.iteritems(installed_pkgs))
 
     pkgs_satisfied = []
     pkgs_to_install = []
@@ -125,9 +128,12 @@ def installed(name,
         # Check to see if we are trying to install from a URI
         elif '://' in pkg_name:  # TODO Better way?
             for pkg_details in installed_pkgs.values():
-                pkg_from = pkg_details.get('from', '').split('://')[1]
-                if pkg_name.split('://')[1] == pkg_from:
-                    return True
+                try:
+                    pkg_from = pkg_details.get('from', '').split('://')[1]
+                    if pkg_name.split('://')[1] == pkg_from:
+                        return True
+                except IndexError:
+                    pass
         return False
 
     for pkg in pkg_list:

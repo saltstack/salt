@@ -2,15 +2,16 @@
 '''
 A collection of mixins useful for the various *Client interfaces
 '''
-from __future__ import print_function
-from __future__ import absolute_import
-import collections
-import copy
-import logging
-import traceback
-import multiprocessing
-import weakref
 
+# Import Python libs
+from __future__ import absolute_import, print_function, with_statement
+import signal
+import logging
+import weakref
+import traceback
+import collections
+
+# Import Salt libs
 import salt.exceptions
 import salt.minion
 import salt.utils
@@ -18,10 +19,16 @@ import salt.utils.event
 import salt.utils.jid
 import salt.utils.job
 import salt.transport
+import salt.log.setup
 from salt.utils.error import raise_error
 from salt.utils.event import tagify
 from salt.utils.doc import strip_rst as _strip_rst
 from salt.utils.lazy import verify_fun
+from salt.utils.process import default_signals, SignalHandlingMultiprocessingProcess
+
+# Import 3rd-party libs
+import salt.ext.six as six
+import tornado.stack_context
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +43,8 @@ CLIENT_INTERNAL_KEYWORDS = frozenset([
     '__jid__',
     '__tag__',
     '__user__',
+    'username',
+    'password'
 ])
 
 
@@ -66,21 +75,25 @@ class ClientFuncsDict(collections.MutableMapping):
                    'kwargs': kwargs,
                    }
             pub_data = {}
+            # Copy kwargs keys so we can iterate over and pop the pub data
+            kwargs_keys = list(kwargs)
+
             # pull out pub_data if you have it
-            for kwargs_key, kwargs_value in kwargs.items():
+            for kwargs_key in kwargs_keys:
                 if kwargs_key.startswith('__pub_'):
                     pub_data[kwargs_key] = kwargs.pop(kwargs_key)
 
             async_pub = self.client._gen_async_pub(pub_data.get('__pub_jid'))
 
             user = salt.utils.get_specific_user()
-            return self.client._proc_function(key,
-                   low,
-                   user,
-                   async_pub['tag'],  # TODO: fix
-                   async_pub['jid'],  # TODO: fix
-                   False,  # Don't daemonize
-                   )
+            return self.client._proc_function(
+                key,
+                low,
+                user,
+                async_pub['tag'],  # TODO: fix
+                async_pub['jid'],  # TODO: fix
+                False,  # Don't daemonize
+            )
         return wrapper
 
     def __len__(self):
@@ -135,12 +148,12 @@ class SyncClientMixin(object):
                 'eauth': 'pam',
             })
         '''
-        event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'])
+        event = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=True)
         job = self.master_call(**low)
         ret_tag = salt.utils.event.tagify('ret', base=job['tag'])
 
         if timeout is None:
-            timeout = 300
+            timeout = self.opts.get('rest_timeout', 300)
         ret = event.get_event(tag=ret_tag, full=True, wait=timeout)
         if ret is None:
             raise salt.exceptions.SaltClientTimeout(
@@ -230,6 +243,10 @@ class SyncClientMixin(object):
                 - __jid__: jid to run under
                 - __tag__: tag to run under
         '''
+        # fire the mminion loading (if not already done) here
+        # this is not to clutter the output with the module loading
+        # if we have a high debug level.
+        self.mminion  # pylint: disable=W0104
         jid = low.get('__jid__', salt.utils.jid.gen_jid())
         tag = low.get('__tag__', tagify(jid, prefix=self.tag_prefix))
 
@@ -270,14 +287,15 @@ class SyncClientMixin(object):
             # Inject some useful globals to *all* the function's global
             # namespace only once per module-- not per func
             completed_funcs = []
-            _functions = copy.deepcopy(self.functions)
 
-            for mod_name in _functions:
+            for mod_name in six.iterkeys(self.functions):
+                if '.' not in mod_name:
+                    continue
                 mod, _ = mod_name.split('.', 1)
                 if mod in completed_funcs:
                     continue
                 completed_funcs.append(mod)
-                for global_key, value in func_globals.iteritems():
+                for global_key, value in six.iteritems(func_globals):
                     self.functions[mod_name].__globals__[global_key] = value
 
             # There are some descrepencies of what a "low" structure is in the
@@ -317,14 +335,19 @@ class SyncClientMixin(object):
             else:
                 kwargs = low['kwargs']
 
-            data['return'] = self.functions[fun](*args, **kwargs)
-            data['success'] = True
-        except (Exception, SystemExit) as exc:
-            data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
-                            self.client,
-                            fun,
-                            traceback.format_exc(),
-                            )
+            # Initialize a context for executing the method.
+            with tornado.stack_context.StackContext(self.functions.context_dict.clone):
+                data['return'] = self.functions[fun](*args, **kwargs)
+                data['success'] = True
+        except (Exception, SystemExit) as ex:
+            if isinstance(ex, salt.exceptions.NotImplemented):
+                data['return'] = str(ex)
+            else:
+                data['return'] = 'Exception occurred in {0} {1}: {2}'.format(
+                                self.client,
+                                fun,
+                                traceback.format_exc(),
+                                )
             data['success'] = False
 
         namespaced_event.fire_event(data, 'ret')
@@ -377,7 +400,13 @@ class AsyncClientMixin(object):
         multiprocess and fire the return data on the event bus
         '''
         if daemonize:
+            # Shutdown the multiprocessing before daemonizing
+            salt.log.setup.shutdown_multiprocessing_logging()
+
             salt.utils.daemonize()
+
+            # Reconfigure multiprocessing logging after daemonizing
+            salt.log.setup.setup_multiprocessing_logging()
 
         # pack a few things into low
         low['__jid__'] = jid
@@ -419,10 +448,13 @@ class AsyncClientMixin(object):
         '''
         async_pub = self._gen_async_pub()
 
-        proc = multiprocessing.Process(
+        proc = SignalHandlingMultiprocessingProcess(
                 target=self._proc_function,
                 args=(fun, low, user, async_pub['tag'], async_pub['jid']))
-        proc.start()
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            # Reset current signals before starting the process in
+            # order not to inherit the current signal handlers
+            proc.start()
         proc.join()  # MUST join, otherwise we leave zombies all over
         return async_pub
 
@@ -446,11 +478,6 @@ class AsyncClientMixin(object):
         except AttributeError:
             outputter = None
 
-        try:
-            if event.get('return').get('outputter'):
-                event['return'].pop('outputter')
-        except AttributeError:
-            pass
         # if this is a ret, we have our own set of rules
         if suffix == 'ret':
             # Check if ouputter was passed in the return data. If this is the case,

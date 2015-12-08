@@ -18,13 +18,16 @@ import collections
 from salttesting import TestCase
 from salttesting.helpers import ensure_in_syspath
 
-import integration
-
 ensure_in_syspath('../../')
 
+import integration  # pylint: disable=import-error
+
 # Import Salt libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
+from salt.ext.six.moves import range
 from salt.config import minion_config
+# pylint: enable=no-name-in-module,redefined-builtin
 
 from salt.loader import LazyLoader, _module_dirs, grains
 
@@ -430,6 +433,94 @@ class LazyLoaderSubmodReloadingTest(TestCase):
         self.rm_lib()
         self.loader.clear()
         self.assertNotIn(self.module_key, self.loader)
+
+
+mod_template = '''
+def test():
+    return ({val})
+'''
+
+
+class LazyLoaderModulePackageTest(TestCase):
+    '''
+    Test the loader of salt with changing modules
+    '''
+    module_name = 'loadertestmodpkg'
+    module_key = 'loadertestmodpkg.test'
+
+    def setUp(self):
+        self.opts = _config = minion_config(None)
+        self.opts['grains'] = grains(self.opts)
+        self.tmp_dir = tempfile.mkdtemp(dir=integration.TMP)
+
+        dirs = _module_dirs(self.opts, 'modules', 'module')
+        dirs.append(self.tmp_dir)
+        self.loader = LazyLoader(dirs,
+                                 self.opts,
+                                 tag='module')
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp_dir)
+
+    def update_pyfile(self, pyfile, contents):
+        dirname = os.path.dirname(pyfile)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        with open(pyfile, 'wb') as fh:
+            fh.write(contents)
+            fh.flush()
+            os.fsync(fh.fileno())  # flush to disk
+
+        # pyc files don't like it when we change the original quickly
+        # since the header bytes only contain the timestamp (granularity of seconds)
+        # TODO: don't write them? Is *much* slower on re-load (~3x)
+        # https://docs.python.org/2/library/sys.html#sys.dont_write_bytecode
+        try:
+            os.unlink(pyfile + 'c')
+        except OSError:
+            pass
+
+    def rm_pyfile(self, pyfile):
+        os.unlink(pyfile)
+        os.unlink(pyfile + 'c')
+
+    def update_module(self, relative_path, contents):
+        self.update_pyfile(os.path.join(self.tmp_dir, relative_path), contents)
+
+    def rm_module(self, relative_path):
+        self.rm_pyfile(os.path.join(self.tmp_dir, relative_path))
+
+    def test_module(self):
+        # ensure it doesn't exist
+        self.assertNotIn('foo', self.loader)
+        self.assertNotIn('foo.test', self.loader)
+        self.update_module('foo.py', mod_template.format(val=1))
+        self.loader.clear()
+        self.assertIn('foo.test', self.loader)
+        self.assertEqual(self.loader['foo.test'](), 1)
+
+    def test_package(self):
+        # ensure it doesn't exist
+        self.assertNotIn('foo', self.loader)
+        self.assertNotIn('foo.test', self.loader)
+        self.update_module('foo/__init__.py', mod_template.format(val=2))
+        self.loader.clear()
+        self.assertIn('foo.test', self.loader)
+        self.assertEqual(self.loader['foo.test'](), 2)
+
+    def test_module_package_collision(self):
+        # ensure it doesn't exist
+        self.assertNotIn('foo', self.loader)
+        self.assertNotIn('foo.test', self.loader)
+        self.update_module('foo.py', mod_template.format(val=3))
+        self.loader.clear()
+        self.assertIn('foo.test', self.loader)
+        self.assertEqual(self.loader['foo.test'](), 3)
+
+        self.update_module('foo/__init__.py', mod_template.format(val=4))
+        self.loader.clear()
+        self.assertIn('foo.test', self.loader)
+        self.assertEqual(self.loader['foo.test'](), 4)
 
 
 deep_init_base = '''

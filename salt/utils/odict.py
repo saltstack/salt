@@ -19,22 +19,37 @@
 
         http://stackoverflow.com/questions/6190331/
 '''
+
+# Import python libs
+from __future__ import absolute_import
 from collections import Callable
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 try:
-    from collections import OrderedDict  # pylint: disable=E0611,minimum-python-version
-except ImportError:
+    # pylint: disable=E0611,minimum-python-version
+    import collections
+
+    class OrderedDict(collections.OrderedDict):
+        __hash__ = None
+except (ImportError, AttributeError):
     try:
-        from ordereddict import OrderedDict
+        import ordereddict
+
+        class OrderedDict(ordereddict.OrderedDict):  # pylint: disable=W0232
+            __hash_ = None
     except ImportError:
-        ## {{{ http://code.activestate.com/recipes/576693/ (r9)
+        # {{{ http://code.activestate.com/recipes/576693/ (r9)
         # Backport of OrderedDict() class that runs on Python 2.4, 2.5, 2.6, 2.7 and pypy.
         # Passes Python2.7's test suite and incorporates all the latest updates.
 
+        # pylint: disable=import-error,no-name-in-module
         try:
-            from thread import get_ident as _get_ident
+            from salt.ext.six.moves._thread import get_ident as _get_ident
         except ImportError:
-            from dummy_thread import get_ident as _get_ident
+            from salt.ext.six.moves._dummy_thread import get_ident as _get_ident
+        # pylint: enable=import-error,no-name-in-module
 
 #        try:
 #            from _abcoll import KeysView, ValuesView, ItemsView
@@ -52,6 +67,7 @@ except ImportError:
             # The circular doubly linked list starts and ends with a sentinel element.
             # The sentinel element never gets deleted (this simplifies the algorithm).
             # Each link is stored as a list of length three:  [PREV, NEXT, KEY].
+            __hash_ = None
 
             def __init__(self, *args, **kwds):  # pylint: disable=E1003
                 '''Initialize an ordered dictionary.  Signature is the same as for
@@ -110,7 +126,7 @@ except ImportError:
             def clear(self):
                 'od.clear() -> None.  Remove all items from od.'
                 try:
-                    for node in self.__map.itervalues():
+                    for node in six.itervalues(self.__map):
                         del node[:]
                     root = self.__root
                     root[:] = [root, root, None]
@@ -200,7 +216,7 @@ except ImportError:
                 else:
                     for key, value in other:
                         self[key] = value
-                for key, value in kwds.items():
+                for key, value in six.iteritems(kwds):
                     self[key] = value
 
             __update = update  # let subclasses override update without breaking __init__
@@ -236,7 +252,7 @@ except ImportError:
                 try:
                     if not self:
                         return '{0}()'.format(self.__class__.__name__)
-                    return '{0}({1!r})'.format(self.__class__.__name__, self.items())
+                    return '{0}(\'{1}\')'.format(self.__class__.__name__, list(self.items()))
                 finally:
                     del _repr_running[call_key]
 
@@ -271,7 +287,7 @@ except ImportError:
 
                 '''
                 if isinstance(other, OrderedDict):
-                    return len(self) == len(other) and self.items() == other.items()
+                    return len(self) == len(other) and self.items() == other.items()  # pylint: disable=incompatible-py3-code
                 return dict.__eq__(self, other)
 
             def __ne__(self, other):
@@ -319,7 +335,7 @@ class DefaultOrderedDict(OrderedDict):
             args = tuple()
         else:
             args = self.default_factory,
-        return type(self), args, None, None, self.items()
+        return type(self), args, None, None, self.items()  # pylint: disable=incompatible-py3-code
 
     def copy(self):
         return self.__copy__()
@@ -330,7 +346,7 @@ class DefaultOrderedDict(OrderedDict):
     def __deepcopy__(self):
         import copy
         return type(self)(self.default_factory,
-                          copy.deepcopy(self.items()))
+                          copy.deepcopy(self.items()))  # pylint: disable=incompatible-py3-code
 
     def __repr__(self, _repr_running={}):  # pylint: disable=W0102
         return 'DefaultOrderedDict({0}, {1})'.format(self.default_factory,

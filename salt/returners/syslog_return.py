@@ -13,6 +13,15 @@ To use the syslog returner, append '--return syslog' to the salt command.
 
     salt '*' test.ping --return syslog
 
+.. note::
+
+    Syslog server implementations may have limits on the maximum record size received
+    by the client. This may lead to job return data being truncated in the syslog server's
+    logs. For example, for rsyslog on RHEL-based systems, the default maximum record size
+    is approximately 2KB (which return data can easily exceed). This is configurable in
+    rsyslog.conf via the $MaxMessageSize config parameter. Please consult your syslog
+    implmentation's documentation to determine how to adjust this limit.
+
 '''
 from __future__ import absolute_import
 
@@ -41,7 +50,7 @@ def returner(ret):
     '''
     Return data to the local syslog
     '''
-    syslog.syslog(syslog.LOG_INFO, 'salt-minion: {0}'.format(json.dumps(ret)))
+    syslog.syslog(syslog.LOG_INFO, '{0}'.format(json.dumps(ret)))
 
 
 def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument

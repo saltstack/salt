@@ -13,12 +13,13 @@ at https://cloud.google.com.
 
 Dependencies
 ============
-* Libcloud >= 0.14.0-beta3
-* PyCrypto >= 2.1.
+* LibCloud >= 0.14.1
 * A Google Cloud Platform account with Compute Engine enabled
 * A registered Service Account for authorization
 * Oh, and obviously you'll need `salt <https://github.com/saltstack/salt>`_
 
+
+.. _gce_setup:
 
 Google Compute Engine Setup
 ===========================
@@ -49,17 +50,19 @@ Google Compute Engine Setup
    To set up authorization, navigate to *APIs & auth* section and then the
    *Credentials* link and click the *CREATE NEW CLIENT ID* button. Select
    *Service Account* and click the *Create Client ID* button. This will
-   automatically download a ``.json`` file which can be ignored.
+   automatically download a ``.json`` file, which may or may not be used
+   in later steps, depending on your version of ``libcloud``.
    
-   Look for a new *Service Account* section in the page and record the generated email
-   address for the matching key/fingerprint. The email address will be used
-   in the ``service_account_email_address`` of the ``/etc/salt/cloud`` file.
+   Look for a new *Service Account* section in the page and record the generated
+   email address for the matching key/fingerprint. The email address will be used
+   in the ``service_account_email_address`` of the ``/etc/salt/cloud.providers``
+   or the ``/etc/salt/cloud.providers.d/*.conf`` file.
 
 #. Key Format
 
-   *If you are using ``libcloud >= 0.17.0`` it is recommended that you use the ``JSON 
-   format`` file you downloaded above and skip to the "Configuration" section below, using 
-   the JSON file **_in place of 'NEW.pem'_** in the documentation.
+   *If you are using ``libcloud >= 0.17.0`` it is recommended that you use the ``JSON
+   format`` file you downloaded above and skip to the `Provider Configuration`_ section
+   below, using the JSON file **_in place of 'NEW.pem'_** in the documentation.
    
    If you are using an older version of libcloud or are unsure of the version you 
    have, please follow the instructions below to generate and format a new P12 key.*
@@ -103,13 +106,21 @@ Set up the provider cloud config at ``/etc/salt/cloud.providers`` or
         node_type: broker
         release: 1.0.1
 
-      provider: gce
+      driver: gce
 
 .. note::
 
     The value provided for ``project`` must not contain underscores or spaces and
     is labeled as "Project ID" on the Google Developers Console.
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Profile Configuration
 =====================
@@ -233,11 +244,14 @@ deleted when you destroy an instance, set delete_boot_pd to True.
 ssh_interface
 -------------
 
+.. versionadded:: 2015.5.0
+
 Specify whether to use public or private IP for deploy script.
 
 Valid options are:
-* private_ips: The salt-master is also hosted with GCE
-* public_ips: The salt-master is hosted outside of GCE
+
+- private_ips: The salt-master is also hosted with GCE
+- public_ips: The salt-master is hosted outside of GCE
 
 external_ip
 -----------
@@ -245,8 +259,9 @@ external_ip
 Per instance setting: Used a named fixed IP address to this host.
 
 Valid options are:
-* ephemeral - The host will use a GCE ephemeral IP
-* None - No external IP will be configured on this host.
+
+- ephemeral: The host will use a GCE ephemeral IP
+- None: No external IP will be configured on this host.
 
 Optionally, pass the name of a GCE address to use a fixed IP address.
 If the address does not already exist, it will be created.
@@ -260,6 +275,14 @@ disk, set ``pd-ssd`` as the value.
 
 .. versionadded:: 2014.7.0
 
+ip_forwarding
+-------------
+
+GCE instances can be enabled to use IP Forwarding. When set to ``True``,
+this options allows the instance to send/receive non-matching src/dst
+packets. Default is ``False``.
+
+.. versionadded:: 2015.8.1
 
 SSH Remote Access
 =================

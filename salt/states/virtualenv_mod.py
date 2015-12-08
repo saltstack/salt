@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Setup of Python virtualenv sandboxes
-====================================
+Setup of Python virtualenv sandboxes.
 
+.. versionadded:: 0.17.0
 '''
 from __future__ import absolute_import
 
@@ -45,42 +45,53 @@ def managed(name,
             pip_download=None,
             pip_download_cache=None,
             pip_exists_action=None,
+            pip_ignore_installed=False,
             proxy=None,
             use_vt=False,
-            env_vars=None):
+            env_vars=None,
+            no_use_wheel=False,
+            pip_upgrade=False,
+            pip_pkgs=None):
     '''
     Create a virtualenv and optionally manage it with pip
 
     name
-        Path to the virtualenv
+        Path to the virtualenv.
     requirements
         Path to a pip requirements file. If the path begins with ``salt://``
         the file will be transferred from the master file server.
     cwd
-        Path to the working directory where "pip install" is executed.
+        Path to the working directory where `pip install` is executed.
     user
-        The user under which to run virtualenv and pip
+        The user under which to run virtualenv and pip.
     no_chown: False
-        When user is given, do not attempt to copy and chown
-        a requirements file (needed if the requirements file refers to other
-        files via relative paths, as the copy-and-chown procedure does not
-        account for such files)
+        When user is given, do not attempt to copy and chown a requirements file
+        (needed if the requirements file refers to other files via relative
+        paths, as the copy-and-chown procedure does not account for such files)
     use_wheel : False
-        Prefer wheel archives (requires pip>=1.4)
+        Prefer wheel archives (requires pip >= 1.4).
+    no_use_wheel : False
+        Force to not use wheel archives (requires pip>=1.4)
     no_deps: False
-        Pass `--no-deps` to `pip`.
+        Pass `--no-deps` to `pip install`.
     pip_exists_action: None
         Default action of pip when a path already exists: (s)witch, (i)gnore,
         (w)ipe, (b)ackup
     proxy: None
-        Proxy address which is passed to "pip install"
+        Proxy address which is passed to `pip install`.
     env_vars
         Set environment variables that some builds will depend on. For example,
         a Python C-module may have a Makefile that needs INCLUDE_PATH set to
         pick up a header file while compiling.
+    pip_upgrade: False
+        Pass `--upgrade` to `pip install`.
+    pip_pkgs: None
+        As an alternative to `requirements`, pass a list of pip packages that
+        should be installed.
 
 
-    Also accepts any kwargs that the virtualenv module will.
+     Also accepts any kwargs that the virtualenv module will.
+     However, some kwargs require `- distribute: True`
 
     .. code-block:: yaml
 
@@ -190,13 +201,27 @@ def managed(name,
                               'was {1}.').format(min_version, cur_version)
             return ret
 
+    if no_use_wheel:
+        min_version = '1.4'
+        cur_version = __salt__['pip.version'](bin_env=name)
+        if not salt.utils.compare_versions(ver1=cur_version, oper='>=',
+                                           ver2=min_version):
+            ret['result'] = False
+            ret['comment'] = ('The \'no_use_wheel\' option is only supported '
+                              'in pip {0} and newer. The version of pip '
+                              'detected was {1}.').format(min_version,
+                                                          cur_version)
+            return ret
+
     # Populate the venv via a requirements file
-    if requirements:
+    if requirements or pip_pkgs:
         before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
         _ret = __salt__['pip.install'](
+            pkgs=pip_pkgs,
             requirements=requirements,
             bin_env=name,
             use_wheel=use_wheel,
+            no_use_wheel=no_use_wheel,
             user=user,
             cwd=cwd,
             index_url=index_url,
@@ -206,6 +231,8 @@ def managed(name,
             no_chown=no_chown,
             pre_releases=pre_releases,
             exists_action=pip_exists_action,
+            ignore_installed=pip_ignore_installed,
+            upgrade=pip_upgrade,
             no_deps=no_deps,
             proxy=proxy,
             use_vt=use_vt,
@@ -228,4 +255,4 @@ def managed(name,
                 'old': old if old else ''}
     return ret
 
-manage = managed  # pylint: disable=C0103
+manage = salt.utils.alias_function(managed, 'manage')

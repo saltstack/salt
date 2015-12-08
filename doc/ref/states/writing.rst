@@ -1,9 +1,13 @@
+.. _state-modules:
+
 =============
 State Modules
 =============
 
 State Modules are the components that map to actual enforcement and management
 of Salt states.
+
+.. _writing-state-modules:
 
 States are Easy to Write!
 =========================
@@ -17,8 +21,7 @@ illustrate:
 .. code-block:: yaml
 
     /etc/salt/master: # maps to "name"
-      file: # maps to State module filename e.g. https://github.com/saltstack/salt/tree/develop/salt/states/file.py
-        - managed # maps to the managed function in the file State module
+      file.managed: # maps to <filename>.<function> - e.g. "managed" in https://github.com/saltstack/salt/tree/develop/salt/states/file.py
         - user: root # one of many options passed to the manage function
         - group: root
         - mode: 644
@@ -64,12 +67,12 @@ state with the same name. Note that a state's default name is its filename
 (i.e. ``foo.py`` becomes state ``foo``), but that its name can be overridden
 by using a :ref:`__virtual__ function <virtual-modules>`.
 
-
-Cross Calling Modules
-=====================
+Cross Calling Execution Modules from States
+===========================================
 
 As with Execution Modules, State Modules can also make use of the ``__salt__``
-and ``__grains__`` data.
+and ``__grains__`` data. See :ref:`cross calling execution modules
+<cross-calling-execution-modules>`.
 
 It is important to note that the real work of state management should not be
 done in the state module unless it is needed. A good example is the pkg state
@@ -82,6 +85,31 @@ On the other hand some modules will require that the logic be placed in the
 state module, a good example of this is the file module. But in the vast
 majority of cases this is not the best approach, and writing specific
 execution modules to do the backend work will be the optimal solution.
+
+.. _cross-calling-state-modules:
+
+Cross Calling State Modules
+===========================
+
+All of the Salt state modules are available to each other and state modules can call
+functions available in other state modules.
+
+The variable ``__states__`` is packed into the modules after they are loaded into
+the Salt minion.
+
+The ``__states__`` variable is a :ref:`Python dictionary <python2:typesmapping>`
+containing all of the state modules. Dictionary keys are strings representing the
+names of the modules and the values are the functions themselves.
+
+Salt state modules can be cross-called by accessing the value in the ``__states__`` dict:
+
+.. code-block:: python
+
+    ret = __states__['file.managed'](name='/tmp/myfile', source='salt://myfile')
+
+This code will call the `managed` function in the :mod:`file
+<salt.states.file>` state module and pass the arguments ``name`` and ``source``
+to it.
 
 Return Data
 ===========
@@ -114,6 +142,10 @@ A State Module must return a dict containing the following keys/values:
       Test mode does not predict if the changes will be successful or not.
 
 - **comment:** A string containing a summary of the result.
+
+The return data can also, include the **pchanges** key, this statnds for
+`predictive changes`. The **pchanges** key informs the State system what
+changes are predicted to occur.
 
 Test State
 ==========
@@ -269,7 +301,13 @@ Example state module
         bar : True
             An argument with a default value
         '''
-        ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
+        ret = {
+            'name': name,
+            'changes': {},
+            'result': False,
+            'comment': '',
+            'pchanges': {},
+            }
 
         # Start with basic error-checking. Do all the passed parameters make sense
         # and agree with each-other?
@@ -289,7 +327,7 @@ Example state module
         # in ``test=true`` mode.
         if __opts__['test'] == True:
             ret['comment'] = 'The state of "{0}" will be changed.'.format(name)
-            ret['changes'] = {
+            ret['pchanges'] = {
                 'old': current_state,
                 'new': 'Description, diff, whatever of the new state',
             }

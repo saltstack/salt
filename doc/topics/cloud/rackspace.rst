@@ -5,7 +5,7 @@ Getting Started With Rackspace
 Rackspace is a major public cloud platform which may be configured using either
 the `rackspace` or the `openstack` driver, depending on your needs.
 
-Please note that the `rackspace` driver is only intended for 1st gen instances,
+Please note that the `rackspace` driver is intended only for 1st gen instances,
 aka, "the old cloud" at Rackspace. It is required for 1st gen instances, but
 will *not* work with OpenStack-based instances. Unless you explicitly have a
 reason to use it, it is highly recommended that you use the `openstack` driver
@@ -47,7 +47,7 @@ To use the `openstack` driver (recommended), set up the cloud configuration at
       tenant: 123456
       apikey: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-      provider: openstack
+      driver: openstack
 
 
 To use the `rackspace` driver, set up the cloud configuration at
@@ -57,7 +57,7 @@ To use the `rackspace` driver, set up the cloud configuration at
 .. code-block:: yaml
 
     my-rackspace-config:
-      provider: rackspace
+      driver: rackspace
       # The Rackspace login user
       user: fred
       # The Rackspace user's apikey
@@ -66,6 +66,14 @@ To use the `rackspace` driver, set up the cloud configuration at
 The settings that follow are for using Rackspace with the `openstack` driver,
 and will not work with the `rackspace` driver.
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Compute Region
 ==============
@@ -119,7 +127,7 @@ it can be verified with Salt:
     # salt myinstance test.ping
 
 RackConnect Environments
---------------------------------
+------------------------
 
 Rackspace offers a hybrid hosting configuration option called RackConnect that
 allows you to use a physical firewall appliance with your cloud servers. When
@@ -137,7 +145,7 @@ capability by adding this to your profiles:
         rackconnect: True
 
 Managed Cloud Environments
---------------------------------
+--------------------------
 
 Rackspace offers a managed service level of hosting. As part of the managed
 service level you have the ability to choose from base of lamp installations on
@@ -172,10 +180,10 @@ configuration please add:
       force_first_gen: True
 
 Private Subnets
---------------------------------
-By default salt-cloud will not add Rackspace private networks to new servers.   To enable 
+---------------
+By default salt-cloud will not add Rackspace private networks to new servers. To enable
 a private network to a server instantiated by salt cloud, add the following section 
-to the provider file (typically  ``/etc/salt/cloud.providers.d/rackspace.conf``)
+to the provider file (typically ``/etc/salt/cloud.providers.d/rackspace.conf``)
 
 .. code-block:: yaml
 

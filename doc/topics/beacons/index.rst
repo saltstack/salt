@@ -70,6 +70,28 @@ provide an ``interval`` argument to a beacon. The following beacons run on
           - 1.0
         - interval: 10
 
+Avoiding Event Loops
+--------------------
+
+It is important to carefully consider the possibility of creating a loop
+between a reactor and a beacon. For example, one might set up a beacon
+which monitors whether a file is read which in turn fires a reactor to
+run a state which in turn reads the file and re-fires the beacon.
+
+To avoid these types of scenarios, the ``disable_during_state_run``
+argument may be set. If a state run is in progress, the beacon will
+not be run on its regular interval until the minion detects that the
+state run has completed, at which point the normal beacon interval
+will resume.
+
+.. code-block:: yaml
+
+    beacons:
+      inotify:
+        /etc/passwd: {}
+        disable_during_state_run: True
+
+
 Beacon Example
 ==============
 
@@ -202,3 +224,50 @@ as lightweight as possible. The ``beacon`` also must return a list of dicts,
 each dict in the list will be translated into an event on the master.
 
 Please see the :py:mod:`~salt.beacons.inotify` beacon as an example.
+
+The `beacon` Function
+---------------------
+
+The beacons system will look for a function named `beacon` in the module. If
+this function is not present then the beacon will not be fired. This function is
+called on a regular basis and defaults to being called on every iteration of the
+minion, which can be tens to hundreds of times a second. This means that the 
+`beacon` function cannot block and should not be CPU or IO intensive.
+
+The beacon function will be passed in the configuration for the executed
+beacon. This makes it easy to establish a flexible configuration for each
+called beacon. This is also the preferred way to ingest the beacon's
+configuration as it allows for the configuration to be dynamically updated
+while the minion is running by configuring the beacon in the minion's pillar.
+
+The Beacon Return
+-----------------
+
+The information returned from the beacon is expected to follow a predefined
+structure. The returned value needs to be a list of dictionaries (standard
+python dictionaries are preferred, no ordered dicts are needed).
+
+The dictionaries represent individual events to be fired on the minion and
+master event buses. Each dict is a single event. The dict can contain any
+arbitrary keys but the 'tag' key will be extracted and added to the tag of
+the fired event.
+
+The return data structure would look something like this:
+
+.. code-block:: python
+
+    [{'changes': ['/foo/bar'], 'tag': 'foo'},
+     {'changes': ['/foo/baz'], 'tag': 'bar'}]
+
+Calling Execution Modules
+-------------------------
+
+Execution modules are still the preferred location for all work and system
+interaction to happen in Salt. For this reason the `__salt__` variable is
+available inside the beacon.
+
+Please be careful when calling functions in `__salt__`, while this is the
+preferred means of executing complicated routines in Salt not all of the
+execution modules have been written with beacons in mind. Watch out for
+execution modules that may be CPU intense or IO bound. Please feel free to
+add new execution modules and functions to back specific beacons.

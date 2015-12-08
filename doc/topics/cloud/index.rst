@@ -12,25 +12,25 @@ Getting Started
 
 Salt Cloud is built-in to Salt and is configured on and executed from your Salt Master.
 
-Define a Profile
-----------------
+Define a Provider
+-----------------
 
-The first step is to add the credentials for your cloud provider. Credentials
-and provider settings are stored in provider configuration files.
-Provider configurations contain the details needed to connect, and any global options that you want set on
-your cloud minions (such as the location of your Salt Master).
+The first step is to add the credentials for your cloud host. Credentials
+and other settings provided by the cloud host are stored in provider configuration files.
+Provider configurations contain the details needed to connect to a cloud host such as EC2, GCE, Rackspace, etc.,
+and any global options that you want set on your cloud minions (such as the location of your Salt Master).
 
 On your Salt Master, browse to ``/etc/salt/cloud.providers.d/`` and create a file called ``<provider>.provider.conf``,
 replacing ``<provider>`` with ``ec2``, ``softlayer``, and so on. The name helps you identify the contents, and is not
 important as long as the file ends in ``.conf``.
 
 Next, browse to the :ref:`Provider specifics <cloud-provider-specifics>` and add any required settings for your
-provider to this file. Here is an example for Amazon EC2:
+cloud host to this file. Here is an example for Amazon EC2:
 
 .. code-block:: yaml
 
     my-ec2:
-      provider: ec2
+      driver: ec2
       # Set the EC2 access credentials (see below)
       #
       id: 'HJGRYCILJLKJYG'
@@ -45,7 +45,7 @@ provider to this file. Here is an example for Amazon EC2:
       minion:
         master: saltmaster.example.com
 
-The required configuration varies between providers so make sure you read the provider specifics.
+The required configuration varies between cloud hosts so make sure you read the provider specifics.
 
 List Cloud Provider Options
 ---------------------------
@@ -167,13 +167,16 @@ Cloud Provider Specifics
         Getting Started With Joyent <joyent>
         Getting Started With LXC <lxc>
         Getting Started With Linode <linode>
+        Getting Started With OpenNebula <opennebula>
         Getting Started With OpenStack <openstack>
         Getting Started With Parallels <parallels>
         Getting Started With Proxmox <proxmox>
         Getting Started With Rackspace <rackspace>
         Getting Started With Saltify <saltify>
+        Getting Started With Scaleway <scaleway>
         Getting Started With SoftLayer <softlayer>
         Getting Started With Vexxhost <vexxhost>
+        Getting Started With VMware <vmware>
         Getting Started With vSphere <vsphere>
 
 

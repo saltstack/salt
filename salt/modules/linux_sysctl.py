@@ -10,10 +10,11 @@ import os
 import re
 
 # Import salt libs
+import salt.ext.six as six
 import salt.utils
 from salt.ext.six import string_types
 from salt.exceptions import CommandExecutionError
-from salt.modules.systemd import _sd_booted
+import salt.utils.systemd
 import string
 
 log = logging.getLogger(__name__)
@@ -31,8 +32,6 @@ def __virtual__():
     '''
     if __grains__['kernel'] != 'Linux':
         return False
-    global _sd_booted
-    _sd_booted = salt.utils.namespaced_function(_sd_booted, globals())
     return __virtualname__
 
 
@@ -59,22 +58,9 @@ def default_config():
 
         salt -G 'kernel:Linux' sysctl.default_config
     '''
-    if _sd_booted(__context__):
-        for line in __salt__['cmd.run_stdout'](
-            'systemctl --version'
-        ).splitlines():
-            if line.startswith('systemd '):
-                version = line.split()[-1]
-                try:
-                    if int(version) >= 207:
-                        return _check_systemd_salt_config()
-                except ValueError:
-                    log.error(
-                        'Unexpected non-numeric systemd version {0!r} '
-                        'detected'.format(version)
-                    )
-                break
-
+    if salt.utils.systemd.booted(__context__) \
+            and salt.utils.systemd.version(__context__) >= 207:
+        return _check_systemd_salt_config()
     return '/etc/sysctl.conf'
 
 
@@ -144,7 +130,8 @@ def assign(name, value):
         salt '*' sysctl.assign net.ipv4.ip_forward 1
     '''
     value = str(value)
-    sysctl_file = '/proc/sys/{0}'.format(name.translate(string.maketrans('./', '/.')))
+    trantab = ''.maketrans('./', '/.') if six.PY3 else string.maketrans('./', '/.')
+    sysctl_file = '/proc/sys/{0}'.format(name.translate(trantab))
     if not os.path.exists(sysctl_file):
         raise CommandExecutionError('sysctl {0} does not exist'.format(name))
 

@@ -247,3 +247,39 @@ service.
     auth_timeout:
         The total time to wait for the authentication process to complete, regardless
         of the number of attempts.
+
+
+=====================
+Running state locally
+=====================
+
+To debug the states, you can use call locally.
+
+.. code-block:: bash
+
+    salt-call -l trace --local state.highstate
+
+
+The top.sls file is used to map what SLS modules get loaded onto what minions via the state system.
+
+It is located in the file defined in the ``file_roots`` variable of the salt master
+configuration file which is defined by found in ``CONFIG_DIR/master``, normally ``/etc/salt/master``
+
+The default configuration for the ``file_roots`` is:
+
+.. code-block:: yaml
+
+   file_roots:
+     base:
+       - /srv/salt
+
+So the top file is defaulted to the location ``/srv/salt/top.sls``
+
+
+Salt Master Umask
+=================
+
+The salt master uses a cache to track jobs as they are published and returns come back.
+The recommended umask for a salt-master is `022`, which is the default for most users
+on a system. Incorrect umasks can result in permission-denied errors when the master
+tries to access files in its cache.

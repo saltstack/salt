@@ -10,6 +10,7 @@
 
 # pylint: disable=file-perms
 
+from __future__ import absolute_import
 import errno
 import glob
 import logging
@@ -219,7 +220,7 @@ def build_centos(opts):
             major_release = int(redhat_release.split()[2].split('.')[0])
     except (ValueError, IndexError):
         _abort('Unable to determine major release from /etc/redhat-release '
-               'contents: {0!r}'.format(redhat_release))
+               'contents: \'{0}\''.format(redhat_release))
     except IOError as exc:
         _abort('{0}'.format(exc))
 
@@ -257,7 +258,7 @@ def build_centos(opts):
     try:
         base, offset, oid = tarball_re.match(os.path.basename(sdist)).groups()
     except AttributeError:
-        _abort('Unable to extract version info from sdist filename {0!r}'
+        _abort('Unable to extract version info from sdist filename \'{0}\''
                .format(sdist))
 
     if offset is None:
@@ -349,7 +350,7 @@ if __name__ == '__main__':
                         datefmt=log_datefmt,
                         level=LOG_LEVELS[opts.log_level])
     if opts.log_level not in LOG_LEVELS:
-        log.error('Invalid log level {0!r}, falling back to \'warning\''
+        log.error('Invalid log level \'{0}\', falling back to \'warning\''
                   .format(opts.log_level))
 
     # Build for the specified platform
@@ -358,7 +359,7 @@ if __name__ == '__main__':
     elif opts.platform.lower() == 'centos':
         artifacts = build_centos(opts)
     else:
-        _abort('Unsupported platform {0!r}'.format(opts.platform))
+        _abort('Unsupported platform \'{0}\''.format(opts.platform))
 
     msg = ('Build complete. Artifacts will be stored in {0}'
            .format(opts.artifact_dir))

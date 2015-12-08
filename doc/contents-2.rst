@@ -8,6 +8,7 @@ Salt Table of Contents
 
     topics/jobs/index
     topics/event/index
+    topics/proxyminion/index
     topics/topology/index
     topics/highavailability/index
     topics/windows/index

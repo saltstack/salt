@@ -6,12 +6,16 @@ Watch files and translate the changes into salt events
 
 :Caution:   Using generic mask options like open, access, ignored, and
             closed_nowrite with reactors can easily cause the reactor
-            to loop on itself.
+            to loop on itself. To mitigate this behavior, consider
+            setting the `disable_during_state_run` flag to `True` in
+            the beacon configuration.
 
 '''
 # Import Python libs
 from __future__ import absolute_import
 import collections
+import fnmatch
+import os
 
 # Import salt libs
 import salt.ext.six
@@ -31,6 +35,9 @@ except ImportError:
     DEFAULT_MASK = None
 
 __virtualname__ = 'inotify'
+
+import logging
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -64,6 +71,72 @@ def _get_notifier():
     return __context__['inotify.notifier']
 
 
+def validate(config):
+    '''
+    Validate the beacon configuration
+    '''
+
+    VALID_MASK = [
+        'access',
+        'attrib',
+        'close_nowrite',
+        'close_write',
+        'create',
+        'delete',
+        'delete_self',
+        'excl_unlink',
+        'ignored',
+        'modify',
+        'moved_from',
+        'moved_to',
+        'move_self',
+        'oneshot',
+        'onlydir',
+        'open',
+        'unmount'
+    ]
+
+    # Configuration for inotify beacon should be a dict of dicts
+    if not isinstance(config, dict):
+        log.info('Configuration for inotify beacon must be a dictionary.')
+        return False
+    else:
+        for config_item in config:
+            if not isinstance(config[config_item], dict):
+                log.info('Configuration for inotify beacon must '
+                         'be a dictionary of dictionaries.')
+                return False
+            else:
+                if not any(j in ['mask', 'recurse', 'auto_add'] for j in config[config_item]):
+                    log.info('Configuration for inotify beacon must '
+                             'contain mask, recurse or auto_add items.')
+                    return False
+
+            if 'auto_add' in config[config_item]:
+                if not isinstance(config[config_item]['auto_add'], bool):
+                    log.info('Configuration for inotify beacon '
+                             'auto_add must be boolean.')
+                    return False
+
+            if 'recurse' in config[config_item]:
+                if not isinstance(config[config_item]['recurse'], bool):
+                    log.info('Configuration for inotify beacon '
+                             'recurse must be boolean.')
+                    return False
+
+            if 'mask' in config[config_item]:
+                if not isinstance(config[config_item]['mask'], list):
+                    log.info('Configuration for inotify beacon '
+                             'mask must be list.')
+                    return False
+                for mask in config[config_item]['mask']:
+                    if mask not in VALID_MASK:
+                        log.info('Configuration for inotify beacon '
+                                 'invalid mask option {0}.'.format(mask))
+                        return False
+    return True
+
+
 def beacon(config):
     '''
     Watch the configured files
@@ -81,34 +154,39 @@ def beacon(config):
                 - close_write
               recurse: True
               auto_add: True
+              exclude:
+                - /path/to/file/or/dir/exclude1
+                - /path/to/file/or/dir/exclude2
 
     The mask list can contain the following events (the default mask is create,
     delete, and modify):
 
-    * access            File accessed
-    * attrib            File metadata changed
-    * close_nowrite     Unwritable file closed
-    * close_write       Writable file closed
-    * create            File created in watched directory
-    * delete            File deleted from watched directory
-    * delete_self       Watched file or directory deleted
-    * modify            File modified
-    * moved_from        File moved out of watched directory
-    * moved_to          File moved into watched directory
-    * move_self         Watched file moved
-    * open              File opened
+    * access            - File accessed
+    * attrib            - File metadata changed
+    * close_nowrite     - Unwritable file closed
+    * close_write       - Writable file closed
+    * create            - File created in watched directory
+    * delete            - File deleted from watched directory
+    * delete_self       - Watched file or directory deleted
+    * modify            - File modified
+    * moved_from        - File moved out of watched directory
+    * moved_to          - File moved into watched directory
+    * move_self         - Watched file moved
+    * open              - File opened
 
     The mask can also contain the following options:
 
-    * dont_follow       Don't dereference symbolic links
-    * excl_unlink       Omit events for children after they have been unlinked
-    * oneshot           Remove watch after one event
-    * onlydir           Operate only if name is directory
+    * dont_follow       - Don't dereference symbolic links
+    * excl_unlink       - Omit events for children after they have been unlinked
+    * oneshot           - Remove watch after one event
+    * onlydir           - Operate only if name is directory
 
     recurse:
       Recursively watch files in the directory
     auto_add:
       Automatically start watching files that are created in the watched directory
+    exclude:
+      Exclude directories or files from triggering events in the watched directory
     '''
     ret = []
     notifier = _get_notifier()
@@ -121,10 +199,32 @@ def beacon(config):
         queue = __context__['inotify.queue']
         while queue:
             event = queue.popleft()
-            sub = {'tag': event.path,
-                   'path': event.pathname,
-                   'change': event.maskname}
-            ret.append(sub)
+
+            _append = True
+            # Find the matching path in config
+            path = event.path
+            while path != '/':
+                if path in config:
+                    break
+                path = os.path.dirname(path)
+
+            excludes = config[path].get('exclude', '')
+            if excludes and isinstance(excludes, list):
+                for exclude in excludes:
+                    if '*' in exclude:
+                        if fnmatch.fnmatch(event.pathname, exclude):
+                            _append = False
+                    else:
+                        if event.pathname.startswith(exclude):
+                            _append = False
+
+            if _append:
+                sub = {'tag': event.path,
+                       'path': event.pathname,
+                       'change': event.maskname}
+                ret.append(sub)
+            else:
+                log.info('Excluding {0} from event for {1}'.format(event.pathname, path))
 
     # Get paths currently being watched
     current = set()

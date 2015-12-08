@@ -25,21 +25,19 @@ If this driver is still needed, set up the cloud configuration at
       securitygroup: ssh_open
       # The location of the private key which corresponds to the keyname
       private_key: /root/default.pem
-      provider: aws
+      driver: aws
 
 '''
-from __future__ import absolute_import
 # pylint: disable=E0102
 
 # Import python libs
-import os
-import stat
+from __future__ import absolute_import
 import logging
 
 # Import salt.cloud libs
+import salt.utils.cloud
 import salt.config as config
 from salt.utils import namespaced_function
-from salt.exceptions import SaltCloudException, SaltCloudSystemExit
 import salt.ext.six as six
 
 # Import libcloudfuncs and libcloud_aws, required to latter patch __opts__
@@ -68,9 +66,6 @@ def __virtual__():
     '''
     Set up the libcloud funcstions and check for AWS configs
     '''
-    if not HAS_LIBCLOUD:
-        return False
-
     try:
         # Import botocore
         import botocore.session
@@ -86,30 +81,18 @@ def __virtual__():
     if get_configured_provider() is False:
         return False
 
+    if get_dependencies() is False:
+        return False
+
     for provider, details in six.iteritems(__opts__['providers']):
-        if 'provider' not in details or details['provider'] != 'aws':
+        if 'aws' not in details:
             continue
 
-        if not os.path.exists(details['private_key']):
-            raise SaltCloudException(
-                'The AWS key file {0!r} used in the {1!r} provider '
-                'configuration does not exist\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
-
-        keymode = str(
-            oct(stat.S_IMODE(os.stat(details['private_key']).st_mode))
-        )
-        if keymode not in ('0400', '0600'):
-            raise SaltCloudException(
-                'The AWS key file {0!r} used in the {1!r} provider '
-                'configuration needs to be set to mode 0400 or 0600\n'.format(
-                    details['private_key'],
-                    provider
-                )
-            )
+        parameters = details['aws']
+        if salt.utils.cloud.check_key_path_and_mode(
+                provider, parameters['private_key']
+        ) is False:
+            return False
 
     # Let's bring the functions imported from libcloud_aws to the current
     # namespace.
@@ -146,7 +129,10 @@ def __virtual__():
         list_nodes_select, globals(), (conn,)
     )
 
-    return 'aws'
+    log.warning('This driver has been deprecated and will be removed in the '
+                'Boron release of Salt. Please use the ec2 driver instead.')
+
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -157,6 +143,16 @@ def get_configured_provider():
         __opts__,
         'aws',
         ('id', 'key', 'keyname', 'securitygroup', 'private_key')
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'libcloud': HAS_LIBCLOUD}
     )
 
 

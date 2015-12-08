@@ -1,5 +1,5 @@
 ##### Primary configuration settings #####
-########################################## 
+##########################################
 # This configuration file is used to manage the behavior of the Salt Minion.
 # With the exception of the location of the Salt Master Server, values that are
 # commented out but have an empty line after the comment are defaults that need
@@ -14,6 +14,12 @@
 # Set the location of the salt master server. If the master server cannot be
 # resolved, then the minion will fail to start.
 #master: salt
+
+# Set http proxy information for the minion when doing requests
+#proxy_host:
+#proxy_port:
+#proxy_username:
+#proxy_password:
 
 # If multiple masters are specified in the 'master' setting, the default behavior
 # is to always try to connect to them in the order they are listed. If random_master is
@@ -31,7 +37,9 @@
 # master_type: str
 
 # Poll interval in seconds for checking if the master is still there.  Only
-# respected if master_type above is "failover".
+# respected if master_type above is "failover". To disable the interval entirely,
+# set the value to -1. (This may be necessary on machines which have high numbers
+# of TCP connections, such as load balancers.)
 # master_alive_interval: 30
 
 # Set whether the minion should connect to the master via IPv6:
@@ -88,6 +96,7 @@
 #  cab_u: 14-15
 #
 # Where cache data goes.
+# This data may contain sensitive data and should be protected accordingly.
 #cachedir: /var/cache/salt/minion
 
 # Verify and set permissions on configuration directories at startup.
@@ -241,6 +250,12 @@
 # often lower this value
 #loop_interval: 60
 
+# The grains can be merged, instead of overridden, using this option.
+# This allows custom grains to defined different subvalues of a dictionary
+# grain. By default this feature is disabled, to enable set grains_deep_merge
+# to ``True``.
+#grains_deep_merge: False
+
 # The grains_refresh_every setting allows for a minion to periodically check
 # its grains to see if they have changed and, if so, to inform the master
 # of the new grains. This operation is moderately expensive, therefore
@@ -350,9 +365,7 @@
 # failure detected in the state execution. Defaults to False.
 #failhard: False
 #
-# autoload_dynamic_modules turns on automatic loading of modules found in the
-# environments on the master. This is turned on by default. To turn of
-# autoloading modules when states run, set this value to False.
+# Reload the modules prior to a highstate run.
 #autoload_dynamic_modules: True
 #
 # clean_dynamic_modules keeps the dynamic modules on the minion in sync with
@@ -403,7 +416,8 @@
 
 # Set the file client. The client defaults to looking on the master server for
 # files, but can be directed to look at the local file directory setting
-# defined below by setting it to local.
+# defined below by setting it to "local". Setting a local file_client runs the
+# minion in masterless mode.
 #file_client: remote
 
 # The file directory works on environments passed to the minion, each environment
@@ -532,7 +546,21 @@
 
 # The format of the console logging messages. Allowed formatting options can
 # be seen here: http://docs.python.org/library/logging.html#logrecord-attributes
+#
+# Console log colors are specified by these additional formatters:
+#
+# %(colorlevel)s
+# %(colorname)s
+# %(colorprocess)s
+# %(colormsg)s
+#
+# Since it is desirable to include the surrounding brackets, '[' and ']', in
+# the coloring of the messages, these color formatters also include padding as
+# well.  Color LogRecord attributes are only available for console logging.
+#
+#log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
+#
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This
@@ -635,3 +663,9 @@
 ############################################
 # Which returner(s) will be used for minion's result:
 #return: mysql
+
+
+######    Miscellaneous  settings     ######
+############################################
+# Default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
+#event_match_type: startswith

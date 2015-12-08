@@ -17,7 +17,7 @@ python2.7 setup.py bdist
 python2.7 setup.py bdist_esky
 rm salt/_syspaths.py
 rm -f dist/*.tar.gz
-mkdir -p $BUILD_DIR/{install,bin/appdata}
+mkdir -p $BUILD_DIR/{bin/appdata,install,var/log/salt}
 cp -r conf $BUILD_DIR/etc
 cp $PKG_DIR/*.xml $PKG_DIR/install.sh $BUILD_DIR/install
 chmod +x $BUILD_DIR/install/install.sh

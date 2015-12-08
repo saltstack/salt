@@ -13,7 +13,6 @@ from salttesting.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
-    mock_open,
     patch)
 
 
@@ -92,22 +91,6 @@ class SeedTestCase(TestCase):
                                                   return_value=None):
                                     self.assertFalse(seed.apply_('path',
                                                                  install=False))
-
-    @skipIf(True, 'Failing intermittently, will review later')
-    def test_mkconfig(self):
-        '''
-        Test to generate keys and config and put them in a tmp directory.
-        '''
-        file_data = '\n'.join(['#', 'A B C D,E,F G H'])
-        with patch('salt.utils.fopen', mock_open(read_data=file_data),
-                   create=True) as mfile:
-            mfile.return_value.__iter__.return_value = file_data.splitlines()
-            with patch.dict(seed.__opts__, {'master': 'master'}):
-                with patch.object(os.path, 'join', return_value=False):
-                    with patch.dict(seed.__salt__, {'pillar.ext': MagicMock()}):
-                        self.assertDictEqual(seed.mkconfig(None, 'tmp', 'id'),
-                                             {'pubkey': False, 'config': False,
-                                              'privkey': False})
 
 
 if __name__ == '__main__':

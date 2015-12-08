@@ -14,6 +14,7 @@ import logging
 # Import Salt libs
 import salt.utils
 import salt.utils.decorators as decorators
+from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +33,23 @@ def _check_zpool():
 
 
 @decorators.memoize
+def _check_features():
+    '''
+    Looks to see if zpool-features is available
+    '''
+    # get man location
+    man = salt.utils.which('man')
+    if not man:
+        return False
+
+    cmd = '{man} zpool-features'.format(
+        man=man
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    return res['retcode'] == 0
+
+
+@decorators.memoize
 def _check_mkfile():
     '''
     Looks to see if mkfile is present on the system
@@ -45,7 +63,27 @@ def __virtual__():
     '''
     if _check_zpool():
         return 'zpool'
-    return False
+    return (False, "Module zpool: zpool not found")
+
+
+def healthy():
+    '''
+    .. versionadded:: Boron
+    Check if all zpools are healthy
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.healthy
+    '''
+    zpool_cmd = _check_zpool()
+
+    cmd = '{zpool_cmd} status -x'.format(
+        zpool_cmd=zpool_cmd
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    return res['stdout'] == 'all pools are healthy'
 
 
 def status(name=''):
@@ -82,11 +120,24 @@ def iostat(name=''):
     return ret
 
 
-def list_():
+def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
     '''
     .. versionadded:: 2015.5.0
+    .. versionchanged:: Boron
 
-    Return a list of all pools in the system with health status and space usage
+    Return information about (all) zpools
+
+    properties : string
+        comma-separated list of properties to list
+
+    .. note::
+        the 'name' property will always be included, the 'frag' property will get removed if not available
+
+    zpool : string
+        optional zpool
+
+    .. note::
+        multiple zpools can be provded as a space seperated list
 
     CLI Example:
 
@@ -94,11 +145,40 @@ def list_():
 
         salt '*' zpool.list
     '''
-    zpool = _check_zpool()
-    cmd = [zpool, 'list']
-    res = __salt__['cmd.run'](cmd, python_shell=False)
-    pool_list = [l for l in res.splitlines()]
-    return {'pools': pool_list}
+    ret = OrderedDict()
+
+    # remove 'frag' property if not available
+    properties = properties.split(',')
+    if 'name' in properties:
+        properties.remove('name')
+    properties.insert(0, 'name')
+    if not _check_features() and 'frag' in properties:
+        properties.remove('frag')
+
+    # get zpool list data
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} list -H -o {properties}{zpool}'.format(
+        zpool_cmd=zpool_cmd,
+        properties=','.join(properties),
+        zpool=' {0}'.format(zpool) if zpool else ''
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        return ret
+
+    # parse zpool list data
+    for zp in res['stdout'].splitlines():
+        zp = zp.split("\t")
+        zp_data = {}
+
+        for prop in properties:
+            zp_data[prop] = zp[properties.index(prop)]
+
+        ret[zp_data['name']] = zp_data
+        del ret[zp_data['name']]['name']
+
+    return ret
 
 
 def zpool_list():
@@ -154,6 +234,7 @@ def destroy(pool_name):
     ret = {}
     if not exists(pool_name):
         ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
+        ret['retcode'] = 1
         return ret
     else:
         zpool = _check_zpool()
@@ -177,6 +258,7 @@ def scrub(pool_name=None):
     ret = {}
     if not pool_name:
         ret['Error'] = 'zpool name parameter is mandatory.'
+        ret['retcode'] = 1
         return ret
     if exists(pool_name):
         zpool = _check_zpool()
@@ -186,6 +268,7 @@ def scrub(pool_name=None):
         return ret
     else:
         ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
+        ret['retcode'] = 2
 
 
 def create(pool_name, *vdevs, **kwargs):
@@ -224,10 +307,12 @@ def create(pool_name, *vdevs, **kwargs):
     # Check if the pool_name is already being used
     if exists(pool_name):
         ret['Error'] = 'Storage Pool `{0}` already exists'.format(pool_name)
+        ret['retcode'] = 1
         return ret
 
     if not vdevs:
         ret['Error'] = 'Missing vdev specification. Please specify vdevs.'
+        ret['retcode'] = 2
         return ret
 
     # make sure files are present on filesystem
@@ -236,11 +321,13 @@ def create(pool_name, *vdevs, **kwargs):
             if not os.path.exists(vdev):
                 # Path doesn't exist so error and return
                 ret[vdev] = '{0} not present on filesystem'.format(vdev)
+                ret['retcode'] = 3
                 return ret
             mode = os.stat(vdev).st_mode
             if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode) and not stat.S_ISCHR(mode):
                 # Not a block device, file vdev, or character special device so error and return
                 ret[vdev] = '{0} is not a block device, a file vdev, or character special device'.format(vdev)
+                ret['retcode'] = 4
                 return ret
         dlist.append(vdev)
 
@@ -274,6 +361,7 @@ def create(pool_name, *vdevs, **kwargs):
         ret['Error'] = {}
         ret['Error']['Messsage'] = 'Unable to create storage pool {0}'.format(pool_name)
         ret['Error']['Reason'] = res
+        ret['retcode'] = 5
 
     return ret
 
@@ -294,10 +382,12 @@ def add(pool_name, *vdevs):
     # check for pool
     if not exists(pool_name):
         ret['Error'] = 'Storage Pool `{0}` doesn\'t exist'.format(pool_name)
+        ret['retcode'] = 1
         return ret
 
     if not vdevs:
         ret['Error'] = 'Missing vdev specification. Please specify vdevs.'
+        ret['retcode'] = 2
         return ret
 
     # make sure files are present on filesystem
@@ -306,11 +396,13 @@ def add(pool_name, *vdevs):
             if not os.path.exists(vdev):
                 # Path doesn't exist so error and return
                 ret[vdev] = '{0} not present on filesystem'.format(vdev)
+                ret['retcode'] = 3
                 return ret
             mode = os.stat(vdev).st_mode
             if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
                 # Not a block device or file vdev so error and return
                 ret[vdev] = '{0} is not a block device or a file vdev'.format(vdev)
+                ret['retcode'] = 4
                 return ret
         dlist.append(vdev)
 
@@ -324,6 +416,7 @@ def add(pool_name, *vdevs):
         ret['Added'] = '{0} to {1}'.format(devs, pool_name)
         return ret
     ret['Error'] = 'Something went wrong when adding {0} to {1}'.format(devs, pool_name)
+    ret['retcode'] = 5
 
 
 def replace(pool_name, old, new):
@@ -340,14 +433,17 @@ def replace(pool_name, old, new):
     # Make sure pools there
     if not exists(pool_name):
         ret['Error'] = '{0}: pool does not exists.'.format(pool_name)
+        ret['retcode'] = 1
         return ret
 
     # make sure old, new vdevs are on filesystem
     if not os.path.isfile(old):
         ret['Error'] = '{0}: is not on the file system.'.format(old)
+        ret['retcode'] = 2
         return ret
     if not os.path.isfile(new):
         ret['Error'] = '{0}: is not on the file system.'.format(new)
+        ret['retcode'] = 3
         return ret
 
     # Replace vdevs
@@ -362,6 +458,7 @@ def replace(pool_name, old, new):
             ret['replaced'] = '{0} with {1}'.format(old, new)
             return ret
     ret['Error'] = 'Does not look like devices were swapped; check status'
+    ret['retcode'] = 4
     return ret
 
 
@@ -402,6 +499,7 @@ def create_file_vdev(size, *vdevs):
     for vdev in vdevs:
         if not os.path.isfile(vdev):
             ret[vdev] = 'The vdev can\'t be created'
+            ret['retcode'] = 1
     ret['status'] = True
     ret[cmd] = cmd
     return ret
@@ -424,11 +522,13 @@ def export(*pools, **kwargs):
     pool_list = []
     if not pools:
         ret['Error'] = 'zpool name parameter is mandatory'
+        ret['retcode'] = 1
         return ret
 
     for pool in pools:
         if not exists(pool):
             ret['Error'] = 'Storage pool {0} does not exist'.format(pool)
+            ret['retcode'] = 2
             return ret
         pool_list.append(pool)
 
@@ -444,6 +544,7 @@ def export(*pools, **kwargs):
         ret['Error'] = {}
         ret['Error']['Message'] = 'Import failed!'
         ret['Error']['Reason'] = res
+        ret['retcode'] = 3
     else:
         for pool in pool_list:
             ret[pool] = 'Exported'
@@ -476,6 +577,7 @@ def import_(pool_name='', new_name='', **kwargs):
         res = __salt__['cmd.run'](cmd, ignore_retcode=True)
         if not res and import_all is False:
             ret['Error'] = 'No pools available for import'
+            ret['retcode'] = 1
         elif import_all is False:
             pool_list = [l for l in res.splitlines()]
             ret['pools'] = pool_list
@@ -485,8 +587,10 @@ def import_(pool_name='', new_name='', **kwargs):
 
     if exists(pool_name) and not new_name:
         ret['Error'] = 'Storage pool {0} already exists. Import the pool under a different name instead'.format(pool_name)
+        ret['retcode'] = 2
     elif exists(new_name):
         ret['Error'] = 'Storage pool {0} already exists. Import the pool under a different name instead'.format(new_name)
+        ret['retcode'] = 3
     else:
         if force is True:
             cmd = '{0} import -f {1} {2}'.format(zpool, pool_name, new_name)
@@ -497,6 +601,7 @@ def import_(pool_name='', new_name='', **kwargs):
             ret['Error'] = {}
             ret['Error']['Message'] = 'Import failed!'
             ret['Error']['Reason'] = res
+            ret['retcode'] = 4
         else:
             ret[pool_name] = 'Imported'
     return ret
@@ -521,10 +626,12 @@ def online(pool_name, *vdevs, **kwargs):
     # Check if the pool_name exists
     if not exists(pool_name):
         ret['Error'] = 'Storage Pool `{0}` doesn\'t exist'.format(pool_name)
+        ret['retcode'] = 1
         return ret
 
     if not vdevs:
         ret['Error'] = 'Missing vdev specification. Please specify vdevs.'
+        ret['retcode'] = 2
         return ret
 
     # make sure files are present on filesystem
@@ -532,11 +639,13 @@ def online(pool_name, *vdevs, **kwargs):
         if not os.path.exists(vdev):
             # Path doesn't exist so error and return
             ret[vdev] = '{0} not present on filesystem'.format(vdev)
+            ret['retcode'] = 3
             return ret
         mode = os.stat(vdev).st_mode
         if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
             # Not a block device or file vdev so error and return
             ret[vdev] = '{0} is not a block device or a file vdev'.format(vdev)
+            ret['retcode'] = 4
             return ret
         dlist.append(vdev)
 
@@ -550,6 +659,7 @@ def online(pool_name, *vdevs, **kwargs):
         ret['Error'] = {}
         ret['Error']['Message'] = 'Failure bringing device online.'
         ret['Error']['Reason'] = res
+        ret['retcode'] = 5
     else:
         ret[pool_name] = 'Specified devices: {0} are online.'.format(vdevs)
     return ret
@@ -578,10 +688,12 @@ def offline(pool_name, *vdevs, **kwargs):
     # Check if the pool_name exists
     if not exists(pool_name):
         ret['Error'] = 'Storage Pool `{0}` doesn\'t exist'.format(pool_name)
+        ret['retcode'] = 1
         return ret
 
     if not vdevs:
         ret['Error'] = 'Missing vdev specification. Please specify vdevs.'
+        ret['retcode'] = 2
         return ret
 
     # make sure files are present on filesystem
@@ -589,11 +701,13 @@ def offline(pool_name, *vdevs, **kwargs):
         if not os.path.exists(vdev):
             # Path doesn't exist so error and return
             ret[vdev] = '{0} not present on filesystem'.format(vdev)
+            ret['retcode'] = 3
             return ret
         mode = os.stat(vdev).st_mode
         if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
             # Not a block device or file vdev so error and return
             ret[vdev] = '{0} is not a block device or a file vdev'.format(vdev)
+            ret['retcode'] = 4
             return ret
         dlist.append(vdev)
 
@@ -611,6 +725,9 @@ def offline(pool_name, *vdevs, **kwargs):
         ret['Error'] = {}
         ret['Error']['Message'] = 'Failure taking specified devices offline.'
         ret['Error']['Reason'] = res
+        ret['retcode'] = 5
     else:
         ret[pool_name] = 'Specified devices: {0} are offline.'.format(vdevs)
     return ret
+
+# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

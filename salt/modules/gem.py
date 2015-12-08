@@ -4,13 +4,13 @@ Manage ruby gems.
 '''
 from __future__ import absolute_import
 
-try:
-    from shlex import quote as _cmd_quote  # pylint: disable=E0611
-except ImportError:
-    from pipes import quote as _cmd_quote
-
 # Import python libs
 import re
+import logging
+
+# Import salt libs
+import salt.utils.itertools
+from salt.exceptions import CommandExecutionError
 
 # Import salt libs
 import salt.utils
@@ -18,6 +18,8 @@ import salt.utils
 __func_alias__ = {
     'list_': 'list'
 }
+
+log = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 def _gem(command, ruby=None, runas=None, gem_bin=None):
@@ -39,7 +41,7 @@ def _gem(command, ruby=None, runas=None, gem_bin=None):
     :return:
     Returns the full standard out including success codes or False if it fails
     '''
-    cmdline = '{gem} {command}'.format(gem=gem_bin or 'gem', command=command)
+    cmdline = [gem_bin or 'gem'] + command
 
     # If a custom gem is given, use that and don't check for rvm/rbenv. User
     # knows best!
@@ -47,22 +49,21 @@ def _gem(command, ruby=None, runas=None, gem_bin=None):
         if __salt__['rvm.is_installed'](runas=runas):
             return __salt__['rvm.do'](ruby, cmdline, runas=runas)
 
-        if not salt.utils.is_windows() and __salt__['rbenv.is_installed'](runas=runas):
+        if not salt.utils.is_windows() \
+                and __salt__['rbenv.is_installed'](runas=runas):
             if ruby is None:
                 return __salt__['rbenv.do'](cmdline, runas=runas)
             else:
-                return __salt__['rbenv.do_with_ruby'](ruby, cmdline, runas=runas)
+                return __salt__['rbenv.do_with_ruby'](ruby,
+                                                      cmdline,
+                                                      runas=runas)
 
-    ret = __salt__['cmd.run_all'](
-        cmdline,
-        runas=runas,
-        python_shell=True
-        )
+    ret = __salt__['cmd.run_all'](cmdline, runas=runas, python_shell=False)
 
     if ret['retcode'] == 0:
         return ret['stdout']
     else:
-        return False
+        raise CommandExecutionError(ret['stderr'])
 
 
 def install(gems,           # pylint: disable=C0103
@@ -73,7 +74,8 @@ def install(gems,           # pylint: disable=C0103
             rdoc=False,
             ri=False,
             pre_releases=False,
-            proxy=None):      # pylint: disable=C0103
+            proxy=None,
+            source=None):      # pylint: disable=C0103
     '''
     Installs one or several gems.
 
@@ -98,6 +100,9 @@ def install(gems,           # pylint: disable=C0103
     :param proxy: string : None
         Use the specified HTTP proxy server for all outgoing traffic.
         Format: http://hostname[:port]
+    source : None
+        Use the specified HTTP gem source server to download gem.
+        Format: http://hostname[:port]
 
     CLI Example:
 
@@ -107,19 +112,14 @@ def install(gems,           # pylint: disable=C0103
 
         salt '*' gem.install redphone gem_bin=/opt/sensu/embedded/bin/gem
     '''
-
-    # Check for injection
-    if gems:
-        gems = ' '.join([_cmd_quote(gem) for gem in gems.split()])
-    if ruby:
-        ruby = _cmd_quote(ruby)
-    if gem_bin:
-        gem_bin = _cmd_quote(gem_bin)
+    try:
+        gems = gems.split()
+    except AttributeError:
+        pass
 
     options = []
     if version:
-        version = _cmd_quote(version)  # injection check
-        options.append('--version {0}'.format(version))
+        options.extend(['--version', version])
     if not rdoc:
         options.append('--no-rdoc')
     if not ri:
@@ -127,12 +127,11 @@ def install(gems,           # pylint: disable=C0103
     if pre_releases:
         options.append('--pre')
     if proxy:
-        proxy = _cmd_quote(proxy)  # injection check
-        options.append('-p {0}'.format(proxy))
+        options.extend(['-p', proxy])
+    if source:
+        options.extend(['--source', source])
 
-    cmdline_args = ' '.join(options)
-    return _gem('install {gems} {options}'.format(gems=gems,
-                                                  options=cmdline_args),
+    return _gem(['install'] + gems + options,
                 ruby,
                 gem_bin=gem_bin,
                 runas=runas)
@@ -158,15 +157,12 @@ def uninstall(gems, ruby=None, runas=None, gem_bin=None):
 
         salt '*' gem.uninstall vagrant
     '''
-    # Check for injection
-    if gems:
-        gems = ' '.join([_cmd_quote(gem) for gem in gems.split()])
-    if ruby:
-        ruby = _cmd_quote(ruby)
-    if gem_bin:
-        gem_bin = _cmd_quote(gem_bin)
+    try:
+        gems = gems.split()
+    except AttributeError:
+        pass
 
-    return _gem('uninstall {gems} -a -x'.format(gems=gems),
+    return _gem(['uninstall'] + gems + ['-a', '-x'],
                 ruby,
                 gem_bin=gem_bin,
                 runas=runas)
@@ -192,15 +188,12 @@ def update(gems, ruby=None, runas=None, gem_bin=None):
 
         salt '*' gem.update vagrant
     '''
-    # Check for injection
-    if gems:
-        gems = ' '.join([_cmd_quote(gem) for gem in gems.split()])
-    if ruby:
-        ruby = _cmd_quote(ruby)
-    if gem_bin:
-        gem_bin = _cmd_quote(gem_bin)
+    try:
+        gems = gems.split()
+    except AttributeError:
+        pass
 
-    return _gem('update {gems}'.format(gems=gems),
+    return _gem(['update'] + gems,
                 ruby,
                 gem_bin=gem_bin,
                 runas=runas)
@@ -226,15 +219,7 @@ def update_system(version='', ruby=None, runas=None, gem_bin=None):
 
         salt '*' gem.update_system
     '''
-    # Check for injection
-    if version:
-        version = _cmd_quote(version)
-    if ruby:
-        ruby = _cmd_quote(ruby)
-    if gem_bin:
-        gem_bin = _cmd_quote(gem_bin)
-
-    return _gem('update --system {version}'.format(version=version),
+    return _gem(['update', '--system', version],
                 ruby,
                 gem_bin=gem_bin,
                 runas=runas)
@@ -260,31 +245,59 @@ def list_(prefix='', ruby=None, runas=None, gem_bin=None):
 
         salt '*' gem.list
     '''
-    gems = {}
-    # Check for injection
+    cmd = ['list']
     if prefix:
-        prefix = _cmd_quote(prefix)
-    if ruby:
-        ruby = _cmd_quote(ruby)
-    if gem_bin:
-        gem_bin = _cmd_quote(gem_bin)
-
-    stdout = _gem('list {prefix}'.format(prefix=prefix),
+        cmd.append(prefix)
+    stdout = _gem(cmd,
                   ruby,
                   gem_bin=gem_bin,
                   runas=runas)
-
-    lines = []
-    if isinstance(stdout, str):
-        lines = stdout.splitlines()
-    for line in lines:
+    ret = {}
+    for line in salt.utils.itertools.split(stdout, '\n'):
         match = re.match(r'^([^ ]+) \((.+)\)', line)
         if match:
             gem = match.group(1)
             versions = match.group(2).split(', ')
-            gems[gem] = versions
+            ret[gem] = versions
+    return ret
 
-    return gems
+
+def list_upgrades(ruby=None,
+                  runas=None,
+                  gem_bin=None):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Check if an upgrade is available for installed gems
+
+    gem_bin : None
+        Full path to ``gem`` binary to use.
+    ruby : None
+        If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
+    runas : None
+        The user to run gem as.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' gem.list_upgrades
+    '''
+    result = _gem(['outdated'],
+                  ruby,
+                  gem_bin=gem_bin,
+                  runas=runas)
+    ret = {}
+    for line in salt.utils.itertools.split(result, '\n'):
+        match = re.search(r'(\S+) \(\S+ < (\S+)\)', line)
+        if match:
+            name, version = match.groups()
+        else:
+            log.error('Can\'t parse line \'{0}\''.format(line))
+            continue
+        ret[name] = version
+    return ret
 
 
 def sources_add(source_uri, ruby=None, runas=None, gem_bin=None):
@@ -307,15 +320,7 @@ def sources_add(source_uri, ruby=None, runas=None, gem_bin=None):
 
         salt '*' gem.sources_add http://rubygems.org/
     '''
-    # Check for injection
-    if source_uri:
-        source_uri = _cmd_quote(source_uri)
-    if ruby:
-        ruby = _cmd_quote(ruby)
-    if gem_bin:
-        gem_bin = _cmd_quote(gem_bin)
-
-    return _gem('sources --add {source_uri}'.format(source_uri=source_uri),
+    return _gem(['sources', '--add', source_uri],
                 ruby,
                 gem_bin=gem_bin,
                 runas=runas)
@@ -341,15 +346,7 @@ def sources_remove(source_uri, ruby=None, runas=None, gem_bin=None):
 
         salt '*' gem.sources_remove http://rubygems.org/
     '''
-    # Check for injection
-    if source_uri:
-        source_uri = _cmd_quote(source_uri)
-    if ruby:
-        ruby = _cmd_quote(ruby)
-    if gem_bin:
-        gem_bin = _cmd_quote(gem_bin)
-
-    return _gem('sources --remove {source_uri}'.format(source_uri=source_uri),
+    return _gem(['sources', '--remove', source_uri],
                 ruby,
                 gem_bin=gem_bin,
                 runas=runas)
@@ -373,11 +370,5 @@ def sources_list(ruby=None, runas=None, gem_bin=None):
 
         salt '*' gem.sources_list
     '''
-    # Check for injection
-    if ruby:
-        ruby = _cmd_quote(ruby)
-    if gem_bin:
-        gem_bin = _cmd_quote(gem_bin)
-
-    ret = _gem('sources', ruby, gem_bin=gem_bin, runas=runas)
+    ret = _gem(['sources'], ruby, gem_bin=gem_bin, runas=runas)
     return [] if ret is False else ret.splitlines()[2:]

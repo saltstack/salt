@@ -1,5 +1,13 @@
 # -*- coding: utf-8 -*-
+
+# Import Python libs
+from __future__ import absolute_import
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
 # define the module's virtual name
+__virtualname__ = 'sysrc'
 
 
 def __virtual__():
@@ -21,6 +29,15 @@ def managed(name, value, **kwargs):
         (optional) The rc file to add the variable to.
     jail
         (option) the name or JID of the jail to set the value in.
+
+    Example:
+
+    .. code-block:: yaml
+
+        syslogd:
+          sysrc.managed:
+            - name: syslogd_flags
+            - value: -ss
     '''
 
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
@@ -28,7 +45,7 @@ def managed(name, value, **kwargs):
     # Check the current state
     current_state = __salt__['sysrc.get'](name=name, **kwargs)
     if current_state is not None:
-        for rcname, rcdict in current_state.iteritems():
+        for rcname, rcdict in six.iteritems(current_state):
             if rcdict[name] == value:
                 ret['result'] = True
                 ret['comment'] = '{0} is already set to the desired value.'.format(name)

@@ -154,7 +154,7 @@ creates a consistent understanding throughout our Salt environment. Users can
 expect that pillar variables found in an Apache state will live inside of an
 Apache pillar:
 
-``/srv/salt/pillar/apache.sls``:
+``/srv/pillar/apache.sls``:
 
 .. code-block:: yaml
 
@@ -320,7 +320,7 @@ modification of static values:
         'Debian': {
             'server': 'apache2',
             'service': 'apache2',
-             'conf': '/etc/apache2/apache.conf',
+            'conf': '/etc/apache2/apache.conf',
         },
         'RedHat': {
             'server': 'httpd',
@@ -376,7 +376,7 @@ to be broken into two states.
         'Debian': {
             'server': 'apache2',
             'service': 'apache2',
-             'conf': '/etc/apache2/apache.conf',
+            'conf': '/etc/apache2/apache.conf',
         },
         'RedHat': {
             'server': 'httpd',

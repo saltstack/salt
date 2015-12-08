@@ -51,25 +51,48 @@ class BotoAsgTestCase(TestCase):
             with patch.dict(boto_asg.__opts__, {'test': True}):
                 comt = ('Autoscale group set to be created.')
                 ret.update({'comment': comt})
-                self.assertDictEqual(boto_asg.present(name, launch_config_name,
-                                                      availability_zones,
-                                                      min_size, max_size), ret)
+                with patch.dict(boto_asg.__salt__,
+                                {'config.option': MagicMock(return_value={})}):
+                    self.assertDictEqual(
+                        boto_asg.present(
+                            name,
+                            launch_config_name,
+                            availability_zones,
+                            min_size,
+                            max_size
+                        ),
+                        ret
+                    )
 
                 comt = ('Autoscale group set to be updated.')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(boto_asg.present(name, launch_config_name,
-                                                      availability_zones,
-                                                      min_size, max_size), ret)
+                with patch.dict(boto_asg.__salt__,
+                                {'config.option': MagicMock(return_value={})}):
+                    self.assertDictEqual(
+                        boto_asg.present(
+                            name,
+                            launch_config_name,
+                            availability_zones,
+                            min_size,
+                            max_size
+                        ),
+                        ret
+                    )
 
                 with patch.dict(boto_asg.__salt__,
                                 {'config.option': MagicMock(return_value={})}):
                     comt = ('Autoscale group present. ')
                     ret.update({'comment': comt, 'result': True})
-                    self.assertDictEqual(boto_asg.present(name,
-                                                          launch_config_name,
-                                                          availability_zones,
-                                                          min_size, max_size),
-                                         ret)
+                    self.assertDictEqual(
+                        boto_asg.present(
+                            name,
+                            launch_config_name,
+                            availability_zones,
+                            min_size,
+                            max_size
+                        ),
+                        ret
+                    )
 
     # 'absent' function tests: 1
 

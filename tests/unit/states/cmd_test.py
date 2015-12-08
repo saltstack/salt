@@ -132,13 +132,15 @@ class CmdTestCase(TestCase):
                'comment': ''}
 
         with patch.object(os.path, 'isdir', MagicMock(return_value=False)):
-            comt = ('Desired working directory "/tmp/salt" is not available')
-            ret.update({'comment': comt})
-            self.assertDictEqual(cmd.run(name, cwd='/tmp/salt'), ret)
+            with patch.dict(cmd.__opts__, {'test': False}):
+                comt = ('Desired working directory "/tmp/salt" is not available')
+                ret.update({'comment': comt})
+                self.assertDictEqual(cmd.run(name, cwd='/tmp/salt'), ret)
 
-        comt = ("Invalidly-formatted 'env' parameter. See documentation.")
-        ret.update({'comment': comt})
-        self.assertDictEqual(cmd.run(name, env='salt'), ret)
+        with patch.dict(cmd.__opts__, {'test': False}):
+            comt = ("Invalidly-formatted 'env' parameter. See documentation.")
+            ret.update({'comment': comt})
+            self.assertDictEqual(cmd.run(name, env='salt'), ret)
 
         with patch.dict(cmd.__grains__, {'shell': 'shell'}):
             with patch.dict(cmd.__opts__, {'test': False}):
@@ -159,10 +161,11 @@ class CmdTestCase(TestCase):
 
             mock = MagicMock(return_value=1)
             with patch.dict(cmd.__salt__, {'cmd.retcode': mock}):
-                comt = ('onlyif execution failed')
-                ret.update({'comment': comt, 'result': True,
-                            'skip_watch': True})
-                self.assertDictEqual(cmd.run(name, onlyif=''), ret)
+                with patch.dict(cmd.__opts__, {'test': False}):
+                    comt = ('onlyif execution failed')
+                    ret.update({'comment': comt, 'result': True,
+                                'skip_watch': True})
+                    self.assertDictEqual(cmd.run(name, onlyif=''), ret)
 
     # 'script' function tests: 1
 
@@ -178,13 +181,15 @@ class CmdTestCase(TestCase):
                'comment': ''}
 
         with patch.object(os.path, 'isdir', MagicMock(return_value=False)):
-            comt = ('Desired working directory "/tmp/salt" is not available')
-            ret.update({'comment': comt})
-            self.assertDictEqual(cmd.script(name, cwd='/tmp/salt'), ret)
+            with patch.dict(cmd.__opts__, {'test': False}):
+                comt = ('Desired working directory "/tmp/salt" is not available')
+                ret.update({'comment': comt})
+                self.assertDictEqual(cmd.script(name, cwd='/tmp/salt'), ret)
 
-        comt = ("Invalidly-formatted 'env' parameter. See documentation.")
-        ret.update({'comment': comt})
-        self.assertDictEqual(cmd.script(name, env='salt'), ret)
+        with patch.dict(cmd.__opts__, {'test': False}):
+            comt = ("Invalidly-formatted 'env' parameter. See documentation.")
+            ret.update({'comment': comt})
+            self.assertDictEqual(cmd.script(name, env='salt'), ret)
 
         with patch.dict(cmd.__grains__, {'shell': 'shell'}):
             with patch.dict(cmd.__opts__, {'test': True}):
@@ -205,10 +210,11 @@ class CmdTestCase(TestCase):
 
             mock = MagicMock(return_value=1)
             with patch.dict(cmd.__salt__, {'cmd.retcode': mock}):
-                comt = ('onlyif execution failed')
-                ret.update({'comment': comt, 'result': True,
-                            'skip_watch': True, 'changes': {}})
-                self.assertDictEqual(cmd.script(name, onlyif=''), ret)
+                with patch.dict(cmd.__opts__, {'test': False}):
+                    comt = ('onlyif execution failed')
+                    ret.update({'comment': comt, 'result': True,
+                                'skip_watch': True, 'changes': {}})
+                    self.assertDictEqual(cmd.script(name, onlyif=''), ret)
 
     # 'call' function tests: 1
 

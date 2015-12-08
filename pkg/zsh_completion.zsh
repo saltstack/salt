@@ -1,38 +1,132 @@
-#compdef salt salt-call salt-cp
+#compdef salt salt-call salt-cp salt-run salt-key
+# The use-cache style is checked in a few places to allow caching minions, modules,
+# or the directory salt is installed in.
+# you can cache those three with:
+# zstyle ':completion:*:salt(|-cp|-call|-run|-key):*' use-cache true
+# and/or selectively:
+# zstyle ':completion::complete:salt-key:set-option-a-1:'             use-cache false
+# zstyle ':completion::complete:salt(|-cp|-call):minions:'            use-cache true
+# zstyle ':completion::complete:salt(|-call):modules:'                use-cache true
+# zstyle ':completion::complete:salt(|-cp|-call|-run|-key):salt_dir:' use-cache true
+#
+# cache validation can be controled with the style cache-ttl.
+# it expects two arguments: number (days|hours|weeks|months)
+# to invalidate the minion cache after four days:
+# zstyle ':completion::complete:salt(|-cp|-call):minions:'            cache-ttl 4 days
 
-local state line curcontext="$curcontext"
- 
-salt_dir="${$(python2 -c 'import salt; print(salt.__file__);')%__init__*}"
+
+local state line curcontext="$curcontext" salt_dir
+
 _modules(){
-    typeset -a _funcs
-    for file in $salt_dir/modules/*${words[CURRENT]%.*}*.py; do
-        module=${${file##*/}%.py}
-        if ! grep '__virtual__' $file &> /dev/null; then
-            continue
-        fi
-        mod=$(python2 -c "import salt.modules.$module as tmp; print(getattr(tmp, '__virtualname__', '$module'));")
-        for func in $(awk -F'[ (]' '/^def [^_]/ {print $2}' $file); do 
-            _funcs+=($mod.$func)
-        done
-    done
-    _describe modules _funcs
+    local _funcs expl curcontext=${curcontext%:*}:modules
+
+    if ! zstyle -m ":completion:$curcontext:" cache-policy '*'; then
+        zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
+    fi
+
+    if _cache_invalid salt/modules || ! _retrieve_cache salt/modules; then
+        _funcs=( ${(M)${(f)"$(command salt-call --local -d 2>/dev/null)"}##[[:alnum:]._]##} )
+        _store_cache salt/modules _funcs
+    fi
+
+    _wanted modules expl modules _multi_parts "$@" . _funcs
+}
+
+_runners(){
+    local _runs expl curcontext=${curcontext%:*}:runners
+
+    if ! zstyle -m ":completion:$curcontext:" cache-policy '*'; then
+        zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
+    fi
+
+    if _cache_invalid salt/runners || ! _retrieve_cache salt/runners; then
+        _runs=( ${(M)${(Q)${(f)"$(command salt-run -d 2>/dev/null)"}}##[[:alnum:]._]##} )
+        _store_cache salt/runners _runs
+    fi
+
+    _wanted modules expl runners _multi_parts "$@" . _runs
 }
 
 _minions(){
-    _peons=($(salt-key 2>/dev/null | tail -n +2))
-    _describe Minions _peons
+    local type requested_type include_all key expl; typeset -A _peons
+
+    # when completing the minion argument for salt and salt-cp, set the argument section
+    # of the context to `minion' not `argument-1'
+    if [[ $service = salt(|-cp) ]]; then
+       curcontext=${curcontext%:*}:minions
+    fi
+
+    # only pass the argument accepted, unaccepted, rejected, denied or all to -t/-T
+    # the argument is used as part of an tag, accepted-minions, rejected-minions, etc.
+    # while un, acc, den, etc will work, you will possibly ignore user customized tags.
+    zparseopts -D -E 't+:=requested_type' 'T+:=include_all'
+
+    if ! zstyle -m ":completion:$curcontext:" cache-policy '*'; then
+        zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
+    fi
+
+    if _cache_invalid salt/minions || ! _retrieve_cache salt/minions; then
+        # it would be awesome if salt-key could prefix or suffix a word to denote
+        # the key's state. It would remove the need for this loop, calling salt-key N times.
+        for type in accepted unaccepted rejected denied; do
+            salt-key -l $type 2>/dev/null | while read -r key; do
+              [[ $key == *' Keys:' ]] && continue
+              _peons+=( "$key" $type )
+            done
+        done
+        _store_cache salt/minions _peons
+    fi
+
+    # if salt-key's --include-all option isn't on the line, ignore the -T options
+    (( words[(I)--include-all] )) || unset include_all
+
+    if (( requested_type[(I)all] )); then
+        requested_type=( -t accepted -t unaccepted -t rejected -t denied )
+        unset include_all
+    fi
+
+    for type in ${${requested_type:#-t}:-accepted} ${include_all:#-T}; do
+        _wanted $type-minions expl minion compadd "$@" -M 'r:|.=* r:|=*' ${(k)_peons[(R)$~type]}
+    done
 }
 
+(( $+functions[_salt_caching_policy] )) ||
+_salt_caching_policy() {
+    local oldp ttl d t
+    zstyle -a ":completion:$curcontext:" cache-ttl ttl
+
+    if (( $#ttl >= 2 )); then
+      [[ $ttl[1] == <-> ]] && integer t=$ttl[1]
+
+      case $ttl[2] in
+        seconds#)d=s;;
+        months#) d=M;;
+        weeks#)  d=w;;
+        hours#)  d=h;;
+        *)       d=d;;
+      esac
+    fi
+
+    oldp=( "$1"(Nm${d:-d}+${t:-1}) )
+    (( $#oldp ))
+}
+
+local -a _{target,master,logging,minion}_options _{common,out}_opts _target_opt_pat
+_target_opt_pat=(
+    '(-[ELGNRCIS]|--(pcre|list|grain(|-pcre)|nodegroup|range|compound|pillar|ipcidr))'
+    '(-E --pcre -L --list -G --grain --grain-pcre -N --nodegroup -R --range -C --compound -I --pillar -S --ipcidr)'
+)
+
 _target_options=(
-    '(-E --pcre)'{-E,--pcre}'[use pcre regular expressions]:pcre:'
-    '(-L --list)'{-L,--list}'[take a comma or space delimited list of servers.]:list:'
-    '(-G --grain)'{-G,--grain}'[use a grain value to identify targets]:Grains:'
-    '--grain-pcre[use a grain value to identify targets.]:pcre:'
-    '(-N --nodegroup)'{-N,--nodegroup}'[use one of the predefined nodegroups to identify a list of targets.]:Nodegroup:'
-    '(-R --range)'{-R,--range}'[use a range expression to identify targets.]:Range:'
-    '(-C --compound)'{-C,--compound}'[Use multiple targeting options.]:Compound:'
-    '(-I --pillar)'{-I,--pillar}'[use a pillar value to identify targets.]:Pillar:'
-    '(-S --ipcidr)'{-S,--ipcidr}'[Match based on Subnet (CIDR notation) or IPv4 address.]:Cidr:'
+    "$_target_opt_pat[2]"{-E,--pcre}'[use pcre regular expressions]:pcre:'
+    "$_target_opt_pat[2]"{-L,--list}'[take a comma or space delimited list of servers.]:list:'
+    "$_target_opt_pat[2]"{-G,--grain}'[use a grain value to identify targets]:Grains:'
+    "$_target_opt_pat[2]--grain-pcre[use a grain value to identify targets.]:pcre:"
+    "$_target_opt_pat[2]"{-N,--nodegroup}'[use one of the predefined nodegroups to identify a list of targets.]:Nodegroup:'
+    "$_target_opt_pat[2]"{-R,--range}'[use a range expression to identify targets.]:Range:'
+    "$_target_opt_pat[2]"{-C,--compound}'[Use multiple targeting options.]:Compound:'
+    "$_target_opt_pat[2]"{-I,--pillar}'[use a pillar value to identify targets.]:Pillar:'
+    "$_target_opt_pat[2]"{-S,--ipcidr}'[Match based on Subnet (CIDR notation) or IPv4 address.]:Cidr:'
 )
 
 _common_opts=(
@@ -53,14 +147,14 @@ _master_options=(
     '(-b --batch --batch-size)'{-b,--batch,--batch-size}'[Execute the salt job in batch mode, pass number or percentage to batch.]:Batch Size:'
     '(-a --auth --eauth --extrenal-auth)'{-a,--auth,--eauth,--external-auth}'[Specify an external authentication system to use.]:eauth:'
     '(-T --make-token)'{-T,--make-token}'[Generate and save an authentication token for re-use.]'
-    "--return[Set an alternative return method.]:Returners:_path_files -W '$salt_dir/returners' -g '[^_]*.py(\:r)'"
-    '(-d --doc --documentation)'{-d,--doc,--documentation}"[Return the documentation for the specified module]:Module:_path_files -W '$salt_dir/modules' -g '[^_]*.py(\:r)'"
+    '--return[Set an alternative return method.]:Returners:_path_files -W "$salt_dir/returners" -g "[^_]*.py(\:r)"'
+    '(-d --doc --documentation)'{-d,--doc,--documentation}'[Return the documentation for the specified module]'
     '--args-separator[Set the special argument used as a delimiter between command arguments of compound commands.]:Arg separator:'
 )
 
 _minion_options=(
-    "--return[Set an alternative return method.]:Returners:_path_files -W '$salt_dir/returners' -g '[^_]*.py(\:r)'"
-    '(-d --doc --documentation)'{-d,--doc,--documentation}"[Return the documentation for the specified module]:Module:_path_files -W '$salt_dir/modules' -g '[^_]*.py(\:r)'"
+    '--return[Set an alternative return method.]:Returners:_path_files -W "$salt_dir"/returners" -g "[^_]*.py(\:r)"'
+    '(-d --doc --documentation)'{-d,--doc,--documentation}'[Return the documentation for the specified module]'
     '(-g --grains)'{-g,--grains}'[Return the information generated by the salt grains]'
     {*-m,*--module-dirs}'[Specify an additional directory to pull modules from.]:Module Dirs:_files -/'
     '--master[Specify the master to use.]:Master:'
@@ -73,6 +167,44 @@ _minion_options=(
     '--refresh-grains-cache[Force a refresh of the grains cache]'
 )
 
+_runner_options=(
+    '--hard-crash[raise any original exception rather than exiting gracefully]'
+    '(-d --doc --documentation)'{-d,--doc,--documentation}'[Return the documentation for the specified module]'
+)
+
+_key_options=(
+    '(-u --user)'{-u+,--user=}'[specify user to run salt-key]:user:_users'
+    '--hard-crash[raise any original exception rather than exiting gracefully]'
+    '(-q --quiet)'{-q,--quiet}'[quiet mode]'
+    '(-y --yes)'{-y,--yes}'[assume yes]'
+    '--rotate-aes-key[prevents the master from refreshing the key session when keys are deleted or rejected]:boolean:(true false)'
+    '--gen-keys=[set a name to generate a keypair for use with salt]:key name'
+    '--gen-keys-dir=[set the directory to save the generated keypair]: : _directories'
+    '--keysize=[set the size for keypair]:key size'
+    '--gen-signature[create a signature file of the masters public-key]'
+    '--priv=[the private-key file to create a signature with]:private key:_files'
+    '--signature-path=[the path where the signature file should be written]: : _directories'
+    '--pub=[the public-key file to create a signature for]:public key:_files'
+    '--auto-create[auto-create a signing key-pair if it does not yet exist]'
+    '--include-all[include non-pending keys when accepting/rejecting]'
+    - '(set)'
+    {-l+,--list=}'[list public keys]:key type:((
+        preaccepted\:"unaccepted/unsigned keys" unaccepted\:"unaccepted/unsigned keys" un\:"unaccepted/unsigned keys"
+        accepted\:"accepted/signed keys" acc\:"accepted/signed keys"
+        rejected\:"rejected keys" rej\:"rejected keys"
+        den\:"denied keys" denied\:"denied keys" all
+      ))'
+    {-a+,--accept=}'[accept key]:key:_minions -t unaccepted -T rejected'
+    {-A,--accept-all}'[accept all keys]'
+    {-r+,--reject=}'[reject key]:key:_minions -t rejected -T accepted'
+    {-p+,--print=}'[print the specified public key]:key:_minions -t all'
+    {-P,--print-all}'[print all public keys]'
+    {-d+,--delete=}'[delete the specified public key]:key:_minions -t all'
+    {-D,--delete-all}'[delete all public keys]'
+    {-f+,--finger=}'[print the specified key'\''s fingerprint]:key:_minions -t all'
+    {-F,--finger-all}'[print the fingerprint of all keys]'
+)
+
 _logging_options=(
     '(-l --log-level)'{-l,--log-level}'[Console logging log level.(default: warning)]:Log Level:(all garbage trace debug info warning error critical quiet)'
     '--log-file[Log file path. Default: /var/log/salt/master.]:Log File:_files'
@@ -80,7 +212,7 @@ _logging_options=(
 )
 
 _out_opts=(
-    '(--out --output)'{--out,--output}"[Print the output using the specified outputter.]:Outputters:_path_files -W '$salt_dir/output' -g '[^_]*.py(\:r)'"
+    '(--out --output)'{--out,--output}'[Print the output using the specified outputter.]:Outputters:_path_files -W "$salt_dir/output" -g "[^_]*.py(\:r)"'
     '(--out-indent --output-indent)'{--out-indent,--output-indent}'[Print the output indented by the provided value in spaces.]:Number:'
     '(--out-file --output-file)'{--out-file,--output-file}'[Write the output to the specified file]:Output File:_files'
     '(--no-color --no-colour)'{--no-color,--no-colour}'[Disable all colored output]'
@@ -91,7 +223,7 @@ _salt_comp(){
     case "$service" in
         salt)
             _arguments -C \
-                ':minions:_minions' \
+                "${words[(r)$_target_opt_pat[1]]+!}:minions:_minions" \
                 ':modules:_modules' \
                 "$_target_options[@]" \
                 "$_common_opts[@]" \
@@ -109,14 +241,39 @@ _salt_comp(){
             ;;
         salt-cp)
             _arguments -C \
-                ':minions:_minions' \
+                "${words[(r)$_target_opt_pat[1]]+!}:minions:_minions" \
                 "$_target_options[@]" \
                 "$_common_opts[@]" \
                 "$_logging_options[@]" \
                 ':Source File:_files' \
                 ':Destination File:_files'
             ;;
+        salt-run)
+            _arguments -C \
+                ":runners:_runners" \
+                "$_runner_options[@]" \
+                "$_common_opts[@]" \
+                "$_logging_options[@]"
+            ;;
+        salt-key)
+            _arguments -C \
+                "$_key_options[@]" \
+                "${_common_opts[@]:#'-t --timeout\)'*}" \
+                "${_logging_options[@]:#'(-l --log-level)'*}"
+            ;;
     esac
+}
+
+() {
+    local curcontext=${curcontext%:*}:salt_dir
+    if ! zstyle -m ":completion:$curcontext:" cache-policy '*'; then
+        zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
+    fi
+
+    if _cache_invalid salt/salt_dir || ! _retrieve_cache salt/salt_dir; then
+        salt_dir="${$(python2 -c 'import salt; print(salt.__file__);')%__init__*}"
+        _store_cache salt/salt_dir salt_dir
+    fi
 }
 
 _salt_comp "$@"

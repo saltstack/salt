@@ -5,31 +5,37 @@ Wrapper around Server Density API
 
 .. versionadded:: 2014.7.0
 '''
-from __future__ import absolute_import
 
+# Import Python libs
+from __future__ import absolute_import
 import json
 import logging
 import os
 import tempfile
 
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import map  # pylint: disable=import-error,no-name-in-module,redefined-builtin
+
+from salt.exceptions import CommandExecutionError
+
 try:
     import requests
-    HAS_REQUESTS = True
+    ENABLED = True
 except ImportError:
-    HAS_REQUESTS = False
-
-from salt.ext.six.moves import map
-from salt.exceptions import CommandExecutionError
+    ENABLED = False
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     '''
-    Requires requests
+    Return virtual name of the module.
+
+    :return: The virtual name of the module.
     '''
-    if not HAS_REQUESTS:
-        return False
+    if not ENABLED:
+        return (False, 'The requests python module cannot be imported')
     return "serverdensity_device"
 
 
@@ -46,7 +52,7 @@ def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
     sd_pillar = __pillar__.get(sd_auth_pillar_name)
     log.debug('Server Density Pillar: {0}'.format(sd_pillar))
     if not sd_pillar:
-        log.error('Cloud not load {0} pillar'.format(sd_auth_pillar_name))
+        log.error('Could not load {0} pillar'.format(sd_auth_pillar_name))
         raise CommandExecutionError(
             '{0} pillar is required for authentication'.format(sd_auth_pillar_name)
         )
@@ -54,7 +60,7 @@ def get_sd_auth(val, sd_auth_pillar_name='serverdensity'):
     try:
         return sd_pillar[val]
     except KeyError:
-        log.error('Cloud not find value {0} in pillar'.format(val))
+        log.error('Could not find value {0} in pillar'.format(val))
         raise CommandExecutionError('{0} value was not found in pillar'.format(val))
 
 
@@ -161,8 +167,8 @@ def ls(**params):
         endpoint = 'resources'
 
     # Convert all ints to strings:
-    for k, v in params.items():
-        params[k] = str(v)
+    for key, val in six.iteritems(params):
+        params[key] = str(val)
 
     api_response = requests.get(
         'https://api.serverdensity.io/inventory/{0}'.format(endpoint),

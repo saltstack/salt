@@ -227,6 +227,17 @@ container-by-container basis, for instance using the ``nic_opts`` argument to
     for instance, typically are configured for eth0 to use DHCP, which will
     conflict with static IP addresses set at the container level.
 
+.. note::
+
+    For LXC < 1.0.7 and DHCP support, set ``ipv4.gateway: 'auto'`` is your
+    network profile, ie.::
+
+        lxc.network_profile.nic:
+          debian:
+            eth0:
+              link: lxcbr0
+              ipv4.gateway: 'auto'
+
 
 Old lxc support (<1.0.7)
 ------------------------

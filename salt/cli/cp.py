@@ -11,12 +11,12 @@ from __future__ import print_function
 from __future__ import absolute_import
 import os
 import sys
-import pprint
 
 # Import salt libs
 import salt.client
 from salt.utils import parsers, print_cli
-from salt.utils.verify import verify_files, verify_log
+from salt.utils.verify import verify_log
+import salt.output
 
 
 class SaltCPCli(parsers.SaltCPOptionParser):
@@ -29,16 +29,6 @@ class SaltCPCli(parsers.SaltCPOptionParser):
         Execute salt-cp
         '''
         self.parse_args()
-
-        if self.config['verify_env']:
-            if not self.config['log_file'].startswith(('tcp://',
-                                                       'udp://',
-                                                       'file://')):
-                # Logfile is not using Syslog, verify
-                verify_files(
-                    [self.config['log_file']],
-                    self.config['user']
-                )
 
         # Setup file logging!
         self.setup_logfile_logger()
@@ -114,4 +104,7 @@ class SaltCP(object):
 
         ret = local.cmd(*args)
 
-        pprint.pprint(ret)
+        salt.output.display_output(
+                ret,
+                self.opts.get('output', 'nested'),
+                self.opts)

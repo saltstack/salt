@@ -21,7 +21,7 @@ try:
         logger.error('rest_tornado requires at least tornado {0}'.format(min_tornado_version))
 except (ImportError, TypeError) as err:
     has_tornado = False
-    logger.info('ImportError! {0}'.format(str(err)))
+    logger.error('ImportError! {0}'.format(str(err)))
 
 import salt.auth
 
@@ -39,7 +39,11 @@ def start():
     '''
     Start the saltnado!
     '''
-    from . import saltnado
+    try:
+        from . import saltnado
+    except ImportError as err:
+        logger.error('ImportError! {0}'.format(str(err)))
+        return None
 
     mod_opts = __opts__.get(__virtualname__, {})
 

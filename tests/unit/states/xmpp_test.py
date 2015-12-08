@@ -46,7 +46,8 @@ class XmppTestCase(TestCase):
 
         with patch.dict(xmpp.__opts__, {"test": False}):
             mock = MagicMock(return_value=True)
-            with patch.dict(xmpp.__salt__, {"xmpp.send_msg": mock}):
+            with patch.dict(xmpp.__salt__, {'xmpp.send_msg': mock,
+                                            'xmpp.send_msg_multi': mock}):
                 ret.update({'result': True,
                             'comment': 'Sent message to myaccount: salt'})
                 self.assertDictEqual(xmpp.send_msg('salt', 'myaccount',

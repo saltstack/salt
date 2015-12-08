@@ -23,26 +23,37 @@ def write_launchd_plist(program):
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
+  <dict>
     <key>Label</key>
     <string>org.saltstack.{program}</string>
-
-    <key>ProgramArguments</key>
-    <array>
-        <string>{python}</string>
-        <string>{script}</string>
-    </array>
-
     <key>RunAtLoad</key>
     <true/>
-</dict>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{script}</string>
+    </array>
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>100000</integer>
+    </dict>
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>100000</integer>
+    </dict>
+  </dict>
 </plist>
     '''.strip()
 
     supported_programs = ['salt-master', 'salt-minion']
 
     if program not in supported_programs:
-        sys.stderr.write('Supported programs: {0!r}\n'.format(supported_programs))
+        sys.stderr.write(
+            'Supported programs: \'{0}\'\n'.format(supported_programs)
+        )
         sys.exit(-1)
 
         return plist_sample_text.format(

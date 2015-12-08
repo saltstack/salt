@@ -30,7 +30,7 @@ def disabled(name):
             break
 
     if __opts__['test']:
-        ret['result'] = None
+        ret['result'] = not action or None
         return ret
 
     # Disable it
@@ -61,7 +61,7 @@ def add_rule(name, localport, protocol="tcp", action="allow", dir="in"):
         ret['changes'] = {'new rule': name}
 
     if __opts__['test']:
-        ret['result'] = None
+        ret['result'] = not commit or None
         return ret
 
     # Add rule

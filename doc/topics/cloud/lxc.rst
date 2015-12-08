@@ -10,22 +10,18 @@ and possibly remote minion.
 In other words, Salt will connect to a minion, then from that minion:
 
 - Provision and configure a container for networking access
-- Use those modules to deploy salt and re-attach to master. 
+- Use those modules to deploy salt and re-attach to master.
 
-    - :mod:`lxc runner <salt.runners.lxc>` 
+    - :mod:`lxc runner <salt.runners.lxc>`
     - :mod:`lxc module <salt.modules.lxc>`
-    - :mod:`seed <salt.modules.config>` 
+    - :mod:`seed <salt.modules.config>`
 
 Limitations
-------------
+-----------
 
 - You can only act on one minion and one provider at a time.
 - Listing images must be targeted to a particular LXC provider (nothing will be
   outputted with ``all``)
-
-.. warning::
-
-   On pre **2015.5.2**, you need to specify explitly the network bridge
 
 Operation
 ---------
@@ -60,7 +56,16 @@ Here is a simple provider configuration:
     # /etc/salt/cloud.providers.d/ directory.
     devhost10-lxc:
       target: devhost10
-      provider: lxc
+      driver: lxc
+
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Profile configuration
 ---------------------
@@ -80,7 +85,7 @@ Here are the options to configure your containers:
         Name of the profile or inline options for the LXC vm network settings,
         please see :ref:`tutorial-lxc-profiles-network`.
     nic_opts
-        Totally optionnal.
+        Totally optional.
         Per interface new-style configuration options mappings which will
         override any profile default option::
 
@@ -97,6 +102,12 @@ Here are the options to configure your containers:
         List of DNS servers to use. This is optional.
     minion
         minion configuration (see :doc:`Minion Configuration in Salt Cloud </topics/cloud/config>`)
+    bootstrap_delay
+        specify the time to wait (in seconds) between container creation
+        and salt bootstrap execution. It is useful to ensure that all essential services
+        have started before the bootstrap script is executed. By default there's no
+        wait time between container creation and bootstrap unless you are on systemd
+        where we wait that the system is no more in starting state.
     bootstrap_shell
         shell for bootstraping script (default: /bin/sh)
     script
@@ -138,7 +149,7 @@ Using inline profiles (eg to override the network bridge):
         master: 10.5.0.1
         master_port: 4506
 
-Template instead of a clone:
+Using a lxc template instead of a clone:
 
 .. code-block:: yaml
 
@@ -146,9 +157,11 @@ Template instead of a clone:
       provider: devhost10-lxc
       lxc_profile:
         template: ubuntu
+        # options:
+        #   release: trusty
       network_profile:
         etho:
-          link: lxcbr0    
+          link: lxcbr0
       minion:
         master: 10.5.0.1
         master_port: 4506
@@ -186,3 +199,4 @@ Driver Support
 - Container creation
 - Image listing (LXC templates)
 - Running container information (IP addresses, etc.)
+

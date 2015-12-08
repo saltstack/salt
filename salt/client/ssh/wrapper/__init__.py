@@ -5,9 +5,9 @@ how executions are run in the salt-ssh system, this allows for state routines
 to be easily rewritten to execute in a way that makes them do the same tasks
 as ZeroMQ salt, but via ssh.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import json
 import copy
 
@@ -15,6 +15,9 @@ import copy
 import salt.loader
 import salt.utils
 import salt.client.ssh
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class FunctionWrapper(object):
@@ -101,7 +104,7 @@ class FunctionWrapper(object):
             '''
             argv = [cmd]
             argv.extend([str(arg) for arg in args])
-            argv.extend(['{0}={1}'.format(key, val) for key, val in kwargs.items()])
+            argv.extend(['{0}={1}'.format(key, val) for key, val in six.iteritems(kwargs)])
             single = salt.client.ssh.Single(
                     self.opts,
                     argv,
@@ -111,11 +114,12 @@ class FunctionWrapper(object):
                     minion_opts=self.minion_opts,
                     **self.kwargs
             )
-            stdout, stderr, _ = single.cmd_block()
+            stdout, stderr, retcode = single.cmd_block()
             if stderr.count('Permission Denied'):
                 return {'_error': 'Permission Denied',
                         'stdout': stdout,
-                        'stderr': stderr}
+                        'stderr': stderr,
+                        'retcode': retcode}
             try:
                 ret = json.loads(stdout, object_hook=salt.utils.decode_dict)
                 if len(ret) < 2 and 'local' in ret:
@@ -124,7 +128,8 @@ class FunctionWrapper(object):
             except ValueError:
                 ret = {'_error': 'Failed to return clean data',
                        'stderr': stderr,
-                       'stdout': stdout}
+                       'stdout': stdout,
+                       'retcode': retcode}
             return ret
         return caller
 

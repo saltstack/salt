@@ -25,7 +25,7 @@ __virtualname__ = 'service'
 
 def __virtual__():
     '''
-    Only work on systems which default to systemd
+    Only work on FreeBSD
     '''
     # Disable on these platforms, specific service modules exist:
     if __grains__['os'] == 'FreeBSD':
@@ -162,7 +162,7 @@ def _switch(name,                   # pylint: disable=C0103
                 edited = True
     if not edited:
         # Ensure that the file ends in a \n
-        if nlines[-1][-1] != '\n':
+        if len(nlines) > 1 and nlines[-1][-1] != '\n':
             nlines[-1] = '{0}\n'.format(nlines[-1])
         nlines.append('{0}="{1}"\n'.format(rcvar, val))
 

@@ -14,6 +14,9 @@ import salt.utils
 import salt.utils.decorators as decorators
 from salt.exceptions import CommandExecutionError, MinionError
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
 VERSION_MATCH = re.compile(r'pkgin(?:[\s]+)([\d.]+)(?:[\s]+)(?:.*)')
 log = logging.getLogger(__name__)
 
@@ -29,15 +32,17 @@ def _check_pkgin():
     ppath = salt.utils.which('pkgin')
     if ppath is None:
         # pkgin was not found in $PATH, try to find it via LOCALBASE
-        localbase = __salt__['cmd.run'](
-            'pkg_info -Q LOCALBASE pkgin',
-            output_loglevel='trace'
-        )
-        if localbase is not None:
-            ppath = '{0}/bin/pkgin'.format(localbase)
-            if not os.path.exists(ppath):
-                return None
-
+        try:
+            localbase = __salt__['cmd.run'](
+               'pkg_info -Q LOCALBASE pkgin',
+                output_loglevel='trace'
+            )
+            if localbase is not None:
+                ppath = '{0}/bin/pkgin'.format(localbase)
+                if not os.path.exists(ppath):
+                    return None
+        except CommandExecutionError:
+            return None
     return ppath
 
 
@@ -68,15 +73,6 @@ def _supports_regex():
     '''
 
     return tuple([int(i) for i in _get_version()]) > (0, 5)
-
-
-@decorators.memoize
-def _supports_parsing():
-    '''
-    Check support of parsing
-    '''
-
-    return tuple([int(i) for i in _get_version()]) > (0, 7)
 
 
 def __virtual__():
@@ -182,7 +178,7 @@ def latest_version(*names, **kwargs):
 
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def version(*names, **kwargs):
@@ -258,10 +254,9 @@ def list_pkgs(versions_as_list=False, **kwargs):
     out = __salt__['cmd.run'](pkg_command, output_loglevel='trace')
     for line in out.splitlines():
         try:
-            if _supports_parsing():
-                pkg, ver = line.split(';', 1)[0].rsplit('-', 1)
-            else:
-                pkg, ver = line.split(' ', 1)[0].rsplit('-', 1)
+            # Some versions of pkgin check isatty unfortunately
+            # this results in cases where a ' ' or ';' can be used
+            pkg, ver = re.split('[; ]', line, 1)[0].rsplit('-', 1)
         except ValueError:
             continue
         __salt__['pkg_resource.add_pkg'](ret, pkg, ver)
@@ -530,7 +525,7 @@ def file_list(package):
     '''
     ret = file_dict(package)
     files = []
-    for pkg_files in ret['files'].values():
+    for pkg_files in six.itervalues(ret['files']):
         files.extend(pkg_files)
     ret['files'] = files
     return ret

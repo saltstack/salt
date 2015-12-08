@@ -75,12 +75,25 @@ class LocalemodTestCase(TestCase):
         with patch.dict(localemod.__grains__, {'os_family': ['A']}):
             self.assertTrue(localemod.set_locale('locale'))
 
+    @patch('salt.utils.which', MagicMock(side_effect=[None, '/usr/sbin/update-locale']))
+    def test_set_locale_debian_no_localectl(self):
+        with patch.dict(localemod.__grains__, {'os_family': ['Debian']}):
+            with patch.dict(localemod.__salt__, {'cmd.run': MagicMock(return_value=''),
+                                                 'file.replace': MagicMock(return_value='')}):
+                self.assertTrue(localemod.set_locale('C'))
+
+    @patch('salt.utils.which', MagicMock(side_effect=['/usr/bin/localectl', '/usr/sbin/update-locale']))
+    def test_set_locale_debian_localectl(self):
+        with patch.dict(localemod.__grains__, {'os_family': ['Debian']}):
+            with patch.object(localemod, '_localectl_set', return_value=True):
+                self.assertTrue(localemod.set_locale('C'))
+
     def test_avail(self):
         '''
         Test for Check if a locale is available
         '''
-        with patch.object(localemod, '_normalize_locale',
-                          return_value='en_US.UTF-8 UTF-8'):
+        with patch('salt.utils.locales.normalize_locale',
+                   MagicMock(return_value='en_US.UTF-8 UTF-8')):
             with patch.dict(localemod.__salt__,
                             {'locale.list_avail':
                              MagicMock(return_value=['A', 'B'])}):

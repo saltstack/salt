@@ -35,7 +35,8 @@ def installed(name,          # pylint: disable=C0103
               rdoc=False,
               ri=False,
               pre_releases=False,
-              proxy=None):     # pylint: disable=C0103
+              proxy=None,
+              source=None):     # pylint: disable=C0103
     '''
     Make sure that a gem is installed.
 
@@ -72,6 +73,10 @@ def installed(name,          # pylint: disable=C0103
     proxy : None
         Use the specified HTTP proxy server for all outgoing traffic.
         Format: http://hostname[:port]
+
+    source : None
+        Use the specified HTTP gem source server to download gem.
+        Format: http://hostname[:port]
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
     if ruby is not None and (__salt__['rvm.is_installed'](runas=user) or __salt__['rbenv.is_installed'](runas=user)):
@@ -79,7 +84,7 @@ def installed(name,          # pylint: disable=C0103
             'Use of argument ruby found, but neither rvm or rbenv is installed'
         )
     gems = __salt__['gem.list'](name, ruby, gem_bin=gem_bin, runas=user)
-    if name in gems and version is not None and version in gems[name]:
+    if name in gems and version is not None and str(version) in gems[name]:
         ret['result'] = True
         ret['comment'] = 'Gem is already installed.'
         return ret
@@ -99,7 +104,8 @@ def installed(name,          # pylint: disable=C0103
                                rdoc=rdoc,
                                ri=ri,
                                pre_releases=pre_releases,
-                               proxy=proxy):
+                               proxy=proxy,
+                               source=source):
         ret['result'] = True
         ret['changes'][name] = 'Installed'
         ret['comment'] = 'Gem was successfully installed'
@@ -146,4 +152,74 @@ def removed(name, ruby=None, user=None, gem_bin=None):
     else:
         ret['result'] = False
         ret['comment'] = 'Could not remove gem.'
+    return ret
+
+
+def sources_add(name, ruby=None, user=None):
+    '''
+    Make sure that a gem source is added.
+
+    name
+        The URL of the gem source to be added
+
+    ruby: None
+        For RVM or rbenv installations: the ruby version and gemset to target.
+
+    user: None
+        The user under which to run the ``gem`` command
+
+        .. versionadded:: 0.17.0
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    if name in __salt__['gem.sources_list'](ruby, runas=user):
+        ret['result'] = True
+        ret['comment'] = 'Gem source is already added.'
+        return ret
+    if __opts__['test']:
+        ret['comment'] = 'The gem source {0} would have been removed.'.format(name)
+        return ret
+    if __salt__['gem.sources_add'](source_uri=name, ruby=ruby, runas=user):
+        ret['result'] = True
+        ret['changes'][name] = 'Installed'
+        ret['comment'] = 'Gem source was successfully added.'
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Could not add gem source.'
+    return ret
+
+
+def sources_remove(name, ruby=None, user=None):
+    '''
+    Make sure that a gem source is removed.
+
+    name
+        The URL of the gem source to be removed
+
+    ruby: None
+        For RVM or rbenv installations: the ruby version and gemset to target.
+
+    user: None
+        The user under which to run the ``gem`` command
+
+        .. versionadded:: 0.17.0
+    '''
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
+
+    if name not in __salt__['gem.sources_list'](ruby, runas=user):
+        ret['result'] = True
+        ret['comment'] = 'Gem source is already removed.'
+        return ret
+
+    if __opts__['test']:
+        ret['comment'] = 'The gem source would have been removed'
+        return ret
+
+    if __salt__['gem.sources_remove'](source_uri=name, ruby=ruby, runas=user):
+        ret['result'] = True
+        ret['changes'][name] = 'Removed'
+        ret['comment'] = 'Gem source was successfully removed.'
+    else:
+        ret['result'] = False
+        ret['comment'] = 'Could not remove gem source.'
     return ret

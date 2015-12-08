@@ -37,6 +37,12 @@ class SaltMasterError(SaltException):
     '''
 
 
+class SaltNoMinionsFound(SaltException):
+    '''
+    An attempt to retrieve a list of minions failed
+    '''
+
+
 class SaltSyndicMasterError(SaltException):
     '''
     Problem while proxying a request in the syndication master
@@ -261,4 +267,11 @@ class SaltCloudExecutionFailure(SaltCloudException):
 class SaltCloudPasswordError(SaltCloudException):
     '''
     Raise when virtual terminal password input failed
+    '''
+
+
+class NotImplemented(SaltException):
+    '''
+    Used when a module runs a command which returns an error and wants
+    to show the user the output gracefully instead of dying
     '''

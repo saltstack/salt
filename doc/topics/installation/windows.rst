@@ -1,3 +1,5 @@
+.. _windows:
+
 =======
 Windows
 =======
@@ -11,6 +13,7 @@ to control your Salt Minions on Windows.
 Many of the standard Salt modules have been ported to work on Windows and many
 of the Salt States currently work on Windows, as well.
 
+.. _windows-installer:
 
 Windows Installer
 =================
@@ -46,18 +49,24 @@ Windows service.
 If the minion won't start, try installing the Microsoft Visual C++ 2008 x64 SP1
 redistributable. Allow all Windows updates to run salt-minion smoothly.
 
+.. _windows-installer-options:
 
-Silent Installer option
-=======================
+Silent Installer Options
+========================
 
 The installer can be run silently by providing the `/S` option at the command
-line. The options `/master` and `/minion-name` allow for configuring the master
-hostname and minion name, respectively. Here's an example of using the silent
-installer:
+line. The installer also accepts the following options for configuring the Salt
+Minion silently:
+
+- `/master=` A string value to set the IP address or host name of the master. Default value is 'salt'
+- `/minion-name=` A string value to set the minion name. Default is 'hostname'
+- `/start-service=` Either a 1 or 0. '1' will start the service, '0' will not. Default is to start the service after installation.
+
+Here's an example of using the silent installer:
 
 .. code-block:: bat
 
-    Salt-Minion-0.17.0-Setup-amd64.exe /S /master=yoursaltmaster /minion-name=yourminionname
+    Salt-Minion-2015.5.6-Setup-amd64.exe /S /master=yoursaltmaster /minion-name=yourminionname /start-service=0
 
 
 Running the Salt Minion on Windows as an Unprivileged User
@@ -70,76 +79,78 @@ Notes:
 A. Create the Unprivileged User that the Salt Minion will Run As
 ----------------------------------------------------------------
 
-1. Click "Start", "Control Panel", "User Accounts"
+1. Click ``Start`` > ``Control Panel`` > ``User Accounts``.
 
-2. Click "Add or remove user accounts"
+2. Click ``Add or remove user accounts``.
 
-3. Click "Create new account"
+3. Click ``Create new account``.
 
-4. Enter "salt-user" (or a name of your preference) in the "New account name" field
+4. Enter ``salt-user`` (or a name of your preference) in the ``New account name`` field.
 
-5. Select the "Standard user" radio button
+5. Select the ``Standard user`` radio button.
 
-6. Click the "Create Account" button
+6. Click the ``Create Account`` button.
 
-7. Click on the newly created user account
+7. Click on the newly created user account.
 
-8. Click the "Create a password" link
+8. Click the ``Create a password`` link.
 
-9. In the "New password" and "Confirm new password" fields, provide a password (e.g "SuperSecretMinionPassword4Me!")
+9. In the ``New password`` and ``Confirm new password`` fields, provide
+   a password (e.g "SuperSecretMinionPassword4Me!").
 
-10. In the "Type a password hint" field, provide appropriate text (e.g. "My Salt Password")
+10. In the ``Type a password hint`` field, provide appropriate text (e.g. "My Salt Password").
 
-11. Click the "Create password" button
+11. Click the ``Create password`` button.
 
-12. Close the "Change an Account" window
+12. Close the ``Change an Account`` window.
 
 
 B. Add the New User to the Access Control List for the Salt Folder
 ------------------------------------------------------------------
 
-1. In a File Explorer window, browse to the path where Salt is installed (the default path is C:\Salt)
+1. In a File Explorer window, browse to the path where Salt is installed (the default path is ``C:\Salt``).
 
-2. Right-click on the "Salt" folder and select "Properties"
+2. Right-click on the ``Salt`` folder and select ``Properties``.
 
-3. Click on the "Security" tab
+3. Click on the ``Security`` tab.
 
-4. Click the "Edit" button
+4. Click the ``Edit`` button.
 
-5. Click the "Add" button
+5. Click the ``Add`` button.
 
-6. Type the name of your designated Salt user and click the "OK" button
+6. Type the name of your designated Salt user and click the ``OK`` button.
 
-7. Check the box to "Allow" the "Modify" permission
+7. Check the box to ``Allow`` the ``Modify`` permission.
 
-8. Click the "OK" button
+8. Click the ``OK`` button.
 
-9. Click the "OK" button to close the "Salt Properties" window
+9. Click the ``OK`` button to close the ``Salt Properties`` window.
 
 
-C. Update the Windows Service User for the "salt-minion" Service
-----------------------------------------------------------------
+C. Update the Windows Service User for the ``salt-minion`` Service
+------------------------------------------------------------------
 
-1. Click "Start", "Administrative Tools", "Services"
+1. Click ``Start`` > ``Administrative Tools`` > ``Services``.
 
-2. In the list of Services, Right-Click on "salt-minion" and select "Properties"
+2. In the Services list, right-click on ``salt-minion`` and select ``Properties``.
 
-3. Click the "Log On" tab
+3. Click the ``Log On`` tab.
 
-4. Click the "This account" radio button
+4. Click the ``This account`` radio button.
 
-5. Provide the account credentials created in section A
+5. Provide the account credentials created in section A.
 
-6. Click the "OK" button
+6. Click the ``OK`` button.
 
-7. Click the "OK" button to the prompt confirming that the user "has been granted the Log On As A Service right"
+7. Click the ``OK`` button to the prompt confirming that the user ``has been
+   granted the Log On As A Service right``.
 
-8. Click the "OK" button to the prompt confirming that "The new logon name will not take effect until you stop and restart the service"
+8. Click the ``OK`` button to the prompt confirming that ``The new logon name
+   will not take effect until you stop and restart the service``.
 
-9. Right-Click on "salt-minion" and select "Stop"
+9. Right-Click on ``salt-minion`` and select ``Stop``.
 
-10. Right-Click on "salt-minion" and select "Start"
-
+10. Right-Click on ``salt-minion`` and select ``Start``.
 
 Setting up a Windows build environment
 ======================================
@@ -223,7 +234,7 @@ SaltStack download site:
 * `Salt32.zip <http://repo.saltstack.com/windows/dependencies/Salt32.zip/>`_
 * `Salt64.zip <http://repo.saltstack.com/windows/dependencies/Salt64.zip/>`_
 
-These files contain all sofware required to build and develop salt. Unzip the
+These files contain all software required to build and develop salt. Unzip the
 contents of the file to ``C:\Salt-Dev\temp``.
 
 Create the Build Environment
@@ -517,7 +528,7 @@ Packages management under Windows 2003
 
 On windows Server 2003, you need to install optional component "wmi windows
 installer provider" to have full list of installed packages. If you don't have
-this, salt-minion can't report some installed softwares.
+this, salt-minion can't report some installed software.
 
 
 .. _http://csa-net.dk/salt: http://csa-net.dk/salt

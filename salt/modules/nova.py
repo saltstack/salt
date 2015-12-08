@@ -42,11 +42,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
-try:
-    import salt.utils.openstack.nova as suon
-    HAS_NOVA = True
-except NameError as exc:
-    HAS_NOVA = False
+import salt.utils.openstack.nova as suon
 
 
 # Get logging started
@@ -63,7 +59,7 @@ def __virtual__():
     Only load this module if nova
     is installed on this minion.
     '''
-    return HAS_NOVA
+    return suon.check_nova()
 
 
 __opts__ = {}
@@ -572,7 +568,7 @@ def server_list(profile=None):
 
     .. code-block:: bash
 
-        salt '*' nova.show
+        salt '*' nova.server_list
     '''
     conn = _auth(profile)
     return conn.server_list()

@@ -55,8 +55,8 @@ class ArtifactoryTestCase(TestCase):
         with patch.object(artifactory, '__fetch_from_artifactory',
                           MagicMock(side_effect=Exception('error'))):
             ret = artifactory.downloaded(name, artifact)
-            self.assertEqual(ret[0], None)
-            self.assertEqual(repr(ret[1]), repr(Exception('error')))
+            self.assertEqual(ret['result'], False)
+            self.assertEqual(repr(ret['comment']), repr(Exception('error')))
 
 
 if __name__ == '__main__':

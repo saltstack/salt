@@ -221,8 +221,8 @@ def present(name, entry=None, family='ipv4', **kwargs):
                     ret['changes'] = {'locale': name}
                     ret['result'] = True
                     ret['comment'] += 'entry {0} added to set {1} for family {2}\n'.format(
-                        kwargs['set_name'],
                         _entry,
+                        kwargs['set_name'],
                         family)
                 else:
                     ret['result'] = False

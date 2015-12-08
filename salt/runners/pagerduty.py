@@ -22,6 +22,7 @@ import yaml
 import json
 
 # Import salt libs
+import salt.utils
 import salt.utils.pagerduty
 from salt.ext.six import string_types
 
@@ -42,7 +43,11 @@ def list_services(profile=None, api_key=None):
         salt-run pagerduty.list_services my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
-        'services', 'name', profile, api_key, opts=__opts__
+        'services',
+        'name',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
     )
 
 
@@ -55,7 +60,11 @@ def list_incidents(profile=None, api_key=None):
         salt-run pagerduty.list_incidents my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
-        'incidents', 'id', profile, api_key, opts=__opts__
+        'incidents',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
     )
 
 
@@ -68,7 +77,11 @@ def list_users(profile=None, api_key=None):
         salt-run pagerduty.list_users my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
-        'users', 'id', profile, api_key, opts=__opts__
+        'users',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
     )
 
 
@@ -81,7 +94,11 @@ def list_schedules(profile=None, api_key=None):
         salt-run pagerduty.list_schedules my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
-        'schedules', 'id', profile, api_key, opts=__opts__
+        'schedules',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
     )
 
 
@@ -95,12 +112,16 @@ def list_windows(profile=None, api_key=None):
         salt-run pagerduty.list_maintenance_windows my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
-        'maintenance_windows', 'id', profile, api_key, opts=__opts__
+        'maintenance_windows',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
     )
 
 
 # The long version, added for consistency
-list_maintenance_windows = list_windows
+list_maintenance_windows = salt.utils.alias_function(list_windows, 'list_maintenance_windows')
 
 
 def list_policies(profile=None, api_key=None):
@@ -113,12 +134,16 @@ def list_policies(profile=None, api_key=None):
         salt-run pagerduty.list_escalation_policies my-pagerduty-account
     '''
     return salt.utils.pagerduty.list_items(
-        'escalation_policies', 'id', profile, api_key, opts=__opts__
+        'escalation_policies',
+        'id',
+        __salt__['config.option'](profile),
+        api_key,
+        opts=__opts__
     )
 
 
 # The long version, added for consistency
-list_escalation_policies = list_policies
+list_escalation_policies = salt.utils.alias_function(list_policies, 'list_escalation_policies')
 
 
 def create_event(service_key=None, description=None, details=None,
@@ -157,7 +182,7 @@ def create_event(service_key=None, description=None, details=None,
 
     ret = json.loads(salt.utils.pagerduty.query(
         method='POST',
-        profile=profile,
+        profile_dict=__salt__['config.option'](profile),
         api_key=service_key,
         data={
             'service_key': service_key,

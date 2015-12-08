@@ -17,28 +17,22 @@ This guide assumes you've followed the `directions for setting up salt testing`_
 
 Unit tests should be written to the following specifications:
 
-- All the tests for a specific module at salt/.../<module>.py need to be
-  contained in a file called tests/unit/.../<module>_test.py, e.g. the tests
-  for salt/modules/fib.py need to be contained in a file called
-  tests/unit/modules/fib_test.py.
+- Each ``raise`` and ``return`` statement needs to be independently tested.
 
-- The tests within tests/unit/modules/fib_test.py file must be member functions
-  of a class which subclasses salttesting.Testcase
+- Unit tests for ``salt/.../<module>.py`` are contained in a file called
+  ``tests/unit/.../<module>_test.py``, e.g. the tests for
+  ``salt/modules/fib.py`` are in ``tests/unit/modules/fib_test.py``.
 
-- Each external resource used in the code to be tested, such as function calls,
-  external data either globally available or passed in through the function
-  arguments, file data, etc. needs to be mocked.
+- Test functions are named ``test_<fcn>_<test-name>`` where ``<fcn>`` is the
+  function being tested and ``<test-name>`` describes the ``raise`` or
+  ``return`` being tested.
 
-- Each raise and return statement of the code to be tested needs to be
-  separately and independently tested.
+- A reasonable effort needs to be made to mock external resources used in the
+  code being tested, such as APIs, function calls, external data either
+  globally available or passed in through function arguments, file data, etc.
 
-- Test functions should contain only one test and contain all necessary mock
-  data and mock code for that test.
-
-- Test functions should be named test_<fcn>_<test-name> where <fcn> is the name
-  of the function being tested and <test-name> describes which raise or return
-  within the function is being tested and whether that raise or return
-  statement is considered a success or a failure condition.
+- Test functions should contain only one assertion and all necessary mock code
+  and data for that assertion.
 
 .. __: http://docs.saltstack.com/topics/installation/index.html
 
@@ -50,13 +44,11 @@ Most commonly, the following imports are necessary to create a unit test:
     from salttesting import skipIf, TestCase
     from salttesting.helpers import ensure_in_syspath
 
-
 If you need mock support to your tests, please also import:
 
 .. code-block:: python
 
     from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
-
 
 A Simple Example
 ================
@@ -86,11 +78,9 @@ we might write the skeleton for testing ``fib.py``:
 
     # Create test case class and inherit from Salt's customized TestCase
     class FibTestCase(TestCase):
-
         '''
         This class contains a set of functions that test salt.modules.fib.
         '''
-
         def test_fib(self):
             '''
             To create a unit test, we should prefix the name with `test_' so
@@ -99,18 +89,16 @@ we might write the skeleton for testing ``fib.py``:
             fib_five = (0, 1, 1, 2, 3)
             self.assertEqual(fib.calculate(5), fib_five)
 
-
 At this point, the test can now be run, either individually or as a part of a
 full run of the test runner. To ease development, a single test can be
 executed:
 
 .. code-block:: bash
 
-    tests/runtests.py -n unit.modules.fib_test
+    tests/runtests.py -v -n unit.modules.fib_test
 
-This will produce output indicating the success or failure of the tests in
-given test case. For more detailed results, one can also include a flag to
-increase verbosity:
+This will report the status of the test: success, failure, or error.  The
+``-v`` flag increases output verbosity.
 
 .. code-block:: bash
 
@@ -134,14 +122,13 @@ reading `Python's documentation on unit testing`__.
 Tests Using Mock Objects
 ========================
 
-In many cases, the very purpose of a Salt module is to interact with some
-external system, whether it be to control a database, manipulate files on a
-filesystem or many other examples. In these varied cases, it's necessary to
-design a unit test which can test the function whilst replacing functions which
-might actually call out to external systems. One might think of this as
-"blocking the exits" for code under tests and redirecting the calls to external
-systems with our own code which produces known results during the duration of
-the test.
+In many cases, the purpose of a Salt module is to interact with some external
+system, whether it be to control a database, manipulate files on a filesystem
+or something else. In these varied cases, it's necessary to design a unit test
+which can test the function whilst replacing functions which might actually
+call out to external systems. One might think of this as "blocking the exits"
+for code under tests and redirecting the calls to external systems with our own
+code which produces known results during the duration of the test.
 
 To achieve this behavior, Salt makes heavy use of the `MagicMock package`__.
 
@@ -179,11 +166,10 @@ additional imports for MagicMock:
     # Import Salt execution module to test
     from salt.modules import db
 
-    # NEW! -- Import Mock libraries
+    # Import Mock libraries
     from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
 
     # Create test case class and inherit from Salt's customized TestCase
-
     # Skip this test case if we don't have access to mock!
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     class DbTestCase(TestCase):
@@ -192,35 +178,20 @@ additional imports for MagicMock:
             db.execute_query = MagicMock()
 
             # Now that the exits are blocked, we can run the function under test.
-
             db.create_user('testuser')
 
             # We could now query our mock object to see which calls were made
             # to it.
             ## print db.execute_query.mock_calls
 
-            '''
-            We want to test to ensure that the correct query was formed.  This
-            is a contrived example, just designed to illustrate the concepts at
-            hand.
-
-            We're going to first construct a call() object that represents the
-            way we expect our mocked execute_query() function to have been
-            called.  Then, we'll examine the list of calls that were actually
-            made to to execute_function().
-
-            By comparing our expected call to execute_query() with
-            create_user()'s call to execute_query(), we can determine the
-            success or failure of our unit test.
-            '''
-
+            # Construct a call object that simulates the way we expected
+            # execute_query to have been called.
             expected_call = call('CREATE USER testuser')
 
-            # Do the comparison! Will assert False if execute_query() was not
-            # called with the given call
-
+            # Compare the expected call with the list of actual calls.  The
+            # test will succeed or fail depending on the output of this
+            # assertion.
             db.execute_query.assert_has_calls(expected_call)
-
 
 .. __: http://www.voidspace.org.uk/python/mock/index.html
 
@@ -266,6 +237,7 @@ This function is very simple, comprising only four source lines of code and
 having only one return statement, so we know only one test is needed.  There
 are also two inputs to the function, the ``name`` function argument and the call
 to ``__salt__['cmd.run']()``, both of which need to be appropriately mocked.
+
 Mocking a function parameter is straightforward, whereas mocking a function
 call will require, in this case, the use of MagicMock.  For added isolation, we
 will also redefine the ``__salt__`` dictionary such that it only contains
@@ -316,7 +288,7 @@ success condition, the test function is simply named ``test_get()``.  As
 described, the single function call parameter, ``name`` is mocked with
 ``net.ipv4.ip_forward`` and ``__salt__['cmd.run']`` is replaced by a MagicMock
 function object.  We are only interested in the return value of
-``__salt__['cmd.run']``, which MagicMock allows to be specified via
+``__salt__['cmd.run']``, which MagicMock allows us by specifying via
 ``return_value=1``.  Finally, the test itself tests for equality between the
 return value of ``get()`` and the expected return of ``1``.  This assertion is
 expected to succeed because ``get()`` will determine its return value from

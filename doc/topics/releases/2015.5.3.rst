@@ -1,6 +1,6 @@
-
-Changes for v2015.5.2..v2015.5.3
---------------------------------
+===========================
+Salt 2015.5.3 Release Notes
+===========================
 
 Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
@@ -195,7 +195,7 @@ Changes:
 - **PR** `#24994`_: (*garethgreenaway*) Another Fix to gpg.py in 2015.5
   @ *2015-06-27T22:28:15Z*
 
-  - **ISSUE** `#24862`_: (*dkatsanikakis*) gpg.import_key returns error after succesfully completed
+  - **ISSUE** `#24862`_: (*dkatsanikakis*) gpg.import_key returns error after successfully completed
     | refs: `#24966`_ `#24994`_
   * e9aaa11 Merge pull request `#24994`_ from garethgreenaway/2015_5_24862_gpg_import_key
   * d2f0d8f variable was referenced before assignment.  Just removing the variable and checking the return from distutils.version.LooseVersion directly.
@@ -245,7 +245,7 @@ Changes:
 - **PR** `#24966`_: (*garethgreenaway*) Fixes to gpg.py in 2015.5
   @ *2015-06-25T19:58:49Z*
 
-  - **ISSUE** `#24862`_: (*dkatsanikakis*) gpg.import_key returns error after succesfully completed
+  - **ISSUE** `#24862`_: (*dkatsanikakis*) gpg.import_key returns error after successfully completed
     | refs: `#24966`_ `#24994`_
   * a71c1b7 Merge pull request `#24966`_ from garethgreenaway/2015_5_24862_gpg_import_key
   * 55eb73b fixing unit tests.
@@ -621,7 +621,7 @@ Changes:
 
   - **ISSUE** `#24560`_: (*hydrosine*) Documentation missing on parameter
     | refs: `#24632`_
-  - **ISSUE** `#24547`_: (*dragonpaw*) Artifactory docs say module is 'jboss7'. 
+  - **ISSUE** `#24547`_: (*dragonpaw*) Artifactory docs say module is 'jboss7'.
     | refs: `#24632`_
   - **ISSUE** `#24375`_: (*companykitchen-dev*) Custom grain won't sync under any circumstances
     | refs: `#24632`_
@@ -634,7 +634,7 @@ Changes:
 
   * c7cdd41 Doc bug fixes Refs `#24547`_ Refs `#24275`_ Refs `#24375`_ Refs `#24560`_ Refs `#24163`_
 
-- **PR** `#24607`_: (*garethgreenaway*) fixes to minion.py 
+- **PR** `#24607`_: (*garethgreenaway*) fixes to minion.py
   @ *2015-06-17T18:16:42Z*
 
   - **ISSUE** `#24198`_: (*ahammond*) salt-call event.send doesn't send events from minion
@@ -852,7 +852,7 @@ Changes:
     | refs: `#24591`_
   - **ISSUE** `#21217`_: (*Colstuwjx*) Maybe a bug for jinja render?
     | refs: `#24591`_
-  - **PR** `#24591`_: (*tbaker57*) Add some documentation surrounding Jinja vs yaml comments - 
+  - **PR** `#24591`_: (*tbaker57*) Add some documentation surrounding Jinja vs yaml comments -
     | refs: `#24631`_
   - **PR** `#24492`_: (*DmitryKuzmenko*) Don't remove grains from opts
   * 5f491f9 Merge pull request `#24631`_ from rallytime/`bp-24591`_
@@ -956,7 +956,7 @@ Changes:
   * a570d7f Merge pull request `#24566`_ from jayeshka/rdp_states-unit-test
   * 273b994 adding states/rdp unit test case.
 
-- **PR** `#24551`_: (*joejulian*) 2015.5 dont pollute environment
+- **PR** `#24551`_: (*joejulian*) 2015.5 don't pollute environment
   @ *2015-06-11T02:13:06Z*
 
   - **ISSUE** `#24480`_: (*kiorky*) [CRITICAL] [2015.5] tls breaks tzinfo
@@ -1284,7 +1284,7 @@ Changes:
 - **PR** `#24426`_: (*basepi*) [2015.5] Merge forward from 2014.7 to 2015.5
   @ *2015-06-05T03:59:11Z*
 
-  - **ISSUE** `#24276`_: (*markuskramerIgitt*) Live salt-master Profiling with SIGUSR2 fails 
+  - **ISSUE** `#24276`_: (*markuskramerIgitt*) Live salt-master Profiling with SIGUSR2 fails
   - **PR** `#24405`_: (*jacksontj*) Fix for `#24276`_
   - **PR** `#24395`_: (*hvnsweeting*) handle exceptions when received data is not in good shape
   - **PR** `#24305`_: (*twangboy*) Added documentation, fixed formatting

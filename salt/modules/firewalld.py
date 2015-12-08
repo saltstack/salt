@@ -1,13 +1,18 @@
 # -*- coding: utf-8 -*-
+'''
+Support for firewalld.
 
+.. versionadded:: 2015.2.0
 '''
-Support for firewalld
-'''
+
+# Import Python Libs
 from __future__ import absolute_import
-
-import salt.utils
 import logging
 import re
+
+# Import Salt Libs
+from salt.exceptions import CommandExecutionError
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -26,16 +31,18 @@ def __firewall_cmd(cmd):
     '''
     Return the firewall-cmd location
     '''
-    out = __salt__['cmd.run']('{0} {1}'.format(
-        salt.utils.which('firewall-cmd'),
-        cmd))
+    firewall_cmd = '{0} {1}'.format(salt.utils.which('firewall-cmd'), cmd)
+    out = __salt__['cmd.run_all'](firewall_cmd)
 
-    if out == 'success':
-        return 'success'
-    elif 'Error' in out:
-        return out[5:-5]
-
-    return out
+    if out['retcode'] != 0:
+        if not out['stderr']:
+            msg = out['stdout']
+        else:
+            msg = out['stderr']
+        raise CommandExecutionError(
+            'firewall-cmd failed: {0}'.format(msg)
+        )
+    return out['stdout']
 
 
 def __mgmt(name, _type, action):
@@ -279,6 +286,7 @@ def list_all(zone=None):
         salt '*' firewalld.list_all my_zone
     '''
     _zone = {}
+    id_ = ''
 
     if zone:
         cmd = '--zone={0} --list-all'.format(zone)
@@ -286,16 +294,21 @@ def list_all(zone=None):
         cmd = '--list-all'
 
     for i in __firewall_cmd(cmd).splitlines():
-        if i.strip():
-            if bool(re.match('^[a-z0-9]', i, re.I)):
-                zone_name = i.rstrip()
-            else:
-                (id_, val) = i.strip().split(':')
+        if re.match('^[a-z0-9]', i, re.I):
+            zone_name = i.rstrip()
+        else:
+            if i.startswith('\t'):
+                _zone[zone_name][id_].append(i.strip())
+                continue
 
-                if _zone.get(zone_name, None):
-                    _zone[zone_name].update({id_: val})
-                else:
-                    _zone[zone_name] = {id_: val}
+            (id_, val) = i.split(':', 1)
+
+            id_ = id_.strip()
+
+            if _zone.get(zone_name, None):
+                _zone[zone_name].update({id_: [val.strip()]})
+            else:
+                _zone[zone_name] = {id_: [val.strip()]}
 
     return _zone
 
@@ -335,7 +348,7 @@ def add_service(name, zone=None, permanent=True):
 
         salt '*' firewalld.add_service ssh
 
-    To assign a service to a specific zone
+    To assign a service to a specific zone:
 
     .. code-block:: bash
 
@@ -378,3 +391,235 @@ def remove_service(name, zone=None, permanent=True):
         cmd += ' --permanent'
 
     return __firewall_cmd(cmd)
+
+
+def get_masquerade(zone):
+    '''
+    Show if masquerading is enabled on a zone
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.get_masquerade zone
+    '''
+    zone_info = list_all(zone)
+
+    if 'no' in [zone_info[i]['masquerade'][0] for i in zone_info.keys()]:
+        return False
+
+    return True
+
+
+def add_masquerade(zone):
+    '''
+    Enable masquerade on a zone.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.add_masquerade
+    '''
+    return __firewall_cmd('--zone={0} --add-masquerade'.format(zone))
+
+
+def remove_masquerade(zone):
+    '''
+    Remove masquerade on a zone.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.remove_masquerade
+    '''
+    return __firewall_cmd('--zone={0} --remove-masquerade'.format(zone))
+
+
+def add_port(zone, port):
+    '''
+    Allow specific ports in a zone.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.add_port internal 443/tcp
+    '''
+    if not get_masquerade(zone):
+        add_masquerade(zone)
+
+    return __firewall_cmd('--zone={0} --add-port={1}'.format(zone, port))
+
+
+def remove_port(zone, port):
+    '''
+    Remove a specific port from a zone.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.remove_port internal 443/tcp
+    '''
+    return __firewall_cmd('--zone={0} --remove-port={1}'.format(zone, port))
+
+
+def list_ports(zone):
+    '''
+    List all ports in a zone.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.list_ports
+    '''
+    return __firewall_cmd('--zone={0} --list-ports'.format(zone)).split()
+
+
+def add_port_fwd(zone, src, dest, proto='tcp', dstaddr=''):
+    '''
+    Add port forwarding.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.add_port_fwd public 80 443 tcp
+    '''
+    if not get_masquerade(zone):
+        add_masquerade(zone)
+
+    return __firewall_cmd(
+        '--zone={0} --add-forward-port=port={1}:proto={2}:toport={3}:toaddr={4}'.format(
+            zone,
+            src,
+            proto,
+            dest,
+            dstaddr
+        )
+    )
+
+
+def remove_port_fwd(zone, src, dest, proto='tcp'):
+    '''
+    Remove Port Forwarding.
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.remove_port_fwd public 80 443 tcp
+    '''
+    return __firewall_cmd(
+        '--zone={0} --remove-forward-port=port={1}:proto={2}:toport={3}'.format(
+            zone,
+            src,
+            proto,
+            dest
+        )
+    )
+
+
+def list_port_fwd(zone):
+    '''
+    List port forwarding
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.list_port_fwd public
+    '''
+    ret = []
+
+    for i in __firewall_cmd('--zone={0} --list-forward-ports'.format(zone)).splitlines():
+        (src, proto, dest, addr) = i.split(':')
+
+        ret.append(
+            {'Source port': src.split('=')[1],
+             'Protocol': proto.split('=')[1],
+             'Destination port': dest.split('=')[1],
+             'Destination address': addr.split('=')[1]}
+        )
+
+    return ret
+
+
+def block_icmp(zone, icmp):
+    '''
+    Block a specific ICMP type on a zone
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.block_icmp zone echo-reply
+    '''
+    if icmp not in get_icmp_types():
+        log.error('Invalid ICMP type')
+        return False
+
+    if icmp in list_icmp_block(zone):
+        log.info('ICMP block already exists')
+        return 'success'
+
+    return __firewall_cmd('--zone={0} --add-icmp-block={1}'.format(zone, icmp))
+
+
+def allow_icmp(zone, icmp):
+    '''
+    Allow a specific ICMP type on a zone
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewalld.allow_icmp zone echo-reply
+    '''
+    if icmp not in get_icmp_types():
+        log.error('Invalid ICMP type')
+        return False
+
+    if icmp not in list_icmp_block(zone):
+        log.info('ICMP Type is already permitted')
+        return 'success'
+
+    return __firewall_cmd('--zone={0} --remove-icmp-block={1}'.format(zone, icmp))
+
+
+def list_icmp_block(zone):
+    '''
+    List ICMP blocks on a zone
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' firewlld.list_icmp_block zone
+    '''
+    return __firewall_cmd('--zone={0} --list-icmp-blocks'.format(zone)).split()

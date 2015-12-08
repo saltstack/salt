@@ -12,7 +12,7 @@ Multimaster
 ===========
 
 Salt minions can connect to multiple masters at one time by configuring the
-`master` configuration paramter as a YAML list of all the available masters.  By
+`master` configuration parameter as a YAML list of all the available masters.  By
 default, all masters are "hot", meaning that any master can direct commands to
 the Salt infrastructure.
 

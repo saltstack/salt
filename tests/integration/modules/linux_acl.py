@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import shutil
 
@@ -59,9 +60,10 @@ class LinuxAclModuleTest(integration.ModuleCase,
 
     def test_getfacl_w_single_file_without_acl(self):
         ret = self.run_function('acl.getfacl', arg=[self.myfile])
+        self.maxDiff = None
         self.assertEqual(
             ret,
-            {self.myfile: {'other': {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}},
+            {self.myfile: {'other': [{'': {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}}],
                            'user': [{'root': {'octal': 6, 'permissions': {'read': True, 'write': True, 'execute': False}}}],
                            'group': [{'root': {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}}],
                            'comment': {'owner': 'root', 'group': 'root', 'file': self.myfile}}}

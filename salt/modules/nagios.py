@@ -2,15 +2,15 @@
 '''
 Run nagios plugins/checks from salt and get the return as data.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import stat
-
-# Import salt libs
-
 import logging
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def __virtual__():
     '''
     Only load if nagios-plugins are installed
     '''
-    if os.path.isdir('/usr/lib/nagios/'):
+    if os.path.isdir(PLUGINDIR):
         return 'nagios'
     return False
 
@@ -63,10 +63,10 @@ def _execute_pillar(pillar_name, run_type):
         data[group] = {}
         commands = groups[group]
         for command in commands:
-            #Check if is a dict to get the arguments
-            #in command if not set the arguments to empty string
+            # Check if is a dict to get the arguments
+            # in command if not set the arguments to empty string
             if isinstance(command, dict):
-                plugin = next(command.iterkeys())
+                plugin = next(six.iterkeys(command))
                 args = command[plugin]
             else:
                 plugin = command
@@ -90,6 +90,12 @@ def run(plugin, args=''):
     '''
     Run nagios plugin and return all the data execution with cmd.run
 
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nagios.run check_apt
+        salt '*' nagios.run check_icmp '8.8.8.8'
     '''
     data = _execute_cmd(plugin, args, 'cmd.run')
 
@@ -99,13 +105,6 @@ def run(plugin, args=''):
 def retcode(plugin, args='', key_name=None):
     '''
     Run one nagios plugin and return retcode of the execution
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' nagios.run check_apt
-        salt '*' nagios.run check_icmp '8.8.8.8'
     '''
     data = {}
 
@@ -165,10 +164,10 @@ def retcode_pillar(pillar_name):
     for group in groups:
         commands = groups[group]
         for command in commands:
-            #Check if is a dict to get the arguments
-            #in command if not set the arguments to empty string
+            # Check if is a dict to get the arguments
+            # in command if not set the arguments to empty string
             if isinstance(command, dict):
-                plugin = next(command.iterkeys())
+                plugin = next(six.iterkeys(command))
                 args = command[plugin]
             else:
                 plugin = command

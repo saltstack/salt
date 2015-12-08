@@ -37,9 +37,10 @@ def post_message(name,
                  channel,
                  from_name,
                  message,
-                 api_key=None):
+                 api_key=None,
+                 icon=None):
     '''
-    Send a message to a Slack room.
+    Send a message to a Slack channel.
 
     .. code-block:: yaml
 
@@ -56,20 +57,22 @@ def post_message(name,
         The unique name for this event.
 
     channel
-        The room to send the message to. Can either be the ID or the name.
+        The channel to send the message to. Can either be the ID or the name.
 
     from_name
         The name of that is to be shown in the "from" field.
-        If not specified, defaults to.
 
     message
-        The message that is to be sent to the Hipchat room.
+        The message that is to be sent to the Slack channel.
 
     The following parameters are optional:
 
     api_key
         The api key for Slack to use for authentication,
         if not specified in the configuration options of master or minion.
+
+    icon
+        URL to an image to use as the icon for this message
     '''
     ret = {'name': name,
            'changes': {},
@@ -98,6 +101,7 @@ def post_message(name,
         message=message,
         from_name=from_name,
         api_key=api_key,
+        icon=icon,
     )
 
     if result:

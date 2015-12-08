@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
+from __future__ import absolute_import
 import os
 import os.path
 import tempfile
-from cStringIO import StringIO
-
 
 # Import Salt Testing libs
 from salttesting import TestCase
@@ -17,6 +16,11 @@ ensure_in_syspath('../')
 import salt.loader
 import salt.config
 import integration
+from salt.exceptions import SaltRenderError
+from salt.ext.six.moves import StringIO
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
@@ -204,6 +208,36 @@ extend:
     ''', sls='test.work')
         self.assertTrue('test.utils::some_state' in result['extend'])
 
+    def test_multilevel_relative_include_with_requisites(self):
+        for req in REQUISITES:
+            result = self._render_sls('''
+include:
+  - .shared
+  - ..utils
+  - ...helper
+
+state_id:
+  cmd.run:
+    - name: echo test
+    - cwd: /
+    - {0}:
+      - cmd: ..utils::some_state
+'''.format(req), sls='test.nested.work')
+            self.assertEqual(result['include'][0],
+                             {'base': 'test.nested.shared'})
+            self.assertEqual(result['include'][1], {'base': 'test.utils'})
+            self.assertEqual(result['include'][2], {'base': 'helper'})
+            self.assertEqual(
+                result['state_id']['cmd.run'][2][req][0]['cmd'],
+                'test.utils::some_state'
+            )
+
+    def test_multilevel_relative_include_beyond_top_level(self):
+        self.assertRaises(SaltRenderError, self._render_sls, '''
+include:
+  - ...shared
+''', sls='test.work')
+
     def test_start_state_generation(self):
         result = self._render_sls('''
 A:
@@ -235,7 +269,7 @@ B:
 
         reqs = result['test.goalstate::goal']['stateconf.set'][0]['require']
         self.assertEqual(
-            set([i.itervalues().next() for i in reqs]), set('ABCDE')
+            set([next(six.itervalues(i)) for i in reqs]), set('ABCDE')
         )
 
     def test_implicit_require_with_goal_state(self):
@@ -289,7 +323,7 @@ G:
         goal_args = result['test::goal']['stateconf.set']
         self.assertEqual(len(goal_args), 1)
         self.assertEqual(
-            [i.itervalues().next() for i in goal_args[0]['require']],
+            [next(six.itervalues(i)) for i in goal_args[0]['require']],
             list('ABCDEFG')
         )
 

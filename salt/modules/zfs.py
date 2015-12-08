@@ -54,7 +54,7 @@ def _available_commands():
     # This bit is dependent on specific output from `zfs -?` - any major changes
     # in how this works upstream will require a change.
     for line in res.splitlines():
-        if re.match('	[a-zA-Z]', line):
+        if re.match('  [a-zA-Z]', line):
             cmds = line.split(' ')[0].split('|')
             doc = ' '.join(line.split(' ')[1:])
             for cmd in [cmd.strip() for cmd in cmds]:
@@ -80,6 +80,7 @@ def __virtual__():
     '''
     on_freebsd = __grains__['kernel'] == 'FreeBSD'
     on_linux = __grains__['kernel'] == 'Linux'
+    on_solaris = __grains__['kernel'] == 'SunOS' and __grains__['kernelrelease'] == '5.11'
 
     cmd = ''
     if on_freebsd:
@@ -90,6 +91,9 @@ def __virtual__():
             cmd = '{0} zfs'.format(modinfo)
         else:
             cmd = 'ls /sys/module/zfs'
+    elif on_solaris:
+        # not using salt.utils.which('zfs') to keep compatible with others
+        cmd = 'which zfs'
 
     if cmd and salt.modules.cmdmod.retcode(
         cmd, output_loglevel='quiet', ignore_retcode=True
@@ -97,7 +101,7 @@ def __virtual__():
         # Build dynamic functions and allow loading module
         _build_zfs_cmd_list()
         return 'zfs'
-    return False
+    return (False, "The zfs module cannot be loaded: zfs not found")
 
 
 def _add_doc(func, doc, prefix='\n\n    '):

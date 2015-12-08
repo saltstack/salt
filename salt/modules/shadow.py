@@ -162,7 +162,7 @@ def gen_password(password, crypt_salt=None, algorithm='sha512'):
     .. code-block:: bash
 
         salt '*' shadow.gen_password 'I_am_password'
-        salt '*' shadow.gen_password 'I_am_password' crypt_salt'I_am_salt' algorithm=sha256
+        salt '*' shadow.gen_password 'I_am_password' crypt_salt='I_am_salt' algorithm=sha256
     '''
     if not HAS_CRYPT:
         raise CommandExecutionError(

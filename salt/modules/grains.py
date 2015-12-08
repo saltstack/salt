@@ -4,32 +4,45 @@ Return/control aspects of the grains data
 '''
 
 # Import python libs
-from __future__ import print_function
-from __future__ import absolute_import
-import collections
+from __future__ import absolute_import, print_function
+import os
 import copy
 import math
-import operator
-import os
 import random
-import yaml
 import logging
+import operator
+import collections
+from functools import reduce
+
+# Import 3rd-party libs
+import salt.utils.compat
+from salt.utils.odict import OrderedDict
+import yaml
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
 import salt.utils
 import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
-from functools import reduce
-from salt.ext.six.moves import range
 
 __proxyenabled__ = ['*']
 
 # Seed the grains dict so cython will build
 __grains__ = {}
 
+# Change the default outputter to make it more readable
+__outputter__ = {
+    'items': 'nested',
+    'item': 'nested',
+    'setval': 'nested',
+}
+
 # http://stackoverflow.com/a/12414913/127816
 _infinitedict = lambda: collections.defaultdict(_infinitedict)
+
+_non_existent_key = 'NonExistentValueMagicNumberSpK3hnufdHfeBUXCfqVK'
 
 log = logging.getLogger(__name__)
 
@@ -75,7 +88,7 @@ def get(key, default='', delimiter=DEFAULT_TARGET_DELIM):
         pkg:apache
 
 
-    delimiter
+    :param delimiter:
         Specify an alternate delimiter to use when traversing a nested dict
 
         .. versionadded:: 2014.7.0
@@ -131,7 +144,7 @@ def items(sanitize=False):
     '''
     if salt.utils.is_true(sanitize):
         out = dict(__grains__)
-        for key, func in _SANITIZERS.items():
+        for key, func in six.iteritems(_SANITIZERS):
             if key in out:
                 out[key] = func(out[key])
         return out
@@ -158,7 +171,7 @@ def item(*args, **kwargs):
     '''
     ret = {}
     default = kwargs.get('default', '')
-    delimiter = kwargs.get('delimiter', ':')
+    delimiter = kwargs.get('delimiter', DEFAULT_TARGET_DELIM)
 
     try:
         for arg in args:
@@ -170,7 +183,7 @@ def item(*args, **kwargs):
         pass
 
     if salt.utils.is_true(kwargs.get('sanitize')):
-        for arg, func in _SANITIZERS.items():
+        for arg, func in six.iteritems(_SANITIZERS):
             if arg in ret:
                 ret[arg] = func(ret[arg])
     return ret
@@ -212,23 +225,36 @@ def setvals(grains, destructive=False):
         with salt.utils.fopen(gfn, 'rb') as fp_:
             try:
                 grains = yaml.safe_load(fp_.read())
-            except Exception as e:
-                return 'Unable to read existing grains file: {0}'.format(e)
+            except yaml.YAMLError as exc:
+                return 'Unable to read existing grains file: {0}'.format(exc)
         if not isinstance(grains, dict):
             grains = {}
-    for key, val in new_grains.items():
+    for key, val in six.iteritems(new_grains):
         if val is None and destructive is True:
             if key in grains:
                 del grains[key]
-                if key in __grains__:
-                    del __grains__[key]
+            if key in __grains__:
+                del __grains__[key]
         else:
             grains[key] = val
             __grains__[key] = val
     # Cast defaultdict to dict; is there a more central place to put this?
+    try:
+        yaml_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_representers)
+        yaml_multi_reps = copy.deepcopy(yaml.representer.SafeRepresenter.yaml_multi_representers)
+    except (TypeError, NameError):
+        # This likely means we are running under Python 2.6 which cannot deepcopy
+        # bound methods. Fallback to a modification of deepcopy which can support
+        # this behavior.
+        yaml_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_representers)
+        yaml_multi_reps = salt.utils.compat.deepcopy_bound(yaml.representer.SafeRepresenter.yaml_multi_representers)
     yaml.representer.SafeRepresenter.add_representer(collections.defaultdict,
             yaml.representer.SafeRepresenter.represent_dict)
+    yaml.representer.SafeRepresenter.add_representer(OrderedDict,
+            yaml.representer.SafeRepresenter.represent_dict)
     cstr = yaml.safe_dump(grains, default_flow_style=False)
+    yaml.representer.SafeRepresenter.yaml_representers = yaml_reps
+    yaml.representer.SafeRepresenter.yaml_multi_representers = yaml_multi_reps
     try:
         with salt.utils.fopen(gfn, 'w+') as fp_:
             fp_.write(cstr)
@@ -237,7 +263,7 @@ def setvals(grains, destructive=False):
         log.error(msg.format(gfn))
     fn_ = os.path.join(__opts__['cachedir'], 'module_refresh')
     try:
-        with salt.utils.fopen(fn_, 'w+') as fp_:
+        with salt.utils.flopen(fn_, 'w+') as fp_:
             fp_.write('')
     except (IOError, OSError):
         msg = 'Unable to write to cache file {0}. Check permissions.'
@@ -265,7 +291,7 @@ def setval(key, val, destructive=False):
     return setvals({key: val}, destructive)
 
 
-def append(key, val, convert=False, delimiter=':'):
+def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.17.0
 
@@ -284,9 +310,10 @@ def append(key, val, convert=False, delimiter=':'):
         is given. Defaults to False.
 
     :param delimiter: The key can be a nested dict key. Use this parameter to
-        specify the delimiter you use.
-        You can now append values to a list in nested dictionnary grains. If the
+        specify the delimiter you use, instead of the default ``:``.
+        You can now append values to a list in nested dictionary grains. If the
         list doesn't exist at this level, it will be created.
+
         .. versionadded:: 2014.7.6
 
     CLI Example:
@@ -318,11 +345,18 @@ def append(key, val, convert=False, delimiter=':'):
     return setval(key, grains)
 
 
-def remove(key, val):
+def remove(key, val, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 0.17.0
 
     Remove a value from a list in the grains config file
+
+    :param delimiter: The key can be a nested dict key. Use this parameter to
+        specify the delimiter you use, instead of the default ``:``.
+        You can now append values to a list in nested dictionary grains. If the
+        list doesn't exist at this level, it will be created.
+
+        .. versionadded:: Boron
 
     CLI Example:
 
@@ -330,12 +364,20 @@ def remove(key, val):
 
         salt '*' grains.remove key val
     '''
-    grains = get(key, [])
+    grains = get(key, [], delimiter)
     if not isinstance(grains, list):
         return 'The key {0} is not a valid list'.format(key)
     if val not in grains:
         return 'The val {0} was not in the list {1}'.format(val, key)
     grains.remove(val)
+
+    while delimiter in key:
+        key, rest = key.rsplit(delimiter, 1)
+        _grain = get(key, None, delimiter)
+        if isinstance(_grain, dict):
+            _grain.update({rest: grains})
+        grains = _grain
+
     return setval(key, grains)
 
 
@@ -455,8 +497,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
     '''
 
     ret = lookup_dict.get(
-            __grains__.get(
-                grain, default),
+            salt.utils.traverse_dict_and_list(__grains__, grain, None),
             lookup_dict.get(
                 default, None)
             )
@@ -478,7 +519,7 @@ def filter_by(lookup_dict, grain='os_family', merge=None, default='default', bas
         if ret is None:
             ret = merge
         else:
-            salt.utils.dictupdate.update(ret, merge)
+            salt.utils.dictupdate.update(ret, copy.deepcopy(merge))
 
     return ret
 
@@ -528,7 +569,7 @@ def get_or_set_hash(name,
     .. warning::
 
         This function could return strings which may contain characters which are reserved
-        as directives by the YAML parser, such as strings beginning with `%`. To avoid
+        as directives by the YAML parser, such as strings beginning with ``%``. To avoid
         issues when using the output of this function in an SLS file containing YAML+Jinja,
         surround the call with single quotes.
     '''
@@ -537,8 +578,8 @@ def get_or_set_hash(name,
     if ret is None:
         val = ''.join([random.SystemRandom().choice(chars) for _ in range(length)])
 
-        if ':' in name:
-            root, rest = name.split(':', 1)
+        if DEFAULT_TARGET_DELIM in name:
+            root, rest = name.split(DEFAULT_TARGET_DELIM, 1)
             curr = get(root, _infinitedict())
             val = _dict_from_path(rest, val)
             curr.update(val)
@@ -547,3 +588,118 @@ def get_or_set_hash(name,
             setval(name, val)
 
     return get(name)
+
+
+def set(key,
+        val='',
+        force=False,
+        destructive=False,
+        delimiter=DEFAULT_TARGET_DELIM):
+    '''
+    Set a key to an arbitrary value. It is used like setval but works
+    with nested keys.
+
+    This function is conservative. It will only overwrite an entry if
+    its value and the given one are not a list or a dict. The ``force``
+    parameter is used to allow overwriting in all cases.
+
+    .. versionadded:: 2015.8.0
+
+    :param force: Force writing over existing entry if given or existing
+                  values are list or dict. Defaults to False.
+    :param destructive: If an operation results in a key being removed,
+                  delete the key, too. Defaults to False.
+    :param delimiter:
+        Specify an alternate delimiter to use when traversing a nested dict,
+        the default being ``:``
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' grains.set 'apps:myApp:port' 2209
+        salt '*' grains.set 'apps:myApp' '{port: 2209}'
+    '''
+
+    ret = {'comment': '',
+           'changes': {},
+           'result': True}
+
+    # Get val type
+    _new_value_type = 'simple'
+    if isinstance(val, dict):
+        _new_value_type = 'complex'
+    elif isinstance(val, list):
+        _new_value_type = 'complex'
+
+    _non_existent = object()
+    _existing_value = get(key, _non_existent, delimiter)
+    _value = _existing_value
+
+    _existing_value_type = 'simple'
+    if _existing_value is _non_existent:
+        _existing_value_type = None
+    elif isinstance(_existing_value, dict):
+        _existing_value_type = 'complex'
+    elif isinstance(_existing_value, list):
+        _existing_value_type = 'complex'
+
+    if _existing_value_type is not None and _existing_value == val \
+                   and (val is not None or destructive is not True):
+        ret['comment'] = 'Grain is already set'
+        return ret
+
+    if _existing_value is not None and not force:
+        if _existing_value_type == 'complex':
+            ret['comment'] = 'The key \'{0}\' exists but is a dict or a list. '.format(key) \
+                 + 'Use \'force=True\' to overwrite.'
+            ret['result'] = False
+            return ret
+        elif _new_value_type == 'complex' and _existing_value_type is not None:
+            ret['comment'] = 'The key \'{0}\' exists and the given value is a '.format(key) \
+                 + 'dict or a list. Use \'force=True\' to overwrite.'
+            ret['result'] = False
+            return ret
+        else:
+            _value = val
+    else:
+        _value = val
+
+    # Process nested grains
+    while delimiter in key:
+        key, rest = key.rsplit(delimiter, 1)
+        _existing_value = get(key, {}, delimiter)
+        if isinstance(_existing_value, dict):
+            if _value is None and destructive:
+                if rest in _existing_value.keys():
+                    _existing_value.pop(rest)
+            else:
+                _existing_value.update({rest: _value})
+        elif isinstance(_existing_value, list):
+            _list_updated = False
+            for _index, _item in enumerate(_existing_value):
+                if _item == rest:
+                    _existing_value[_index] = {rest: _value}
+                    _list_updated = True
+                elif isinstance(_item, dict) and rest in _item:
+                    _item.update({rest: _value})
+                    _list_updated = True
+            if not _list_updated:
+                _existing_value.append({rest: _value})
+        elif _existing_value == rest or force:
+            _existing_value = {rest: _value}
+        else:
+            ret['comment'] = 'The key \'{0}\' value is \'{1}\', '.format(key, _existing_value) \
+                 + 'which is different from the provided key \'{0}\'. '.format(rest) \
+                 + 'Use \'force=True\' to overwrite.'
+            ret['result'] = False
+            return ret
+        _value = _existing_value
+
+    _setval_ret = setval(key, _value, destructive=destructive)
+    if isinstance(_setval_ret, dict):
+        ret['changes'] = _setval_ret
+    else:
+        ret['comment'] = _setval_ret
+        ret['result'] = False
+    return ret

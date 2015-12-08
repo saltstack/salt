@@ -12,12 +12,6 @@ import os
 import re
 import time
 import stat
-try:
-    import pwd
-except ImportError:
-    # In case a non-master needs to import this module
-    pass
-
 import tempfile
 
 # Import salt libs
@@ -44,6 +38,16 @@ from salt.pillar import git_pillar
 from salt.utils.event import tagify
 from salt.exceptions import SaltMasterError
 
+# Import 3rd-party libs
+import salt.ext.six as six
+
+try:
+    import pwd
+    HAS_PWD = True
+except ImportError:
+    # pwd is not available on windows
+    HAS_PWD = False
+
 log = logging.getLogger(__name__)
 
 # Things to do in lower layers:
@@ -54,31 +58,41 @@ def init_git_pillar(opts):
     '''
     Clear out the ext pillar caches, used when the master starts
     '''
-    pillargitfs = []
+    ret = []
     for opts_dict in [x for x in opts.get('ext_pillar', [])]:
         if 'git' in opts_dict:
-            try:
-                import git
-            except ImportError:
-                return pillargitfs
-            parts = opts_dict['git'].strip().split()
-            try:
-                br = parts[0]
-                loc = parts[1]
-            except IndexError:
-                log.critical(
-                    'Unable to extract external pillar data: {0}'
-                    .format(opts_dict['git'])
-                )
-            else:
-                pillargitfs.append(
-                    git_pillar.GitPillar(
-                        br,
-                        loc,
-                        opts
+            if isinstance(opts_dict['git'], six.string_types):
+                # Legacy git pillar code
+                try:
+                    import git
+                except ImportError:
+                    return ret
+                parts = opts_dict['git'].strip().split()
+                try:
+                    br = parts[0]
+                    loc = parts[1]
+                except IndexError:
+                    log.critical(
+                        'Unable to extract external pillar data: {0}'
+                        .format(opts_dict['git'])
                     )
+                else:
+                    ret.append(
+                        git_pillar._LegacyGitPillar(
+                            br,
+                            loc,
+                            opts
+                        )
+                    )
+            else:
+                # New git_pillar code
+                pillar = salt.utils.gitfs.GitPillar(opts)
+                pillar.init_remotes(
+                    opts_dict['git'],
+                    git_pillar.PER_REMOTE_OVERRIDES
                 )
-    return pillargitfs
+                ret.append(pillar)
+    return ret
 
 
 def clean_fsbackend(opts):
@@ -180,12 +194,21 @@ def access_keys(opts):
     '''
     users = []
     keys = {}
-    acl_users = set(opts['client_acl'].keys())
+    if opts['client_acl'] or opts['client_acl_blacklist']:
+        salt.utils.warn_until(
+                'Nitrogen',
+                'ACL rules should be configured with \'publisher_acl\' and '
+                '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
+                'This functionality will be removed in Salt Nitrogen.'
+                )
+    publisher_acl = opts['publisher_acl'] or opts['client_acl']
+    acl_users = set(publisher_acl.keys())
     if opts.get('user'):
         acl_users.add(opts['user'])
     acl_users.add(salt.utils.get_user())
-    for user in pwd.getpwall():
-        users.append(user.pw_name)
+    if HAS_PWD:
+        for user in pwd.getpwall():
+            users.append(user.pw_name)
     for user in acl_users:
         log.info(
             'Preparing the {0} key for local communication'.format(
@@ -193,12 +216,13 @@ def access_keys(opts):
             )
         )
 
-        if user not in users:
-            try:
-                user = pwd.getpwnam(user).pw_name
-            except KeyError:
-                log.error('ACL user {0} is not available'.format(user))
-                continue
+        if HAS_PWD:
+            if user not in users:
+                try:
+                    user = pwd.getpwnam(user).pw_name
+                except KeyError:
+                    log.error('ACL user {0} is not available'.format(user))
+                    continue
         keyfile = os.path.join(
             opts['cachedir'], '.{0}_key'.format(user)
         )
@@ -212,13 +236,17 @@ def access_keys(opts):
         with salt.utils.fopen(keyfile, 'w+') as fp_:
             fp_.write(key)
         os.umask(cumask)
-        os.chmod(keyfile, 256)
-        try:
-            os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
-        except OSError:
-            # The master is not being run as root and can therefore not
-            # chown the key file
-            pass
+        # 600 octal: Read and write access to the owner only.
+        # Write access is necessary since on subsequent runs, if the file
+        # exists, it needs to be written to again. Windows enforces this.
+        os.chmod(keyfile, 0o600)
+        if HAS_PWD:
+            try:
+                os.chown(keyfile, pwd.getpwnam(user).pw_uid, -1)
+            except OSError:
+                # The master is not being run as root and can therefore not
+                # chown the key file
+                pass
         keys[user] = key
     return keys
 
@@ -437,6 +465,7 @@ class RemoteFuncs(object):
         good = self.ckminions.auth_check(
                 perms,
                 load['fun'],
+                load['arg'],
                 load['tgt'],
                 load.get('tgt_type', 'glob'),
                 publish_validate=True)
@@ -455,6 +484,9 @@ class RemoteFuncs(object):
             if saltenv not in file_roots:
                 file_roots[saltenv] = []
         mopts['file_roots'] = file_roots
+        mopts['top_file_merging_strategy'] = self.opts['top_file_merging_strategy']
+        mopts['env_order'] = self.opts['env_order']
+        mopts['default_top'] = self.opts['default_top']
         if load.get('env_only'):
             return mopts
         mopts['renderer'] = self.opts['renderer']
@@ -700,7 +732,8 @@ class RemoteFuncs(object):
                             {'grains': load['grains'],
                              'pillar': data})
                             )
-            os.rename(tmpfname, datap)
+            # On Windows, os.rename will fail if the destination file exists.
+            salt.utils.atomicfile.atomic_rename(tmpfname, datap)
         return data
 
     def _minion_event(self, load):
@@ -729,6 +762,8 @@ class RemoteFuncs(object):
         '''
         Handle the return data sent from the minions
         '''
+        # Generate EndTime
+        endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid())
         # If the return data is invalid, just ignore it
         if any(key not in load for key in ('return', 'jid', 'id')):
             return False
@@ -747,6 +782,11 @@ class RemoteFuncs(object):
         if not self.opts['job_cache'] or self.opts.get('ext_job_cache'):
             return
 
+        fstr = '{0}.update_endtime'.format(self.opts['master_job_cache'])
+        if (self.opts.get('job_cache_store_endtime')
+                and fstr in self.mminion.returners):
+            self.mminion.returners[fstr](load['jid'], endtime)
+
         fstr = '{0}.returner'.format(self.opts['master_job_cache'])
         self.mminion.returners[fstr](load)
 
@@ -764,7 +804,7 @@ class RemoteFuncs(object):
             self.mminion.returners[fstr](load['jid'], load['load'])
 
         # Format individual return loads
-        for key, item in load['return'].items():
+        for key, item in six.iteritems(load['return']):
             ret = {'jid': load['jid'],
                    'id': key,
                    'return': item}
@@ -952,7 +992,7 @@ class RemoteFuncs(object):
                 ret[minion['id']] = minion['return']
                 if 'jid' in minion:
                     ret['__jid__'] = minion['jid']
-        for key, val in self.local.get_cache_returns(ret['__jid__']).items():
+        for key, val in six.iteritems(self.local.get_cache_returns(ret['__jid__'])):
             if key not in ret:
                 ret[key] = val
         if load.get('form', '') != 'full':
@@ -1300,13 +1340,21 @@ class LocalFuncs(object):
         # check blacklist/whitelist
         good = True
         # Check if the user is blacklisted
-        for user_re in self.opts['client_acl_blacklist'].get('users', []):
+        if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
+            salt.utils.warn_until(
+                    'Nitrogen',
+                    'ACL rules should be configured with \'publisher_acl\' and '
+                    '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
+                    'This functionality will be removed in Salt Nitrogen.'
+                    )
+        blacklist = self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist']
+        for user_re in blacklist.get('users', []):
             if re.match(user_re, load['user']):
                 good = False
                 break
 
         # check if the cmd is blacklisted
-        for module_re in self.opts['client_acl_blacklist'].get('modules', []):
+        for module_re in blacklist.get('modules', []):
             # if this is a regular command, its a single function
             if isinstance(load['fun'], str):
                 funs_to_check = [load['fun']]
@@ -1362,6 +1410,7 @@ class LocalFuncs(object):
                         if token['name'] in self.opts['external_auth'][token['eauth']]
                         else self.opts['external_auth'][token['eauth']]['*'],
                     load['fun'],
+                    load['arg'],
                     load['tgt'],
                     load.get('tgt_type', 'glob'))
             if not good:
@@ -1403,6 +1452,7 @@ class LocalFuncs(object):
                         if name in self.opts['external_auth'][extra['eauth']]
                         else self.opts['external_auth'][extra['eauth']]['*'],
                     load['fun'],
+                    load['arg'],
                     load['tgt'],
                     load.get('tgt_type', 'glob'))
             if not good:
@@ -1450,14 +1500,16 @@ class LocalFuncs(object):
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
-                    if load['user'] not in self.opts['client_acl']:
+                    acl = self.opts['publisher_acl'] or self.opts['client_acl']
+                    if load['user'] not in acl:
                         log.warning(
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
                     good = self.ckminions.auth_check(
-                            self.opts['client_acl'][load['user']],
+                            acl[load['user']],
                             load['fun'],
+                            load['arg'],
                             load['tgt'],
                             load.get('tgt_type', 'glob'))
                     if not good:
@@ -1550,8 +1602,6 @@ class LocalFuncs(object):
                 'The specified returner threw a stack trace:\n',
                 exc_info=True
             )
-        # Set up the payload
-        payload = {'enc': 'aes'}
         # Altering the contents of the publish load is serious!! Changes here
         # break compatibility with minion/master versions and even tiny
         # additions can have serious implications on the performance of the
@@ -1574,6 +1624,16 @@ class LocalFuncs(object):
             pub_load['tgt_type'] = load['tgt_type']
         if 'to' in load:
             pub_load['to'] = load['to']
+
+        if 'kwargs' in load:
+            if 'ret_config' in load['kwargs']:
+                pub_load['ret_config'] = load['kwargs'].get('ret_config')
+
+            if 'metadata' in load['kwargs']:
+                pub_load['metadata'] = load['kwargs'].get('metadata')
+
+            if 'ret_kwargs' in load['kwargs']:
+                pub_load['ret_kwargs'] = load['kwargs'].get('ret_kwargs')
 
         if 'user' in load:
             log.info(

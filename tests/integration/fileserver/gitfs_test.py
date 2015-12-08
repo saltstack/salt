@@ -2,6 +2,12 @@
 '''
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
+# Import Python libs
+from __future__ import absolute_import
+import os
+import logging
+import pwd
+import shutil
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -10,17 +16,12 @@ from salttesting.mock import patch, NO_MOCK, NO_MOCK_REASON
 
 ensure_in_syspath('../..')
 
-# Import Python libs
-import os
-import logging
-import pwd
-import shutil
-
 # Import salt libs
 import integration
 from salt.fileserver import gitfs
 
-gitfs.__opts__ = {'gitfs_remotes': [''],
+gitfs.__opts__ = {'cachedir': '/tmp/gitfs_test_cache',
+                  'gitfs_remotes': [''],
                   'gitfs_root': '',
                   'fileserver_backend': ['git'],
                   'gitfs_base': 'master',
@@ -34,7 +35,8 @@ gitfs.__opts__ = {'gitfs_remotes': [''],
                   'gitfs_insecure_auth': False,
                   'gitfs_privkey': '',
                   'gitfs_pubkey': '',
-                  'gitfs_passphrase': ''
+                  'gitfs_passphrase': '',
+                  'gitfs_ssl_verify': True
 }
 
 LOAD = {'saltenv': 'base'}

@@ -11,6 +11,8 @@ from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: dis
 import salt.utils
 import salt.utils.decorators as decorators
 
+import re
+
 
 # Cache the output of running which('nginx') so this module
 # doesn't needlessly walk $PATH looking for the same binary
@@ -43,6 +45,29 @@ def version():
     out = __salt__['cmd.run'](cmd).splitlines()
     ret = out[0].split(': ')
     return ret[-1]
+
+
+def build_info():
+    '''
+    Return server and build arguments
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' nginx.build_info
+    '''
+    ret = {'info': []}
+    out = __salt__['cmd.run']('{0} -V'.format(__detect_os()))
+
+    for i in out.splitlines():
+        if i.startswith('configure argument'):
+            ret['build arguments'] = re.findall(r"(?:[^\s]*'.*')|(?:[^\s]+)", i)[2:]
+            continue
+
+        ret['info'].append(i)
+
+    return ret
 
 
 def configtest():

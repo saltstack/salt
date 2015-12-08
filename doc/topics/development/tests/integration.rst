@@ -318,7 +318,7 @@ Ocean, located at: ``tests/integration/files/conf/cloud.providers.d/digital_ocea
 .. code-block:: yaml
 
     digitalocean-config:
-      provider: digital_ocean
+      driver: digital_ocean
       client_key: ''
       api_key: ''
       location: New York 1

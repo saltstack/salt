@@ -15,7 +15,7 @@ vSphere Cloud Module
 
 The vSphere cloud module is used to control access to VMWare vSphere.
 
-:depends:   - PySphere Python module >= 0.1.8
+:depends: PySphere Python module >= 0.1.8
 
 Note: Ensure python pysphere module is installed by running following one-liner
 check. The output should be 0.
@@ -34,7 +34,7 @@ configuration at:
 .. code-block:: yaml
 
     my-vsphere-config:
-      provider: vsphere
+      driver: vsphere
       user: myuser
       password: verybadpass
       template_user: root
@@ -116,7 +116,7 @@ import salt.config as config
 # Attempt to import pysphere lib
 HAS_LIBS = False
 try:
-    from pysphere import VIServer, MORTypes
+    from pysphere import VIServer, MORTypes, VIException
     HAS_LIBS = True
 except Exception:  # pylint: disable=W0703
     pass
@@ -124,34 +124,47 @@ except Exception:  # pylint: disable=W0703
 # Get logging started
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'vsphere'
+
 
 # Only load in this module if the vSphere configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud functions and check for vSphere configurations.
+    Check for vSphere configurations.
     '''
-    if not HAS_LIBS:
-        return False
-
     if get_configured_provider() is False:
         return False
 
-    return True
+    if get_dependencies() is False:
+        return False
+
+    warn_until(
+        'Carbon',
+        'The vsphere driver is deprecated in favor of the vmware driver and will be removed '
+        'in Salt Carbon. Please convert your vsphere provider configs to use the vmware driver.'
+    )
+
+    return __virtualname__
 
 
 def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    warn_until(
-        'Carbon',
-        'The vsphere driver is deprecated in favor of the vmware driver and will be removed '
-        'in Salt Carbon. Please convert your vsphere provider configs to use the vmware driver.'
-    )
     return config.is_provider_configured(
         __opts__,
-        __active_provider_name__ or 'vsphere',
+        __active_provider_name__ or __virtualname__,
         ('user',)
+    )
+
+
+def get_dependencies():
+    '''
+    Warn if dependencies aren't met.
+    '''
+    return config.check_driver_dependencies(
+        __virtualname__,
+        {'pysphere': HAS_LIBS}
     )
 
 
@@ -228,6 +241,20 @@ def create(vm_):
     '''
     Create a single VM from a data dict
     '''
+    try:
+        # Check for required profile parameters before sending any API calls.
+        if vm_['profile'] and config.is_profile_configured(__opts__,
+                                                           __active_provider_name__ or 'vsphere',
+                                                           vm_['profile']) is False:
+            return False
+    except AttributeError:
+        pass
+
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event',
         'starting create',
@@ -235,7 +262,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -286,7 +313,7 @@ def create(vm_):
     except Exception as exc:  # pylint: disable=W0703
         log.error(
             'Error creating {0} on vSphere\n\n'
-            'The following exception was thrown by libcloud when trying to '
+            'The following exception was thrown when trying to '
             'run the initial deployment: \n{1}'.format(
                 vm_['name'], str(exc)
             ),
@@ -306,9 +333,9 @@ def create(vm_):
     if show_deploy_args:
         ret['deploy_kwargs'] = deploy_kwargs
 
-    log.info('Created Cloud VM {0[name]!r}'.format(vm_))
+    log.info('Created Cloud VM \'{0[name]}\''.format(vm_))
     log.debug(
-        '{0[name]!r} VM creation details:\n{1}'.format(
+        '\'{0[name]}\' VM creation details:\n{1}'.format(
             vm_, pprint.pformat(ret)
         )
     )
@@ -320,7 +347,7 @@ def create(vm_):
         {
             'name': vm_['name'],
             'profile': vm_['profile'],
-            'provider': vm_['provider'],
+            'provider': vm_['driver'],
         },
         transport=__opts__['transport']
     )
@@ -336,9 +363,11 @@ def wait_for_ip(vm_):
         Wait for the IP address to become available
         '''
         instance = show_instance(name=vm_['name'], call='action')
-        if 'ip_address' in instance:
-            if instance['ip_address'] is not None:
-                return instance['ip_address']
+        ip_addrs = instance.get('ip_address', None)
+
+        if ip_addrs is not None:
+            return ip_addrs
+
         time.sleep(1)
         return False
 
@@ -366,8 +395,8 @@ def _deploy(vm_):
         'template_password', vm_, __opts__
     )
 
-    #new_instance = conn.get_vm_by_name(vm_['name'])
-    #ret = new_instance.get_properties()
+    # new_instance = conn.get_vm_by_name(vm_['name'])
+    # ret = new_instance.get_properties()
     ret = show_instance(name=vm_['name'], call='action')
 
     ret['ip_address'] = ip_address
@@ -474,8 +503,8 @@ def _get_instance_properties(instance, from_cache=True):
     ret = {}
     properties = instance.get_properties(from_cache)
     for prop in ('guest_full_name', 'guest_id', 'memory_mb', 'name',
-                    'num_cpu', 'path', 'devices', 'disks', 'files',
-                    'net', 'ip_address', 'mac_address', 'hostname'):
+                 'num_cpu', 'path', 'devices', 'disks', 'files',
+                 'net', 'ip_address', 'mac_address', 'hostname'):
         if prop in properties:
             ret[prop] = properties[prop]
         else:
@@ -487,10 +516,12 @@ def _get_instance_properties(instance, from_cache=True):
     for device in ret['devices']:
         if '_obj' in ret['devices'][device]:
             del ret['devices'][device]['_obj']
+
         # TODO: this is a workaround because the net does not return mac...?
-        if ret['mac_address'] is None:
-            if 'macAddress' in ret['devices'][device]:
-                ret['mac_address'] = ret['devices'][device]['macAddress']
+        mac_address = ret.get('mac_address', None)
+        if mac_address is None and 'macAddress' in ret['devices'][device]:
+            ret['mac_address'] = ret['devices'][device]['macAddress']
+
     ret['status'] = instance.get_status()
     ret['tools_status'] = instance.get_tools_status()
 
@@ -727,3 +758,293 @@ def list_folders(kwargs=None, call=None):  # pylint: disable=W0613
     for folder in folders:
         ret.append(folders[folder])
     return ret
+
+
+def status(name, call=None):
+    '''
+    To check the status of a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a status vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The status action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    return instance.get_status()
+
+
+def start(name, call=None):
+    '''
+    To start/power on a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a start vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The start action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    if instance.is_powered_on():
+        ret = 'already powered on'
+        log.info('VM {0} {1}'.format(name, ret))
+        return ret
+    try:
+        log.info('Starting VM {0}'.format(name))
+        instance.power_on()
+    except Exception as exc:
+        log.error('Could not power on VM {0}: {1}'.format(name, exc))
+        return 'failed to power on'
+    return 'powered on'
+
+
+def stop(name, call=None):
+    '''
+    To stop/power off a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a stop vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The stop action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    if instance.is_powered_off():
+        ret = 'already powered off'
+        log.info('VM {0} {1}'.format(name, ret))
+        return ret
+    try:
+        log.info('Stopping VM {0}'.format(name))
+        instance.power_off()
+    except Exception as exc:
+        log.error('Could not power off VM {0}: {1}'.format(name, exc))
+        return 'failed to power off'
+    return 'powered off'
+
+
+def suspend(name, call=None):
+    '''
+    To suspend a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a suspend vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The suspend action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    if instance.is_suspended():
+        ret = 'already suspended'
+        log.info('VM {0} {1}'.format(name, ret))
+        return ret
+    try:
+        log.info('Suspending VM {0}'.format(name))
+        instance.suspend()
+    except Exception as exc:
+        log.error('Could not suspend VM {0}: {1}'.format(name, exc))
+        return 'failed to suspend'
+    return 'suspended'
+
+
+def reset(name, call=None):
+    '''
+    To reset a VM using its name
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -a reset vmname
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The reset action must be called with -a or --action.'
+        )
+
+    conn = get_conn()
+    instance = conn.get_vm_by_name(name)
+    if instance.is_resetting():
+        ret = 'already resetting'
+        log.info('VM {0} {1}'.format(name, ret))
+        return ret
+    try:
+        log.info('Resetting VM {0}'.format(name))
+        instance.reset()
+    except Exception as exc:
+        log.error('Could not reset VM {0}: {1}'.format(name, exc))
+        return 'failed to reset'
+    return 'reset'
+
+
+def snapshot_list(kwargs=None, call=None):
+    '''
+    List virtual machines with snapshots
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f snapshot_list
+    '''
+    ret = {}
+    vms = []
+
+    conn = get_conn()
+
+    qry = conn._retrieve_properties_traversal(
+        property_names=['name', 'rootSnapshot'],
+        obj_type="VirtualMachine"
+    )
+
+    for prop in qry:
+        has_snapshots = False
+        name = ""
+
+        for i in prop.PropSet:
+            if i.Name == 'rootSnapshot' and i.Val.ManagedObjectReference:
+                has_snapshots = True
+            if i.Name == 'name':
+                name = i.Val
+        if has_snapshots:
+            vms.append(name)
+
+    for vm in vms:
+        _vm = conn.get_vm_by_name(vm)
+
+        ret[vm] = {'snapshots': []}
+
+        for snap in _vm.get_snapshots():
+            ret[vm]['snapshots'] = {
+                'name': snap.get_name(),
+                'description': snap.get_description(),
+                'created': time.strftime("%Y-%m-%d %H:%M:%S", snap.get_create_time()),
+                'state': snap.get_state(),
+                'path': snap.get_path()
+            }
+
+    return ret
+
+
+def create_snapshot(kwargs=None, call=None):
+    '''
+    Create a snapshot
+
+    @name: Name of the virtual machine to snapshot
+    @snapshot: Name of the snapshot
+    @description: Description of the snapshot (optional)
+    @memory: Dump of the internal state of the virtual machine (optional)
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt-cloud -f create_snapshot [PROVIDER] name=myvm.example.com snapshot=mysnapshot
+       salt-cloud -f create_snapshot [PROVIDER] name=myvm.example.com snapshot=mysnapshot description='My Snapshot' memory=True
+    '''
+    if call != 'function':
+        log.error(
+            'The show_keypair function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'name' not in kwargs or 'snapshot' not in kwargs:
+        log.error('name and snapshot are required arguments')
+        return False
+
+    ret = {}
+    conn = get_conn()
+
+    vm = conn.get_vm_by_name(kwargs['name'])
+
+    try:
+        log.info('Creating snapshot')
+        vm.create_snapshot(
+            kwargs['snapshot'],
+            kwargs.get('description', None),
+            kwargs.get('memory', False)
+        )
+
+        ret['name'] = kwargs['name']
+        ret['snapshot'] = kwargs['snapshot']
+        ret['comment'] = 'Snapshot created'
+        ret['result'] = True
+    except VIException:
+        log.error('Unable to create snapshot')
+
+        ret['name'] = kwargs['name']
+        ret['snapshot'] = kwargs['snapshot']
+        ret['comment'] = 'Failed to create snapshot'
+        ret['result'] = False
+
+    return ret
+
+
+def delete_snapshot(kwargs=None, call=None):
+    '''
+    Delete snapshot
+
+    .. versionadded:: 2015.8.0
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud -f delete_snapshot [PROVIDER] name=myvm.example.com snapshot=mysnapshot
+    '''
+    if call != 'function':
+        log.error(
+            'The show_keypair function must be called with -f or --function.'
+        )
+        return False
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'name' not in kwargs or 'snapshot' not in kwargs:
+        log.error('name and snapshot are required arguments')
+        return False
+
+    conn = get_conn()
+
+    vm = conn.get_vm_by_name(kwargs['name'])
+
+    try:
+        log.info('Deleting snapshot')
+        vm.delete_named_snapshot(kwargs['snapshot'], remove_children=True)
+        log.info('Snapshot deleted')
+    except VIException:
+        log.error('Unable to delete snapshot')
+        return False
+
+    return True

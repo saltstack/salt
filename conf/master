@@ -27,31 +27,6 @@
 # modified files cause conflicts, set verify_env to False.
 #user: root
 
-# Max open files
-#
-# Each minion connecting to the master uses AT LEAST one file descriptor, the
-# master subscription connection. If enough minions connect you might start
-# seeing on the console (and then salt-master crashes):
-#   Too many open files (tcp_listener.cpp:335)
-#   Aborted (core dumped)
-#
-# By default this value will be the one of `ulimit -Hn`, ie, the hard limit for
-# max open files.
-#
-# If you wish to set a different value than the default one, uncomment and
-# configure this setting. Remember that this value CANNOT be higher than the
-# hard limit. Raising the hard limit depends on your OS and/or distribution,
-# a good way to find the limit is to search the internet. For example:
-#   raise max open files hard limit debian
-#
-#max_open_files: 100000
-
-# The number of worker threads to start. These threads are used to manage
-# return calls made from minions to the master. If the master seems to be
-# running slowly, increase the number of threads. This setting can not be
-# set lower than 3.
-#worker_threads: 5
-
 # The port used by the communication interface. The ret (return) port is the
 # interface used for the file server, authentication, job returns, etc.
 #ret_port: 4506
@@ -68,6 +43,8 @@
 #pki_dir: /etc/salt/pki/master
 
 # Directory to store job and cache data:
+# This directory may contain sensitive data and should be protected accordingly.
+# 
 #cachedir: /var/cache/salt/master
 
 # Directory for custom modules. This directory can contain subdirectories for
@@ -202,6 +179,59 @@
 #   - /etc/salt/extra_config
 
 
+#####  Large-scale tuning settings   #####
+##########################################
+# Max open files
+#
+# Each minion connecting to the master uses AT LEAST one file descriptor, the
+# master subscription connection. If enough minions connect you might start
+# seeing on the console (and then salt-master crashes):
+#   Too many open files (tcp_listener.cpp:335)
+#   Aborted (core dumped)
+#
+# By default this value will be the one of `ulimit -Hn`, ie, the hard limit for
+# max open files.
+#
+# If you wish to set a different value than the default one, uncomment and
+# configure this setting. Remember that this value CANNOT be higher than the
+# hard limit. Raising the hard limit depends on your OS and/or distribution,
+# a good way to find the limit is to search the internet. For example:
+#   raise max open files hard limit debian
+#
+#max_open_files: 100000
+
+# The number of worker threads to start. These threads are used to manage
+# return calls made from minions to the master. If the master seems to be
+# running slowly, increase the number of threads. This setting can not be
+# set lower than 3.
+#worker_threads: 5
+
+# Set the ZeroMQ high water marks
+# http://api.zeromq.org/3-2:zmq-setsockopt
+
+# The publisher interface ZeroMQPubServerChannel
+#pub_hwm: 1000
+
+# These two ZMQ HWM settings, salt_event_pub_hwm and event_publisher_pub_hwm
+# are significant for masters with thousands of minions.  When these are
+# insufficiently high it will manifest in random responses missing in the CLI
+# and even missing from the job cache.  Masters that have fast CPUs and many
+# cores with appropriate worker_threads will not need these set as high.
+
+# On deployment with 8,000 minions, 2.4GHz CPUs, 24 cores, 32GiB memory has
+# these settings:
+#
+#   salt_event_pub_hwm: 128000
+#   event_publisher_pub_hwm: 64000
+
+# ZMQ high-water-mark for SaltEvent pub socket
+#salt_event_pub_hwm: 20000
+
+# ZMQ high-water-mark for EventPublisher pub socket
+#event_publisher_pub_hwm: 10000
+
+
+
 #####        Security settings       #####
 ##########################################
 # Enable "open mode", this mode still maintains encryption, but turns off
@@ -242,7 +272,7 @@
 # This setting should be treated with care since it opens up execution
 # capabilities to non root users. By default this capability is completely
 # disabled.
-#client_acl:
+#pulisher_acl:
 #  larry:
 #    - test.ping
 #    - network.*
@@ -253,14 +283,18 @@
 # running any commands. It would also blacklist any use of the "cmd"
 # module. This is completely disabled by default.
 #
-#client_acl_blacklist:
+#publisher_acl_blacklist:
 #  users:
 #    - root
 #    - '^(?!sudo_).*$'   #  all non sudo users
 #  modules:
 #    - cmd
+#
+# WARNING: client_acl and client_acl_blacklist options are deprecated and will
+# be removed in the future releases. Use publisher_acl and
+# publisher_acl_blacklist instead.
 
-# Enforce client_acl & client_acl_blacklist when users have sudo
+# Enforce publisher_acl & publisher_acl_blacklist when users have sudo
 # access to the salt command. 
 #
 #sudo_acl: False
@@ -416,6 +450,23 @@
 #file_roots:
 #  base:
 #    - /srv/salt
+#
+
+# When using multiple environments, each with their own top file, the
+# default behaviour is an unordered merge. To prevent top files from
+# being merged together and instead to only use the top file from the
+# requested environment, set this value to 'same'. 
+#top_file_merging_strategy: merge
+
+# To specify the order in which environments are merged, set the ordering
+# in the env_order option. Given a conflict, the last matching value will
+# win.
+#env_order: ['base', 'dev', 'prod']
+
+# If top_file_merging_strategy is set to 'same' and an environment does not
+# contain a top file, the top file in the environment specified by default_top
+# will be used instead.
+#default_top: base
 
 # The hash_type is the hash to use when discovering the hash of a file on
 # the master server. The default is md5, but sha1, sha224, sha256, sha384
@@ -571,10 +622,11 @@
 #####          Syndic settings       #####
 ##########################################
 # The Salt syndic is used to pass commands through a master from a higher
-# master. Using the syndic is simple, if this is a master that will have
-# syndic servers(s) below it set the "order_masters" setting to True, if this
-# is a master that will be running a syndic daemon for passthrough the
-# "syndic_master" setting needs to be set to the location of the master server
+# master. Using the syndic is simple. If this is a master that will have
+# syndic servers(s) below it, then set the "order_masters" setting to True.
+#
+# If this is a master that will be running a syndic daemon for passthrough, then
+# the "syndic_master" setting needs to be set to the location of the master server
 # to receive commands from.
 
 # Set the order_masters setting to True if this master will command lower
@@ -637,7 +689,7 @@
 #
 #
 #####         Mine settings     #####
-##########################################
+#####################################
 # Restrict mine.get access from minions. By default any minion has a full access
 # to get all mine data from master cache. In acl definion below, only pcre matches
 # are allowed.
@@ -690,7 +742,21 @@
 
 # The format of the console logging messages. Allowed formatting options can
 # be seen here: http://docs.python.org/library/logging.html#logrecord-attributes
+#
+# Console log colors are specified by these additional formatters:
+#
+# %(colorlevel)s
+# %(colorname)s
+# %(colorprocess)s
+# %(colormsg)s
+#
+# Since it is desirable to include the surrounding brackets, '[' and ']', in
+# the coloring of the messages, these color formatters also include padding as
+# well.  Color LogRecord attributes are only available for console logging.
+#
+#log_fmt_console: '%(colorlevel)s %(colormsg)s'
 #log_fmt_console: '[%(levelname)-8s] %(message)s'
+#
 #log_fmt_logfile: '%(asctime)s,%(msecs)03.0f [%(name)-17s][%(levelname)-8s] %(message)s'
 
 # This can be used to control logging levels more specificically.  This
@@ -703,7 +769,7 @@
 #log_granular_levels: {}
 
 
-#####         Node Groups           #####
+#####         Node Groups           ######
 ##########################################
 # Node groups allow for logical groupings of minion nodes. A group consists of a group
 # name and a compound target.
@@ -720,19 +786,38 @@
 #range_server: range:80
 
 
-#####     Windows Software Repo settings #####
-##############################################
+#####  Windows Software Repo settings #####
+###########################################
 # Location of the repo on the master:
-#win_repo: '/srv/salt/win/repo'
-#
-# Location of the master's repo cache file:
-#win_repo_mastercachefile: '/srv/salt/win/repo/winrepo.p'
+#winrepo_dir_ng: '/srv/salt/win/repo-ng'
 #
 # List of git repositories to include with the local repo:
-#win_gitrepos:
+#winrepo_remotes_ng:
+#  - 'https://github.com/saltstack/salt-winrepo-ng.git'
+
+
+#####  Windows Software Repo settings - Pre 2015.8 #####
+########################################################
+# Legacy repo settings for pre-2015.8 Windows minions.
+#
+# Location of the repo on the master:
+#winrepo_dir: '/srv/salt/win/repo'
+#
+# Location of the master's repo cache file:
+#winrepo_mastercachefile: '/srv/salt/win/repo/winrepo.p'
+#
+# List of git repositories to include with the local repo:
+#winrepo_remotes:
 #  - 'https://github.com/saltstack/salt-winrepo.git'
+
 
 #####      Returner settings          ######
 ############################################
 # Which returner(s) will be used for minion's result:
 #return: mysql
+
+
+######    Miscellaneous  settings     ######
+############################################
+# Default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
+#event_match_type: startswith

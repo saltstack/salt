@@ -3,14 +3,16 @@
 A runner module to collect and display the inline documentation from the
 various module types
 '''
-from __future__ import absolute_import
 # Import Python libs
+from __future__ import absolute_import, print_function
 import itertools
 
 # Import salt libs
 import salt.client
 import salt.runner
 import salt.wheel
+
+# Import 3rd-party libs
 import salt.ext.six as six
 from salt.exceptions import SaltClientError
 
@@ -70,37 +72,10 @@ def execution():
             for v in six.itervalues(ret):
                 docs.update(v)
     except SaltClientError as exc:
-        print exc
+        print(exc)  # pylint: disable=W1698
         return []
 
     i = itertools.chain.from_iterable([six.iteritems(docs['ret'])])
     ret = dict(list(i))
 
     return ret
-
-
-# Still need to modify some of the backend for auth checks to make this work
-def __list_functions(user=None):
-    '''
-    List all of the functions, optionally pass in a user to evaluate
-    permissions on
-    '''
-    client = salt.client.get_local_client(__opts__['conf_file'])
-    funcs = {}
-    try:
-        gener = client.cmd_iter(
-                '*',
-                'sys.list_functions',
-                timeout=__opts__['timeout'])
-    except SaltClientError as client_error:
-        print client_error
-        return funcs
-
-    for ret in gener:
-        funcs.update(ret)
-    if not user:
-        __jid_event__.fire_event({'message': funcs}, 'progress')
-        return funcs
-    for _, val in __opts__['external_auth'].items():
-        if user in val:
-            pass

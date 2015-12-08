@@ -3,22 +3,27 @@
 Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 '''
-from __future__ import absolute_import
+
 
 # Import python libs
+from __future__ import absolute_import
+import datetime
 import os
 import re
 import fnmatch
 import collections
 
-from salt.ext.six.moves import range
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 # Import salt libs
-import salt.utils
-from salt.utils.network import remote_port_tcp as _remote_port_tcp
-from salt.utils.network import host_to_ip as _host_to_ip
-import salt.utils.event
 import salt.config
+import salt.utils
+import salt.utils.event
+from salt.utils.network import host_to_ip as _host_to_ip
+from salt.utils.network import remote_port_tcp as _remote_port_tcp
+from salt.ext.six.moves import zip
 
 
 __opts__ = {}
@@ -107,7 +112,7 @@ def custom():
     '''
     ret = {}
     conf = __salt__['config.dot_vals']('status')
-    for key, val in conf.items():
+    for key, val in six.iteritems(conf):
         func = '{0}()'.format(key.split('.')[1])
         vals = eval(func)  # pylint: disable=W0123
 
@@ -515,7 +520,10 @@ def nproc():
 
         salt '*' status.nproc
     '''
-    return __grains__.get('num_cpus', 0)
+    try:
+        return int(__salt__['cmd.run']('nproc').strip())
+    except ValueError:
+        return 0
 
 
 def netstats():
@@ -805,3 +813,26 @@ def master(master=None, connected=True):
         if master_ip in ips:
             event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
             event.fire_event({'master': master}, '__master_connected')
+
+
+def time(format='%A, %d. %B %Y %I:%M%p'):
+    '''
+    .. versionadded:: Boron
+
+    Return the current time on the minion,
+    formated based on the format parameter.
+
+    Default date format: Monday, 27. July 2015 07:55AM
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' status.time
+
+        salt '*' status.time '%s'
+
+    '''
+
+    dt = datetime.datetime.today()
+    return dt.strftime(format)

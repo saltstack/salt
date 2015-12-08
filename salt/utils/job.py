@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
+
+# Import Python libs
+from __future__ import absolute_import
 import logging
+
+# Import Salt libs
 import salt.minion
 import salt.utils.verify
 import salt.utils.jid
@@ -13,6 +18,8 @@ def store_job(opts, load, event=None, mminion=None):
     '''
     Store job information using the configured master_job_cache
     '''
+    # Generate EndTime
+    endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid())
     # If the return data is invalid, just ignore it
     if any(key not in load for key in ('return', 'jid', 'id')):
         return False
@@ -76,9 +83,15 @@ def store_job(opts, load, event=None, mminion=None):
         if 'user' in ret_:
             load.update({'user': ret_['user']})
     try:
-        if 'jid' in load and not mminion.returners[getfstr](load.get('jid', '')):
+        if 'jid' in load and 'get_load' in mminion.returners and not mminion.returners[getfstr](load.get('jid', '')):
             mminion.returners[savefstr](load['jid'], load)
         mminion.returners[fstr](load)
+
+        updateetfstr = '{0}.update_endtime'.format(job_cache)
+        if (opts.get('job_cache_store_endtime')
+                and updateetfstr in mminion.returners):
+            mminion.returners[updateetfstr](load['jid'], endtime)
+
     except KeyError:
         emsg = "Returner '{0}' does not support function returner".format(job_cache)
         log.error(emsg)

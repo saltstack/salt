@@ -3,6 +3,9 @@
 Validate the virt module
 '''
 
+# Import Python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath, requires_salt_modules
 ensure_in_syspath('../../')

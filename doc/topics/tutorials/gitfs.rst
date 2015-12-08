@@ -61,8 +61,21 @@ pygit2_ website has installation instructions here__. Keep in mind however that
 following these instructions will install libgit2 and pygit2_ without system
 packages. Additionally, keep in mind that :ref:`SSH authentication in pygit2
 <pygit2-authentication-ssh>` requires libssh2_ (*not* libssh) development
-libraries to be present before libgit2 is built.
+libraries to be present before libgit2 is built. On some distros (debian based)
+``pkg-config`` is also required to link libgit2 with libssh2.
 
+.. warning::
+    pygit2_ is actively developed and :ref:`frequently makes
+    non-backwards-compatible API changes <pygit2-version-policy>`, even in
+    minor releases. It is not uncommon for pygit2_ upgrades to result in errors
+    in Salt. Please take care when upgrading pygit2_, and pay close attention
+    to the :ref:`changelog <pygit2-changelog>`, keeping an eye out for API
+    changes. Errors can be reported on the :ref:`SaltStack issue tracker
+    <saltstack-issue-tracker>`.
+
+.. _pygit2-version-policy: http://www.pygit2.org/install.html#version-numbers
+.. _pygit2-changelog: https://github.com/libgit2/pygit2#changelog
+.. _saltstack-issue-tracker: https://github.com/saltstack/salt/issues
 .. __: http://www.pygit2.org/install.html
 .. _libssh2: http://www.libssh2.org/
 
@@ -443,8 +456,8 @@ be used:
 
 ``top.sls`` files from different branches will be merged into one at runtime.
 Since this can lead to overly complex configurations, the recommended setup is
-to have the ``top.sls`` file only in the master branch and use
-environment-specific branches for state definitions.
+to have a separate repository, containing only the ``top.sls`` file with just
+one single ``master`` branch.
 
 To map a branch other than ``master`` as the ``base`` environment, use the
 :conf_master:`gitfs_base` parameter.
@@ -738,45 +751,22 @@ anything, so long as the usage is consistent.
 
 .. _`post-receive hook`: http://www.git-scm.com/book/en/Customizing-Git-Git-Hooks#Server-Side-Hooks
 
+.. _git-as-ext_pillar
 
 Using Git as an External Pillar Source
 ======================================
 
-Git repositories can also be used to provide :doc:`Pillar
-</topics/pillar/index>` data, using the :doc:`External Pillar
-</topics/development/external_pillars>` system. Note that this is different
-from gitfs, and is not yet at feature parity with it.
+The git external pillar (a.k.a. git_pillar) has been rewritten for the 2015.8.0
+release. This rewrite brings with it pygit2_ support (allowing for access to
+authenticated repositories), as well as more granular support for per-remote
+configuration.
 
-To define a git external pillar, add a section like the following to the salt
-master config file:
+To make use of the new features, changes to the git ext_pillar configuration
+must be made. The new configuration schema is detailed :ref:`here
+<git-pillar-2015-8-0-and-later>`.
 
-.. code-block:: yaml
-
-    ext_pillar:
-      - git: <branch> <repo> [root=<gitroot>]
-
-.. versionchanged:: 2014.7.0
-    The optional ``root`` parameter was added
-
-The ``<branch>`` param is the branch containing the pillar SLS tree. The
-``<repo>`` param is the URI for the repository. To add the
-``master`` branch of the specified repo as an external pillar source:
-
-.. code-block:: yaml
-
-    ext_pillar:
-      - git: master https://domain.com/pillar.git
-
-Use the ``root`` parameter to use pillars from a subdirectory of a git
-repository:
-
-.. code-block:: yaml
-
-    ext_pillar:
-      - git: master https://domain.com/pillar.git root=subdirectory
-
-More information on the git external pillar can be found in the
-:mod:`salt.pillar.git_pillar docs <salt.pillar.git_pillar>`.
+For Salt releases before 2015.8.0, click :ref:`here <git-pillar-pre-2015-8-0>`
+for documentation.
 
 
 .. _faq-gitfs-bug:

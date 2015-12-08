@@ -1,32 +1,21 @@
 # -*- coding: utf-8 -*-
 '''
-Clone a remote git repository and use the filesystem as a Pillar source
+Use a git repository as a Pillar source
+---------------------------------------
 
-Currently GitPython is the only supported provider for git Pillars
+.. note::
+    This external pillar has been rewritten for the :doc:`2015.8.0
+    </topics/releases/2015.8.0>` release. The old method of configuring this
+    external pillar will be maintained for a couple releases, allowing time for
+    configurations to be updated to reflect the new usage.
 
-This external Pillar source can be configured in the master config file like
-so:
+This external pillar allows for a Pillar top file and Pillar SLS files to be
+sourced from a git repository.
 
-.. code-block:: yaml
-
-    ext_pillar:
-      - git: master git://gitserver/git-pillar.git root=subdirectory
-
-The `root=` parameter is optional and used to set the subdirectory from where
-to look for Pillar files (such as ``top.sls``).
-
-.. versionchanged:: 2014.7.0
-    The optional ``root`` parameter will be added.
-
-.. versionchanged:: 2015.5.0
-    The special branch name '__env__' will be replace by the
-    environment ({{env}})
-
-Note that this is not the same thing as configuring pillar data using the
-:conf_master:`pillar_roots` parameter. The branch referenced in the
-:conf_master:`ext_pillar` entry above (``master``), would evaluate to the
-``base`` environment, so this branch needs to contain a ``top.sls`` with a
-``base`` section in it, like this:
+However, since git_pillar does not have an equivalent to the
+:conf_master:`pillar_roots` parameter, configuration is slightly different. A
+Pillar top file is required to be in the git repository and must still contain
+the relevant environment, like so:
 
 .. code-block:: yaml
 
@@ -34,26 +23,50 @@ Note that this is not the same thing as configuring pillar data using the
       '*':
         - foo
 
-To use other environments from the same git repo as git_pillar sources, just
-add additional lines, like so:
+The branch/tag which maps to that environment must then be specified along with
+the repo's URL. Configuration details can be found below.
+
+
+.. _git-pillar-pre-2015-8-0:
+
+Configuring git_pillar for Salt releases before 2015.8.0
+========================================================
+
+For Salt releases earlier than :doc:`2015.8.0 </topics/releases/2015.8.0>`,
+GitPython is the only supported provider for git_pillar. Individual
+repositories can be configured under the :conf_master:`ext_pillar`
+configuration parameter like so:
 
 .. code-block:: yaml
 
     ext_pillar:
-      - git: master git://gitserver/git-pillar.git
-      - git: dev git://gitserver/git-pillar.git
+      - git: master https://gitserver/git-pillar.git root=subdirectory
 
-To remap a specific branch to a specific environment separate the branch name
-and the environment name with a colon:
+The repository is specified in the format ``<branch> <repo_url>``, with an
+optional ``root`` parameter (added in the :doc:`2014.7.0
+</topics/releases/2014.7.0>` release) which allows the pillar SLS files to be
+served up from a subdirectory (similar to :conf_master:`gitfs_root` in gitfs).
+
+To use more than one branch from the same repo, multiple lines must be
+specified under :conf_master:`ext_pillar`:
 
 .. code-block:: yaml
 
     ext_pillar:
-      - git: develop:dev git://gitserver/git-pillar.git
-      - git: master:prod git://gitserver/git-pillar.git
+      - git: master https://gitserver/git-pillar.git
+      - git: dev https://gitserver/git-pillar.git
 
-In this case, the ``dev`` branch would need its own ``top.sls`` with a ``dev``
-section in it, like this:
+To remap a specific branch to a specific Pillar environment, use the format
+``<branch>:<env>``:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git: develop:dev https://gitserver/git-pillar.git
+      - git: master:prod https://gitserver/git-pillar.git
+
+In this case, the ``develop`` branch would need its own ``top.sls`` with a
+``dev`` section in it, like this:
 
 .. code-block:: yaml
 
@@ -61,41 +74,134 @@ section in it, like this:
       '*':
         - bar
 
-In a gitfs base setup with pillars from the same repository as the states,
-the ``ext_pillar:`` configuration would be like:
+The ``master`` branch would need its own ``top.sls`` with a ``prod`` section in
+it:
+
+.. code-block:: yaml
+
+    prod:
+      '*':
+        - bar
+
+If ``__env__`` is specified as the branch name, then git_pillar will use the
+branch specified by :conf_master:`gitfs_base`:
 
 .. code-block:: yaml
 
     ext_pillar:
-      - git: __env__ git://gitserver/git-pillar.git root=pillar
+      - git: __env__ https://gitserver/git-pillar.git root=pillar
 
-The (optional) root=pillar defines the directory that contains the pillar data.
-The corresponding ``top.sls`` would be like:
+The corresponding Pillar top file would look like this:
 
 .. code-block:: yaml
 
     {{env}}:
       '*':
         - bar
+
+.. _git-pillar-2015-8-0-and-later:
+
+Configuring git_pillar for Salt releases 2015.8.0 and later
+===========================================================
+
+.. note::
+    In version 2015.8.0, the method of configuring git external pillars has
+    changed, and now more closely resembles that of the :ref:`Git Fileserver
+    Backend <tutorial-gitfs>`. If Salt detects the old configuration schema, it
+    will use the pre-2015.8.0 code to compile the external pillar. A warning
+    will also be logged.
+
+Beginning with Salt version 2015.8.0, pygit2_ is now supported in addition to
+GitPython_ (Dulwich_ will not be supported for the forseeable future). The
+requirements for GitPython_ and pygit2_ are the same as for gitfs, as described
+:ref:`here <gitfs-dependencies>`.
+
+.. important::
+    git_pillar has its own set of global configuration parameters. While it may
+    seem intuitive to use the global gitfs configuration parameters
+    (:conf_master:`gitfs_base`, etc.) to manage git_pillar, this will not work.
+    The main difference for this is the fact that the different components
+    which use Salt's git backend code do not all function identically. For
+    instance, in git_pillar it is necessary to specify which branch/tag to be
+    used for git_pillar remotes. This is the reverse behavior from gitfs, where
+    branches/tags make up your environments.
+
+    See :ref:`here <git_pillar-config-opts>` for documentation on the
+    git_pillar configuration options and their usage.
+
+Here is an example git_pillar configuration:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git:
+        # Use 'prod' instead of the branch name 'production' as the environment
+        - production https://gitserver/git-pillar.git:
+          - env: prod
+        # Use 'dev' instead of the branch name 'develop' as the environment
+        - develop https://gitserver/git-pillar.git:
+          - env: dev
+        # No per-remote config parameters (and no trailing colon), 'qa' will
+        # be used as the environment
+        - qa https://gitserver/git-pillar.git
+        # SSH key authentication
+        - master git@other-git-server:pillardata-ssh.git:
+          # Pillar SLS files will be read from the 'pillar' subdirectory in
+          # this repository
+          - root: pillar
+          - privkey: /path/to/key
+          - pubkey: /path/to/key.pub
+          - passphrase: CorrectHorseBatteryStaple
+        # HTTPS authentication
+        - master https://other-git-server/pillardata-https.git:
+          - user: git
+          - password: CorrectHorseBatteryStaple
+
+The main difference between this and the old way of configuring git_pillar is
+that multiple remotes can be configured under one ``git`` section under
+:conf_master:`ext_pillar`. More than one ``git`` section can be used, but it is
+not necessary. Remotes will be evaluated sequentially.
+
+Per-remote configuration parameters are supported (similar to :ref:`gitfs
+<gitfs-per-remote-config>`), and global versions of the git_pillar
+configuration parameters can also be set.
+
+With the addition of pygit2_ support, git_pillar can now interact with
+authenticated remotes. Authentication works just like in gitfs (as outlined in
+the :ref:`Git Fileserver Backend Walkthrough <gitfs-authentication>`), only
+with the global authenication parameter names prefixed with ``git_pillar``
+instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
+:conf_master:`git_pillar_privkey`, :conf_master:`git_pillar_passphrase`, etc.).
+
+.. _GitPython: https://github.com/gitpython-developers/GitPython
+.. _pygit2: https://github.com/libgit2/pygit2
+.. _Dulwich: https://www.samba.org/~jelmer/dulwich/
 '''
 from __future__ import absolute_import
 
 # Import python libs
-from copy import deepcopy
+import copy
 import logging
 import hashlib
 import os
 
+# Import salt libs
+import salt.utils.gitfs
+import salt.utils.dictupdate
+from salt.exceptions import FileserverConfigError
+from salt.pillar import Pillar
+
 # Import third party libs
-HAS_GIT = False
+import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import git
-    HAS_GIT = True
+    HAS_GITPYTHON = True
 except ImportError:
-    pass
+    HAS_GITPYTHON = False
+# pylint: enable=import-error
 
-# Import salt libs
-from salt.pillar import Pillar
+PER_REMOTE_OVERRIDES = ('env', 'root', 'ssl_verify')
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -108,19 +214,73 @@ def __virtual__():
     '''
     Only load if gitpython is available
     '''
-    ext_pillar_sources = [x for x in __opts__.get('ext_pillar', [])]
-    if not any(['git' in x for x in ext_pillar_sources]):
+    git_ext_pillars = [x for x in __opts__['ext_pillar'] if 'git' in x]
+    if not git_ext_pillars:
+        # No git external pillars were configured
         return False
-    if not HAS_GIT:
-        log.error('Git-based ext_pillar is enabled in configuration but '
-                  'could not be loaded, is GitPython installed?')
-        return False
-    if not git.__version__ > '0.3.0':
-        return False
-    return __virtualname__
+
+    for ext_pillar in git_ext_pillars:
+        if isinstance(ext_pillar['git'], six.string_types):
+            # Verification of legacy git pillar configuration
+            if not HAS_GITPYTHON:
+                log.error(
+                    'Git-based ext_pillar is enabled in configuration but '
+                    'could not be loaded, is GitPython installed?'
+                )
+                return False
+            if not git.__version__ > '0.3.0':
+                return False
+            return __virtualname__
+        else:
+            # Verification of new git pillar configuration
+            try:
+                salt.utils.gitfs.GitPillar(__opts__)
+                # Initialization of the GitPillar object did not fail, so we
+                # know we have valid configuration syntax and that a valid
+                # provider was detected.
+                return __virtualname__
+            except FileserverConfigError:
+                pass
+    return False
 
 
-class GitPillar(object):
+def ext_pillar(minion_id, repo, pillar_dirs):
+    '''
+    Checkout the ext_pillar sources and compile the resulting pillar SLS
+    '''
+    if isinstance(repo, six.string_types):
+        return _legacy_git_pillar(minion_id, repo, pillar_dirs)
+    else:
+        opts = copy.deepcopy(__opts__)
+        opts['pillar_roots'] = {}
+        pillar = salt.utils.gitfs.GitPillar(opts)
+        pillar.init_remotes(repo, PER_REMOTE_OVERRIDES)
+        pillar.checkout()
+        ret = {}
+        merge_strategy = __opts__.get(
+            'pillar_source_merging_strategy',
+            'smart'
+        )
+        for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
+            log.debug(
+                'git_pillar is processing pillar SLS from {0} for pillar '
+                'env \'{1}\''.format(pillar_dir, env)
+            )
+            opts['pillar_roots'] = {
+                env: [d for (d, e) in six.iteritems(pillar.pillar_dirs)
+                      if env == e]
+            }
+            local_pillar = Pillar(opts, __grains__, minion_id, env)
+            ret = salt.utils.dictupdate.merge(
+                ret,
+                local_pillar.compile_pillar(ext=False),
+                strategy=merge_strategy
+            )
+        return ret
+
+
+# Legacy git_pillar code
+class _LegacyGitPillar(object):
     '''
     Deal with the remote git repository for Pillar
     '''
@@ -174,7 +334,8 @@ class GitPillar(object):
                     pass
             else:
                 if self.repo.remotes.origin.url != self.rp_location:
-                    self.repo.remotes.origin.config_writer.set('url', self.rp_location)
+                    self.repo.remotes.origin.config_writer.set(
+                        'url', self.rp_location)
 
     def map_branch(self, branch, opts=None):
         opts = __opts__ if opts is None else opts
@@ -182,6 +343,8 @@ class GitPillar(object):
             branch = opts.get('environment') or 'base'
             if branch == 'base':
                 branch = opts.get('gitfs_base') or 'master'
+        elif ':' in branch:
+            branch = branch.split(':', 1)[0]
         return branch
 
     def update(self):
@@ -201,8 +364,8 @@ class GitPillar(object):
         try:
             self.repo.git.checkout('origin/{0}'.format(self.branch))
         except git.exc.GitCommandError as exc:
-            logging.error('Unable to checkout branch '
-                          '{0}: {1}'.format(self.branch, exc))
+            log.error('Unable to checkout branch '
+                      '{0}: {1}'.format(self.branch, exc))
             return False
 
         return True
@@ -211,7 +374,6 @@ class GitPillar(object):
         '''
         Return a list of refs that can be used as environments
         '''
-
         if isinstance(self.repo, git.Repo):
             remote = self.repo.remote()
             for ref in self.repo.refs:
@@ -228,22 +390,84 @@ class GitPillar(object):
         return list(self._envs)
 
 
-def update(branch, repo_location):
+def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
+    '''
+    Support pre-Beryllium config schema
+    '''
+    if pillar_dirs is None:
+        return
+    # split the branch, repo name and optional extra (key=val) parameters.
+    options = repo_string.strip().split()
+    branch_env = options[0]
+    repo_location = options[1]
+    root = ''
+
+    for extraopt in options[2:]:
+        # Support multiple key=val attributes as custom parameters.
+        DELIM = '='
+        if DELIM not in extraopt:
+            log.error('Incorrectly formatted extra parameter. '
+                      'Missing \'{0}\': {1}'.format(DELIM, extraopt))
+        key, val = _extract_key_val(extraopt, DELIM)
+        if key == 'root':
+            root = val
+        else:
+            log.warning('Unrecognized extra parameter: {0}'.format(key))
+
+    # environment is "different" from the branch
+    cfg_branch, _, environment = branch_env.partition(':')
+
+    gitpil = _LegacyGitPillar(cfg_branch, repo_location, __opts__)
+    branch = gitpil.branch
+
+    if environment == '':
+        if branch == 'master':
+            environment = 'base'
+        else:
+            environment = branch
+
+    # normpath is needed to remove appended '/' if root is empty string.
+    pillar_dir = os.path.normpath(os.path.join(gitpil.working_dir, root))
+
+    pillar_dirs.setdefault(pillar_dir, {})
+
+    if cfg_branch == '__env__' and branch not in ['master', 'base']:
+        gitpil.update()
+    elif pillar_dirs[pillar_dir].get(branch, False):
+        return {}  # we've already seen this combo
+
+    pillar_dirs[pillar_dir].setdefault(branch, True)
+
+    # Don't recurse forever-- the Pillar object will re-call the ext_pillar
+    # function
+    if __opts__['pillar_roots'].get(branch, []) == [pillar_dir]:
+        return {}
+
+    opts = copy.deepcopy(__opts__)
+
+    opts['pillar_roots'][environment] = [pillar_dir]
+
+    pil = Pillar(opts, __grains__, minion_id, branch)
+
+    return pil.compile_pillar(ext=False)
+
+
+def _update(branch, repo_location):
     '''
     Ensure you are following the latest changes on the remote
 
     return boolean whether it worked
     '''
-    gitpil = GitPillar(branch, repo_location, __opts__)
+    gitpil = _LegacyGitPillar(branch, repo_location, __opts__)
 
     return gitpil.update()
 
 
-def envs(branch, repo_location):
+def _envs(branch, repo_location):
     '''
     Return a list of refs that can be used as environments
     '''
-    gitpil = GitPillar(branch, repo_location, __opts__)
+    gitpil = _LegacyGitPillar(branch, repo_location, __opts__)
 
     return gitpil.envs()
 
@@ -259,67 +483,3 @@ def _extract_key_val(kv, delimiter='='):
     key = pieces[0]
     val = delimiter.join(pieces[1:])
     return key, val
-
-
-def ext_pillar(minion_id,
-               repo_string,
-               pillar_dirs):
-    '''
-    Execute a command and read the output as YAML
-    '''
-    if pillar_dirs is None:
-        return
-    # split the branch, repo name and optional extra (key=val) parameters.
-    options = repo_string.strip().split()
-    branch_env = options[0]
-    repo_location = options[1]
-    root = ''
-
-    for extraopt in options[2:]:
-        # Support multiple key=val attributes as custom parameters.
-        DELIM = '='
-        if DELIM not in extraopt:
-            log.error('Incorrectly formatted extra parameter. '
-                      'Missing {0!r}: {1}'.format(DELIM, extraopt))
-        key, val = _extract_key_val(extraopt, DELIM)
-        if key == 'root':
-            root = val
-        else:
-            log.warning('Unrecognized extra parameter: {0}'.format(key))
-
-    # environment is "different" from the branch
-    branch, _, environment = branch_env.partition(':')
-
-    gitpil = GitPillar(branch, repo_location, __opts__)
-    branch = gitpil.branch
-
-    if environment == '':
-        if branch == 'master':
-            environment = 'base'
-        else:
-            environment = branch
-
-    # normpath is needed to remove appended '/' if root is empty string.
-    pillar_dir = os.path.normpath(os.path.join(gitpil.working_dir, root))
-
-    pillar_dirs.setdefault(pillar_dir, {})
-
-    if pillar_dirs[pillar_dir].get(branch, False):
-        return {}  # we've already seen this combo
-
-    pillar_dirs[pillar_dir].setdefault(branch, True)
-
-    # Don't recurse forever-- the Pillar object will re-call the ext_pillar
-    # function
-    if __opts__['pillar_roots'].get(branch, []) == [pillar_dir]:
-        return {}
-
-    gitpil.update()
-
-    opts = deepcopy(__opts__)
-
-    opts['pillar_roots'][environment] = [pillar_dir]
-
-    pil = Pillar(opts, __grains__, minion_id, branch)
-
-    return pil.compile_pillar()

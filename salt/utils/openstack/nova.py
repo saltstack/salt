@@ -2,12 +2,21 @@
 '''
 Nova class
 '''
-from __future__ import with_statement
+
+# Import Python libs
+from __future__ import absolute_import, with_statement
+from distutils.version import LooseVersion
+import time
+import inspect
+import logging
 
 # Import third party libs
+import salt.ext.six as six
 HAS_NOVA = False
+# pylint: disable=import-error
 try:
-    from novaclient.v1_1 import client
+    import novaclient
+    from novaclient import client
     from novaclient.shell import OpenStackComputeShell
     import novaclient.utils
     import novaclient.auth_plugin
@@ -16,12 +25,9 @@ try:
     import novaclient.base
     HAS_NOVA = True
 except ImportError:
-    pass
-
-# Import python libs
-import inspect
-import time
-import logging
+    class OpenStackComputeShell(object):
+        '''mock class for errors'''
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils
@@ -30,9 +36,18 @@ from salt.exceptions import SaltCloudSystemExit
 # Get logging started
 log = logging.getLogger(__name__)
 
+# Version added to novaclient.client.Client function
+NOVACLIENT_MINVER = '2.6.1'
+
 
 def check_nova():
-    return HAS_NOVA
+    if HAS_NOVA:
+        novaclient_ver = LooseVersion(novaclient.__version__)
+        min_ver = LooseVersion(NOVACLIENT_MINVER)
+        if novaclient_ver >= min_ver:
+            return HAS_NOVA
+        log.debug('Newer novaclient version required.  Minimum: 2.6.1')
+    return False
 
 
 # kwargs has to be an object instead of a dictionary for the __post_parse_arg__
@@ -81,11 +96,13 @@ class NovaServer(object):
         return self.__dict__
 
 
-def get_entry(dict_, key, value):
+def get_entry(dict_, key, value, raise_error=True):
     for entry in dict_:
         if entry[key] == value:
             return entry
-    raise SaltCloudSystemExit('Unable to find {0} in {1}.'.format(key, dict_))
+    if raise_error is True:
+        raise SaltCloudSystemExit('Unable to find {0} in {1}.'.format(key, dict_))
+    return {}
 
 
 def sanatize_novaclient(kwargs):
@@ -123,13 +140,10 @@ class SaltNova(OpenStackComputeShell):
         '''
         Set up nova credentials
         '''
-        if not HAS_NOVA:
-            return None
-
         self.kwargs = kwargs.copy()
 
         if not novaclient.base.Manager._hooks_map:
-            self.extensions = self._discover_extensions('1.1')
+            self.extensions = client.discover_extensions('1.1')
             for extension in self.extensions:
                 extension.run_hooks('__pre_parse_args__')
             self.kwargs['extensions'] = self.extensions
@@ -163,20 +177,19 @@ class SaltNova(OpenStackComputeShell):
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
-        if not hasattr(client.Client, '__exit__'):
-            raise SaltCloudSystemExit("Newer version of novaclient required for __exit__.")
+        # Requires novaclient version >= 2.6.1
+        self.kwargs['version'] = str(kwargs.get('version', 2))
 
-        with client.Client(**self.kwargs) as conn:
-            try:
-                conn.client.authenticate()
-            except novaclient.exceptions.AmbiguousEndpoints:
-                raise SaltCloudSystemExit(
-                    "Nova provider requires a 'region_name' to be specified"
-                )
+        conn = client.Client(**self.kwargs)
+        try:
+            conn.client.authenticate()
+        except novaclient.exceptions.AmbiguousEndpoints:
+            raise SaltCloudSystemExit(
+                "Nova provider requires a 'region_name' to be specified"
+            )
 
-            self.kwargs['auth_token'] = conn.client.auth_token
-            self.catalog = \
-                conn.client.service_catalog.catalog['access']['serviceCatalog']
+        self.kwargs['auth_token'] = conn.client.auth_token
+        self.catalog = conn.client.service_catalog.catalog['access']['serviceCatalog']
 
         if region_name is not None:
             servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
@@ -188,30 +201,30 @@ class SaltNova(OpenStackComputeShell):
 
         self.compute_conn = client.Client(**self.kwargs)
 
-        if region_name is not None:
-            servers_endpoints = get_entry(
-                self.catalog,
-                'type',
-                'volume'
-            )['endpoints']
-            self.kwargs['bypass_url'] = get_entry(
-                servers_endpoints,
-                'region',
-                region_name
-            )['publicURL']
+        volume_endpoints = get_entry(self.catalog, 'type', 'volume', raise_error=False).get('endpoints', {})
+        if volume_endpoints:
+            if region_name is not None:
+                self.kwargs['bypass_url'] = get_entry(
+                    volume_endpoints,
+                    'region',
+                    region_name
+                )['publicURL']
 
-        self.kwargs['service_type'] = 'volume'
-        self.volume_conn = client.Client(**self.kwargs)
-        if hasattr(self, 'extensions'):
-            self.expand_extensions()
+            self.volume_conn = client.Client(**self.kwargs)
+            if hasattr(self, 'extensions'):
+                self.expand_extensions()
+        else:
+            self.volume_conn = None
 
     def expand_extensions(self):
         for connection in (self.compute_conn, self.volume_conn):
+            if connection is None:
+                continue
             for extension in self.extensions:
                 for attr in extension.module.__dict__:
                     if not inspect.isclass(getattr(extension.module, attr)):
                         continue
-                    for key, value in connection.__dict__.items():
+                    for key, value in six.iteritems(connection.__dict__):
                         if not isinstance(value, novaclient.base.Manager):
                             continue
                         if value.__class__.__name__ == attr:
@@ -228,8 +241,8 @@ class SaltNova(OpenStackComputeShell):
         Make output look like libcloud output for consistency
         '''
         server_info = self.server_show(uuid)
-        server = server_info.itervalues().next()
-        server_name = server_info.iterkeys().next()
+        server = next(six.itervalues(server_info))
+        server_name = next(six.iterkeys(server_info))
         if not hasattr(self, 'password'):
             self.password = None
         ret = NovaServer(server_name, server, self.password)
@@ -295,6 +308,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         Organize information about a volume from the volume_id
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         volume = nt_ks.volumes.get(volume_id)
         response = {'name': volume.display_name,
@@ -310,6 +325,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         List all block volumes
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         volumes = nt_ks.volumes.list(search_opts=search_opts)
         response = {}
@@ -328,6 +345,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         Show one volume
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         volumes = self.volume_list(
             search_opts={'display_name': name},
@@ -345,6 +364,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         Create a block device
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         response = nt_ks.volumes.create(
             size=size,
@@ -360,6 +381,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         Delete a block device
         '''
+        if self.volume_conn is None:
+            raise SaltCloudSystemExit('No cinder endpoint available')
         nt_ks = self.volume_conn
         try:
             volume = self.volume_show(name)
@@ -662,17 +685,20 @@ class SaltNova(OpenStackComputeShell):
         nt_ks = self.compute_conn
         ret = {}
         for item in nt_ks.servers.list():
-            ret[item.name] = {
-                'id': item.id,
-                'name': item.name,
-                'state': item.status,
-                'accessIPv4': item.accessIPv4,
-                'accessIPv6': item.accessIPv6,
-                'flavor': {'id': item.flavor['id'],
-                           'links': item.flavor['links']},
-                'image': {'id': item.image['id'],
-                          'links': item.image['links']},
-                }
+            try:
+                ret[item.name] = {
+                    'id': item.id,
+                    'name': item.name,
+                    'state': item.status,
+                    'accessIPv4': item.accessIPv4,
+                    'accessIPv6': item.accessIPv6,
+                    'flavor': {'id': item.flavor['id'],
+                               'links': item.flavor['links']},
+                    'image': {'id': item.image['id'],
+                              'links': item.image['links']},
+                    }
+            except TypeError:
+                pass
         return ret
 
     def server_list_detailed(self):
@@ -682,28 +708,31 @@ class SaltNova(OpenStackComputeShell):
         nt_ks = self.compute_conn
         ret = {}
         for item in nt_ks.servers.list():
-            ret[item.name] = {
-                'OS-EXT-SRV-ATTR': {},
-                'OS-EXT-STS': {},
-                'accessIPv4': item.accessIPv4,
-                'accessIPv6': item.accessIPv6,
-                'addresses': item.addresses,
-                'created': item.created,
-                'flavor': {'id': item.flavor['id'],
-                           'links': item.flavor['links']},
-                'hostId': item.hostId,
-                'id': item.id,
-                'image': {'id': item.image['id'],
-                          'links': item.image['links']},
-                'key_name': item.key_name,
-                'links': item.links,
-                'metadata': item.metadata,
-                'name': item.name,
-                'state': item.status,
-                'tenant_id': item.tenant_id,
-                'updated': item.updated,
-                'user_id': item.user_id,
-            }
+            try:
+                ret[item.name] = {
+                    'OS-EXT-SRV-ATTR': {},
+                    'OS-EXT-STS': {},
+                    'accessIPv4': item.accessIPv4,
+                    'accessIPv6': item.accessIPv6,
+                    'addresses': item.addresses,
+                    'created': item.created,
+                    'flavor': {'id': item.flavor['id'],
+                               'links': item.flavor['links']},
+                    'hostId': item.hostId,
+                    'id': item.id,
+                    'image': {'id': item.image['id'],
+                              'links': item.image['links']},
+                    'key_name': item.key_name,
+                    'links': item.links,
+                    'metadata': item.metadata,
+                    'name': item.name,
+                    'state': item.status,
+                    'tenant_id': item.tenant_id,
+                    'updated': item.updated,
+                    'user_id': item.user_id,
+                }
+            except TypeError:
+                continue
 
             ret[item.name]['progress'] = getattr(item, 'progress', '0')
 
@@ -741,9 +770,9 @@ class SaltNova(OpenStackComputeShell):
         ret = {}
         try:
             servers = self.server_list_detailed()
-        except AttributeError as exc:
+        except AttributeError:
             raise SaltCloudSystemExit('Corrupt server in server_list_detailed. Remove corrupt servers.')
-        for server_name, server in servers.iteritems():
+        for server_name, server in six.iteritems(servers):
             if str(server['id']) == server_id:
                 ret[server_name] = server
         return ret
@@ -828,7 +857,7 @@ class SaltNova(OpenStackComputeShell):
             'priority', 'project_id', 'vlan_start', 'vpn_start'
         ]
 
-        for variable in kwargs.keys():  # iterate over a copy, we might delete some
+        for variable in six.iterkeys(kwargs):  # iterate over a copy, we might delete some
             if variable not in params:
                 del kwargs[variable]
         return kwargs
@@ -869,94 +898,185 @@ class SaltNova(OpenStackComputeShell):
         nets = nt_ks.virtual_interfaces.create(networkid, serverid)
         return nets
 
-#The following is a list of functions that need to be incorporated in the
-#nova module. This list should be updated as functions are added.
+    def floating_ip_pool_list(self):
+        '''
+        List all floating IP pools
+
+        .. versionadded:: Boron
+        '''
+        nt_ks = self.compute_conn
+        pools = nt_ks.floating_ip_pools.list()
+        response = {}
+        for pool in pools:
+            response[pool.name] = {
+                'name': pool.name,
+            }
+        return response
+
+    def floating_ip_list(self):
+        '''
+        List floating IPs
+
+        .. versionadded:: Boron
+        '''
+        nt_ks = self.compute_conn
+        floating_ips = nt_ks.floating_ips.list()
+        response = {}
+        for floating_ip in floating_ips:
+            response[floating_ip.ip] = {
+                'ip': floating_ip.ip,
+                'fixed_ip': floating_ip.fixed_ip,
+                'id': floating_ip.id,
+                'instance_id': floating_ip.instance_id,
+                'pool': floating_ip.pool
+            }
+        return response
+
+    def floating_ip_show(self, ip):
+        '''
+        Show info on specific floating IP
+
+        .. versionadded:: Boron
+        '''
+        nt_ks = self.compute_conn
+        floating_ips = nt_ks.floating_ips.list()
+        for floating_ip in floating_ips:
+            if floating_ip.ip == ip:
+                return floating_ip
+        return {}
+
+    def floating_ip_create(self, pool=None):
+        '''
+        Allocate a floating IP
+
+        .. versionadded:: Boron
+        '''
+        nt_ks = self.compute_conn
+        floating_ip = nt_ks.floating_ips.create(pool)
+        response = {
+            'ip': floating_ip.ip,
+            'fixed_ip': floating_ip.fixed_ip,
+            'id': floating_ip.id,
+            'instance_id': floating_ip.instance_id,
+            'pool': floating_ip.pool
+        }
+        return response
+
+    def floating_ip_delete(self, floating_ip):
+        '''
+        De-allocate a floating IP
+
+        .. versionadded:: Boron
+        '''
+        ip = self.floating_ip_show(floating_ip)
+        nt_ks = self.compute_conn
+        return nt_ks.floating_ips.delete(ip)
+
+    def floating_ip_associate(self, server_name, floating_ip):
+        '''
+        Associate floating IP address to server
+
+        .. versionadded:: Boron
+        '''
+        nt_ks = self.compute_conn
+        server_ = self.server_by_name(server_name)
+        server = nt_ks.servers.get(server_.__dict__['id'])
+        server.add_floating_ip(floating_ip)
+        return self.floating_ip_list()[floating_ip]
+
+    def floating_ip_disassociate(self, server_name, floating_ip):
+        '''
+        Disassociate a floating IP from server
+
+        .. versionadded:: Boron
+        '''
+        nt_ks = self.compute_conn
+        server_ = self.server_by_name(server_name)
+        server = nt_ks.servers.get(server_.__dict__['id'])
+        server.remove_floating_ip(floating_ip)
+        return self.floating_ip_list()[floating_ip]
+
+# The following is a list of functions that need to be incorporated in the
+# nova module. This list should be updated as functions are added.
 #
-#absolute-limits     Print a list of absolute limits for a user
-#actions             Retrieve server actions.
-#add-fixed-ip        Add new IP address to network.
-#add-floating-ip     Add a floating IP address to a server.
-#aggregate-add-host  Add the host to the specified aggregate.
-#aggregate-create    Create a new aggregate with the specified details.
-#aggregate-delete    Delete the aggregate by its id.
-#aggregate-details   Show details of the specified aggregate.
-#aggregate-list      Print a list of all aggregates.
-#aggregate-remove-host
-#                    Remove the specified host from the specified aggregate.
-#aggregate-set-metadata
-#                    Update the metadata associated with the aggregate.
-#aggregate-update    Update the aggregate's name and optionally
-#                    availability zone.
-#cloudpipe-create    Create a cloudpipe instance for the given project
-#cloudpipe-list      Print a list of all cloudpipe instances.
-#console-log         Get console log output of a server.
-#credentials         Show user credentials returned from auth
-#describe-resource   Show details about a resource
-#diagnostics         Retrieve server diagnostics.
-#dns-create          Create a DNS entry for domain, name and ip.
-#dns-create-private-domain
-#                    Create the specified DNS domain.
-#dns-create-public-domain
-#                    Create the specified DNS domain.
-#dns-delete          Delete the specified DNS entry.
-#dns-delete-domain   Delete the specified DNS domain.
-#dns-domains         Print a list of available dns domains.
-#dns-list            List current DNS entries for domain and ip or domain
-#                    and name.
-#endpoints           Discover endpoints that get returned from the
-#                    authenticate services
-#floating-ip-create  Allocate a floating IP for the current tenant.
-#floating-ip-delete  De-allocate a floating IP.
-#floating-ip-list    List floating ips for this tenant.
-#floating-ip-pool-list
-#                    List all floating ip pools.
-#get-vnc-console     Get a vnc console to a server.
-#host-action         Perform a power action on a host.
-#host-update         Update host settings.
-#image-create        Create a new image by taking a snapshot of a running
-#                    server.
-#image-delete        Delete an image.
-#live-migration      Migrates a running instance to a new machine.
-#meta                Set or Delete metadata on a server.
-#migrate             Migrate a server.
-#pause               Pause a server.
-#rate-limits         Print a list of rate limits for a user
-#reboot              Reboot a server.
-#rebuild             Shutdown, re-image, and re-boot a server.
-#remove-fixed-ip     Remove an IP address from a server.
-#remove-floating-ip  Remove a floating IP address from a server.
-#rename              Rename a server.
-#rescue              Rescue a server.
-#resize              Resize a server.
-#resize-confirm      Confirm a previous resize.
-#resize-revert       Revert a previous resize (and return to the previous
-#                    VM).
-#root-password       Change the root password for a server.
-#secgroup-add-group-rule
-#                    Add a source group rule to a security group.
-#secgroup-add-rule   Add a rule to a security group.
-#secgroup-delete-group-rule
-#                    Delete a source group rule from a security group.
-#secgroup-delete-rule
-#                    Delete a rule from a security group.
-#secgroup-list-rules
-#                    List rules for a security group.
-#ssh                 SSH into a server.
-#unlock              Unlock a server.
-#unpause             Unpause a server.
-#unrescue            Unrescue a server.
-#usage-list          List usage data for all tenants
-#volume-list         List all the volumes.
-#volume-snapshot-create
-#                    Add a new snapshot.
-#volume-snapshot-delete
-#                    Remove a snapshot.
-#volume-snapshot-list
-#                    List all the snapshots.
-#volume-snapshot-show
-#                    Show details about a snapshot.
-#volume-type-create  Create a new volume type.
-#volume-type-delete  Delete a specific flavor
-#volume-type-list    Print a list of available 'volume types'.
-#x509-create-cert    Create x509 cert for a user in tenant
-#x509-get-root-cert  Fetches the x509 root cert.
+# absolute-limits     Print a list of absolute limits for a user
+# actions             Retrieve server actions.
+# add-fixed-ip        Add new IP address to network.
+# aggregate-add-host  Add the host to the specified aggregate.
+# aggregate-create    Create a new aggregate with the specified details.
+# aggregate-delete    Delete the aggregate by its id.
+# aggregate-details   Show details of the specified aggregate.
+# aggregate-list      Print a list of all aggregates.
+# aggregate-remove-host
+#                     Remove the specified host from the specified aggregate.
+# aggregate-set-metadata
+#                     Update the metadata associated with the aggregate.
+# aggregate-update    Update the aggregate's name and optionally
+#                     availability zone.
+# cloudpipe-create    Create a cloudpipe instance for the given project
+# cloudpipe-list      Print a list of all cloudpipe instances.
+# console-log         Get console log output of a server.
+# credentials         Show user credentials returned from auth
+# describe-resource   Show details about a resource
+# diagnostics         Retrieve server diagnostics.
+# dns-create          Create a DNS entry for domain, name and ip.
+# dns-create-private-domain
+#                     Create the specified DNS domain.
+# dns-create-public-domain
+#                     Create the specified DNS domain.
+# dns-delete          Delete the specified DNS entry.
+# dns-delete-domain   Delete the specified DNS domain.
+# dns-domains         Print a list of available dns domains.
+# dns-list            List current DNS entries for domain and ip or domain
+#                     and name.
+# endpoints           Discover endpoints that get returned from the
+#                     authenticate services
+# get-vnc-console     Get a vnc console to a server.
+# host-action         Perform a power action on a host.
+# host-update         Update host settings.
+# image-create        Create a new image by taking a snapshot of a running
+#                     server.
+# image-delete        Delete an image.
+# live-migration      Migrates a running instance to a new machine.
+# meta                Set or Delete metadata on a server.
+# migrate             Migrate a server.
+# pause               Pause a server.
+# rate-limits         Print a list of rate limits for a user
+# reboot              Reboot a server.
+# rebuild             Shutdown, re-image, and re-boot a server.
+# remove-fixed-ip     Remove an IP address from a server.
+# rename              Rename a server.
+# rescue              Rescue a server.
+# resize              Resize a server.
+# resize-confirm      Confirm a previous resize.
+# resize-revert       Revert a previous resize (and return to the previous
+#                     VM).
+# root-password       Change the root password for a server.
+# secgroup-add-group-rule
+#                     Add a source group rule to a security group.
+# secgroup-add-rule   Add a rule to a security group.
+# secgroup-delete-group-rule
+#                     Delete a source group rule from a security group.
+# secgroup-delete-rule
+#                     Delete a rule from a security group.
+# secgroup-list-rules
+#                     List rules for a security group.
+# ssh                 SSH into a server.
+# unlock              Unlock a server.
+# unpause             Unpause a server.
+# unrescue            Unrescue a server.
+# usage-list          List usage data for all tenants
+# volume-list         List all the volumes.
+# volume-snapshot-create
+#                     Add a new snapshot.
+# volume-snapshot-delete
+#                     Remove a snapshot.
+# volume-snapshot-list
+#                     List all the snapshots.
+# volume-snapshot-show
+#                     Show details about a snapshot.
+# volume-type-create  Create a new volume type.
+# volume-type-delete  Delete a specific flavor
+# volume-type-list    Print a list of available 'volume types'.
+# x509-create-cert    Create x509 cert for a user in tenant
+# x509-get-root-cert  Fetches the x509 root cert.

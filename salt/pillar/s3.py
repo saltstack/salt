@@ -17,6 +17,7 @@ options
           prefix: somewhere/overthere
           verify_ssl: True
           service_url: s3.amazonaws.com
+          kms_keyid: 01234567-89ab-cdef-0123-4567890abcde
           s3_cache_expire: 30
           s3_sync_on_update: True
 
@@ -49,10 +50,13 @@ must be set to False else an invalid certificate error will be thrown (issue
 The ``service_url`` parameter defaults to 's3.amazonaws.com'. It specifies the
 base url to use for accessing S3.
 
+The ``kms_keyid`` parameter is optional. It specifies the ID of the Key
+Management Service (KMS) master key that was used to encrypt the object.
+
 The ``s3_cache_expire`` parameter defaults to 30s. It specifies expiration
 time of S3 metadata cache file.
 
-The ``s3_sync_on_update`` paramater defaults to True. It specifies if cache
+The ``s3_sync_on_update`` parameter defaults to True. It specifies if cache
 is synced on update rather than jit.
 
 This pillar can operate in two modes, single environment per bucket or multiple
@@ -75,9 +79,9 @@ that you use the `prefix=` parameter and specify one entry in ext_pillar
 for each environment rather than specifying multiple_env. This is due
 to issue #22471 (https://github.com/saltstack/salt/issues/22471)
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
 import os
 import time
@@ -101,10 +105,11 @@ log = logging.getLogger(__name__)
 
 
 class S3Credentials(object):
-    def __init__(self, key, keyid, bucket, service_url, verify_ssl,
-                 location):
+    def __init__(self, key, keyid, bucket, service_url, verify_ssl=True,
+                 kms_keyid=None, location=None):
         self.key = key
         self.keyid = keyid
+        self.kms_keyid = kms_keyid
         self.bucket = bucket
         self.service_url = service_url
         self.verify_ssl = verify_ssl
@@ -122,6 +127,7 @@ def ext_pillar(minion_id,
                environment='base',
                prefix='',
                service_url=None,
+               kms_keyid=None,
                s3_cache_expire=30,  # cache for 30 seconds
                s3_sync_on_update=True):  # sync cache on update rather than jit
 
@@ -130,7 +136,7 @@ def ext_pillar(minion_id,
     '''
 
     s3_creds = S3Credentials(key, keyid, bucket, service_url, verify_ssl,
-                             location)
+                             kms_keyid, location)
 
     # normpath is needed to remove appended '/' if root is empty string.
     pillar_dir = os.path.normpath(os.path.join(_get_cache_dir(), environment,
@@ -160,7 +166,10 @@ def ext_pillar(minion_id,
         log.info('Sync local pillar cache from S3 completed.')
 
     opts = deepcopy(__opts__)
-    opts['pillar_roots'][environment] = [pillar_dir]
+    opts['pillar_roots'][environment] = [os.path.join(pillar_dir, environment)] if multiple_env else [pillar_dir]
+
+    # Avoid recursively re-adding this same pillar
+    opts['ext_pillar'] = [x for x in opts['ext_pillar'] if 's3' not in x]
 
     pil = Pillar(opts, __grains__, minion_id, environment)
 
@@ -177,17 +186,26 @@ def _init(creds, bucket, multiple_env, environment, prefix, s3_cache_expire):
 
     cache_file = _get_buckets_cache_filename(bucket, prefix)
     exp = time.time() - s3_cache_expire
-    cache_file_mtime = os.path.getmtime(cache_file)
 
-    # check mtime of the buckets files cache
-    if os.path.isfile(cache_file) and cache_file_mtime > exp:
-        log.debug("S3 bucket cache file {0} is not expired, mtime_diff={1}s, expiration={2}s".format(cache_file, cache_file_mtime - exp, s3_cache_expire))
-        return _read_buckets_cache_file(cache_file)
+    # check if cache_file exists and its mtime
+    if os.path.isfile(cache_file):
+        cache_file_mtime = os.path.getmtime(cache_file)
     else:
-        # bucket files cache expired
-        log.debug("S3 bucket cache file {0} is expired, mtime_diff={1}s, expiration={2}s".format(cache_file, cache_file_mtime - exp, s3_cache_expire))
-        return _refresh_buckets_cache_file(creds, cache_file, multiple_env,
+        # file does not exists then set mtime to 0 (aka epoch)
+        cache_file_mtime = 0
+
+    expired = (cache_file_mtime <= exp)
+
+    log.debug("S3 bucket cache file {0} is {1}expired, mtime_diff={2}s, expiration={3}s".format(cache_file, "" if expired else "not ", cache_file_mtime - exp, s3_cache_expire))
+
+    if expired:
+        pillars = _refresh_buckets_cache_file(creds, cache_file, multiple_env,
                                            environment, prefix)
+    else:
+        pillars = _read_buckets_cache_file(cache_file)
+
+    log.debug("S3 bucket retrieved pillars {0}".format(pillars))
+    return pillars
 
 
 def _get_cache_dir():
@@ -242,6 +260,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
         return s3.query(
             key=creds.key,
             keyid=creds.keyid,
+            kms_keyid=creds.kms_keyid,
             bucket=creds.bucket,
             service_url=creds.service_url,
             verify_ssl=creds.verify_ssl,
@@ -375,6 +394,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
         log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
 
         # hashes match we have a cache hit
+        log.debug("Cached file: path={0}, md5={1}, etag={2}".format(cached_file_path, cached_md5, file_md5))
         if cached_md5 == file_md5:
             return
 
@@ -382,6 +402,7 @@ def _get_file_from_s3(creds, metadata, saltenv, bucket, path,
     s3.query(
         key=creds.key,
         keyid=creds.keyid,
+        kms_keyid=creds.kms_keyid,
         bucket=bucket,
         service_url=creds.service_url,
         path=_quote(path),

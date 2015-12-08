@@ -17,16 +17,16 @@ Implemented using ctypes, so no compilation is necessary.
     The Python interface to PAM does not support authenticating as ``root``.
 
 '''
-from __future__ import absolute_import
 
-# Import python libs
+# Import Python Libs
+from __future__ import absolute_import
 from ctypes import CDLL, POINTER, Structure, CFUNCTYPE, cast, pointer, sizeof
 from ctypes import c_void_p, c_uint, c_char_p, c_char, c_int
 from ctypes.util import find_library
 
 # Import Salt libs
 from salt.utils import get_group_list
-from salt.ext.six.moves import range
+from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 LIBPAM = CDLL(find_library('pam'))
 LIBC = CDLL(find_library('c'))
@@ -69,7 +69,7 @@ class PamMessage(Structure):
             ]
 
     def __repr__(self):
-        return '<PamMessage {0} {1!r}>'.format(self.msg_style, self.msg)
+        return '<PamMessage {0} \'{1}\'>'.format(self.msg_style, self.msg)
 
 
 class PamResponse(Structure):
@@ -82,7 +82,7 @@ class PamResponse(Structure):
             ]
 
     def __repr__(self):
-        return '<PamResponse {0} {1!r}>'.format(self.resp_retcode, self.resp)
+        return '<PamResponse {0} \'{1}\'>'.format(self.resp_retcode, self.resp)
 
 
 CONV_FUNC = CFUNCTYPE(c_int,

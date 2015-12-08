@@ -5,9 +5,9 @@ Getting Started With AWS EC2
 Amazon EC2 is a very widely used public cloud platform and one of the core
 platforms Salt Cloud has been built to support.
 
-Previously, the suggested provider for AWS EC2 was the ``aws`` provider. This
-has been deprecated in favor of the ``ec2`` provider. Configuration using the
-old ``aws`` provider will still function, but that driver is no longer in
+Previously, the suggested driver for AWS EC2 was the ``aws`` driver. This
+has been deprecated in favor of the ``ec2`` driver. Configuration using the
+old ``aws`` driver will still function, but that driver is no longer in
 active development.
 
 
@@ -54,8 +54,8 @@ parameters are discussed in more detail below.
       
       # Set the EC2 access credentials (see below)
       #
-      id: HJGRYCILJLKJYG
-      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      id: 'use-instance-role-credentials'
+      key: 'use-instance-role-credentials'
 
       # Make sure this key is owned by root with permissions 0400.
       #
@@ -84,7 +84,7 @@ parameters are discussed in more detail below.
       # Optionally add an IAM profile
       iam_profile: 'arn:aws:iam::123456789012:instance-profile/ExampleInstanceProfile'
 
-      provider: ec2
+      driver: ec2
 
 
     my-ec2-southeast-private-ips:
@@ -109,13 +109,19 @@ parameters are discussed in more detail below.
       
       # Set the EC2 access credentials (see below)
       #
-      id: HJGRYCILJLKJYG
-      key: 'kdjgfsgm;woormgl/aserigjksjdhasdfgn'
+      id: 'use-instance-role-credentials'
+      key: 'use-instance-role-credentials'
 
       # Make sure this key is owned by root with permissions 0400.
       #
       private_key: /etc/salt/my_test_key.pem
       keyname: my_test_key
+
+      # This one should NOT be specified if VPC was not configured in AWS to be
+      # the default. It might cause an error message which says that network
+      # interfaces and an instance-level security groups may not be specified
+      # on the same request.
+      #
       securitygroup: default
 
       # Optionally configure default region
@@ -138,8 +144,16 @@ parameters are discussed in more detail below.
       # Optionally add an IAM profile
       iam_profile: 'my other profile name'
 
-      provider: ec2
+      driver: ec2
 
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider definitions was renamed to ``driver``. This
+    change was made to avoid confusion with the ``provider`` parameter that is used in cloud profile
+    definitions. Cloud provider definitions now use ``driver`` to refer to the Salt cloud module that
+    provides the underlying functionality to connect to a cloud host, while cloud profiles continue
+    to use ``provider`` to refer to provider configurations that you define.
 
 Access Credentials
 ==================
@@ -151,6 +165,25 @@ https://portal.aws.amazon.com/gp/aws/securityCredentials
 Both are located in the Access Credentials area of the page, under the Access
 Keys tab. The ``id`` setting is labeled Access Key ID, and the ``key`` setting
 is labeled Secret Access Key.
+
+Note: if either ``id`` or ``key`` is set to 'use-instance-role-credentials' it is
+assumed that Salt is running on an AWS instance, and the instance role
+credentials will be retrieved and used.  Since both the ``id`` and ``key`` are
+required parameters for the AWS ec2 provider, it is recommended to set both
+to 'use-instance-role-credentials' for this functionality.
+
+A "static" and "permanent" Access Key ID and Secret Key can be specified,
+but this is not recommended.  Instance role keys are rotated on a regular
+basis, and are the recommended method of specifying AWS credentials.
+
+Windows Deploy Timeouts
+=======================
+For Windows instances, it may take longer than normal for the instance to be
+ready.  In these circumstances, the provider configuration can be configured
+with a ``win_deploy_auth_retries`` and/or a ``win_deploy_auth_retry_delay``
+setting, which default to 10 retries and a one second delay between retries.
+These retries and timeouts relate to validating the Administrator password
+once AWS provides the credentials via the AWS API.
 
 
 Windows Deploy Timeouts
@@ -315,7 +348,7 @@ The following settings are always required for EC2:
       keyname: test
       securitygroup: quick-start
       private_key: /root/test.pem
-      provider: ec2
+      driver: ec2
 
 
 Optional Settings
@@ -519,17 +552,6 @@ function exists which renames both the instance, and the salt keys.
 .. code-block:: bash
 
     salt-cloud -a rename mymachine newname=yourmachine
-
-
-EC2 Termination Protection
-==========================
-EC2 allows the user to enable and disable termination protection on a specific
-instance. An instance with this protection enabled cannot be destroyed.
-
-.. code-block:: bash
-
-    salt-cloud -a enable_term_protect mymachine
-    salt-cloud -a disable_term_protect mymachine
 
 
 Rename on Destroy
@@ -868,6 +890,13 @@ point, and should be stored immediately.
 
     salt-cloud -f create_keypair ec2 keyname=mykeypair
 
+Importing a Key Pair
+-------------------
+
+.. code-block:: bash
+
+    salt-cloud -f import_keypair ec2 keyname=mykeypair file=/path/to/id_rsa.pub
+
 
 Show a Key Pair
 ---------------
@@ -931,11 +960,16 @@ the network interfaces of your virtual machines, for example:-
           SubnetId: subnet-XXXXXXXX
           SecurityGroupId:
             - sg-XXXXXXXX
+          
+          # Uncomment this line if you would like to set an explicit private
+          # IP address for the ec2 instance
+          #
+          # PrivateIpAddress: 192.168.1.66
 
           # Uncomment this to associate an existing Elastic IP Address with
           # this network interface:
           #
-          # associate_eip: eni-XXXXXXXX
+          # associate_eip: eipalloc-XXXXXXXX
 
           # You can allocate more than one IP address to an interface. Use the
           # 'ip addr list' command to see them.
@@ -952,6 +986,10 @@ the network interfaces of your virtual machines, for example:-
           # both the primary private ip address and each of the secondary ones
           #
           allocate_new_eips: True
+
+          # Uncomment this if you're creating NAT instances. Allows an instance
+          # to accept IP packets with destinations other than itself.
+          # SourceDestCheck: False
 
 Note that it is an error to assign a 'subnetid' or 'securitygroupid' to a
 profile where the interfaces are manually configured like this. These are both

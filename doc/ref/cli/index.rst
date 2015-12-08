@@ -231,6 +231,14 @@ You may change the arguments separator using the ``--args-separator`` option:
 
     salt --args-separator=:: '*' some.fun,test.echo params with , comma :: foo
 
+CLI Completion
+==============
+
+Shell completion scripts for the Salt CLI are available in the ``pkg`` Salt
+`source directory`_.
+
+.. _source directory: https://github.com/saltstack/salt/tree/develop/pkg
+
 salt-call
 =========
 .. toctree::
@@ -273,6 +281,12 @@ salt-minion
 
     salt-minion
 
+salt-proxy
+==========
+.. toctree::
+
+    salt-proxy
+
 salt-run
 ========
 .. toctree::
@@ -296,3 +310,9 @@ salt-api
 .. toctree::
 
     salt-api
+
+spm
+===
+.. toctree::
+
+    spm

@@ -18,15 +18,21 @@
 Module for managing BTRFS file systems.
 '''
 
+# Import Python libs
+from __future__ import absolute_import
 import os
 import re
-import logging
 import uuid
+import logging
 
+
+# Import Salt libs
 import salt.utils
+import salt.utils.fsutils
 from salt.exceptions import CommandExecutionError
 
-import salt.modules.fsutils
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -90,7 +96,7 @@ def info(device):
         salt '*' btrfs.info /dev/sda1
     '''
     out = __salt__['cmd.run_all']("btrfs filesystem show {0}".format(device))
-    salt.modules.fsutils._verify_run(out)
+    salt.utils.fsutils._verify_run(out)
 
     return _parse_btrfs_info(out['stdout'])
 
@@ -106,9 +112,9 @@ def devices():
         salt '*' btrfs.devices
     '''
     out = __salt__['cmd.run_all']("blkid -o export")
-    salt.modules.fsutils._verify_run(out)
+    salt.utils.fsutils._verify_run(out)
 
-    return salt.modules.fsutils._blkid_output(out['stdout'], fs_type='btrfs')
+    return salt.utils.fsutils._blkid_output(out['stdout'], fs_type='btrfs')
 
 
 def _defragment_mountpoint(mountpoint):
@@ -139,8 +145,8 @@ def defragment(path):
         salt '*' btrfs.defragment /dev/sda1
         salt '*' btrfs.defragment /path/on/filesystem
     '''
-    is_device = salt.modules.fsutils._is_device(path)
-    mounts = salt.modules.fsutils._get_mounts("btrfs")
+    is_device = salt.utils.fsutils._is_device(path)
+    mounts = salt.utils.fsutils._get_mounts("btrfs")
     if is_device and not mounts.get(path):
         raise CommandExecutionError("Device \"{0}\" is not mounted".format(path))
 
@@ -150,7 +156,7 @@ def defragment(path):
             result.append(_defragment_mountpoint(mount_point['mount_point']))
     else:
         is_mountpoint = False
-        for mountpoints in mounts.values():
+        for mountpoints in six.itervalues(mounts):
             for mpnt in mountpoints:
                 if path == mpnt['mount_point']:
                     is_mountpoint = True
@@ -179,7 +185,7 @@ def features():
         salt '*' btrfs.mkfs_features
     '''
     out = __salt__['cmd.run_all']("mkfs.btrfs -O list-all")
-    salt.modules.fsutils._verify_run(out)
+    salt.utils.fsutils._verify_run(out)
 
     ret = {}
     for line in [re.sub(r"\s+", " ", line) for line in out['stderr'].split("\n") if " - " in line]:
@@ -254,7 +260,7 @@ def usage(path):
         salt '*' btrfs.usage /your/mountpoint
     '''
     out = __salt__['cmd.run_all']("btrfs filesystem usage {0}".format(path))
-    salt.modules.fsutils._verify_run(out)
+    salt.utils.fsutils._verify_run(out)
 
     ret = {}
     for section in out['stdout'].split("\n\n"):
@@ -304,7 +310,7 @@ def mkfs(*devices, **kwargs):
     if not devices:
         raise CommandExecutionError("No devices specified")
 
-    mounts = salt.modules.fsutils._get_mounts("btrfs")
+    mounts = salt.utils.fsutils._get_mounts("btrfs")
     for device in devices:
         if mounts.get(device):
             raise CommandExecutionError("Device \"{0}\" should not be mounted".format(device))
@@ -343,7 +349,7 @@ def mkfs(*devices, **kwargs):
     cmd.extend(devices)
 
     out = __salt__['cmd.run_all'](' '.join(cmd))
-    salt.modules.fsutils._verify_run(out)
+    salt.utils.fsutils._verify_run(out)
 
     ret = {'log': out['stdout']}
     ret.update(__salt__['btrfs.info'](devices[0]))
@@ -369,16 +375,16 @@ def resize(mountpoint, size):
     '''
 
     if size == 'max':
-        if not salt.modules.fsutils._is_device(mountpoint):
+        if not salt.utils.fsutils._is_device(mountpoint):
             raise CommandExecutionError("Mountpoint \"{0}\" should be a valid device".format(mountpoint))
-        if not salt.modules.fsutils._get_mounts("btrfs").get(mountpoint):
+        if not salt.utils.fsutils._get_mounts("btrfs").get(mountpoint):
             raise CommandExecutionError("Device \"{0}\" should be mounted".format(mountpoint))
     elif len(size) < 3 or size[0] not in '-+' \
          or size[-1] not in 'kKmMgGtTpPeE' or re.sub(r"\d", "", size[1:][:-1]):
         raise CommandExecutionError("Unknown size: \"{0}\". Expected: [+/-]<newsize>[kKmMgGtTpPeE]|max".format(size))
 
     out = __salt__['cmd.run_all']('btrfs filesystem resize {0} {1}'.format(size, mountpoint))
-    salt.modules.fsutils._verify_run(out)
+    salt.utils.fsutils._verify_run(out)
 
     ret = {'log': out['stdout']}
     ret.update(__salt__['btrfs.info'](mountpoint))
@@ -430,8 +436,8 @@ def convert(device, permanent=False, keeplf=False):
     '''
 
     out = __salt__['cmd.run_all']("blkid -o export")
-    salt.modules.fsutils._verify_run(out)
-    devices = salt.modules.fsutils._blkid_output(out['stdout'])
+    salt.utils.fsutils._verify_run(out)
+    devices = salt.utils.fsutils._blkid_output(out['stdout'])
     if not devices.get(device):
         raise CommandExecutionError("The device \"{0}\" was is not found.".format(device))
 
@@ -439,7 +445,7 @@ def convert(device, permanent=False, keeplf=False):
         raise CommandExecutionError("The device \"{0}\" is a \"{1}\" file system.".format(
             device, devices[device]["type"]))
 
-    mountpoint = salt.modules.fsutils._get_mounts(devices[device]["type"]).get(
+    mountpoint = salt.utils.fsutils._get_mounts(devices[device]["type"]).get(
         device, [{'mount_point': None}])[0].get('mount_point')
     if mountpoint == '/':
         raise CommandExecutionError("""One does not simply converts a root filesystem!
@@ -456,7 +462,7 @@ For further details, please refer to your OS vendor
 documentation regarding this topic.
 """)
 
-    salt.modules.fsutils._verify_run(__salt__['cmd.run_all']("umount {0}".format(device)))
+    salt.utils.fsutils._verify_run(__salt__['cmd.run_all']("umount {0}".format(device)))
 
     ret = {
         'before': {
@@ -466,13 +472,13 @@ documentation regarding this topic.
         }
     }
 
-    salt.modules.fsutils._verify_run(__salt__['cmd.run_all']("btrfs-convert {0}".format(device)))
-    salt.modules.fsutils._verify_run(__salt__['cmd.run_all']("mount {0} {1}".format(device, mountpoint)))
+    salt.utils.fsutils._verify_run(__salt__['cmd.run_all']("btrfs-convert {0}".format(device)))
+    salt.utils.fsutils._verify_run(__salt__['cmd.run_all']("mount {0} {1}".format(device, mountpoint)))
 
     # Refresh devices
     out = __salt__['cmd.run_all']("blkid -o export")
-    salt.modules.fsutils._verify_run(out)
-    devices = salt.modules.fsutils._blkid_output(out['stdout'])
+    salt.utils.fsutils._verify_run(out)
+    devices = salt.utils.fsutils._blkid_output(out['stdout'])
 
     ret['after'] = {
         'fsck_status': "N/A",  # ToDO
@@ -496,14 +502,14 @@ documentation regarding this topic.
         ret['after']['{0}_image'.format(orig_fstype)] = 'removed'
         ret['after']['{0}_image_info'.format(orig_fstype)] = 'N/A'
 
-        salt.modules.fsutils._verify_run(__salt__['cmd.run_all']("btrfs subvolume delete {0}".format(image_path)))
+        salt.utils.fsutils._verify_run(__salt__['cmd.run_all']("btrfs subvolume delete {0}".format(image_path)))
         out = __salt__['cmd.run_all']("btrfs filesystem balance {0}".format(mountpoint))
-        salt.modules.fsutils._verify_run(out)
+        salt.utils.fsutils._verify_run(out)
         ret['after']['balance_log'] = out['stdout']
 
     lost_found = "{0}/lost+found".format(mountpoint)
     if os.path.exists(lost_found) and not keeplf:
-        salt.modules.fsutils._verify_run(__salt__['cmd.run_all']("rm -rf {0}".format(lost_found)))
+        salt.utils.fsutils._verify_run(__salt__['cmd.run_all']("rm -rf {0}".format(lost_found)))
 
     return ret
 
@@ -514,12 +520,12 @@ def _restripe(mountpoint, direction, *devices, **kwargs):
     '''
     fs_log = []
 
-    if salt.modules.fsutils._is_device(mountpoint):
+    if salt.utils.fsutils._is_device(mountpoint):
         raise CommandExecutionError(
             "Mountpount expected, while device \"{0}\" specified".format(mountpoint))
 
     mounted = False
-    for device, mntpoints in salt.modules.fsutils._get_mounts("btrfs").items():
+    for device, mntpoints in six.iteritems(salt.utils.fsutils._get_mounts("btrfs")):
         for mntdata in mntpoints:
             if mntdata['mount_point'] == mountpoint:
                 mounted = True
@@ -534,7 +540,7 @@ def _restripe(mountpoint, direction, *devices, **kwargs):
 
     available_devices = __salt__['btrfs.devices']()
     for device in devices:
-        if device not in available_devices.keys():
+        if device not in six.iterkeys(available_devices):
             raise CommandExecutionError("Device \"{0}\" is not recognized".format(device))
 
     cmd = ['btrfs device {0}'.format(direction)]
@@ -550,7 +556,7 @@ def _restripe(mountpoint, direction, *devices, **kwargs):
     cmd.append(mountpoint)
 
     out = __salt__['cmd.run_all'](' '.join(cmd))
-    salt.modules.fsutils._verify_run(out)
+    salt.utils.fsutils._verify_run(out)
     if out['stdout']:
         fs_log.append(out['stdout'])
 
@@ -564,7 +570,7 @@ def _restripe(mountpoint, direction, *devices, **kwargs):
                     data_conversion, meta_conversion, mountpoint))
         else:
             out = __salt__['cmd.run_all']("btrfs filesystem balance {0}".format(mountpoint))
-        salt.modules.fsutils._verify_run(out)
+        salt.utils.fsutils._verify_run(out)
         if out['stdout']:
             fs_log.append(out['stdout'])
 
@@ -659,11 +665,11 @@ def properties(obj, type=None, set=None):
             raise CommandExecutionError(ex)
 
     out = __salt__['cmd.run_all'](' '.join(cmd))
-    salt.modules.fsutils._verify_run(out)
+    salt.utils.fsutils._verify_run(out)
 
     if not set:
         ret = {}
-        for prop, descr in _parse_proplist(out['stdout']).items():
+        for prop, descr in six.iteritems(_parse_proplist(out['stdout'])):
             ret[prop] = {'description': descr}
             value = __salt__['cmd.run_all'](
                 "btrfs property get {0} {1}".format(obj, prop))['stdout']

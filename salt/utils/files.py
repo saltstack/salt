@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 
 # Import Python libs
+import errno
 import os
 import shutil
 import subprocess
@@ -10,7 +11,7 @@ import subprocess
 # Import salt libs
 import salt.utils
 import salt.modules.selinux
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, MinionError
 
 
 def recursive_copy(source, dest):
@@ -87,3 +88,27 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
             os.remove(tgt)
         except Exception:
             pass
+
+
+def rename(src, dst):
+    '''
+    On Windows, os.rename() will fail with a WindowsError exception if a file
+    exists at the destination path. This function checks for this error and if
+    found, it deletes the destination path first.
+    '''
+    try:
+        os.rename(src, dst)
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise
+        try:
+            os.remove(dst)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                raise MinionError(
+                    'Error: Unable to remove {0}: {1}'.format(
+                        dst,
+                        exc.strerror
+                    )
+                )
+        os.rename(src, dst)

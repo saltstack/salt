@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import re
 
 # Import Salt Testing libs
@@ -9,6 +10,9 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class SysModuleTest(integration.ModuleCase):
@@ -65,6 +69,9 @@ class SysModuleTest(integration.ModuleCase):
                 'yumpkg.expand_repo_def',
                 'yumpkg5.expand_repo_def',
                 'container_resource.run',
+                'nspawn.stop',
+                'nspawn.restart',
+                'lowpkg.bin_pkg_info',
         )
 
         for fun in docs:
@@ -72,7 +79,7 @@ class SysModuleTest(integration.ModuleCase):
                 continue
             if fun in allow_failure:
                 continue
-            if not isinstance(docs[fun], basestring):
+            if not isinstance(docs[fun], six.string_types):
                 nodoc.add(fun)
             elif not re.search(r'([E|e]xample(?:s)?)+(?:.*)::?', docs[fun]):
                 noexample.add(fun)

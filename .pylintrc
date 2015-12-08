@@ -1,5 +1,4 @@
 [MASTER]
-
 # Specify a configuration file.
 #rcfile=
 
@@ -31,28 +30,52 @@ load-plugins=saltpylint.pep8,
   saltpylint.pep263,
   saltpylint.strings,
   saltpylint.fileperms,
+  saltpylint.py3modernize,
+  saltpylint.smartup,
   saltpylint.minpyver
 
+# Use multiple processes to speed up Pylint.
+# Don't bump this values on PyLint 1.4.0 - Know bug that ignores the passed --rcfile
+jobs=1
+
+# Allow loading of arbitrary C extensions. Extensions are imported into the
+# active Python interpreter and may run arbitrary code.
+unsafe-load-any-extension=no
+
+# A comma-separated list of package or module names from where C extensions may
+# be loaded. Extensions are loading into the active Python interpreter and may
+# run arbitrary code
+extension-pkg-whitelist=
 
 # Fileperms Lint Plugin Settings
 fileperms-default=0644
 fileperms-ignore-paths=tests/runtests.py,tests/jenkins*.py,tests/saltsh.py,tests/buildpackage.py
 
+# Py3 Modernize PyLint Plugin Settings
+modernize-nofix = libmodernize.fixes.fix_dict_six
 
 # Minimum Python Version To Enforce
 minimum-python-version = 2.6
 
 [MESSAGES CONTROL]
+# Only show warnings with the listed confidence levels. Leave empty to show
+# all. Valid levels: HIGH, INFERENCE, INFERENCE_FAILURE, UNDEFINED
+confidence=
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
-# multiple time.
+# multiple time. See also the "--disable" option for examples.
 #enable=
 
 # Disable the message, report, category or checker with the given id(s). You
-# can either give multiple identifier separated by comma (,) or put this option
-# multiple time (only on the command line, not in the configuration file where
-# it should appear only once).
+# can either give multiple identifiers separated by comma (,) or put this
+# option multiple times (only on the command line, not in the configuration
+# file where it should appear only once).You can also use "--disable=all" to
+# disable everything first and then reenable specific checks. For example, if
+# you want to run only the similarities checker, you can use "--disable=all
+# --enable=similarities". If you want to run only the classes checker, but have
+# no Warning level messages displayed, use"--disable=all --enable=classes
+# --disable=W"
 disable=W0142,
   C0330,
   I0011,
@@ -80,12 +103,13 @@ disable=W0142,
 # C0330 (bad-continuation)
 # I0011 (locally-disabling)
 # I0012 (locally-enabling)
+# W1202 (logging-format-interpolation)
 
 
 [REPORTS]
-
 # Set the output format. Available formats are text, parseable, colorized, msvs
-# (visual studio) and html
+# (visual studio) and html. You can also give a reporter class, eg
+# mypackage.mymodule.MyReporterClass.
 output-format=text
 
 # Put messages in a separate file for each module / package specified on the
@@ -107,12 +131,92 @@ evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / stateme
 # evaluation report (RP0004).
 comment=no
 
+# Template used to display messages. This is a python new-style format string
+# used to format the message information. See doc for all details
+#msg-template=
+
+
+[VARIABLES]
+# Tells whether we should check for unused import in __init__ files.
+init-import=no
+
+# A regular expression matching the name of dummy variables (i.e. expectedly
+# not used).
+dummy-variables-rgx=_|dummy
+
+# List of additional names supposed to be defined in builtins. Remember that
+# you should avoid to define new builtins when possible.
+additional-builtins=__opts__,
+  __utils__,
+  __salt__,
+  __pillar__,
+  __grains__,
+  __context__,
+  __ret__,
+  __env__,
+  __low__,
+  __states__,
+  __lowstate__,
+  __running__,
+  __active_provider_name__,
+  __master_opts__,
+  __jid_event__,
+  __instance_id__,
+  __salt_system_encoding__,
+  __proxy__,
+  __serializers__
+
+# List of strings which can identify a callback function by name. A callback
+# name must start or end with one of those strings.
+callbacks=cb_,_cb
+
+
+[FORMAT]
+# Maximum number of characters on a single line.
+max-line-length=120
+
+# Regexp for a line that is allowed to be longer than the limit.
+ignore-long-lines=^\s*(# )?<?https?://\S+>?$
+
+# Allow the body of an if to be on the same line as the test if there is no
+# else.
+single-line-if-stmt=no
+
+# List of optional constructs for which whitespace checking is disabled
+no-space-check=trailing-comma,dict-separator
+
+# Maximum number of lines in a module
+max-module-lines=3000
+
+# String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
+# tab).
+indent-string='    '
+
+# Number of spaces of indent required inside a hanging or continued line.
+indent-after-paren=4
+
+# Expected format of line ending, e.g. empty (any line ending), LF or CRLF.
+expected-line-ending-format=LF
+
+[LOGGING]
+# Logging modules to check that the string format arguments are in logging
+# function parameter format
+#logging-modules=logging
+#
+# Disabled because it not only complains about %s arguments but it also
+# complains about {0} arguments
+logging-modules=
+
 
 [TYPECHECK]
-
 # Tells whether missing members accessed in mixin class should be ignored. A
 # mixin class is detected if its name ends with "mixin" (case insensitive).
 ignore-mixin-members=yes
+
+# List of module names for which member attributes should not be checked
+# (useful for modules/projects where namespaces are manipulated during runtime
+# and thus existing member attributes cannot be deduced by static analysis
+ignored-modules=
 
 # List of classes names for which member attributes should not be checked
 # (useful for classes with attributes dynamically set).
@@ -128,103 +232,12 @@ zope=no
 generated-members=REQUEST,acl_users,aq_parent
 
 
-[BASIC]
-
-# Required attributes for module, separated by a comma
-required-attributes=
-
-# List of builtins function names that should not be used, separated by a comma
-bad-functions=map,filter,apply,input
-
-# Regular expression which should only match correct module names
-module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
-
-# Regular expression which should only match correct module level names
-const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
-
-# Regular expression which should only match correct class names
-class-rgx=[A-Z_][a-zA-Z0-9]+$
-
-# Regular expression which should only match correct function names
-function-rgx=[a-z_][a-z0-9_]{2,30}$
-
-# Regular expression which should only match correct method names
-method-rgx=[a-z_][a-z0-9_]{2,30}$
-
-# Regular expression which should only match correct instance attribute names
-attr-rgx=[a-z_][a-z0-9_]{2,30}$
-
-# Regular expression which should only match correct argument names
-argument-rgx=[a-z_][a-z0-9_]{2,30}$
-
-# Regular expression which should only match correct variable names
-variable-rgx=[a-z_][a-z0-9_]{2,30}$
-
-# Regular expression which should only match correct list comprehension /
-# generator expression variable names
-inlinevar-rgx=[A-Za-z_][A-Za-z0-9_]*$
-
-# Good variable names which should always be accepted, separated by a comma
-good-names=i,j,k,ex,Run,_,log
-
-# Bad variable names which should always be refused, separated by a comma
-bad-names=foo,bar,baz,toto,tutu,tata
-
-# Regular expression which should only match functions or classes name which do
-# not require a docstring
-no-docstring-rgx=__.*__
-
-
 [MISCELLANEOUS]
-
 # List of note tags to take in consideration, separated by a comma.
 notes=FIXME,FIX,XXX,TODO
 
 
-[FORMAT]
-
-# Maximum number of characters on a single line.
-max-line-length=120
-
-# Maximum number of lines in a module
-max-module-lines=3000
-
-# String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
-# tab).
-indent-string='    '
-
-
-[VARIABLES]
-
-# Tells whether we should check for unused import in __init__ files.
-init-import=no
-
-# A regular expression matching the beginning of the name of dummy variables
-# (i.e. not used).
-dummy-variables-rgx=_|dummy
-
-# List of additional names supposed to be defined in builtins. Remember that
-# you should avoid to define new builtins when possible.
-additional-builtins=__opts__,
-  __salt__,
-  __pillar__,
-  __grains__,
-  __context__,
-  __ret__,
-  __env__,
-  __low__,
-  __states__,
-  __lowstate__,
-  __running__,
-  __active_provider_name__,
-  __master_opts__,
-  __jid_event__,
-  __instance_id__,
-  __salt_system_encoding__
-
-
 [SIMILARITIES]
-
 # Minimum lines number of a similarity.
 min-similarity-lines=4
 
@@ -234,9 +247,116 @@ ignore-comments=yes
 # Ignore docstrings when computing similarities.
 ignore-docstrings=yes
 
+# Ignore imports when computing similarities.
+ignore-imports=no
+
+
+[BASIC]
+# Required attributes for module, separated by a comma
+required-attributes=
+
+# List of builtins function names that should not be used, separated by a comma
+bad-functions=map,filter,apply,input
+
+# Good variable names which should always be accepted, separated by a comma
+good-names=i,j,k,ex,Run,_,log
+
+# Bad variable names which should always be refused, separated by a comma
+bad-names=foo,bar,baz,toto,tutu,tata
+
+# Colon-delimited sets of names that determine each other's naming style when
+# the name regexes allow several styles.
+name-group=
+
+# Include a hint for the correct naming format with invalid-name
+include-naming-hint=no
+
+# Regular expression matching correct function names
+function-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Naming hint for function names
+function-name-hint=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression matching correct variable names
+variable-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Naming hint for variable names
+variable-name-hint=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression matching correct constant names
+const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
+
+# Naming hint for constant names
+const-name-hint=(([A-Z_][A-Z0-9_]*)|(__.*__))$
+
+# Regular expression matching correct attribute names
+attr-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Naming hint for attribute names
+attr-name-hint=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression matching correct argument names
+argument-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Naming hint for argument names
+argument-name-hint=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression matching correct class attribute names
+class-attribute-rgx=([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$
+
+# Naming hint for class attribute names
+class-attribute-name-hint=([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$
+
+# Regular expression matching correct inline iteration names
+inlinevar-rgx=[A-Za-z_][A-Za-z0-9_]*$
+
+# Naming hint for inline iteration names
+inlinevar-name-hint=[A-Za-z_][A-Za-z0-9_]*$
+
+# Regular expression matching correct class names
+class-rgx=[A-Z_][a-zA-Z0-9]+$
+
+# Naming hint for class names
+class-name-hint=[A-Z_][a-zA-Z0-9]+$
+
+# Regular expression matching correct module names
+module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
+
+# Naming hint for module names
+module-name-hint=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
+
+# Regular expression matching correct method names
+method-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Naming hint for method names
+method-name-hint=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression which should only match function or class names that do
+# not require a docstring.
+no-docstring-rgx=__.*__
+
+# Minimum line length for functions/classes that require docstrings, shorter
+# ones are exempt.
+docstring-min-length=-1
+
+
+[SPELLING]
+# Spelling dictionary name. Available dictionaries: none. To make it working
+# install python-enchant package.
+spelling-dict=
+
+# List of comma separated words that should not be checked.
+spelling-ignore-words=
+
+# A path to a file that contains private dictionary; one word per line.
+spelling-private-dict-file=
+
+# Tells whether to store unknown words to indicated private dictionary in
+# --spelling-private-dict-file option instead of raising a message.
+spelling-store-unknown-words=no
+
 
 [CLASSES]
-
 # List of interface methods to ignore, separated by a comma. This is used for
 # instance to not check methods defines in Zope's Interface base class.
 ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
@@ -247,11 +367,17 @@ defining-attr-methods=__init__,__new__,setUp
 # List of valid names for the first argument in a class method.
 valid-classmethod-first-arg=cls
 
+# List of valid names for the first argument in a metaclass class method.
+valid-metaclass-classmethod-first-arg=mcs
+
+# List of member names, which should be excluded from the protected access
+# warning.
+exclude-protected=_asdict,_fields,_replace,_source,_make
+
 
 [IMPORTS]
-
 # Deprecated modules which should not be used, separated by a comma
-deprecated-modules=regsub,string,TERMIOS,Bastion,rexec
+deprecated-modules=regsub,TERMIOS,Bastion,rexec
 
 # Create a graph of every (i.e. internal and external) dependencies in the
 # given file (report RP0402 must not be disabled)
@@ -267,7 +393,6 @@ int-import-graph=
 
 
 [DESIGN]
-
 # Maximum number of arguments for function / method
 max-args=35
 
@@ -276,7 +401,6 @@ max-args=35
 ignored-argument-names=_.*
 
 # Maximum number of locals for function / method body
-# Let's have max-args + 5
 max-locals=40
 
 # Maximum number of return / yield for function / method body
@@ -284,10 +408,9 @@ max-returns=6
 
 # Maximum number of branch for function / method body
 # We create a lot of branches in salt, 4x the default value
-max-branchs=48
+max-branches=48
 
 # Maximum number of statements in function / method body
-# Again, we have LOTS in salt. Double default
 max-statements=100
 
 # Maximum number of parents for a class (see R0901).

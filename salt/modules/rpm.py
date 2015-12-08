@@ -2,15 +2,24 @@
 '''
 Support for rpm
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import logging
+import os
 import re
+import time
+import datetime
 
 # Import Salt libs
 import salt.utils
+import salt.utils.itertools
 import salt.utils.decorators as decorators
+import salt.utils.pkg.rpm
+# pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import zip
+# pylint: enable=import-error,redefined-builtin
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +46,68 @@ def __virtual__():
     return False
 
 
+def bin_pkg_info(path, saltenv='base'):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Parses RPM metadata and returns a dictionary of information about the
+    package (name, version, etc.).
+
+    path
+        Path to the file. Can either be an absolute path to a file on the
+        minion, or a salt fileserver URL (e.g. ``salt://path/to/file.rpm``).
+        If a salt fileserver URL is passed, the file will be cached to the
+        minion so that it can be examined.
+
+    saltenv : base
+        Salt fileserver envrionment from which to retrieve the package. Ignored
+        if ``path`` is a local file path on the minion.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.bin_pkg_info /root/salt-2015.5.1-2.el7.noarch.rpm
+        salt '*' lowpkg.bin_pkg_info salt://salt-2015.5.1-2.el7.noarch.rpm
+    '''
+    # If the path is a valid protocol, pull it down using cp.cache_file
+    if __salt__['config.valid_fileproto'](path):
+        newpath = __salt__['cp.cache_file'](path, saltenv)
+        if not newpath:
+            raise CommandExecutionError(
+                'Unable to retrieve {0} from saltenv \'{1}\''
+                .format(path, saltenv)
+            )
+        path = newpath
+    else:
+        if not os.path.exists(path):
+            raise CommandExecutionError(
+                '{0} does not exist on minion'.format(path)
+            )
+        elif not os.path.isabs(path):
+            raise SaltInvocationError(
+                '{0} does not exist on minion'.format(path)
+            )
+
+    # REPOID is not a valid tag for the rpm command. Remove it and replace it
+    # with 'none'
+    queryformat = salt.utils.pkg.rpm.QUERYFORMAT.replace('%{REPOID}', 'none')
+    output = __salt__['cmd.run_stdout'](
+        ['rpm', '-qp', '--queryformat', queryformat, path],
+        output_loglevel='trace',
+        ignore_retcode=True,
+        python_shell=False
+    )
+    ret = {}
+    pkginfo = salt.utils.pkg.rpm.parse_pkginfo(
+        output,
+        osarch=__grains__['osarch']
+    )
+    for field in pkginfo._fields:
+        ret[field] = getattr(pkginfo, field)
+    return ret
+
+
 def list_pkgs(*packages):
     '''
     List the packages currently installed in a dict::
@@ -50,14 +121,12 @@ def list_pkgs(*packages):
         salt '*' lowpkg.list_pkgs
     '''
     pkgs = {}
-    if not packages:
-        cmd = 'rpm -qa --qf \'%{NAME} %{VERSION}\\n\''
-    else:
-        cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
-            ' '.join(packages)
-        )
-    out = __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
-    for line in out.splitlines():
+    cmd = ['rpm', '-q' if packages else '-qa',
+           '--queryformat', r'%{NAME} %{VERSION}\n']
+    if packages:
+        cmd.extend(packages)
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         if 'is not installed' in line:
             continue
         comps = line.split()
@@ -65,7 +134,7 @@ def list_pkgs(*packages):
     return pkgs
 
 
-def verify(*package, **kwargs):
+def verify(*packages, **kwargs):
     '''
     Runs an rpm -Va on a system, and returns the results in a dict
 
@@ -78,8 +147,8 @@ def verify(*package, **kwargs):
 
         salt '*' lowpkg.verify
         salt '*' lowpkg.verify httpd
-        salt '*' lowpkg.verify 'httpd postfix'
-        salt '*' lowpkg.verify 'httpd postfix' ignore_types=['config','doc']
+        salt '*' lowpkg.verify httpd postfix
+        salt '*' lowpkg.verify httpd postfix ignore_types=['config','doc']
     '''
     ftypes = {'c': 'config',
               'd': 'doc',
@@ -88,17 +157,17 @@ def verify(*package, **kwargs):
               'r': 'readme'}
     ret = {}
     ignore_types = kwargs.get('ignore_types', [])
-    if package:
-        packages = ' '.join(package)
-        cmd = 'rpm -V {0}'.format(packages)
+    if packages:
+        cmd = ['rpm', '-V']
+        # Can't concatenate a tuple, must do a list.extend()
+        cmd.extend(packages)
     else:
-        cmd = 'rpm -Va'
-    out = __salt__['cmd.run'](
-            cmd,
-            python_shell=False,
-            output_loglevel='trace',
-            ignore_retcode=True)
-    for line in out.splitlines():
+        cmd = ['rpm', '-Va']
+    out = __salt__['cmd.run'](cmd,
+                              output_loglevel='trace',
+                              ignore_retcode=True,
+                              python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         fdict = {'mismatch': []}
         if 'missing' in line:
             line = ' ' + line
@@ -147,8 +216,8 @@ def modified(*packages, **flags):
     '''
     ret = __salt__['cmd.run_all'](
         ['rpm', '-Va'] + list(packages),
-        python_shell=False,
-        output_loglevel='trace')
+        output_loglevel='trace',
+        python_shell=False)
 
     data = {}
 
@@ -163,7 +232,7 @@ def modified(*packages, **flags):
 
     ptrn = re.compile(r"\s+")
     changes = cfg = f_name = None
-    for f_info in ret['stdout'].splitlines():
+    for f_info in salt.utils.itertools.split(ret['stdout'], '\n'):
         f_info = ptrn.split(f_info)
         if len(f_info) == 3:  # Config file
             changes, cfg, f_name = f_info
@@ -174,7 +243,7 @@ def modified(*packages, **flags):
                 'owner', 'group', 'time', 'capabilities']
         changes = list(changes)
         if len(changes) == 8:  # Older RPMs do not support capabilities
-            changes.append(".")
+            changes.append('.')
         stats = []
         for k, v in zip(keys, changes):
             if v != '.':
@@ -218,13 +287,15 @@ def file_list(*packages):
         salt '*' lowpkg.file_list
     '''
     if not packages:
-        cmd = 'rpm -qla'
+        cmd = ['rpm', '-qla']
     else:
-        cmd = 'rpm -ql {0}'.format(' '.join(packages))
+        cmd = ['rpm', '-ql']
+        # Can't concatenate a tuple, must do a list.extend()
+        cmd.extend(packages)
     ret = __salt__['cmd.run'](
-            cmd,
-            python_shell=False,
-            output_loglevel='trace').splitlines()
+        cmd,
+        output_loglevel='trace',
+        python_shell=False).splitlines()
     return {'errors': [], 'files': ret}
 
 
@@ -245,14 +316,12 @@ def file_dict(*packages):
     errors = []
     ret = {}
     pkgs = {}
-    if not packages:
-        cmd = 'rpm -qa --qf \'%{NAME} %{VERSION}\\n\''
-    else:
-        cmd = 'rpm -q --qf \'%{{NAME}} %{{VERSION}}\\n\' {0}'.format(
-            ' '.join(packages)
-        )
-    out = __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
-    for line in out.splitlines():
+    cmd = ['rpm', '-q' if packages else '-qa',
+           '--queryformat', r'%{NAME} %{VERSION}\n']
+    if packages:
+        cmd.extend(packages)
+    out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    for line in salt.utils.itertools.split(out, '\n'):
         if 'is not installed' in line:
             errors.append(line)
             continue
@@ -260,11 +329,12 @@ def file_dict(*packages):
         pkgs[comps[0]] = {'version': comps[1]}
     for pkg in pkgs:
         files = []
-        cmd = 'rpm -ql {0}'.format(pkg)
-        out = __salt__['cmd.run'](cmd, python_shell=False, output_loglevel='trace')
-        for line in out.splitlines():
-            files.append(line)
-        ret[pkg] = files
+        cmd = ['rpm', '-ql', pkg]
+        out = __salt__['cmd.run'](
+            ['rpm', '-ql', pkg],
+            output_loglevel='trace',
+            python_shell=False)
+        ret[pkg] = out.splitlines()
     return {'errors': errors, 'packages': ret}
 
 
@@ -288,10 +358,11 @@ def owner(*paths):
     if not paths:
         return ''
     ret = {}
-    cmd = 'rpm -qf --queryformat "%{{NAME}}" {0!r}'
     for path in paths:
-        ret[path] = __salt__['cmd.run_stdout'](cmd.format(path),
-                                               output_loglevel='trace')
+        cmd = ['rpm', '-qf', '--queryformat', '%{name}', path]
+        ret[path] = __salt__['cmd.run_stdout'](cmd,
+                                               output_loglevel='trace',
+                                               python_shell=False)
         if 'not owned' in ret[path].lower():
             ret[path] = ''
     if len(ret) == 1:
@@ -322,8 +393,105 @@ def diff(package, path):
     cmd = "rpm2cpio {0} " \
           "| cpio -i --quiet --to-stdout .{1} " \
           "| diff -u --label 'A {1}' --from-file=- --label 'B {1}' {1}"
-    res = __salt__['cmd.shell'](cmd.format(package, path), output_loglevel='trace')
+    res = __salt__['cmd.shell'](cmd.format(package, path),
+                                output_loglevel='trace')
     if res and res.startswith('Binary file'):
-        return 'File "{0}" is binary and its content has been modified.'.format(path)
+        return 'File \'{0}\' is binary and its content has been ' \
+               'modified.'.format(path)
 
     return res
+
+
+def _pkg_time_to_iso(pkg_time):
+    '''
+    Convert package time to ISO 8601.
+
+    :param pkg_time:
+    :return:
+    '''
+    ptime = time.strptime(pkg_time, '%a %d %b %Y %H:%M:%S %p %Z')
+    return datetime.datetime(ptime.tm_year, ptime.tm_mon, ptime.tm_mday,
+                             ptime.tm_hour, ptime.tm_min, ptime.tm_sec).isoformat() + "Z"
+
+
+def info(*packages):
+    '''
+    Return a detailed package(s) summary information.
+    If no packages specified, all packages will be returned.
+
+    :param packages:
+    :return:
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' lowpkg.info apache2 bash
+    '''
+
+    cmd = packages and "rpm -q {0}".format(' '.join(packages)) or "rpm -qa"
+
+    # Locale needs to be en_US instead of C, because RPM otherwise will yank the timezone from the timestamps
+    call = __salt__['cmd.run_all'](cmd + (" --queryformat 'Name: %{NAME}\n"
+                                                          "Relocations: %|PREFIXES?{[%{PREFIXES} ]}:{(not relocatable)}|\n"
+                                                          "Version: %{VERSION}\n"
+                                                          "Vendor: %{VENDOR}\n"
+                                                          "Release: %{RELEASE}\n"
+                                                          "Build Date: %{BUILDTIME:date}\n"
+                                                          "Install Date: %|INSTALLTIME?{%{INSTALLTIME:date}}:{(not installed)}|\n"
+                                                          "Build Host: %{BUILDHOST}\n"
+                                                          "Group: %{GROUP}\n"
+                                                          "Source RPM: %{SOURCERPM}\n"
+                                                          "Size: %{LONGSIZE}\n"
+                                                          "%|LICENSE?{License: %{LICENSE}\n}|"
+                                                          "Signature: %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:{%|SIGGPG?{%{SIGGPG:pgpsig}}:{%|SIGPGP?{%{SIGPGP:pgpsig}}:{(none)}|}|}|}|\n"
+                                                          "%|PACKAGER?{Packager: %{PACKAGER}\n}|"
+                                                          "%|URL?{URL: %{URL}\n}|"
+                                                          "Summary: %{SUMMARY}\n"
+                                                          "Description:\n%{DESCRIPTION}\n"
+                                                          "-----\n'"),
+                                   output_loglevel='trace', env={'LC_ALL': 'en_US', 'TZ': 'UTC'}, clean_env=True)
+    if call['retcode'] != 0:
+        comment = ''
+        if 'stderr' in call:
+            comment += (call['stderr'] or call['stdout'])
+        raise CommandExecutionError('{0}'.format(comment))
+    else:
+        out = call['stdout']
+
+    ret = dict()
+    for pkg_info in re.split(r"----*", out):
+        pkg_info = pkg_info.strip()
+        if not pkg_info:
+            continue
+        pkg_info = pkg_info.split(os.linesep)
+        if pkg_info[-1].lower().startswith('distribution'):
+            pkg_info = pkg_info[:-1]
+
+        pkg_data = dict()
+        pkg_name = None
+        descr_marker = False
+        descr = list()
+        for line in pkg_info:
+            if descr_marker:
+                descr.append(line)
+                continue
+            line = [item.strip() for item in line.split(':', 1)]
+            if len(line) != 2:
+                continue
+            key, value = line
+            key = key.replace(' ', '_').lower()
+            if key == 'description':
+                descr_marker = True
+                continue
+            if key == 'name':
+                pkg_name = value
+            if key in ['build_date', 'install_date']:
+                value = _pkg_time_to_iso(value)
+            if key != 'description' and value:
+                pkg_data[key] = value
+        pkg_data['description'] = os.linesep.join(descr)
+        if pkg_name:
+            ret[pkg_name] = pkg_data
+
+    return ret

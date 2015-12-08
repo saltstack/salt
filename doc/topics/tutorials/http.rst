@@ -2,8 +2,9 @@ HTTP Modules
 ============
 
 This tutorial demonstrates using the various HTTP modules available in Salt.
-These modules wrap the Python ``urllib2`` and ``requests`` libraries, extending
-them in a manner that is more consistent with Salt workflows.
+These modules wrap the Python ``tornado``, ``urllib2``, and ``requests``
+libraries, extending them in a manner that is more consistent with Salt
+workflows.
 
 The ``salt.utils.http`` Library
 -------------------------------
@@ -26,13 +27,20 @@ This library can be imported with:
 Configuring Libraries
 ~~~~~~~~~~~~~~~~~~~~~
 
-This library can make use of either ``urllib2``, which ships with Python, or
-``requests``, which can be installed separately. By default, ``urllib2`` will
-be used. In order to switch to ``requests``, set the following variable:
+This library can make use of either ``tornado``, which is required by Salt,
+``urllib2``, which ships with Python, or ``requests``, which can be installed
+separately. By default, ``tornado`` will be used. In order to switch to
+``urllib2``, set the following variable:
 
 .. code-block:: yaml
 
-    requests_lib: True
+    backend: urllib2
+
+In order to switch to ``requests``, set the following variable:
+
+.. code-block:: yaml
+
+    backend: requests
 
 This can be set in the master or minion configuration file, or passed as an
 option directly to any ``http.query()`` functions.
@@ -42,8 +50,9 @@ option directly to any ``http.query()`` functions.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This function forms a basic query, but with some add-ons not present in the
-``urllib2`` and ``requests`` libraries. Not all functionality currently
-available in these libraries has been added, but can be in future iterations.
+``tornado``, ``urllib2``, and ``requests`` libraries. Not all functionality
+currently available in these libraries has been added, but can be in future
+iterations.
 
 A basic query can be performed by calling this function with no more than a
 single URL:
@@ -301,7 +310,7 @@ debugging purposes, SSL verification can be turned off.
 
     salt.utils.http.query(
         'https://example.com',
-        ssl_verify=False,
+        verify_ssl=False,
     )
 
 CA Bundles

@@ -3,13 +3,14 @@
 Support for getting and setting the environment variables
 of the current salt process.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 
 # Import salt libs
-from salt.ext.six import string_types
+import salt.utils as utils
+import salt.ext.six as six
 
 
 def __virtual__():
@@ -23,7 +24,8 @@ def setenv(name,
            value,
            false_unsets=False,
            clear_all=False,
-           update_minion=False):
+           update_minion=False,
+           permanent=False):
     '''
     Set the salt process environment variables.
 
@@ -56,7 +58,15 @@ def setenv(name,
         current salt subprocess.
         Default: False
 
-    CLI Example:
+    permanent
+        On Windows minions this will set the environment variable in the
+        registry so that it is always added as a environment variable when
+        applications open. If you want to set the variable to HKLM instead of
+        HKCU just pass in "HKLM" for this parameter. On all other minion types
+        this will be ignored. Note: This will only take affect on applications
+        opened after this has been set.
+
+    Example:
 
     .. code-block:: yaml
 
@@ -79,13 +89,13 @@ def setenv(name,
            'result': True,
            'comment': ''}
     environ = {}
-    if isinstance(value, string_types):
+    if isinstance(value, six.string_types) or value is False:
         environ[name] = value
     elif isinstance(value, dict):
         environ = value
     else:
         ret['result'] = False
-        ret['comment'] = 'Environ value must be string or dict'
+        ret['comment'] = 'Environ value must be string, dict or False'
         return ret
 
     if clear_all is True:
@@ -101,12 +111,25 @@ def setenv(name,
 
     current_environ = dict(os.environ)
     already_set = []
-    for key, val in environ.items():
+    for key, val in six.iteritems(environ):
         if val is False:
             # We unset this key from the environment if
             # false_unsets is True. Otherwise we want to set
             # the value to ''
-            if current_environ.get(key, None) is None:
+            def key_exists():
+                if utils.is_windows():
+                    permanent_hive = 'HKCU'
+                    permanent_key = 'Environment'
+                    if permanent == 'HKLM':
+                        permanent_hive = 'HKLM'
+                        permanent_key = r'SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+
+                    out = __salt__['reg.read_value'](permanent_hive, permanent_key, key)
+                    return out['success'] is True
+                else:
+                    return False
+
+            if current_environ.get(key, None) is None and not key_exists():
                 # The key does not exist in environment
                 if false_unsets is not True:
                     # This key will be added with value ''
@@ -137,7 +160,8 @@ def setenv(name,
         environ_ret = __salt__['environ.setenv'](environ,
                                                  false_unsets,
                                                  clear_all,
-                                                 update_minion)
+                                                 update_minion,
+                                                 permanent)
         if not environ_ret:
             ret['result'] = False
             ret['comment'] = 'Failed to set environ variables'

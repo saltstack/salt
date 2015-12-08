@@ -3,35 +3,57 @@ FreeBSD
 =======
 
 Salt was added to the FreeBSD ports tree Dec 26th, 2011 by Christer Edwards
-<christer.edwards@gmail.com>. It has been tested on FreeBSD 7.4, 8.2, 9.0, and 9.1
-releases.
-
-Salt is dependent on the following additional ports. These will be installed as
-dependencies of the ``sysutils/py-salt`` port:
-
-.. code-block:: text
-
-   /devel/py-yaml
-   /devel/py-pyzmq
-   /devel/py-Jinja2
-   /devel/py-msgpack
-   /security/py-pycrypto
-   /security/py-m2crypto
+<christer.edwards@gmail.com>. It has been tested on FreeBSD 7.4, 8.2, 9.0,
+9.1, 10.0 and later releases.
 
 Installation
 ============
 
-On FreeBSD 10 and later, to install Salt from the FreeBSD pkgng repo, use the command:
+Salt is available in binary package form from both the FreeBSD pkgng repository
+or directly from SaltStack. The instructions below outline installation via
+both methods:
 
-.. code-block:: bash
+FreeBSD repo
+============
+
+The FreeBSD pkgng repository is preconfigured on systems 10.x and above. No
+configuration is needed to pull from these repositories. 
+
+.. code-block:: shell
 
     pkg install py27-salt
 
-On older versions of FreeBSD, to install Salt from the FreeBSD ports tree, use the command:
+These packages are usually available within a few days of upstream release.
 
-.. code-block:: bash
+.. _freebsd-upstream:
 
-    make -C /usr/ports/sysutils/py-salt install clean
+SaltStack repo
+==============
+
+SaltStack also hosts internal binary builds of the Salt package, available from
+https://repo.saltstack.com/freebsd/. To make use of this repository, add the
+following file to your system:
+
+**/usr/local/etc/pkg/repos/saltstack.conf:**
+
+.. code-block:: json 
+
+    saltstack: {
+      url: "https://repo.saltstack.com/freebsd/${ABI}/",
+      mirror_type: "http",
+      enabled: yes
+      priority: 10
+    }
+
+You should now be able to install Salt from this new repository:
+
+.. code-block:: shell
+
+    pkg install py27-salt
+
+These packages are usually available earlier than upstream FreeBSD. Also
+available are release candidates and development releases. Use these pre-release
+packages with caution.
 
 Post-installation tasks
 =======================
@@ -40,23 +62,23 @@ Post-installation tasks
 
 Copy the sample configuration file:
 
-.. code-block:: bash
+.. code-block:: shell
 
    cp /usr/local/etc/salt/master.sample /usr/local/etc/salt/master
 
 **rc.conf**
 
-Activate the Salt Master in ``/etc/rc.conf`` or ``/etc/rc.conf.local`` and add:
+Activate the Salt Master in ``/etc/rc.conf``:
 
-.. code-block:: diff
+.. code-block:: shell
 
-   + salt_master_enable="YES"
+   sysrc salt_master_enable="YES"
 
 **Start the Master**
 
 Start the Salt Master as follows:
 
-.. code-block:: bash
+.. code-block:: shell
 
    service salt_master start
 
@@ -64,24 +86,23 @@ Start the Salt Master as follows:
 
 Copy the sample configuration file:
 
-.. code-block:: bash
+.. code-block:: shell
 
    cp /usr/local/etc/salt/minion.sample /usr/local/etc/salt/minion
 
 **rc.conf**
 
-Activate the Salt Minion in ``/etc/rc.conf`` or ``/etc/rc.conf.local`` and add:
+Activate the Salt Minion in ``/etc/rc.conf``:
 
-.. code-block:: diff
+.. code-block:: shell
 
-   + salt_minion_enable="YES"
-   + salt_minion_paths="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
+   sysrc salt_minion_enable="YES"
 
 **Start the Minion**
 
 Start the Salt Minion as follows:
 
-.. code-block:: bash
+.. code-block:: shell
 
    service salt_minion start
 

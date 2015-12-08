@@ -7,9 +7,9 @@ Install Salt on an LXC Container
 
 Please read :ref:`core config documentation <config_lxc>`.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import json
 import os
 import logging
@@ -29,6 +29,9 @@ import salt.client
 import salt.runner
 import salt.syspaths
 
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 # Get logging started
 log = logging.getLogger(__name__)
@@ -275,10 +278,14 @@ def list_nodes(conn=None, call=None):
         hide = True
     if not get_configured_provider():
         return
-    lxclist = _salt('lxc.list', extra=True)
+
+    path = None
+    if profile and profile in profiles:
+        path = profiles[profile].get('path', None)
+    lxclist = _salt('lxc.list', extra=True, path=path)
     nodes = {}
-    for state, lxcs in lxclist.items():
-        for lxcc, linfos in lxcs.items():
+    for state, lxcs in six.iteritems(lxclist):
+        for lxcc, linfos in six.iteritems(lxcs):
             info = {
                 'id': lxcc,
                 'image': None,
@@ -292,10 +299,9 @@ def list_nodes(conn=None, call=None):
             # do not also mask half configured nodes which are explicitly asked
             # to be acted on, on the command line
             if (
-                (call in ['full'] or not hide)
-                and (
-                    (lxcc in names and call in ['action'])
-                    or (call in ['full'])
+                (call in ['full'] or not hide) and (
+                    (lxcc in names and call in ['action']) or (
+                        call in ['full'])
                 )
             ):
                 nodes[lxcc] = info
@@ -380,7 +386,7 @@ def destroy(vm_, call=None):
         return
     ret = {'comment': '{0} was not found'.format(vm_),
            'result': False}
-    if _salt('lxc.info', vm_):
+    if _salt('lxc.info', vm_, path=path):
         salt.utils.cloud.fire_event(
             'event',
             'destroying instance',
@@ -388,7 +394,7 @@ def destroy(vm_, call=None):
             {'name': vm_, 'instance_id': vm_},
             transport=__opts__['transport']
         )
-        cret = _salt('lxc.destroy', vm_, stop=True)
+        cret = _salt('lxc.destroy', vm_, stop=True, path=path)
         ret['result'] = cret['result']
         if ret['result']:
             ret['comment'] = '{0} was destroyed'.format(vm_)
@@ -421,11 +427,16 @@ def create(vm_, call=None):
         'lxc_profile',
         vm_.get('container_profile', None))
 
+    # Since using "provider: <provider-engine>" is deprecated, alias provider
+    # to use driver: "driver: <provider-engine>"
+    if 'provider' in vm_:
+        vm_['driver'] = vm_.pop('provider')
+
     salt.utils.cloud.fire_event(
         'event', 'starting create',
         'salt/cloud/{0}/creating'.format(vm_['name']),
         {'name': vm_['name'], 'profile': profile,
-         'provider': vm_['provider'], },
+         'provider': vm_['driver'], },
         transport=__opts__['transport'])
     ret = {'name': vm_['name'], 'changes': {}, 'result': True, 'comment': ''}
     if 'pub_key' not in vm_ and 'priv_key' not in vm_:
@@ -455,6 +466,18 @@ def create(vm_, call=None):
     if 'profile' in __opts__:
         __opts__['internal_lxc_profile'] = __opts__['profile']
         del __opts__['profile']
+
+    salt.utils.cloud.fire_event(
+        'event',
+        'created instance',
+        'salt/cloud/{0}/created'.format(vm_['name']),
+        {
+            'name': vm_['name'],
+            'profile': vm_['profile'],
+            'provider': vm_['driver'],
+        },
+        transport=__opts__['transport']
+    )
 
     return ret
 
@@ -504,27 +527,27 @@ def get_configured_provider(vm_=None):
         profs = __opts__['profiles']
         tgt = 'profile: {0}'.format(curprof)
         if (
-            curprof in profs
-            and profs[curprof]['provider'] == __active_provider_name__
+            curprof in profs and
+            profs[curprof]['provider'] == __active_provider_name__
         ):
             prov, cdriver = profs[curprof]['provider'].split(':')
             tgt += ' provider: {0}'.format(prov)
             data = get_provider(prov)
             matched = True
     # fallback if we have only __active_provider_name__
-    if ((__opts__.get('destroy', False) and not data)
-        or (not matched and __active_provider_name__)):
+    if (
+        (__opts__.get('destroy', False) and not data) or (
+            not matched and __active_provider_name__
+        )
+    ):
         data = __opts__.get('providers',
-                           {}).get(dalias, {}).get(driver, {})
+                            {}).get(dalias, {}).get(driver, {})
     # in all cases, verify that the linked saltmaster is alive.
     if data:
-        try:
-            ret = _salt('test.ping', salt_target=data['target'])
-            if not ret:
-                raise Exception('error')
-            return data
-        except Exception:
+        ret = _salt('test.ping', salt_target=data['target'])
+        if not ret:
             raise SaltCloudSystemExit(
                 'Configured provider {0} minion: {1} is unreachable'.format(
                     __active_provider_name__, data['target']))
+        return data
     return False

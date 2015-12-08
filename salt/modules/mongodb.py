@@ -70,6 +70,20 @@ def _connect(user=None, password=None, host=None, port=None, database='admin'):
     return conn
 
 
+def _to_dict(objects):
+    """
+    Potentially interprets a string as JSON for usage with mongo
+    """
+    try:
+        if isinstance(objects, string_types):
+            objects = json.loads(objects)
+    except ValueError as err:
+        log.error("Could not parse objects: %s", err)
+        raise err
+
+    return objects
+
+
 def db_list(user=None, password=None, host=None, port=None):
     '''
     List all Mongodb databases
@@ -194,6 +208,10 @@ def user_exists(name, user=None, password=None, host=None, port=None,
         salt '*' mongodb.user_exists <name> <user> <password> <host> <port> <database>
     '''
     users = user_list(user, password, host, port, database)
+
+    if isinstance(users, string_types):
+        return 'Failed to connect to mongo database'
+
     for user in users:
         if name == dict(user).get('user'):
             return True
@@ -260,18 +278,120 @@ def user_remove(name, user=None, password=None, host=None, port=None,
     return True
 
 
-def _to_dict(objects):
-    """
-    Potentially interprets a string as JSON for usage with mongo
-    """
-    try:
-        if isinstance(objects, string_types):
-            objects = json.loads(objects)
-    except ValueError as err:
-        log.error("Could not parse objects: %s", err)
-        raise err
+def user_roles_exists(name, roles, database, user=None, password=None, host=None,
+                      port=None):
+    '''
+    Checks if a user of a Mongodb database has specified roles
 
-    return objects
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_roles_exists johndoe '["readWrite"]' dbname admin adminpwd localhost 27017
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_roles_exists johndoe '[{"role": "readWrite", "db": "dbname" }, {"role": "read", "db": "otherdb"}]' dbname admin adminpwd localhost 27017
+    '''
+    try:
+        roles = _to_dict(roles)
+    except Exception:
+        return 'Roles provided in wrong format'
+
+    users = user_list(user, password, host, port, database)
+
+    if isinstance(users, string_types):
+        return 'Failed to connect to mongo database'
+
+    for user in users:
+        if name == dict(user).get('user'):
+            for role in roles:
+                # if the role was provided in the shortened form, we convert it to a long form
+                if not isinstance(role, dict):
+                    role = {'role': role, 'db': database}
+                if role not in dict(user).get('roles', []):
+                    return False
+            return True
+
+    return False
+
+
+def user_grant_roles(name, roles, database, user=None, password=None, host=None,
+                     port=None):
+    '''
+    Grant one or many roles to a Mongodb user
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_grant_roles johndoe '["readWrite"]' dbname admin adminpwd localhost 27017
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_grant_roles janedoe '[{"role": "readWrite", "db": "dbname" }, {"role": "read", "db": "otherdb"}]' dbname admin adminpwd localhost 27017
+    '''
+    conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
+
+    try:
+        roles = _to_dict(roles)
+    except Exception:
+        return 'Roles provided in wrong format'
+
+    try:
+        log.info('Granting roles {0} to user {1}'.format(roles, name))
+        mdb = pymongo.database.Database(conn, database)
+        mdb.eval("db.grantRolesToUser('{0}', {1})".format(name, roles))
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Granting roles {0} to user {1} failed with error: {2}'.format(
+                roles, name, str(err)
+            )
+        )
+        return str(err)
+
+    return True
+
+
+def user_revoke_roles(name, roles, database, user=None, password=None, host=None,
+                      port=None):
+    '''
+    Revoke one or many roles to a Mongodb user
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_revoke_roles johndoe '["readWrite"]' dbname admin adminpwd localhost 27017
+
+    .. code-block:: bash
+
+        salt '*' mongodb.user_revoke_roles janedoe '[{"role": "readWrite", "db": "dbname" }, {"role": "read", "db": "otherdb"}]' dbname admin adminpwd localhost 27017
+    '''
+    conn = _connect(user, password, host, port)
+    if not conn:
+        return 'Failed to connect to mongo database'
+
+    try:
+        roles = _to_dict(roles)
+    except Exception:
+        return 'Roles provided in wrong format'
+
+    try:
+        log.info('Revoking roles {0} from user {1}'.format(roles, name))
+        mdb = pymongo.database.Database(conn, database)
+        mdb.eval("db.revokeRolesFromUser('{0}', {1})".format(name, roles))
+    except pymongo.errors.PyMongoError as err:
+        log.error(
+            'Revoking roles {0} from user {1} failed with error: {2}'.format(
+                roles, name, str(err)
+            )
+        )
+        return str(err)
+
+    return True
 
 
 def insert(objects, collection, user=None, password=None,
@@ -292,7 +412,7 @@ def insert(objects, collection, user=None, password=None,
 
     try:
         objects = _to_dict(objects)
-    except Exception, err:
+    except Exception as err:
         return err
 
     try:
@@ -314,7 +434,7 @@ def find(collection, query=None, user=None, password=None,
 
     try:
         query = _to_dict(query)
-    except Exception, err:
+    except Exception as err:
         return err
 
     try:
@@ -346,7 +466,7 @@ def remove(collection, query=None, user=None, password=None,
 
     try:
         query = _to_dict(query)
-    except Exception, err:
+    except Exception as err:
         return err.message
 
     try:

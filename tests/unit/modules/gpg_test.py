@@ -42,11 +42,15 @@ class Mockgnupg(object):
     __version__ = '1.3.1'
     fingerprint = u'F321F'
     counts = {}
-    imported = True
+    count = ''
+    imported = False
+    imported_rsa = False
     results = [{'ok': '1', 'fingerprint': u'F321F'}]
     data = True
     trust_level = None
     ok = True
+    unchanged = False
+    not_imported = False
 
     class GPG(object):
         '''
@@ -332,8 +336,11 @@ class GpgTestCase(TestCase):
                 self.assertRaises(SaltInvocationError, gpg.import_key,
                                   filename='/path/to/public-key-file')
 
-            self.assertDictEqual(gpg.import_key
-                                 (text='-BEGIN PGP PUBLIC KEY BLOCK-'), ret)
+            gpg.GPG_1_3_1 = True
+            self.assertDictEqual(gpg.import_key(text='-BEGIN PGP PUBLIC KEY BLOCK-'), ret)
+
+            gpg.GPG_1_3_1 = False
+            self.assertDictEqual(gpg.import_key(text='-BEGIN PGP PUBLIC KEY BLOCK-'), ret)
 
     # 'export_key' function tests: 1
 

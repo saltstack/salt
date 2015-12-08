@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
-
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 '''
 This script is used to test Salt from a Jenkins server, specifically
 jenkins.saltstack.com.
@@ -9,7 +8,7 @@ This script is intended to be shell-centric!!
 '''
 
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import glob
 import os
 import re
@@ -21,6 +20,7 @@ import optparse
 import subprocess
 
 # Import Salt libs
+import salt.utils
 try:
     from salt.utils.nb_popen import NonBlockingPopen
 except ImportError:
@@ -455,7 +455,8 @@ def run(opts):
                 delete_vm(opts)
             sys.exit(retcode)
 
-        if not stdout.strip():
+        outstr = salt.utils.to_str(stdout).strip()
+        if not outstr:
             print('Failed to get the bootstrapped minion version(no output). Exit code: {0}'.format(retcode))
             sys.stdout.flush()
             if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
@@ -463,7 +464,7 @@ def run(opts):
             sys.exit(retcode)
 
         try:
-            version_info = json.loads(stdout.strip())
+            version_info = json.loads(outstr)
             bootstrap_minion_version = os.environ.get(
                 'SALT_MINION_BOOTSTRAP_RELEASE',
                 opts.bootstrap_salt_commit[:7]
@@ -472,7 +473,12 @@ def run(opts):
             if bootstrap_minion_version not in version_info[vm_name]:
                 print('\n\nATTENTION!!!!\n')
                 print('The boostrapped minion version commit does not contain the desired commit:')
-                print(' {0!r} does not contain {1!r}'.format(version_info[vm_name], bootstrap_minion_version))
+                print(
+                    ' \'{0}\' does not contain \'{1}\''.format(
+                        version_info[vm_name],
+                        bootstrap_minion_version
+                    )
+                )
                 print('\n\n')
                 sys.stdout.flush()
                 #if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
@@ -481,7 +487,7 @@ def run(opts):
             else:
                 print('matches!')
         except ValueError:
-            print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
+            print('Failed to load any JSON from \'{0}\''.format(outstr))
 
     if opts.cloud_only:
         # Run Cloud Provider tests preparation SLS
@@ -517,11 +523,10 @@ def run(opts):
     stdout, stderr = proc.communicate()
 
     if stdout:
-        print(stdout)
-    sys.stdout.flush()
+        print(salt.utils.to_str(stdout))
     if stderr:
-        print(stderr)
-    sys.stderr.flush()
+        print(salt.utils.to_str(stderr))
+    sys.stdout.flush()
 
     retcode = proc.returncode
     if retcode != 0:
@@ -556,10 +561,9 @@ def run(opts):
         if stdout:
             # DO NOT print the state return here!
             print('Cloud configuration files provisioned via pillar.')
-        sys.stdout.flush()
         if stderr:
-            print(stderr)
-        sys.stderr.flush()
+            print(salt.utils.to_str(stderr))
+        sys.stdout.flush()
 
         retcode = proc.returncode
         if retcode != 0:
@@ -593,11 +597,10 @@ def run(opts):
         stdout, stderr = proc.communicate()
 
         if stdout:
-            print(stdout)
-        sys.stdout.flush()
+            print(salt.utils.to_str(stdout))
         if stderr:
-            print(stderr)
-        sys.stderr.flush()
+            print(salt.utils.to_str(stderr))
+        sys.stdout.flush()
 
         retcode = proc.returncode
         if retcode != 0:
@@ -623,7 +626,7 @@ def run(opts):
             stderr=subprocess.PIPE,
         )
 
-        proc.communicate()
+        stdout, _ = proc.communicate()
 
         retcode = proc.returncode
         if retcode != 0:
@@ -644,14 +647,14 @@ def run(opts):
             remotes_info = json.loads(stdout.strip())
             if remotes_info is None or remotes_info[vm_name] is None or opts.test_git_url not in remotes_info[vm_name]:
                 print('The cloned repository remote is not the desired one:')
-                print(' {0!r} is not in {1}'.format(opts.test_git_url, remotes_info))
+                print(' \'{0}\' is not in {1}'.format(opts.test_git_url, remotes_info))
                 sys.stdout.flush()
                 if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                     delete_vm(opts)
                 sys.exit(retcode)
             print('matches!')
         except ValueError:
-            print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
+            print('Failed to load any JSON from \'{0}\''.format(salt.utils.to_str(stdout).strip()))
 
     if opts.test_git_commit is not None:
         time.sleep(1)
@@ -690,14 +693,14 @@ def run(opts):
             revision_info = json.loads(stdout.strip())
             if revision_info[vm_name][7:] != opts.test_git_commit[7:]:
                 print('The cloned repository commit is not the desired one:')
-                print(' {0!r} != {1!r}'.format(revision_info[vm_name][:7], opts.test_git_commit[:7]))
+                print(' \'{0}\' != \'{1}\''.format(revision_info[vm_name][:7], opts.test_git_commit[:7]))
                 sys.stdout.flush()
                 if opts.clean and 'JENKINS_SALTCLOUD_VM_NAME' not in os.environ:
                     delete_vm(opts)
                 sys.exit(retcode)
             print('matches!')
         except ValueError:
-            print('Failed to load any JSON from {0!r}'.format(stdout.strip()))
+            print('Failed to load any JSON from \'{0}\''.format(salt.utils.to_str(stdout).strip()))
 
     # Run tests here
     time.sleep(3)
@@ -719,15 +722,15 @@ def run(opts):
     )
     stdout, stderr = proc.communicate()
 
-    if stdout:
-        print(stdout)
-    sys.stdout.flush()
+    outstr = salt.utils.to_str(stdout)
+    if outstr:
+        print(outstr)
     if stderr:
-        print(stderr)
-    sys.stderr.flush()
+        print(salt.utils.to_str(stderr))
+    sys.stdout.flush()
 
     try:
-        match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', stdout)
+        match = re.search(r'Test Suite Exit Code: (?P<exitcode>[\d]+)', outstr)
         retcode = int(match.group('exitcode'))
     except AttributeError:
         # No regex matching
@@ -738,7 +741,7 @@ def run(opts):
     except TypeError:
         # No output!?
         retcode = 1
-        if stdout:
+        if outstr:
             # Anything else, raise the exception
             raise
 
@@ -763,11 +766,10 @@ def run(opts):
         stdout, stderr = proc.communicate()
 
         if stdout:
-            print(stdout)
-        sys.stdout.flush()
+            print(salt.utils.to_str(stdout))
         if stderr:
-            print(stderr)
-        sys.stderr.flush()
+            print(salt.utils.to_str(stderr))
+        sys.stdout.flush()
 
         # Grab packages and log file (or just log file if build failed)
         download_packages(opts)
@@ -831,8 +833,10 @@ def parse():
     parser.add_option(
         '--test-transport',
         default='zeromq',
-        choices=('zeromq', 'raet'),
-        help='Set to raet to run integration tests with raet transport. Default: %default')
+        choices=('zeromq', 'raet', 'tcp'),
+        help=('Select which transport to run the integration tests with, '
+              'zeromq, raet, or tcp. Default: %default')
+    )
     parser.add_option(
         '--test-without-coverage',
         default=False,

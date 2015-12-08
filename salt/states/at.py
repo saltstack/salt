@@ -66,16 +66,11 @@ def present(name, timespec, tag=None, user=None, job=None):
                                                                      timespec)
         return ret
 
-    if __grains__['os_family'] == 'RedHat':
-        echo_cmd = 'echo -e'
-    else:
-        echo_cmd = 'echo'
-
     if tag:
-        cmd = '{0} "### SALT: {4}\n{1}" | {2} {3}'.format(echo_cmd,
-            job, binary, timespec, tag)
+        stdin = '### SALT: {0}\n{1}'.format(tag, job)
     else:
-        cmd = '{0} "{1}" | {2} {3}'.format(echo_cmd, name, binary, timespec)
+        stdin = name
+    cmd = '{0} {1}'.format(binary, timespec)
 
     if user:
         luser = __salt__['user.info'](user)
@@ -83,9 +78,9 @@ def present(name, timespec, tag=None, user=None, job=None):
             ret['comment'] = 'User: {0} is not exists'.format(user)
             ret['result'] = False
             return ret
-        ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd), runas=user)
+        ret['comment'] = __salt__['cmd.run'](cmd, stdin=stdin, runas=user)
     else:
-        ret['comment'] = __salt__['cmd.run']('{0}'.format(cmd))
+        ret['comment'] = __salt__['cmd.run'](cmd, stdin=stdin)
 
     return ret
 

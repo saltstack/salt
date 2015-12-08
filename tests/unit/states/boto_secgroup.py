@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+# import Python Libs
+from __future__ import absolute_import
+
 # Import Salt Testing Libs
 from salttesting.case import TestCase
 from salttesting.helpers import ensure_in_syspath

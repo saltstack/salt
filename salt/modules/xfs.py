@@ -25,15 +25,20 @@
 Module for managing XFS file systems.
 '''
 
+# Import Python libs
 from __future__ import absolute_import
 import os
 import re
 import time
 import logging
-from salt.ext.six.moves import range
 
+# Import Salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
@@ -325,7 +330,7 @@ def _blkid_output(out):
             data[dev.pop("devname")] = dev
 
     mounts = _get_mounts()
-    for device in mounts.keys():
+    for device in six.iterkeys(mounts):
         if data.get(device):
             data[device].update(mounts[device])
 

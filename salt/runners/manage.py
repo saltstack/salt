@@ -14,6 +14,7 @@ import tempfile
 import time
 
 # Import 3rd-party libs
+import salt.ext.six as six
 from salt.ext.six.moves.urllib.request import urlopen as _urlopen  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
@@ -23,7 +24,7 @@ import salt.utils
 import salt.utils.minions
 import salt.wheel
 import salt.version
-import salt.ext.six as six
+from salt.utils.event import tagify
 from salt.exceptions import SaltClientError
 
 FINGERPRINT_REGEX = re.compile(r'^([a-f0-9]{2}:){15}([a-f0-9]{2})$')
@@ -141,10 +142,12 @@ def up():  # pylint: disable=C0103
     return ret
 
 
-def present(subset=None, show_ipv4=False):
+def list_state(subset=None, show_ipv4=False, state=None):
     '''
+    .. versionadded:: 2015.8.0
+
     Print a list of all minions that are up according to Salt's presence
-    detection (no commands will be sent)
+    detection (no commands will be sent to minions)
 
     subset : None
         Pass in a CIDR range to filter minions by IP address.
@@ -152,20 +155,31 @@ def present(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
+    state : 'available'
+        Show minions being in specific state that is one of 'available', 'joined',
+        'allowed', 'alived' or 'reaped'.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt-run manage.present
+        salt-run manage.list_state
     '''
     conf_file = __opts__['conf_file']
     opts = salt.config.client_config(conf_file)
     if opts['transport'] == 'raet':
-        event = salt.utils.raetevent.PresenceEvent(__opts__, __opts__['sock_dir'])
-        data = event.get_event(wait=60, tag=salt.utils.event.tagify('present', 'presence'))
-        present = data['present'] if data else []
-        minions = [m for m in present if m in subset] if subset else present
+        event = salt.utils.raetevent.PresenceEvent(__opts__, __opts__['sock_dir'], state=state)
+        data = event.get_event(wait=60, tag=tagify('present', 'presence'))
+        key = 'present' if state is None else state
+        if not data or key not in data:
+            minions = []
+        else:
+            minions = data[key]
+            if subset:
+                minions = [m for m in minions if m in subset]
     else:
+        # Always return 'present' for 0MQ for now
+        # TODO: implement other states spport for 0MQ
         ckminions = salt.utils.minions.CkMinions(__opts__)
         minions = ckminions.connected_ids(show_ipv4=show_ipv4, subset=subset)
 
@@ -174,10 +188,12 @@ def present(subset=None, show_ipv4=False):
     return connected
 
 
-def not_present(subset=None, show_ipv4=False):
+def list_not_state(subset=None, show_ipv4=False, state=None):
     '''
+    .. versionadded:: 2015.8.0
+
     Print a list of all minions that are NOT up according to Salt's presence
-    detection (no commands will be sent)
+    detection (no commands will be sent to minions)
 
     subset : None
         Pass in a CIDR range to filter minions by IP address.
@@ -185,13 +201,17 @@ def not_present(subset=None, show_ipv4=False):
     show_ipv4 : False
         Also show the IP address each minion is connecting from.
 
+    state : 'available'
+        Show minions being in specific state that is one of 'available', 'joined',
+        'allowed', 'alived' or 'reaped'.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt-run manage.not_present
+        salt-run manage.list_not_state
     '''
-    connected = present(subset=None, show_ipv4=show_ipv4)
+    connected = list_state(subset=None, show_ipv4=show_ipv4, state=state)
 
     key = salt.key.get_key(__opts__)
     keys = key.list_keys()
@@ -211,6 +231,286 @@ def not_present(subset=None, show_ipv4=False):
     return not_connected
 
 
+def present(subset=None, show_ipv4=False):
+    '''
+    Print a list of all minions that are up according to Salt's presence
+    detection (no commands will be sent to minions)
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.present
+    '''
+    return list_state(subset=subset, show_ipv4=show_ipv4)
+
+
+def not_present(subset=None, show_ipv4=False):
+    '''
+    .. versionadded:: 2015.5.0
+
+    Print a list of all minions that are NOT up according to Salt's presence
+    detection (no commands will be sent)
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.not_present
+    '''
+    return list_not_state(subset=subset, show_ipv4=show_ipv4)
+
+
+def joined(subset=None, show_ipv4=False):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Print a list of all minions that are up according to Salt's presence
+    detection (no commands will be sent to minions)
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.joined
+    '''
+    return list_state(subset=subset, show_ipv4=show_ipv4, state='joined')
+
+
+def not_joined(subset=None, show_ipv4=False):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Print a list of all minions that are NOT up according to Salt's presence
+    detection (no commands will be sent)
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.not_joined
+    '''
+    return list_not_state(subset=subset, show_ipv4=show_ipv4, state='joined')
+
+
+def allowed(subset=None, show_ipv4=False):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Print a list of all minions that are up according to Salt's presence
+    detection (no commands will be sent to minions)
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.allowed
+    '''
+    return list_state(subset=subset, show_ipv4=show_ipv4, state='allowed')
+
+
+def not_allowed(subset=None, show_ipv4=False):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Print a list of all minions that are NOT up according to Salt's presence
+    detection (no commands will be sent)
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.not_allowed
+    '''
+    return list_not_state(subset=subset, show_ipv4=show_ipv4, state='allowed')
+
+
+def alived(subset=None, show_ipv4=False):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Print a list of all minions that are up according to Salt's presence
+    detection (no commands will be sent to minions)
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.alived
+    '''
+    return list_state(subset=subset, show_ipv4=show_ipv4, state='alived')
+
+
+def not_alived(subset=None, show_ipv4=False):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Print a list of all minions that are NOT up according to Salt's presence
+    detection (no commands will be sent)
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.not_alived
+    '''
+    return list_not_state(subset=subset, show_ipv4=show_ipv4, state='alived')
+
+
+def reaped(subset=None, show_ipv4=False):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Print a list of all minions that are up according to Salt's presence
+    detection (no commands will be sent to minions)
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.reaped
+    '''
+    return list_state(subset=subset, show_ipv4=show_ipv4, state='reaped')
+
+
+def not_reaped(subset=None, show_ipv4=False):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Print a list of all minions that are NOT up according to Salt's presence
+    detection (no commands will be sent)
+
+    subset : None
+        Pass in a CIDR range to filter minions by IP address.
+
+    show_ipv4 : False
+        Also show the IP address each minion is connecting from.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.not_reaped
+    '''
+    return list_not_state(subset=subset, show_ipv4=show_ipv4, state='reaped')
+
+
+def get_stats(estate=None, stack='road'):
+    '''
+    Print the stack stats
+
+    estate : None
+        The name of the target estate. Master stats would be requested by default
+
+    stack : 'road'
+        Show stats on either road or lane stack
+        Allowed values are 'road' or 'lane'.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.get_stats [estate=alpha_minion] [stack=lane]
+    '''
+    conf_file = __opts__['conf_file']
+    opts = salt.config.client_config(conf_file)
+    if opts['transport'] == 'raet':
+        tag = tagify(stack, 'stats')
+        event = salt.utils.raetevent.StatsEvent(__opts__, __opts__['sock_dir'], tag=tag, estate=estate)
+        stats = event.get_event(wait=60, tag=tag)
+    else:
+        #TODO: implement 0MQ analog
+        stats = 'Not implemented'
+
+    return stats
+
+
+def road_stats(estate=None):
+    '''
+    Print the estate road stack stats
+
+    estate : None
+        The name of the target estate. Master stats would be requested by default
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.road_stats [estate=alpha_minion]
+    '''
+    return get_stats(estate=estate, stack='road')
+
+
+def lane_stats(estate=None):
+    '''
+    Print the estate manor lane stack stats
+
+    estate : None
+        The name of the target estate. Master stats would be requested by default
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run manage.lane_stats [estate=alpha_minion]
+    '''
+    return get_stats(estate=estate, stack='lane')
+
+
 def safe_accept(target, expr_form='glob'):
     '''
     Accept a minion's public key after checking the fingerprint over salt-ssh
@@ -228,7 +528,7 @@ def safe_accept(target, expr_form='glob'):
     ret = ssh_client.cmd(target, 'key.finger', expr_form=expr_form)
 
     failures = {}
-    for minion, finger in ret.items():
+    for minion, finger in six.iteritems(ret):
         if not FINGERPRINT_REGEX.match(finger):
             failures[minion] = finger
         else:
@@ -349,7 +649,7 @@ def bootstrap(version='develop',
         # deployment easier on existing hosts (i.e. use salt.utils.vt,
         # pass better options to ssh, etc)
         subprocess.call(['ssh',
-                        'root@' if root_user else '' + host,
+                        ('root@' if root_user else '') + host,
                         'python -c \'import urllib; '
                         'print urllib.urlopen('
                         '\'' + script + '\''
@@ -375,7 +675,7 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
 
     installer_url
         URL of minion installer executable. Defaults to the latest version from
-        http://docs.saltstack.com/downloads
+        https://repo.saltstack.com/windows/
 
     username
         Optional user name for login on remote computer.
@@ -394,7 +694,7 @@ def bootstrap_psexec(hosts='', master=None, version=None, arch='win32',
     '''
 
     if not installer_url:
-        base_url = 'http://docs.saltstack.com/downloads/'
+        base_url = 'https://repo.saltstack.com/windows/'
         source = _urlopen(base_url).read()
         salty_rx = re.compile('>(Salt-Minion-(.+?)-(.+)-Setup.exe)</a></td><td align="right">(.*?)\\s*<')
         source_list = sorted([[path, ver, plat, time.strptime(date, "%d-%b-%Y %H:%M")]

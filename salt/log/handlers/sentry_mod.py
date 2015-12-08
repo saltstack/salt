@@ -13,7 +13,8 @@
         logging handler to be available.
 
     Configuring the python `Sentry`_ client, `Raven`_, should be done under the
-    ``sentry_handler`` configuration key.
+    ``sentry_handler`` configuration key. Additional `context` may be provided
+    for coresponding grain item(s).
     At the bare minimum, you need to define the `DSN`_. As an example:
 
     .. code-block:: yaml
@@ -33,7 +34,12 @@
           project: app-id
           public_key: deadbeefdeadbeefdeadbeefdeadbeef
           secret_key: beefdeadbeefdeadbeefdeadbeefdead
-
+          context:
+            - os
+            - master
+            - saltversion
+            - cpuarch
+            - ec2.tags.environment
 
     All the client configuration keys are supported, please see the
     `Raven client documentation`_.
@@ -101,17 +107,25 @@ def setup_handlers():
     if 'sentry_handler' not in __opts__:
         log.debug('No \'sentry_handler\' key was found in the configuration')
         return False
-
     options = {}
     dsn = get_config_value('dsn')
     if dsn is not None:
         try:
-            dsn_config = raven.load(dsn)
+            # support raven ver 5.5.0
+            from raven.transport import TransportRegistry, default_transports
+            from raven.utils.urlparse import urlparse
+            transport_registry = TransportRegistry(default_transports)
+            url = urlparse(dsn)
+            if not transport_registry.supported_scheme(url.scheme):
+                raise ValueError('Unsupported Sentry DSN scheme: {0}'.format(url.scheme))
+            dsn_config = {}
+            conf_extras = transport_registry.compute_scope(url, dsn_config)
+            dsn_config.update(conf_extras)
             options.update({
                 'project': dsn_config['SENTRY_PROJECT'],
                 'servers': dsn_config['SENTRY_SERVERS'],
                 'public_key': dsn_config['SENTRY_PUBLIC_KEY'],
-                'private_key': dsn_config['SENTRY_SECRET_KEY']
+                'secret_key': dsn_config['SENTRY_SECRET_KEY']
             })
         except ValueError as exc:
             log.info(
@@ -120,12 +134,12 @@ def setup_handlers():
             )
 
     # Allow options to be overridden if previously parsed, or define them
-    for key in ('project', 'servers', 'public_key', 'private_key'):
+    for key in ('project', 'servers', 'public_key', 'secret_key'):
         config_value = get_config_value(key)
         if config_value is None and key not in options:
             log.debug(
                 'The required \'sentry_handler\' configuration key, '
-                '{0!r}, is not properly configured. Not configuring '
+                '\'{0}\', is not properly configured. Not configuring '
                 'the sentry logging handler.'.format(key)
             )
             return
@@ -178,7 +192,15 @@ def setup_handlers():
     })
 
     client = raven.Client(**options)
-
+    context = get_config_value('context')
+    context_dict = {}
+    if context is not None:
+        for tag in context:
+            tag_value = __salt__['grains.get'](tag)
+            if len(tag_value) > 0:
+                context_dict[tag] = tag_value
+        if len(context_dict) > 0:
+            client.context.merge({'tags': context_dict})
     try:
         handler = SentryHandler(client)
         handler.setLevel(LOG_LEVELS[get_config_value('log_level', 'error')])

@@ -8,8 +8,13 @@ Support for RFC 2136 dynamic DNS updates.
     support this (the keyname is only needed if the keyring contains more
     than one key)::
 
-        keyring: keyring file (default=None)
+        keyfile: keyring file (default=None)
         keyname: key name in file (default=None)
+        keyalgorithm: algorithm used to create the key
+                      (default='HMAC-MD5.SIG-ALG.REG.INT').
+            Other possible values: hmac-sha1, hmac-sha224, hmac-sha256,
+                hmac-sha384, hmac-sha512
+
 
     The keyring file needs to be in json format and the key name needs to end
     with an extra period in the file, similar to this:
@@ -29,6 +34,7 @@ try:
     import dns.query
     import dns.update
     import dns.tsigkeyring
+
     dns_support = True
 except ImportError as e:
     dns_support = False
@@ -63,13 +69,14 @@ def _config(name, key=None, **kwargs):
 
 def _get_keyring(keyfile):
     keyring = None
-    if keyfile and __salt__['file.file_exists'](keyfile):
+    if keyfile:
         with salt.utils.fopen(keyfile) as _f:
             keyring = dns.tsigkeyring.from_text(json.load(_f))
     return keyring
 
 
-def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True, **kwargs):
+def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True,
+             **kwargs):
     '''
     Add, replace, or update the A and PTR (reverse) records for a host.
 
@@ -93,7 +100,8 @@ def add_host(zone, name, ttl, ip, nameserver='127.0.0.1', replace=True, **kwargs
         popped.append(p)
         zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
         name = '.'.join(popped)
-        ptr = update(zone, name, ttl, 'PTR', fqdn, nameserver, replace, **kwargs)
+        ptr = update(zone, name, ttl, 'PTR', fqdn, nameserver, replace,
+                     **kwargs)
         if ptr:
             return True
     return res
@@ -132,13 +140,15 @@ def delete_host(zone, name, nameserver='127.0.0.1', **kwargs):
             popped.append(p)
             zone = '{0}.{1}'.format('.'.join(parts), 'in-addr.arpa.')
             name = '.'.join(popped)
-            ptr = delete(zone, name, 'PTR', fqdn, nameserver=nameserver, **kwargs)
+            ptr = delete(zone, name, 'PTR', fqdn, nameserver=nameserver,
+                         **kwargs)
         if ptr:
             res = True
     return res
 
 
-def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False, **kwargs):
+def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1',
+           replace=False, **kwargs):
     '''
     Add, replace, or update a DNS record.
     nameserver must be an IP address and the minion running this module
@@ -159,26 +169,24 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False,
     rdtype = dns.rdatatype.from_text(rdtype)
     rdata = dns.rdata.from_text(dns.rdataclass.IN, rdtype, data)
 
-    is_update = False
-    for rrset in answer.answer:
-        if rdata in rrset.items:
-            rr = rrset.items
-            if ttl == rrset.ttl:
-                if replace and (len(answer.answer) > 1
-                        or len(rrset.items) > 1):
-                    is_update = True
-                    break
-                return None
-            is_update = True
-            break
-
     keyring = _get_keyring(_config('keyfile', **kwargs))
     keyname = _config('keyname', **kwargs)
+    keyalgorithm = _config('keyalgorithm',
+                           **kwargs) or 'HMAC-MD5.SIG-ALG.REG.INT'
 
-    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname)
-    if is_update:
+    is_exist = False
+    for rrset in answer.answer:
+        if rdata in rrset.items:
+            if ttl == rrset.ttl:
+                if len(answer.answer) >= 1 or len(rrset.items) >= 1:
+                    is_exist = True
+                    break
+
+    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname,
+                                   keyalgorithm=keyalgorithm)
+    if replace:
         dns_update.replace(name, ttl, rdata)
-    else:
+    elif not is_exist:
         dns_update.add(name, ttl, rdata)
     answer = dns.query.udp(dns_update, nameserver)
     if answer.rcode() > 0:
@@ -186,7 +194,8 @@ def update(zone, name, ttl, rdtype, data, nameserver='127.0.0.1', replace=False,
     return True
 
 
-def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1', **kwargs):
+def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1',
+           **kwargs):
     '''
     Delete a DNS record.
 
@@ -206,8 +215,11 @@ def delete(zone, name, rdtype=None, data=None, nameserver='127.0.0.1', **kwargs)
 
     keyring = _get_keyring(_config('keyfile', **kwargs))
     keyname = _config('keyname', **kwargs)
+    keyalgorithm = _config('keyalgorithm',
+                           **kwargs) or 'HMAC-MD5.SIG-ALG.REG.INT'
 
-    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname)
+    dns_update = dns.update.Update(zone, keyring=keyring, keyname=keyname,
+                                   keyalgorithm=keyalgorithm)
 
     if rdtype:
         rdtype = dns.rdatatype.from_text(rdtype)

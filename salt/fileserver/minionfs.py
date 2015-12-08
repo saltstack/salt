@@ -32,6 +32,7 @@ import logging
 # Import salt libs
 import salt.fileserver
 import salt.utils
+import salt.utils.url
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                   'for security reasons (path requested: {0})'.format(path))
         return fnd
 
-    mountpoint = salt.utils.strip_proto(__opts__['minionfs_mountpoint'])
+    mountpoint = salt.utils.url.strip_proto(__opts__['minionfs_mountpoint'])
     # Remove the mountpoint to get the "true" path
     path = path[len(mountpoint):].lstrip(os.path.sep)
     try:
@@ -90,6 +91,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             and not salt.fileserver.is_file_ignored(__opts__, full):
         fnd['path'] = full
         fnd['rel'] = path
+        fnd['stat'] = list(os.stat(full))
         return fnd
     return fnd
 
@@ -231,7 +233,7 @@ def file_list(load):
 
     if load['saltenv'] not in envs():
         return []
-    mountpoint = salt.utils.strip_proto(__opts__['minionfs_mountpoint'])
+    mountpoint = salt.utils.url.strip_proto(__opts__['minionfs_mountpoint'])
     prefix = load.get('prefix', '').strip('/')
     if mountpoint and prefix.startswith(mountpoint + os.path.sep):
         prefix = prefix[len(mountpoint + os.path.sep):]
@@ -251,7 +253,7 @@ def file_list(load):
         # pushed files
         if tgt_minion not in minion_dirs:
             log.warning(
-                'No files found in minionfs cache for minion ID {0!r}'
+                'No files found in minionfs cache for minion ID \'{0}\''
                 .format(tgt_minion)
             )
             return []
@@ -314,7 +316,7 @@ def dir_list(load):
 
     if load['saltenv'] not in envs():
         return []
-    mountpoint = salt.utils.strip_proto(__opts__['minionfs_mountpoint'])
+    mountpoint = salt.utils.url.strip_proto(__opts__['minionfs_mountpoint'])
     prefix = load.get('prefix', '').strip('/')
     if mountpoint and prefix.startswith(mountpoint + os.path.sep):
         prefix = prefix[len(mountpoint + os.path.sep):]
@@ -334,7 +336,7 @@ def dir_list(load):
         # pushed files
         if tgt_minion not in minion_dirs:
             log.warning(
-                'No files found in minionfs cache for minion ID {0!r}'
+                'No files found in minionfs cache for minion ID \'{0}\''
                 .format(tgt_minion)
             )
             return []

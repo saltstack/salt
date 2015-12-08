@@ -12,6 +12,8 @@
     localhost:
         localhost
 '''
+# Import Python libs
+from __future__ import absolute_import
 
 # Import Salt Libs
 import integration

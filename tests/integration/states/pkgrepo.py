@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-
 '''
 tests for pkgrepo states
 '''
+
+# Import Python libs
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf
@@ -16,6 +18,9 @@ ensure_in_syspath('../../')
 # Import salt libs
 import integration
 import salt.utils
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 class PkgrepoTest(integration.ModuleCase,
@@ -42,7 +47,7 @@ class PkgrepoTest(integration.ModuleCase,
         # tests/integration/files/file/base/pkgrepo/managed.sls needs to be
         # corrected.
         self.assertReturnNonEmptySaltType(ret)
-        for state_id, state_result in ret.iteritems():
+        for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
     @destructiveTest
@@ -57,7 +62,7 @@ class PkgrepoTest(integration.ModuleCase,
         # tests/integration/files/file/base/pkgrepo/absent.sls needs to be
         # corrected.
         self.assertReturnNonEmptySaltType(ret)
-        for state_id, state_result in ret.iteritems():
+        for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
 

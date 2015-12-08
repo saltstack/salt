@@ -1,5 +1,8 @@
 # coding: utf-8
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import salttesting libs
 from salttesting.unit import skipIf
 from salttesting.helpers import ensure_in_syspath

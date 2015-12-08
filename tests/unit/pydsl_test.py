@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 
 # Import Python libs
+from __future__ import absolute_import
 import os
 import sys
 import shutil
 import tempfile
 import textwrap
 import copy
-from cStringIO import StringIO
 
 # Import Salt Testing libs
-from salttesting import TestCase
+from salttesting.unit import TestCase
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../')
@@ -23,26 +23,71 @@ import salt.utils
 from salt.state import HighState
 from salt.utils.pydsl import PyDslError
 
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import StringIO
+
+
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 
-OPTS = salt.config.minion_config(None)
-OPTS['state_events'] = False
-OPTS['id'] = 'whatever'
-OPTS['file_client'] = 'local'
-OPTS['file_roots'] = dict(base=['/tmp'])
-OPTS['cachedir'] = 'cachedir'
-OPTS['test'] = False
-OPTS['grains'] = salt.loader.grains(OPTS)
 
-
-class PyDSLRendererTestCase(TestCase):
+class CommonTestCaseBoilerplate(TestCase):
 
     def setUp(self):
-        self.HIGHSTATE = HighState(OPTS)
+        self.root_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.state_tree_dir = os.path.join(self.root_dir, 'state_tree')
+        self.cache_dir = os.path.join(self.root_dir, 'cachedir')
+        if not os.path.isdir(self.root_dir):
+            os.makedirs(self.root_dir)
+
+        if not os.path.isdir(self.state_tree_dir):
+            os.makedirs(self.state_tree_dir)
+
+        if not os.path.isdir(self.cache_dir):
+            os.makedirs(self.cache_dir)
+        self.config = salt.config.minion_config(None)
+        self.config['root_dir'] = self.root_dir
+        self.config['state_events'] = False
+        self.config['id'] = 'match'
+        self.config['file_client'] = 'local'
+        self.config['file_roots'] = dict(base=[self.state_tree_dir])
+        self.config['cachedir'] = self.cache_dir
+        self.config['test'] = False
+        self.config['grains'] = salt.loader.grains(self.config)
+        self.HIGHSTATE = HighState(self.config)
         self.HIGHSTATE.push_active()
 
     def tearDown(self):
-        self.HIGHSTATE.pop_active()
+        try:
+            self.HIGHSTATE.pop_active()
+        except IndexError:
+            pass
+
+    def state_highstate(self, state, dirpath):
+        opts = copy.copy(self.config)
+        opts['file_roots'] = dict(base=[dirpath])
+        HIGHSTATE = HighState(opts)
+        HIGHSTATE.push_active()
+        try:
+            high, errors = HIGHSTATE.render_highstate(state)
+            if errors:
+                import pprint
+                pprint.pprint('\n'.join(errors))
+                pprint.pprint(high)
+
+            out = HIGHSTATE.state.call_high(high)
+            # pprint.pprint(out)
+        finally:
+            HIGHSTATE.pop_active()
+
+
+class PyDSLRendererTestCase(CommonTestCaseBoilerplate):
+    '''
+    WARNING: If tests in here are flaky, they may need
+    to be moved to their own class. Sharing HighState, especially
+    through setUp/tearDown can create dangerous race conditions!
+    '''
 
     def render_sls(self, content, sls='', env='base', **kws):
         return self.HIGHSTATE.state.rend['pydsl'](
@@ -81,11 +126,11 @@ class PyDSLRendererTestCase(TestCase):
         # 2 rather than 1 because pydsl adds an extra no-op state
         # declaration.
 
-        s_iter = result.itervalues()
+        s_iter = six.itervalues(result)
         try:
-            s = s_iter.next()['file']
+            s = next(s_iter)['file']
         except KeyError:
-            s = s_iter.next()['file']
+            s = next(s_iter)['file']
         self.assertEqual(s[0], 'managed')
         self.assertEqual(s[1]['name'], 'myfile.txt')
         self.assertEqual(s[2]['source'], 'salt://path/to/file')
@@ -168,14 +213,14 @@ class PyDSLRendererTestCase(TestCase):
             state('G').cmd.wait('echo this is state G', cwd='/') \
                           .watch(state('C').cmd)
         '''))
-        ret = (result[k] for k in result.keys() if 'do_something' in k).next()
+        ret = next(result[k] for k in six.iterkeys(result) if 'do_something' in k)
         changes = ret['changes']
         self.assertEqual(
             changes,
             dict(a=1, b=2, args=(3,), kws=dict(x=1, y=2), some_var=12345)
         )
 
-        ret = (result[k] for k in result.keys() if '-G_' in k).next()
+        ret = next(result[k] for k in six.iterkeys(result) if '-G_' in k)
         self.assertEqual(ret['changes']['stdout'], 'this is state G')
 
     def test_multiple_state_func_in_state_mod(self):
@@ -244,7 +289,7 @@ class PyDSLRendererTestCase(TestCase):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
+                'The temporary directory \'{0}\' was not created'.format(
                     dirpath
                 )
             )
@@ -292,102 +337,9 @@ class PyDSLRendererTestCase(TestCase):
                 state('.C').cmd.run('echo C >> {2}', cwd='/')
                 '''.format(output, output, output)))
 
-            state_highstate({'base': ['aaa']}, dirpath)
+            self.state_highstate({'base': ['aaa']}, dirpath)
             with salt.utils.fopen(output, 'r') as f:
                 self.assertEqual(''.join(f.read().split()), "XYZABCDEF")
-
-        finally:
-            shutil.rmtree(dirpath, ignore_errors=True)
-
-    def test_rendering_includes(self):
-        dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
-        if not os.path.isdir(dirpath):
-            self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
-                    dirpath
-                )
-            )
-        output = os.path.join(dirpath, 'output')
-        try:
-            write_to(os.path.join(dirpath, 'aaa.sls'), textwrap.dedent('''\
-                #!pydsl|stateconf -ps
-
-                include('xxx')
-                yyy = include('yyy')
-
-                # ensure states in xxx are run first, then those in yyy and then those in aaa last.
-                extend(state('yyy::start').stateconf.require(stateconf='xxx::goal'))
-                extend(state('.start').stateconf.require(stateconf='yyy::goal'))
-
-                extend(state('yyy::Y2').cmd.run('echo Y2 extended >> {0}'))
-
-                __pydsl__.set(ordered=True)
-
-                yyy.hello('red', 1)
-                yyy.hello('green', 2)
-                yyy.hello('blue', 3)
-                '''.format(output)))
-
-            write_to(os.path.join(dirpath, 'xxx.sls'), textwrap.dedent('''\
-                #!stateconf -os yaml . jinja
-
-                include:
-                  - yyy
-
-                extend:
-                  yyy::start:
-                    stateconf.set:
-                      - require:
-                        - stateconf: .goal
-
-                  yyy::Y1:
-                    cmd.run:
-                      - name: 'echo Y1 extended >> {0}'
-
-                .X1:
-                  cmd.run:
-                    - name: echo X1 >> {1}
-                    - cwd: /
-                .X2:
-                  cmd.run:
-                    - name: echo X2 >> {2}
-                    - cwd: /
-                .X3:
-                  cmd.run:
-                    - name: echo X3 >> {3}
-                    - cwd: /
-
-                '''.format(output, output, output, output)))
-
-            write_to(os.path.join(dirpath, 'yyy.sls'), textwrap.dedent('''\
-                #!pydsl|stateconf -ps
-
-                include('xxx')
-                __pydsl__.set(ordered=True)
-
-                state('.Y1').cmd.run('echo Y1 >> {0}', cwd='/')
-                state('.Y2').cmd.run('echo Y2 >> {1}', cwd='/')
-                state('.Y3').cmd.run('echo Y3 >> {2}', cwd='/')
-
-                def hello(color, number):
-                    state(color).cmd.run('echo hello '+color+' '+str(number)+' >> {3}', cwd='/')
-                '''.format(output, output, output, output)))
-
-            state_highstate({'base': ['aaa']}, dirpath)
-            expected = textwrap.dedent('''\
-                X1
-                X2
-                X3
-                Y1 extended
-                Y2 extended
-                Y3
-                hello red 1
-                hello green 2
-                hello blue 3
-                ''')
-
-            with salt.utils.fopen(output, 'r') as f:
-                self.assertEqual(sorted(f.read()), sorted(expected))
 
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
@@ -398,7 +350,7 @@ class PyDSLRendererTestCase(TestCase):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
+                'The temporary directory \'{0}\' was not created'.format(
                     dirpath
                 )
             )
@@ -418,11 +370,10 @@ class PyDSLRendererTestCase(TestCase):
                 A.file.managed('{3}/xxx.txt', source='salt://zzz.txt')
                 A()
                 '''.format(dirpath, dirpath, dirpath, dirpath)))
-            state_highstate({'base': ['aaa']}, dirpath)
-            with salt.utils.fopen(os.path.join(dirpath, 'yyy.txt'), 'r') as f:
-
+            self.state_highstate({'base': ['aaa']}, dirpath)
+            with salt.utils.fopen(os.path.join(dirpath, 'yyy.txt'), 'rt') as f:
                 self.assertEqual(f.read(), 'hehe\nhoho\n')
-            with salt.utils.fopen(os.path.join(dirpath, 'xxx.txt'), 'r') as f:
+            with salt.utils.fopen(os.path.join(dirpath, 'xxx.txt'), 'rt') as f:
                 self.assertEqual(f.read(), 'hehe\n')
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
@@ -431,7 +382,7 @@ class PyDSLRendererTestCase(TestCase):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
+                'The temporary directory \'{0}\' was not created'.format(
                     dirpath
                 )
             )
@@ -444,7 +395,7 @@ class PyDSLRendererTestCase(TestCase):
                 '''))
             write_to(os.path.join(dirpath, 'bbb.sls'), textwrap.dedent(
                 '''
-                # {{ salt['state.sls']('ccc')
+                # {{ salt['state.sls']('ccc') }}
                 test:
                   cmd.run:
                     - name: echo bbbbbbb
@@ -455,7 +406,7 @@ class PyDSLRendererTestCase(TestCase):
                 #!pydsl
                 state().cmd.run('echo ccccc', cwd='/')
                 '''))
-            state_highstate({'base': ['aaa']}, dirpath)
+            self.state_highstate({'base': ['aaa']}, dirpath)
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
@@ -463,7 +414,7 @@ class PyDSLRendererTestCase(TestCase):
         dirpath = tempfile.mkdtemp(dir=integration.SYS_TMP_DIR)
         if not os.path.isdir(dirpath):
             self.skipTest(
-                'The temporary directory {0!r} was not created'.format(
+                'The temporary directory \'{0}\' was not created'.format(
                     dirpath
                 )
             )
@@ -488,8 +439,8 @@ class PyDSLRendererTestCase(TestCase):
                 #!pydsl
                 success = True
                 '''))
-            state_highstate({'base': ['b']}, dirpath)
-            state_highstate({'base': ['c', 'd']}, dirpath)
+            self.state_highstate({'base': ['b']}, dirpath)
+            self.state_highstate({'base': ['c', 'd']}, dirpath)
         finally:
             shutil.rmtree(dirpath, ignore_errors=True)
 
@@ -499,24 +450,7 @@ def write_to(fpath, content):
         f.write(content)
 
 
-def state_highstate(state, dirpath):
-    opts = copy.copy(OPTS)
-    opts['file_roots'] = dict(base=[dirpath])
-    HIGHSTATE = HighState(opts)
-    HIGHSTATE.push_active()
-    try:
-        high, errors = HIGHSTATE.render_highstate(state)
-        if errors:
-            import pprint
-            pprint.pprint('\n'.join(errors))
-            pprint.pprint(high)
-
-        out = HIGHSTATE.state.call_high(high)
-        # pprint.pprint(out)
-    finally:
-        HIGHSTATE.pop_active()
-
-
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(PyDSLRendererTestCase, needs_daemon=False)
+    tests = [PyDSLRendererTestCase]
+    run_tests(*tests, needs_daemon=False)

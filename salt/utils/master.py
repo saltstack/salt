@@ -7,27 +7,29 @@
 
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
+from __future__ import absolute_import
 import os
 import logging
-from threading import Thread, Event
-import multiprocessing
 import signal
 import tempfile
+from threading import Thread, Event
 
 # Import salt libs
 import salt.log
 import salt.client
 import salt.pillar
 import salt.utils
+import salt.utils.atomicfile
 import salt.utils.minions
 import salt.payload
 from salt.exceptions import SaltException
 import salt.config
+from salt.utils.cache import CacheCli as cache_cli
+from salt.utils.process import MultiprocessingProcess
 
 # Import third party libs
+import salt.ext.six as six
 try:
     import zmq
     HAS_ZMQ = True
@@ -100,7 +102,7 @@ class MasterPillarUtil(object):
         self.grains_fallback = grains_fallback
         self.pillar_fallback = pillar_fallback
         log.debug(
-            'Init settings: tgt: {0!r}, expr_form: {1!r}, saltenv: {2!r}, '
+            'Init settings: tgt: \'{0}\', expr_form: \'{1}\', saltenv: \'{2}\', '
             'use_cached_grains: {3}, use_cached_pillar: {4}, '
             'grains_fallback: {5}, pillar_fallback: {6}'.format(
                 tgt, expr_form, saltenv, use_cached_grains, use_cached_pillar,
@@ -199,19 +201,19 @@ class MasterPillarUtil(object):
         cret = {}
         lret = {}
         if self.use_cached_grains:
-            cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_grains.items() if mcache])
+            cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_grains) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion grains for: {0}'.format(missed_minions))
             if self.grains_fallback:
                 lret = self._get_live_minion_grains(missed_minions)
-            ret = dict(list(dict([(minion_id, {}) for minion_id in minion_ids]).items()) + list(lret.items()) + list(cret.items()))
+            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
         else:
             lret = self._get_live_minion_grains(minion_ids)
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion grains for: {0}'.format(missed_minions))
             if self.grains_fallback:
-                cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_grains.items() if mcache])
-            ret = dict(list(dict([(minion_id, {}) for minion_id in minion_ids]).items()) + list(lret.items()) + list(cret.items()))
+                cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_grains) if mcache])
+            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
         return ret
 
     def _get_minion_pillar(self, *minion_ids, **kwargs):
@@ -224,19 +226,19 @@ class MasterPillarUtil(object):
         cret = {}
         lret = {}
         if self.use_cached_pillar:
-            cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_pillar.items() if mcache])
+            cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_pillar) if mcache])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in cret]
             log.debug('Missed cached minion pillars for: {0}'.format(missed_minions))
             if self.pillar_fallback:
                 lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in missed_minions])
-            ret = dict(list(dict([(minion_id, {}) for minion_id in minion_ids]).items()) + list(lret.items()) + list(cret.items()))
+            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
         else:
             lret = dict([(minion_id, self._get_live_minion_pillar(minion_id, grains.get(minion_id, {}))) for minion_id in minion_ids])
             missed_minions = [minion_id for minion_id in minion_ids if minion_id not in lret]
             log.debug('Missed live minion pillars for: {0}'.format(missed_minions))
             if self.pillar_fallback:
-                cret = dict([(minion_id, mcache) for (minion_id, mcache) in cached_pillar.items() if mcache])
-            ret = dict(list(dict([(minion_id, {}) for minion_id in minion_ids]).items()) + list(lret.items()) + list(cret.items()))
+                cret = dict([(minion_id, mcache) for (minion_id, mcache) in six.iteritems(cached_pillar) if mcache])
+            ret = dict(list(six.iteritems(dict([(minion_id, {}) for minion_id in minion_ids]))) + list(lret.items()) + list(cret.items()))
         return ret
 
     def _tgt_to_list(self):
@@ -341,7 +343,7 @@ class MasterPillarUtil(object):
         if clear_mine:
             clear_what.append('mine')
         if clear_mine_func is not None:
-            clear_what.append('mine_func: {0!r}'.format(clear_mine_func))
+            clear_what.append('mine_func: \'{0}\''.format(clear_mine_func))
         if not len(clear_what):
             log.debug('No cached data types specified for clearing.')
             return False
@@ -382,13 +384,13 @@ class MasterPillarUtil(object):
                     os.close(tmpfh)
                     with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                         fp_.write(self.serial.dumps({'grains': minion_grains}))
-                    os.rename(tmpfname, data_file)
+                    salt.utils.atomicfile.atomic_rename(tmpfname, data_file)
                 elif clear_grains and minion_pillar:
                     tmpfh, tmpfname = tempfile.mkstemp(dir=cdir)
                     os.close(tmpfh)
                     with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                         fp_.write(self.serial.dumps({'pillar': minion_pillar}))
-                    os.rename(tmpfname, data_file)
+                    salt.utils.atomicfile.atomic_rename(tmpfname, data_file)
                 if clear_mine:
                     # Delete the whole mine file
                     os.remove(os.path.join(mine_file))
@@ -402,7 +404,9 @@ class MasterPillarUtil(object):
                             os.close(tmpfh)
                             with salt.utils.fopen(tmpfname, 'w+b') as fp_:
                                 fp_.write(self.serial.dumps(mine_data))
-                            os.rename(tmpfname, mine_file)
+                            salt.utils.atomicfile.atomic_rename(
+                                tmpfname,
+                                mine_file)
         except (OSError, IOError):
             return True
         return True
@@ -441,7 +445,32 @@ class CacheTimer(Thread):
                 count = 0
 
 
-class ConnectedCache(multiprocessing.Process):
+class CacheWorker(MultiprocessingProcess):
+    '''
+    Worker for ConnectedCache which runs in its
+    own process to prevent blocking of ConnectedCache
+    main-loop when refreshing minion-list
+    '''
+
+    def __init__(self, opts):
+        '''
+        Sets up the zmq-connection to the ConCache
+        '''
+        super(CacheWorker, self).__init__()
+        self.opts = opts
+
+    def run(self):
+        '''
+        Gather currently connected minions and update the cache
+        '''
+        new_mins = list(salt.utils.minions.CkMinions(self.opts).connected_ids())
+        cc = cache_cli(self.opts)
+        cc.get_cached()
+        cc.put_cache([new_mins])
+        log.debug('ConCache CacheWorker update finished')
+
+
+class ConnectedCache(MultiprocessingProcess):
     '''
     Provides access to all minions ids that the master has
     successfully authenticated. The cache is cleaned up regularly by
@@ -480,17 +509,6 @@ class ConnectedCache(multiprocessing.Process):
         handle signals and shutdown
         '''
         self.stop()
-
-    def renew(self):
-        '''
-        compares the current minion list against the ips
-        connected on the master publisher port and updates
-        the minion list accordingly
-        '''
-        log.debug('ConCache renewing minion cache')
-        new_mins = list(salt.utils.minions.CkMinions(self.opts).connected_ids())
-        self.minions = new_mins
-        log.debug('ConCache received {0} minion ids'.format(len(new_mins)))
 
     def cleanup(self):
         '''
@@ -581,7 +599,7 @@ class ConnectedCache(multiprocessing.Process):
             # check for next cache-request
             if socks.get(creq_in) == zmq.POLLIN:
                 msg = serial.loads(creq_in.recv())
-                log.trace('ConCache Received request: {0}'.format(msg))
+                log.debug('ConCache Received request: {0}'.format(msg))
 
                 # requests to the minion list are send as str's
                 if isinstance(msg, str):
@@ -590,12 +608,8 @@ class ConnectedCache(multiprocessing.Process):
                         reply = serial.dumps(self.minions)
                         creq_in.send(reply)
 
-                else:
-                    reply = serial.dumps(False)
-                    creq_in.send(reply)
-
             # check for next cache-update from workers
-            elif socks.get(cupd_in) == zmq.POLLIN:
+            if socks.get(cupd_in) == zmq.POLLIN:
                 new_c_data = serial.loads(cupd_in.recv())
                 # tell the worker to exit
                 #cupd_in.send(serial.dumps('ACK'))
@@ -608,27 +622,41 @@ class ConnectedCache(multiprocessing.Process):
 
                 # the cache will receive lists of minions
                 # 1. if the list only has 1 item, its from an MWorker, we append it
-                # 2. anything else is considered malformed
+                # 2. if the list contains another list, its from a CacheWorker and
+                #    the currently cached minions are replaced with that list
+                # 3. anything else is considered malformed
 
-                if len(new_c_data) == 0:
-                    log.debug('ConCache Got empty update from worker')
-                elif len(new_c_data) == 1:
-                    if new_c_data[0] not in self.minions:
-                        log.trace('ConCache Adding minion {0} to cache'.format(new_c_data[0]))
-                        self.minions.append(new_c_data[0])
-                else:
+                try:
+
+                    if len(new_c_data) == 0:
+                        log.debug('ConCache Got empty update from worker')
+                        continue
+
+                    data = new_c_data[0]
+
+                    if isinstance(data, str):
+                        if data not in self.minions:
+                            log.debug('ConCache Adding minion {0} to cache'.format(new_c_data[0]))
+                            self.minions.append(data)
+
+                    elif isinstance(data, list):
+                        log.debug('ConCache Replacing minion list from worker')
+                        self.minions = data
+
+                except IndexError:
                     log.debug('ConCache Got malformed result dict from worker')
                     del new_c_data
 
                 log.info('ConCache {0} entries in cache'.format(len(self.minions)))
 
             # check for next timer-event to start new jobs
-            elif socks.get(timer_in) == zmq.POLLIN:
+            if socks.get(timer_in) == zmq.POLLIN:
                 sec_event = serial.loads(timer_in.recv())
 
                 # update the list every 30 seconds
-                if (sec_event == 31) or (sec_event == 1):
-                    self.renew()
+                if int(sec_event % 30) == 0:
+                    cw = CacheWorker(self.opts)
+                    cw.start()
 
         self.stop()
         creq_in.close()

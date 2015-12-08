@@ -1,17 +1,24 @@
 # -*- coding: utf-8 -*-
-import __builtin__
+
+# Import python libs
+from __future__ import absolute_import
+
+# Import salt testing libs
+from salttesting.unit import skipIf, TestCase
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import salt libs
 from salt.utils.odict import OrderedDict
-
 from salt.modules import jboss7
-
-from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON
 
 try:
     # will pass if executed along with other tests
     __salt__
 except NameError:
     # if executed separately we need to export __salt__ dictionary ourselves
+    from salt.ext.six.moves import builtins as __builtin__
     __builtin__.__salt__ = {}
 
 

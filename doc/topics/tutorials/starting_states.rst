@@ -170,6 +170,8 @@ this:
 So the httpd.conf is just a file in the apache directory, and is referenced
 directly.
 
+.. include:: ../../_incl/_incl/sls_filename_cant_contain_period.rst
+
 But when using more than one single SLS file, more components can be added to
 the toolkit. Consider this SSH example:
 
@@ -306,7 +308,7 @@ to configure the banner.
 In the new mod_python SLS the mod_python package is added, but more importantly
 the apache service was extended to also watch the mod_python package.
 
-.. include:: /_incl/extend_with_require_watch.rst
+.. include:: ../../_incl/extend_with_require_watch.rst
 
 
 Understanding the Render System
@@ -517,7 +519,7 @@ The above example could be written as:
     Pkg.installed("django")
 
 
-This Python examples would look like this if they were written in YAML:
+These Python examples would look like this if they were written in YAML:
 
 .. code-block:: yaml
 

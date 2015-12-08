@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Support for htpasswd module
+Support for htpasswd module. Requires the apache2-utils package for Debian-based distros.
 
 .. versionadded:: 2014.7.0
 
@@ -81,7 +81,7 @@ def user_exists(name, password=None, htpasswd_file=None, options='',
             ret['comment'] = useradd_ret['stderr']
             return ret
 
-    if __opts__['test']:
+    if __opts__['test'] and ret['changes']:
         ret['result'] = None
     else:
         ret['result'] = True

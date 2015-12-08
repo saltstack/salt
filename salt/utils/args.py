@@ -8,12 +8,14 @@ from __future__ import absolute_import
 import re
 import inspect
 
-# Import salt libs
-from salt.ext.six import string_types, integer_types
+# Import 3rd-party libs
 import salt.ext.six as six
 
-#KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)  # python 3
-KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')
+
+if six.PY3:
+    KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$', re.UNICODE)
+else:
+    KWARG_REGEX = re.compile(r'^([^\d\W][\w.-]*)=(?!=)(.*)$')
 
 
 def condition_input(args, kwargs):
@@ -22,7 +24,10 @@ def condition_input(args, kwargs):
     '''
     ret = []
     for arg in args:
-        if isinstance(arg, long):
+        # XXX: We might need to revisit this code when we move to Py3
+        #      since long's are int's in Py3
+        if (six.PY3 and isinstance(arg, six.integer_types)) or \
+                (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code
             ret.append(str(arg))
         else:
             ret.append(arg)
@@ -44,7 +49,7 @@ def parse_input(args, condition=True):
     _args = []
     _kwargs = {}
     for arg in args:
-        if isinstance(arg, string_types):
+        if isinstance(arg, six.string_types):
             arg_name, arg_value = parse_kwarg(arg)
             if arg_name:
                 _kwargs[arg_name] = yamlify_arg(arg_value)
@@ -86,7 +91,7 @@ def yamlify_arg(arg):
     '''
     yaml.safe_load the arg
     '''
-    if not isinstance(arg, string_types):
+    if not isinstance(arg, six.string_types):
         return arg
 
     if arg.strip() == '':
@@ -109,7 +114,7 @@ def yamlify_arg(arg):
             # Only yamlify if it parses into a non-string type, to prevent
             # loss of content due to # as comment character
             parsed_arg = yamlloader.load(arg, Loader=yamlloader.SaltYamlSafeLoader)
-            if isinstance(parsed_arg, string_types) or parsed_arg is None:
+            if isinstance(parsed_arg, six.string_types) or parsed_arg is None:
                 return arg
             return parsed_arg
         if arg == 'None':
@@ -119,14 +124,14 @@ def yamlify_arg(arg):
 
         if isinstance(arg, dict):
             # dicts must be wrapped in curly braces
-            if (isinstance(original_arg, string_types) and
+            if (isinstance(original_arg, six.string_types) and
                     not original_arg.startswith('{')):
                 return original_arg
             else:
                 return arg
 
         elif arg is None \
-                or isinstance(arg, (list, float, integer_types, string_types)):
+                or isinstance(arg, (list, float, six.integer_types, six.string_types)):
             # yaml.safe_load will load '|' as '', don't let it do that.
             if arg == '' and original_arg in ('|',):
                 return original_arg
@@ -160,6 +165,6 @@ def get_function_argspec(func):
         aspec = inspect.getargspec(func.__call__)
         del aspec.args[0]  # self
     else:
-        raise TypeError('Cannot inspect argument list for {0!r}'.format(func))
+        raise TypeError('Cannot inspect argument list for \'{0}\''.format(func))
 
     return aspec

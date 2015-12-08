@@ -1,4 +1,3 @@
 .. toctree::
 
     syndic
-    proxyminion/index

@@ -26,9 +26,9 @@ This backend assumes a standard svn layout with directories for ``branches``,
     per-remote configuration parameters was added. See the
     :conf_master:`documentation <svnfs_remotes>` for more information.
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import copy
 import errno
 import fnmatch
@@ -37,12 +37,13 @@ import logging
 import os
 import shutil
 from datetime import datetime
-from salt._compat import text_type as _text_type
 from salt.exceptions import FileserverConfigError
 
-PER_REMOTE_PARAMS = ('mountpoint', 'root', 'trunk', 'branches', 'tags')
+PER_REMOTE_OVERRIDES = ('mountpoint', 'root', 'trunk', 'branches', 'tags')
 
 # Import third party libs
+import salt.ext.six as six
+# pylint: disable=import-error
 HAS_SVN = False
 try:
     import pysvn
@@ -50,11 +51,12 @@ try:
     CLIENT = pysvn.Client()
 except ImportError:
     pass
+# pylint: enable=import-error
 
 # Import salt libs
 import salt.utils
+import salt.utils.url
 import salt.fileserver
-from salt.ext.six import string_types
 from salt.utils.event import tagify
 
 log = logging.getLogger(__name__)
@@ -77,8 +79,8 @@ def __virtual__():
     for param in ('svnfs_trunk', 'svnfs_branches', 'svnfs_tags'):
         if os.path.isabs(__opts__[param]):
             errors.append(
-                'Master configuration parameter {0!r} (value: {1}) cannot be '
-                'an absolute path'.format(param, __opts__[param])
+                'Master configuration parameter \'{0}\' (value: {1}) cannot '
+                'be an absolute path'.format(param, __opts__[param])
             )
     if errors:
         for error in errors:
@@ -93,7 +95,7 @@ def _rev(repo):
     Returns revision ID of repo
     '''
     try:
-        repo_info = dict(CLIENT.info(repo['repo']).items())
+        repo_info = dict(six.iteritems(CLIENT.info(repo['repo'])))
     except (pysvn._pysvn.ClientError, TypeError,
             KeyError, AttributeError) as exc:
         log.error(
@@ -124,17 +126,17 @@ def init():
     repos = []
 
     per_remote_defaults = {}
-    for param in PER_REMOTE_PARAMS:
+    for param in PER_REMOTE_OVERRIDES:
         per_remote_defaults[param] = \
-            _text_type(__opts__['svnfs_{0}'.format(param)])
+            six.text_type(__opts__['svnfs_{0}'.format(param)])
 
     for remote in __opts__['svnfs_remotes']:
         repo_conf = copy.deepcopy(per_remote_defaults)
         if isinstance(remote, dict):
             repo_url = next(iter(remote))
             per_remote_conf = dict(
-                [(key, _text_type(val)) for key, val in
-                 salt.utils.repack_dictlist(remote[repo_url]).items()]
+                [(key, six.text_type(val)) for key, val in
+                 six.iteritems(salt.utils.repack_dictlist(remote[repo_url]))]
             )
             if not per_remote_conf:
                 log.error(
@@ -147,12 +149,12 @@ def init():
 
             per_remote_errors = False
             for param in (x for x in per_remote_conf
-                          if x not in PER_REMOTE_PARAMS):
+                          if x not in PER_REMOTE_OVERRIDES):
                 log.error(
-                    'Invalid configuration parameter {0!r} for remote {1}. '
+                    'Invalid configuration parameter \'{0}\' for remote {1}. '
                     'Valid parameters are: {2}. See the documentation for '
                     'further information.'.format(
-                        param, repo_url, ', '.join(PER_REMOTE_PARAMS)
+                        param, repo_url, ', '.join(PER_REMOTE_OVERRIDES)
                     )
                 )
                 per_remote_errors = True
@@ -163,7 +165,7 @@ def init():
         else:
             repo_url = remote
 
-        if not isinstance(repo_url, string_types):
+        if not isinstance(repo_url, six.string_types):
             log.error(
                 'Invalid svnfs remote {0}. Remotes must be strings, you may '
                 'need to enclose the URL in quotes'.format(repo_url)
@@ -171,7 +173,7 @@ def init():
             _failhard()
 
         try:
-            repo_conf['mountpoint'] = salt.utils.strip_proto(
+            repo_conf['mountpoint'] = salt.utils.url.strip_proto(
                 repo_conf['mountpoint']
             )
         except TypeError:
@@ -192,7 +194,7 @@ def init():
                 new_remote = True
             except pysvn._pysvn.ClientError as exc:
                 log.error(
-                    'Failed to initialize svnfs remote {0!r}: {1}'
+                    'Failed to initialize svnfs remote \'{0}\': {1}'
                     .format(repo_url, exc)
                 )
                 _failhard()
@@ -344,7 +346,7 @@ def clear_lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if _text_type(remote) not in repo['url']:
+                if six.text_type(remote) not in repo['url']:
                     continue
         success, failed = _do_clear_lock(repo)
         cleared.extend(success)
@@ -390,7 +392,7 @@ def lock(remote=None):
                     continue
             except TypeError:
                 # remote was non-string, try again
-                if not fnmatch.fnmatch(repo['url'], _text_type(remote)):
+                if not fnmatch.fnmatch(repo['url'], six.text_type(remote)):
                     continue
         success, failed = _do_lock(repo)
         locked.extend(success)
@@ -503,7 +505,7 @@ def envs(ignore_cache=False):
             ret.add('base')
         else:
             log.error(
-                'svnfs trunk path {0!r} does not exist in repo {1}, no base '
+                'svnfs trunk path \'{0}\' does not exist in repo {1}, no base '
                 'environment will be provided by this remote'
                 .format(repo['trunk'], repo['url'])
             )
@@ -513,7 +515,7 @@ def envs(ignore_cache=False):
             ret.update(os.listdir(branches))
         else:
             log.error(
-                'svnfs branches path {0!r} does not exist in repo {1}'
+                'svnfs branches path \'{0}\' does not exist in repo {1}'
                 .format(repo['branches'], repo['url'])
             )
 
@@ -522,7 +524,7 @@ def envs(ignore_cache=False):
             ret.update(os.listdir(tags))
         else:
             log.error(
-                'svnfs tags path {0!r} does not exist in repo {1}'
+                'svnfs tags path \'{0}\' does not exist in repo {1}'
                 .format(repo['tags'], repo['url'])
             )
     return [x for x in sorted(ret) if _env_is_exposed(x)]

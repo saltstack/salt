@@ -5,6 +5,18 @@ Salt 2015.5.6 Release Notes
 Version 2015.5.6 is a bugfix release for :doc:`2015.5.0
 </topics/releases/2015.5.0>`.
 
+Security Fixes
+--------------
+
+CVE-2015-6941 - ``win_useradd`` module and ``salt-cloud`` display passwords in debug log
+
+Updated the ``win_useradd`` module return data to no longer include the password of the newly created user. The password is now replaced with the string ``XXX-REDACTED-XXX``.
+Updated the Salt Cloud debug output to no longer display ``win_password`` and ``sudo_password`` authentication credentials.
+
+CVE-2015-6918 - Git modules leaking HTTPS auth credentials to debug log
+
+Updated the Git state and execution modules to no longer display HTTPS basic authentication credentials in loglevel debug output on the Salt master. These credentials are now replaced with ``REDACTED`` in the debug output. Thanks to Andreas Stieger <asteiger@suse.com> for bringing this to our attention.
+
 Changes for v2015.5.5..v2015.5.6
 --------------------------------
 

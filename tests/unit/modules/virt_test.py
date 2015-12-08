@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import sys
 import re
 
@@ -18,6 +19,7 @@ import salt.utils
 
 # Import third party libs
 import yaml
+import salt.ext.six as six
 
 config.__grains__ = {}
 config.__opts__ = {}
@@ -189,7 +191,7 @@ class VirtTestCase(TestCase):
             system = ret[0]['system']
             self.assertEqual(system['format'], 'vmdk')
             self.assertEqual(system['model'], 'scsi')
-            self.assertTrue(system['size'] >= 1)
+            self.assertTrue(int(system['size']) >= 1)
 
     def test_default_disk_profile_hypervisor_kvm(self):
         mock = MagicMock(return_value={})
@@ -200,7 +202,7 @@ class VirtTestCase(TestCase):
             system = ret[0]['system']
             self.assertEqual(system['format'], 'qcow2')
             self.assertEqual(system['model'], 'virtio')
-            self.assertTrue(system['size'] >= 1)
+            self.assertTrue(int(system['size']) >= 1)
 
     def test_default_nic_profile_hypervisor_esxi(self):
         mock = MagicMock(return_value={})
@@ -485,7 +487,7 @@ class VirtTestCase(TestCase):
         mock_config = yaml.load(yaml_config)
         salt.modules.config.__opts__ = mock_config
 
-        for name in mock_config['virt.nic'].keys():
+        for name in six.iterkeys(mock_config['virt.nic']):
             profile = salt.modules.virt._nic_profile(name, 'kvm')
             self.assertEqual(len(profile), 2)
 
@@ -533,7 +535,7 @@ class VirtTestCase(TestCase):
             </domain>
         ''')
         nics = virt.get_nics('test-vm')
-        nic = nics[nics.keys()[0]]
+        nic = nics[list(nics)[0]]
         self.assertEqual('bridge', nic['type'])
         self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
 

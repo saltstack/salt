@@ -6,7 +6,6 @@ The jail module for FreeBSD
 # Import python libs
 from __future__ import absolute_import
 import os
-import shlex
 import re
 
 # Import salt libs
@@ -21,7 +20,7 @@ def __virtual__():
     '''
     Only runs on FreeBSD systems
     '''
-    return __virtualname__ if __grains__['os'] == 'FreeBSD' else False
+    return __virtualname__ if salt.utils.is_freebsd() else False
 
 
 def start(jail=''):
@@ -122,7 +121,7 @@ def show_config(jail):
     ret = {}
     if subprocess.call(["jls", "-nq", "-j", jail]) == 0:
         jls = subprocess.check_output(["jls", "-nq", "-j", jail])  # pylint: disable=minimum-python-version
-        jailopts = shlex.split(jls)
+        jailopts = salt.utils.shlex_split(salt.utils.to_str(jls))
         for jailopt in jailopts:
             if '=' not in jailopt:
                 ret[jailopt.strip().rstrip(";")] = '1'

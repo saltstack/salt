@@ -3,9 +3,9 @@
 A module written originally by Armin Ronacher to manage file transfers in an
 atomic way
 '''
-from __future__ import absolute_import
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import tempfile
 import sys

@@ -152,7 +152,7 @@ def _get_pool_results(*args, **kwargs):
 
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
-        minions = client.cmd(tgt, cmd, args[2:], timeout=__opts__['timeout'])
+        minions = client.cmd(tgt, cmd, args[2:], timeout=__opts__['timeout'], expr_form='compound')
     except SaltClientError as client_error:
         print(client_error)
         return ret

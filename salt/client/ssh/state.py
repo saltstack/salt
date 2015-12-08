@@ -16,6 +16,7 @@ import salt.client.ssh.shell
 import salt.client.ssh
 import salt.utils
 import salt.utils.thin
+import salt.utils.url
 import salt.roster
 import salt.state
 import salt.loader
@@ -30,13 +31,15 @@ class SSHState(salt.state.State):
         self.wrapper = wrapper
         super(SSHState, self).__init__(opts, pillar)
 
-    def load_modules(self, data=None):
+    def load_modules(self, data=None, proxy=None):
         '''
         Load up the modules for remote compilation via ssh
         '''
         self.functions = self.wrapper
-        locals_ = salt.loader.minion_mods(self.opts)
-        self.states = salt.loader.states(self.opts, locals_)
+        self.utils = salt.loader.utils(self.opts)
+        self.serializers = salt.loader.serializers(self.opts)
+        locals_ = salt.loader.minion_mods(self.opts, utils=self.utils)
+        self.states = salt.loader.states(self.opts, locals_, self.utils, self.serializers)
         self.rend = salt.loader.render(self.opts, self.functions)
 
     def check_refresh(self, data, ret):
@@ -129,19 +132,19 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
     lowfn = os.path.join(gendir, 'lowstate.json')
     pillarfn = os.path.join(gendir, 'pillar.json')
     sync_refs = [
-            ['salt://_modules'],
-            ['salt://_states'],
-            ['salt://_grains'],
-            ['salt://_renderers'],
-            ['salt://_returners'],
-            ['salt://_output'],
-            ['salt://_utils'],
+            [salt.utils.url.create('_modules')],
+            [salt.utils.url.create('_states')],
+            [salt.utils.url.create('_grains')],
+            [salt.utils.url.create('_renderers')],
+            [salt.utils.url.create('_returners')],
+            [salt.utils.url.create('_output')],
+            [salt.utils.url.create('_utils')],
             ]
     with salt.utils.fopen(lowfn, 'w+') as fp_:
         fp_.write(json.dumps(chunks))
     if pillar:
         with salt.utils.fopen(pillarfn, 'w+') as fp_:
-            fp_.write(json.dumps(pillar))
+            fp_.write(json.dumps(pillar._dict()))
     for saltenv in file_refs:
         file_refs[saltenv].extend(sync_refs)
         env_root = os.path.join(gendir, saltenv)
@@ -149,7 +152,7 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
             os.makedirs(env_root)
         for ref in file_refs[saltenv]:
             for name in ref:
-                short = name[7:]
+                short = salt.utils.url.parse(name)[0]
                 path = file_client.cache_file(name, saltenv)
                 if path:
                     tgt = os.path.join(env_root, short)
@@ -174,7 +177,8 @@ def prep_trans_tar(file_client, chunks, file_refs, pillar=None):
                             os.makedirs(tgt_dir)
                         shutil.copy(filename, tgt)
                     continue
-    try:  # cwd may not exist if it was removed but salt was run from it
+    try:
+        # cwd may not exist if it was removed but salt was run from it
         cwd = os.getcwd()
     except OSError:
         cwd = None

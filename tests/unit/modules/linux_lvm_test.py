@@ -2,7 +2,9 @@
 '''
     :codeauthor: :email:`Rupesh Tare <rupesht@saltstack.com>`
 '''
-#  Import python libs
+
+# Import Python libs
+from __future__ import absolute_import
 import os.path
 
 # Import Salt Testing Libs
@@ -16,6 +18,7 @@ from salttesting.mock import (
 
 # Import Salt Libs
 from salt.modules import linux_lvm
+from salt.exceptions import CommandExecutionError
 
 # Globals
 linux_lvm.__salt__ = {}
@@ -131,28 +134,32 @@ class LinuxLVMTestCase(TestCase):
         self.assertEqual(linux_lvm.pvcreate(''),
                          'Error: at least one device is required')
 
-        self.assertEqual(linux_lvm.pvcreate('A'), 'A does not exist')
+        self.assertRaises(CommandExecutionError, linux_lvm.pvcreate, 'A')
 
-        with patch.object(os.path, 'exists', return_value=True):
-            mock = MagicMock(return_value='A\nB')
-            with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
-                self.assertEqual(linux_lvm.pvcreate('A', metadatasize=1000),
-                                 'A')
+        pvdisplay = MagicMock(return_value=True)
+        with patch('salt.modules.linux_lvm.pvdisplay', pvdisplay):
+            with patch.object(os.path, 'exists', return_value=True):
+                ret = {'stdout': 'saltines', 'stderr': 'cheese', 'retcode': 0, 'pid': '1337'}
+                mock = MagicMock(return_value=ret)
+                with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
+                    self.assertEqual(linux_lvm.pvcreate('A', metadatasize=1000), True)
 
     def test_pvremove(self):
         '''
         Tests for remove a physical device being used as an LVM physical volume
         '''
-        mock = MagicMock(return_value=False)
-        with patch.dict(linux_lvm.__salt__, {'lvm.pvdisplay': mock}):
-            self.assertEqual(linux_lvm.pvremove('A'),
-                             'A is not a physical volume')
+        pvdisplay = MagicMock(return_value=False)
+        with patch('salt.modules.linux_lvm.pvdisplay', pvdisplay):
+            self.assertRaises(CommandExecutionError, linux_lvm.pvremove, 'A', override=False)
 
-        mock = MagicMock(return_value=True)
-        with patch.dict(linux_lvm.__salt__, {'lvm.pvdisplay': mock}):
-            mock = MagicMock(return_value='A\nB')
-            with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
-                self.assertEqual(linux_lvm.pvremove('A'), 'A')
+        pvdisplay = MagicMock(return_value=False)
+        with patch('salt.modules.linux_lvm.pvdisplay', pvdisplay):
+            mock = MagicMock(return_value=True)
+            with patch.dict(linux_lvm.__salt__, {'lvm.pvdisplay': mock}):
+                ret = {'stdout': 'saltines', 'stderr': 'cheese', 'retcode': 0, 'pid': '1337'}
+                mock = MagicMock(return_value=ret)
+                with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
+                    self.assertEqual(linux_lvm.pvremove('A'), True)
 
     def test_vgcreate(self):
         '''

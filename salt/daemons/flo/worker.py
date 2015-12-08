@@ -14,6 +14,7 @@ import logging
 from salt.ext.six.moves import range
 
 # Import salt libs
+import salt.daemons.flo
 import salt.daemons.masterapi
 from raet import raeting
 from raet.lane.stacking import LaneStack
@@ -30,54 +31,78 @@ log = logging.getLogger(__name__)
 INHIBIT_RETURN = []  # ['_return']  # cmd for which we should not send return
 
 
-class SaltRaetWorkerFork(ioflo.base.deeding.Deed):
+@ioflo.base.deeding.deedify(
+    'SaltRaetWorkerFork',
+    ioinits={
+        'opts': '.salt.opts',
+        'proc_mgr': '.salt.usr.proc_mgr',
+        'worker_verify': '.salt.var.worker_verify',
+        'access_keys': '.salt.access_keys',
+        'mkey': '.salt.var.zmq.master_key',
+        'aes': '.salt.var.zmq.aes'})
+def worker_fork(self):
     '''
     Fork off the worker procs
     FloScript:
 
     do salt raet worker fork at enter
-
     '''
-    Ioinits = {'opts': '.salt.opts',
-               'worker_verify': '.salt.var.worker_verify',
-               'access_keys': '.salt.access_keys'}
-
-    def _make_workers(self):
-        '''
-        Spin up a process for each worker thread
-        '''
-        for index in range(int(self.opts.value['worker_threads'])):
-            time.sleep(0.01)
-            proc = multiprocessing.Process(
-                    target=self._worker, kwargs={'windex': index + 1}
+    for index in range(int(self.opts.value['worker_threads'])):
+        time.sleep(0.01)
+        self.proc_mgr.value.add_process(
+                Worker,
+                args=(
+                    self.opts.value,
+                    index + 1,
+                    self.worker_verify.value,
+                    self.access_keys.value,
+                    self.mkey.value,
+                    self.aes.value
                     )
-            proc.start()
+                )
 
-    def _worker(self, windex):
+
+class Worker(multiprocessing.Process):
+    '''
+    Create an ioflo worker in a seperate process
+    '''
+    def __init__(self, opts, windex, worker_verify, access_keys, mkey, aes):
+        super(Worker, self).__init__()
+        self.opts = opts
+        self.windex = windex
+        self.worker_verify = worker_verify
+        self.access_keys = access_keys
+        self.mkey = mkey
+        self.aes = aes
+
+    def run(self):
         '''
         Spin up a worker, do this in  multiprocess
         windex is worker index
         '''
-        self.opts.value['__worker'] = True
+        self.opts['__worker'] = True
         behaviors = ['salt.daemons.flo']
-        preloads = [('.salt.opts', dict(value=self.opts.value)),
-                    ('.salt.var.worker_verify', dict(value=self.worker_verify.value))]
-        preloads.append(('.salt.var.fork.worker.windex', dict(value=windex)))
+        preloads = [('.salt.opts', dict(value=self.opts)),
+                    ('.salt.var.worker_verify', dict(value=self.worker_verify))]
+        preloads.append(('.salt.var.fork.worker.windex', dict(value=self.windex)))
+        preloads.append(('.salt.var.zmq.master_key', dict(value=self.mkey)))
+        preloads.append(('.salt.var.zmq.aes', dict(value=self.aes)))
         preloads.append(
-                ('.salt.access_keys', dict(value=self.access_keys.value)))
+                ('.salt.access_keys', dict(value=self.access_keys)))
+        preloads.extend(salt.daemons.flo.explode_opts(self.opts))
 
-        console_logdir = self.opts.value.get('ioflo_console_logdir', '')
+        console_logdir = self.opts.get('ioflo_console_logdir', '')
         if console_logdir:
-            consolepath = os.path.join(console_logdir, "worker_{0}.log".format(windex))
+            consolepath = os.path.join(console_logdir, "worker_{0}.log".format(self.windex))
         else:  # empty means log to std out
             consolepath = ''
 
         ioflo.app.run.start(
-                name='worker{0}'.format(windex),
-                period=float(self.opts.value['ioflo_period']),
+                name='worker{0}'.format(self.windex),
+                period=float(self.opts['ioflo_period']),
                 stamp=0.0,
-                real=self.opts.value['ioflo_realtime'],
-                filepath=self.opts.value['worker_floscript'],
+                real=self.opts['ioflo_realtime'],
+                filepath=self.opts['worker_floscript'],
                 behaviors=behaviors,
                 username='',
                 password='',
@@ -85,15 +110,9 @@ class SaltRaetWorkerFork(ioflo.base.deeding.Deed):
                 houses=None,
                 metas=None,
                 preloads=preloads,
-                verbose=int(self.opts.value['ioflo_verbose']),
+                verbose=int(self.opts['ioflo_verbose']),
                 consolepath=consolepath,
                 )
-
-    def action(self):
-        '''
-        Run with an enter, starts the worker procs
-        '''
-        self._make_workers()
 
 
 class SaltRaetWorkerSetup(ioflo.base.deeding.Deed):

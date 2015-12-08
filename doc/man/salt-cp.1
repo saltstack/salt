@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT-CP" "1" "August 10, 2015" "2015.5.4" "Salt"
+.TH "SALT-CP" "1" "September 01, 2015" "2015.8.0" "Salt"
 .SH NAME
 salt-cp \- salt-cp Documentation
 .
@@ -51,6 +51,11 @@ salt\-cp \-G \(aqos:Arch.*\(aq [ options ] SOURCE DEST
 .sp
 Salt copy copies a local file out to all of the Salt minions matched by the
 given target.
+.sp
+Note: salt\-cp uses salt\(aqs publishing mechanism. This means the privacy of the
+contents of the file on the wire are completely dependant upon the transport
+in use. In addition, if the salt\-master is running with debug logging it is
+possible that the contents of the file will be logged to disk.
 .SH OPTIONS
 .INDENT 0.0
 .TP

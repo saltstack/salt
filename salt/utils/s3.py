@@ -28,7 +28,8 @@ log = logging.getLogger(__name__)
 def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
           path='', return_bin=False, action=None, local_file=None,
-          verify_ssl=True, location=None, full_headers=False):
+          verify_ssl=True, full_headers=False, kms_keyid=None,
+          location=None, role_arn=None):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -85,9 +86,15 @@ def query(key, keyid, method='GET', params=None, headers=None,
         endpoint = service_url
 
     # Try grabbing the credentials from the EC2 instance IAM metadata if available
-    if not key or not keyid:
+    if not key:
         key = salt.utils.aws.IROLE_CODE
+
+    if not keyid:
         keyid = salt.utils.aws.IROLE_CODE
+
+    if kms_keyid is not None and method in ('PUT', 'POST'):
+        headers['x-amz-server-side-encryption'] = 'aws:kms'
+        headers['x-amz-server-side-encryption-aws-kms-key-id'] = kms_keyid
 
     data = ''
     if method == 'PUT':
@@ -104,9 +111,11 @@ def query(key, keyid, method='GET', params=None, headers=None,
             data=data,
             uri='/{0}'.format(path),
             prov_dict={'id': keyid, 'key': key},
+            role_arn=role_arn,
             location=location,
             product='s3',
             requesturl=requesturl,
+            headers=headers,
         )
 
     log.debug('S3 Request: {0}'.format(requesturl))
@@ -122,10 +131,10 @@ def query(key, keyid, method='GET', params=None, headers=None,
                                   verify=verify_ssl)
         response = result.content
     except requests.exceptions.HTTPError as exc:
-        log.error('There was an error::')
-        if hasattr(exc, 'code') and hasattr(exc, 'msg'):
-            log.error('    Code: {0}: {1}'.format(exc.code, exc.msg))
-        log.error('    Content: \n{0}'.format(exc.read()))
+        log.error('Failed to {0} {1}::'.format(method, requesturl))
+        log.error('    Exception: {0}'.format(exc))
+        if exc.response:
+            log.error('    Response content: {0}'.format(exc.response.content))
         return False
 
     log.debug('S3 Response Status Code: {0}'.format(result.status_code))

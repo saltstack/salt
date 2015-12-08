@@ -17,17 +17,17 @@ Download
 
 Salt source releases are available for download via the following PyPI link:
 
-    https://pypi.python.org/pypi/salt
+* https://pypi.python.org/pypi/salt
 
 The installation document, found in the following link,  outlines where to
 obtain packages and installation specifics for platforms:
 
-    :doc:`Installation </topics/installation/index>`
+* :doc:`Installation </topics/installation/index>`
 
 The Salt Bootstrap project, found in the following repository, is a single
 shell script, which automates the install correctly on  multiple platforms:
 
-    https://github.com/saltstack/salt-bootstrap
+* https://github.com/saltstack/salt-bootstrap
 
 Get Started
 ===============
@@ -59,8 +59,20 @@ States - Configuration Management with Salt:
 Masterless Quickstart:
     :doc:`Salt Quickstart </topics/tutorials/quickstart>`
 
+Running Salt without root access in userland:
+    :doc:`Salt Usermode <topics/tutorials/rooted>`
+
 A list of all tutorials can be found here:
     :doc:`All Salt tutorials <topics/tutorials/index>`
+
+Demo Environments
+=================
+
+You can download one of the following `Vagrant <http://vagrantup.com>`_
+projects to quickly set up a Salt demo environment:
+
+- https://github.com/UtahDave/salt-vagrant-demo
+- https://github.com/UtahDave/salt-vagrant-lxc
 
 Salt in depth
 =============
@@ -220,7 +232,7 @@ The following links explore various Salt topics in depth.
 :doc:`Testing Salt <topics/development/tests/index>`
     This is a  tutorial for writing unit tests and integration tests.
 
-:doc:`Salt Proxy Minions <topics/topology/proxyminion/index>`
+:doc:`Salt Proxy Minions <topics/proxyminion/index>`
     Proxy minions allow for the control of devices and machines which are
     unable to run a salt-minion.
 

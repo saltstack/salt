@@ -85,10 +85,14 @@ by their ``os`` grain:
 
     company: Foo Industries
 
+.. important::
+  See :ref:`Is Targeting using Grain Data Secure? <faq-grain-security>` for
+  important security information.
+
 The above pillar sets two key/value pairs. If a minion is running RedHat, then
 the ``apache`` key is set to ``httpd`` and the ``git`` key is set to the value
 of ``git``. If the minion is running Debian, those values are changed to
-``apache2`` and ``git-core`` respctively. All minions that have this pillar
+``apache2`` and ``git-core`` respectively. All minions that have this pillar
 targeting to them via a top file will have the key of ``company`` with a value
 of ``Foo Industries``.
 
@@ -321,28 +325,6 @@ locally. This is done with the ``saltutil.refresh_pillar`` function.
 This function triggers the minion to asynchronously refresh the pillar and will
 always return ``None``.
 
-.. _targeting-pillar:
-
-Targeting with Pillar
-=====================
-
-Pillar data can be used when targeting minions. This allows for ultimate
-control and flexibility when targeting minions.
-
-.. code-block:: bash
-
-    salt -I 'somekey:specialvalue' test.ping
-
-Like with :doc:`Grains <../targeting/grains>`, it is possible to use globbing
-as well as match nested values in Pillar, by adding colons for each level that
-is being traversed. The below example would match minions with a pillar named
-``foo``, which is a dict containing a key ``bar``, with a value beginning with
-``baz``:
-
-.. code-block:: bash
-
-    salt -I 'foo:bar:baz*' test.ping
-
 
 Set Pillar Data at the Command Line
 ===================================
@@ -375,6 +357,20 @@ to ``True``:
 .. code-block:: yaml
 
     pillar_opts: True
+
+
+Minion Config in Pillar
+=======================
+
+Minion configuration options can be set on pillars. Any option that you want
+to modify, should be in the first level of the pillars, in the same way you set
+the options in the config file. For example, to configure the MySQL root
+password to be used by MySQL Salt execution module, set the following pillar
+variable:
+
+.. code-block:: yaml
+
+    mysql.pass: hardtoguesspassword
 
 
 Master Provided Pillar Error

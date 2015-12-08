@@ -53,13 +53,23 @@ class SystemTestCase(TestCase):
                         {'cmd.run': MagicMock(return_value='A')}):
             self.assertEqual(system.poweroff(), 'A')
 
+    @patch.dict(system.__salt__, {'cmd.run': MagicMock(return_value='A')})
     def test_reboot(self):
         '''
-        Test to reboot the system using the 'reboot' command
+        Test to reboot the system with shutdown -r
         '''
-        with patch.dict(system.__salt__,
-                        {'cmd.run': MagicMock(return_value='A')}):
-            self.assertEqual(system.reboot(), 'A')
+        self.assertEqual(system.reboot(), 'A')
+        system.__salt__['cmd.run'].assert_called_with(
+            ['shutdown', '-r', 'now'], python_shell=False)
+
+    @patch.dict(system.__salt__, {'cmd.run': MagicMock(return_value='A')})
+    def test_reboot_with_delay(self):
+        '''
+        Test to reboot the system using shutdown -r with a delay
+        '''
+        self.assertEqual(system.reboot(at_time=5), 'A')
+        system.__salt__['cmd.run'].assert_called_with(
+            ['shutdown', '-r', '5'], python_shell=False)
 
     def test_shutdown(self):
         '''

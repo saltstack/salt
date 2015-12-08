@@ -2,16 +2,83 @@
 Ubuntu Installation
 ===================
 
-Add repository
-==============
+.. _installation-ubuntu-repo:
 
-The latest packages for Ubuntu are published in the saltstack PPA. If you have
+Installation from the SaltStack Repository
+==========================================
+
+2015.8.0 and later packages for Ubuntu 14 (Trusty) and Ubuntu 12 (Precise) are
+available in the SaltStack repository.
+
+.. important::
+  The repository folder structure changed between 2015.8.0 and 2015.8.1. If you
+  previously configured this repository, verify that your paths contain
+  ``latest``.
+
+To install using the SaltStack repository:
+
+#. Run the following command to import the SaltStack repository key:
+
+   Ubuntu 14:
+
+   .. code-block:: bash
+
+       wget -O - https://repo.saltstack.com/apt/ubuntu/ubuntu14/latest/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
+
+   Ubuntu 12:
+
+   .. code-block:: bash
+
+       wget -O - https://repo.saltstack.com/apt/ubuntu/ubuntu12/latest/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
+
+#. Add the following line to ``/etc/apt/sources.list``:
+
+   Ubuntu 14:
+
+   .. code-block:: bash
+
+       deb http://repo.saltstack.com/apt/ubuntu/ubuntu14/latest trusty main
+
+   Ubuntu 12:
+
+   .. code-block:: bash
+
+       deb http://repo.saltstack.com/apt/ubuntu/ubuntu12/latest precise main
+
+#. Run ``sudo apt-get update``.
+
+#. Install the salt-minion, salt-master, or other Salt components:
+
+   - ``apt-get install salt-master``
+   - ``apt-get install salt-minion``
+   - ``apt-get install salt-ssh``
+   - ``apt-get install salt-syndic``
+
+Post-installation tasks
+-----------------------
+
+Now, go to the :doc:`Configuring Salt </ref/configuration/index>` page.
+
+Installation from the Community Repository
+==========================================
+
+Packages for Ubuntu are also published in the saltstack PPA. If you have
 the ``add-apt-repository`` utility, you can add the repository and import the
 key in one step:
 
 .. code-block:: bash
 
     sudo add-apt-repository ppa:saltstack/salt
+
+In addition to the main repository, there are secondary repositories for each
+individual major release. These repositories receive security and point
+releases but will not upgrade to any subsequent major release.  There are
+currently several available repos: salt16, salt17, salt2014-1, salt2014-7,
+salt2015-5. For example to follow 2015.5.x releases:
+
+.. code-block:: bash
+
+    sudo add-apt-repository ppa:saltstack/salt2015-5
 
 .. admonition:: add-apt-repository: command not found?
 
@@ -55,30 +122,15 @@ Install the Salt master, minion, or syndic from the repository with the apt-get
 command. These examples each install one daemon, but more than one package name
 may be given at a time:
 
-.. code-block:: bash
-
-    sudo apt-get install salt-master
-
-.. code-block:: bash
-
-    sudo apt-get install salt-minion
-
-.. code-block:: bash
-
-    sudo apt-get install salt-syndic
+- ``apt-get install salt-master``
+- ``apt-get install salt-minion``
+- ``apt-get install salt-ssh``
+- ``apt-get install salt-syndic``
 
 .. _ubuntu-config:
-
-
-ZeroMQ 4
-========
-
-ZeroMQ 4 is available by default for Ubuntu 14.04 and newer. However, for Ubuntu
-12.04 LTS, starting with Salt version ``2014.7.5``, ZeroMQ 4 is included with the
-Salt installation package and nothing additional needs to be done.
-
 
 Post-installation tasks
 =======================
 
 Now go to the :doc:`Configuring Salt</ref/configuration/index>` page.
+

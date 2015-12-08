@@ -8,6 +8,7 @@
 '''
 
 # Import python libraries
+from __future__ import absolute_import
 import sys
 
 # Import Salt Testing libs
@@ -309,7 +310,7 @@ class VirtualenvTestCase(TestCase):
         with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}):
             virtualenv_mod.create('/tmp/foo', prompt='\'PY\' Prompt')
             mock.assert_called_once_with(
-                ['virtualenv', '--prompt="\'PY\' Prompt"', '/tmp/foo'],
+                ['virtualenv', "--prompt=''PY' Prompt'", '/tmp/foo'],
                 runas=None,
                 python_shell=False
             )

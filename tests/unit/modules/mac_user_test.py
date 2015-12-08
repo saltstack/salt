@@ -3,6 +3,11 @@
     :codeauthor: :email:`Nicole Thomas <nicole@saltstack.com>`
 '''
 
+# Import python libs
+from __future__ import absolute_import
+import grp
+import pwd
+
 # Import Salt Testing Libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
@@ -13,10 +18,6 @@ ensure_in_syspath('../../')
 # Import Salt Libs
 from salt.modules import mac_user
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-
-# Import python Libs
-import pwd
-import grp
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -63,10 +64,11 @@ class MacUserTestCase(TestCase):
             with patch.dict(mac_user.__grains__,
                             {'kernel': 'Darwin', 'osrelease': '10.9.1',
                              'osrelease_info': (10, 9, 1)}):
-                self.assertEqual(mac_user._dscl('username'), {'pid': 4948,
-                                                              'retcode': 0,
-                                                              'stderr': '',
-                                                              'stdout': ''})
+                self.assertEqual(mac_user._dscl(['username', 'UniqueID', 501]),
+                                 {'pid': 4948,
+                                  'retcode': 0,
+                                  'stderr': '',
+                                  'stdout': ''})
 
     @patch('pwd.getpwall', MagicMock(return_value=mock_pwall))
     def test_first_avail_uid(self):

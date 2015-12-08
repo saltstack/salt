@@ -21,7 +21,7 @@ def get_returner_options(virtualname=None,
 
     :param str virtualname: The returner virtualname (as returned
         by __virtual__()
-    :param ret: result of the module that ran. dit-like object
+    :param ret: result of the module that ran. dict-like object
 
         May contain a `ret_config` key pointing to a string
         If a `ret_config` is specified, config options are read from::
@@ -98,6 +98,11 @@ def get_returner_options(virtualname=None,
         )
     )
 
+    # override some values with relevant options from
+    # keyword arguments passed via return_kwargs
+    if ret and 'ret_kwargs' in ret:
+        _options.update(ret['ret_kwargs'])
+
     return _options
 
 
@@ -131,9 +136,9 @@ def _fetch_option(cfg, ret_config, virtualname, attr_name):
     if not ret_config:
         # Using the default configuration key
         if isinstance(cfg, dict):
-            return c_cfg.get(default_cfg_key, cfg.get(default_cfg_key))
+            return c_cfg.get(attr_name, cfg.get(default_cfg_key))
         else:
-            return c_cfg.get(default_cfg_key, cfg(default_cfg_key))
+            return c_cfg.get(attr_name, cfg(default_cfg_key))
 
     # Using ret_config to override the default configuration key
     ret_cfg = cfg('{0}.{1}'.format(ret_config, virtualname), {})
@@ -204,13 +209,15 @@ def _fetch_profile_opts(
 
     # Using a profile and it is in _options
 
+    creds = {}
     profile = _options[profile_attr]
-    log.info('Using profile %s', profile)
+    if profile:
+        log.info('Using profile %s', profile)
 
-    if 'config.option' in __salt__:
-        creds = cfg(profile)
-    else:
-        creds = cfg.get(profile)
+        if 'config.option' in __salt__:
+            creds = cfg(profile)
+        else:
+            creds = cfg.get(profile)
 
     if not creds:
         return {}

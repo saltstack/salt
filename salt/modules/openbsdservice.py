@@ -7,7 +7,10 @@ The service module for OpenBSD
 from __future__ import absolute_import
 import os
 import logging
-from salt.ext.six.moves import map
+
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import map  # pylint: disable=import-error,redefined-builtin
 
 # Import Salt libs
 import salt.utils
@@ -245,7 +248,7 @@ def get_enabled():
         salt '*' service.get_enabled
     '''
     services = []
-    for daemon, is_enabled in _get_rc().items():
+    for daemon, is_enabled in six.iteritems(_get_rc()):
         if is_enabled:
             services.append(daemon)
     return sorted(set(get_all()) & set(services))
@@ -279,7 +282,7 @@ def get_disabled():
         salt '*' service.get_disabled
     '''
     services = []
-    for daemon, is_enabled in _get_rc().items():
+    for daemon, is_enabled in six.iteritems(_get_rc()):
         if not is_enabled:
             services.append(daemon)
     return sorted(set(get_all()) & set(services))

@@ -7,6 +7,21 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 
+# Import 3rd-party libs
+import salt.ext.six as six
+if six.PY3:
+    import ipaddress
+else:
+    import salt.ext.ipaddress as ipaddress
+
+
+# Fix included in py2-ipaddress for 32bit architectures
+# Except that xrange only supports machine integers, not longs, so...
+def long_range(start, end):
+    while start < end:
+        yield start
+        start += 1
+
 # Import salt libs
 import salt.utils
 
@@ -271,9 +286,9 @@ def list_sets(family='ipv4'):
 
 def check_set(set=None, family='ipv4'):
     '''
-    .. versionadded:: 2014.7.0
-
     Check that given ipset set exists.
+
+    .. versionadded:: 2014.7.0
 
     CLI Example:
 
@@ -380,6 +395,22 @@ def check(set=None, entry=None, family='ipv4'):
     '''
     Check that an entry exists in the specified set.
 
+    set
+        The ipset name
+
+    entry
+        An entry in the ipset.  This parameter can be a single IP address, a
+        range of IP addresses, or a subnet block.  Example:
+
+        .. code-block:: cfg
+
+            192.168.0.1
+            192.168.0.2-192.168.0.19
+            192.168.0.0/25
+
+    family
+        IP protocol version: ipv4 or ipv6
+
     CLI Example:
 
     .. code-block:: bash
@@ -396,10 +427,47 @@ def check(set=None, entry=None, family='ipv4'):
     if not settype:
         return 'Error: Set {0} does not exist'.format(set)
 
+    if isinstance(entry, list):
+        entries = entry
+    else:
+        if entry.find('-') != -1 and entry.count('-') == 1:
+            start, end = entry.split('-')
+
+            if settype == 'hash:ip':
+                entries = [str(ipaddress.ip_address(ip)) for ip in long_range(
+                    ipaddress.ip_address(start),
+                    ipaddress.ip_address(end) + 1
+                )]
+
+            elif settype == 'hash:net':
+                networks = ipaddress.summarize_address_range(ipaddress.ip_address(start),
+                                                             ipaddress.ip_address(end))
+                entries = []
+                for network in networks:
+                    entries.append(network.with_prefixlen)
+            else:
+                entries = [entry]
+
+        elif entry.find('/') != -1 and entry.count('/') == 1:
+            if settype == 'hash:ip':
+                entries = [str(ip) for ip in ipaddress.ip_network(entry)]
+            elif settype == 'hash:net':
+                _entries = [str(ip) for ip in ipaddress.ip_network(entry)]
+                if len(_entries) == 1:
+                    entries = [_entries[0]]
+                else:
+                    entries = [entry]
+            else:
+                entries = [entry]
+        else:
+            entries = [entry]
+
     current_members = _find_set_members(set)
-    if entry in current_members:
-        return True
-    return False
+    for entry in entries:
+        if entry not in current_members:
+            return False
+
+    return True
 
 
 def test(set=None, entry=None, family='ipv4', **kwargs):

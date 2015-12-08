@@ -1,3 +1,5 @@
+.. _execution-modules:
+
 =================
 Execution Modules
 =================
@@ -21,10 +23,10 @@ Modules Are Easy to Write!
 
 Writing Salt execution modules is straightforward.
 
-A Salt execution modules is a Python or `Cython`_ module
+A Salt execution module is a Python or `Cython`_ module
 placed in a directory called ``_modules/``
 within the :conf_master:`file_roots` as specified by the master config file. By
-default this is `/srv/salt/_modules` on Linux systems.
+default this is ``/srv/salt/_modules`` on Linux systems.
 
 
 Modules placed in ``_modules/`` will be synced to the minions when any of the following
@@ -48,8 +50,90 @@ starts, so only the ``*.pyx`` file is required.
 
 .. _`Cython`: http://cython.org/
 
-Cross-Calling Modules
-=====================
+Zip Archives as Modules
+=======================
+Python 2.3 and higher allows developers to directly import zip archives containing Python code.
+By setting :conf_minion:`enable_zip_modules` to ``True`` in the minion config, the Salt loader
+will be able to import ``.zip`` files in this fashion.  This allows Salt module developers to
+package dependencies with their modules for ease of deployment, isolation, etc.
+
+For a user, Zip Archive modules behave just like other modules.  When executing a function from a
+module provided as the file ``my_module.zip``, a user would call a function within that module
+as ``my_module.<function>``.
+
+Creating a Zip Archive Module
+-----------------------------
+A Zip Archive module is structured similarly to a simple `Python package`_.  The ``.zip`` file contains
+a single directory with the same name as the module.  The module code traditionally in ``<module_name>.py``
+goes in ``<module_name>/__init__.py``.  The dependency packages are subdirectories of ``<module_name>/``.
+
+Here is an example directory structure for the ``lumberjack`` module, which has two library dependencies
+(``sleep`` and ``work``) to be included.
+
+.. code-block:: bash
+
+    modules $ ls -R lumberjack
+    __init__.py     sleep           work
+
+    lumberjack/sleep:
+    __init__.py
+
+    lumberjack/work:
+    __init__.py
+
+The contents of ``lumberjack/__init__.py`` show how to import and use these included libraries.
+
+.. code-block:: python
+
+    # Libraries included in lumberjack.zip
+    from lumberjack import sleep, work
+
+
+    def is_ok(person):
+        ''' Checks whether a person is really a lumberjack '''
+        return sleep.all_night(person) and work.all_day(person)
+
+Then, create the zip:
+
+.. code-block:: bash
+
+    modules $ zip -r lumberjack lumberjack
+      adding: lumberjack/ (stored 0%)
+      adding: lumberjack/__init__.py (deflated 39%)
+      adding: lumberjack/sleep/ (stored 0%)
+      adding: lumberjack/sleep/__init__.py (deflated 7%)
+      adding: lumberjack/work/ (stored 0%)
+      adding: lumberjack/work/__init__.py (deflated 7%)
+    modules $ unzip -l lumberjack.zip
+    Archive:  lumberjack.zip
+      Length     Date   Time    Name
+     --------    ----   ----    ----
+            0  08-21-15 20:08   lumberjack/
+          348  08-21-15 20:08   lumberjack/__init__.py
+            0  08-21-15 19:53   lumberjack/sleep/
+           83  08-21-15 19:53   lumberjack/sleep/__init__.py
+            0  08-21-15 19:53   lumberjack/work/
+           81  08-21-15 19:21   lumberjack/work/__init__.py
+     --------                   -------
+          512                   6 files
+
+Once placed in :conf_master:`file_roots`, Salt users can distribute and use ``lumberjack.zip`` like any other module.
+
+.. code-block:: bash
+
+    $ sudo salt minion1 saltutil.sync_modules
+    minion1:
+      - modules.lumberjack
+    $ sudo salt minion1 lumberjack.is_ok 'Michael Palin'
+    minion1:
+      True
+
+.. _`Python package`: https://docs.python.org/2/tutorial/modules.html#packages
+
+.. _cross-calling-execution-modules:
+
+Cross Calling Execution Modules
+===============================
 
 All of the Salt execution modules are available to each other and modules can call
 functions available in other execution modules.
@@ -68,8 +152,8 @@ Salt modules can be cross-called by accessing the value in the ``__salt__`` dict
     def foo(bar):
         return __salt__['cmd.run'](bar)
 
-This code will call the `run` function in the :mod:`cmd <salt.modules.cmdmod>` and pass the argument
-``bar`` to it.
+This code will call the `run` function in the :mod:`cmd <salt.modules.cmdmod>`
+module and pass the argument ``bar`` to it.
 
 
 Preloaded Execution Module Data
@@ -141,26 +225,91 @@ This will ensure that the text outputter is used.
 Virtual Modules
 ===============
 
-Sometimes an execution module should be presented in a generic way. A good example of this
-can be found in the package manager modules. The package manager changes from
-one operating system to another, but the Salt execution module that interfaces with the
-package manager can be presented in a generic way.
+Virtual modules let you override the name of a module in order to use the same
+name to refer to one of several similar modules. The specific module that is
+loaded for a virtual name is selected based on the current platform or
+environment.
 
-The Salt modules for package managers all contain a ``__virtual__`` function
-which is called to define what systems the module should be loaded on.
+For example, packages are managed across platforms using the ``pkg`` module.
+``pkg`` is a virtual module name that is
+an alias for the specific package manager module that is loaded on a specific
+system (for example, :mod:`yumpkg <salt.modules.yumpkg>` on RHEL/CentOS systems
+, and :mod:`aptpkg <salt.modules.aptpkg>` on Ubuntu).
 
-The ``__virtual__`` function is used to return either a
-:ref:`string <python2:typesseq>` or :py:data:`False`. If
-False is returned then the module is not loaded, if a string is returned then
-the module is loaded with the name of the string.
+Virtual module names are set using the ``__virtual__`` function and the
+:ref:`virtual name <modules-virtual-name>`.
 
-This means that the package manager modules can be presented as the ``pkg`` module
-regardless of what the actual module is named.
+``__virtual__`` Function
+========================
+
+The ``__virtual__`` function returns either a :ref:`string <python2:typesseq>`,
+:py:data:`True`, :py:data:`False`, or :py:data:`False` with an :ref:`error
+string <modules-error-info>`. If a string is returned then the module is loaded
+using the name of the string as the virtual name. If ``True`` is returned the
+module is loaded using the current module name. If ``False`` is returned the
+module is not loaded. ``False`` lets the module perform system checks and
+prevent loading if dependencies are not met.
 
 Since ``__virtual__`` is called before the module is loaded, ``__salt__`` will be
 unavailable as it will not have been packed into the module at this point in time.
 
-The package manager modules are among the best example of using the ``__virtual__``
+.. note::
+    Modules which return a string from ``__virtual__`` that is already used by a module that
+    ships with Salt will _override_ the stock module.
+
+.. _modules-error-info:
+
+Returning Error Information from ``__virtual__``
+------------------------------------------------
+
+Optionally, Salt plugin modules, such as execution, state, returner, beacon,
+etc. modules may additionally return a string containing the reason that a
+module could not be loaded.  For example, an execution module called ``cheese``
+and a corresponding state module also called ``cheese``, both depending on a
+utility called ``enzymes`` should have ``__virtual__`` functions that handle
+the case when the dependency is unavailable.
+
+.. code-block:: python
+
+    '''
+    Cheese execution (or returner/beacon/etc.) module
+    '''
+    try:
+        import enzymes
+        HAS_ENZYMES = True
+    except ImportError:
+        HAS_ENZYMES = False
+
+
+    def __virtual__():
+        '''
+        only load cheese if enzymes are available
+        '''
+        if HAS_ENZYMES:
+            return 'cheese'
+        else:
+            return (False, 'The cheese execution module cannot be loaded: enzymes unavailable.')
+
+.. code-block:: python
+
+    '''
+    Cheese state module
+    '''
+
+    def __virtual__():
+        '''
+        only load cheese if enzymes are available
+        '''
+        # predicate loading of the cheese state on the corresponding execution module
+        if 'cheese.slice' in __salt__:
+            return 'cheese'
+        else:
+            return (False, 'The cheese state module cannot be loaded: enzymes unavailable.')
+
+Examples
+--------
+
+The package manager modules are among the best examples of using the ``__virtual__``
 function. Some examples:
 
 - :blob:`pacman.py <salt/modules/pacman.py>`
@@ -168,19 +317,34 @@ function. Some examples:
 - :blob:`aptpkg.py <salt/modules/aptpkg.py>`
 - :blob:`at.py <salt/modules/at.py>`
 
-.. note::
-    Modules which return a string from ``__virtual__`` that is already used by a module that
-    ships with Salt will _override_ the stock module.
+.. _modules-virtual-name:
 
-Returning Error Information from ``__virtual__``
-------------------------------------------------
+``__virtualname__``
+===================
 
-Optionally, modules may additionally return a list of reasons that a module could
-not be loaded. For example, if a dependency for 'my_mod' was not met, a
-__virtual__ function could do as follows:
+``__virtualname__`` is a variable that is used by the documentation build
+system to know the virtual name of a module without calling the ``__virtual__``
+function. Modules that return a string from the ``__virtual__`` function
+must also set the ``__virtualname__`` variable.
 
- return False, ['My Module must be installed before this module can be
- used.']
+To avoid setting the virtual name string twice, you can implement
+``__virtual__`` to return the value set for ``__virtualname__`` using a pattern
+similar to the following:
+
+.. code-block:: python
+
+   # Define the module's virtual name
+   __virtualname__ = 'pkg'
+
+
+   def __virtual__():
+       '''
+       Confine this module to Mac OS with Homebrew.
+       '''
+
+       if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
+           return __virtualname__
+       return False
 
 
 Documentation
@@ -354,7 +518,7 @@ If a "fallback_function" is defined, it will replace the function instead of rem
         '''
         return True
 
-In addition to global dependancies the depends decorator also supports raw booleans.
+In addition to global dependencies the depends decorator also supports raw booleans.
 
 .. code-block:: python
 

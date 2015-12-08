@@ -47,11 +47,11 @@ Here's a more complex example:
 .. code-blocK:: jinja
 
     # Comments in yaml start with a hash symbol.
-    # Since jinja rendering occurs before yaml parsing, if you want to include jinja 
+    # Since jinja rendering occurs before yaml parsing, if you want to include jinja
     # in the comments you may need to escape them using 'jinja' comments to prevent
     # jinja from trying to render something which is not well-defined jinja.
     # e.g.
-    # {# iterate over the Three Stooges using a {% for %}..{% endfor %} loop 
+    # {# iterate over the Three Stooges using a {% for %}..{% endfor %} loop
     # with the iterator variable {{ usr }} becoming the state ID. #}
     {% for usr in 'moe','larry','curly' %}
     {{ usr }}:
@@ -80,6 +80,43 @@ in the template context. The `grains` can be used from within sls modules:
         {% elif grains['os'] == 'Ubuntu' %}
         - name: apache2
         {% endif %}
+
+Using Environment Variables in SLS modules
+==========================================
+
+You can use ``salt['environ.get']('VARNAME')`` to use an environment
+variable in a Salt state.
+
+.. code-block:: bash
+
+   MYENVVAR="world" salt-call state.template test.sls
+
+.. code-block:: yaml
+
+   Create a file with contents from an environment variable:
+  file.managed:
+    - name: /tmp/hello
+    - contents: {{ salt['environ.get']('MYENVVAR') }}
+
+Error checking:
+
+.. code-block:: yaml
+
+   {% set myenvvar = salt['environ.get']('MYENVVAR') %}
+   {% if myenvvar %}
+
+   Create a file with contents from an environment variable:
+     file.managed:
+       - name: /tmp/hello
+       - contents: {{ salt['environ.get']('MYENVVAR') }}
+
+   {% else %}
+
+   Fail - no environment passed in:
+     test:
+       A. fail_without_changes
+
+   {% endif %}
 
 Calling Salt modules from templates
 ===================================

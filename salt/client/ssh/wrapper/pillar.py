@@ -108,6 +108,36 @@ def raw(key=None):
     return ret
 
 
+def keys(key, delimiter=DEFAULT_TARGET_DELIM):
+    '''
+    .. versionadded:: 2015.8.0
+
+    Attempt to retrieve a list of keys from the named value from the pillar.
+
+    The value can also represent a value in a nested dict using a ":" delimiter
+    for the dict, similar to how pillar.get works.
+
+    delimiter
+        Specify an alternate delimiter to use when traversing a nested dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pillar.keys web:sites
+    '''
+    ret = salt.utils.traverse_dict_and_list(
+        __pillar__, key, KeyError, delimiter)
+
+    if ret is KeyError:
+        raise KeyError("Pillar key not found: {0}".format(key))
+
+    if not isinstance(ret, dict):
+        raise ValueError("Pillar value in key {0} is not a dict".format(key))
+
+    return ret.keys()
+
+
 # Allow pillar.data to also be used to return pillar data
 items = raw
 data = items

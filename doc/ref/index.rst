@@ -5,7 +5,7 @@ Reference
 
     auth/all/index
     cli/index
-    clientacl
+    publisheracl
     clients/index
     clouds/all/index
     configuration/*
@@ -20,6 +20,7 @@ Reference
     peer
     pillar/index
     pillar/all/index
+    proxy/all/index
     renderers/index
     returners/index
     roster/all/index
@@ -31,4 +32,6 @@ Reference
     tops/all/index
     wheel/all/index
     beacons/all/index
+    engines/all/index
     sdb/all/index
+    serializers/all/index

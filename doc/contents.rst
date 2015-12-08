@@ -21,10 +21,13 @@ Salt Table of Contents
     topics/sdb/index
     topics/event/index
     topics/beacons/index
+    topics/engines/index
     topics/ext_processes/index
     topics/highavailability/index
     topics/topology/index
-    topics/transports/raet/index
+    topics/proxyminion/index
+    topics/spm/index
+    topics/transports/index
     topics/windows/index
     topics/cloud/index
     topics/netapi/index
@@ -34,6 +37,7 @@ Salt Table of Contents
     topics/ssh/*
     ref/index
     topics/best_practices
+    topics/hardening
     topics/troubleshooting/index
     topics/development/index
     topics/releases/index

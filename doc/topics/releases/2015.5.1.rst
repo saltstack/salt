@@ -501,7 +501,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
   * 558798d Fix net_io_counters deprecation issue
 
-  * 8140f92 Override unecessary pylint errors
+  * 8140f92 Override unnecessary pylint errors
 
   * 7d02ad4 Fix some of the mock names for the new API
 
@@ -513,7 +513,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
   * e48982f Fix version checking in psutil_compat
 
-  * 93ee411 Create compatability psutil. psutil 3.0 drops 1.0 API, but we still support old psutil versions.
+  * 93ee411 Create compatibility psutil. psutil 3.0 drops 1.0 API, but we still support old psutil versions.
 
 - **PR** `#23782`_: (*terminalmage*) Replace "command -v" with "which" and get rid of spurious log messages
   @ *2015-05-16T04:03:10Z*
@@ -564,7 +564,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
       * 2d9aa2b Avoid shadowing variables in lxc module
 
-      * 792e102 Allow to override profile options in lxc.cloud_init_interface
+      * 792e102 Allow overriding profile options in lxc.cloud_init_interface
 
       * 42bd64b Return changes on successful lxc.create from salt-cloud
 
@@ -782,11 +782,11 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
   * 07e987e Merge pull request `#23702`_ from jayeshka/fix_lvs_service
   * ecff218 fix lvs_service
 
-- **PR** `#23686`_: (*jfindlay*) remove superflous return statement
+- **PR** `#23686`_: (*jfindlay*) remove superfluous return statement
   @ *2015-05-14T14:20:18Z*
 
   * 39973d4 Merge pull request `#23686`_ from jfindlay/fix_lvs_server
-  * 5aaeb73 remove superflous return statement
+  * 5aaeb73 remove superfluous return statement
 
 - **PR** `#23690`_: (*rallytime*) Backport `#23424`_ to 2015.5
   @ *2015-05-13T23:04:36Z*
@@ -853,10 +853,10 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
   - **PR** `#23530`_: (*dr4Ke*) salt-ssh state: fix including all salt:// references
   - **PR** `#23496`_: (*martinhoefling*) Fix for issue `#23110`_
     | refs: `#23594`_
-  - **PR** `#23474`_: (*dr4Ke*) Fix grains.append in nested dictionnary grains `#23411`_
+  - **PR** `#23474`_: (*dr4Ke*) Fix grains.append in nested dictionary grains `#23411`_
   - **PR** `#23442`_: (*clan*) add directory itself to keep list
     | refs: `#23593`_
-  - **PR** `#23440`_: (*dr4Ke*) fix grains.append in nested dictionnary grains `#23411`_
+  - **PR** `#23440`_: (*dr4Ke*) fix grains.append in nested dictionary grains `#23411`_
     | refs: `#23474`_
   - **PR** `#23433`_: (*twangboy*) Obtain all software from the registry
   - **PR** `#23389`_: (*cachedout*) Correct fail_hard typo
@@ -952,7 +952,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
       * b39f504 remove debugging output
 
-      * b6e15e2 fix grains.append in nested dictionnary grains `#23411`_
+      * b6e15e2 fix grains.append in nested dictionary grains `#23411`_
 
     * ab7e1ae Merge pull request `#23537`_ from t0rrant/patch-1
 
@@ -968,7 +968,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
   * 73cfda7 Remove unused import
 
-  * 52b68d6 Use the zip_longest from six module for python 3 compatiblity
+  * 52b68d6 Use the zip_longest from six module for python 3 compatibility
 
   * 18d5ff9 Fix salt.state.file._unify_sources_and_hashes when sources is used without sources_hashes
 
@@ -1477,7 +1477,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
     | refs: `#23368`_
   - **PR** `#23350`_: (*lorengordon*) Append/prepend: search for full line
   - **PR** `#23347`_: (*basepi*) [2014.7] Salt-SSH Backport FunctionWrapper.__contains__
-  - **PR** `#23344`_: (*cachedout*) Explicitely set file_client on master
+  - **PR** `#23344`_: (*cachedout*) Explicitly set file_client on master
   - **PR** `#23341`_: (*cachedout*) Fix syndic pid and logfile path
   - **PR** `#23324`_: (*s0undt3ch*) [2014.7] Update to the latest stable release of the bootstrap script v2015.05.04
   - **PR** `#23318`_: (*cellscape*) Honor seed argument in LXC container initializaton
@@ -1557,7 +1557,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
     * 02658b1 Merge pull request `#23344`_ from cachedout/issue_22742
 
-      * 5adc96c Explicitely set file_client on master
+      * 5adc96c Explicitly set file_client on master
 
     * ba7605d Merge pull request `#23318`_ from cellscape/honor-seed-argument
 

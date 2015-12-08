@@ -445,7 +445,7 @@ the command line:
     salt '*' pkg.install vim
 
 This example passes the argument ``vim`` to the pkg.install function. Since
-many functions can accept more complex input then just a string, the arguments
+many functions can accept more complex input than just a string, the arguments
 are parsed through YAML, allowing for more complex data to be sent on the
 command line:
 

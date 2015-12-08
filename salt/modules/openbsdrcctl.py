@@ -6,7 +6,6 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
-import re
 
 # Import salt libs
 import salt.utils
@@ -61,7 +60,7 @@ def available(name):
 
         salt '*' service.available sshd
     '''
-    cmd = '{0} status {1}'.format(_cmd(), name)
+    cmd = '{0} get {1}'.format(_cmd(), name)
     if __salt__['cmd.retcode'](cmd) == 2:
         return False
     return True
@@ -93,8 +92,7 @@ def get_all():
     '''
     ret = []
     service = _cmd()
-    for svc in __salt__['cmd.run']('{0} status'.format(service)).splitlines():
-        svc = re.sub('(_flags|)=.*$', '', svc)
+    for svc in __salt__['cmd.run']('{0} ls all'.format(service)).splitlines():
         ret.append(svc)
     return sorted(ret)
 
@@ -111,10 +109,8 @@ def get_disabled():
     '''
     ret = []
     service = _cmd()
-    for svc in __salt__['cmd.run']('{0} status'.format(service)).splitlines():
-        if svc.endswith("=NO"):
-            svc = re.sub('(_flags|)=.*$', '', svc)
-            ret.append(svc)
+    for svc in __salt__['cmd.run']('{0} ls off'.format(service)).splitlines():
+        ret.append(svc)
     return sorted(ret)
 
 
@@ -130,10 +126,8 @@ def get_enabled():
     '''
     ret = []
     service = _cmd()
-    for svc in __salt__['cmd.run']('{0} status'.format(service)).splitlines():
-        if not svc.endswith("=NO"):
-            svc = re.sub('(_flags|)=.*$', '', svc)
-            ret.append(svc)
+    for svc in __salt__['cmd.run']('{0} ls on'.format(service)).splitlines():
+        ret.append(svc)
     return sorted(ret)
 
 
@@ -227,9 +221,17 @@ def enable(name, **kwargs):
         salt '*' service.enable <service name>
         salt '*' service.enable <service name> flags=<flags>
     '''
-    flags = _get_flags(**kwargs)
-    cmd = '{0} enable {1} flags {2}'.format(_cmd(), name, flags)
-    return not __salt__['cmd.retcode'](cmd)
+    stat_cmd = '{0} set {1} status on'.format(_cmd(), name)
+    stat_retcode = __salt__['cmd.retcode'](stat_cmd)
+
+    flag_retcode = None
+    # only (re)set flags for services that have an rc.d(8) script
+    if os.path.exists('/etc/rc.d/{0}'.format(name)):
+        flags = _get_flags(**kwargs)
+        flag_cmd = '{0} set {1} flags {2}'.format(_cmd(), name, flags)
+        flag_retcode = __salt__['cmd.retcode'](flag_cmd)
+
+    return not any([stat_retcode, flag_retcode])
 
 
 def disable(name, **kwargs):
@@ -242,7 +244,7 @@ def disable(name, **kwargs):
 
         salt '*' service.disable <service name>
     '''
-    cmd = '{0} disable {1}'.format(_cmd(), name)
+    cmd = '{0} set {1} status off'.format(_cmd(), name)
     return not __salt__['cmd.retcode'](cmd)
 
 
@@ -256,7 +258,7 @@ def disabled(name):
 
         salt '*' service.disabled <service name>
     '''
-    cmd = '{0} status {1}'.format(_cmd(), name)
+    cmd = '{0} get {1} status'.format(_cmd(), name)
     return not __salt__['cmd.retcode'](cmd) == 0
 
 
@@ -275,16 +277,16 @@ def enabled(name, **kwargs):
         salt '*' service.enabled <service name>
         salt '*' service.enabled <service name> flags=<flags>
     '''
-    cmd = '{0} status {1}'.format(_cmd(), name)
+    cmd = '{0} get {1} status'.format(_cmd(), name)
     if not __salt__['cmd.retcode'](cmd):
         # also consider a service disabled if the current flags are different
         # than the configured ones so we have a chance to update them
         flags = _get_flags(**kwargs)
-        cur_flags = __salt__['cmd.run_stdout']('{0} status {1}'.format(_cmd(), name))
+        cur_flags = __salt__['cmd.run_stdout']('{0} get {1} flags'.format(_cmd(), name))
         if format(flags) == format(cur_flags):
             return True
         if not flags:
-            def_flags = __salt__['cmd.run_stdout']('{0} default {1}'.format(_cmd(), name))
+            def_flags = __salt__['cmd.run_stdout']('{0} getdef {1} flags'.format(_cmd(), name))
             if format(cur_flags) == format(def_flags):
                 return True
 

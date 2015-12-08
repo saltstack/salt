@@ -10,17 +10,22 @@ import logging
 
 # Import salt libs
 import salt.loader
-import salt.utils
-import salt.state
 import salt.runner
+import salt.state
+import salt.utils
+import salt.utils.schema as S
 from salt.utils.doc import strip_rst as _strip_rst
+from salt.ext.six.moves import zip
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = 'sys'
 
-__proxyenabled__ = '*'
+__proxyenabled__ = ['*']
 
 
 def __virtual__():
@@ -76,9 +81,10 @@ def doc(*args):
         else:
             target_mod = ''
         if _use_fnmatch:
-            for fun in fnmatch.filter(__salt__.keys(), target_mod):
-                docs[fun] = __salt__[fun].__doc__
-        else:
+            for fun in fnmatch.filter(__salt__.keys(), target_mod):  # pylint: disable=incompatible-py3-code
+                docs[fun] = __salt__[fun].__doc__                    # There's no problem feeding fnmatch.filter()
+        else:                                                        # with a Py3's dict_keys() instance
+
             for fun in __salt__:
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = __salt__[fun].__doc__
@@ -267,7 +273,7 @@ def returner_doc(*args):
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = returners_[fun].__doc__
         else:
-            for fun in returners_.keys():
+            for fun in six.iterkeys(returners_):
                 if fun == module or fun.startswith(target_mod):
                     docs[fun] = returners_[fun].__doc__
     return _strip_rst(docs)
@@ -303,21 +309,22 @@ def renderer_doc(*args):
     renderers_ = salt.loader.render(__opts__, [])
     docs = {}
     if not args:
-        for fun in renderers_.keys():
+        for fun in six.iterkeys(renderers_):
             docs[fun] = renderers_[fun].__doc__
         return _strip_rst(docs)
 
     for module in args:
         if '*' in module:
-            for fun in fnmatch.filter(list(renderers_.keys()), module):
-                docs[fun] = renderers_[fun].__doc__
+            for fun in fnmatch.filter(renderers_.keys(), module):   # pylint: disable=incompatible-py3-code
+                docs[fun] = renderers_[fun].__doc__                 # There's no problem feeding fnmatch.filter()
+                                                                    # with a Py3's dict_keys() instance
         else:
-            for fun in renderers_.keys():
+            for fun in six.iterkeys(renderers_):
                 docs[fun] = renderers_[fun].__doc__
     return _strip_rst(docs)
 
 
-def list_functions(*args, **kwargs):
+def list_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     List the functions for all modules. Optionally, specify a module or modules
     from which to list.
@@ -520,7 +527,7 @@ def runner_argspec(module=''):
     return salt.utils.argspec_report(run_.functions, module)
 
 
-def list_state_functions(*args, **kwargs):
+def list_state_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     List the functions for all state modules. Optionally, specify a state
     module or modules from which to list.
@@ -655,7 +662,7 @@ def list_runners(*args):
     return sorted(runners)
 
 
-def list_runner_functions(*args, **kwargs):
+def list_runner_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     List the functions for all runner modules. Optionally, specify a runner
     module or modules from which to list.
@@ -709,7 +716,7 @@ def list_runner_functions(*args, **kwargs):
 
 def list_returners(*args):
     '''
-    List the runners loaded on the minion
+    List the returners loaded on the minion
 
     .. versionadded:: 2014.7.0
 
@@ -732,7 +739,7 @@ def list_returners(*args):
     returners = set()
 
     if not args:
-        for func in returners_.keys():
+        for func in six.iterkeys(returners_):
             comps = func.split('.')
             if len(comps) < 2:
                 continue
@@ -740,15 +747,15 @@ def list_returners(*args):
         return sorted(returners)
 
     for module in args:
-        for func in fnmatch.filter(returners_.keys(), module):
-            comps = func.split('.')
-            if len(comps) < 2:
+        for func in fnmatch.filter(returners_.keys(), module):  # pylint: disable=incompatible-py3-code
+            comps = func.split('.')                             # There's no problem feeding fnmatch.filter()
+            if len(comps) < 2:                                  # with a Py3's dict_keys() instance
                 continue
             returners.add(comps[0])
     return sorted(returners)
 
 
-def list_returner_functions(*args, **kwargs):
+def list_returner_functions(*args, **kwargs):  # pylint: disable=unused-argument
     '''
     List the functions for all returner modules. Optionally, specify a returner
     module or modules from which to list.
@@ -795,7 +802,7 @@ def list_returner_functions(*args, **kwargs):
                 if func.startswith(module):
                     names.add(func)
         else:
-            for func in returners_.keys():
+            for func in six.iterkeys(returners_):
                 if func.startswith(module):
                     names.add(func)
     return sorted(names)
@@ -824,7 +831,7 @@ def list_renderers(*args):
     ren = set()
 
     if not args:
-        for func in ren_.keys():
+        for func in six.iterkeys(ren_):
             ren.add(func)
         return sorted(ren)
 
@@ -832,3 +839,62 @@ def list_renderers(*args):
         for func in fnmatch.filter(ren_, module):
             ren.add(func)
     return sorted(ren)
+
+
+def _argspec_to_schema(mod, spec):
+    args = spec['args']
+    defaults = spec['defaults'] or []
+
+    args_req = args[:len(args) - len(defaults)]
+    args_defaults = list(zip(args[-len(defaults):], defaults))
+
+    types = {
+        'title': mod,
+        'description': mod,
+    }
+
+    for i in args_req:
+        types[i] = S.OneOfItem(items=(
+            S.BooleanItem(title=i, description=i, required=True),
+            S.IntegerItem(title=i, description=i, required=True),
+            S.NumberItem(title=i, description=i, required=True),
+            S.StringItem(title=i, description=i, required=True),
+
+            # S.ArrayItem(title=i, description=i, required=True),
+            # S.DictItem(title=i, description=i, required=True),
+        ))
+
+    for i, j in args_defaults:
+        types[i] = S.OneOfItem(items=(
+            S.BooleanItem(title=i, description=i, default=j),
+            S.IntegerItem(title=i, description=i, default=j),
+            S.NumberItem(title=i, description=i, default=j),
+            S.StringItem(title=i, description=i, default=j),
+
+            # S.ArrayItem(title=i, description=i, default=j),
+            # S.DictItem(title=i, description=i, default=j),
+        ))
+
+    return type(mod, (S.Schema,), types).serialize()
+
+
+def state_schema(module=''):
+    '''
+    Return a JSON Schema for the given state function(s)
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' sys.state_schema
+        salt '*' sys.state_schema pkg.installed
+    '''
+    specs = state_argspec(module)
+
+    schemas = []
+    for state_mod, state_spec in specs.items():
+        schemas.append(_argspec_to_schema(state_mod, state_spec))
+
+    return schemas

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-
 '''
 Tests for the salt-run command
 '''
+# Import Python libs
+from __future__ import absolute_import
 
 # Import Salt Testing libs
 from salttesting import skipIf

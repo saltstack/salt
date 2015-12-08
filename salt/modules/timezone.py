@@ -13,6 +13,7 @@ import string
 
 # Import salt libs
 import salt.utils
+import salt.utils.itertools
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -25,6 +26,19 @@ def __virtual__():
     if salt.utils.is_windows():
         return False
     return True
+
+
+def _timedatectl():
+    '''
+    get the output of timedatectl
+    '''
+    ret = __salt__['cmd.run_all'](['timedatectl'], python_shell=False)
+
+    if ret['retcode'] != 0:
+        msg = 'timedatectl failed: {0}'.format(ret['stderr'])
+        raise CommandExecutionError(msg)
+
+    return ret
 
 
 def _get_zone_solaris():
@@ -100,15 +114,18 @@ def get_zone():
     '''
     cmd = ''
     if salt.utils.which('timedatectl'):
-        out = __salt__['cmd.run'](['timedatectl'], python_shell=False)
-        for line in (x.strip() for x in out.splitlines()):
+        ret = _timedatectl()
+
+        for line in (x.strip() for x in salt.utils.itertools.split(ret['stdout'], '\n')):
             try:
                 return re.match(r'Time ?zone:\s+(\S+)', line).group(1)
             except AttributeError:
                 pass
-        raise CommandExecutionError(
-            'Failed to parse timedatectl output, this is likely a bug'
-        )
+
+        msg = ('Failed to parse timedatectl output: {0}\n'
+               'Please file an issue with SaltStack').format(ret['stdout'])
+        raise CommandExecutionError(msg)
+
     else:
         if __grains__['os'].lower() == 'centos':
             return _get_zone_etc_localtime()
@@ -167,6 +184,12 @@ def set_zone(timezone):
 
         salt '*' timezone.set_zone 'America/Denver'
     '''
+    if salt.utils.which('timedatectl'):
+        try:
+            __salt__['cmd.run']('timedatectl set-timezone {0}'.format(timezone))
+        except CommandExecutionError:
+            pass
+
     if 'Solaris' in __grains__['os_family']:
         zonepath = '/usr/share/lib/zoneinfo/{0}'.format(timezone)
     else:
@@ -202,9 +225,10 @@ def set_zone(timezone):
 
 def zone_compare(timezone):
     '''
+    Compares the given timezone name with the system timezone name.
     Checks the hash sum between the given timezone, and the one set in
-    /etc/localtime. Returns True if they match, and False if not. Mostly useful
-    for running state checks.
+    /etc/localtime. Returns True if names and hash sums match, and False if not.
+    Mostly useful for running state checks.
 
     CLI Example:
 
@@ -214,6 +238,10 @@ def zone_compare(timezone):
     '''
     if 'Solaris' in __grains__['os_family']:
         return 'Not implemented for Solaris family'
+
+    curtzstring = get_zone()
+    if curtzstring != timezone:
+        return False
 
     tzfile = '/etc/localtime'
     zonepath = '/usr/share/zoneinfo/{0}'.format(timezone)
@@ -226,7 +254,7 @@ def zone_compare(timezone):
     try:
         usrzone = salt.utils.get_hash(zonepath, hash_type)
     except IOError as exc:
-        raise SaltInvocationError('Invalid timezone {0!r}'.format(timezone))
+        raise SaltInvocationError('Invalid timezone \'{0}\''.format(timezone))
 
     try:
         etczone = salt.utils.get_hash(tzfile, hash_type)
@@ -253,8 +281,8 @@ def get_hwclock():
     '''
     cmd = ''
     if salt.utils.which('timedatectl'):
-        out = __salt__['cmd.run'](['timedatectl'], python_shell=False)
-        for line in (x.strip() for x in out.splitlines()):
+        ret = _timedatectl()
+        for line in (x.strip() for x in ret['stdout'].splitlines()):
             if 'rtc in local tz' in line.lower():
                 try:
                     if line.split(':')[-1].strip().lower() == 'yes':
@@ -263,9 +291,11 @@ def get_hwclock():
                         return 'UTC'
                 except IndexError:
                     pass
-        raise CommandExecutionError(
-            'Failed to parse timedatectl output, this is likely a bug'
-        )
+
+        msg = ('Failed to parse timedatectl output: {0}\n'
+               'Please file an issue with SaltStack').format(ret['stdout'])
+        raise CommandExecutionError(msg)
+
     else:
         os_family = __grains__['os_family']
         for family in ('RedHat', 'Suse'):

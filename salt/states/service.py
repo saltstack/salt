@@ -4,7 +4,12 @@ Starting or restarting of services and daemons
 ==============================================
 
 Services are defined as system daemons typically started with system init or
-rc scripts, services can be defined as running or dead.
+rc scripts.  Services can be defined as running or dead.
+
+.. note::
+    The current status of a service is determined by the return code of the init/rc
+    script status command. A status return code of 0 it is considered running.  Any
+    other return code is considered dead.
 
 .. code-block:: yaml
 
@@ -38,6 +43,10 @@ service, then set the reload value to True:
     :doc:`Requisites </ref/states/requisites>` documentation.
 
 '''
+
+# Import Python libs
+from __future__ import absolute_import
+import time
 
 
 def __virtual__():
@@ -92,6 +101,8 @@ def _enable(name, started, result=True, **kwargs):
             ret['comment'] = ('Service {0} is already enabled,'
                               ' and is running').format(name)
         elif started is None:
+            # always be sure in this case to reset the changes dict
+            ret['changes'] = {}
             ret['comment'] = ('Service {0} is already enabled,'
                               ' and is in the desired state').format(name)
         else:
@@ -175,6 +186,8 @@ def _disable(name, started, result=True, **kwargs):
             ret['comment'] = ('Service {0} is already disabled,'
                               ' and is running').format(name)
         elif started is None:
+            # always be sure in this case to reset the changes dict
+            ret['changes'] = {}
             ret['comment'] = ('Service {0} is already disabled,'
                               ' and is in the desired state').format(name)
         else:
@@ -241,7 +254,7 @@ def _available(name, ret):
     return avail
 
 
-def running(name, enable=None, sig=None, **kwargs):
+def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     '''
     Verify that the service is running
 
@@ -255,6 +268,14 @@ def running(name, enable=None, sig=None, **kwargs):
 
     sig
         The string to search for when looking for the service process with ps
+
+    init_delay
+        Some services may not be truly available for a short period after their
+        startup script indicates to the system that they are. Provide an
+        'init_delay' to specify that this state should wait an additional given
+        number of seconds after a service has started before returning. Useful
+        for requisite states wherein a dependent state might assume a service
+        has started but is not yet fully initialized.
     '''
     ret = {'name': name,
            'changes': {},
@@ -269,13 +290,21 @@ def running(name, enable=None, sig=None, **kwargs):
     if not _available(name, ret):
         return ret
 
+    # lot of custom init script wont or mis implement the status
+    # command, so it is just an indicator but can not be fully trusted
+    before_toggle_status = __salt__['service.status'](name, sig)
+    before_toggle_enable_status = __salt__['service.enabled'](name)
+
     # See if the service is already running
-    if __salt__['service.status'](name, sig):
+    if before_toggle_status:
         ret['comment'] = 'The service {0} is already running'.format(name)
-        if enable is True:
+        if __opts__['test']:
+            ret['result'] = True
+            return ret
+        if enable is True and not before_toggle_enable_status:
             ret.update(_enable(name, None, **kwargs))
             return ret
-        elif enable is False:
+        elif enable is False and before_toggle_enable_status:
             ret.update(_disable(name, None, **kwargs))
             return ret
         else:
@@ -287,9 +316,9 @@ def running(name, enable=None, sig=None, **kwargs):
         ret['comment'] = 'Service {0} is set to start'.format(name)
         return ret
 
-    ret['changes'] = {name: __salt__['service.start'](name)}
+    func_ret = __salt__['service.start'](name)
 
-    if not ret['changes'][name]:
+    if not func_ret:
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to start'.format(name)
         if enable is True:
@@ -302,6 +331,22 @@ def running(name, enable=None, sig=None, **kwargs):
             ret.update(_enable(name, True, **kwargs))
         elif enable is False:
             ret.update(_disable(name, True, **kwargs))
+
+    # only force a change state if we have explicitly detected them
+    after_toggle_status = __salt__['service.status'](name)
+    after_toggle_enable_status = __salt__['service.enabled'](name)
+    if (
+        (before_toggle_enable_status != after_toggle_enable_status) or
+        (before_toggle_status != after_toggle_status)
+    ) and not ret.get('changes', {}):
+        ret['changes'][name] = func_ret
+
+    if init_delay:
+        time.sleep(init_delay)
+        ret['comment'] = (
+            '{0}\nDelayed return for {1} seconds'
+            .format(ret['comment'], init_delay)
+        )
     return ret
 
 
@@ -334,12 +379,20 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['result'] = True
         return ret
 
-    if not __salt__['service.status'](name, sig):
+    # lot of custom init script wont or mis implement the status
+    # command, so it is just an indicator but can not be fully trusted
+    before_toggle_status = __salt__['service.status'](name, sig)
+    before_toggle_enable_status = __salt__['service.enabled'](name)
+    if not before_toggle_status:
         ret['comment'] = 'The service {0} is already dead'.format(name)
-        if enable is True:
-            ret.update(_enable(name, None, **kwargs))
-        elif enable is False:
-            ret.update(_disable(name, None, **kwargs))
+        if not __opts__['test']:
+            if enable is True and not before_toggle_enable_status:
+                ret.update(_enable(name, None, **kwargs))
+            elif enable is False and before_toggle_enable_status:
+                ret.update(_disable(name, None, **kwargs))
+            return ret
+        else:
+            ret['result'] = True
         return ret
 
     if __opts__['test']:
@@ -347,9 +400,9 @@ def dead(name, enable=None, sig=None, **kwargs):
         ret['comment'] = 'Service {0} is set to be killed'.format(name)
         return ret
 
-    ret['changes'] = {name: __salt__['service.stop'](name)}
-
-    if not ret['changes'][name]:
+    # be sure to stop, in case we mis detected in the check
+    func_ret = __salt__['service.stop'](name)
+    if not func_ret:
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)
         if enable is True:
@@ -362,6 +415,14 @@ def dead(name, enable=None, sig=None, **kwargs):
             ret.update(_enable(name, False, **kwargs))
         elif enable is False:
             ret.update(_disable(name, False, **kwargs))
+    # only force a change state if we have explicitly detected them
+    after_toggle_status = __salt__['service.status'](name)
+    after_toggle_enable_status = __salt__['service.enabled'](name)
+    if (
+        (before_toggle_enable_status != after_toggle_enable_status) or
+        (before_toggle_status != after_toggle_status)
+    ) and not ret.get('changes', {}):
+        ret['changes'][name] = func_ret
     return ret
 
 
@@ -408,6 +469,7 @@ def mod_watch(name,
               sig=None,
               reload=False,
               full_restart=False,
+              init_delay=None,
               force=False,
               **kwargs):
     '''
@@ -422,6 +484,19 @@ def mod_watch(name,
 
     sig
         The string to search for when looking for the service process with ps
+
+    reload
+        Use reload instead of the default restart (exclusive option with full_restart,
+        defaults to reload if both are used)
+
+    full_restart
+        Use service.full_restart instead of restart (exclusive option with reload)
+
+    force
+        Use service.force_reload instead of reload (needs reload to be set to True)
+
+    init_delay
+        Add a sleep command (in seconds) before the service is restarted/reloaded
     '''
     ret = {'name': name,
            'changes': {},
@@ -454,6 +529,8 @@ def mod_watch(name,
                 func = __salt__['service.restart']
                 verb = 'restart'
         else:
+            if 'service.stop' in __salt__:
+                __salt__['service.stop'](name)
             func = __salt__['service.start']
             verb = 'start'
         if not past_participle:
@@ -469,6 +546,8 @@ def mod_watch(name,
         return ret
 
     result = func(name)
+    if init_delay:
+        time.sleep(init_delay)
 
     ret['changes'] = {name: result}
     ret['result'] = result

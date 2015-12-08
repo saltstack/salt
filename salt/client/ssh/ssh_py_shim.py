@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# pylint: disable=W9903
 '''
 This is a shim that handles checking and updating salt thin and
 then invoking thin.
@@ -92,8 +92,10 @@ def get_hash(path, form='sha1', chunk_size=4096):
 def unpack_thin(thin_path):
     """Unpack the Salt thin archive."""
     tfile = tarfile.TarFile.gzopen(thin_path)
+    old_umask = os.umask(0o077)
     tfile.extractall(path=OPTIONS.saltdir)
     tfile.close()
+    os.umask(old_umask)
     os.unlink(thin_path)
 
 
@@ -114,8 +116,10 @@ def unpack_ext(ext_path):
             'minion',
             'extmods')
     tfile = tarfile.TarFile.gzopen(ext_path)
+    old_umask = os.umask(0o077)
     tfile.extractall(path=modcache)
     tfile.close()
+    os.umask(old_umask)
     os.unlink(ext_path)
     ver_path = os.path.join(modcache, 'ext_version')
     ver_dst = os.path.join(OPTIONS.saltdir, 'ext_version')
@@ -210,8 +214,10 @@ def main(argv):  # pylint: disable=W0613
     # Yes, the flush() is necessary.
     sys.stdout.write(OPTIONS.delimiter + '\n')
     sys.stdout.flush()
-    sys.stderr.write(OPTIONS.delimiter + '\n')
-    sys.stderr.flush()
+    if not OPTIONS.tty:
+        sys.stderr.write(OPTIONS.delimiter + '\n')
+        sys.stderr.flush()
+    old_umask = os.umask(0o077)
     if OPTIONS.tty:
         stdout, _ = subprocess.Popen(salt_argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
         sys.stdout.write(stdout)
@@ -223,6 +229,7 @@ def main(argv):  # pylint: disable=W0613
         shutil.rmtree(OPTIONS.saltdir)
     else:
         os.execv(sys.executable, salt_argv)
+    os.umask(old_umask)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

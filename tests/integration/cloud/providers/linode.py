@@ -4,12 +4,12 @@
 '''
 
 # Import Python Libs
+from __future__ import absolute_import
 import os
 import random
 import string
 
 # Import Salt Testing Libs
-from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath, expensiveTest
 
 ensure_in_syspath('../../../')
@@ -17,13 +17,7 @@ ensure_in_syspath('../../../')
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config
-
-# Import Third-Party Libs
-try:
-    import libcloud  # pylint: disable=W0611
-    HAS_LIBCLOUD = True
-except ImportError:
-    HAS_LIBCLOUD = False
+from salt.ext.six.moves import range
 
 
 def __random_name(size=6):
@@ -40,7 +34,6 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'linode'
 
 
-@skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
 class LinodeTest(integration.ShellCase):
     '''
     Integration tests for the Linode cloud provider in Salt-Cloud
@@ -63,7 +56,7 @@ class LinodeTest(integration.ShellCase):
                 .format(PROVIDER_NAME)
             )
 
-        # check if apikey and password are present
+        # check if personal access token, ssh_key_file, and ssh_key_names are present
         config = cloud_providers_config(
             os.path.join(
                 integration.FILES,
@@ -72,6 +65,7 @@ class LinodeTest(integration.ShellCase):
                 PROVIDER_NAME + '.conf'
             )
         )
+
         api = config[profile_str][PROVIDER_NAME]['apikey']
         password = config[profile_str][PROVIDER_NAME]['password']
         if api == '' or password == '':
@@ -118,5 +112,5 @@ class LinodeTest(integration.ShellCase):
 
 
 if __name__ == '__main__':
-    from integration import run_tests
+    from integration import run_tests  # pylint: disable=import-error
     run_tests(LinodeTest)

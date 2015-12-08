@@ -9,9 +9,12 @@ information about package receipts and installed applications.
 
 '''
 
+from __future__ import absolute_import
+
 import plistlib
 import subprocess
 import salt.utils
+from salt.ext import six
 
 PROFILER_BINARY = '/usr/sbin/system_profiler'
 
@@ -39,7 +42,10 @@ def _call_system_profiler(datatype):
          '-xml', datatype], stdout=subprocess.PIPE)
     (sysprofresults, sysprof_stderr) = p.communicate(input=None)
 
-    plist = plistlib.readPlistFromString(sysprofresults)
+    if six.PY2:
+        plist = plistlib.readPlistFromString(sysprofresults)
+    else:
+        plist = plistlib.readPlistFromBytes(sysprofresults)
 
     try:
         apps = plist[0]['_items']

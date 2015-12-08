@@ -19,6 +19,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import errno
 import logging
 
 # Import salt libs
@@ -63,12 +64,14 @@ def find_file(path, saltenv='base', env=None, **kwargs):
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd['path'] = full
             fnd['rel'] = path
+            fnd['stat'] = list(os.stat(full))
         return fnd
     for root in __opts__['file_roots'][saltenv]:
         full = os.path.join(root, path)
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd['path'] = full
             fnd['rel'] = path
+            fnd['stat'] = list(os.stat(full))
             return fnd
     return fnd
 
@@ -131,7 +134,7 @@ def update():
     old_mtime_map = {}
     # if you have an old map, load that
     if os.path.exists(mtime_map_path):
-        with salt.utils.fopen(mtime_map_path, 'rb') as fp_:
+        with salt.utils.fopen(mtime_map_path, 'r') as fp_:
             for line in fp_:
                 try:
                     file_path, mtime = line.split(':', 1)
@@ -201,7 +204,7 @@ def file_hash(load, fnd):
     # if we have a cache, serve that if the mtime hasn't changed
     if os.path.exists(cache_path):
         try:
-            with salt.utils.fopen(cache_path, 'rb') as fp_:
+            with salt.utils.fopen(cache_path, 'r') as fp_:
                 try:
                     hsum, mtime = fp_.read().split(':')
                 except ValueError:
@@ -232,8 +235,13 @@ def file_hash(load, fnd):
     if not os.path.exists(cache_dir):
         try:
             os.makedirs(cache_dir)
-        except OSError:
-            pass
+        except OSError as err:
+            if err.errno == errno.EEXIST:
+                # rarely, the directory can be already concurrently created between
+                # the os.path.exists and the os.makedirs lines above
+                pass
+            else:
+                raise
     # save the cache object "hash:mtime"
     cache_object = '{0}:{1}'.format(ret['hsum'], os.path.getmtime(path))
     with salt.utils.flopen(cache_path, 'w') as fp_:

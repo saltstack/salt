@@ -5,6 +5,12 @@ Use pycrypto to generate random passwords on the fly.
 '''
 
 # Import python libraries
+from __future__ import absolute_import
+import re
+import string
+import random
+
+# Import 3rd-party libs
 try:
     import Crypto.Random  # pylint: disable=E0611
     HAS_RANDOM = True
@@ -18,10 +24,6 @@ try:
 except ImportError:
     HAS_CRYPT = False
 
-import re
-import string
-import random
-
 # Import salt libs
 from salt.exceptions import SaltInvocationError
 
@@ -30,6 +32,7 @@ def secure_password(length=20):
     '''
     Generate a secure password.
     '''
+    length = int(length)
     pw = ''
     while len(pw) < length:
         if HAS_RANDOM:
@@ -51,7 +54,7 @@ def gen_hash(crypt_salt=None, password=None, algorithm='sha512'):
     )
     if algorithm not in hash_algorithms:
         raise SaltInvocationError(
-            'Algorithm {0!r} is not supported'.format(algorithm)
+            'Algorithm \'{0}\' is not supported'.format(algorithm)
         )
 
     if password is None:

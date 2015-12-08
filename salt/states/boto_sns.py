@@ -56,6 +56,9 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 '''
 from __future__ import absolute_import
 
+# Standard Libs
+import re
+
 
 def __virtual__():
     '''
@@ -66,6 +69,7 @@ def __virtual__():
 
 def present(
         name,
+        subscriptions=None,
         region=None,
         key=None,
         keyid=None,
@@ -75,6 +79,18 @@ def present(
 
     name
         Name of the SNS topic.
+
+    subscriptions
+        List of SNS subscriptions.
+
+        Each subscription is a dictionary with a protocol and endpoint key:
+
+        .. code-block:: python
+
+            [
+            {'protocol': 'https', 'endpoint': 'https://www.example.com/sns-endpoint'},
+            {'protocol': 'sqs', 'endpoint': 'arn:aws:sqs:us-west-2:123456789012:MyQueue'}
+            ]
 
     region
         Region to connect to.
@@ -89,10 +105,11 @@ def present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+    ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     is_present = __salt__['boto_sns.exists'](name, region, key, keyid, profile)
     if is_present:
+        ret['result'] = True
         ret['comment'] = 'AWS SNS topic {0} present.'.format(name)
     else:
         if __opts__['test']:
@@ -107,12 +124,83 @@ def present(
             msg = 'AWS SNS topic {0} created.'.format(name)
             ret['comment'] = msg
             ret['changes']['old'] = None
-            ret['changes']['new'] = {'topic': name}
+            ret['changes']['new'] = {'topic': name, 'subscriptions': []}
+            ret['result'] = True
         else:
-            ret['result'] = False
             ret['comment'] = 'Failed to create {0} AWS SNS topic'.format(name)
+            ret['result'] = False
             return ret
 
+    if not subscriptions:
+        return ret
+
+    # Get current subscriptions
+    _subscriptions = __salt__['boto_sns.get_all_subscriptions_by_topic'](
+        name, region=region, key=key, keyid=keyid, profile=profile
+    )
+
+    # Convert subscriptions into a data strucure we can compare against
+    _subscriptions = [
+        {'protocol': s['Protocol'], 'endpoint': s['Endpoint']}
+        for s in _subscriptions
+    ]
+
+    for subscription in subscriptions:
+        # If the subscription contains inline digest auth, AWS will *** the
+        # password. So we need to do the same with ours if the regex matches
+        # Example: https://user:****@my.endpoiint.com/foo/bar
+        _endpoint = subscription['endpoint']
+        matches = re.search(
+            r'https://(?P<user>\w+):(?P<pass>\w+)@',
+            _endpoint)
+
+        # We are using https and have auth creds - the password will be starred out,
+        # so star out our password so we can still match it
+        if matches is not None:
+            subscription['endpoint'] = _endpoint.replace(
+                matches.groupdict()['pass'],
+                '****')
+
+        if subscription not in _subscriptions:
+            # Ensure the endpoint is set back to it's original value,
+            # incase we starred out a password
+            subscription['endpoint'] = _endpoint
+
+            if __opts__['test']:
+                msg = ' AWS SNS subscription {0}:{1} to be set on topic {2}.'\
+                    .format(
+                        subscription['protocol'],
+                        subscription['endpoint'],
+                        name)
+                ret['comment'] += msg
+                ret['result'] = None
+                continue
+
+            created = __salt__['boto_sns.subscribe'](
+                name, subscription['protocol'], subscription['endpoint'],
+                region=region, key=key, keyid=keyid, profile=profile)
+            if created:
+                msg = ' AWS SNS subscription {0}:{1} set on topic {2}.'\
+                      .format(subscription['protocol'],
+                              subscription['endpoint'],
+                              name)
+                ret['comment'] += msg
+                ret['changes'].setdefault('old', None)
+                ret['changes']\
+                    .setdefault('new', {})\
+                    .setdefault('subscriptions', [])\
+                    .append(subscription)
+                ret['result'] = True
+            else:
+                ret['result'] = False
+                return ret
+        else:
+            msg = ' AWS SNS subscription {0}:{1} already set on topic {2}.'\
+                .format(
+                    subscription['protocol'],
+                    subscription['endpoint'],
+                    name)
+            ret['comment'] += msg
     return ret
 
 

@@ -117,7 +117,7 @@ Or just type
 
 .. code-block:: bash
 
-    ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
+    ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
 
 Now type the following commands in your terminal (you may want to type ``brew
@@ -496,4 +496,4 @@ Where To Go From Here
 
 A full description of configuration management within Salt (sls files among
 other things) is available here:
-http://docs.saltstack.com/index.html#configuration-management
+http://docs.saltstack.com/en/latest/index.html#configuration-management

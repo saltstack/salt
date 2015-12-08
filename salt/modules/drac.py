@@ -2,20 +2,22 @@
 '''
 Manage Dell DRAC
 '''
-from __future__ import absolute_import
 
+# Import python libs
+from __future__ import absolute_import
+import logging
+
+# Import Salt libs
 import salt.utils
 
-import logging
-from salt.ext.six.moves import range
+# Import 3rd-party libs
+import salt.ext.six as six
+from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    '''
-
-    '''
     if salt.utils.which('racadm'):
         return True
 
@@ -50,7 +52,7 @@ def __execute_cmd(command):
     cmd = __salt__['cmd.run_all']('racadm {0}'.format(command))
 
     if cmd['retcode'] != 0:
-        log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
+        log.warning('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
         return False
 
     return True
@@ -66,13 +68,10 @@ def system_info():
 
         salt dell drac.system_info
     '''
-    drac = {}
-    section = ''
-
     cmd = __salt__['cmd.run_all']('racadm getsysinfo')
 
     if cmd['retcode'] != 0:
-        log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
+        log.warning('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
 
     return __parse_drac(cmd['stdout'])
 
@@ -91,7 +90,7 @@ def network_info():
     cmd = __salt__['cmd.run_all']('racadm getniccfg')
 
     if cmd['retcode'] != 0:
-        log.warn('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
+        log.warning('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
 
     return __parse_drac(cmd['stdout'])
 
@@ -108,7 +107,7 @@ def nameservers(*ns):
         salt dell drac.nameservers ns1.example.com ns2.example.com
     '''
     if len(ns) > 2:
-        log.warn('racadm only supports two nameservers')
+        log.warning('racadm only supports two nameservers')
         return False
 
     for i in range(1, len(ns) + 1):
@@ -132,11 +131,10 @@ def syslog(server, enable=True):
         salt dell drac.syslog [SYSLOG IP] [ENABLE/DISABLE]
         salt dell drac.syslog 0.0.0.0 False
     '''
-    if enable:
-        if __execute_cmd('config -g cfgRemoteHosts -o \
+    if enable and __execute_cmd('config -g cfgRemoteHosts -o \
                 cfgRhostsSyslogEnable 1'):
-            return __execute_cmd('config -g cfgRemoteHosts -o \
-                    cfgRhostsSyslogServer1 {0}'.format(server))
+        return __execute_cmd('config -g cfgRemoteHosts -o \
+                cfgRhostsSyslogServer1 {0}'.format(server))
 
     return __execute_cmd('config -g cfgRemoteHosts -o cfgRhostsSyslogEnable 0')
 
@@ -179,24 +177,23 @@ def list_users():
                 cfgUserAdmin -i {0}'.format(idx))
 
         if cmd['retcode'] != 0:
-            log.warn('racadm return an exit \
-                    code \'{0}\'.'.format(cmd['retcode']))
+            log.warning('racadm return an exit code \'{0}\'.'.format(cmd['retcode']))
 
         for user in cmd['stdout'].splitlines():
             if not user.startswith('cfg'):
                 continue
 
-            (k, v) = user.split('=')
+            (key, val) = user.split('=')
 
-            if k.startswith('cfgUserAdminUserName'):
-                _username = v.strip()
+            if key.startswith('cfgUserAdminUserName'):
+                _username = val.strip()
 
-                if v:
+                if val:
                     users[_username] = {'index': idx}
                 else:
                     break
             else:
-                users[_username].update({k: v})
+                users[_username].update({key: val})
 
     return users
 
@@ -221,7 +218,7 @@ def delete_user(username, uid=None):
                               cfgUserAdminUserName -i {0} ""'.format(uid))
 
     else:
-        log.warn('\'{0}\' does not exist'.format(username))
+        log.warning('\'{0}\' does not exist'.format(username))
         return False
 
     return True
@@ -246,7 +243,7 @@ def change_password(username, password, uid=None):
         return __execute_cmd('config -g cfgUserAdmin -o \
                 cfgUserAdminPassword -i {0} {1}'.format(uid, password))
     else:
-        log.warn('\'{0}\' does not exist'.format(username))
+        log.warning('\'{0}\' does not exist'.format(username))
         return False
 
     return True
@@ -280,11 +277,11 @@ def create_user(username, password, permissions, users=None):
         users = list_users()
 
     if username in users:
-        log.warn('\'{0}\' already exists'.format(username))
+        log.warning('\'{0}\' already exists'.format(username))
         return False
 
-    for i in users.keys():
-        _uids.add(users[i]['index'])
+    for idx in six.iterkeys(users):
+        _uids.add(users[idx]['index'])
 
     uid = sorted(list(set(range(2, 12)) - _uids), reverse=True).pop()
 
@@ -296,13 +293,13 @@ def create_user(username, password, permissions, users=None):
 
     # Configure users permissions
     if not set_permissions(username, permissions, uid):
-        log.warn('unable to set user permissions')
+        log.warning('unable to set user permissions')
         delete_user(username, uid)
         return False
 
     # Configure users password
     if not change_password(username, password, uid):
-        log.warn('unable to set user password')
+        log.warning('unable to set user password')
         delete_user(username, uid)
         return False
 
@@ -465,8 +462,8 @@ def server_pxe():
         if __execute_cmd('config -g cfgServerInfo -o cfgServerBootOnce 1'):
             return server_reboot
         else:
-            log.warn('failed to set boot order')
+            log.warning('failed to set boot order')
             return False
 
-    log.warn('failed to to configure PXE boot')
+    log.warning('failed to to configure PXE boot')
     return False

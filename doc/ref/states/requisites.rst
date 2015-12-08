@@ -4,6 +4,40 @@
 Requisites and Other Global State Arguments
 ===========================================
 
+.. _requisites-fire-event:
+
+Fire Event Notifications
+========================
+
+.. versionadded:: 2015.8.0
+
+The `fire_event` option in a state will cause the minion to send an event to
+the Salt Master upon completion of that individual state.
+
+The following example will cause the minion to send an event to the Salt Master
+with a tag of `salt/state_result/20150505121517276431/dasalt/nano` and the
+result of the state will be the data field of the event. Notice that the `name`
+of the state gets added to the tag.
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: True
+
+In the following example instead of setting `fire_event` to `True`,
+`fire_event` is set to an arbitrary string, which will cause the event to be
+sent with this tag:
+`salt/state_result/20150505121725642845/dasalt/custom/tag/nano/finished`
+
+.. code-block:: yaml
+
+    nano_stuff:
+      pkg.installed:
+        - name: nano
+        - fire_event: custom/tag/nano/finished
+
 Requisites
 ==========
 
@@ -47,7 +81,7 @@ something", requisite_ins say "Someone depends on me":
 So here, with a requisite_in, the same thing is accomplished as in the first
 example, but the other way around. The vim package is saying "/etc/vimrc depends
 on me". This will result in a ``require`` being inserted into the
-``/etc/vimrc`` state which  targets the ``vim`` state.
+``/etc/vimrc`` state which targets the ``vim`` state.
 
 In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
@@ -69,10 +103,24 @@ finite and predictable order.
 Direct Requisite and Requisite_in types
 ---------------------------------------
 
-There are six direct requisite statements that can be used in Salt:
-``require``, ``watch``, ``prereq``, ``use``, ``onchanges``, and ``onfail``.
-Each direct requisite also has a corresponding requisite_in: ``require_in``,
-``watch_in``, ``prereq_in``, ``use_in``, ``onchanges_in``, and ``onfail_in``.
+There are several direct requisite statements that can be used in Salt:
+
+* ``require``
+* ``watch``
+* ``prereq``
+* ``use``
+* ``onchanges``
+* ``onfail``
+
+Each direct requisite also has a corresponding requisite_in:
+
+* ``require_in``
+* ``watch_in``
+* ``prereq_in``
+* ``use_in``
+* ``onchanges_in``
+* ``onfail_in``
+
 All of the requisites define specific relationships and always work with the
 dependency logic defined above.
 
@@ -280,6 +328,9 @@ The ``onchanges`` requisite makes a state only apply if the required states
 generate changes, and if the watched state's "result" is ``True``. This can be
 a useful way to execute a post hook after changing aspects of a system.
 
+If a state has multiple ``onchanges`` requisites then the state will trigger
+if any of the watched states changes.
+
 use
 ~~~
 
@@ -321,7 +372,7 @@ The _in versions of requisites
 All of the requisites also have corresponding requisite_in versions, which do
 the reverse of their normal counterparts. The examples below all use
 ``require_in`` as the example, but note that all of the ``_in`` requisites work
-the same way:  They result in a normal requisite in the targeted state, which
+the same way: They result in a normal requisite in the targeted state, which
 targets the state which has defines the requisite_in. Thus, a ``require_in``
 causes the target state to ``require`` the targeting state. Similarly, a
 ``watch_in`` causes the target state to ``watch`` the targeting state. This
@@ -401,7 +452,7 @@ The state altering system is used to make sure that states are evaluated exactly
 as the user expects. It can be used to double check that a state preformed
 exactly how it was expected to, or to make 100% sure that a state only runs
 under certain conditions. The use of unless or onlyif options help make states
-even more stateful. The check_cmds option helps ensure that the result of a
+even more stateful. The ``check_cmd`` option helps ensure that the result of a
 state is evaluated correctly.
 
 Unless
@@ -551,15 +602,18 @@ same privileges as the salt-minion.
         - pattern: ^enabled=0
         - repl: enabled=1
         - check_cmd:
-          - grep 'enabled=0' /etc/yum.repos.d/fedora.repo && return 1 || return 0
+          - ! grep 'enabled=0' /etc/yum.repos.d/fedora.repo
 
-This will attempt to do a replace on all enabled=0 in the .repo file, and
-replace them with enabled=1. The check_cmd is just a bash command. It will do
-a grep for enabled=0 in the file, and if it finds any, it will return a 0, which
-will prompt the && portion of the command to return a 1, causing check_cmd to
-set the state as failed. If it returns a 1, meaning it didn't find any
-'enabled=0' it will hit the || portion of the command, returning a 0, and
+This will attempt to do a replace on all ``enabled=0`` in the .repo file, and
+replace them with ``enabled=1``. The ``check_cmd`` is just a bash command. It
+will do a grep for ``enabled=0`` in the file, and if it finds any, it will
+return a 0, which will be inverted by the leading ``!``, causing ``check_cmd``
+to set the state as failed. If it returns a 1, meaning it didn't find any
+``enabled=0``, it will be inverted by the leading ``!``, returning a 0, and
 declaring the function succeeded.
+
+**NOTE**: This requisite ``check_cmd`` functions differently than the ``check_cmd``
+of the ``file.managed`` state.
 
 Overriding Checks
 -----------------

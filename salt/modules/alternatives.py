@@ -30,7 +30,7 @@ def __virtual__():
     '''
     if os.path.isdir('/etc/alternatives'):
         return True
-    return False
+    return (False, 'Cannot load alternatives module: /etc/alternatives dir not found')
 
 
 def _get_cmd():

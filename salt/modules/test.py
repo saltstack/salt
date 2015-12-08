@@ -9,17 +9,23 @@ import os
 import sys
 import time
 import traceback
-import hashlib
 import random
 
 # Import Salt libs
 import salt
+import salt.utils
 import salt.version
 import salt.loader
 import salt.ext.six as six
 from salt.utils.decorators import depends
 
 __proxyenabled__ = ['*']
+
+# Don't shadow built-in's.
+__func_alias__ = {
+    'true_': 'true',
+    'false_': 'false'
+}
 
 
 @depends('non_existantmodulename')
@@ -105,11 +111,14 @@ def ping():
         salt '*' test.ping
     '''
 
-    if 'proxymodule' in __opts__:
-        ping_cmd = __opts__['proxymodule'].loaded_base_name + '.ping'
-        return __opts__['proxymodule'][ping_cmd]()
-    else:
+    if not salt.utils.is_proxy():
         return True
+    else:
+        ping_cmd = __opts__['proxy']['proxytype'] + '.ping'
+        if __opts__.get('add_proxymodule_to_opts', False):
+            return __opts__['proxymodule'][ping_cmd]()
+        else:
+            return __proxy__[ping_cmd]()
 
 
 def sleep(length):
@@ -157,7 +166,7 @@ def version():
 
 def versions_information():
     '''
-    Returns versions of components used by salt as a dict
+    Report the versions of dependent and system software
 
     CLI Example:
 
@@ -165,7 +174,7 @@ def versions_information():
 
         salt '*' test.versions_information
     '''
-    return dict(salt.version.versions_information())
+    return salt.version.versions_information()
 
 
 def versions_report():
@@ -179,6 +188,9 @@ def versions_report():
         salt '*' test.versions_report
     '''
     return '\n'.join(salt.version.versions_report())
+
+
+versions = salt.utils.alias_function(versions_report, 'versions')
 
 
 def conf_test():
@@ -297,8 +309,10 @@ def arg_repr(*args, **kwargs):
 
 def fib(num):
     '''
-    Return a Fibonacci sequence up to the passed number, and the
-    timeit took to compute in seconds. Used for performance tests
+    Return the num-th Fibonacci number, and the time it took to compute in
+    seconds. Used for performance tests.
+
+    This function is designed to have terrible performance.
 
     CLI Example:
 
@@ -308,12 +322,18 @@ def fib(num):
     '''
     num = int(num)
     start = time.time()
-    fib_a, fib_b = 0, 1
-    ret = [0]
-    while fib_b < num:
-        ret.append(fib_b)
-        fib_a, fib_b = fib_b, fib_a + fib_b
-    return ret, time.time() - start
+    if num < 2:
+        return num, time.time() - start
+    return _fib(num-1) + _fib(num-2), time.time() - start
+
+
+def _fib(num):
+    '''
+    Helper method for test.fib, doesn't calculate the time.
+    '''
+    if num < 2:
+        return num
+    return _fib(num-1) + _fib(num-2)
 
 
 def collatz(start):
@@ -453,9 +473,16 @@ def opts_pkg():
     return ret
 
 
-def rand_str(size=9999999999):
+def rand_str(size=9999999999, hash_type=None):
     '''
     Return a random string
+
+        size
+            size of the string to generate
+        hash_type
+            hash type to use
+
+            .. versionadded:: 2015.5.2
 
     CLI Example:
 
@@ -463,8 +490,9 @@ def rand_str(size=9999999999):
 
         salt '*' test.rand_str
     '''
-    hasher = getattr(hashlib, __opts__.get('hash_type', 'md5'))
-    return hasher(str(random.SystemRandom().randint(0, size))).hexdigest()
+    if not hash_type:
+        hash_type = __opts__.get('hash_type', 'md5')
+    return salt.utils.rand_str(hash_type=hash_type, size=size)
 
 
 def exception(message='Test Exception'):
@@ -513,7 +541,7 @@ def try_(module, return_try_exception=False, **kwargs):
     '''
     Try to run a module command. On an exception return None.
     If `return_try_exception` is set True return the exception.
-    This can be helpfull in templates where running a module might fail as expected.
+    This can be helpful in templates where running a module might fail as expected.
 
     CLI Example:
 
@@ -544,3 +572,29 @@ def assertion(assertion):
         salt '*' test.assert False
     '''
     assert assertion
+
+
+def true_():
+    '''
+    Always return True
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.true
+    '''
+    return True
+
+
+def false_():
+    '''
+    Always return False
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.false
+    '''
+    return False

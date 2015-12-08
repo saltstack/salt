@@ -8,7 +8,7 @@ a yaml configuration. The syntax for declaring profiles is simple:
 .. code-block:: yaml
 
     fedora_rackspace:
-        provider: rackspace
+        provider: my-rackspace-config
         image: Fedora 17
         size: 256 server
         script: bootstrap-salt
@@ -18,19 +18,19 @@ and does not normally need to be specified. Further examples in this document
 will not show the ``script`` option.
 
 A few key pieces of information need to be declared and can change based on the
-public cloud provider. A number of additional parameters can also be inserted:
+cloud provider. A number of additional parameters can also be inserted:
 
 .. code-block:: yaml
 
     centos_rackspace:
-        provider: rackspace
-        image: CentOS 6.2
-        size: 1024 server
-        minion:
-            master: salt.example.com
-            append_domain: webs.example.com
-            grains:
-                role: webserver
+      provider: my-rackspace-config
+      image: CentOS 6.2
+      size: 1024 server
+      minion:
+        master: salt.example.com
+        append_domain: webs.example.com
+        grains:
+          role: webserver
 
 
 The image must be selected from available images. Similarly, sizes must be
@@ -66,44 +66,44 @@ Larger Example
 .. code-block:: yaml
 
     rhel_ec2:
-        provider: ec2
-        image: ami-e565ba8c
-        size: t1.micro
-        minion:
-            cheese: edam
+      provider: my-ec2-config
+      image: ami-e565ba8c
+      size: t1.micro
+      minion:
+        cheese: edam
 
     ubuntu_ec2:
-        provider: ec2
-        image: ami-7e2da54e
-        size: t1.micro
-        minion:
-            cheese: edam
+      provider: my-ec2-config
+      image: ami-7e2da54e
+      size: t1.micro
+      minion:
+        cheese: edam
 
     ubuntu_rackspace:
-        provider: rackspace
-        image: Ubuntu 12.04 LTS
-        size: 256 server
-        minion:
-            cheese: edam
+      provider: my-rackspace-config
+      image: Ubuntu 12.04 LTS
+      size: 256 server
+      minion:
+        cheese: edam
 
     fedora_rackspace:
-        provider: rackspace
-        image: Fedora 17
-        size: 256 server
-        minion:
-            cheese: edam
+      provider: my-rackspace-config
+      image: Fedora 17
+      size: 256 server
+      minion:
+        cheese: edam
 
     cent_linode:
-        provider: linode
-        image: CentOS 6.2 64bit
-        size: Linode 512
+      provider: my-linode-config
+      image: CentOS 6.2 64bit
+      size: Linode 512
 
     cent_gogrid:
-        provider: gogrid
-        image: 12834
-        size: 512MB
+      provider: my-gogrid-config
+      image: 12834
+      size: 512MB
 
     cent_joyent:
-        provider: joyent
-        image: centos-6
-        size: Small 1GB
+      provider: my-joyent-config
+      image: centos-6
+      size: Small 1GB

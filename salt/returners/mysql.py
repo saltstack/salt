@@ -64,6 +64,7 @@ Use the following mysql database schema:
       `load` mediumtext NOT NULL,
       UNIQUE KEY `jid` (`jid`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+    CREATE INDEX jid ON jids(jid) USING BTREE;
 
     --
     -- Table structure for table `salt_returns`
@@ -113,6 +114,15 @@ To use the alternative configuration, append '--return_config alternative' to th
 .. code-block:: bash
 
     salt '*' test.ping --return mysql --return_config alternative
+
+To override individual configuration items, append --return_kwargs '{"key:": "value"}' to the salt command.
+
+.. versionadded:: Boron
+
+.. code-block:: bash
+
+    salt '*' test.ping --return mysql --return_kwargs '{"db": "another-salt"}'
+
 '''
 from __future__ import absolute_import
 # Let's not allow PyLint complain about string substitution
@@ -188,24 +198,42 @@ def _get_serv(ret=None, commit=False):
     Return a mysql cursor
     '''
     _options = _get_options(ret)
-    try:
-        # An empty ssl_options dictionary passed to MySQLdb.connect will
-        # effectively connect w/o SSL.
-        ssl_options = {}
-        if _options.get('ssl_ca'):
-            ssl_options['ca'] = _options.get('ssl_ca')
-        if _options.get('ssl_cert'):
-            ssl_options['cert'] = _options.get('ssl_cert')
-        if _options.get('ssl_key'):
-            ssl_options['key'] = _options.get('ssl_key')
-        conn = MySQLdb.connect(host=_options.get('host'),
-                               user=_options.get('user'),
-                               passwd=_options.get('pass'),
-                               db=_options.get('db'),
-                               port=_options.get('port'),
-                               ssl=ssl_options)
-    except MySQLdb.connections.OperationalError as exc:
-        raise salt.exceptions.SaltMasterError('MySQL returner could not connect to database: {exc}'.format(exc=exc))
+
+    connect = True
+    if __context__ and 'mysql_returner_conn' in __context__:
+        try:
+            log.debug('Trying to reuse MySQL connection pool')
+            conn = __context__['mysql_returner_conn']
+            conn.ping()
+            connect = False
+        except MySQLdb.connections.OperationalError as exc:
+            log.debug('OperationalError on ping: {0}'.format(exc))
+
+    if connect:
+        log.debug('Generating new MySQL connection pool')
+        try:
+            # An empty ssl_options dictionary passed to MySQLdb.connect will
+            # effectively connect w/o SSL.
+            ssl_options = {}
+            if _options.get('ssl_ca'):
+                ssl_options['ca'] = _options.get('ssl_ca')
+            if _options.get('ssl_cert'):
+                ssl_options['cert'] = _options.get('ssl_cert')
+            if _options.get('ssl_key'):
+                ssl_options['key'] = _options.get('ssl_key')
+            conn = MySQLdb.connect(host=_options.get('host'),
+                                   user=_options.get('user'),
+                                   passwd=_options.get('pass'),
+                                   db=_options.get('db'),
+                                   port=_options.get('port'),
+                                   ssl=ssl_options)
+
+            try:
+                __context__['mysql_returner_conn'] = conn
+            except TypeError:
+                pass
+        except MySQLdb.connections.OperationalError as exc:
+            raise salt.exceptions.SaltMasterError('MySQL returner could not connect to database: {exc}'.format(exc=exc))
 
     cursor = conn.cursor()
 
@@ -221,8 +249,6 @@ def _get_serv(ret=None, commit=False):
             cursor.execute("COMMIT")
         else:
             cursor.execute("ROLLBACK")
-    finally:
-        conn.close()
 
 
 def returner(ret):
@@ -342,14 +368,40 @@ def get_jids():
     '''
     with _get_serv(ret=None, commit=True) as cur:
 
-        sql = '''SELECT DISTINCT jid
+        sql = '''SELECT DISTINCT `jid`, `load`
                 FROM `jids`'''
 
         cur.execute(sql)
         data = cur.fetchall()
+        ret = {}
+        for jid in data:
+            ret[jid[0]] = salt.utils.jid.format_jid_instance(jid[0],
+                                                             json.loads(jid[1]))
+        return ret
+
+
+def get_jids_filter(count, filter_find_job=True):
+    '''
+    Return a list of all job ids
+    :param int count: show not more than the count of most recent jobs
+    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    '''
+    with _get_serv(ret=None, commit=True) as cur:
+
+        sql = '''SELECT * FROM (
+                     SELECT DISTINCT `jid` ,`load` FROM `jids`
+                     {0}
+                     ORDER BY `jid` DESC limit {1}
+                     ) `tmp`
+                 ORDER BY `jid`;'''
+        where = '''WHERE `load` NOT LIKE '%"fun": "saltutil.find_job"%' '''
+
+        cur.execute(sql.format(where if filter_find_job else '', count))
+        data = cur.fetchall()
         ret = []
         for jid in data:
-            ret.append(jid[0])
+            ret.append(salt.utils.jid.format_jid_instance_ext(jid[0],
+                                                              json.loads(jid[1])))
         return ret
 
 

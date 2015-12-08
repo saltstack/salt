@@ -34,8 +34,7 @@ using the ``ec2-config`` provider, the payload for this tag would look like:
 
     {'name': 'web1',
      'profile': 'ec2-centos',
-     'provider': 'ec2-config'}
-
+     'provider': 'ec2-config:ec2'}
 
 Available Events
 ================
@@ -123,7 +122,7 @@ Configuring the Event Reactor
 =============================
 
 The Event Reactor is built into the Salt Master process, and as such is
-configured via the master configuration file. Normally this will will be a YAML
+configured via the master configuration file. Normally this will be a YAML
 file located at ``/etc/salt/master``. Additionally, master configuration items
 can be stored, in YAML format, inside the ``/etc/salt/master.d/`` directory.
 
@@ -206,11 +205,11 @@ options that can be specified is ``startup_states``, which is commonly set to
 ``highstate``. This will tell the minion to immediately apply a highstate, as
 soon as it is able to do so.
 
-This can present a problem with some system images on some cloud providers. For
+This can present a problem with some system images on some cloud hosts. For
 instance, Salt Cloud can be configured to log in as either the ``root`` user, or
-a user with ``sudo`` access. While some providers commonly use images that
+a user with ``sudo`` access. While some hosts commonly use images that
 lock out remote ``root`` access and require a user with ``sudo`` privileges to
-log in (notably EC2, with their ``ec2-user`` login), most cloud providers fall
+log in (notably EC2, with their ``ec2-user`` login), most cloud hosts fall
 back to ``root`` as the default login on all images, including for operating
 systems (such as Ubuntu) which normally disallow remote ``root`` login.
 

@@ -133,7 +133,7 @@ def ext_pillar(minion_id,
                 'resource-id': minion_id})
         for tag in _tags:
             tags[tag.name] = tag.value
-    except IndexError, e:
+    except IndexError as e:
         log.error("Couldn't retrieve instance information: %s", e)
         return None
 

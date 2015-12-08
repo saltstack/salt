@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+r'''
 A salt module for SSL/TLS.
 Can create a Certificate Authority (CA)
 or use Self-Signed certificates.
@@ -104,12 +104,13 @@ import os
 import time
 import calendar
 import logging
-import hashlib
+import math
+import binascii
 import salt.utils
 from salt._compat import string_types
 from salt.ext.six.moves import range as _range
 from datetime import datetime
-from distutils.version import LooseVersion
+from distutils.version import LooseVersion  # pylint: disable=no-name-in-module
 
 import re
 
@@ -140,7 +141,7 @@ def __virtual__():
         if OpenSSL_version < LooseVersion('0.14'):
             X509_EXT_ENABLED = False
             log.error('You should upgrade pyOpenSSL to at least 0.14.1 '
-                     'to enable the use of X509 extensions')
+                      'to enable the use of X509 extensions')
         elif OpenSSL_version <= LooseVersion('0.15'):
             log.warn('You should upgrade pyOpenSSL to at least 0.15.1 '
                      'to enable the full use of X509 extensions')
@@ -156,8 +157,18 @@ def __virtual__():
         return True
     else:
         X509_EXT_ENABLED = False
-        return False, ['PyOpenSSL version 0.10 or later must be installed '
-                       'before this module can be used.']
+        return (False, ('PyOpenSSL version 0.10 or later must be installed '
+                        'before this module can be used.'))
+
+
+def _microtime():
+    '''
+    Return a Unix timestamp as a string of digits
+    :return:
+    '''
+    val1, val2 = math.modf(time.time())
+    val2 = int(val2)
+    return '{0:f}{1}'.format(val1, val2)
 
 
 def cert_base_path(cacert_path=None):
@@ -207,25 +218,21 @@ def set_ca_path(cacert_path):
     return cert_base_path()
 
 
-def _new_serial(ca_name, CN):
+def _new_serial(ca_name):
     '''
-    Return a serial number in hex using md5sum, based upon the ca_name and
-    CN values
+    Return a serial number in hex using os.urandom() and a Unix timestamp
+    in microseconds.
 
     ca_name
         name of the CA
     CN
         common name in the request
     '''
-    opts_hash_type = __opts__.get('hash_type', 'md5')
-    hashtype = getattr(hashlib, opts_hash_type)
     hashnum = int(
-        hashtype(
-            '{0}_{1}_{2}'.format(
-                ca_name,
-                CN,
-                int(calendar.timegm(time.gmtime())))
-        ).hexdigest(),
+        binascii.hexlify(
+            '{0}_{1}'.format(
+                _microtime(),
+                os.urandom(5))),
         16
     )
     log.debug('Hashnum: {0}'.format(hashnum))
@@ -679,7 +686,7 @@ def create_ca(ca_name,
 
     ca = OpenSSL.crypto.X509()
     ca.set_version(2)
-    ca.set_serial_number(_new_serial(ca_name, CN))
+    ca.set_serial_number(_new_serial(ca_name))
     ca.get_subject().C = C
     ca.get_subject().ST = ST
     ca.get_subject().L = L
@@ -711,7 +718,7 @@ def create_ca(ca_name,
                 issuer=ca)])
     ca.sign(key, digest)
 
-    # alway backup existing keys in case
+    # always backup existing keys in case
     keycontent = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM,
                                                 key)
     write_key = True
@@ -750,7 +757,7 @@ def get_extensions(cert_type):
     Fetch X509 and CSR extension definitions from tls:extensions:
     (common|server|client) or set them to standard defaults.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     cert_type:
         The type of certificate such as ``server`` or ``client``.
@@ -891,27 +898,29 @@ def create_csr(ca_name,
         for the given req. source with a DNS: prefix. To be thorough, you
         may want to include both DNS: and IP: entries if you are using
         subjectAltNames for destinations for your TLS connections.
-            e.g.:
-                requests to https://1.2.3.4 will fail from python's
-                requests library w/out the second entry in the above list
+        e.g.:
+        requests to https://1.2.3.4 will fail from python's
+        requests library w/out the second entry in the above list
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     cert_type
         Specify the general certificate type. Can be either `server` or
         `client`. Indicates the set of common extensions added to the CSR.
 
-        server: {
-           'basicConstraints': 'CA:FALSE',
-           'extendedKeyUsage': 'serverAuth',
-           'keyUsage': 'digitalSignature, keyEncipherment'
-        }
+        .. code-block:: cfg
 
-        client: {
-           'basicConstraints': 'CA:FALSE',
-           'extendedKeyUsage': 'clientAuth',
-           'keyUsage': 'nonRepudiation, digitalSignature, keyEncipherment'
-        }
+            server: {
+               'basicConstraints': 'CA:FALSE',
+               'extendedKeyUsage': 'serverAuth',
+               'keyUsage': 'digitalSignature, keyEncipherment'
+            }
+
+            client: {
+               'basicConstraints': 'CA:FALSE',
+               'extendedKeyUsage': 'clientAuth',
+               'keyUsage': 'nonRepudiation, digitalSignature, keyEncipherment'
+            }
 
     type_ext
         boolean.  Whether or not to extend the filename with CN_[cert_type]
@@ -1156,7 +1165,7 @@ def create_self_signed_cert(tls_dir='tls',
     cert.get_subject().CN = CN
     cert.get_subject().emailAddress = emailAddress
 
-    cert.set_serial_number(_new_serial(tls_dir, CN))
+    cert.set_serial_number(_new_serial(tls_dir))
     cert.set_issuer(cert.get_subject())
     cert.set_pubkey(key)
     cert.sign(key, digest)
@@ -1404,7 +1413,7 @@ def create_ca_signed_cert(ca_name,
     cert.set_subject(req.get_subject())
     cert.gmtime_adj_notBefore(0)
     cert.gmtime_adj_notAfter(int(days) * 24 * 60 * 60)
-    cert.set_serial_number(_new_serial(ca_name, CN))
+    cert.set_serial_number(_new_serial(ca_name))
     cert.set_issuer(ca_cert.get_subject())
     cert.set_pubkey(req.get_pubkey())
 
@@ -1588,7 +1597,7 @@ def create_empty_crl(
     '''
     Create an empty Certificate Revocation List.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     ca_name
         name of the CA
@@ -1664,7 +1673,7 @@ def revoke_cert(
     '''
     Revoke a certificate.
 
-    .. versionadded:: Beryllium
+    .. versionadded:: 2015.8.0
 
     ca_name
         Name of the CA.

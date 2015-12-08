@@ -1,7 +1,19 @@
 # -*- coding: utf-8 -*-
+
+# Import pytohn libs
+from __future__ import absolute_import
+
+# Import Salt testing libs
+from salttesting.unit import skipIf, TestCase
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
+from salttesting.helpers import ensure_in_syspath
+ensure_in_syspath('../../')
+
+# Import Salt libs
 from salt.modules import artifactory
-from salttesting import TestCase, skipIf
-from salttesting.mock import MagicMock, NO_MOCK, NO_MOCK_REASON
+
+# Import 3rd-party libs
+import salt.ext.six as six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -10,12 +22,12 @@ class ArtifactoryTestCase(TestCase):
     org_module_functions = {}
 
     def __save_module_functions(self):
-        for name, val in artifactory.__dict__.iteritems():
+        for name, val in six.iteritems(artifactory.__dict__):
             if callable(val):
                 self.org_module_functions[name] = val
 
     def __restore_module_functions(self):
-        for name, val in self.org_module_functions.iteritems():
+        for name, val in six.iteritems(self.org_module_functions):
             artifactory.__dict__[name] = val
 
     def setUp(self):
@@ -43,7 +55,8 @@ class ArtifactoryTestCase(TestCase):
         metadata = artifactory._get_artifact_metadata(artifactory_url='http://artifactory.company.com/artifactory',
                                             repository='libs-releases',
                                             group_id='com.company.sampleapp.web-module',
-                                            artifact_id='web')
+                                            artifact_id='web',
+                                            headers={})
         self.assertEqual(metadata['latest_version'], '1.1_RC11')
 
     def test_snapshot_version_get_metadata(self):
@@ -77,7 +90,8 @@ class ArtifactoryTestCase(TestCase):
                                                              repository='libs-releases',
                                                              group_id='com.company.sampleapp.web-module',
                                                              artifact_id='web',
-                                                             version='1.1_RC8-SNAPSHOT')
+                                                             version='1.1_RC8-SNAPSHOT',
+                                                             headers={})
         self.assertEqual(metadata['snapshot_versions']['war'], '1.1_RC8-20140418.150212-1')
 
     def test_artifact_metadata_url(self):
@@ -117,7 +131,8 @@ class ArtifactoryTestCase(TestCase):
                                                group_id='com.company.sampleapp.web-module',
                                                artifact_id='web',
                                                version='1.0_RC10-SNAPSHOT',
-                                               packaging='war')
+                                               packaging='war',
+                                               headers={})
 
         self.assertEqual(artifact_url, "http://artifactory.company.com/artifactory/libs-snapshots/com/company/sampleapp/web-module/web/1.0_RC10-SNAPSHOT/web-1.0_RC10-20131127.105838-2.war")
         self.assertEqual(file_name, "web-1.0_RC10-20131127.105838-2.war")

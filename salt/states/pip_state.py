@@ -30,6 +30,7 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
 import salt.ext.six as six
+# pylint: disable=import-error
 try:
     import pip
     HAS_PIP = True
@@ -46,6 +47,7 @@ if HAS_PIP is True:
         del pip
         if 'pip' in sys.modules:
             del sys.modules['pip']
+# pylint: enable=import-error
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +104,7 @@ def _check_pkg_version_format(pkg):
     if not HAS_PIP:
         ret['comment'] = (
             'An importable pip module is required but could not be found on '
-            'your system. This usually means that the system''s pip package '
+            'your system. This usually means that the system\'s pip package '
             'is not installed properly.'
         )
 
@@ -171,7 +173,7 @@ def _check_if_installed(prefix, state_pkg_name, version_spec,
     # result: False means the package is not installed
     ret = {'result': False, 'comment': None}
 
-    # Check if the requested packated is already installed.
+    # Check if the requested package is already installed.
     try:
         pip_list = __salt__['pip.list'](prefix, bin_env=bin_env,
                                         user=user, cwd=cwd)
@@ -243,7 +245,8 @@ def installed(name,
               allow_unverified=None,
               process_dependency_links=False,
               env_vars=None,
-              use_vt=False):
+              use_vt=False,
+              trusted_host=None):
     '''
     Make sure the package is installed
 
@@ -403,6 +406,10 @@ def installed(name,
     use_vt
         Use VT terminal emulation (see ouptut while installing)
 
+    trusted_host
+        Mark this host as trusted, even though it does not have valid or any
+        HTTPS.
+
     Example:
 
     .. code-block:: yaml
@@ -476,6 +483,24 @@ def installed(name,
         them to the ``pip`` library. It's functionality duplication and it's
         more error prone.
 
+
+    .. admonition:: Attention
+
+        Please set ``reload_modules: True`` to have the salt minion
+        import this module after installation.
+
+
+    Example:
+
+    .. code-block:: yaml
+
+        pyopenssl:
+            pip.installed:
+                - name: pyOpenSSL
+                - reload_modules: True
+                - exists_action: i
+
+
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
 
@@ -544,9 +569,9 @@ def installed(name,
         name = repo
 
     # Get the packages parsed name and version from the pip library.
-    # This only is done when there is no requirements parameter.
+    # This only is done when there is no requirements or editable parameter.
     pkgs_details = []
-    if pkgs and not requirements:
+    if pkgs and not (requirements or editable):
         comments = []
         for pkg in iter(pkgs):
             out = _check_pkg_version_format(pkg)
@@ -566,7 +591,6 @@ def installed(name,
     target_pkgs = []
     already_installed_comments = []
     if requirements or editable:
-        name = ''
         comments = []
         # Append comments if this is a dry run.
         if __opts__['test']:
@@ -595,6 +619,12 @@ def installed(name,
                 out = _check_if_installed(prefix, state_pkg_name, version_spec,
                                           ignore_installed, force_reinstall,
                                           upgrade, user, cwd, bin_env)
+                # If _check_if_installed result is None, something went wrong with
+                # the command running. This way we keep stateful output.
+                if out['result'] is None:
+                    ret['result'] = False
+                    ret['comment'] = out['comment']
+                    return ret
             else:
                 out = {'result': False, 'comment': None}
 
@@ -670,10 +700,16 @@ def installed(name,
         process_dependency_links=process_dependency_links,
         saltenv=__env__,
         env_vars=env_vars,
-        use_vt=use_vt
+        use_vt=use_vt,
+        trusted_host=trusted_host
     )
 
-    if pip_install_call and (pip_install_call.get('retcode', 1) == 0):
+    # Check the retcode for success, but don't fail if using pip1 and the package is
+    # already present. Pip1 returns a retcode of 1 (instead of 0 for pip2) if you run
+    # "pip install" without any arguments. See issue #21845.
+    if pip_install_call and \
+            (pip_install_call.get('retcode', 1) == 0 or pip_install_call.get('stdout', '').startswith(
+                'You must give at least one requirement to install')):
         ret['result'] = True
 
         if requirements or editable:
@@ -710,12 +746,11 @@ def installed(name,
                     # If we didnt find the package in the system after
                     # installing it report it
                     if not pipsearch:
-                        msg = (
+                        pkg_404_comms.append(
                             'There was no error installing package \'{0}\' '
                             'although it does not show when calling '
                             '\'pip.freeze\'.'.format(pkg)
                         )
-                        pkg_404_comms.append(msg)
                     else:
                         pkg_name = _find_key(prefix, pipsearch)
                         ver = pipsearch[pkg_name]
@@ -745,7 +780,7 @@ def installed(name,
             comments = []
             if requirements:
                 comments.append('Unable to process requirements file '
-                                '{0}.'.format(requirements))
+                                '"{0}".'.format(requirements))
             if editable:
                 comments.append('Unable to install from VCS checkout'
                                 '{0}.'.format(editable))

@@ -97,7 +97,7 @@ def _validate_partition_boundary(boundary):
         )
 
 
-def probe(*devices, **kwargs):
+def probe(*devices):
     '''
     Ask the kernel to update its local partition data. When no args are
     specified all block devices are tried.
@@ -113,39 +113,12 @@ def probe(*devices, **kwargs):
         salt '*' partition.probe /dev/sda
         salt '*' partition.probe /dev/sda /dev/sdb
     '''
-    salt.utils.kwargs_warn_until(kwargs, 'Beryllium')
-    if 'device' in kwargs:
-        devices = tuple([kwargs['device']] + list(devices))
-        del kwargs['device']
-    if kwargs:
-        raise TypeError("probe() takes no keyword arguments")
-
     for device in devices:
         _validate_device(device)
 
     cmd = 'partprobe -- {0}'.format(" ".join(devices))
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
-
-
-def part_list(device, unit=None):
-    '''
-    Deprecated. Calls partition.list.
-
-    CLI Examples:
-
-    .. code-block:: bash
-
-        salt '*' partition.part_list /dev/sda
-        salt '*' partition.part_list /dev/sda unit=s
-        salt '*' partition.part_list /dev/sda unit=kB
-    '''
-    salt.utils.warn_until(
-        'Beryllium',
-        '''The \'part_list\' function has been deprecated in favor of
-        \'list_\'. Please update your code and configs to reflect this.''')
-
-    return list_(device, unit)
 
 
 def list_(device, unit=None):
@@ -440,16 +413,15 @@ def mklabel(device, label_type):
 
         salt '*' partition.mklabel /dev/sda msdos
     '''
-    _validate_device(device)
-
-    if label_type not in set(['aix', 'amiga', 'bsd', 'dvh', 'gpt', 'loop', 'mac',
-                             'msdos', 'pc98', 'sun']):
+    if label_type not in set([
+        'aix', 'amiga', 'bsd', 'dvh', 'gpt', 'loop', 'mac', 'msdos', 'pc98', 'sun'
+    ]):
         raise CommandExecutionError(
             'Invalid label_type passed to partition.mklabel'
         )
 
-    cmd = 'parted -m -s {0} mklabel {1}'.format(device, label_type)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ('parted', '-m', '-s', device, 'mklabel', label_type)
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out
 
 
@@ -468,37 +440,33 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
         salt '*' partition.mkpart /dev/sda primary fs_type=fat32 start=0 end=639
         salt '*' partition.mkpart /dev/sda primary start=0 end=639
     '''
-    _validate_device(device)
-
-    if not start or not end:
-        raise CommandExecutionError(
-            'partition.mkpart requires a start and an end'
-        )
-
     if part_type not in set(['primary', 'logical', 'extended']):
         raise CommandExecutionError(
             'Invalid part_type passed to partition.mkpart'
         )
 
     if fs_type and fs_type not in set(['ext2', 'fat32', 'fat16', 'linux-swap', 'reiserfs',
-                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs']):
+                          'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs', 'xfs', 'zfs']):
         raise CommandExecutionError(
             'Invalid fs_type passed to partition.mkpart'
         )
 
-    _validate_partition_boundary(start)
-    _validate_partition_boundary(end)
+    if start is not None and end is not None:
+        _validate_partition_boundary(start)
+        _validate_partition_boundary(end)
+
+    if start is None:
+        start = ''
+
+    if end is None:
+        end = ''
 
     if fs_type:
-        cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
-            device, part_type, fs_type, start, end
-        )
+        cmd = ('parted', '-m', '-s', '--', device, 'mkpart', part_type, fs_type, start, end)
     else:
-        cmd = 'parted -m -s -- {0} mkpart {1} {2} {3}'.format(
-            device, part_type, start, end
-        )
+        cmd = ('parted', '-m', '-s', '--', device, 'mkpart', part_type, start, end)
 
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out
 
 

@@ -74,7 +74,7 @@ the following:
 
     group: group name
     md5:   MD5 digest of file contents
-    mode:  file permissions (as integer)
+    mode:  file permissions (as as integer)
     mtime: last modification time (as time_t)
     name:  file basename
     path:  file absolute path
@@ -83,10 +83,8 @@ the following:
     user:  user name
 '''
 
-from __future__ import absolute_import
-
 # Import python libs
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 import logging
 import os
 import re
@@ -94,7 +92,6 @@ import stat
 import shutil
 import sys
 import time
-import shlex
 from subprocess import Popen, PIPE
 try:
     import grp
@@ -160,7 +157,7 @@ def _parse_interval(value):
     '''
     match = _INTERVAL_REGEX.match(str(value))
     if match is None:
-        raise ValueError('invalid time interval: {0!r}'.format(value))
+        raise ValueError('invalid time interval: \'{0}\''.format(value))
 
     result = 0
     resolution = None
@@ -491,7 +488,7 @@ class PrintOption(Option):
                     _FILE_TYPES.get(stat.S_IFMT(fstat[stat.ST_MODE]), '?')
                 )
             elif arg == 'mode':
-                result.append(fstat[stat.ST_MODE])
+                result.append(int(oct(fstat[stat.ST_MODE])[-3:]))
             elif arg == 'mtime':
                 result.append(fstat[stat.ST_MTIME])
             elif arg == 'user':
@@ -561,8 +558,8 @@ class ExecOption(Option):
     def execute(self, fullpath, fstat, test=False):
         try:
             command = self.command.replace('{}', fullpath)
-            print(shlex.split(command))
-            p = Popen(shlex.split(command),
+            print(salt.utils.shlex_split(command))
+            p = Popen(salt.utils.shlex_split(command),
                       stdout=PIPE,
                       stderr=PIPE)
             (out, err) = p.communicate()
@@ -570,8 +567,8 @@ class ExecOption(Option):
                 log.error(
                     'Error running command: {0}\n\n{1}'.format(
                     command,
-                    err))
-            return "{0}:\n{1}\n".format(command, out)
+                    salt.utils.to_str(err)))
+            return "{0}:\n{1}\n".format(command, salt.utils.to_str(out))
 
         except Exception as e:
             log.error(
@@ -599,7 +596,7 @@ class Finder(object):
         if 'test' in options:
             self.test = options['test']
             del options['test']
-        for key, value in options.items():
+        for key, value in six.iteritems(options):
             if key.startswith('_'):
                 # this is a passthrough object, continue
                 continue
@@ -635,9 +632,6 @@ class Finder(object):
         '''
         for dirpath, dirs, files in os.walk(path):
             depth = dirpath[len(path) + len(os.path.sep):].count(os.path.sep)
-            if depth == self.maxdepth:
-                dirs[:] = []
-
             if depth >= self.mindepth:
                 for name in dirs + files:
                     fstat = None
@@ -660,6 +654,9 @@ class Finder(object):
                             result = action.execute(fullpath, fstat, test=self.test)
                             if result is not None:
                                 yield result
+
+            if depth == self.maxdepth:
+                dirs[:] = []
 
 
 def find(path, options):

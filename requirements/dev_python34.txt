@@ -1,0 +1,6 @@
+-r base.txt
+
+mock
+boto>=2.32.1
+moto>=0.3.6
+SaltTesting>=2015.2.16

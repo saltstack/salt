@@ -3,14 +3,17 @@
     :codeauthor: :email:`Mike Place <mp@saltstack.com>`
 '''
 
+# Import python libs
+from __future__ import absolute_import
+
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
 from salttesting.helpers import ensure_in_syspath
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from StringIO import StringIO
 
 ensure_in_syspath('../../')
 
+from salt.ext.six.moves import StringIO
 from salt.modules import cron as cronmod
 from salt.states import cron as cron
 
@@ -64,6 +67,7 @@ def get_crontab(*args, **kw):
 
 
 def set_crontab(val):
+    CRONTAB.seek(0)
     CRONTAB.truncate(0)
     CRONTAB.write(val)
 
@@ -97,7 +101,7 @@ class CronTestCase(TestCase):
             hour='1',
             identifier='1',
             user='root')
-        self.assertEqual(
+        self.assertMultiLineEqual(
             get_crontab(),
             '# Lines below here are managed by Salt, do not edit\n'
             '# SALT_CRON_IDENTIFIER:1\n'
@@ -107,23 +111,55 @@ class CronTestCase(TestCase):
             hour='2',
             identifier='1',
             user='root')
-        self.assertEqual(
+        self.assertMultiLineEqual(
             get_crontab(),
             '# Lines below here are managed by Salt, do not edit\n'
             '# SALT_CRON_IDENTIFIER:1\n'
             '* 2 * * * foo')
         cron.present(
-            name='foo',
-            hour='2',
-            identifier='2',
+            name='cmd1',
+            minute='0',
+            comment='Commented cron job',
+            commented=True,
+            identifier='commented_1',
             user='root')
-        self.assertEqual(
+        self.assertMultiLineEqual(
             get_crontab(),
             '# Lines below here are managed by Salt, do not edit\n'
             '# SALT_CRON_IDENTIFIER:1\n'
             '* 2 * * * foo\n'
+            '# Commented cron job SALT_CRON_IDENTIFIER:commented_1\n'
+            '#DISABLED#0 * * * * cmd1')
+        cron.present(
+            name='foo',
+            hour='2',
+            identifier='2',
+            user='root')
+        self.assertMultiLineEqual(
+            get_crontab(),
+            '# Lines below here are managed by Salt, do not edit\n'
+            '# SALT_CRON_IDENTIFIER:1\n'
+            '* 2 * * * foo\n'
+            '# Commented cron job SALT_CRON_IDENTIFIER:commented_1\n'
+            '#DISABLED#0 * * * * cmd1\n'
             '# SALT_CRON_IDENTIFIER:2\n'
             '* 2 * * * foo')
+        cron.present(
+            name='cmd2',
+            commented=True,
+            identifier='commented_2',
+            user='root')
+        self.assertMultiLineEqual(
+            get_crontab(),
+            '# Lines below here are managed by Salt, do not edit\n'
+            '# SALT_CRON_IDENTIFIER:1\n'
+            '* 2 * * * foo\n'
+            '# Commented cron job SALT_CRON_IDENTIFIER:commented_1\n'
+            '#DISABLED#0 * * * * cmd1\n'
+            '# SALT_CRON_IDENTIFIER:2\n'
+            '* 2 * * * foo\n'
+            '# SALT_CRON_IDENTIFIER:commented_2\n'
+            '#DISABLED#* * * * * cmd2')
         set_crontab(
             '# Lines below here are managed by Salt, do not edit\n'
             '# SALT_CRON_IDENTIFIER:1\n'

@@ -31,11 +31,17 @@ __func_alias__ = {
 }
 
 
-def _do(name, fun):
+def _do(name, fun, path=None):
     '''
     Invoke a function in the lxc module with no args
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
     '''
-    host = find_guest(name, quiet=True)
+    host = find_guest(name, quiet=True, path=path)
     if not host:
         return False
 
@@ -44,6 +50,7 @@ def _do(name, fun):
             host,
             'lxc.{0}'.format(fun),
             [name],
+            kwarg={'path': path},
             timeout=60)
     data = next(cmd_ret)
     data = data.get(host, {}).get('ret', None)
@@ -52,60 +59,85 @@ def _do(name, fun):
     return data
 
 
-def _do_names(names, fun):
+def _do_names(names, fun, path=None):
     '''
     Invoke a function in the lxc module with no args
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
     '''
     ret = {}
-    hosts = find_guests(names)
+    hosts = find_guests(names, path=path)
     if not hosts:
         return False
 
     client = salt.client.get_local_client(__opts__['conf_file'])
-    cmds = []
-    for id_, sub_names in hosts.items():
+    for host, sub_names in six.iteritems(hosts):
+        cmds = []
         for name in sub_names:
             cmds.append(client.cmd_iter(
-                    id_,
+                    host,
                     'lxc.{0}'.format(fun),
                     [name],
+                    kwarg={'path': path},
                     timeout=60))
-    for cmd in cmds:
-        data = next(cmd)
-        data = data.get(id_, {}).get('ret', None)
-        if data:
-            ret.update({id_: data})
+        for cmd in cmds:
+            data = next(cmd)
+            data = data.get(host, {}).get('ret', None)
+            if data:
+                ret.update({host: data})
     return ret
 
 
-def find_guest(name, quiet=False):
+def find_guest(name, quiet=False, path=None):
     '''
     Returns the host for a container.
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
+
 
     .. code-block:: bash
 
         salt-run lxc.find_guest name
     '''
     if quiet:
-        log.warn('\'quiet\' argument is being deprecated. Please migrate to --quiet')
-    for data in _list_iter():
-        host, l = data.items()[0]
+        log.warn('\'quiet\' argument is being deprecated.'
+                 ' Please migrate to --quiet')
+    for data in _list_iter(path=path):
+        host, l = next(six.iteritems(data))
         for x in 'running', 'frozen', 'stopped':
             if name in l[x]:
                 if not quiet:
-                    __jid_event__.fire_event({'data': host, 'outputter': 'lxc_find_host'}, 'progress')
+                    __jid_event__.fire_event(
+                        {'data': host,
+                         'outputter': 'lxc_find_host'},
+                        'progress')
                 return host
     return None
 
 
-def find_guests(names):
+def find_guests(names, path=None):
     '''
     Return a dict of hosts and named guests
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
+
     '''
     ret = {}
     names = names.split(',')
-    for data in _list_iter():
-        host, stat = data.items()[0]
+    for data in _list_iter(path=path):
+        host, stat = next(six.iteritems(data))
         for state in stat:
             for name in stat[state]:
                 if name in names:
@@ -139,6 +171,12 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     host
         Minion on which to initialize the container **(required)**
 
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
+
     saltcloud_mode
         init the container with the saltcloud opts format instead
         See lxc.init_interface module documentation
@@ -169,7 +207,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
     network_profile
         Network profile to use for the container
 
-        .. versionadded:: 2015.5.0
+        .. versionadded:: 2015.5.2
 
     nic
         .. deprecated:: 2015.5.0
@@ -194,8 +232,10 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         Optional config parameters. By default, the id is set to
         the name of the container.
     '''
+    path = kwargs.get('path', None)
     if quiet:
-        log.warn('\'quiet\' argument is being deprecated. Please migrate to --quiet')
+        log.warn('\'quiet\' argument is being deprecated.'
+                 ' Please migrate to --quiet')
     ret = {'comment': '', 'result': True}
     if host is None:
         # TODO: Support selection of host based on available memory/cpu/etc.
@@ -222,10 +262,10 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         return ret
 
     log.info('Searching for LXC Hosts')
-    data = __salt__['lxc.list'](host, quiet=True)
-    for host, containers in data.items():
+    data = __salt__['lxc.list'](host, quiet=True, path=path)
+    for host, containers in six.iteritems(data):
         for name in names:
-            if name in sum(containers.values(), []):
+            if name in sum(six.itervalues(containers), []):
                 log.info('Container \'{0}\' already exists'
                          ' on host \'{1}\','
                          ' init can be a NO-OP'.format(
@@ -272,6 +312,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         if saltcloud_mode:
             kw = copy.deepcopy(kw)
             kw['name'] = name
+            saved_kwargs = {}
             kw = client.cmd(
                 host, 'lxc.cloud_init_interface', args + [kw],
                 expr_form='list', timeout=600).get(host, {})
@@ -280,6 +321,7 @@ def init(names, host=None, saltcloud_mode=False, quiet=False, **kwargs):
         kw['seed'] = seeds.get(name, seed_arg)
         if not kw['seed']:
             kw.pop('seed_cmd', '')
+        kw.update(saved_kwargs)
         cmds.append(
             (host,
              name,
@@ -372,6 +414,12 @@ def cloud_init(names, host=None, quiet=False, **kwargs):
     host
         Minion to start the container on. Required.
 
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
+
     saltcloud_mode
         init the container with the saltcloud opts format instead
     '''
@@ -381,13 +429,21 @@ def cloud_init(names, host=None, quiet=False, **kwargs):
                                 saltcloud_mode=True, quiet=quiet, **kwargs)
 
 
-def _list_iter(host=None):
+def _list_iter(host=None, path=None):
     '''
     Return a generator iterating over hosts
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
     '''
     tgt = host or '*'
     client = salt.client.get_local_client(__opts__['conf_file'])
-    for container_info in client.cmd_iter(tgt, 'lxc.list'):
+    for container_info in client.cmd_iter(
+        tgt, 'lxc.list', kwarg={'path': path}
+    ):
         if not container_info:
             continue
         if not isinstance(container_info, dict):
@@ -406,34 +462,47 @@ def _list_iter(host=None):
         yield chunk
 
 
-def list_(host=None, quiet=False):
+def list_(host=None, quiet=False, path=None):
     '''
     List defined containers (running, stopped, and frozen) for the named
     (or all) host(s).
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 
         salt-run lxc.list [host=minion_id]
     '''
-    it = _list_iter(host)
+    it = _list_iter(host, path=path)
     ret = {}
     for chunk in it:
         ret.update(chunk)
         if not quiet:
-            __jid_event__.fire_event({'data': chunk, 'outputter': 'lxc_list'}, 'progress')
+            __jid_event__.fire_event(
+                {'data': chunk, 'outputter': 'lxc_list'}, 'progress')
     return ret
 
 
-def purge(name, delete_key=True, quiet=False):
+def purge(name, delete_key=True, quiet=False, path=None):
     '''
     Purge the named container and delete its minion key if present.
     WARNING: Destroys all data associated with the container.
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 
         salt-run lxc.purge name
     '''
-    data = _do_names(name, 'destroy')
+    data = _do_names(name, 'destroy', path=path)
     if data is False:
         return data
 
@@ -445,41 +514,62 @@ def purge(name, delete_key=True, quiet=False):
         return
 
     if not quiet:
-        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_purge'}, 'progress')
+        __jid_event__.fire_event(
+            {'data': data, 'outputter': 'lxc_purge'}, 'progress')
     return data
 
 
-def start(name, quiet=False):
+def start(name, quiet=False, path=None):
     '''
     Start the named container.
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 
         salt-run lxc.start name
     '''
-    data = _do_names(name, 'start')
+    data = _do_names(name, 'start', path=path)
     if data and not quiet:
-        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_start'}, 'progress')
+        __jid_event__.fire_event(
+            {'data': data, 'outputter': 'lxc_start'}, 'progress')
     return data
 
 
-def stop(name, quiet=False):
+def stop(name, quiet=False, path=None):
     '''
     Stop the named container.
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 
         salt-run lxc.stop name
     '''
-    data = _do_names(name, 'stop')
+    data = _do_names(name, 'stop', path=path)
     if data and not quiet:
-        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_force_off'}, 'progress')
+        __jid_event__.fire_event(
+            {'data': data, 'outputter': 'lxc_force_off'}, 'progress')
     return data
 
 
-def freeze(name, quiet=False):
+def freeze(name, quiet=False, path=None):
     '''
     Freeze the named container
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 
@@ -487,33 +577,48 @@ def freeze(name, quiet=False):
     '''
     data = _do_names(name, 'freeze')
     if data and not quiet:
-        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_pause'}, 'progress')
+        __jid_event__.fire_event(
+            {'data': data, 'outputter': 'lxc_pause'}, 'progress')
     return data
 
 
-def unfreeze(name, quiet=False):
+def unfreeze(name, quiet=False, path=None):
     '''
     Unfreeze the named container
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 
         salt-run lxc.unfreeze name
     '''
-    data = _do_names(name, 'unfreeze')
+    data = _do_names(name, 'unfreeze', path=path)
     if data and not quiet:
-        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_resume'}, 'progress')
+        __jid_event__.fire_event(
+            {'data': data, 'outputter': 'lxc_resume'}, 'progress')
     return data
 
 
-def info(name, quiet=False):
+def info(name, quiet=False, path=None):
     '''
     Returns information about a container.
+
+    path
+        path to the container parent
+        default: /var/lib/lxc (system default)
+
+        .. versionadded:: 2015.8.0
 
     .. code-block:: bash
 
         salt-run lxc.info name
     '''
-    data = _do_names(name, 'info')
+    data = _do_names(name, 'info', path=path)
     if data and not quiet:
-        __jid_event__.fire_event({'data': data, 'outputter': 'lxc_info'}, 'progress')
+        __jid_event__.fire_event(
+            {'data': data, 'outputter': 'lxc_info'}, 'progress')
     return data

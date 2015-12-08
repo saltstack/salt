@@ -4,9 +4,6 @@ Manage users with the useradd command
 '''
 from __future__ import absolute_import
 
-# Import python libs
-import re
-
 try:
     import pwd
     HAS_PWD = True
@@ -22,10 +19,6 @@ from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
-RETCODE_12_ERROR_REGEX = re.compile(
-    r'userdel(.*)warning(.*)/var/mail(.*)No such file or directory'
-)
-
 # Define the module's virtual name
 __virtualname__ = 'user'
 
@@ -37,7 +30,7 @@ def __virtual__():
 
     if HAS_PWD and __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD'):
         return __virtualname__
-    return False
+    return (False, 'useradd execution module not loaded: either pwd python library not available or system not one of Linux, OpenBSD or NetBSD')
 
 
 def _get_gecos(name):
@@ -72,7 +65,9 @@ def _update_gecos(name, key, value):
     '''
     Common code to change a user's GECOS information
     '''
-    if not isinstance(value, six.string_types):
+    if value is None:
+        value = ''
+    elif not isinstance(value, six.string_types):
         value = str(value)
     pre_info = _get_gecos(name)
     if not pre_info:
@@ -157,12 +152,11 @@ def add(name,
                 # /etc/usermgmt.conf not present: defaults will be used
                 pass
 
-    if salt.utils.is_true(createhome):
-        if createhome:
-            cmd.append('-m')
-        elif (__grains__['kernel'] != 'NetBSD'
-                and __grains__['kernel'] != 'OpenBSD'):
-            cmd.append('-M')
+    if createhome:
+        cmd.append('-m')
+    elif (__grains__['kernel'] != 'NetBSD'
+            and __grains__['kernel'] != 'OpenBSD'):
+        cmd.append('-M')
 
     if home is not None:
         cmd.extend(['-d', home])
@@ -240,7 +234,7 @@ def delete(name, remove=False, force=False):
         if __grains__['os_family'] not in ('Debian',):
             return False
 
-        if RETCODE_12_ERROR_REGEX.match(ret['stderr']) is not None:
+        if 'var/mail' in ret['stderr'] or 'var/spool/mail' in ret['stderr']:
             # We've hit the bug, let's log it and not fail
             log.debug(
                 'While the userdel exited with code 12, this is a known bug on '

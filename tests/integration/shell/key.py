@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 # Import python libs
+from __future__ import absolute_import
 import os
 import yaml
 import shutil
@@ -40,7 +41,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-L')
         expect = None
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             expect = [
                 'Accepted Keys:',
                 'minion',
@@ -66,7 +67,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-L --out json')
         expect = None
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             expect = [
                 '{',
                 '    "minions_rejected": [], ',
@@ -98,7 +99,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-L --out yaml')
         expect = []
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             expect = [
                 'minions:',
                 '- minion',
@@ -124,7 +125,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-L --out raw')
         expect = None
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             expect = [
                 "{'minions_rejected': [], 'minions_denied': [], 'minions_pre': [], "
                 "'minions': ['minion', 'sub_minion']}"
@@ -143,7 +144,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         test salt-key -l
         '''
         data = self.run_key('-l acc')
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             self.assertEqual(
                 data,
                 ['Accepted Keys:', 'minion', 'sub_minion']
@@ -165,7 +166,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         '''
         data = self.run_key('-l un')
         expect = None
-        if self.master_opts['transport'] == 'zeromq':
+        if self.master_opts['transport'] in ('zeromq', 'tcp'):
             expect = ['Unaccepted Keys:']
         elif self.master_opts['transport'] == 'raet':
             expect = ['minions_pre:']
@@ -180,7 +181,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.run_key(arg_str)
         try:
             key_names = None
-            if self.master_opts['transport'] == 'zeromq':
+            if self.master_opts['transport'] in ('zeromq', 'tcp'):
                 key_names = ('minibar.pub', 'minibar.pem')
             elif self.master_opts['transport'] == 'raet':
                 key_names = ('minibar.key',)
@@ -196,7 +197,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
         self.run_script('salt-key', arg_str)
         try:
             key_names = None
-            if self.master_opts['transport'] == 'zeromq':
+            if self.master_opts['transport'] in ('zeromq', 'tcp'):
                 key_names = ('minibar.pub', 'minibar.pem')
             elif self.master_opts['transport'] == 'raet':
                 key_names = ('minibar.key',)
@@ -253,7 +254,7 @@ class KeyTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             self.assertIn('minion', '\n'.join(ret))
             self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
         finally:
-            os.chdir(old_cwd)
+            self.chdir(old_cwd)
             if os.path.isdir(config_dir):
                 shutil.rmtree(config_dir)
 

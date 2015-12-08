@@ -34,8 +34,13 @@ Create a new `virtualenv`_:
 
 .. _`virtualenv`: https://pypi.python.org/pypi/virtualenv
 
-On Arch Linux, where Python 3 is the default installation of Python, use the
-``virtualenv2`` command instead of ``virtualenv``.
+Avoid making your :ref:`virtualenv path too long <too_long_socket_path>`.
+
+On Arch Linux, where Python 3 is the default installation of Python, use
+the ``virtualenv2`` command instead of ``virtualenv``.
+
+On Gentoo you must use ``--system-site-packages`` to enable pkg and portage_config
+functionality
 
 .. note:: Using system Python modules in the virtualenv
 
@@ -121,8 +126,7 @@ Copy the master and minion config files into your virtualenv:
 .. code-block:: bash
 
     mkdir -p /path/to/your/virtualenv/etc/salt
-    cp ./salt/conf/master /path/to/your/virtualenv/etc/salt/master
-    cp ./salt/conf/minion /path/to/your/virtualenv/etc/salt/minion
+    cp ./salt/conf/master ./salt/conf/minion /path/to/your/virtualenv/etc/salt/
 
 Edit the master config file:
 
@@ -175,25 +179,28 @@ do this, add ``-l debug`` to the calls to ``salt-master`` and ``salt-minion``.
 If you would like to log to the console instead of to the log file, remove the
 ``-d``.
 
-Once the minion starts, you may see an error like the following:
+.. _too_long_socket_path:
+.. note:: Too long socket path?
 
-.. code-block:: bash
-
-    zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/
-    var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc"
-    is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
-
-This means that the path to the socket the minion is using is too long. This is
-a system limitation, so the only workaround is to reduce the length of this
-path. This can be done in a couple different ways:
-
-1.  Create your virtualenv in a path that is short enough.
-2.  Edit the :conf_minion:`sock_dir` minion config variable and reduce its
-    length. Remember that this path is relative to the value you set in
-    :conf_minion:`root_dir`.
-
-``NOTE:`` The socket path is limited to 107 characters on Solaris and Linux,
-and 103 characters on BSD-based systems.
+    Once the minion starts, you may see an error like the following:
+    
+    .. code-block:: bash
+    
+        zmq.core.error.ZMQError: ipc path "/path/to/your/virtualenv/
+        var/run/salt/minion/minion_event_7824dcbcfd7a8f6755939af70b96249f_pub.ipc"
+        is longer than 107 characters (sizeof(sockaddr_un.sun_path)).
+    
+    This means that the path to the socket the minion is using is too long. This is
+    a system limitation, so the only workaround is to reduce the length of this
+    path. This can be done in a couple different ways:
+    
+    1.  Create your virtualenv in a path that is short enough.
+    2.  Edit the :conf_minion:`sock_dir` minion config variable and reduce its
+        length. Remember that this path is relative to the value you set in
+        :conf_minion:`root_dir`.
+    
+    ``NOTE:`` The socket path is limited to 107 characters on Solaris and Linux,
+    and 103 characters on BSD-based systems.
 
 .. note:: File descriptor limits
 
@@ -221,8 +228,8 @@ tools, you can explicitly tweak the default system paths that Salt expects:
 
 .. code-block:: bash
 
-    GENERATE_SALT_SYSPATHS=1 pip --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
-        install -e ./salt   # the path to the salt git clone from above
+    GENERATE_SALT_SYSPATHS=1 pip install --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
+        -e ./salt   # the path to the salt git clone from above
 
 
 You can now call all of Salt's CLI tools without explicitly passing the configuration directory.
@@ -237,8 +244,8 @@ version information which is distributable:
 
 .. code-block:: bash
 
-    GENERATE_SALT_SYSPATHS=1 WRITE_SALT_VERSION=1 pip --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
-        install -e ./salt   # the path to the salt git clone from above
+    GENERATE_SALT_SYSPATHS=1 WRITE_SALT_VERSION=1 pip install --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
+        -e ./salt   # the path to the salt git clone from above
 
 
 Instead of passing those two environmental variables, you can just pass a
@@ -246,11 +253,11 @@ single one which will trigger the other two:
 
 .. code-block:: bash
 
-    MIMIC_SALT_INSTALL=1 pip --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
-        install -e ./salt   # the path to the salt git clone from above
+    MIMIC_SALT_INSTALL=1 pip install --global-option='--salt-root-dir=/path/to/your/virtualenv/' \
+        -e ./salt   # the path to the salt git clone from above
 
 
-This last one will grant you an edditable salt installation with hardcoded
+This last one will grant you an editable salt installation with hardcoded
 system paths and version information.
 
 
@@ -275,7 +282,7 @@ to a virtualenv using pip:
 
 .. code-block:: bash
 
-    pip install Sphinx
+    pip install Sphinx==1.3.1
 
 Change to salt documentation directory, then:
 
@@ -306,7 +313,7 @@ Change to salt documentation directory, then:
 
 .. code-block:: bash
 
-    make SPHINXBUILD=sphinx-1.0-build html
+    make SPHINXBUILD=sphinx-build html
 
 Once you've updated the documentation, you can run the following command to
 launch a simple Python HTTP server to see your changes:

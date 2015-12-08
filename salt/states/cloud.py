@@ -13,10 +13,15 @@ Use this minion to spin up a cloud instance:
       cloud.profile:
         my-ec2-config
 '''
-from __future__ import absolute_import
 
+# Import python libs
+from __future__ import absolute_import
 import pprint
-from salt.ext.six import string_types
+
+# Import 3rd-party libs
+import salt.ext.six as six
+
+# Import Salt Libs
 import salt.utils.cloud as suc
 
 
@@ -90,18 +95,18 @@ def present(name, cloud_provider, onlyif=None, unless=None, **kwargs):
 
     retcode = __salt__['cmd.retcode']
     if onlyif is not None:
-        if not isinstance(onlyif, string_types):
+        if not isinstance(onlyif, six.string_types):
             if not onlyif:
                 return _valid(name, comment='onlyif execution failed')
-        elif isinstance(onlyif, string_types):
-            if retcode(onlyif) != 0:
+        elif isinstance(onlyif, six.string_types):
+            if retcode(onlyif, python_shell=True) != 0:
                 return _valid(name, comment='onlyif execution failed')
     if unless is not None:
-        if not isinstance(unless, string_types):
+        if not isinstance(unless, six.string_types):
             if unless:
                 return _valid(name, comment='unless execution succeeded')
-        elif isinstance(unless, string_types):
-            if retcode(unless) == 0:
+        elif isinstance(unless, six.string_types):
+            if retcode(unless, python_shell=True) == 0:
                 return _valid(name, comment='unless execution succeeded')
 
     # provider=None not cloud_provider because
@@ -167,18 +172,18 @@ def absent(name, onlyif=None, unless=None):
     retcode = __salt__['cmd.retcode']
 
     if onlyif is not None:
-        if not isinstance(onlyif, string_types):
+        if not isinstance(onlyif, six.string_types):
             if not onlyif:
                 return _valid(name, comment='onlyif execution failed')
-        elif isinstance(onlyif, string_types):
-            if retcode(onlyif) != 0:
+        elif isinstance(onlyif, six.string_types):
+            if retcode(onlyif, python_shell=True) != 0:
                 return _valid(name, comment='onlyif execution failed')
     if unless is not None:
-        if not isinstance(unless, string_types):
+        if not isinstance(unless, six.string_types):
             if unless:
                 return _valid(name, comment='unless execution succeeded')
-        elif isinstance(unless, string_types):
-            if retcode(unless) == 0:
+        elif isinstance(unless, six.string_types):
+            if retcode(unless, python_shell=True) == 0:
                 return _valid(name, comment='unless execution succeeded')
 
     if not __salt__['cloud.has_instance'](name=name, provider=None):
@@ -241,21 +246,21 @@ def profile(name, profile, onlyif=None, unless=None, **kwargs):
            'comment': ''}
     retcode = __salt__['cmd.retcode']
     if onlyif is not None:
-        if not isinstance(onlyif, string_types):
+        if not isinstance(onlyif, six.string_types):
             if not onlyif:
                 return _valid(name, comment='onlyif execution failed')
-        elif isinstance(onlyif, string_types):
-            if retcode(onlyif) != 0:
+        elif isinstance(onlyif, six.string_types):
+            if retcode(onlyif, python_shell=True) != 0:
                 return _valid(name, comment='onlyif execution failed')
     if unless is not None:
-        if not isinstance(unless, string_types):
+        if not isinstance(unless, six.string_types):
             if unless:
                 return _valid(name, comment='unless execution succeeded')
-        elif isinstance(unless, string_types):
-            if retcode(unless) == 0:
+        elif isinstance(unless, six.string_types):
+            if retcode(unless, python_shell=True) == 0:
                 return _valid(name, comment='unless execution succeeded')
     instance = _get_instance([name])
-    prov = str(next(instance.iterkeys()))
+    prov = str(next(six.iterkeys(instance)))
     if instance and 'Not Actioned' not in prov:
         ret['result'] = True
         ret['comment'] = 'Already present instance {0}'.format(name)

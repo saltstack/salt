@@ -65,6 +65,7 @@ import hashlib
 import tempfile
 import os
 import re
+import logging
 
 # Import 3rd-party libs
 # pylint: disable=no-name-in-module,import-error
@@ -80,6 +81,8 @@ from salt.ext.six.moves.urllib.request import (
 
 # Import Salt libs
 import salt.utils
+
+log = logging.getLogger(__name__)
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -105,7 +108,7 @@ def __virtual__():
     '''
     if __catalina_home() or _auth('dummy'):
         return 'tomcat'
-    return False
+    return (False, 'Tomcat execution module not loaded: neither Tomcat installed locally nor tomcat-manager credentials set in grains/pillar/config.')
 
 
 def __catalina_home():
@@ -728,6 +731,6 @@ if __name__ == '__main__':
     new_format_creds = _get_credentials()
 
     if old_format_creds == new_format_creds:
-        print 'Config backwards compatible'
+        log.info('Config backwards compatible')
     else:
-        print 'Config not backwards compatible'
+        log.ifno('Config not backwards compatible')
