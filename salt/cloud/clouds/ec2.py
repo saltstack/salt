@@ -62,6 +62,9 @@ To use the EC2 cloud module, set up the cloud configuration at
 
       driver: ec2
 
+      # Pass userdata to the instance to be created
+      userdata_file: /etc/salt/my-userdata-file
+
 :depends: requests
 '''
 # pylint: disable=invalid-name,function-redefined

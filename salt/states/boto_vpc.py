@@ -78,9 +78,9 @@ config:
             - routes:
               - destination_cidr_block: 0.0.0.0/0
                 instance_id: i-123456
-            - subnets:
-              - name: subnet1
-              - name: subnet2
+            - subnet_names:
+              - subnet1
+              - subnet2
             - region: us-east-1
             - profile:
                 keyid: GKTADJGHEIQSXMKKRBJ08H

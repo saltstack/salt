@@ -25,15 +25,14 @@ from salt.utils.network import host_to_ip as _host_to_ip
 from salt.utils.network import remote_port_tcp as _remote_port_tcp
 from salt.ext.six.moves import zip
 
-
+__virtualname__ = 'status'
 __opts__ = {}
 
 
-# TODO: Make this module support windows hosts
 def __virtual__():
     if salt.utils.is_windows():
-        return False
-    return True
+        return (False, 'Cannot load status module on windows')
+    return __virtualname__
 
 
 def _number(text):
@@ -122,9 +121,15 @@ def custom():
     return ret
 
 
-def uptime():
+def uptime(human_readable=True):
     '''
     Return the uptime for this minion
+
+    human_readable: True
+        If ``True`` return the output provided by the system.  If ``False``
+        return the output in seconds.
+
+        .. versionadded:: 2015.8.4
 
     CLI Example:
 
@@ -132,7 +137,16 @@ def uptime():
 
         salt '*' status.uptime
     '''
-    return __salt__['cmd.run']('uptime')
+    if human_readable:
+        return __salt__['cmd.run']('uptime')
+    else:
+        if os.path.exists('/proc/uptime'):
+            out = __salt__['cmd.run']('cat /proc/uptime').split()
+            if len(out):
+                return out[0]
+            else:
+                return 'unexpected format in /proc/uptime'
+        return 'cannot find /proc/uptime'
 
 
 def loadavg():

@@ -59,7 +59,10 @@ def __virtual__():
     Only load this module if nova
     is installed on this minion.
     '''
-    return suon.check_nova()
+    if suon.check_nova():
+        return 'nova'
+    else:
+        return False
 
 
 __opts__ = {}
