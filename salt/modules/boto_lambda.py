@@ -256,9 +256,9 @@ def delete_function(FunctionName, Qualifier=None, region=None, key=None, keyid=N
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         if Qualifier:
-           conn.delete_function(FunctionName=FunctionName, Qualifier=Qualifier)
+           r = conn.delete_function(FunctionName=FunctionName, Qualifier=Qualifier)
         else:
-           conn.delete_function(FunctionName=FunctionName)
+           r = conn.delete_function(FunctionName=FunctionName)
         return {'deleted': True}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
