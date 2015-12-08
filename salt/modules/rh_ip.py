@@ -546,6 +546,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
 
     return bond
 
+
 def _parse_settings_vlan(opts, iface):
 
     '''
@@ -569,7 +570,7 @@ def _parse_settings_vlan(opts, iface):
         if len(opts['phys_dev']) > 0:
             vlan.update({'phys_dev': opts['phys_dev']})
         else:
-            _raise_error_iface(iface, 'phys_dev','Non-empty string')
+            _raise_error_iface(iface, 'phys_dev', 'Non-empty string')
 
     return vlan
 
@@ -617,7 +618,6 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             result['devtype'] = "Vlan"
             for opt in vlan:
                 result[opt] = opts[opt]
-
 
     if iface_type not in ['bond', 'vlan', 'bridge', 'ipip']:
         if 'addr' in opts:
