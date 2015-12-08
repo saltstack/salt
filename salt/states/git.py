@@ -1181,7 +1181,7 @@ def latest(name,
                 if submodules:
                     __salt__['git.submodule'](target,
                                               'update',
-                                              opts=['--recursive'],
+                                              opts=['--init', '--recursive'],
                                               user=user,
                                               identity=identity)
             elif bare:
@@ -1449,7 +1449,7 @@ def latest(name,
             if submodules and remote_rev:
                 __salt__['git.submodule'](target,
                                           'update',
-                                          opts=['--recursive'],
+                                          opts=['--init', '--recursive'],
                                           user=user,
                                           identity=identity)
 
