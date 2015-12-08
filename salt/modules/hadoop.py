@@ -23,7 +23,7 @@ def __virtual__():
     '''
     if salt.utils.which('hadoop'):
         return 'hadoop'
-    return False
+    return (False, 'The hadoop execution module cannot be loaded: hadoop binary not in path.')
 
 
 def version():
