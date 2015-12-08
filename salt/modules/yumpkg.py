@@ -59,18 +59,18 @@ def __virtual__():
     Confine this module to yum based systems
     '''
     if __opts__.get('yum_provider') == 'yumpkg_api':
-        return False
+        return (False, "Module yumpkg: yumpkg_api provider not available")
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
     except Exception:
-        return False
+        return (False, "Module yumpkg: no yum based system detected")
 
     enabled = ('amazon', 'xcp', 'xenserver')
 
     if os_family == 'redhat' or os_grain in enabled:
         return __virtualname__
-    return False
+    return (False, "Module yumpkg: no yum based system detected")
 
 
 def _yum():
