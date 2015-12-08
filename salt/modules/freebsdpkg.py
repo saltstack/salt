@@ -97,9 +97,9 @@ def __virtual__():
         if providers and 'pkg' in providers and providers['pkg'] == 'pkgng':
             log.debug('Configuration option \'providers:pkg\' is set to '
                     '\'pkgng\', won\'t load old provider \'freebsdpkg\'.')
-            return False
+            return (False, 'The freebsdpkg execution module cannot be loaded: the configuration option \'providers:pkg\' is set to \'pkgng\'')
         return __virtualname__
-    return False
+    return (False, 'The freebsdpkg execution module cannot be loaded: either the os is not FreeBSD or the version of FreeBSD is >= 10.')
 
 
 def _get_repo_options(fromrepo=None, packagesite=None):
