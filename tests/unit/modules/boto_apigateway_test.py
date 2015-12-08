@@ -6,6 +6,9 @@
 # Import Python libs
 from __future__ import absolute_import
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
+import datetime
+from dateutil.tz import tzlocal
+from md5 import md5
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
@@ -98,7 +101,20 @@ class BotoApiGatewayTestCaseBase(TestCase):
         session_instance.client.return_value = self.conn
 
 class BotoApiGatewayTestCaseMixin(object):
-    pass
+    def _diff_list_dicts(self, listdict1, listdict2, sortkey):
+        '''
+        Compares the two list of dictionaries to ensure they have same content.  Returns True
+        if there is difference, else False
+        '''
+        if (len(listdict1) != len(listdict2)):
+            return True
+
+        listdict1_sorted = sorted(listdict1, key=lambda x: x[sortkey])
+        listdict2_sorted = sorted(listdict2, key=lambda x: x[sortkey])
+        for item1, item2 in zip(listdict1_sorted, listdict2_sorted):
+            if (len(set(item1) & set(item2)) != len(set(item2))):
+                return True
+        return False
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -111,7 +127,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
     TestCase for salt.modules.boto_apigateway module
     '''
 
-    def test_that_when_checking_if_a_rest_api_exists_and_a_rest_api_exists_the_function_api_exists_method_returns_true(self):
+    def test_that_when_checking_if_a_rest_api_exists_and_a_rest_api_exists_the_api_exists_method_returns_true(self):
         '''
         Tests checking an apigateway rest api existence when api's name exists
         '''
@@ -120,7 +136,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
 
         self.assertTrue(api_exists_result['exists'])
 
-    def test_that_when_checking_if_a_rest_api_exists_and_multiple_rest_api_exist_the_function_api_exists_method_returns_true(self):
+    def test_that_when_checking_if_a_rest_api_exists_and_multiple_rest_api_exist_the_api_exists_method_returns_true(self):
         '''
         Tests checking an apigateway rest api existence when multiple api's with same name exists
         '''
@@ -130,7 +146,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
 
         self.assertTrue(api_exists_result['exists'])
 
-    def test_that_when_checking_if_a_rest_api_exists_and_no_rest_api_exists_the_function_api_exists_method_returns_false(self):
+    def test_that_when_checking_if_a_rest_api_exists_and_no_rest_api_exists_the_api_exists_method_returns_false(self):
         '''
         Tests checking an apigateway rest api existence when no matching rest api name exists
         '''
@@ -140,36 +156,271 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         
         self.assertFalse(api_exists_result['exists'])                                                
 
-#    def test_that_when_creating_a_function_succeeds_the_create_function_method_returns_true(self):
-#        '''
-#        tests True function created.
-#        '''
-#        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-#            self.conn.create_function.return_value={'FunctionName': 'testfunction'}
-#            with TempZipFile() as zipfile:
-#                lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
-#                                                    Runtime='python2.7',
-#                                                    Role='myrole',
-#                                                    Handler='file.method',
-#                                                    ZipFile=zipfile,
-#                                                    **conn_parameters)
-#
-#        self.assertTrue(lambda_creation_result['created'])
-#
-#    def test_that_when_creating_a_function_succeeds_the_create_function_method_returns_error(self):
-#        '''
-#        tests True function created.
-#        '''
-#        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-#            self.conn.create_function.side_effect=ClientError(error_content, 'create_function')
-#            with TempZipFile() as zipfile:
-#                lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
-#                                                    Runtime='python2.7',
-#                                                    Role='myrole',
-#                                                    Handler='file.method',
-#                                                    ZipFile=zipfile,
-#                                                    **conn_parameters)
-#        self.assertEqual(lambda_creation_result.get('error',{}).get('message'), error_message.format('create_function'))
+    def test_that_when_getting_rest_apis_and_no_name_option_the_get_apis_method_returns_list_of_all_rest_apis(self):
+        '''
+        Tests that all rest apis defined for a region is returned
+        '''
+        self.conn.get_rest_apis.return_value={u'items': [{u'description': u'A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()), 
+                                                          u'id': u'2ut6i4vyle', 
+                                                          u'name': u'Swagger Petstore'}, 
+                                                         {u'description': u'testingabcd', 
+                                                          u'createdDate': datetime.datetime(2015, 12, 3, 21, 57, 58, tzinfo=tzlocal()), 
+                                                          u'id': u'g41ls77hz0', 
+                                                          u'name': u'testingabc'}, 
+                                                         {u'description': u'a simple food delivery service test', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 4, 23, 57, 28, tzinfo=tzlocal()), 
+                                                          u'id': u'h7pbwydho9', 
+                                                          u'name': u'Food Delivery Service'}, 
+                                                         {u'description': u'Created by AWS Lambda', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 4, 17, 55, 41, tzinfo=tzlocal()), 
+                                                          u'id': u'i2yyd1ldvj', 
+                                                          u'name': u'LambdaMicroservice'}, 
+                                                         {u'description': u'cloud tap service with combination of API GW and Lambda', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 17, 22, 3, 18, tzinfo=tzlocal()), 
+                                                          u'id': u'rm06h9oac4', 
+                                                          u'name': u'API Gateway Cloudtap Service'}, 
+                                                         {u'description': u'testing1234', 
+                                                          u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44, tzinfo=tzlocal()), 
+                                                          u'id': u'vtir6ssxvd', 
+                                                          u'name': u'testing123'}], 
+                                              'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
+        items = self.conn.get_rest_apis.return_value['items']
+        get_apis_result = boto_apigateway.get_apis()
+        items_dt = map(boto_apigateway._convert_datetime_str, items)
+        apis = get_apis_result.get('restapi')
+        
+        diff = False;
+        if (len(apis) != len(items)):
+            diff = True
+        else:
+            # compare individual items.
+            diff = self._diff_list_dicts(apis, items_dt, 'id')
+
+        self.assertTrue(apis and not diff)
+
+    def test_that_when_getting_rest_apis_and_name_is_testing123_the_get_apis_method_returns_list_of_two_rest_apis(self):
+        '''
+        Tests that exactly 2 apis are returned matching 'testing123'
+        '''
+        self.conn.get_rest_apis.return_value={u'items': [{u'description': u'A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()), 
+                                                          u'id': u'2ut6i4vyle', 
+                                                          u'name': u'Swagger Petstore'}, 
+                                                         {u'description': u'testingabcd', 
+                                                          u'createdDate': datetime.datetime(2015, 12, 3, 21, 57, 58, tzinfo=tzlocal()), 
+                                                          u'id': u'g41ls77hz0', 
+                                                          u'name': u'testing123'}, 
+                                                         {u'description': u'a simple food delivery service test', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 4, 23, 57, 28, tzinfo=tzlocal()), 
+                                                          u'id': u'h7pbwydho9', 
+                                                          u'name': u'Food Delivery Service'}, 
+                                                         {u'description': u'Created by AWS Lambda', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 4, 17, 55, 41, tzinfo=tzlocal()), 
+                                                          u'id': u'i2yyd1ldvj', 
+                                                          u'name': u'LambdaMicroservice'}, 
+                                                         {u'description': u'cloud tap service with combination of API GW and Lambda', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 17, 22, 3, 18, tzinfo=tzlocal()), 
+                                                          u'id': u'rm06h9oac4', 
+                                                          u'name': u'API Gateway Cloudtap Service'}, 
+                                                         {u'description': u'testing1234', 
+                                                          u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44, tzinfo=tzlocal()), 
+                                                          u'id': u'vtir6ssxvd', 
+                                                          u'name': u'testing123'}], 
+                                              'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
+        expected_items = [{u'description': u'testingabcd', u'createdDate': datetime.datetime(2015, 12, 3, 21, 57, 58, tzinfo=tzlocal()), 
+                           u'id': u'g41ls77hz0', u'name': u'testing123'}, 
+                          {u'description': u'testing1234', u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44, tzinfo=tzlocal()), 
+                           u'id': u'vtir6ssxvd', u'name': u'testing123'}]  
+
+        get_apis_result = boto_apigateway.get_apis(name='testing123')
+        expected_items_dt = map(boto_apigateway._convert_datetime_str, expected_items)
+        apis = get_apis_result.get('restapi')
+        diff = self._diff_list_dicts(apis, expected_items_dt, 'id')
+
+        self.assertTrue(apis and not diff)
+
+    def test_that_when_getting_rest_apis_and_name_is_testing123_the_get_apis_method_returns_no_matching_items(self):
+        '''
+        Tests that no apis are returned matching 'testing123'
+        '''
+        self.conn.get_rest_apis.return_value={u'items': [{u'description': u'A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()), 
+                                                          u'id': u'2ut6i4vyle', 
+                                                          u'name': u'Swagger Petstore'}, 
+                                                         {u'description': u'a simple food delivery service test', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 4, 23, 57, 28, tzinfo=tzlocal()), 
+                                                          u'id': u'h7pbwydho9', 
+                                                          u'name': u'Food Delivery Service'}, 
+                                                         {u'description': u'Created by AWS Lambda', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 4, 17, 55, 41, tzinfo=tzlocal()), 
+                                                          u'id': u'i2yyd1ldvj', 
+                                                          u'name': u'LambdaMicroservice'}, 
+                                                         {u'description': u'cloud tap service with combination of API GW and Lambda', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 17, 22, 3, 18, tzinfo=tzlocal()), 
+                                                          u'id': u'rm06h9oac4', 
+                                                          u'name': u'API Gateway Cloudtap Service'}], 
+                                              'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
+                                 
+        get_apis_result = boto_apigateway.get_apis(name='testing123')
+        apis = get_apis_result.get('restapi')
+ 
+        self.assertTrue(not apis)
+
+    def test_that_when_creating_a_rest_api_succeeds_the_create_api_method_returns_true(self):
+        '''
+        test True if rest api is created
+        '''
+        created_date = datetime.datetime.now()
+        assigned_api_id = unicode(md5('{0}'.format(created_date)).hexdigest()[:10])
+
+        self.conn.create_rest_api.return_value={u'description': u'unit-testing1234', 
+                                                u'createdDate': created_date, 
+                                                u'id': assigned_api_id, 
+                                                u'name': u'unit-testing123',
+                                                'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
+        
+        create_api_result = boto_apigateway.create_api(name='unit-testing123', description='unit-testing1234')
+        api = create_api_result.get('restapi')
+
+        self.assertTrue(create_api_result.get('created') and api and
+                        api['id'] == assigned_api_id and
+                        api['createdDate'] == '{0}'.format(created_date) and
+                        api['name'] == 'unit-testing123' and
+                        api['description'] == 'unit-testing1234')
+
+    def test_that_when_creating_a_rest_api_fails_the_create_api_method_returns_error(self):
+        '''
+        test True for rest api creation error.
+        '''
+        self.conn.create_rest_api.side_effect=ClientError(error_content, 'create_rest_api')
+        create_api_result = boto_apigateway.create_api(name='unit-testing123', description='unit-testing1234')
+        api = create_api_result.get('restapi')
+
+        self.assertEqual(create_api_result.get('error').get('message'), error_message.format('create_rest_api'))
+
+    def test_that_when_deleting_rest_apis_and_name_is_testing123_matching_two_apis_the_delete_api_method_returns_delete_count_of_two(self):
+        '''
+        test True if the deleted count for "testing123" api is 2.
+        '''
+        self.conn.get_rest_apis.return_value={u'items': [{u'description': u'A sample API that uses a petstore as an example to demonstrate features in the swagger-2.0 specification', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()), 
+                                                          u'id': u'2ut6i4vyle', 
+                                                          u'name': u'Swagger Petstore'}, 
+                                                         {u'description': u'testingabcd', 
+                                                          u'createdDate': datetime.datetime(2015, 12, 3, 21, 57, 58, tzinfo=tzlocal()), 
+                                                          u'id': u'g41ls77hz0', 
+                                                          u'name': u'testing123'}, 
+                                                         {u'description': u'a simple food delivery service test', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 4, 23, 57, 28, tzinfo=tzlocal()), 
+                                                          u'id': u'h7pbwydho9', 
+                                                          u'name': u'Food Delivery Service'}, 
+                                                         {u'description': u'Created by AWS Lambda', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 4, 17, 55, 41, tzinfo=tzlocal()), 
+                                                          u'id': u'i2yyd1ldvj', 
+                                                          u'name': u'LambdaMicroservice'}, 
+                                                         {u'description': u'cloud tap service with combination of API GW and Lambda', 
+                                                          u'createdDate': datetime.datetime(2015, 11, 17, 22, 3, 18, tzinfo=tzlocal()), 
+                                                          u'id': u'rm06h9oac4', 
+                                                          u'name': u'API Gateway Cloudtap Service'}, 
+                                                         {u'description': u'testing1234', 
+                                                          u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44, tzinfo=tzlocal()), 
+                                                          u'id': u'vtir6ssxvd', 
+                                                          u'name': u'testing123'}], 
+                                              'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
+        self.conn.delete_rest_api.return_value = None
+        delete_api_result = boto_apigateway.delete_api(name='testing123')
+
+        self.assertTrue(delete_api_result.get('deleted') and
+                        delete_api_result.get('count') == 2)
+
+    def test_that_when_deleting_rest_apis_and_name_given_provides_no_match_the_delete_api_method_returns_false(self):
+        '''
+        Test that the given api name doesn't exists, and delete_api should return deleted status of False
+        '''
+        self.conn.get_rest_apis.return_value={u'items': [{u'description': u'testing1234', 
+                                                          u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44, tzinfo=tzlocal()), 
+                                                          u'id': u'vtir6ssxvd', 
+                                                          u'name': u'testing1234'}], 
+                                              'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
+        self.conn.delete_rest_api.return_value = None
+        delete_api_result = boto_apigateway.delete_api(name='testing123')
+
+        self.assertTrue(delete_api_result.get('deleted') == False)
+
+    def test_that_getting_api_keys_the_get_api_keys_method_returns_all_api_keys(self):
+        '''
+        tests True if all api_keys are returned.
+        '''
+        self.conn.get_api_keys.return_value = {
+            u'items': [{u'description': u'test-lambda-api-key', u'enabled': True, 
+                        u'stageKeys': [u'123yd1l123/test'], 
+                        u'lastUpdatedDate': datetime.datetime(2015, 11, 4, 19, 22, 18, tzinfo=tzlocal()), 
+                        u'createdDate': datetime.datetime(2015, 11, 4, 19, 21, 7, tzinfo=tzlocal()), 
+                        u'id': u'88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2', 
+                        u'name': u'test-salt-key'}, 
+                       {u'description': u'testing_salt_123', u'enabled': True, 
+                        u'stageKeys': [], 
+                        u'lastUpdatedDate': datetime.datetime(2015, 12, 5, 0, 14, 49, tzinfo=tzlocal()), 
+                        u'createdDate': datetime.datetime(2015, 12, 4, 22, 29, 33, tzinfo=tzlocal()), 
+                        u'id': u'999999989b8cNSp4505pL6OgDe3oW7oY29Z3eIZ4', 
+                        u'name': u'testing_salt'}],
+            'ResponseMetadata': {'HTTPStatusCode': 200, 
+                'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
+
+        items = self.conn.get_api_keys.return_value['items']
+        get_api_keys_result = boto_apigateway.get_api_keys()
+        items_dt = map(boto_apigateway._convert_datetime_str, items)
+        api_keys = get_api_keys_result.get('apiKeys')
+        
+        diff = False;
+        if (len(api_keys) != len(items)):
+            diff = True
+        else:
+            # compare individual items.
+            diff = self._diff_list_dicts(api_keys, items_dt, 'id')
+
+        self.assertTrue(api_keys and not diff)
+
+
+    def test_that_when_creating_an_api_key_succeeds_the_create_api_key_method_returns_true(self):
+        '''
+        tests that we can successfully create an api key and the createDat and lastUpdateDate are
+        converted to string
+        '''
+        now = datetime.datetime.now()
+        self.conn.create_api_key.return_value = {
+            u'description': u'test-lambda-api-key', u'enabled': True, 
+            u'stageKeys': [], 
+            u'lastUpdatedDate': now, 
+            u'createdDate': now, 
+            u'id': u'88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2', 
+            u'name': u'test-salt-key', 
+            'ResponseMetadata': {'HTTPStatusCode': 200, 
+                'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
+
+        create_api_key_result = boto_apigateway.create_api_key('test-salt-key', 'test-lambda-api-key')
+        api_key = create_api_key_result.get('apiKey')
+        now_str = '{0}'.format(now)
+
+        self.assertTrue(create_api_key_result.get('created') == True and
+            api_key.get('lastUpdatedDate') == now_str and
+            api_key.get('createdDate') == now_str)
+
+    def test_that_when_creating_an_api_key_fails_the_create_api_key_method_returns_error(self):
+        '''
+        tests that we properly handle errors when create an api key fails.
+        '''
+
+        self.conn.create_api_key.side_effect=ClientError(error_content, 'create_api_key')
+        create_api_key_result = boto_apigateway.create_api_key('test-salt-key', 'unit-testing1234')
+        api_key = create_api_key_result.get('apiKey')
+
+        self.assertTrue(not api_key and
+            create_api_key_result.get('created') == False and
+            create_api_key_result.get('error').get('message') == error_message.format('create_api_key'))
+
+
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error
