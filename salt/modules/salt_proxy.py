@@ -155,7 +155,7 @@ def is_running(proxyname):
     Returns True if the process is running
     False otherwise
 
-    Paramters:
+    Parameters:
         proxyname:
             String name of the proxy (p8000 for example)
 
@@ -163,6 +163,6 @@ def is_running(proxyname):
 
     .. code-block:: bash
 
-        salt deviceminion salt_proxy.is_running
+        salt deviceminion salt_proxy.is_running p8000
     '''
     return {'result': _is_proxy_running(proxyname)}
