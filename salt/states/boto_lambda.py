@@ -350,7 +350,7 @@ def function_absent(name, FunctionName, region=None, key=None, keyid=None, profi
         ret['comment'] = 'Failed to delete function: {0}.'.format(r['error']['message'])
         return ret
 
-    if not r:
+    if r and not r['exists']:
         ret['comment'] = 'Function {0} does not exist.'.format(FunctionName)
         return ret
 
@@ -511,7 +511,7 @@ def alias_absent(name, FunctionName, Name, region=None, key=None, keyid=None, pr
         ret['comment'] = 'Failed to delete alias: {0}.'.format(r['error']['message'])
         return ret
 
-    if not r:
+    if r and not r['exists']:
         ret['comment'] = 'Alias {0} does not exist.'.format(Name)
         return ret
 
@@ -531,6 +531,16 @@ def alias_absent(name, FunctionName, Name, region=None, key=None, keyid=None, pr
     ret['comment'] = 'Alias {0} deleted.'.format(Name)
     return ret
 
+
+
+def _get_function_arn(name, region=None, key=None, keyid=None, profile=None):
+    if name.startswith('arn:aws:lambda:'):
+        return name
+
+    account_id = __salt__['boto_iam.get_account_id'](
+        region=region, key=key, keyid=keyid, profile=profile
+    )
+    return 'arn:aws:lambda:{0}:{1}:function:{2}'.format(region, account_id, name)
 
 
 def event_source_mapping_present(name, EventSourceArn, FunctionName, StartingPosition,
@@ -639,8 +649,14 @@ def event_source_mapping_present(name, EventSourceArn, FunctionName, StartingPos
             need_update = True
             ret['changes'].setdefault('new',{})[var] = locals()[var]
             ret['changes'].setdefault('old',{})[var] = _describe[val]
-    # TODO verify FunctionName against FunctionArn
-    # TODO check for 'Enabled', since it doesn't directly map to a state
+    # verify FunctionName against FunctionArn
+    function_arn = _get_function_arn(FunctionName, 
+                    region=region, key=key, keyid=keyid, profile=profile)
+    if _describe['FunctionArn'] != function_arn:
+        need_update = True
+        ret['changes'].setdefault('new',{})['FunctionArn'] = function_arn
+        ret['changes'].setdefault('old',{})['FunctionArn'] = _describe['FunctionArn']
+    # TODO check for 'Enabled', since it doesn't directly map to a specific state
     if need_update:
         ret['comment'] = os.linesep.join([ret['comment'], 'Event source mapping to be modified'])
         if __opts__['test']:
@@ -648,7 +664,7 @@ def event_source_mapping_present(name, EventSourceArn, FunctionName, StartingPos
             ret['comment'] = msg
             ret['result'] = None
             return ret
-        _r = __salt__['boto_lambda.update_event_source_mapping'](uuid=_describe['UUID'],
+        _r = __salt__['boto_lambda.update_event_source_mapping'](UUID=_describe['UUID'],
                                         FunctionName=FunctionName,
                                         Enabled=Enabled,
                                         BatchSize=BatchSize,
