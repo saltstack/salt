@@ -81,6 +81,7 @@ import logging
 import socket
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import string
+import json
 
 # Import Salt libs
 import salt.utils.boto3
@@ -826,7 +827,6 @@ def create_api_method(apiId, resourcePath, httpMethod, authorizationType, apiKey
     '''
     try:
         resource = get_api_resource(apiId, resourcePath, region=region, key=key, keyid=keyid, profile=profile).get('resource')
-        log.info(resource)
         if resource: 
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             method = conn.put_method(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, authorizationType=str(authorizationType),
@@ -836,3 +836,322 @@ def create_api_method(apiId, resourcePath, httpMethod, authorizationType, apiKey
         
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)} 
+
+def get_api_method(apiId, resourcePath, httpMethod, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get API method for a resource in the given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_method apiId resourcePath httpMethod
+
+    '''
+    try:
+        resource = get_api_resource(apiId, resourcePath, region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        if resource:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            method = conn.get_method(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod)
+            return {'method': _convert_datetime_str(method)}
+        return {'error': 'get API method failed: no such resource'}        
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+def delete_api_method(apiId, resourcePath, httpMethod, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete API method for a resource in the given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.delete_api_method apiId resourcePath httpMethod
+
+    '''
+    try:
+        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        if resource:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            method = conn.delete_method(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod)
+            return {'deleted': True}
+        return {'deleted': False, 'error': 'get API method failed: no such resource'}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
+def create_api_method_response(apiId, resourcePath, httpMethod, statusCode, responseParameters={}, responseModels={},
+                               region=None, key=None, keyid=None, profile=None):
+    '''
+    Create API method response for a method on a given resource in the given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.create_api_method_response apiId resourcePath httpMethod statusCode responseParameters='{"name", "True|False"}' responseModels='{"content-type", "model"}'
+
+    '''
+    try:
+        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        if resource:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            response = conn.put_method_response(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, statusCode=str(statusCode), 
+                                                responseParameters=responseParameters, responseModels=responseModels)
+            return {'created': True, 'response': response}
+        return {'created': False, 'error': 'no such resource'}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def delete_api_method_response(apiId, resourcePath, httpMethod, statusCode, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete API method response for a resource in the given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.delete_api_method_response apiId resourcePath httpMethod statusCode
+
+    '''
+    try:
+        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        if resource:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            conn.delete_method_response(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, statusCode=str(statusCode))
+            return {'deleted': True}
+        return {'deleted': False, 'error': 'no such resource'}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}   
+
+def get_api_method_response(apiId, resourcePath, httpMethod, statusCode, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get API method response for a resource in the given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_method_response apiId resourcePath httpMethod statusCode
+
+    '''
+    try:
+        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        if resource:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            response = conn.get_method_response(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, statusCode=str(statusCode))
+            return {'response': _convert_datetime_str(response)}
+        return {'error': 'no such resource'}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+
+# API Model
+
+def get_api_models(apiId, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get all models for a given API 
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_models apiId 
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        models = _multi_call(conn.get_models, 'items', restApiId=apiId)
+        return {'models': map(_convert_datetime_str, models)}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+
+def get_api_model(apiId, modelName, flatten = True, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get a model by name for a given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_model apiId modelName [True]
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        model = conn.get_model(restApiId=apiId, modelName=modelName, flatten=flatten)
+        return {'model': _convert_datetime_str(model)}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+def delete_api_model(apiId, modelName, region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete a model identified by name in a given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.delete_api_model apiId modelName 
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.delete_model(restApiId=apiId, modelName=modelName)
+        return {'deleted': True}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)} 
+
+def create_api_model(apiId, modelName, modelDescription, schema, contentType="application/json", region=None, key=None, keyid=None, profile=None):
+    '''
+    Create a new model in a given API with a given schema
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.create_api_model apiId modelName modelDescription '<schema>' 'content-type'
+
+    '''
+    try:
+        log.info(json.dumps(schema));
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        model = conn.create_model(restApiId=apiId, name=modelName, description=modelDescription, schema=json.dumps(schema), contentType=contentType)
+        return {'created': True, 'model': _convert_datetime_str(model)}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+
+# API Integrations
+
+def get_api_integration(apiId, resourcePath, httpMethod, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get an integration for a given method in a given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_integration apiId resourcePath httpMethod
+
+    '''
+    try:
+        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        if resource:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            integration = conn.get_integration(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod)
+            return {'integration': _convert_datetime_str(integration)}
+        return {'error': 'no such resource'}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+
+def get_api_integration_response(apiId, resourcePath, httpMethod, statusCode, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get an integration response for a given method in a given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.get_api_integration_response apiId resourcePath httpMethod statusCode
+
+    '''
+    try:
+        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        if resource:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            response = conn.get_integration_response(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, statusCode=statusCode)
+            return {'response': _convert_datetime_str(response)}
+        return {'error': 'no such resource'}
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}
+
+def delete_api_integration(apiId, resourcePath, httpMethod, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes an integration for a given method in a given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.delete_api_integration apiId resourcePath httpMethod
+
+    '''
+    try:
+        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        if resource:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            conn.delete_integration(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod)
+            return {'deleted': True}
+        return {'deleted': False, 'error': 'no such resource'}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
+def delete_api_integration_response(apiId, resourcePath, httpMethod, statusCode, region=None, key=None, keyid=None, profile=None):
+    '''
+    Deletes an integration response for a given method in a given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.delete_api_integration_response apiId resourcePath httpMethod statusCode
+
+    '''
+    try:
+        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        if resource:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            conn.delete_integration_response(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, statusCode=statusCode)
+            return {'deleted': True}
+        return {'deleted': False, 'error': 'no such resource'}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def create_api_integration(apiId, resourcePath, httpMethod, integrationType, integrationHttpMethod, uri, credentials, requestParameters={}, requestTemplates={}):
+    '''
+    Creates an integration for a given method in a given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.create_api_integration apiId resourcePath httpMethod integrationType integrationHttpMethod uri credentials ['{}' ['{}']]
+
+    '''
+    try:
+        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        if resource:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            integration = conn.put_integration(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, type=integrationType, integrationHttpMethod=integrationHttpMethod,
+                                               uri=uri, credentials=credentials, requestParameters=requestParameters, requestTemplates=requestTemplates)
+            return {'created': True, 'integration': integration}
+        return {'created': False, 'error': 'no such resource'}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+
+def create_api_integration_response(apiId, resourcePath, httpMethod, statusCode, selectionPattern, responseParameters={}, responseTemplates={}):
+    '''
+    Creates an integration response for a given method in a given API
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.create_api_integration_response apiId resourcePath httpMethod statusCode selectionPattern ['{}' ['{}']]
+
+    '''
+    try:
+        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        if resource:
+            conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            response = conn.put_integration_response(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, statusCode=statusCode, 
+                                                     selectionPattern=selectionPattern, responseParameters=responseParameters, responseTemplates=responseTemplates)
+            return {'created': True, 'response': response}
+        return {'created': False, 'error': 'no such resource'}
+    except ClientError as e:
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+
+
