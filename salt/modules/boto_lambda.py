@@ -215,6 +215,9 @@ def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
                'ZipFile': _filedata(ZipFile),
             }
         else:
+            if not S3Bucket or not S3Key:
+                raise SaltInvocationError('Either ZipFile must be specified, or '
+                                'S3Bucket and S3Key must be provided.')
             code = {
                'S3Bucket': S3Bucket,
                'S3Key': S3Key,
@@ -290,7 +293,8 @@ def describe_function(FunctionName, region=None, key=None,
         return {'error': salt.utils.boto3.get_error(e)}
 
 
-def update_function_config(FunctionName, Role, Handler, Description="", Timeout=3, MemorySize=128,
+def update_function_config(FunctionName, Role=None, Handler=None,
+                           Description=None, Timeout=None, MemorySize=None,
             region=None, key=None, keyid=None, profile=None):
     '''
     Update the named lambda function to the configuration.
@@ -306,13 +310,21 @@ def update_function_config(FunctionName, Role, Handler, Description="", Timeout=
 
     '''
 
-    role_arn = _get_role_arn(Role, region, key, keyid, profile)
+    args = dict(FunctionName=FunctionName)
+    for val, var in {
+        'Handler': Handler,
+        'Description': Description,
+        'Timeout': Timeout,
+        'MemorySize': MemorySize,
+    }.iteritems():
+        if var:
+            args[val] = var
+    if Role:
+        role_arn = _get_role_arn(Role, region, key, keyid, profile)
+        args['Role'] = role_arn
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        r = conn.update_function_configuration(FunctionName=FunctionName,
-                                               Role=role_arn, Handler=Handler, 
-                                               Description=Description, Timeout=Timeout,
-                                               MemorySize=MemorySize)
+        r = conn.update_function_configuration(*args)
         if r:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
@@ -352,6 +364,9 @@ def update_function_code(FunctionName, ZipFile=None, S3Bucket=None, S3Key=None,
                                    ZipFile=_filedata(ZipFile),
                                    Publish=Publish)
         else:
+            if not S3Bucket or not S3Key:
+                raise SaltInvocationError('Either ZipFile must be specified, or '
+                                'S3Bucket and S3Key must be provided.')
             args = {
                 'S3Bucket': S3Bucket, 
                 'S3Key': S3Key,
@@ -369,7 +384,7 @@ def update_function_code(FunctionName, ZipFile=None, S3Bucket=None, S3Key=None,
             log.warning('Function was not updated')
             return {'updated': False}
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
+        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
 
 
 def list_function_versions(FunctionName, 
@@ -377,8 +392,7 @@ def list_function_versions(FunctionName,
     '''
     List the versions available for the given function.
 
-    Returns {created: true} if the alias was created and returns
-    {created: False} if the alias was not created.
+    Returns list of function versions
 
     CLI Example:
 
@@ -392,7 +406,7 @@ def list_function_versions(FunctionName,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         vers = []
-        for ret in salt.utils.boto3.paged_call(con.list_versions_by_function, 
+        for ret in salt.utils.boto3.paged_call(conn.list_versions_by_function, 
                                  FunctionName=FunctionName):
             vers.extend(ret['Versions'])
         if not bool(vers):
