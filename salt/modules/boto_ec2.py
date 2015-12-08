@@ -655,7 +655,7 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         additional_info=None, tenancy=None, instance_profile_arn=None,
         instance_profile_name=None, ebs_optimized=None,
         network_interface_id=None, network_interface_name=None,
-        region=None, key=None, keyid=None, profile=None):
+        region=None, key=None, keyid=None, profile=None, network_interfaces=None):
     #TODO: support multi-instance reservations
     '''
     Create and start an EC2 instance.

@@ -502,6 +502,76 @@ class DockerngTestCase(TestCase):
                                            'removed': 'removed'},
                                'result': True})
 
+    def test_volume_present(self):
+        '''
+        Test dockerng.volume_present
+        '''
+        dockerng_create_volume = Mock(return_value='created')
+        __salt__ = {'dockerng.create_volume': dockerng_create_volume,
+                    'dockerng.volumes': Mock(return_value={'Volumes': []}),
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.volume_present(
+                'volume_foo',
+                )
+        dockerng_create_volume.assert_called_with('volume_foo',
+                                                  driver=None,
+                                                  driver_opts=None)
+        self.assertEqual(ret, {'name': 'volume_foo',
+                               'comment': '',
+                               'changes': {'created': 'created'},
+                               'result': True})
+
+    def test_volume_present_with_another_driver(self):
+        '''
+        Test dockerng.volume_present
+        '''
+        dockerng_create_volume = Mock(return_value='created')
+        dockerng_remove_volume = Mock(return_value='removed')
+        __salt__ = {'dockerng.create_volume': dockerng_create_volume,
+                    'dockerng.remove_volume': dockerng_remove_volume,
+                    'dockerng.volumes': Mock(return_value={
+                        'Volumes': [{'Name': 'volume_foo',
+                                     'Driver': 'foo'}]}),
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.volume_present(
+                'volume_foo',
+                driver='bar'
+                )
+        dockerng_remove_volume.assert_called_with('volume_foo')
+        dockerng_create_volume.assert_called_with('volume_foo',
+                                                  driver='bar',
+                                                  driver_opts=None)
+        self.assertEqual(ret, {'name': 'volume_foo',
+                               'comment': '',
+                               'changes': {'created': 'created',
+                                           'removed': 'removed'},
+                               'result': True})
+
+    def test_volume_absent(self):
+        '''
+        Test dockerng.volume_absent
+        '''
+        dockerng_remove_volume = Mock(return_value='removed')
+        __salt__ = {'dockerng.remove_volume': dockerng_remove_volume,
+                    'dockerng.volumes': Mock(return_value={
+                        'Volumes': [{'Name': 'volume_foo'}]}),
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.volume_absent(
+                'volume_foo',
+                )
+        dockerng_remove_volume.assert_called_with('volume_foo')
+        self.assertEqual(ret, {'name': 'volume_foo',
+                               'comment': '',
+                               'changes': {'removed': 'removed'},
+                               'result': True})
+
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(DockerngTestCase, needs_daemon=False)
