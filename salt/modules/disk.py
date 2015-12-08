@@ -372,8 +372,7 @@ def _hdparm(args, failhard=True):
     Fail hard when required
     return output when possible
     '''
-    cmd = 'hdparm {1}'.format(args)
-    log.trace('Running {0}'.format(cmd))
+    cmd = 'hdparm {0}'.format(args)
     result = __salt__['cmd.run_all'](cmd)
     if result['retcode'] != 0:
         msg = '{0}: {1}'.format(cmd, result['stderr'])
@@ -402,10 +401,10 @@ def hdparms(disks, args=None):
     all_parms = 'aAbBcCdgHiJkMmNnQrRuW'
     if args is None:
         args = all_parms
-    elif isinstance(args, [list, tuple]):
+    elif isinstance(args, (list, tuple)):
         args = ''.join(args)
 
-    if not isinstance(disks, [list, tuple]):
+    if not isinstance(disks, (list, tuple)):
         disks = [disks]
 
     out = {}
