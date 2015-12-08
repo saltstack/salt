@@ -313,7 +313,6 @@ def bind(name,
                     ret['comment'] = 'Error: {0}'.format(err)
                     return ret
 
-
     if new_interfaces or old_interfaces:
         ret['changes'].update({'interfaces':
                                 {'old': _current_interfaces,
