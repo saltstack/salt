@@ -24,7 +24,8 @@ def __virtual__():
     '''
     if __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD'):
         return __virtualname__
-    return False
+    return (False, 'The groupadd execution module cannot be loaded: '
+      ' only available on Linux, OpenBSD and NetBSD')
 
 
 def add(name, gid=None, system=False):

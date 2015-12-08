@@ -90,7 +90,7 @@ def __virtual__():
     '''
     if HAS_GLANCE:
         return 'glance'
-    return False
+    return (False, 'The glance execution module cannot be loaded: the glanceclient python library is not available.')
 
 
 __opts__ = {}
