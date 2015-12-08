@@ -156,7 +156,6 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         
         self.assertFalse(api_exists_result['exists'])                                                
 
-
     def test_that_when_getting_rest_apis_and_no_name_option_the_get_apis_method_returns_list_of_all_rest_apis(self):
         '''
         Tests that all rest apis defined for a region is returned
@@ -199,7 +198,6 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
             diff = self._diff_list_dicts(apis, items_dt, 'id')
 
         self.assertTrue(apis and not diff)
-
 
     def test_that_when_getting_rest_apis_and_name_is_testing123_the_get_apis_method_returns_list_of_two_rest_apis(self):
         '''
@@ -349,6 +347,78 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         delete_api_result = boto_apigateway.delete_api(name='testing123')
 
         self.assertTrue(delete_api_result.get('deleted') == False)
+
+    def test_that_getting_api_keys_the_get_api_keys_method_returns_all_api_keys(self):
+        '''
+        tests True if all api_keys are returned.
+        '''
+        self.conn.get_api_keys.return_value = {
+            u'items': [{u'description': u'test-lambda-api-key', u'enabled': True, 
+                        u'stageKeys': [u'123yd1l123/test'], 
+                        u'lastUpdatedDate': datetime.datetime(2015, 11, 4, 19, 22, 18, tzinfo=tzlocal()), 
+                        u'createdDate': datetime.datetime(2015, 11, 4, 19, 21, 7, tzinfo=tzlocal()), 
+                        u'id': u'88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2', 
+                        u'name': u'test-salt-key'}, 
+                       {u'description': u'testing_salt_123', u'enabled': True, 
+                        u'stageKeys': [], 
+                        u'lastUpdatedDate': datetime.datetime(2015, 12, 5, 0, 14, 49, tzinfo=tzlocal()), 
+                        u'createdDate': datetime.datetime(2015, 12, 4, 22, 29, 33, tzinfo=tzlocal()), 
+                        u'id': u'999999989b8cNSp4505pL6OgDe3oW7oY29Z3eIZ4', 
+                        u'name': u'testing_salt'}],
+            'ResponseMetadata': {'HTTPStatusCode': 200, 
+                'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
+
+        items = self.conn.get_api_keys.return_value['items']
+        get_api_keys_result = boto_apigateway.get_api_keys()
+        items_dt = map(boto_apigateway._convert_datetime_str, items)
+        api_keys = get_api_keys_result.get('apiKeys')
+        
+        diff = False;
+        if (len(api_keys) != len(items)):
+            diff = True
+        else:
+            # compare individual items.
+            diff = self._diff_list_dicts(api_keys, items_dt, 'id')
+
+        self.assertTrue(api_keys and not diff)
+
+
+    def test_that_when_creating_an_api_key_succeeds_the_create_api_key_method_returns_true(self):
+        '''
+        tests that we can successfully create an api key and the createDat and lastUpdateDate are
+        converted to string
+        '''
+        now = datetime.datetime.now()
+        self.conn.create_api_key.return_value = {
+            u'description': u'test-lambda-api-key', u'enabled': True, 
+            u'stageKeys': [], 
+            u'lastUpdatedDate': now, 
+            u'createdDate': now, 
+            u'id': u'88883333amaa1ZMVGCoLeaTrQk8kzOC36vCgRcT2', 
+            u'name': u'test-salt-key', 
+            'ResponseMetadata': {'HTTPStatusCode': 200, 
+                'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
+
+        create_api_key_result = boto_apigateway.create_api_key('test-salt-key', 'test-lambda-api-key')
+        api_key = create_api_key_result.get('apiKey')
+        now_str = '{0}'.format(now)
+
+        self.assertTrue(create_api_key_result.get('created') == True and
+            api_key.get('lastUpdatedDate') == now_str and
+            api_key.get('createdDate') == now_str)
+
+    def test_that_when_creating_an_api_key_fails_the_create_api_key_method_returns_error(self):
+        '''
+        tests that we properly handle errors when create an api key fails.
+        '''
+
+        self.conn.create_api_key.side_effect=ClientError(error_content, 'create_api_key')
+        create_api_key_result = boto_apigateway.create_api_key('test-salt-key', 'unit-testing1234')
+        api_key = create_api_key_result.get('apiKey')
+
+        self.assertTrue(not api_key and
+            create_api_key_result.get('created') == False and
+            create_api_key_result.get('error').get('message') == error_message.format('create_api_key'))
 
 
 
