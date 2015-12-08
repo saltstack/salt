@@ -1179,6 +1179,8 @@ def os_data():
                         grains['lsb_distrib_codename'] = os_release['PRETTY_NAME']
                 elif os.path.isfile('/etc/SuSE-release'):
                     grains['lsb_distrib_id'] = 'SUSE'
+                    version = ''
+                    patch = ''
                     with salt.utils.fopen('/etc/SuSE-release') as fhr:
                         for line in fhr:
                             if 'enterprise' in line.lower():
@@ -1187,7 +1189,9 @@ def os_data():
                                 version = re.sub(r'[^0-9]', '', line)
                             elif 'patchlevel' in line.lower():
                                 patch = re.sub(r'[^0-9]', '', line)
-                    grains['lsb_distrib_release'] = version + ' SP' + patch
+                    grains['lsb_distrib_release'] = version
+                    if patch:
+                        grains['lsb_distrib_release'] += ' SP' + patch
                     grains['lsb_distrib_codename'] = 'n.a'
                 elif os.path.isfile('/etc/altlinux-release'):
                     # ALT Linux
