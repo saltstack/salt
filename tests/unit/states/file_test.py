@@ -189,7 +189,9 @@ class FileTestCase(TestCase):
                 with patch.object(os.path, 'exists', mock_f):
                     comt = ('Symlink {0} to {1}'
                             ' is set for creation').format(name, target)
-                    ret.update({'comment': comt, 'result': None})
+                    ret.update({'comment': comt,
+                                'result': None,
+                                'pchanges': {'new': name}})
                     self.assertDictEqual(filestate.symlink(name, target,
                                                            user=user,
                                                            group=group), ret)
@@ -201,7 +203,9 @@ class FileTestCase(TestCase):
             with patch.dict(filestate.__opts__, {'test': False}):
                 with patch.object(os.path, 'isdir', mock_f):
                     comt = ('Directory /etc for symlink is not present')
-                    ret.update({'comment': comt, 'result': False, 'pchanges': {'new': '/etc/grub.conf'}})
+                    ret.update({'comment': comt,
+                                'result': False,
+                                'pchanges': {'new': '/etc/grub.conf'}})
                     self.assertDictEqual(filestate.symlink(name, target,
                                                            user=user,
                                                            group=group), ret)
@@ -216,7 +220,9 @@ class FileTestCase(TestCase):
                     with patch.object(salt.states.file, '_check_symlink_ownership', mock_t):
                         comt = ('Symlink {0} is present and owned by '
                                 '{1}:{2}'.format(name, user, group))
-                        ret.update({'comment': comt, 'result': True})
+                        ret.update({'comment': comt,
+                                    'result': True,
+                                    'pchanges': {}})
                         self.assertDictEqual(filestate.symlink(name, target,
                                                                user=user,
                                                                group=group), ret)
@@ -231,7 +237,9 @@ class FileTestCase(TestCase):
                     with patch.object(os.path, 'lexists', mock_t):
                         comt = ('File exists where the backup target SALT'
                                 ' should go')
-                        ret.update({'comment': comt, 'result': False})
+                        ret.update({'comment': comt,
+                                    'result': False,
+                                    'pchanges': {'new': name}})
                         self.assertDictEqual(filestate.symlink
                                              (name, target, user=user,
                                               group=group, backupname='SALT'),
@@ -709,7 +717,8 @@ class FileTestCase(TestCase):
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
                                              'file.stats': mock_f,
-                                             'file.check_perms': mock_perms}):
+                                             'file.check_perms': mock_perms,
+                                             'file.mkdir': mock_t}):
             if salt.utils.is_windows():
                 comt = ('User salt is not available Group salt'
                         ' is not available')
