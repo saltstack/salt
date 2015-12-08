@@ -970,10 +970,18 @@ def get_service_policy(host, username, password, service_name, protocol=None, po
                                                               password=password,
                                                               protocol=protocol,
                                                               port=port)
+    valid_services = ['DCUI', 'TSM', 'SSH', 'ssh', 'lbtd', 'lsassd', 'lwiod', 'netlogond',
+                      'ntpd', 'sfcbd-watchdog', 'snmpd', 'vprobed', 'vpxa', 'xorg']
     host_names = _check_hosts(service_instance, host, host_names)
 
     ret = {}
     for host_name in host_names:
+        # Check if the service_name provided is a valid one.
+        # If we don't have a valid service, return. The service will be invalid for all hosts.
+        if service_name not in valid_services:
+            ret.update({host_name: {'Error': '{0} is not a valid service name.'.format(service_name)}})
+            return ret
+
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         services = host_ref.configManager.serviceSystem.serviceInfo.service
 
@@ -983,16 +991,20 @@ def get_service_policy(host, username, password, service_name, protocol=None, po
         else:
             temp_service_name = service_name
 
+        # Loop through services until we find a matching name
         for service in services:
             if service.key == temp_service_name:
                 ret.update({host_name:
                            {service_name: service.policy}})
+                # We've found a match - break out of the loop so we don't overwrite the
+                # Updated host_name value with an error message.
                 break
             else:
                 msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name,
                                                                                 host_name)
                 ret.update({host_name: {'Error': msg}})
 
+        # If we made it this far, something else has gone wrong.
         if ret.get(host_name) is None:
             msg = '\'vsphere.get_service_policy\' failed for host {0}.'.format(host_name)
             log.debug(msg)
@@ -1063,10 +1075,18 @@ def get_service_running(host, username, password, service_name, protocol=None, p
                                                               password=password,
                                                               protocol=protocol,
                                                               port=port)
+    valid_services = ['DCUI', 'TSM', 'SSH', 'ssh', 'lbtd', 'lsassd', 'lwiod', 'netlogond',
+                      'ntpd', 'sfcbd-watchdog', 'snmpd', 'vprobed', 'vpxa', 'xorg']
     host_names = _check_hosts(service_instance, host, host_names)
 
     ret = {}
     for host_name in host_names:
+        # Check if the service_name provided is a valid one.
+        # If we don't have a valid service, return. The service will be invalid for all hosts.
+        if service_name not in valid_services:
+            ret.update({host_name: {'Error': '{0} is not a valid service name.'.format(service_name)}})
+            return ret
+
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         services = host_ref.configManager.serviceSystem.serviceInfo.service
 
@@ -1076,16 +1096,20 @@ def get_service_running(host, username, password, service_name, protocol=None, p
         else:
             temp_service_name = service_name
 
+        # Loop through services until we find a matching name
         for service in services:
             if service.key == temp_service_name:
                 ret.update({host_name:
                            {service_name: service.running}})
+                # We've found a match - break out of the loop so we don't overwrite the
+                # Updated host_name value with an error message.
                 break
             else:
                 msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name,
                                                                                 host_name)
                 ret.update({host_name: {'Error': msg}})
 
+        # If we made it this far, something else has gone wrong.
         if ret.get(host_name) is None:
             msg = '\'vsphere.get_service_running\' failed for host {0}.'.format(host_name)
             log.debug(msg)
@@ -1207,6 +1231,8 @@ def get_vsan_enabled(host, username, password, protocol=None, port=None, host_na
     for host_name in host_names:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vsan_config = host_ref.config.vsanHostConfig
+
+        # We must have a VSAN Config in place get information about VSAN state.
         if vsan_config is None:
             msg = 'VSAN System Config Manager is unset for host \'{0}\'.'.format(host_name)
             log.debug(msg)
@@ -1937,6 +1963,8 @@ def service_start(host,
                                                               protocol=protocol,
                                                               port=port)
     host_names = _check_hosts(service_instance, host, host_names)
+    valid_services = ['DCUI', 'TSM', 'SSH', 'ssh', 'lbtd', 'lsassd', 'lwiod', 'netlogond',
+                      'ntpd', 'sfcbd-watchdog', 'snmpd', 'vprobed', 'vpxa', 'xorg']
     ret = {}
 
     # Don't require users to know that VMware lists the ssh service as TSM-SSH
@@ -1946,9 +1974,17 @@ def service_start(host,
         temp_service_name = service_name
 
     for host_name in host_names:
+        # Check if the service_name provided is a valid one.
+        # If we don't have a valid service, return. The service will be invalid for all hosts.
+        if service_name not in valid_services:
+            ret.update({host_name: {'Error': '{0} is not a valid service name.'.format(service_name)}})
+            return ret
+
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         service_manager = _get_service_manager(host_ref)
         log.debug('Starting the \'{0}\' service on {1}.'.format(service_name, host_name))
+
+        # Start the service
         try:
             service_manager.StartService(id=temp_service_name)
         except vim.fault.HostConfigFault as err:
@@ -1956,6 +1992,7 @@ def service_start(host,
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
             continue
+        # Some services are restricted by the vSphere License Level.
         except vim.fault.RestrictedVersion as err:
             log.debug(err)
             ret.update({host_name: {'Error': err}})
@@ -2035,6 +2072,8 @@ def service_stop(host,
                                                               protocol=protocol,
                                                               port=port)
     host_names = _check_hosts(service_instance, host, host_names)
+    valid_services = ['DCUI', 'TSM', 'SSH', 'ssh', 'lbtd', 'lsassd', 'lwiod', 'netlogond',
+                      'ntpd', 'sfcbd-watchdog', 'snmpd', 'vprobed', 'vpxa', 'xorg']
     ret = {}
 
     # Don't require users to know that VMware lists the ssh service as TSM-SSH
@@ -2044,9 +2083,17 @@ def service_stop(host,
         temp_service_name = service_name
 
     for host_name in host_names:
+        # Check if the service_name provided is a valid one.
+        # If we don't have a valid service, return. The service will be invalid for all hosts.
+        if service_name not in valid_services:
+            ret.update({host_name: {'Error': '{0} is not a valid service name.'.format(service_name)}})
+            return ret
+
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         service_manager = _get_service_manager(host_ref)
         log.debug('Stopping the \'{0}\' service on {1}.'.format(service_name, host_name))
+
+        # Stop the service.
         try:
             service_manager.StopService(id=temp_service_name)
         except vim.fault.HostConfigFault as err:
@@ -2054,6 +2101,7 @@ def service_stop(host,
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
             continue
+        # Some services are restricted by the vSphere License Level.
         except vim.fault.RestrictedVersion as err:
             log.debug(err)
             ret.update({host_name: {'Error': err}})
@@ -2133,6 +2181,8 @@ def service_restart(host,
                                                               protocol=protocol,
                                                               port=port)
     host_names = _check_hosts(service_instance, host, host_names)
+    valid_services = ['DCUI', 'TSM', 'SSH', 'ssh', 'lbtd', 'lsassd', 'lwiod', 'netlogond',
+                      'ntpd', 'sfcbd-watchdog', 'snmpd', 'vprobed', 'vpxa', 'xorg']
     ret = {}
 
     # Don't require users to know that VMware lists the ssh service as TSM-SSH
@@ -2142,9 +2192,17 @@ def service_restart(host,
         temp_service_name = service_name
 
     for host_name in host_names:
+        # Check if the service_name provided is a valid one.
+        # If we don't have a valid service, return. The service will be invalid for all hosts.
+        if service_name not in valid_services:
+            ret.update({host_name: {'Error': '{0} is not a valid service name.'.format(service_name)}})
+            return ret
+
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         service_manager = _get_service_manager(host_ref)
         log.debug('Restarting the \'{0}\' service on {1}.'.format(service_name, host_name))
+
+        # Restart the service.
         try:
             service_manager.RestartService(id=temp_service_name)
         except vim.fault.HostConfigFault as err:
@@ -2152,6 +2210,7 @@ def service_restart(host,
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
             continue
+        # Some services are restricted by the vSphere License Level.
         except vim.fault.RestrictedVersion as err:
             log.debug(err)
             ret.update({host_name: {'Error': err}})
@@ -2235,11 +2294,23 @@ def set_service_policy(host,
                                                               protocol=protocol,
                                                               port=port)
     host_names = _check_hosts(service_instance, host, host_names)
+    valid_services = ['DCUI', 'TSM', 'SSH', 'ssh', 'lbtd', 'lsassd', 'lwiod', 'netlogond',
+                      'ntpd', 'sfcbd-watchdog', 'snmpd', 'vprobed', 'vpxa', 'xorg']
     ret = {}
+
     for host_name in host_names:
+        # Check if the service_name provided is a valid one.
+        # If we don't have a valid service, return. The service will be invalid for all hosts.
+        if service_name not in valid_services:
+            ret.update({host_name: {'Error': '{0} is not a valid service name.'.format(service_name)}})
+            return ret
+
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         service_manager = _get_service_manager(host_ref)
         services = host_ref.configManager.serviceSystem.serviceInfo.service
+
+        # Services are stored in a general list - we need loop through the list and find
+        # service key that matches our service name.
         for service in services:
             service_key = None
 
@@ -2259,6 +2330,7 @@ def set_service_policy(host,
                     log.debug(msg)
                     ret.update({host_name: {'Error': msg}})
                     continue
+                # Some services are restricted by the vSphere License Level.
                 except vim.fault.HostConfigFault as err:
                     msg = '\'vsphere.set_service_policy\' failed for host {0}: {1}'.format(host_name, err)
                     log.debug(msg)
@@ -2267,6 +2339,7 @@ def set_service_policy(host,
 
                 ret.update({host_name: True})
 
+            # If we made it this far, something else has gone wrong.
             if ret.get(host_name) is None:
                 msg = 'Could not find service \'{0}\' for host \'{1}\'.'.format(service_name, host_name)
                 log.debug(msg)
@@ -2392,6 +2465,7 @@ def update_host_password(host, username, password, new_password, protocol=None, 
     except vim.fault.UserNotFound:
         raise CommandExecutionError('\'vsphere.update_host_password\' failed for host {0}: '
                                     'User was not found.'.format(host))
+    # If the username and password already exist, we don't need to do anything.
     except vim.fault.AlreadyExists:
         pass
 
@@ -2449,6 +2523,8 @@ def vmotion_disable(host, username, password, protocol=None, port=None, host_nam
     for host_name in host_names:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vmotion_system = host_ref.configManager.vmotionSystem
+
+        # Disable VMotion for the host by removing the VNic selected to use for VMotion.
         try:
             vmotion_system.DeselectVnic()
         except vim.fault.HostConfigFault as err:
@@ -2518,6 +2594,8 @@ def vmotion_enable(host, username, password, protocol=None, port=None, host_name
     for host_name in host_names:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vmotion_system = host_ref.configManager.vmotionSystem
+
+        # Enable VMotion for the host by setting the given device to provide the VNic to use for VMotion.
         try:
             vmotion_system.SelectVnic(device)
         except vim.fault.HostConfigFault as err:
@@ -2586,33 +2664,42 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
     for host_name in response:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vsan_system = host_ref.configManager.vsanSystem
-        eligible = host_name.get('Eligible')
-        error = host_name.get('Error')
 
-        if eligible and isinstance(eligible, list):
-            # If we have eligible, matching disks, add them to VSAN.
-            try:
-                task = vsan_system.AddDisks(eligible)
-                salt.utils.vmware.wait_for_task(task, host_name, 'Adding disks to VSAN', sleep_seconds=3)
-            except Exception as err:
-                msg = '\'vsphere.vsan_add_disks\' failed for host {0}: {1}'.format(host_name, err)
-                log.debug(msg)
-                ret.update({host_name: {'Error': msg}})
-                continue
-
-            log.debug('Successfully added disks to the VSAN system for host \'{0}\'.'.format(host_name))
-            ret.update({host_name: eligible})
-        elif eligible and isinstance(eligible, six.string_types):
-            # If we have a string type in the eligible value, we don't
-            # have any VSAN-eligible disks. Pull the message through.
-            ret.update({host_name: eligible})
-        elif error:
-            # If we hit an error, populate the Error return dict for state functions.
-            ret.update({host_name: {'Error': error}})
+        # We must have a VSAN Config in place before we can manipulate it.
+        if vsan_system is None:
+            msg = 'VSAN System Config Manager is unset for host \'{0}\'. ' \
+                  'VSAN configuration cannot be changed without a configured ' \
+                  'VSAN System.'.format(host_name)
+            log.debug(msg)
+            ret.update({host_name: {'Error': msg}})
         else:
-            # If we made it this far, we somehow have eligible disks, but they didn't
-            # match the disk list and just got an empty list of matching disks.
-            ret.update({host_name: 'No new VSAN-eligible disks were found to add.'})
+            eligible = host_name.get('Eligible')
+            error = host_name.get('Error')
+
+            if eligible and isinstance(eligible, list):
+                # If we have eligible, matching disks, add them to VSAN.
+                try:
+                    task = vsan_system.AddDisks(eligible)
+                    salt.utils.vmware.wait_for_task(task, host_name, 'Adding disks to VSAN', sleep_seconds=3)
+                except Exception as err:
+                    msg = '\'vsphere.vsan_add_disks\' failed for host {0}: {1}'.format(host_name, err)
+                    log.debug(msg)
+                    ret.update({host_name: {'Error': msg}})
+                    continue
+
+                log.debug('Successfully added disks to the VSAN system for host \'{0}\'.'.format(host_name))
+                ret.update({host_name: eligible})
+            elif eligible and isinstance(eligible, six.string_types):
+                # If we have a string type in the eligible value, we don't
+                # have any VSAN-eligible disks. Pull the message through.
+                ret.update({host_name: eligible})
+            elif error:
+                # If we hit an error, populate the Error return dict for state functions.
+                ret.update({host_name: {'Error': error}})
+            else:
+                # If we made it this far, we somehow have eligible disks, but they didn't
+                # match the disk list and just got an empty list of matching disks.
+                ret.update({host_name: 'No new VSAN-eligible disks were found to add.'})
 
     return ret
 
@@ -2672,6 +2759,8 @@ def vsan_disable(host, username, password, protocol=None, port=None, host_names=
     for host_name in host_names:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vsan_system = host_ref.configManager.vsanSystem
+
+        # We must have a VSAN Config in place before we can manipulate it.
         if vsan_system is None:
             msg = 'VSAN System Config Manager is unset for host \'{0}\'. ' \
                   'VSAN configuration cannot be changed without a configured ' \
@@ -2749,6 +2838,8 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
     for host_name in host_names:
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vsan_system = host_ref.configManager.vsanSystem
+
+        # We must have a VSAN Config in place before we can manipulate it.
         if vsan_system is None:
             msg = 'VSAN System Config Manager is unset for host \'{0}\'. ' \
                   'VSAN configuration cannot be changed without a configured ' \
