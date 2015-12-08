@@ -86,18 +86,78 @@ on me". This will result in a ``require`` being inserted into the
 In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
 
-.. note:: Requisite matching
+Requisite matching
+------------------
 
-    Requisites match on both the ID Declaration and the ``name`` parameter.
-    This means that, in the example above, the ``require_in`` requisite would
-    also have been matched if the ``/etc/vimrc`` state was written as follows:
+Requisites need two pieces of information for matching: The state module name –
+e.g. ``pkg`` –, and the identifier – e.g. vim –, which can be either the ID (the
+first line in the stanza) or the ``- name`` parameter.
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
-        vimrc:
-          file.managed:
-            - name: /etc/vimrc
-            - source: salt://edit/vimrc
+    - require:
+      - pkg: vim
+
+State target matching
+~~~~~~~~~~~~~~~~~~~~~
+
+In order to understand how state targets are matched, it is helpful to know
+:ref:`how the state compiler is working <compiler_ordering>`. Consider the following
+example:
+
+.. code-block:: yaml
+
+    Deploy server package:
+      file.managed:
+        - name: /usr/local/share/myapp.tar.xz
+        - source: salt://myapp.tar.xz
+
+    Extract server package:
+      archive.extracted:
+        - name: /usr/local/share/myapp
+        - source: /usr/local/share/myapp.tar.xz
+        - archive_format: tar
+        - onchanges:
+          - file: Deploy server package
+
+The first formula is converted to a dictionary which looks as follows (represented
+as YAML, some properties omitted for simplicity) as `High Data`:
+
+.. code-block:: yaml
+
+    Deploy server package:
+      file:
+        - managed
+        - name: /usr/local/share/myapp.tar.xz
+        - source: salt://myapp.tar.xz
+
+The ``file.managed`` format used in the formula is essentially syntactic sugar:
+at the end, the target is ``file``, which is used in the ``Extract server package``
+state above.
+
+Identifier matching
+~~~~~~~~~~~~~~~~~~~
+
+Requisites match on both the ID Declaration and the ``name`` parameter.
+This means that, in the "Deploy server package" example above, a ``require``
+requisite would match with with ``Deploy server package`` *or* ``/usr/local/share/myapp.tar.xz``,
+so either of the following versions for "Extract server package" works:
+
+.. code-block:: yaml
+
+    # (Archive arguments omitted for simplicity)
+
+    # Match by ID declaration
+    Extract server package:
+      archive.extracted:
+        - onchanges:
+          - file: Deploy server package
+
+    # Match by name parameter
+    Extract server package:
+      archive.extracted:
+        - onchanges:
+          - file: /usr/local/share/myapp.tar.xz
 
 
 Direct Requisite and Requisite_in types
@@ -252,7 +312,7 @@ Or, we may want to run a state only if a previously defined state, in this case
     Install node dependencies:
       cmd.wait:
         - watch:
-          - cmd: Extract node package
+          - archive: Extract node package
         - name: npm rebuild
 
 .. _requisites-prereq:
