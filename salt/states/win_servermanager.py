@@ -87,7 +87,7 @@ def removed(name):
 
     .. note::
 
-        Some features require a reboot after uninstallation. If so the feature will not be completly uninstalled until
+        Some features require a reboot after uninstallation. If so the feature will not be completely uninstalled until
         the server is restarted.
 
     Example:

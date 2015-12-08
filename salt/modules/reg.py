@@ -32,19 +32,16 @@ Values/Entries are name/data pairs. There can be many values in a key. The
 
 # TODO: Figure out the exceptions _winreg can raise and properly catch them
 
+# Import python libs
+from __future__ import absolute_import
+import logging
+
 # Import third party libs
 try:
-    import _winreg
+    from salt.ext.six.moves import winreg as _winreg  # pylint: disable=import-error,no-name-in-module
     HAS_WINDOWS_MODULES = True
 except ImportError:
-    try:
-        import winreg as _winreg
-        HAS_WINDOWS_MODULES = True
-    except ImportError:
-        HAS_WINDOWS_MODULES = False
-
-# Import python libs
-import logging
+    HAS_WINDOWS_MODULES = False
 
 # Import salt libs
 import salt.utils
@@ -70,9 +67,9 @@ class Registry(object):
             "HKU": _winreg.HKEY_USERS,
             }
 
-        self.reflection_mask = {
-            True: _winreg.KEY_ALL_ACCESS,
-            False: _winreg.KEY_ALL_ACCESS | _winreg.KEY_WOW64_64KEY,
+        self.registry_32 = {
+            True: _winreg.KEY_ALL_ACCESS | _winreg.KEY_WOW64_32KEY,
+            False: _winreg.KEY_ALL_ACCESS,
             }
 
         self.vtype = {
@@ -109,22 +106,44 @@ def __virtual__():
     return False
 
 
-def read_key(hkey, path, key=None):
+def _key_exists(hive, key, use_32bit_registry=False):
     '''
-    *** Incorrect Usage ***
-    The name of this function is misleading and will be changed to reflect
-    proper usage in the Boron release of Salt. The path option will be removed
-    and the key will be the actual key. See the following issue:
+    Check that the key is found in the registry
 
-    https://github.com/saltstack/salt/issues/25618
+    :param str hive: The hive to connect to.
+    :param str key: The key to check
+    :param bool use_32bit_registry: Look in the 32bit portion of the registry
 
-    In order to not break existing state files this function will call the
-    read_value function if a key is passed. Key will be passed as the value
-    name. If key is not passed, this function will return the default value for
-    the key.
+    :return: Returns True if found, False if not found
+    :rtype: bool
+    '''
+    registry = Registry()
+    hkey = registry.hkeys[hive]
+    access_mask = registry.registry_32[use_32bit_registry]
 
-    In the Boron release this function will be removed in favor of read_value.
-    ***
+    try:
+        handle = _winreg.OpenKey(hkey, key, 0, access_mask)
+        _winreg.CloseKey(handle)
+        return True
+    except WindowsError as exc:  # pylint: disable=E0602
+        return False
+
+
+def read_key(hkey, path, key=None, use_32bit_registry=False):
+    '''
+    .. important::
+        The name of this function is misleading and will be changed to reflect
+        proper usage in the Boron release of Salt. The path option will be removed
+        and the key will be the actual key. See the following issue:
+
+        https://github.com/saltstack/salt/issues/25618
+
+        In order to not break existing state files this function will call the
+        read_value function if a key is passed. Key will be passed as the value
+        name. If key is not passed, this function will return the default value for
+        the key.
+
+        In the Boron release this function will be removed in favor of read_value.
 
     Read registry key value
 
@@ -150,36 +169,41 @@ def read_key(hkey, path, key=None):
                                        'removed in Salt Boron')
         return read_value(hive=hkey,
                           key=path,
-                          vname=key)
+                          vname=key,
+                          use_32bit_registry=use_32bit_registry)
 
-    return read_value(hive=hkey, key=path)
+    return read_value(hive=hkey,
+                      key=path,
+                      use_32bit_registry=use_32bit_registry)
 
 
-def read_value(hive, key, vname=None):
+def read_value(hive, key, vname=None, use_32bit_registry=False):
     r'''
     Reads a registry value entry or the default value for a key.
 
-    :param str hive:
-        The name of the hive. Can be one of the following
-        - HKEY_LOCAL_MACHINE or HKLM
-        - HKEY_CURRENT_USER or HKCU
-        - HKEY_USER or HKU
+    :param str hive: The name of the hive. Can be one of the following
 
-    :param str key:
-        The key (looks like a path) to the value name.
+    - HKEY_LOCAL_MACHINE or HKLM
+    - HKEY_CURRENT_USER or HKCU
+    - HKEY_USER or HKU
 
-    :param str vname:
-        The value name. These are the individual name/data pairs under the key.
-        If not passed, the key (Default) value will be returned
+    :param str key: The key (looks like a path) to the value name.
 
-    :return:
-        A dictionary containing the passed settings as well as the value_data if
-        successful. If unsuccessful, sets success to False
+    :param str vname: The value name. These are the individual name/data pairs
+    under the key. If not passed, the key (Default) value will be returned
 
-        If vname is not passed:
-        - Returns the first unnamed value (Default) as a string.
-        - Returns none if first unnamed value is empty.
-        - Returns False if key not found.
+    :param bool use_32bit_registry: Accesses the 32bit portion of the registry
+    on 64 bit installations. On 32bit machines this is ignored.
+
+    :return: A dictionary containing the passed settings as well as the
+    value_data if successful. If unsuccessful, sets success to False
+
+    If vname is not passed:
+
+    - Returns the first unnamed value (Default) as a string.
+    - Returns none if first unnamed value is empty.
+    - Returns False if key not found.
+
     :rtype: dict
 
     CLI Example:
@@ -203,9 +227,10 @@ def read_value(hive, key, vname=None):
 
     registry = Registry()
     hkey = registry.hkeys[hive]
+    access_mask = registry.registry_32[use_32bit_registry]
 
     try:
-        handle = _winreg.OpenKey(hkey, key)
+        handle = _winreg.OpenKey(hkey, key, 0, access_mask)
         try:
             vdata, vtype = _winreg.QueryValueEx(handle, vname)
             if vdata or vdata in [0, '']:
@@ -216,7 +241,6 @@ def read_value(hive, key, vname=None):
         except WindowsError as exc:  # pylint: disable=E0602
             ret['vdata'] = ('(value not set)')
             ret['vtype'] = 'REG_SZ'
-            ret['success'] = True
     except WindowsError as exc:  # pylint: disable=E0602
         log.debug(exc)
         log.debug('Cannot find key: {0}\\{1}'.format(hive, key))
@@ -226,22 +250,27 @@ def read_value(hive, key, vname=None):
     return ret
 
 
-def set_key(hkey, path, value, key=None, vtype='REG_DWORD', reflection=True):
+def set_key(hkey,
+            path,
+            value,
+            key=None,
+            vtype='REG_DWORD',
+            reflection=True,
+            use_32bit_registry=False):
     '''
-    *** Incorrect Usage ***
-    The name of this function is misleading and will be changed to reflect
-    proper usage in the Boron release of Salt. The path option will be removed
-    and the key will be the actual key. See the following issue:
+    .. important ::
+        The name of this function is misleading and will be changed to reflect
+        proper usage in the Boron release of Salt. The path option will be removed
+        and the key will be the actual key. See the following issue:
 
-    https://github.com/saltstack/salt/issues/25618
+        https://github.com/saltstack/salt/issues/25618
 
-    In order to not break existing state files this function will call the
-    set_value function if a key is passed. Key will be passed as the value
-    name. If key is not passed, this function will return the default value for
-    the key.
+        In order to not break existing state files this function will call the
+        set_value function if a key is passed. Key will be passed as the value
+        name. If key is not passed, this function will return the default value for
+        the key.
 
-    In the Boron release this function will be removed in favor of set_value.
-    ***
+        In the Boron release this function will be removed in favor of set_value.
 
     Set a registry key
 
@@ -262,46 +291,57 @@ def set_key(hkey, path, value, key=None, vtype='REG_DWORD', reflection=True):
                          key=path,
                          vname=key,
                          vdata=value,
-                         vtype=vtype)
+                         vtype=vtype,
+                         use_32bit_registry=use_32bit_registry)
 
-    return set_value(hive=hkey, key=path, vdata=value, vtype=vtype)
+    return set_value(hive=hkey,
+                     key=path,
+                     vdata=value,
+                     vtype=vtype,
+                     use_32bit_registry=use_32bit_registry)
 
 
-def set_value(hive, key, vname=None, vdata=None, vtype='REG_SZ', reflection=True):
+def set_value(hive,
+              key,
+              vname=None,
+              vdata=None,
+              vtype='REG_SZ',
+              reflection=True,
+              use_32bit_registry=False):
     '''
     Sets a registry value entry or the default value for a key.
 
-    :param str hive:
-        The name of the hive. Can be one of the following
-        - HKEY_LOCAL_MACHINE or HKLM
-        - HKEY_CURRENT_USER or HKCU
-        - HKEY_USER or HKU
+    :param str hive: The name of the hive. Can be one of the following
 
-    :param str key:
-        The key (looks like a path) to the value name.
+    - HKEY_LOCAL_MACHINE or HKLM
+    - HKEY_CURRENT_USER or HKCU
+    - HKEY_USER or HKU
 
-    :param str vname:
-        The value name. These are the individual name/data pairs under the key.
-        If not passed, the key (Default) value will be set.
+    :param str key: The key (looks like a path) to the value name.
 
-    :param str vdata:
-        The value data to be set.
+    :param str vname: The value name. These are the individual name/data pairs
+    under the key. If not passed, the key (Default) value will be set.
 
-    :param str vtype:
-        The value type. Can be one of the following:
-        - REG_BINARY
-        - REG_DWORD
-        - REG_EXPAND_SZ
-        - REG_MULTI_SZ
-        - REG_SZ
+    :param str vdata: The value data to be set.
 
-    :param bool reflection:
-        A boolean value indicating that the value should also be set in the
-        Wow6432Node portion of the registry. Only applies to 64 bit Windows.
-        This setting is ignored for 32 bit Windows.
+    :param str vtype: The value type. Can be one of the following:
 
-    :return:
-        Returns True if successful, False if not
+    - REG_BINARY
+    - REG_DWORD
+    - REG_EXPAND_SZ
+    - REG_MULTI_SZ
+    - REG_SZ
+
+    :param bool reflection: A boolean value indicating that the value should
+    also be set in the Wow6432Node portion of the registry. Only applies to 64
+    bit Windows. This setting is ignored for 32 bit Windows.
+
+    .. deprecated:: 2015.8.2
+       Use `use_32bit_registry` instead. The parameter seems to have no effect
+       since Windows 7 / Windows 2008R2 removed support for reflection. The
+       parameter will be removed in Boron.
+
+    :return: Returns True if successful, False if not
     :rtype: bool
 
     CLI Example:
@@ -311,37 +351,44 @@ def set_value(hive, key, vname=None, vdata=None, vtype='REG_SZ', reflection=True
         salt '*' reg.set_value HKEY_LOCAL_MACHINE 'SOFTWARE\\Salt' 'version' '2015.5.2'
     '''
     registry = Registry()
-    hive = registry.hkeys[hive]
+    hkey = registry.hkeys[hive]
     vtype = registry.vtype[vtype]
-    access_mask = registry.reflection_mask[reflection]
+    access_mask = registry.registry_32[use_32bit_registry]
 
     try:
-        handle = _winreg.CreateKeyEx(hive, key, 0, access_mask)
+        handle = _winreg.CreateKeyEx(hkey, key, 0, access_mask)
+        if vtype == registry.vtype['REG_SZ']\
+                or vtype == registry.vtype['REG_BINARY']:
+            vdata = str(vdata)
         _winreg.SetValueEx(handle, vname, 0, vtype, vdata)
         _winreg.CloseKey(handle)
         return True
-    except (WindowsError, ValueError) as exc:  # pylint: disable=E0602
+    except (WindowsError, ValueError, TypeError) as exc:  # pylint: disable=E0602
         log.error(exc, exc_info=True)
         return False
 
 
-def create_key(hkey, path, key=None, value=None, reflection=True):
+def create_key(hkey,
+               path,
+               key=None,
+               value=None,
+               reflection=True,
+               use_32bit_registry=False):
     '''
-    *** Incorrect Usage ***
-    The name of this function is misleading and will be changed to reflect
-    proper usage in the Boron release of Salt. The path option will be removed
-    and the key will be the actual key. See the following issue:
+    .. important ::
+        The name of this function is misleading and will be changed to reflect
+        proper usage in the Boron release of Salt. The path option will be removed
+        and the key will be the actual key. See the following issue:
 
-    https://github.com/saltstack/salt/issues/25618
+        https://github.com/saltstack/salt/issues/25618
 
-    In order to not break existing state files this function will call the
-    set_value function if key is passed. Key will be passed as the value name.
-    If key is not passed, this function will return the default value for the
-    key.
+        In order to not break existing state files this function will call the
+        set_value function if key is passed. Key will be passed as the value name.
+        If key is not passed, this function will return the default value for the
+        key.
 
-    In the Boron release path will be removed and key will be the path. You will
-    not pass value.
-    ***
+        In the Boron release path will be removed and key will be the path. You will
+        not pass value.
 
     Create a registry key
 
@@ -359,28 +406,32 @@ def create_key(hkey, path, key=None, value=None, reflection=True):
                          key=path,
                          vname=key,
                          vdata=value,
-                         vtype='REG_SZ')
+                         use_32bit_registry=use_32bit_registry)
 
-    return set_value(hive=hkey, key=path)
+    return set_value(hive=hkey, key=path, use_32bit_registry=use_32bit_registry)
 
 
-def delete_key(hkey, path, key=None, reflection=True, force=False):
+def delete_key(hkey,
+               path,
+               key=None,
+               reflection=True,
+               force=False,
+               use_32bit_registry=False):
     '''
-    *** Incorrect Usage ***
-    The name of this function is misleading and will be changed to reflect
-    proper usage in the Boron release of Salt. The path option will be removed
-    and the key will be the actual key. See the following issue:
+    .. important::
+        The name of this function is misleading and will be changed to reflect
+        proper usage in the Boron release of Salt. The path option will be removed
+        and the key will be the actual key. See the following issue:
 
-    https://github.com/saltstack/salt/issues/25618
+        https://github.com/saltstack/salt/issues/25618
 
-    In order to not break existing state files this function will call the
-    delete_value function if a key is passed. Key will be passed as the value
-    name. If key is not passed, this function will return the default value for
-    the key.
+        In order to not break existing state files this function will call the
+        delete_value function if a key is passed. Key will be passed as the value
+        name. If key is not passed, this function will return the default value for
+        the key.
 
-    In the Boron release path will be removed and key will be the path.
-    reflection will also be removed.
-    ***
+        In the Boron release path will be removed and key will be the path.
+        reflection will also be removed.
 
     Delete a registry key
 
@@ -390,34 +441,31 @@ def delete_key(hkey, path, key=None, reflection=True, force=False):
 
         salt '*' reg.delete_key HKEY_CURRENT_USER 'SOFTWARE\\Salt'
 
-    :param str hkey: (will be changed to hive)
-        The name of the hive. Can be one of the following
-        - HKEY_LOCAL_MACHINE or HKLM
-        - HKEY_CURRENT_USER or HKCU
-        - HKEY_USER or HKU
+    :param str hkey: (will be changed to hive) The name of the hive. Can be one
+    of the following
 
-    :param str path: (will be changed to key)
-        The key (looks like a path) to remove.
+    - HKEY_LOCAL_MACHINE or HKLM
+    - HKEY_CURRENT_USER or HKCU
+    - HKEY_USER or HKU
 
-    :param str key: (used incorrectly)
-        Will be removed in Boron
+    :param str path: (will be changed to key) The key (looks like a path) to
+    remove.
 
-    :param bool reflection:
-        A boolean value indicating that the value should also be removed from
-        the Wow6432Node portion of the registry. Only applies to 64 bit Windows.
-        This setting is ignored for 32 bit Windows.
+    :param str key: (used incorrectly) Will be removed in Boron
 
-        Only applies to delete value. If the key parameter is passed, this
-        function calls delete_value instead. Will be changed in Boron.
+    :param bool reflection: A boolean value indicating that the value should
+    also be removed from the Wow6432Node portion of the registry. Only applies
+    to 64 bit Windows. This setting is ignored for 32 bit Windows.
 
-    :param bool force:
-        A boolean value indicating that all subkeys should be removed as well.
-        If this is set to False (default) and there are subkeys, the delete_key
-        function will fail.
+    Only applies to delete value. If the key parameter is passed, this function
+    calls delete_value instead. Will be changed in Boron.
 
-    :return:
-        Returns True if successful, False if not
-        If force=True, the results of delete_key_recursive are returned.
+    :param bool force: A boolean value indicating that all subkeys should be
+    removed as well. If this is set to False (default) and there are subkeys,
+    the delete_key function will fail.
+
+    :return: Returns True if successful, False if not. If force=True, the
+    results of delete_key_recursive are returned.
     :rtype: bool
     '''
 
@@ -429,42 +477,46 @@ def delete_key(hkey, path, key=None, reflection=True, force=False):
         return delete_value(hive=hkey,
                             key=path,
                             vname=key,
-                            reflection=reflection)
+                            reflection=reflection,
+                            use_32bit_registry=use_32bit_registry)
 
     if force:
-        return delete_key_recursive(hkey, path)
+        return delete_key_recursive(hkey,
+                                    path,
+                                    use_32bit_registry=use_32bit_registry)
 
     registry = Registry()
     hive = registry.hkeys[hkey]
     key = path
+    access_mask = registry.registry_32[use_32bit_registry]
 
     try:
         # Can't use delete_value to delete a key
-        _winreg.DeleteKey(hive, key)
+        key_handle = _winreg.OpenKey(hive, key, 0, access_mask)
+        _winreg.DeleteKey(key_handle, '')
+        _winreg.CloseKey(key_handle)
         return True
     except WindowsError as exc:  # pylint: disable=E0602
         log.error(exc, exc_info=True)
         return False
 
 
-def delete_key_recursive(hive, key):
+def delete_key_recursive(hive, key, use_32bit_registry=False):
     '''
     .. versionadded:: 2015.5.4
 
     Delete a registry key to include all subkeys.
 
-    :param hive:
-        The name of the hive. Can be one of the following
-        - HKEY_LOCAL_MACHINE or HKLM
-        - HKEY_CURRENT_USER or HKCU
-        - HKEY_USER or HKU
+    :param hive: The name of the hive. Can be one of the following
 
-    :param key:
-        The key to remove (looks like a path)
+    - HKEY_LOCAL_MACHINE or HKLM
+    - HKEY_CURRENT_USER or HKCU
+    - HKEY_USER or HKU
 
-    :return:
-        A dictionary listing the keys that deleted successfully as well as those
-        that failed to delete.
+    :param key: The key to remove (looks like a path)
+
+    :return: A dictionary listing the keys that deleted successfully as well as
+    those that failed to delete.
     :rtype: dict
 
     The following example will remove ``salt`` and all its subkeys from the
@@ -476,6 +528,15 @@ def delete_key_recursive(hive, key):
 
         salt '*' reg.delete_key_recursive HKLM SOFTWARE\\salt
     '''
+    # Instantiate the registry object
+    registry = Registry()
+    hkey = registry.hkeys[hive]
+    key_path = key
+    access_mask = registry.registry_32[use_32bit_registry]
+
+    if not _key_exists(hive, key, use_32bit_registry):
+        return False
+
     # Functions for traversing the registry tree
     def subkeys(key):
         i = 0
@@ -487,70 +548,61 @@ def delete_key_recursive(hive, key):
             except WindowsError:  # pylint: disable=E0602
                 break
 
-    def traverse_registry_tree(hkey, keypath, ret):
-        key = _winreg.OpenKey(hkey, keypath, 0, _winreg.KEY_READ)
+    def traverse_registry_tree(hkey, keypath, ret, access_mask):
+        key = _winreg.OpenKey(hkey, keypath, 0, access_mask)
         for subkeyname in subkeys(key):
             subkeypath = r'{0}\{1}'.format(keypath, subkeyname)
-            ret = traverse_registry_tree(hkey, subkeypath, ret)
+            ret = traverse_registry_tree(hkey, subkeypath, ret, access_mask)
             ret.append('{0}'.format(subkeypath))
         return ret
 
-    # Instantiate the registry object
-    registry = Registry()
-    hkey = registry.hkeys[hive]
-    keypath = key
-
     # Get a reverse list of registry keys to be deleted
     key_list = []
-    key_list = traverse_registry_tree(hkey, keypath, key_list)
+    key_list = traverse_registry_tree(hkey, key_path, key_list, access_mask)
+    # Add the top level key last, all subkeys must be deleted first
+    key_list.append(r'{0}'.format(key_path))
 
     ret = {'Deleted': [],
            'Failed': []}
 
-    # Delete all subkeys
-    for keypath in key_list:
+    # Delete all sub_keys
+    for sub_key_path in key_list:
         try:
-            _winreg.DeleteKey(hkey, keypath)
-            ret['Deleted'].append(r'{0}\{1}'.format(hive, keypath))
+            key_handle = _winreg.OpenKey(hkey, sub_key_path, 0, access_mask)
+            _winreg.DeleteKey(key_handle, '')
+            ret['Deleted'].append(r'{0}\{1}'.format(hive, sub_key_path))
         except WindowsError as exc:  # pylint: disable=E0602
             log.error(exc, exc_info=True)
-            ret['Failed'].append(r'{0}\{1} {2}'.format(hive, key, exc))
-
-    # Delete the key now that all the subkeys are deleted
-    try:
-        _winreg.DeleteKey(hkey, key)
-        ret['Deleted'].append(r'{0}\{1}'.format(hive, key))
-    except WindowsError as exc:  # pylint: disable=E0602
-        log.error(exc, exc_info=True)
-        ret['Failed'].append(r'{0}\{1} {2}'.format(hive, key, exc))
+            ret['Failed'].append(r'{0}\{1} {2}'.format(hive, sub_key_path, exc))
 
     return ret
 
 
-def delete_value(hive, key, vname=None, reflection=True):
+def delete_value(hive, key, vname=None, reflection=True, use_32bit_registry=False):
     '''
     Delete a registry value entry or the default value for a key.
 
-    :param str hive:
-        The name of the hive. Can be one of the following
-        - HKEY_LOCAL_MACHINE or HKLM
-        - HKEY_CURRENT_USER or HKCU
-        - HKEY_USER or HKU
+    :param str hive: The name of the hive. Can be one of the following
 
-    :param str key:
-        The key (looks like a path) to the value name.
+    - HKEY_LOCAL_MACHINE or HKLM
+    - HKEY_CURRENT_USER or HKCU
+    - HKEY_USER or HKU
 
-    :param str vname:
-        The value name. These are the individual name/data pairs under the key.
-        If not passed, the key (Default) value will be deleted.
+    :param str key: The key (looks like a path) to the value name.
 
-    :param bool reflection:
-        A boolean value indicating that the value should also be set in the
-        Wow6432Node portion of the registry. Only applies to 64 bit Windows.
-        This setting is ignored for 32 bit Windows.
+    :param str vname: The value name. These are the individual name/data pairs
+    under the key. If not passed, the key (Default) value will be deleted.
 
-    :return:
-        Returns True if successful, False if not
+    :param bool reflection: A boolean value indicating that the value should
+    also be set in the Wow6432Node portion of the registry. Only applies to 64
+    bit Windows. This setting is ignored for 32 bit Windows.
+
+    .. deprecated:: 2015.8.2
+       Use `use_32bit_registry` instead. The parameter seems to have no effect
+       since Windows 7 / Windows 2008R2 removed support for reflection. The
+       parameter will be removed in Boron.
+
+    :return: Returns True if successful, False if not
     :rtype: bool
 
     CLI Example:
@@ -561,7 +613,7 @@ def delete_value(hive, key, vname=None, reflection=True):
     '''
     registry = Registry()
     hive = registry.hkeys[hive]
-    access_mask = registry.reflection_mask[reflection]
+    access_mask = registry.registry_32[use_32bit_registry]
 
     try:
         handle = _winreg.OpenKey(hive, key, 0, access_mask)
@@ -569,6 +621,5 @@ def delete_value(hive, key, vname=None, reflection=True):
         _winreg.CloseKey(handle)
         return True
     except WindowsError as exc:  # pylint: disable=E0602
-        _winreg.CloseKey(handle)
         log.error(exc, exc_info=True)
         return False

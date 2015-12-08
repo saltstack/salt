@@ -19,7 +19,7 @@ import logging
 
 # Salt imports
 from salt.modules import postgres
-
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +41,7 @@ def present(name,
             inherit=None,
             login=None,
             password=None,
+            default_password=None,
             refresh_password=None,
             groups=None,
             user=None,
@@ -92,6 +93,11 @@ def present(name,
         encrypted to the previous
         format if it is not already done.
 
+    default_passwoord
+        The password used only when creating the user, unless password is set.
+
+        .. versionadded:: Boron
+
     refresh_password
         Password refresh flag
 
@@ -139,6 +145,11 @@ def present(name,
                                                 password,
                                                 encrypted=encrypted)
 
+    if default_password is not None:
+        default_password = postgres._maybe_encrypt_password(name,
+                                                            password,
+                                                            encrypted=encrypted)
+
     db_args = {
         'maintenance_db': maintenance_db,
         'runas': user,
@@ -159,6 +170,7 @@ def present(name,
     cret = None
     update = {}
     if mode == 'update':
+        user_groups = user_attr.get('groups', [])
         if (
             createdb is not None
             and user_attr['can create databases'] != createdb
@@ -185,6 +197,17 @@ def present(name,
             update['superuser'] = superuser
         if password is not None and (refresh_password or user_attr['password'] != password):
             update['password'] = True
+        if groups is not None:
+            lgroups = groups
+            if isinstance(groups, (six.string_types, six.text_type)):
+                lgroups = lgroups.split(',')
+            if isinstance(lgroups, list):
+                missing_groups = [a for a in lgroups if a not in user_groups]
+                if missing_groups:
+                    update['groups'] = missing_groups
+
+    if mode == 'create' and password is None:
+        password = default_password
 
     if mode == 'create' or (mode == 'update' and update):
         if __opts__['test']:

@@ -33,6 +33,7 @@ __defopts__ = {'auth.ldap.uri': '',
                'auth.ldap.scope': 2,
                'auth.ldap.groupou': 'Groups',
                'auth.ldap.accountattributename': 'memberUid',
+               'auth.ldap.groupattribute': 'memberOf',
                'auth.ldap.persontype': 'person',
                'auth.ldap.groupclass': 'posixGroup',
                'auth.ldap.activedirectory': False,
@@ -205,6 +206,7 @@ def _bind(username, password, anonymous=False):
 
     # Update connection dictionary with the user's password
     connargs['bindpw'] = password
+
     # Attempt bind with user dn and password
     if paramvalues['anonymous']:
         log.debug('Attempting anonymous LDAP bind')
@@ -301,9 +303,10 @@ def groups(username, **kwargs):
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
                                            [_config('accountattributename'), 'cn'])
-            for _, entry in search_results:
-                if username in entry[_config('accountattributename')]:
-                    group_list.append(entry['cn'][0])
+            for user, entry in search_results:
+                if username == user.split(',')[0].split('=')[-1]:
+                    for group in entry[_config('groupattribute')]:
+                        group_list.append(group.split(',')[0].split('=')[-1])
             log.debug('User {0} is a member of groups: {1}'.format(username, group_list))
 
             if not auth(username, kwargs['password']):

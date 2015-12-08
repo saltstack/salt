@@ -4,12 +4,15 @@ Manage groups on Mac OS 10.7+
 '''
 
 # Import python libs
+from __future__ import absolute_import
 try:
     import grp
 except ImportError:
     pass
 
+# Import Salt Libs
 import salt.utils
+import salt.utils.itertools
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.modules.mac_user import _dscl, _flush_dscl_cache
 
@@ -42,7 +45,9 @@ def add(name, gid=None, **kwargs):
     ### NOTE: **kwargs isn't used here but needs to be included in this
     ### function for compatibility with the group.present state
     if info(name):
-        raise CommandExecutionError('Group {0!r} already exists'.format(name))
+        raise CommandExecutionError(
+            'Group \'{0}\' already exists'.format(name)
+        )
     if salt.utils.contains_whitespace(name):
         raise SaltInvocationError('Group name cannot contain whitespace')
     if name.startswith('_'):
@@ -55,28 +60,30 @@ def add(name, gid=None, **kwargs):
     gid_list = _list_gids()
     if str(gid) in gid_list:
         raise CommandExecutionError(
-            'gid {0!r} already exists'.format(gid)
+            'gid \'{0}\' already exists'.format(gid)
         )
 
-    cmd = 'dseditgroup -o create '
+    cmd = ['dseditgroup', '-o', 'create']
     if gid:
-        cmd += '-i {0} '.format(gid)
-    cmd += str(name)
-    return __salt__['cmd.retcode'](cmd) == 0
+        cmd.extend(['-i', gid])
+    cmd.append(name)
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
 
 
 def _list_gids():
     '''
     Return a list of gids in use
     '''
-    cmd = __salt__['cmd.run']('dscacheutil -q group | grep gid:',
-                              output_loglevel='quiet',
-                              python_shell=True)
-    data_list = cmd.split()
-    for item in data_list:
-        if item == 'gid:':
-            data_list.remove(item)
-    return sorted(set(data_list))
+    output = __salt__['cmd.run'](
+        ['dscacheutil', '-q', 'group'],
+        output_loglevel='quiet',
+        python_shell=False
+    )
+    ret = set()
+    for line in salt.utils.itertools.split(output, '\n'):
+        if line.startswith('gid:'):
+            ret.update(line.split()[1:])
+    return sorted(ret)
 
 
 def delete(name):
@@ -97,8 +104,73 @@ def delete(name):
         )
     if not info(name):
         return True
-    cmd = 'dseditgroup -o delete {0}'.format(name)
+    cmd = ['dseditgroup', '-o', 'delete', name]
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
+
+
+def adduser(group, name):
+    '''
+    Add a user in the group.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+         salt '*' group.adduser foo bar
+
+    Verifies if a valid username 'bar' as a member of an existing group 'foo',
+    if not then adds it.
+    '''
+    cmd = 'dscl . -merge /Groups/{0} GroupMembership {1}'.format(group, name)
     return __salt__['cmd.retcode'](cmd) == 0
+
+
+def deluser(group, name):
+    '''
+    Remove a user from the group
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+         salt '*' group.deluser foo bar
+
+    Removes a member user 'bar' from a group 'foo'. If group is not present
+    then returns True.
+    '''
+    cmd = 'dscl . -delete /Groups/{0} GroupMembership {1}'.format(group, name)
+    return __salt__['cmd.retcode'](cmd) == 0
+
+
+def members(name, members_list):
+    '''
+    Replaces members of the group with a provided list.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+        salt '*' group.members foo 'user1,user2,user3,...'
+
+    Replaces a membership list for a local group 'foo'.
+    '''
+    retcode = 1
+    grp_info = __salt__['group.info'](name)
+    if grp_info and name in grp_info['name']:
+        cmd = '/usr/bin/dscl . -delete /Groups/{0} GroupMembership'.format(name)
+        retcode = __salt__['cmd.retcode'](cmd) == 0
+        for user in members_list.split(','):
+            cmd = '/usr/bin/dscl . -merge /Groups/{0} GroupMembership {1}'.format(name, user)
+            retcode = __salt__['cmd.retcode'](cmd)
+            if not retcode == 0:
+                break
+            # provided list is '': users previously deleted from group
+            else:
+                retcode = 0
+
+    return retcode == 0
 
 
 def info(name):
@@ -168,8 +240,10 @@ def chgid(name, gid):
     pre_gid = __salt__['file.group_to_gid'](name)
     pre_info = info(name)
     if not pre_info:
-        raise CommandExecutionError('Group {0!r} does not exist'.format(name))
+        raise CommandExecutionError(
+            'Group \'{0}\' does not exist'.format(name)
+        )
     if gid == pre_info['gid']:
         return True
-    cmd = 'dseditgroup -o edit -i {0} {1}'.format(gid, name)
-    return __salt__['cmd.retcode'](cmd) == 0
+    cmd = ['dseditgroup', '-o', 'edit', '-i', gid, name]
+    return __salt__['cmd.retcode'](cmd, python_shell=False) == 0

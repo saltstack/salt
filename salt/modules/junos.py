@@ -44,7 +44,8 @@ def __virtual__():
     if HAS_JUNOS and 'proxy' in __opts__:
         return __virtualname__
     else:
-        return False
+        return (False, 'The junos module could not be \
+                loaded: junos-eznc or proxy could not be loaded.')
 
 
 def facts_refresh():
@@ -52,17 +53,16 @@ def facts_refresh():
     Reload the facts dictionary from the device.  Usually only needed
     if the device configuration is changed by some other actor.
     '''
-
-    return __opts__['proxymodule']['junos.refresh']()
+    return __proxy__['junos.refresh']()
 
 
 def call_rpc():
-    return __opts__['proxymodule']['junos.rpc']()
+    return __proxy__['junos.rpc']()
 
 
 def set_hostname(hostname=None, commit_change=True):
 
-    conn = __opts__['proxymodule']['junos.conn']()
+    conn = __proxy__['junos.conn']()
     ret = dict()
     if hostname is None:
         ret['out'] = False
@@ -84,7 +84,7 @@ def set_hostname(hostname=None, commit_change=True):
 
 def commit():
 
-    conn = __opts__['proxymodule']['junos.conn']()
+    conn = __proxy__['junos.conn']()
     ret = {}
     commit_ok = conn.cu.commit_check()
     if commit_ok:
@@ -104,7 +104,7 @@ def commit():
 
 def rollback():
     ret = dict()
-    conn = __opts__['proxymodule']['junos.conn']()
+    conn = __proxy__['junos.conn']()
 
     ret['out'] = conn.cu.rollback(0)
 
@@ -118,7 +118,7 @@ def rollback():
 
 def diff():
 
-    conn = __opts__['proxymodule']['junos.conn']()
+    conn = __proxy__['junos.conn']()
     ret = dict()
     ret['out'] = True
     ret['message'] = conn.cu.diff()
@@ -128,7 +128,18 @@ def diff():
 
 def ping():
 
-    conn = __opts__['proxymodule']['junos.conn']()
+    conn = __proxy__['junos.conn']()
     ret = dict()
     ret['message'] = conn.probe()
     ret['out'] = True
+
+    return ret
+
+
+def cli(command):
+
+    conn = __proxy__['junos.conn']()
+    ret = dict()
+    ret['message'] = conn.cli(command)
+    ret['out'] = True
+    return ret

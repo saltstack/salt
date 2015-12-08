@@ -15,7 +15,7 @@ Example:
         rabbitmq_policy.present:
             - name: HA
             - pattern: '.*'
-            - definition: '{"ha-mode": "all"}'
+            - definition: '{"ha-mode":"all"}'
 '''
 from __future__ import absolute_import
 
@@ -60,7 +60,7 @@ def present(name,
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     result = {}
 
-    policies = __salt__['rabbitmq.list_policies'](runas=runas)
+    policies = __salt__['rabbitmq.list_policies'](vhost=vhost, runas=runas)
     policy = policies.get(vhost, {}).get(name)
     updates = []
     if policy:
