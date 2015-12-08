@@ -25,6 +25,7 @@ import salt.ext.six as six
 from tempfile import NamedTemporaryFile
 import logging
 import os
+import copy
 
 # Import Mock libraries
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
@@ -55,11 +56,17 @@ error_content = {
     'Message': "Test-defined error"
   }
 }
-#cidr_block = '10.0.0.0/24'
-#dhcp_options_parameters = {'domain_name': 'example.com', 'domain_name_servers': ['1.2.3.4'], 'ntp_servers': ['5.6.7.8'],
-#                           'netbios_name_servers': ['10.0.0.1'], 'netbios_node_type': 2}
-#network_acl_entry_parameters = ('fake', 100, -1, 'allow', cidr_block)
-#dhcp_options_parameters.update(conn_parameters)
+function_ret = dict(FunctionName='testfunction',
+                    Runtime='python2.7',
+                    Role=None,
+                    Handler='handler',
+                    Description='abcdefg',
+                    Timeout=5,
+                    MemorySize=128,
+                    CodeSha256='abcdef',
+                    CodeSize=199,
+                    FunctionArn='arn:lambda:us-east-1:1234:Something',
+                    LastModified='yes')
 
 log = logging.getLogger(__name__)
 
@@ -118,7 +125,7 @@ class BotoLambdaTestCaseMixin(object):
                                        ' or equal to version {0}'
         .format(required_boto3_version))
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class BotoLambdaTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
+class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
     '''
     TestCase for salt.modules.boto_lambda module
     '''
@@ -127,8 +134,8 @@ class BotoLambdaTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         '''
         Tests checking lambda function existence when the lambda function already exists
         '''
-        self.conn.list_functions.return_value={'Functions': [{'FunctionName': 'myfunc'}]}
-        func_exists_result = boto_lambda.function_exists(FunctionName='myfunc', **conn_parameters)
+        self.conn.list_functions.return_value={'Functions': [function_ret]}
+        func_exists_result = boto_lambda.function_exists(FunctionName=function_ret['FunctionName'], **conn_parameters)
 
         self.assertTrue(func_exists_result['exists'])
 
@@ -136,7 +143,7 @@ class BotoLambdaTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         '''
         Tests checking lambda function existence when the lambda function does not exist
         '''
-        self.conn.list_functions.return_value={'Functions': [{'FunctionName': 'otherfunc'}]}
+        self.conn.list_functions.return_value={'Functions': [function_ret]}
         func_exists_result = boto_lambda.function_exists(FunctionName='myfunc', **conn_parameters)
 
         self.assertFalse(func_exists_result['exists'])
@@ -150,14 +157,13 @@ class BotoLambdaTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
 
         self.assertEqual(func_exists_result.get('error',{}).get('message'), error_message.format('list_functions'))
 
-    def test_that_when_creating_a_function_succeeds_the_create_function_method_returns_true(self):
+    def test_that_when_creating_a_function_from_zipfile_succeeds_the_create_function_method_returns_true(self):
         '''
         tests True function created.
         '''
-        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            self.conn.create_function.return_value={'FunctionName': 'testfunction'}
-            with TempZipFile() as zipfile:
-                lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}), TempZipFile() as zipfile:
+            self.conn.create_function.return_value=function_ret
+            lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
                                                     Runtime='python2.7',
                                                     Role='myrole',
                                                     Handler='file.method',
@@ -166,9 +172,55 @@ class BotoLambdaTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
 
         self.assertTrue(lambda_creation_result['created'])
 
-    def test_that_when_creating_a_function_succeeds_the_create_function_method_returns_error(self):
+    def test_that_when_creating_a_function_from_s3_succeeds_the_create_function_method_returns_true(self):
         '''
         tests True function created.
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            self.conn.create_function.return_value=function_ret
+            lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
+                                                    Runtime='python2.7',
+                                                    Role='myrole',
+                                                    Handler='file.method',
+                                                    S3Bucket='bucket',
+                                                    S3Key='key',
+                                                    **conn_parameters)
+
+        self.assertTrue(lambda_creation_result['created'])
+
+    def test_that_when_creating_a_function_without_code_raises_a_salt_invocation_error(self):
+        '''
+        tests Creating a function without code
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}
+                       ), self.assertRaisesRegexp(SaltInvocationError,
+                                     'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
+            lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
+                                                    Runtime='python2.7',
+                                                    Role='myrole',
+                                                    Handler='file.method',
+                                                    **conn_parameters)
+
+    def test_that_when_creating_a_function_with_zipfile_and_s3_raises_a_salt_invocation_error(self):
+        '''
+        tests Creating a function without code
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}
+                      ), self.assertRaisesRegexp(SaltInvocationError,
+                                     'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'
+                       ), TempZipFile() as zipfile:
+                lambda_creation_result = boto_lambda.create_function(FunctionName='testfunction',
+                                                    Runtime='python2.7',
+                                                    Role='myrole',
+                                                    Handler='file.method',
+                                                    ZipFile=zipfile,
+                                                    S3Bucket='bucket',
+                                                    S3Key='key',
+                                                    **conn_parameters)
+
+    def test_that_when_creating_a_function_fails_the_create_function_method_returns_error(self):
+        '''
+        tests False function not created.
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             self.conn.create_function.side_effect=ClientError(error_content, 'create_function')
@@ -180,6 +232,153 @@ class BotoLambdaTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
                                                     ZipFile=zipfile,
                                                     **conn_parameters)
         self.assertEqual(lambda_creation_result.get('error',{}).get('message'), error_message.format('create_function'))
+
+    def test_that_when_deleting_a_function_succeeds_the_delete_function_method_returns_true(self):
+        '''
+        tests True function deleted.
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}), TempZipFile() as zipfile:
+            result = boto_lambda.delete_function(FunctionName='testfunction',
+                                                    Qualifier=1,
+                                                    **conn_parameters)
+
+        self.assertTrue(result['deleted'])
+
+    def test_that_when_deleting_a_function_fails_the_delete_function_method_returns_false(self):
+        '''
+        tests False function not deleted.
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            self.conn.delete_function.side_effect=ClientError(error_content, 'delete_function')
+            result = boto_lambda.delete_function(FunctionName='testfunction',
+                                                    **conn_parameters)
+        self.assertFalse(result['deleted'])
+
+    def test_that_when_describing_function_it_returns_the_dict_of_properties_returns_true(self):
+        '''
+        Tests describing parameters if function exists
+        '''
+        self.conn.list_functions.return_value={ 'Functions': [ function_ret ]}
+
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            result = boto_lambda.describe_function(FunctionName=function_ret['FunctionName'], **conn_parameters)
+
+        self.assertEqual(result, { 'function': function_ret })
+
+    def test_that_when_describing_function_it_returns_the_dict_of_properties_returns_false(self):
+        '''
+        Tests describing parameters if function does not exist
+        '''
+        self.conn.list_functions.return_value={ 'Functions': [ ]}
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            result = boto_lambda.describe_function(FunctionName='testfunction', **conn_parameters)
+
+        self.assertFalse(result['function'])
+
+    def test_that_when_describing_lambda_on_client_error_it_returns_error(self):
+        '''
+        Tests describing parameters failure
+        '''
+        self.conn.list_functions.side_effect=ClientError(error_content, 'list_functions')
+        result = boto_lambda.describe_function(FunctionName='testfunction', **conn_parameters)
+        self.assertTrue('error' in result)
+
+    def test_that_when_updating_a_function_succeeds_the_update_function_method_returns_true(self):
+        '''
+        tests True function updated.
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            self.conn.update_function_config.return_value=function_ret
+            result = boto_lambda.update_function_config(FunctionName=function_ret['FunctionName'], Role='myrole', **conn_parameters)
+
+        self.assertTrue(result['updated'])
+
+    def test_that_when_updating_a_function_fails_the_update_function_method_returns_error(self):
+        '''
+        tests False function not updated.
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            self.conn.update_function_configuration.side_effect=ClientError(error_content, 'update_function')
+            result = boto_lambda.update_function_config(FunctionName='testfunction',
+                                                    Role='myrole',
+                                                    **conn_parameters)
+        self.assertEqual(result.get('error',{}).get('message'), error_message.format('update_function'))
+
+    def test_that_when_updating_function_code_from_zipfile_succeeds_the_update_function_method_returns_true(self):
+        '''
+        tests True function updated.
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}), TempZipFile() as zipfile:
+            self.conn.update_function_code.return_value=function_ret
+            result = boto_lambda.update_function_code(FunctionName=function_ret['FunctionName'], ZipFile=zipfile, **conn_parameters)
+
+        self.assertTrue(result['updated'])
+
+    def test_that_when_updating_function_code_from_s3_succeeds_the_update_function_method_returns_true(self):
+        '''
+        tests True function updated.
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            self.conn.update_function_code.return_value=function_ret
+            result = boto_lambda.update_function_code(FunctionName='testfunction',
+                                                    S3Bucket='bucket',
+                                                    S3Key='key',
+                                                    **conn_parameters)
+
+        self.assertTrue(result['updated'])
+
+    def test_that_when_updating_function_code_without_code_raises_a_salt_invocation_error(self):
+        '''
+        tests Creating a function without code
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}
+                       ), self.assertRaisesRegexp(SaltInvocationError,
+                                     'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
+            result = boto_lambda.update_function_code(FunctionName='testfunction',
+                                                    **conn_parameters)
+
+    def test_that_when_updating_function_code_fails_the_update_function_method_returns_error(self):
+        '''
+        tests False function not updated.
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            self.conn.update_function_code.side_effect=ClientError(error_content, 'update_function_code')
+            result = boto_lambda.update_function_code(FunctionName='testfunction',
+                                                    S3Bucket='bucket',
+                                                    S3Key='key',
+                                                    **conn_parameters)
+        self.assertEqual(result.get('error',{}).get('message'), error_message.format('update_function_code'))
+
+    def test_that_when_listing_function_versions_succeeds_the_list_function_versions_method_returns_true(self):
+        '''
+        tests True function versions listed.
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            self.conn.list_versions_by_function.return_value={'Versions': [ function_ret ]}
+            result = boto_lambda.list_function_versions(FunctionName='testfunction',
+                                                    **conn_parameters)
+
+        self.assertTrue(result['Versions'])
+
+    def test_that_when_listing_function_versions_fails_the_list_function_versions_method_returns_false(self):
+        '''
+        tests False no function versions listed.
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            self.conn.list_versions_by_function.return_value={'Versions': [ ]}
+            result = boto_lambda.list_function_versions(FunctionName='testfunction',
+                                                    **conn_parameters)
+        self.assertFalse(result['Versions'])
+
+    def test_that_when_listing_function_versions_fails_the_list_function_versions_method_returns_error(self):
+        '''
+        tests False function versions error.
+        '''
+        with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            self.conn.list_versions_by_function.side_effect=ClientError(error_content, 'list_versions_by_function')
+            result = boto_lambda.list_function_versions(FunctionName='testfunction',
+                                                    **conn_parameters)
+        self.assertEqual(result.get('error',{}).get('message'), error_message.format('list_versions_by_function'))
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error

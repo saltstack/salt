@@ -295,4 +295,4 @@ def paged_call(function, marker_flag='NextMarker', marker_arg='Marker', *args, *
         yield ret
         if not marker:
             break
-        args[marker_arg] = marker
+        kwargs[marker_arg] = marker
