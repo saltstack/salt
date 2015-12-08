@@ -26,7 +26,8 @@ def __virtual__():
     '''
     if __grains__['os'] == 'Gentoo' and HAS_GENTOOLKIT:
         return __virtualname__
-    return False
+    return (False, 'The gentoolkitmod execution module cannot be loaded: '
+       'either the system is not Gentoo or the gentoolkit.eclean python module not available')
 
 
 def revdep_rebuild(lib=None):

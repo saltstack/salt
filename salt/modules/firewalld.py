@@ -24,7 +24,7 @@ def __virtual__():
     if salt.utils.which('firewall-cmd'):
         return True
 
-    return False
+    return (False, 'The firewalld execution module cannot be loaded: the firewall-cmd binrary is not in the path.')
 
 
 def __firewall_cmd(cmd):
