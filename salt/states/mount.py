@@ -319,6 +319,19 @@ def mounted(name,
                     if fstype in ['cifs'] and opt.split('=')[0] == 'user':
                         opt = "username={0}".format(opt.split('=')[1])
 
+                    # convert uid/gid to numeric value from user/group name
+                    name_id_opts = {'uid': 'user.info',
+                                    'gid': 'group.info'}
+                    if opt.split('=')[0] in name_id_opts:
+                        _givenid = opt.split('=')[1]
+                        _param = opt.split('=')[0]
+                        _id = _givenid
+                        if not re.match('[0-9]+$', _givenid):
+                            _info = __salt__[name_id_opts[_param]](_givenid)
+                            if _info and _param in _info:
+                                _id = _info[_param]
+                        opt = _param + '=' + str(_id)
+
                     if opt not in active[real_name]['opts'] \
                     and opt not in active[real_name].get('superopts', []) \
                     and opt not in mount_invisible_options \
