@@ -782,29 +782,30 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
         ret['changes']['old']['instance_id'] = None
         ret['changes']['new']['instance_id'] = instance_id
 
-    for k, v in attributes.iteritems():
-        curr = __salt__['boto_ec2.get_attribute'](k, instance_id=instance_id, region=region, key=key,
-                                                  keyid=keyid, profile=profile)
-        if isinstance(curr, dict):
-            curr = {}
-        if curr and curr.get(k) == v:
-            continue
-        else:
-            if __opts__['test']:
-                changed_attrs[k] = 'The instance attribute {0} is set to be changed from \'{1}\' to \'{2}\'.'.format(
-                                   k, curr.get(k), v)
+    if attributes:
+        for k, v in attributes.iteritems():
+            curr = __salt__['boto_ec2.get_attribute'](k, instance_id=instance_id, region=region, key=key,
+                                                      keyid=keyid, profile=profile)
+            if isinstance(curr, dict):
+                curr = {}
+            if curr and curr.get(k) == v:
                 continue
-            try:
-                r = __salt__['boto_ec2.set_attribute'](attribute=k, attribute_value=v,
-                                                       instance_id=instance_id, region=region,
-                                                       key=key, keyid=keyid, profile=profile)
-            except SaltInvocationError as e:
-                ret['result'] = False
-                ret['comment'] = 'Failed to set attribute {0} to {1} on instance {2}.'.format(k, v, instance_name)
-                return ret
-            ret['changes'] = ret['changes'] if ret['changes'] else {'old': {}, 'new': {}}
-            ret['changes']['old'][k] = curr.get(k)
-            ret['changes']['new'][k] = v
+            else:
+                if __opts__['test']:
+                    changed_attrs[k] = 'The instance attribute {0} is set to be changed from \'{1}\' to \'{2}\'.'.format(
+                                       k, curr.get(k), v)
+                    continue
+                try:
+                    r = __salt__['boto_ec2.set_attribute'](attribute=k, attribute_value=v,
+                                                           instance_id=instance_id, region=region,
+                                                           key=key, keyid=keyid, profile=profile)
+                except SaltInvocationError as e:
+                    ret['result'] = False
+                    ret['comment'] = 'Failed to set attribute {0} to {1} on instance {2}.'.format(k, v, instance_name)
+                    return ret
+                ret['changes'] = ret['changes'] if ret['changes'] else {'old': {}, 'new': {}}
+                ret['changes']['old'][k] = curr.get(k)
+                ret['changes']['new'][k] = v
 
     if __opts__['test']:
         if changed_attrs:
