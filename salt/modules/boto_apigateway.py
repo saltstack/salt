@@ -247,7 +247,7 @@ def create_api(name, description, cloneFrom=None,
             api = conn.create_rest_api(name=name, description=description, cloneFrom=cloneFrom)
         else:
             api = conn.create_rest_api(name=name, description=description)
-
+        api = _convert_datetime_str(api)
         return {'created': True, 'restapi': api} if api else {'created': False}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
