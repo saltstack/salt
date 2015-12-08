@@ -204,7 +204,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.gen
 from tornado.concurrent import Future
-from zmq.eventloop import ioloop, zmqstream
+from zmq.eventloop import ioloop
 import salt.ext.six as six
 # pylint: enable=import-error
 
@@ -298,6 +298,7 @@ class EventListener(object):
             opts['transport'],
             opts=opts,
             listen=True,
+            io_loop=tornado.ioloop.IOLoop.current()
         )
 
         # tag -> list of futures
@@ -309,11 +310,7 @@ class EventListener(object):
         # map of future -> timeout_callback
         self.timeout_map = {}
 
-        self.stream = zmqstream.ZMQStream(
-            self.event.sub,
-            io_loop=tornado.ioloop.IOLoop.current(),
-        )
-        self.stream.on_recv(self._handle_event_socket_recv)
+        self.event.set_event_handler(self._handle_event_socket_recv)
 
     def clean_timeout_futures(self, request):
         '''
@@ -378,7 +375,7 @@ class EventListener(object):
         '''
         Callback for events on the event sub socket
         '''
-        mtag, data = self.event.unpack(raw[0], self.event.serial)
+        mtag, data = self.event.unpack(raw, self.event.serial)
         # see if we have any futures that need this info:
         for tag_prefix, futures in six.iteritems(self.tag_map):
             if mtag.startswith(tag_prefix):
