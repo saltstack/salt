@@ -38,16 +38,34 @@ config:
 .. code-block:: yaml
 
     Ensure myrds RDS exists:
-        boto_rds.present:
-            - name: myrds
-            - allocated_storage: 5
-            - db_instance_class: db.t2.micro
-            - engine: MySQL
-            - master_username: myuser
-            - master_user_password: mypass
-            - region: us-east-1
-            - keyid: GKTADJGHEIQSXMKKRBJ08H
-            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      boto_rds.present:
+        - name: myrds
+        - allocated_storage: 5
+        - db_instance_class: db.t2.micro
+        - engine: MySQL
+        - master_username: myuser
+        - master_user_password: mypass
+        - region: us-east-1
+        - keyid: GKTADJGHEIQSXMKKRBJ08H
+        - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+        - tags:
+          -
+            - key1
+            - value1
+          -
+            - key2
+            - value2
+
+.. note::
+
+    This state module uses ``boto.rds2``, which requires a different tagging syntax than
+    some of the other boto states. The ``tags`` key and value set noted in the example
+    above is the required yaml notation that ``rds2`` depends upon to function properly.
+    For more information, please see `Issue #28715`_.
+
+.. _Issue #28715: https://github.com/saltstack/salt/issues/28715
+
+
 '''
 
 
@@ -292,9 +310,9 @@ def replica_present(name, source, db_instance_class=None, availability_zone=None
     .. code-block:: yaml
 
         Ensure myrds replica RDS exists:
-            boto_rds.create_replica:
-                - name: myreplica
-                - source: mydb
+          boto_rds.create_replica:
+            - name: myreplica
+            - source: mydb
     '''
     ret = {'name': name,
            'result': None,
