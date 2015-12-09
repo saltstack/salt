@@ -4116,7 +4116,7 @@ def _merge_dict(obj, k, v):
                         for x, y in six.iteritems(updates):
                             changes[k + "." + x] = y
                     else:
-                        if obj[k][a] != b:
+                        if a not in obj[k] or obj[k][a] != b:
                             changes[k + "." + a] = b
                             obj[k][a] = b
             else:
