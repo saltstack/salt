@@ -149,11 +149,11 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         with patch.dict(funcs, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             with TempZipFile() as zipfile:
                 with patch('hashlib.sha256') as sha256:
-                    with patch('os.path.getsize',return_value=199):
+                    with patch('os.path.getsize', return_value=199):
                         sha = sha256()
                         digest = sha.digest()
                         encoded = sha.encode()
-                        encoded.strip.return_value=function_ret['CodeSha256']
+                        encoded.strip.return_value = function_ret['CodeSha256']
                         result = salt_states['boto_lambda.function_present'](
                                      'function present',
                                      FunctionName=function_ret['FunctionName'],
@@ -172,7 +172,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCase
         with patch.dict(funcs, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             with TempZipFile() as zipfile:
                 with patch('hashlib.sha256') as sha256:
-                    with patch('os.path.getsize',return_value=199):
+                    with patch('os.path.getsize', return_value=199):
                         sha = sha256()
                         digest = sha.digest()
                         encoded = sha.encode()

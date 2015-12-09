@@ -115,7 +115,7 @@ class BotoLambdaTestCaseBase(TestCase):
         session_instance.client.return_value = self.conn
 
 
-class TempZipFile:
+class TempZipFile(object):
     def __enter__(self):
         with NamedTemporaryFile(suffix='.zip', prefix='salt_test_', delete=False) as tmp:
             tmp.write('###\n')
@@ -280,7 +280,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         '''
         Tests describing parameters if function does not exist
         '''
-        self.conn.list_functions.return_value = { 'Functions': []}
+        self.conn.list_functions.return_value = {'Functions': []}
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             result = boto_lambda.describe_function(FunctionName='testfunction', **conn_parameters)
 
@@ -472,7 +472,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         '''
         self.conn.list_aliases.side_effect = ClientError(error_content, 'list_aliases')
         result = boto_lambda.alias_exists(FunctionName='testfunction',
-                                          Name=alias_ret['Name'], 
+                                          Name=alias_ret['Name'],
                                           **conn_parameters)
 
         self.assertEqual(result.get('error', {}).get('message'), error_message.format('list_aliases'))
@@ -494,7 +494,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         Tests describing parameters if alias does not exist
         '''
         self.conn.list_aliases.return_value = {'Aliases': [alias_ret]}
-        result = boto_lambda.describe_alias(FunctionName='testfunction', 
+        result = boto_lambda.describe_alias(FunctionName='testfunction',
                                             Name='othername',
                                             **conn_parameters)
 
@@ -505,7 +505,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         Tests describing parameters failure
         '''
         self.conn.list_aliases.side_effect = ClientError(error_content, 'list_aliases')
-        result = boto_lambda.describe_alias(FunctionName='testfunction', 
+        result = boto_lambda.describe_alias(FunctionName='testfunction',
                                             Name=alias_ret['Name'],
                                             **conn_parameters)
         self.assertTrue('error' in result)
@@ -727,4 +727,4 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error
-    run_tests(BotoLambdaTestCase, needs_daemon=False)
+    run_tests(BotoLambdaFunctionTestCase, needs_daemon=False)
