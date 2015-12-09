@@ -216,9 +216,16 @@ def present(name,
         # get rest api service name
         rest_api_name = swagger.rest_api_name
 
-        # TODO: check to see if the service by this name exists, and its description matches the
-        # content of swagger.info_json
+        # TODO: check to see if the service by this name and description exists, 
+        # matches the content of swagger.info_json
+        # may need more elaborate checks on the content of the json in description field of 
+        # AWS ApiGateway Rest API Object.
         # 
+        exists_response = __salt__['boto_apigateway.api_exists'](name=rest_api_name, description=swagger.info_json,
+                                                                 region=region, key=key, keyid=keyid, profile=profile)
+        if exists_response.get('exists'):
+            ret['comment'] = 'rest api already exists'
+            return ret
 
         # call into boto_apigateway to create api
         r = __salt__['boto_apigateway.create_api'](name=rest_api_name, description=swagger.info_json,
