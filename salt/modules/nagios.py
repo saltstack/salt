@@ -23,7 +23,7 @@ def __virtual__():
     '''
     if os.path.isdir(PLUGINDIR):
         return 'nagios'
-    return False
+    return (False, 'The nagios execution module cannot be loaded: nagios-plugins are not installed.')
 
 
 def _execute_cmd(plugin, args='', run_type='cmd.retcode'):
