@@ -151,6 +151,12 @@ def _filter_apis(name, apis):
     '''
     return [api for api in apis if api['name'] == name]
 
+def _filter_apis_desc(desc, apis):
+    '''
+    Return list of api items matching the given description.
+    '''
+    return [api for api in apis if api['description'] == desc]
+
 def _multi_call(function, contentkey, *args, **kwargs):
     '''
     Retrieve full list of values for the contentkey from a boto3 ApiGateway 
@@ -165,11 +171,11 @@ def _multi_call(function, contentkey, *args, **kwargs):
         position = more.get('position')
     return ret.get(contentkey)
 
-def _get_apis_by_name(name,
+def _get_apis_by_name(name, description=None,
                       region=None, key=None, keyid=None, profile=None):
 
     '''
-    get and return list of matching rest api information by the given name. 
+    get and return list of matching rest api information by the given name and desc. 
     If rest api name evaluates to False, return all apis w/o filtering the name.
     '''
     try:
@@ -177,11 +183,13 @@ def _get_apis_by_name(name,
         apis = _multi_call(conn.get_rest_apis, 'items')
         if name:
             apis = _filter_apis(name, apis)
+        if description != None:
+            apis = _filter_apis_desc(description, apis)
         return {'restapi': map(_convert_datetime_str, apis)}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)} 
 
-def get_apis(name=None, region=None, key=None, keyid=None, profile=None):
+def get_apis(name=None, description=None, region=None, key=None, keyid=None, profile=None):
 
     '''
     Returns all rest apis in the defined region.  If optional parameter name is included,
@@ -191,20 +199,24 @@ def get_apis(name=None, region=None, key=None, keyid=None, profile=None):
 
     .. code-block:: bash
 
-        salt myminion boto_apigateways.get_apis
+        salt myminion boto_apigateway.get_apis
 
-        salt myminion boto_apigateways.get_apis name='api name' 
+        salt myminion boto_apigateway.get_apis name='api name'
+
+        salt myminion boto_apigateway.get_apis name='api name' description='desc str' 
 
     '''
 
     if name:
-        return _get_apis_by_name(name, region=region, key=key, keyid=keyid, profile=profile)
+        return _get_apis_by_name(name, description=description,
+                                 region=region, key=key, keyid=keyid, profile=profile)
     else:
-        return _get_apis_by_name('', region=region, key=key, keyid=keyid, profile=profile)
+        return _get_apis_by_name('', description=description,
+                                 region=region, key=key, keyid=keyid, profile=profile)
 
-def api_exists(name, region=None, key=None, keyid=None, profile=None):
+def api_exists(name, description=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Check to see if the given Rest API Name exists.
+    Check to see if the given Rest API Name and optionlly description exists.
 
     CLI Example:
 
@@ -213,7 +225,8 @@ def api_exists(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_apigateway.exists myapi_name
 
     '''
-    apis = _get_apis_by_name(name, region=region, key=key, keyid=keyid, profile=profile)
+    apis = _get_apis_by_name(name, description=description,
+                             region=region, key=key, keyid=keyid, profile=profile)
     return {'exists': bool(apis.get('restapi'))}
 
 
