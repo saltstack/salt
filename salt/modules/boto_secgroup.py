@@ -174,11 +174,11 @@ def _get_group(conn=None, name=None, vpc_id=None, vpc_name=None, group_id=None,
                 # a group in EC2-Classic will have vpc_id set to None
                 if group.vpc_id is None:
                     return group
-	    # If there are more security groups, and no vpc_id, we can't know which one to choose.
-	    if len(filtered_groups) > 1:
-		raise Exception('Security group belongs to more VPCs, specify the VPC ID!')
-	    elif len(filtered_groups) == 1:
-		return filtered_groups[0]
+            # If there are more security groups, and no vpc_id, we can't know which one to choose.
+            if len(filtered_groups) > 1:
+                raise Exception('Security group belongs to more VPCs, specify the VPC ID!')
+            elif len(filtered_groups) == 1:
+                return filtered_groups[0]
             return None
         elif vpc_id:
             log.debug('getting group for {0} in vpc_id {1}'.format(name, vpc_id))
