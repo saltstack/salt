@@ -273,6 +273,8 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
       image: ami-e565ba8c
       size: t2.micro
       ssh_username: ec2-user
+      # Do not bootstrap the salt minion, defaults to True
+      seed: False
 
     base_ec2_db:
       provider: my-ec2-southeast-public-ips

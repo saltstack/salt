@@ -1229,6 +1229,8 @@ CLOUD_CONFIG_DEFAULTS = {
     'log_fmt_logfile': _DFLT_LOG_FMT_LOGFILE,
     'log_granular_levels': {},
     'bootstrap_delay': None,
+    # Runs the bootstrap script to install the minion
+    'seed': True,
 }
 
 DEFAULT_API_OPTS = {
