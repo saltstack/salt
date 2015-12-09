@@ -117,7 +117,7 @@ def configure_proxy(proxyname, start=True):
             Boolean indicating if the process should be started
             default = True
 
-    Usage
+    CLI Example:
 
     .. code-block:: bash
 
@@ -165,7 +165,7 @@ def is_running(proxyname):
         proxyname:
             String name of the proxy (p8000 for example)
 
-    Usage
+    CLI Example:
 
     .. code-block:: bash
 
