@@ -3,7 +3,7 @@
 Manage Lambda Functions
 =================
 
-.. versionadded::
+.. versionadded:: Boron
 
 Create and destroy Lambda Functions. Be aware that this interacts with Amazon's services,
 and so may incur charges.
