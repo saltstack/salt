@@ -1,0 +1,16 @@
+pyopenssl
+m2crypto
+pycrypto
+libnacl
+raet
+requests
+cherrypy==3.2.3
+jinja2
+tornado
+pyyaml
+msgpack-python
+apache-libcloud
+linode-python
+vultr
+pyzmq
+Mako
