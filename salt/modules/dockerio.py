@@ -209,7 +209,7 @@ def __virtual__():
     '''
     if HAS_DOCKER:
         return __virtualname__
-    return False
+    return (False, 'dockerio execution module not loaded: docker python library not available.')
 
 
 def _sizeof_fmt(num):

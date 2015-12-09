@@ -76,7 +76,7 @@ def __virtual__():
     '''
     # win_file takes care of windows
     if salt.utils.is_windows():
-        return False
+        return (False, 'The file execution module cannot be loaded: only available on non-Windows systems - use win_file instead.')
     return True
 
 
@@ -3844,9 +3844,13 @@ def check_file_meta(
                 else:
                     changes['diff'] = 'Replace binary file with text file'
 
-    if user is not None and user != lstats['user']:
+    if (user is not None
+            and user != lstats['user']
+            and user != lstats['uid']):
         changes['user'] = user
-    if group is not None and group != lstats['group']:
+    if (group is not None
+            and group != lstats['group']
+            and group != lstats['gid']):
         changes['group'] = group
     # Normalize the file mode
     smode = __salt__['config.manage_mode'](lstats['mode'])

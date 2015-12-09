@@ -9,18 +9,24 @@ import logging
 import os
 import subprocess
 import re
+import collections
+import decimal
+
+# Import 3rd-party libs
+from salt.ext import six
+from salt.ext.six.moves import zip
 
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
 from salt.utils.decorators import depends
 from salt.exceptions import CommandExecutionError
-from salt.ext.six.moves import zip
 
 log = logging.getLogger(__name__)
 
-HAS_HDPARM = salt.utils.which_bin(['hdparm']) is not None
-HAS_SMARTCTL = salt.utils.which_bin(['smartctl']) is not None
+HAS_HDPARM = salt.utils.which('hdparm') is not None
+HAS_SMARTCTL = salt.utils.which('smartctl') is not None
+HAS_IOSTAT = salt.utils.which('iostat') is not None
 
 
 def __virtual__():
@@ -366,8 +372,7 @@ def _hdparm(args, failhard=True):
     Fail hard when required
     return output when possible
     '''
-    cmd = 'hdparm {1}'.format(args)
-    log.trace('Running {0}'.format(cmd))
+    cmd = 'hdparm {0}'.format(args)
     result = __salt__['cmd.run_all'](cmd)
     if result['retcode'] != 0:
         msg = '{0}: {1}'.format(cmd, result['stderr'])
@@ -396,10 +401,10 @@ def hdparms(disks, args=None):
     all_parms = 'aAbBcCdgHiJkMmNnQrRuW'
     if args is None:
         args = all_parms
-    elif isinstance(args, [list, tuple]):
+    elif isinstance(args, (list, tuple)):
         args = ''.join(args)
 
-    if not isinstance(disks, [list, tuple]):
+    if not isinstance(disks, (list, tuple)):
         disks = [disks]
 
     out = {}
@@ -580,3 +585,130 @@ def smart_attributes(dev, attributes=None, values=None):
         smart_attr[attr] = data
 
     return smart_attr
+
+
+@depends(HAS_IOSTAT)
+def iostat(interval=1, count=5, disks=None):
+    '''
+    Gather and return (averaged) IO stats.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+    .. code-block:: bash
+        salt '*' disk.iostat 1 5 disks=sda
+    '''
+    if salt.utils.is_linux():
+        return _iostat_linux(interval, count, disks)
+    elif salt.utils.is_freebsd():
+        return _iostat_fbsd(interval, count, disks)
+
+
+def _iostats_dict(header, stats):
+    '''
+    Transpose collected data, average it, stomp it in dict using header
+
+    Use Decimals so we can properly calc & round, convert to float 'caus' we can't transmit Decimals over 0mq
+    '''
+    stats = [float((sum(stat) / len(stat)).quantize(decimal.Decimal('.01'))) for stat in zip(*stats)]
+    stats = dict(zip(header, stats))
+    return stats
+
+
+def _iostat_fbsd(interval, count, disks):
+    '''
+    Tested on FreeBSD, quite likely other BSD's only need small changes in cmd syntax
+    '''
+    if disks is None:
+        iostat_cmd = 'iostat -xC -w {0} -c {1} '.format(interval, count)
+    elif isinstance(disks, six.string_types):
+        iostat_cmd = 'iostat -x -w {0} -c {1} {2}'.format(interval, count, disks)
+    else:
+        iostat_cmd = 'iostat -x -w {0} -c {1} {2}'.format(interval, count, ' '.join(disks))
+
+    sys_stats = []
+    dev_stats = collections.defaultdict(list)
+    sys_header = []
+    dev_header = []
+    h_len = 1000  # randomly absurdly high
+
+    ret = iter(__salt__['cmd.run_stdout'](iostat_cmd, output_loglevel='quiet').splitlines())
+    for line in ret:
+        if not line.startswith('device'):
+            continue
+        elif not len(dev_header):
+            dev_header = line.split()[1:]
+        while line is not False:
+            line = next(ret, False)
+            if not line or not line[0].isalnum():
+                break
+            line = line.split()
+            disk = line[0]
+            stats = [decimal.Decimal(x) for x in line[1:]]
+            # h_len will become smallest number of fields in stat lines
+            if len(stats) < h_len:
+                h_len = len(stats)
+            dev_stats[disk].append(stats)
+
+    iostats = {}
+
+    # The header was longer than the smallest number of fields
+    # Therefore the sys stats are hidden in there
+    if h_len < len(dev_header):
+        sys_header = dev_header[h_len:]
+        dev_header = dev_header[0:h_len]
+
+        for disk, stats in dev_stats.items():
+            if len(stats[0]) > h_len:
+                sys_stats = [stat[h_len:] for stat in stats]
+                dev_stats[disk] = [stat[0:h_len] for stat in stats]
+
+        iostats['sys'] = _iostats_dict(sys_header, sys_stats)
+
+    for disk, stats in dev_stats.items():
+        iostats[disk] = _iostats_dict(dev_header, stats)
+
+    return iostats
+
+
+def _iostat_linux(interval, count, disks):
+    if disks is None:
+        iostat_cmd = 'iostat -x {0} {1} '.format(interval, count)
+    elif isinstance(disks, six.string_types):
+        iostat_cmd = 'iostat -xd {0} {1} {2}'.format(interval, count, disks)
+    else:
+        iostat_cmd = 'iostat -xd {0} {1} {2}'.format(interval, count, ' '.join(disks))
+
+    sys_stats = []
+    dev_stats = collections.defaultdict(list)
+    sys_header = []
+    dev_header = []
+
+    ret = iter(__salt__['cmd.run_stdout'](iostat_cmd, output_loglevel='quiet').splitlines())
+    for line in ret:
+        if line.startswith('avg-cpu:'):
+            if not len(sys_header):
+                sys_header = tuple(line.split()[1:])
+            line = [decimal.Decimal(x) for x in next(ret).split()]
+            sys_stats.append(line)
+        elif line.startswith('Device:'):
+            if not len(dev_header):
+                dev_header = tuple(line.split()[1:])
+            while line is not False:
+                line = next(ret, False)
+                if not line or not line[0].isalnum():
+                    break
+                line = line.split()
+                disk = line[0]
+                stats = [decimal.Decimal(x) for x in line[1:]]
+                dev_stats[disk].append(stats)
+
+    iostats = {}
+
+    if len(sys_header):
+        iostats['sys'] = _iostats_dict(sys_header, sys_stats)
+
+    for disk, stats in dev_stats.items():
+        iostats[disk] = _iostats_dict(dev_header, stats)
+
+    return iostats

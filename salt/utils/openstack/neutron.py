@@ -162,6 +162,10 @@ class SaltNeutron(NeutronShell):
         resources = self.list_ipsecpolicies()['ipsecpolicies']
         return self._fetch(resources, name_or_id)
 
+    def _fetch_firewall_rule(self, name_or_id):
+        resources = self.list_firewall_rules()['firewall_rules']
+        return self._fetch(resources, name_or_id)
+
     def get_quotas_tenant(self):
         '''
         Fetches tenant info in server's context
@@ -747,6 +751,12 @@ class SaltNeutron(NeutronShell):
         Fetches a list of all configured firewall rules for a tenant
         '''
         return self.network_conn.list_firewall_rules()
+
+    def show_firewall_rule(self, firewall_rule):
+        '''
+        Fetches information of a specific firewall rule
+        '''
+        return self._fetch_firewall_rule(firewall_rule)
 
 # The following is a list of functions that need to be incorporated in the
 # neutron module. This list should be updated as functions are added.

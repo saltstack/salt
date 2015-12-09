@@ -46,7 +46,7 @@ def __virtual__():
     '''
     if HAS_INFLUXDB:
         return __virtualname__
-    return False
+    return (False, 'The influx execution module cannot be loaded: influxdb library not available.')
 
 
 def _client(user=None, password=None, host=None, port=None):

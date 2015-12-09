@@ -298,17 +298,11 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     # See if the service is already running
     if before_toggle_status:
         ret['comment'] = 'The service {0} is already running'.format(name)
-        if __opts__['test']:
-            ret['result'] = True
-            return ret
         if enable is True and not before_toggle_enable_status:
             ret.update(_enable(name, None, **kwargs))
-            return ret
         elif enable is False and before_toggle_enable_status:
             ret.update(_disable(name, None, **kwargs))
-            return ret
-        else:
-            return ret
+        return ret
 
     # Run the tests
     if __opts__['test']:
@@ -385,14 +379,10 @@ def dead(name, enable=None, sig=None, **kwargs):
     before_toggle_enable_status = __salt__['service.enabled'](name)
     if not before_toggle_status:
         ret['comment'] = 'The service {0} is already dead'.format(name)
-        if not __opts__['test']:
-            if enable is True and not before_toggle_enable_status:
-                ret.update(_enable(name, None, **kwargs))
-            elif enable is False and before_toggle_enable_status:
-                ret.update(_disable(name, None, **kwargs))
-            return ret
-        else:
-            ret['result'] = True
+        if enable is True and not before_toggle_enable_status:
+            ret.update(_enable(name, None, **kwargs))
+        elif enable is False and before_toggle_enable_status:
+            ret.update(_disable(name, None, **kwargs))
         return ret
 
     if __opts__['test']:

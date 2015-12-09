@@ -1054,7 +1054,7 @@ def _parse_os_release():
     with salt.utils.fopen(filename) as ifile:
         regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?$')
         for line in ifile:
-            match = regex.match(line.strip('\n'))
+            match = regex.match(line.strip())
             if match:
                 # Shell special characters ("$", quotes, backslash, backtick)
                 # are escaped with backslashes
@@ -1214,6 +1214,8 @@ def os_data():
                         grains['lsb_distrib_codename'] = os_release['PRETTY_NAME']
                 elif os.path.isfile('/etc/SuSE-release'):
                     grains['lsb_distrib_id'] = 'SUSE'
+                    version = ''
+                    patch = ''
                     with salt.utils.fopen('/etc/SuSE-release') as fhr:
                         for line in fhr:
                             if 'enterprise' in line.lower():
@@ -1222,7 +1224,9 @@ def os_data():
                                 version = re.sub(r'[^0-9]', '', line)
                             elif 'patchlevel' in line.lower():
                                 patch = re.sub(r'[^0-9]', '', line)
-                    grains['lsb_distrib_release'] = version + ' SP' + patch
+                    grains['lsb_distrib_release'] = version
+                    if patch:
+                        grains['lsb_distrib_release'] += ' SP' + patch
                     grains['lsb_distrib_codename'] = 'n.a'
                 elif os.path.isfile('/etc/altlinux-release'):
                     # ALT Linux
