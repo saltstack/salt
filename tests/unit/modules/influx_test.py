@@ -35,7 +35,7 @@ class MockInfluxDBClient(object):
     def switch_database(self, name):
         return name
 
-    def get_database_users(self):
+    def get_list_users(self):
         return USER_LIST
 
     def get_list_cluster_admins(self):
