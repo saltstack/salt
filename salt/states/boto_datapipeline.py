@@ -52,6 +52,7 @@ import copy
 import datetime
 import difflib
 import json
+from salt.ext.six.moves import zip
 
 
 def __virtual__():
