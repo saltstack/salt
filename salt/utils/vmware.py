@@ -65,10 +65,16 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
     :return: Dictionary
     '''
 
-    esx_cmd = salt.utils.which('esxicli')
+    esx_cmd = salt.utils.which('esxcli')
     if not esx_cmd:
         log.error('Missing dependency: The salt.utils.vmware.esxcli function requires ESXCLI.')
         return False
+
+    # Set default port and protocol if none are provided.
+    if port is None:
+        port = 443
+    if protocol is None:
+        protocol = 'https'
 
     if not esxi_host:
         # Then we are connecting directly to an ESXi server,

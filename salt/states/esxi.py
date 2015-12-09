@@ -32,7 +32,6 @@ import logging
 
 # Import Salt Libs
 import salt.utils
-import salt.ext.six as six
 from salt.exceptions import CommandExecutionError
 
 # Get Logging Started
@@ -91,24 +90,27 @@ def coredump_configured(name, enabled, dump_ip, host_vnic='vmk0', dump_port=6500
     esxi_cmd = 'esxi.cmd'
     enabled_msg = 'ESXi requires that the core dump must be enabled ' \
                   'before any other parameters may be set.'
+    host = __pillar__['proxy']['host']
 
-    current_config = __salt__[esxi_cmd]('get_coredump_network_config')
-    if isinstance(current_config, six.string_types):
-        ret['comment'] = 'Error: {0}'.format(current_config)
+    current_config = __salt__[esxi_cmd]('get_coredump_network_config').get(host)
+    error = current_config.get('Error')
+    if error:
+        ret['comment'] = 'Error: {0}'.format(error)
         return ret
-    elif ret.get('stderr'):
-        ret['comment'] = 'Error: {0}'.format(ret.get('stderr'))
-        return ret
-    else:
-        current_enabled = current_config.get('enabled')
 
+    current_config = current_config.get('Coredump Config')
+    current_enabled = current_config.get('enabled')
+
+    # Configure coredump enabled state, if there are changes.
     if current_enabled != enabled:
+        enabled_changes = {'enabled': {'old': current_enabled, 'new': enabled}}
         # Only run the command if not using test=True
         if not __opts__['test']:
             response = __salt__[esxi_cmd]('coredump_network_enable',
-                                          enabled=enabled)
-            if response['retcode'] != 0:
-                ret['comment'] = 'Error: {0}'.format(ret['stderr'])
+                                          enabled=enabled).get(host)
+            error = response.get('Error')
+            if error:
+                ret['comment'] = 'Error: {0}'.format(error)
                 return ret
 
             # Allow users to disable core dump, but then return since
@@ -116,11 +118,10 @@ def coredump_configured(name, enabled, dump_ip, host_vnic='vmk0', dump_port=6500
             if not enabled:
                 ret['result'] = True
                 ret['comment'] = enabled_msg
+                ret['changes'].update(enabled_changes)
                 return ret
 
-        ret['changes'].update({'enabled':
-                              {'old': current_enabled,
-                               'new': enabled}})
+        ret['changes'].update(enabled_changes)
 
     elif not enabled:
         # If current_enabled and enabled match, but are both False,
@@ -130,6 +131,8 @@ def coredump_configured(name, enabled, dump_ip, host_vnic='vmk0', dump_port=6500
         ret['comment'] = enabled_msg
         return ret
 
+    # Test for changes with all remaining configurations. The changes flag is used
+    # To detect changes, and then set_coredump_network_config is called one time.
     changes = False
     current_ip = current_config.get('ip')
     if current_ip != dump_ip:
@@ -157,7 +160,7 @@ def coredump_configured(name, enabled, dump_ip, host_vnic='vmk0', dump_port=6500
         response = __salt__[esxi_cmd]('set_coredump_network_config',
                                       dump_ip=dump_ip,
                                       host_vnic=host_vnic,
-                                      dump_port=dump_port)
+                                      dump_port=dump_port).get(host)
         if response.get('success') is False:
             msg = response.get('stderr')
             if not msg:
@@ -815,6 +818,7 @@ def syslog_configured(name,
            'changes': {},
            'comment': ''}
     esxi_cmd = 'esxi.cmd'
+    host = __pillar__['proxy']['host']
 
     if reset_syslog_config:
         if not reset_configs:
@@ -822,7 +826,7 @@ def syslog_configured(name,
         # Only run the command if not using test=True
         if not __opts__['test']:
             reset = __salt__[esxi_cmd]('reset_syslog_config',
-                                       syslog_config=reset_configs)
+                                       syslog_config=reset_configs).get(host)
             for key, val in reset.iteritems():
                 if isinstance(val, bool):
                     continue
@@ -838,10 +842,10 @@ def syslog_configured(name,
                               {'old': '',
                                'new': reset_configs}})
 
-    current_firewall = __salt__[esxi_cmd]('get_firewall_status')
-    if not current_firewall.get('success'):
-        ret['comment'] = 'There was an error obtaining firewall statuses. ' \
-                         'Please check debug logs.'
+    current_firewall = __salt__[esxi_cmd]('get_firewall_status').get(host)
+    error = current_firewall.get('Error')
+    if error:
+        ret['comment'] = 'Error: {0}'.format(error)
         return ret
 
     current_firewall = current_firewall.get('rulesets').get('syslog')
@@ -850,7 +854,7 @@ def syslog_configured(name,
         if not __opts__['test']:
             enabled = __salt__[esxi_cmd]('enable_firewall_ruleset',
                                          ruleset_enable=firewall,
-                                         ruleset_name='syslog')
+                                         ruleset_name='syslog').get(host)
             if enabled.get('retcode') != 0:
                 err = enabled.get('stderr')
                 out = enabled.get('stdout')
@@ -861,7 +865,7 @@ def syslog_configured(name,
                               {'old': current_firewall,
                                'new': firewall}})
 
-    current_syslog_config = __salt__[esxi_cmd]('get_syslog_config')
+    current_syslog_config = __salt__[esxi_cmd]('get_syslog_config').get(host)
     for key, val in syslog_configs.iteritems():
         # The output of get_syslog_config has different keys than the keys
         # Used to set syslog_config values. We need to look them up first.
@@ -872,17 +876,17 @@ def syslog_configured(name,
             return ret
 
         current_val = current_syslog_config[lookup_key]
-        if current_val != val:
+        if str(current_val) != str(val):
             # Only run the command if not using test=True
             if not __opts__['test']:
                 response = __salt__[esxi_cmd]('set_syslog_config',
                                               syslog_config=key,
                                               config_value=val,
                                               firewall=firewall,
-                                              reset_service=reset_service)
-                success = response.get('success')
+                                              reset_service=reset_service).get(host)
+                success = response.get(key).get('success')
                 if not success:
-                    msg = response.get('message')
+                    msg = response.get(key).get('message')
                     if not msg:
                         msg = 'There was an error setting syslog config \'{0}\'. ' \
                               'Please check debug logs.'.format(key)
