@@ -73,6 +73,9 @@ def _gen_md5_filehash(fname):
             hash.update(chunk)
     return hash.hexdigest()
 
+def _dict_to_json_pretty(d, sort_keys=True):
+    return json.dumps(d, indent=4, separators=(',', ': '), sort_keys=sort_keys)
+
 class ixSwagger(object):
     # SWAGGER_OBJECT_V2_FIELDS
     SWAGGER_OBJECT_V2_FIELDS = ['swagger', 'info', 'host', 'basePath', 'schemes', 'consumes', 'produces',
@@ -102,10 +105,6 @@ class ixSwagger(object):
             raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
 
         self._validate_swagger_file()
-
-    @property
-    def md5_filehash(self):
-        return self._md5_filehash
 
     def _validate_swagger_file(self):
         '''
@@ -144,6 +143,39 @@ class ixSwagger(object):
                                                                  ixSwagger.SALT_BOTO_APIGATEWAY_VERSIONS_SUPPORTED))
 
 
+    @property
+    def md5_filehash(self):
+        return self._md5_filehash
+
+    @property
+    def info(self):
+        info = self._cfg.get('info')
+        if not info:
+            raise ValueError('Info Object has no values')
+        return info
+
+    @property
+    def info_json(self):
+        return _dict_to_json_pretty(self.info)
+
+    @property
+    def rest_api_name(self):
+        api_name = self.info.get('title')
+        if (not api_name):
+            raise ValueError('Missing "title" attribute in Info Object')
+
+        return api_name
+
+    @property
+    def rest_api_version(self):
+        version = self.info.get('version')
+        if (not version):
+            raise ValueError('Missing "version" attribute in Info Object')
+
+        return version
+
+
+
 def __virtual__():
     '''
     Only load if boto is available.
@@ -178,7 +210,27 @@ def present(name,
            }
 
     try:
+        # try to open the swagger file and basic validation
         swagger = ixSwagger(name)
+
+        # get rest api service name
+        rest_api_name = swagger.rest_api_name
+
+        # TODO: check to see if the service by this name exists, and its description matches the
+        # content of swagger.info_json
+        # 
+
+        # call into boto_apigateway to create api
+        r = __salt__['boto_apigateway.create_api'](name=rest_api_name, description=swagger.info_json,
+                                                   region=region, key=key, keyid=keyid, profile=profile)
+
+        if 'error' in r:
+            ret['result'] = False
+            ret['comment'] = 'Failed to create rest api: {0}.'.format(r['error']['message'])
+            return ret
+
+        ret['comment'] = r['restapi']
+
     except Exception as e:
         ret['result'] = False
         ret['comment'] = e.message
