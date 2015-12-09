@@ -226,7 +226,7 @@ in other states.
     If a state should only execute when another state has changes, and
     otherwise do nothing, the new ``onchanges`` requisite should be used
     instead of ``watch``. ``watch`` is designed to add *additional* behavior
-    when there are changes, but otherwise execute normally.
+    when there are changes, but otherwise the state executes normally.
 
 The state containing the ``watch`` requisite is defined as the watching
 state. The state specified in the ``watch`` statement is defined as the watched
@@ -235,36 +235,37 @@ a key named "changes". Here are two examples of state return dictionaries,
 shown in json for clarity:
 
 .. code-block:: json
-
-    "local": {
-        "file_|-/tmp/foo_|-/tmp/foo_|-directory": {
-            "comment": "Directory /tmp/foo updated",
-            "__run_num__": 0,
-            "changes": {
-                "user": "bar"
-            },
-            "name": "/tmp/foo",
-            "result": true
+    {
+        "local": {
+            "file_|-/tmp/foo_|-/tmp/foo_|-directory": {
+                "comment": "Directory /tmp/foo updated",
+                "__run_num__": 0,
+                "changes": {
+                    "user": "bar"
+                },
+                "name": "/tmp/foo",
+                "result": true
+            }
         }
     }
 
-    "local": {
-        "pkgrepo_|-salt-minion_|-salt-minion_|-managed": {
-            "comment": "Package repo 'salt-minion' already configured",
-            "__run_num__": 0,
-            "changes": {},
-            "name": "salt-minion",
-            "result": true
+    {
+        "local": {
+            "pkgrepo_|-salt-minion_|-salt-minion_|-managed": {
+                "comment": "Package repo 'salt-minion' already configured",
+                "__run_num__": 0,
+                "changes": {},
+                "name": "salt-minion",
+                "result": true
+            }
         }
     }
 
 If the "result" of the watched state is ``True``, the watching state *will
-execute normally*. This part of ``watch`` mirrors the functionality of the
-``require`` requisite. If the "result" of the watched state is ``False``, the
-watching state will never run, nor will the watching state's ``mod_watch``
-function execute.
+execute normally*, and if it is ``False``, the watching state will never run.
+This part of ``watch`` mirrors the functionality of the ``require`` requisite.
 
-However, if the "result" of the watched state is ``True``, and the "changes"
+If the "result" of the watched state is ``True`` *and* the "changes"
 key contains a populated dictionary (changes occurred in the watched state),
 then the ``watch`` requisite can add additional behavior. This additional
 behavior is defined by the ``mod_watch`` function within the watching state
@@ -297,23 +298,6 @@ to Salt ensuring that the service is running.
       file.managed:
         - name: /etc/ntp.conf
         - source: salt://ntp/files/ntp.conf
-
-Or, we may want to run a state only if a previously defined state, in this case
-*Extract node package*, has run as well:
-
-.. code-block:: yaml
-
-    Extract node package:
-      archive.extracted:
-        - name: my-nodejs-package.tgz
-        - archive_format: tar
-        - if_missing: package/
-
-    Install node dependencies:
-      cmd.wait:
-        - watch:
-          - archive: Extract node package
-        - name: npm rebuild
 
 .. _requisites-prereq:
 
