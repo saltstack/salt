@@ -52,6 +52,7 @@ import logging
 import os
 import os.path
 import hashlib
+import re
 
 # Import Salt Libs
 import salt.utils.dictupdate as dictupdate
@@ -61,7 +62,86 @@ import yaml
 import json
 import anyconfig
 
+
 log = logging.getLogger(__name__)
+
+# Helper Swagger Class for swagger version 2.0 API specification
+def _gen_md5_filehash(fname):
+    hash = hashlib.md5()
+    with open(fname, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash.update(chunk)
+    return hash.hexdigest()
+
+class ixSwagger(object):
+    # SWAGGER_OBJECT_V2_FIELDS
+    SWAGGER_OBJECT_V2_FIELDS = ['swagger', 'info', 'host', 'basePath', 'schemes', 'consumes', 'produces',
+                                'paths', 'definitions', 'parameters', 'responses', 'securityDefinitions',
+                                'security', 'tags', 'externalDocs']
+
+    # SWAGGER OBJECT V2 Fields that are required by boto apigateway states.
+    SWAGGER_OBJECT_V2_FIELDS_REQUIRED = ['swagger', 'info', 'basePath', 'schemes', 'paths', 'definitions',
+                                         'x-salt-boto-apigateway-version']
+
+    # the version we expect to handle for the values for x-salt-boto-apigateway-version
+    SALT_BOTO_APIGATEWAY_VERSIONS_SUPPORTED = ['0.0']
+    SWAGGER_VERSIONS_SUPPORTED = ['2.0']
+
+    # VENDOR SPECIFIC FIELD PATTERNS
+    VENDOR_EXT_PATTERN = re.compile('^x-')
+    SALT_BOTO_APIGATEWAY_EXT_PATTERN = re.compile('^x-salt-boto-apigateway-')
+
+    def __init__(self, swagger_file_path):
+        if os.path.exists(swagger_file_path) and os.path.isfile(swagger_file_path):
+            self._swagger_file = swagger_file_path
+            self._md5_filehash = _gen_md5_filehash(self._swagger_file)
+            self._cfg = anyconfig.load(self._swagger_file)
+            self._swagger_version = ''
+            self._salt_boto_apigateway_version = ''
+        else:
+            raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
+
+        self._validate_swagger_file()
+
+    @property
+    def md5_filehash(self):
+        return self._md5_filehash
+
+    def _validate_swagger_file(self):
+        '''
+        High level check/validation of the input swagger file based on
+        https://github.com/swagger-api/swagger-spec/blob/master/versions/2.0.md
+
+        This is not a full schema compliance check, but rather make sure that the input file (YAML or
+        JSON) can be read into a dictionary, and we check for the content of the Swagger Object for version
+        and info.
+        '''
+        swagger_fields = self._cfg.keys()
+
+        # check for any invalid fields for Swagger Object V2
+        for field in swagger_fields:
+            if (field not in ixSwagger.SWAGGER_OBJECT_V2_FIELDS and
+                not ixSwagger.VENDOR_EXT_PATTERN.match(field)):
+                raise ValueError('Invalid Swagger Object Field: {0}'.format(field))
+
+        # check for Required Swagger fields by Saltstack boto apigateway state
+        for field in ixSwagger.SWAGGER_OBJECT_V2_FIELDS_REQUIRED:
+            if (field not in swagger_fields):
+                raise ValueError('Missing Swagger Object Field: {0}'.format(field))
+
+        # check for Swagger Version
+        self._swagger_version = self._cfg.get('swagger')
+        if self._swagger_version not in ixSwagger.SWAGGER_VERSIONS_SUPPORTED:
+            raise ValueError('Unsupported Swagger version: {0},'
+                             'Supported versions are {1}'.format(self._swagger_version,
+                                                                 ixSwagger.SWAGGER_VERSIONS_SUPPORTED))
+
+        # check for salt boto apigateway extension tags version
+        self._salt_boto_apigateway_version = self._cfg.get('x-salt-boto-apigateway-version')
+        if self._salt_boto_apigateway_version not in ixSwagger.SALT_BOTO_APIGATEWAY_VERSIONS_SUPPORTED:
+            raise ValueError('Unsupported Salt Boto ApiGateway Extension Version {0},'
+                             'Supported versions are {1}'.format(self._salt_boto_apigateway_version,
+                                                                 ixSwagger.SALT_BOTO_APIGATEWAY_VERSIONS_SUPPORTED))
 
 
 def __virtual__():
@@ -97,10 +177,13 @@ def present(name,
            'changes': {}
            }
 
-    if (not os.path.exists(name)):
+    try:
+        swagger = ixSwagger(name)
+    except Exception as e:
         ret['result'] = False
-        ret['comment'] = 'Failed to deploy swagger definitions to AWS'
-        return ret
+        ret['comment'] = e.message
+
+    return ret
 
     '''    
     r = __salt__['boto_lambda.exists'](name=name, region=region,
@@ -251,11 +334,13 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
            'changes': {}
            }
 
-
-    if (not os.path.exists(name)):
+    try:
+        swagger = ixSwagger(name)
+    except Exception as e:
         ret['result'] = False
-        ret['comment'] = 'swagger_yaml_file does not exist'
-        return ret
+        ret['comment'] = e.message
+
+    return ret
 
     '''
     r = __salt__['boto_lambda.exists'](name, region=region,
