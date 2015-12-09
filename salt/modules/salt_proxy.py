@@ -116,6 +116,12 @@ def configure_proxy(proxyname, start=True):
         start:
             Boolean indicating if the process should be started
             default = True
+
+    Usage
+
+    .. code-block:: bash
+
+        salt deviceminion salt_proxy.configure_proxy p8000
     '''
     changes_new = []
     changes_old = []
