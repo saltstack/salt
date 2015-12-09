@@ -69,8 +69,8 @@ alias_ret = dict(AliasArn='arn:lambda:us-east-1:1234:Something',
                  Description='Alias description')
 event_source_mapping_ret = dict(UUID='1234-1-123',
                                 BatchSize=123,
-                                EventSourceArn='arn:lambda:us-east-1:1234:Something',
-                                FunctionArn='arn:lambda:us-east-1:1234:Something',
+                                EventSourceArn='arn:aws:dynamodb:us-east-1:1234::Something',
+                                FunctionArn='arn:aws:lambda:us-east-1:1234:function:myfunc',
                                 LastModified='yes',
                                 LastProcessingResult='SUCCESS',
                                 State='Enabled',
@@ -329,7 +329,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaStateTestCaseBase, BotoLamb
         result = salt_states['boto_lambda.event_source_mapping_present'](
                          'event source mapping present',
                          EventSourceArn=event_source_mapping_ret['EventSourceArn'],
-                         FunctionName='myfunc',
+                         FunctionName=event_source_mapping_ret['FunctionArn'],
                          StartingPosition='LATEST',
                          BatchSize=event_source_mapping_ret['BatchSize'])
         self.assertTrue(result['result'])
@@ -342,7 +342,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaStateTestCaseBase, BotoLamb
         result = salt_states['boto_lambda.event_source_mapping_present'](
                          'event source mapping present',
                          EventSourceArn=event_source_mapping_ret['EventSourceArn'],
-                         FunctionName='myfunc',
+                         FunctionName=event_source_mapping_ret['FunctionArn'],
                          StartingPosition='LATEST',
                          BatchSize=event_source_mapping_ret['BatchSize'])
         self.assertFalse(result['result'])
