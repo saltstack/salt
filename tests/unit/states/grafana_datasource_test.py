@@ -27,6 +27,7 @@ profile = {
     'grafana_token': 'token',
 }
 
+
 def mock_json_response(data):
     response = MagicMock()
     response.json = MagicMock(return_value=data)
