@@ -58,7 +58,7 @@ def __virtual__():
 
     if salt.utils.which('port') and __grains__['os'] == 'MacOS':
         return __virtualname__
-    return False
+    return (False, 'The macports execution module cannot be loaded: only available on MacOS with the port binary in the path.')
 
 
 def _list(query=''):

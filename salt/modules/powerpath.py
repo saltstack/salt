@@ -40,15 +40,15 @@ def __virtual__():
     try:
         kernel_grain = __grains__['kernel']
     except Exception:
-        return False
+        return (False, 'The powerpath execution module cannot be loaded: unable to detect kernel grain.')
 
     if not has_powerpath():
-        return False
+        return (False, 'The powerpath execution module cannot be loaded: the emcpreg binary is not available.')
 
     if kernel_grain == 'Linux':
         return 'powerpath'
 
-    return False
+    return (False, 'The powerpath execution module cannot be loaded: only available on Linux.')
 
 
 def list_licenses():
