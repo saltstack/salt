@@ -3,7 +3,7 @@
 Manage Lambda Functions
 =================
 
-.. versionadded:: 
+.. versionadded::
 
 Create and destroy Lambda Functions. Be aware that this interacts with Amazon's services,
 and so may incur charges.
@@ -78,7 +78,7 @@ def __virtual__():
 
 
 def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S3Bucket=None,
-            S3Key=None, S3ObjectVersion=None, 
+            S3Key=None, S3ObjectVersion=None,
             Description='', Timeout=3, MemorySize=128,
             region=None, key=None, keyid=None, profile=None):
     '''
@@ -91,7 +91,7 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
         Name of the Function.
 
     Runtime
-        The Runtime environment for the function. One of 
+        The Runtime environment for the function. One of
         'nodejs', 'java8', or 'python2.7'
 
     Role
@@ -126,12 +126,12 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
         description as you see fit.
 
     Timeout
-        The function execution time at which Lambda should terminate this function. Because the execution 
+        The function execution time at which Lambda should terminate this function. Because the execution
         time has cost implications, we recommend you set this value based on your expected execution time.
         The default is 3 seconds.
 
     MemorySize
-        The amount of memory, in MB, your function is given. Lambda uses this memory size to infer 
+        The amount of memory, in MB, your function is given. Lambda uses this memory size to infer
         the amount of CPU and memory allocated to your function. Your function use-case determines your
         CPU and memory requirements. For example, a database operation might need less memory compared
         to an image processing function. The default value is 128 MB. The value must be a multiple of
@@ -170,12 +170,12 @@ def function_present(name, FunctionName, Runtime, Role, Handler, ZipFile=None, S
             ret['result'] = None
             return ret
         r = __salt__['boto_lambda.create_function'](FunctionName=FunctionName, Runtime=Runtime,
-                                                    Role=Role, Handler=Handler, 
-                                                    ZipFile=ZipFile, S3Bucket=S3Bucket, 
+                                                    Role=Role, Handler=Handler,
+                                                    ZipFile=ZipFile, S3Bucket=S3Bucket,
                                                     S3Key=S3Key,
                                                     S3ObjectVersion=S3ObjectVersion,
-                                                    Description=Description, 
-                                                    Timeout=Timeout, MemorySize=MemorySize, 
+                                                    Description=Description,
+                                                    Timeout=Timeout, MemorySize=MemorySize,
                                                     region=region, key=key,
                                                     keyid=keyid, profile=profile)
         if not r.get('created'):
@@ -226,7 +226,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
 def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
                            MemorySize, region, key, keyid, profile):
     ret = {'result': True, 'comment': '', 'changes': {}}
-    func = __salt__['boto_lambda.describe_function'](FunctionName, 
+    func = __salt__['boto_lambda.describe_function'](FunctionName,
            region=region, key=key, keyid=keyid, profile=profile)['function']
     role_arn = _get_role_arn(Role, region, key, keyid, profile)
     need_update = False
@@ -239,8 +239,8 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
     }.iteritems():
         if func[val] != locals()[var]:
             need_update = True
-            ret['changes'].setdefault('new',{})[var] = locals()[var]
-            ret['changes'].setdefault('old',{})[var] = func[val]
+            ret['changes'].setdefault('new', {})[var] = locals()[var]
+            ret['changes'].setdefault('old', {})[var] = func[val]
     if need_update:
         ret['comment'] = os.linesep.join([ret['comment'], 'Function config to be modified'])
         if __opts__['test']:
@@ -250,7 +250,7 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
             return ret
         _r = __salt__['boto_lambda.update_function_config'](FunctionName=FunctionName,
                                         Role=Role, Handler=Handler, Description=Description,
-                                        Timeout=Timeout, MemorySize=MemorySize, 
+                                        Timeout=Timeout, MemorySize=MemorySize,
                                         region=region, key=key,
                                         keyid=keyid, profile=profile)
         if not _r.get('updated'):
@@ -263,7 +263,7 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
 def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key, S3ObjectVersion,
                          region, key, keyid, profile):
     ret = {'result': True, 'comment': '', 'changes': {}}
-    func = __salt__['boto_lambda.describe_function'](FunctionName, 
+    func = __salt__['boto_lambda.describe_function'](FunctionName,
            region=region, key=key, keyid=keyid, profile=profile)['function']
     update = False
     if ZipFile:
@@ -276,12 +276,12 @@ def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key, S3ObjectVersi
             if hashed != func['CodeSha256']:
                 update = True
         else:
-            update=True
+            update = True
     else:
-       # No way to judge whether the item in the s3 bucket is current without
-       # downloading it. Cheaper to just request an update every time, and still
-       # idempotent
-       update = True
+        # No way to judge whether the item in the s3 bucket is current without
+        # downloading it. Cheaper to just request an update every time, and still
+        # idempotent
+        update = True
     if update:
         if __opts__['test']:
             msg = 'Function {0} set to be modified.'.format(FunctionName)
@@ -293,7 +293,7 @@ def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key, S3ObjectVersi
             'CodeSize': func['CodeSize'],
         }
         func = __salt__['boto_lambda.update_function_code'](FunctionName, ZipFile, S3Bucket,
-            S3Key, S3ObjectVersion, 
+            S3Key, S3ObjectVersion,
             region=region, key=key, keyid=keyid, profile=profile)
         if not func.get('updated'):
             ret['result'] = False
@@ -309,9 +309,8 @@ def _function_code_present(FunctionName, ZipFile, S3Bucket, S3Key, S3ObjectVersi
                 'CodeSize': func['CodeSize'],
             }
         else:
-			del(ret['changes']['old'])
+            del ret['changes']['old']
     return ret
-
 
 
 def function_absent(name, FunctionName, region=None, key=None, keyid=None, profile=None):
@@ -372,7 +371,7 @@ def function_absent(name, FunctionName, region=None, key=None, keyid=None, profi
     return ret
 
 
-def alias_present(name, FunctionName, Name, FunctionVersion, Description='', 
+def alias_present(name, FunctionName, Name, FunctionVersion, Description='',
             region=None, key=None, keyid=None, profile=None):
     '''
     Ensure alias exists.
@@ -441,7 +440,7 @@ def alias_present(name, FunctionName, Name, FunctionVersion, Description='',
 
     ret['comment'] = os.linesep.join([ret['comment'], 'Alias {0} is present.'.format(Name)])
     ret['changes'] = {}
-    _describe = __salt__['boto_lambda.describe_alias'](FunctionName, Name, 
+    _describe = __salt__['boto_lambda.describe_alias'](FunctionName, Name,
                                                   region=region, key=key, keyid=keyid,
                                                   profile=profile)['alias']
 
@@ -452,8 +451,8 @@ def alias_present(name, FunctionName, Name, FunctionVersion, Description='',
     }.iteritems():
         if _describe[val] != locals()[var]:
             need_update = True
-            ret['changes'].setdefault('new',{})[var] = locals()[var]
-            ret['changes'].setdefault('old',{})[var] = _describe[val]
+            ret['changes'].setdefault('new', {})[var] = locals()[var]
+            ret['changes'].setdefault('old', {})[var] = _describe[val]
     if need_update:
         ret['comment'] = os.linesep.join([ret['comment'], 'Alias config to be modified'])
         if __opts__['test']:
@@ -462,7 +461,7 @@ def alias_present(name, FunctionName, Name, FunctionVersion, Description='',
             ret['result'] = None
             return ret
         _r = __salt__['boto_lambda.update_alias'](FunctionName=FunctionName, Name=Name,
-                                        FunctionVersion=FunctionVersion, Description=Description, 
+                                        FunctionVersion=FunctionVersion, Description=Description,
                                         region=region, key=key,
                                         keyid=keyid, profile=profile)
         if not _r.get('updated'):
@@ -533,7 +532,6 @@ def alias_absent(name, FunctionName, Name, region=None, key=None, keyid=None, pr
     return ret
 
 
-
 def _get_function_arn(name, region=None, key=None, keyid=None, profile=None):
     if name.startswith('arn:aws:lambda:'):
         return name
@@ -545,7 +543,7 @@ def _get_function_arn(name, region=None, key=None, keyid=None, profile=None):
 
 
 def event_source_mapping_present(name, EventSourceArn, FunctionName, StartingPosition,
-            Enabled=True, BatchSize=100, 
+            Enabled=True, BatchSize=100,
             region=None, key=None, keyid=None, profile=None):
     '''
     Ensure event source mapping exists.
@@ -602,7 +600,7 @@ def event_source_mapping_present(name, EventSourceArn, FunctionName, StartingPos
            'changes': {}
            }
 
-    r = __salt__['boto_lambda.event_source_mapping_exists'](EventSourceArn=EventSourceArn, 
+    r = __salt__['boto_lambda.event_source_mapping_exists'](EventSourceArn=EventSourceArn,
                                     FunctionName=FunctionName,
                                     region=region, key=key, keyid=keyid, profile=profile)
 
@@ -648,15 +646,15 @@ def event_source_mapping_present(name, EventSourceArn, FunctionName, StartingPos
     }.iteritems():
         if _describe[val] != locals()[var]:
             need_update = True
-            ret['changes'].setdefault('new',{})[var] = locals()[var]
-            ret['changes'].setdefault('old',{})[var] = _describe[val]
+            ret['changes'].setdefault('new', {})[var] = locals()[var]
+            ret['changes'].setdefault('old', {})[var] = _describe[val]
     # verify FunctionName against FunctionArn
-    function_arn = _get_function_arn(FunctionName, 
+    function_arn = _get_function_arn(FunctionName,
                     region=region, key=key, keyid=keyid, profile=profile)
     if _describe['FunctionArn'] != function_arn:
         need_update = True
-        ret['changes'].setdefault('new',{})['FunctionArn'] = function_arn
-        ret['changes'].setdefault('old',{})['FunctionArn'] = _describe['FunctionArn']
+        ret['changes'].setdefault('new', {})['FunctionArn'] = function_arn
+        ret['changes'].setdefault('old', {})['FunctionArn'] = _describe['FunctionArn']
     # TODO check for 'Enabled', since it doesn't directly map to a specific state
     if need_update:
         ret['comment'] = os.linesep.join([ret['comment'], 'Event source mapping to be modified'])
@@ -712,7 +710,7 @@ def event_source_mapping_absent(name, EventSourceArn, FunctionName,
            'changes': {}
            }
 
-    desc = __salt__['boto_lambda.describe_event_source_mapping'](EventSourceArn=EventSourceArn, 
+    desc = __salt__['boto_lambda.describe_event_source_mapping'](EventSourceArn=EventSourceArn,
                                     FunctionName=FunctionName,
                                     region=region, key=key, keyid=keyid, profile=profile)
     if 'error' in desc:
@@ -741,5 +739,3 @@ def event_source_mapping_absent(name, EventSourceArn, FunctionName,
     ret['changes']['new'] = {'event_source_mapping': None}
     ret['comment'] = 'Event source mapping deleted.'
     return ret
-
-
