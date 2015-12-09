@@ -62,7 +62,7 @@ def __virtual__():
     return __virtualname__
 
 
-def get_coredump_network_config(host, username, password, protocol=None, port=None, esxi_host=None):
+def get_coredump_network_config(host, username, password, protocol=None, port=None, esxi_hosts=None):
     '''
     Retrieve information on ESXi or vCenter network dump collection and
     format it into a dictionary.
@@ -84,13 +84,13 @@ def get_coredump_network_config(host, username, password, protocol=None, port=No
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
-    esxi_host
-        If `host` is a vCenter host, then esxi_host is the ESXi machine on
-        which to execute this command.
+    esxi_hosts
+        If ``host`` is a vCenter host, then use esxi_hosts to execute this function
+        on a list of one or more ESXi machines.
 
     :return: A dictionary with the network configuration, or, if getting
-             the network config failed, a standard cmd.run_all dictionary.
-             This dictionary will at least have a `retcode` key.
+             the network config failed, a an error message retrieved from the
+             standard cmd.run_all dictionary, per host.
 
     CLI Example:
 
@@ -101,45 +101,43 @@ def get_coredump_network_config(host, username, password, protocol=None, port=No
 
         # Used for connecting to a vCenter Server
         salt '*' vsphere.get_coredump_network_config my.vcenter.location root bad-password \
-        esxi_host='esxi-1.host.com'
+            esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
 
     '''
-
     cmd = 'system coredump network get'
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                   protocol=protocol, port=port,
-                                   esxi_host=esxi_host)
+    ret = {}
+    if esxi_hosts:
+        if not isinstance(esxi_hosts, list):
+            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
 
-    if ret['retcode'] != 0:
-        return ret
-
-    ret_dict = {}
-
-    for line in ret['stdout'].splitlines():
-        line = line.strip().lower()
-        if line.startswith('enabled:'):
-            enabled = line.split(':')
-            if 'true' in enabled[1]:
-                ret_dict['enabled'] = True
+        for esxi_host in esxi_hosts:
+            response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                                protocol=protocol, port=port,
+                                                esxi_host=esxi_host)
+            if response['retcode'] != 0:
+                ret.update({esxi_host: {'Error': response.get('stdout')}})
             else:
-                ret_dict['enabled'] = False
-                break
-        if line.startswith('host vnic:'):
-            host_vnic = line.split(':')
-            ret_dict['host_vnic'] = host_vnic[1].strip()
-        if line.startswith('network server ip:'):
-            ip = line.split(':')
-            ret_dict['ip'] = ip[1].strip()
-        if line.startswith('network server port:'):
-            ip_port = line.split(':')
-            ret_dict['port'] = ip_port[1].strip()
+                # format the response stdout into something useful
+                ret.update({esxi_host: {'Coredump Config': _format_coredump_stdout(response)}})
+    else:
+        # Handles a single host or a vCenter connection when no esxi_hosts are provided.
+        response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                            protocol=protocol, port=port)
+        if response['retcode'] != 0:
+            ret.update({host: {'Error': response.get('stdout')}})
+        else:
+            # format the response stdout into something useful
+            stdout = _format_coredump_stdout(response)
+            ret.update({host: {'Coredump Config': stdout}})
 
-    return ret_dict
+    return ret
 
 
-def coredump_network_enable(host, username, password, enabled, protocol=None, port=None, esxi_host=None):
+def coredump_network_enable(host, username, password, enabled, protocol=None, port=None, esxi_hosts=None):
     '''
-    Enable or disable ESXi core dump collection.
+    Enable or disable ESXi core dump collection. Returns ``True`` if coredump is enabled
+    and returns ``False`` if core dump is not enabled. If there was an error, the error
+    will be the value printed in the ``Error`` key dictionary for the given host.
 
     host
         The location of the host.
@@ -161,13 +159,9 @@ def coredump_network_enable(host, username, password, enabled, protocol=None, po
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
-    esxi_host
-        If `host` is a vCenter host, then esxi_host is the ESXi machine on which to
-        execute this command.
-
-    :return: A standard cmd.run_all dictionary.  This dictionary will at least
-             have a `retcode` key.  If `retcode` is 0 the command was
-             successful.
+    esxi_hosts
+        If ``host`` is a vCenter host, then use esxi_hosts to execute this function
+        on a list of one or more ESXi machines.
 
     CLI Example:
 
@@ -178,19 +172,38 @@ def coredump_network_enable(host, username, password, enabled, protocol=None, po
 
         # Used for connecting to a vCenter Server
         salt '*' vsphere.coredump_network_enable my.vcenter.location root bad-password True \
-        esxi_host='esxi-1.host.com'
+            esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
-
     if enabled:
         enable_it = 1
     else:
         enable_it = 0
-
     cmd = 'system coredump network set -e {0}'.format(enable_it)
 
-    return salt.utils.vmware.esxcli(host, username, password, cmd,
-                                    protocol=protocol, port=port,
-                                    esxi_host=esxi_host)
+    ret = {}
+    if esxi_hosts:
+        if not isinstance(esxi_hosts, list):
+            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+
+        for esxi_host in esxi_hosts:
+            response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                                protocol=protocol, port=port,
+                                                esxi_host=esxi_host)
+            if response['retcode'] != 0:
+                ret.update({esxi_host: {'Error': response.get('stdout')}})
+            else:
+                ret.update({esxi_host: {'Coredump Enabled': enabled}})
+
+    else:
+        # Handles a single host or a vCenter connection when no esxi_hosts are provided.
+        response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                            protocol=protocol, port=port)
+        if response['retcode'] != 0:
+            ret.update({host: {'Error': response.get('stdout')}})
+        else:
+            ret.update({host: {'Coredump Enabled': enabled}})
+
+    return ret
 
 
 def set_coredump_network_config(host,
@@ -201,7 +214,7 @@ def set_coredump_network_config(host,
                                 port=None,
                                 host_vnic='vmk0',
                                 dump_port=6500,
-                                esxi_host=None):
+                                esxi_hosts=None):
     '''
 
     Set the network parameters for a network coredump collection.
@@ -228,9 +241,9 @@ def set_coredump_network_config(host,
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
-    esxi_host
-        If `host` is a vCenter host, then esxi_host is the ESXi machine on
-        which to execute this command.
+    esxi_hosts
+        If ``host`` is a vCenter host, then use esxi_hosts to execute this function
+        on a list of one or more ESXi machines.
 
     host_vnic
         Host VNic port through which to communicate. Defaults to ``vmk0``.
@@ -238,7 +251,7 @@ def set_coredump_network_config(host,
     dump_port
         TCP port to use for the dump, defaults to ``6500``.
 
-    :return: A standard cmd.run_all dictionary with a `success` key added.
+    :return: A standard cmd.run_all dictionary with a `success` key added, per host.
              `success` will be True if the set succeeded, False otherwise.
 
     CLI Example:
@@ -250,24 +263,41 @@ def set_coredump_network_config(host,
 
         # Used for connecting to a vCenter Server
         salt '*' vsphere.set_coredump_network_config my.vcenter.location root bad-password 'dump_ip.host.com' \
-        esxi_host='esxi-1.host.com'
+            esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
-
     cmd = 'system coredump network set -v {0} -i {1} -o {2}'.format(host_vnic,
                                                                     dump_ip,
                                                                     dump_port)
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                   protocol=protocol, port=port,
-                                   esxi_host=esxi_host)
-    if ret['retcode'] != 0:
-        ret['success'] = False
+    ret = {}
+    if esxi_hosts:
+        if not isinstance(esxi_hosts, list):
+            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+
+        for esxi_host in esxi_hosts:
+            response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                                protocol=protocol, port=port,
+                                                esxi_host=esxi_host)
+            if response['retcode'] != 0:
+                response['success'] = False
+            else:
+                response['success'] = True
+
+            # Update the cmd.run_all dictionary for each particular host.
+            ret.update({esxi_host: response})
     else:
-        ret['success'] = True
+        # Handles a single host or a vCenter connection when no esxi_hosts are provided.
+        response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                            protocol=protocol, port=port)
+        if response['retcode'] != 0:
+            response['success'] = False
+        else:
+            response['success'] = True
+        ret.update({host: response})
 
     return ret
 
 
-def get_firewall_status(host, username, password, protocol=None, port=None, esxi_host=None):
+def get_firewall_status(host, username, password, protocol=None, port=None, esxi_hosts=None):
     '''
     Show status of all firewall rule sets.
 
@@ -288,14 +318,14 @@ def get_firewall_status(host, username, password, protocol=None, port=None, esxi
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
-    esxi_host
-        If `host` is a vCenter host, then esxi_host is the ESXi machine on
-        which to execute this command.
+    esxi_hosts
+        If ``host`` is a vCenter host, then use esxi_hosts to execute this function
+        on a list of one or more ESXi machines.
 
     :return: Nested dictionary with two toplevel keys ``rulesets`` and ``success``
              ``success`` will be True or False depending on query success
              ``rulesets`` will list the rulesets and their statuses if ``success``
-             was true.
+             was true, per host.
 
     CLI Example:
 
@@ -306,26 +336,39 @@ def get_firewall_status(host, username, password, protocol=None, port=None, esxi
 
         # Used for connecting to a vCenter Server
         salt '*' vsphere.get_firewall_status my.vcenter.location root bad-password \
-            esxi_host='esxi-1.host.com'
+            esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
     cmd = 'network firewall ruleset list'
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                   protocol=protocol, port=port,
-                                   esxi_host=esxi_host)
-    if ret['retcode'] != 0:
-        return {'success': False, 'rulesets': None}
 
-    ret_dict = {'success': True,
-                'rulesets': {}}
-    for line in ret['stdout'].splitlines():
-        if line.startswith('Name'):
-            continue
-        if line.startswith('---'):
-            continue
-        ruleset_status = line.split()
-        ret_dict['rulesets'][ruleset_status[0]] = bool(ruleset_status[1])
+    ret = {}
+    if esxi_hosts:
+        if not isinstance(esxi_hosts, list):
+            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
 
-    return ret_dict
+        for esxi_host in esxi_hosts:
+            response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                                protocol=protocol, port=port,
+                                                esxi_host=esxi_host)
+            if response['retcode'] != 0:
+                ret.update({esxi_host: {'Error': response['stdout'],
+                                        'success': False,
+                                        'rulesets': None}})
+            else:
+                # format the response stdout into something useful
+                ret.update({esxi_host: _format_firewall_stdout(response)})
+    else:
+        # Handles a single host or a vCenter connection when no esxi_hosts are provided.
+        response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                            protocol=protocol, port=port)
+        if response['retcode'] != 0:
+            ret.update({host: {'Error': response['stdout'],
+                               'success': False,
+                               'rulesets': None}})
+        else:
+            # format the response stdout into something useful
+            ret.update({host: _format_firewall_stdout(response)})
+
+    return ret
 
 
 def enable_firewall_ruleset(host,
@@ -335,7 +378,7 @@ def enable_firewall_ruleset(host,
                             ruleset_name,
                             protocol=None,
                             port=None,
-                            esxi_host=None):
+                            esxi_hosts=None):
     '''
     Enable or disable an ESXi firewall rule set.
 
@@ -362,11 +405,11 @@ def enable_firewall_ruleset(host,
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
-    esxi_host
-        If `host` is a vCenter host, then esxi_host is the ESXi machine on
-        which to execute this command.
+    esxi_hosts
+        If ``host`` is a vCenter host, then use esxi_hosts to execute this function
+        on a list of one or more ESXi machines.
 
-    :return: A standard cmd.run_all dictionary
+    :return: A standard cmd.run_all dictionary, per host.
 
     CLI Example:
 
@@ -377,19 +420,32 @@ def enable_firewall_ruleset(host,
 
         # Used for connecting to a vCenter Server
         salt '*' vsphere.enable_firewall_ruleset my.vcenter.location root bad-password True 'syslog' \
-            esxi_host='esxi-1.host.com'
+            esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
-
     cmd = 'network firewall ruleset set --enabled {0} --ruleset-id={1}'.format(
         ruleset_enable, ruleset_name
     )
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                   protocol=protocol, port=port,
-                                   esxi_host=esxi_host)
+
+    ret = {}
+    if esxi_hosts:
+        if not isinstance(esxi_hosts, list):
+            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+
+        for esxi_host in esxi_hosts:
+            response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                                protocol=protocol, port=port,
+                                                esxi_host=esxi_host)
+            ret.update({esxi_host: response})
+    else:
+        # Handles a single host or a vCenter connection when no esxi_hosts are provided.
+        response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                            protocol=protocol, port=port)
+        ret.update({host: response})
+
     return ret
 
 
-def syslog_service_reload(host, username, password, protocol=None, port=None, esxi_host=None):
+def syslog_service_reload(host, username, password, protocol=None, port=None, esxi_hosts=None):
     '''
     Reload the syslog service so it will pick up any changes.
 
@@ -410,9 +466,9 @@ def syslog_service_reload(host, username, password, protocol=None, port=None, es
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
-    esxi_host
-        If `host` is a vCenter host, then esxi_host is the ESXi machine on
-        which to execute this command.
+    esxi_hosts
+        If ``host`` is a vCenter host, then use esxi_hosts to execute this function
+        on a list of one or more ESXi machines.
 
     :return: A standard cmd.run_all dictionary.  This dictionary will at least
              have a `retcode` key.  If `retcode` is 0 the command was successful.
@@ -426,13 +482,26 @@ def syslog_service_reload(host, username, password, protocol=None, port=None, es
 
         # Used for connecting to a vCenter Server
         salt '*' vsphere.syslog_service_reload my.vcenter.location root bad-password \
-            esxi_host='esxi-1.host.com'
+            esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
-
     cmd = 'system syslog reload'
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                   protocol=protocol, port=port,
-                                   esxi_host=esxi_host)
+
+    ret = {}
+    if esxi_hosts:
+        if not isinstance(esxi_hosts, list):
+            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+
+        for esxi_host in esxi_hosts:
+            response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                                protocol=protocol, port=port,
+                                                esxi_host=esxi_host)
+            ret.update({esxi_host: response})
+    else:
+        # Handles a single host or a vCenter connection when no esxi_hosts are provided.
+        response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                            protocol=protocol, port=port)
+        ret.update({host: response})
+
     return ret
 
 
@@ -445,7 +514,7 @@ def set_syslog_config(host,
                       port=None,
                       firewall=True,
                       reset_service=True,
-                      esxi_host=None):
+                      esxi_hosts=None):
     '''
     Set the specified syslog configuration parameter. By default, this function will
     reset the syslog service after the configuration is set.
@@ -487,54 +556,87 @@ def set_syslog_config(host,
     reset_service
         After a successful parameter set, reset the service. Defaults to ``True``.
 
-    esxi_host
-        If ``host`` is a vCenter server, then esxi_host is the ESXi machine on which to execute this command.
+    esxi_hosts
+        If ``host`` is a vCenter host, then use esxi_hosts to execute this function
+        on a list of one or more ESXi machines.
 
     :return: Dictionary with a top-level key of 'success' which indicates
              if all the parameters were reset, and individual keys
-             for each parameter indicating which succeeded or failed.
+             for each parameter indicating which succeeded or failed, per host.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt esxi_host vsphere.set_syslog_config 192.168.1.1 root secret \
+        # Used for ESXi host connection information
+        salt '*' vsphere.set_syslog_config my.esxi.host root bad-password \
             loghost ssl://localhost:5432,tcp://10.1.0.1:1514
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.set_syslog_config my.vcenter.location root bad-password \
+            loghost ssl://localhost:5432,tcp://10.1.0.1:1514 \
+            esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
+
     '''
+    ret = {}
 
+    # First, enable the syslog firewall ruleset, for each host, if needed.
     if firewall and syslog_config == 'loghost':
-        ret = enable_firewall_ruleset(host, username, password,
-                                      ruleset_enable=True, ruleset_name='syslog',
-                                      protocol=protocol, port=port,
-                                      esxi_host=esxi_host)
-        if ret['retcode'] != 0:
-            return {'success': False, 'message': ret['stdout']}
+        if esxi_hosts:
+            if not isinstance(esxi_hosts, list):
+                raise CommandExecutionError('\'esxi_hosts\' must be a list.')
 
-    ret_dict = {}
-    valid_resets = ['logdir', 'loghost', 'default-rotate',
-                    'default-size', 'default-timeout', 'logdir-unique']
-    if syslog_config not in valid_resets:
-        ret_dict = {'success': False, 'message': '\'{0}\' is not a valid config variable.'.format(syslog_config)}
-        return ret_dict
+            for esxi_host in esxi_hosts:
+                response = enable_firewall_ruleset(host, username, password,
+                                                   ruleset_enable=True, ruleset_name='syslog',
+                                                   protocol=protocol, port=port,
+                                                   esxi_hosts=[esxi_host]).get(esxi_host)
+                if response['retcode'] != 0:
+                    ret.update({esxi_host: {'enable_firewall': {'message': response['stdout'],
+                                                                'success': False}}})
+                else:
+                    ret.update({esxi_host: {'enable_firewall': {'success': True}}})
+        else:
+            # Handles a single host or a vCenter connection when no esxi_hosts are provided.
+            response = enable_firewall_ruleset(host, username, password,
+                                               ruleset_enable=True, ruleset_name='syslog',
+                                               protocol=protocol, port=port).get(host)
+            if response['retcode'] != 0:
+                ret.update({host: {'enable_firewall': {'message': response['stdout'],
+                                                       'success': False}}})
+            else:
+                ret.update({host: {'enable_firewall': {'success': True}}})
 
-    cmd = 'system syslog config set --{0} {1}'.format(syslog_config, config_value)
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                   protocol=protocol, port=port,
-                                   esxi_host=esxi_host)
-    ret_dict['success'] = ret['retcode'] == 0
-    if ret['retcode'] != 0:
-        ret_dict['message'] = ret['stdout']
+    # Set the config value on each esxi_host, if provided.
+    if esxi_hosts:
+        if not isinstance(esxi_hosts, list):
+            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
 
-    if reset_service:
-        reset_ret = syslog_service_reload(host, username, password,
-                                          protocol=protocol, port=port,
-                                          esxi_host=esxi_host)
-        ret_dict['syslog_restart'] = reset_ret['retcode'] == 0
+        for esxi_host in esxi_hosts:
+            response = _set_syslog_config_helper(host, username, password, syslog_config,
+                                                 config_value, protocol=protocol, port=port,
+                                                 reset_service=reset_service, esxi_host=esxi_host)
+            # Ensure we don't overwrite any dictionary data already set
+            # By updating the esxi_host directly.
+            if ret.get(esxi_host) is None:
+                ret.update({esxi_host: {}})
+            ret[esxi_host].update(response)
 
-    return ret_dict
+    else:
+        # Handles a single host or a vCenter connection when no esxi_hosts are provided.
+        response = _set_syslog_config_helper(host, username, password, syslog_config,
+                                             config_value, protocol=protocol, port=port,
+                                             reset_service=reset_service)
+        # Ensure we don't overwrite any dictionary data already set
+        # By updating the host directly.
+        if ret.get(host) is None:
+            ret.update({host: {}})
+        ret[host].update(response)
+
+    return ret
 
 
-def get_syslog_config(host, username, password, protocol=None, port=None, esxi_host=None):
+def get_syslog_config(host, username, password, protocol=None, port=None, esxi_hosts=None):
     '''
     Retrieve the syslog configuration.
 
@@ -555,42 +657,54 @@ def get_syslog_config(host, username, password, protocol=None, port=None, esxi_h
         Optionally set to alternate port if the host is not using the default
         port. Default port is ``443``.
 
-    esxi_host
-        If `host` is a vCenter host, then esxi_host is the ESXi machine on
-        which to execute this command.
+    esxi_hosts
+        If ``host`` is a vCenter host, then use esxi_hosts to execute this function
+        on a list of one or more ESXi machines.
 
-    :return: Dictionary with a keys and values corresponding to the
-             syslog configuration
+    :return: Dictionary with keys and values corresponding to the
+             syslog configuration, per host.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt esxi_host vsphere.get_syslog_config 192.168.1.1 root secret
+        # Used for ESXi host connection information
+        salt '*' vsphere.get_syslog_config my.esxi.host root bad-password
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.get_syslog_config my.vcenter.location root bad-password \
+            esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
-    ret_dict = {}
     cmd = 'system syslog config get'
 
-    ret = salt.utils.vmware.esxcli(host, username, password, cmd,
-                                   protocol=protocol, port=port,
-                                   esxi_host=esxi_host)
+    ret = {}
+    if esxi_hosts:
+        if not isinstance(esxi_hosts, list):
+            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
 
-    ret_dict['success'] = ret['retcode'] == 0
-    if ret['retcode'] != 0:
-        ret_dict['message'] = ret['stdout']
+        for esxi_host in esxi_hosts:
+            response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                                protocol=protocol, port=port,
+                                                esxi_host=esxi_host)
+            # format the response stdout into something useful
+            ret.update({esxi_host: _format_syslog_config(response)})
     else:
-        for line in ret['stdout'].splitlines():
-            line = line.strip()
-            cfgvars = line.split(': ')
-            key = cfgvars[0].strip()
-            value = cfgvars[1].strip()
-            ret_dict[key] = value
+        # Handles a single host or a vCenter connection when no esxi_hosts are provided.
+        response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                            protocol=protocol, port=port)
+        # format the response stdout into something useful
+        ret.update({host: _format_syslog_config(response)})
 
-    return ret_dict
+    return ret
 
 
-def reset_syslog_config(host, username, password, protocol=None, port=None, syslog_config=None,
-                        esxi_host=None):
+def reset_syslog_config(host,
+                        username,
+                        password,
+                        protocol=None,
+                        port=None,
+                        syslog_config=None,
+                        esxi_hosts=None):
     '''
     Reset the syslog service to its default settings.
 
@@ -618,13 +732,13 @@ def reset_syslog_config(host, username, password, protocol=None, port=None, sysl
     syslog_config
         List of parameters to reset, or 'all' to reset everything.
 
-    esxi_host
-        If `host` is a vCenter host, then esxi_host is the ESXi machine on
-        which to execute this command.
+    esxi_hosts
+        If ``host`` is a vCenter host, then use esxi_hosts to execute this function
+        on a list of one or more ESXi machines.
 
     :return: Dictionary with a top-level key of 'success' which indicates
              if all the parameters were reset, and individual keys
-             for each parameter indicating which succeeded or failed.
+             for each parameter indicating which succeeded or failed, per host.
 
     CLI Example:
 
@@ -632,8 +746,13 @@ def reset_syslog_config(host, username, password, protocol=None, port=None, sysl
 
     .. code-block:: bash
 
-        salt esxi_host vsphere.reset_syslog_config 192.168.1.1 root \
-             secret syslog_config='logdir,loghost'
+        # Used for ESXi host connection information
+        salt '*' vsphere.reset_syslog_config my.esxi.host root bad-password \
+            syslog_config='logdir,loghost'
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.reset_syslog_config my.vcenter.location root bad-password \
+            syslog_config='logdir,loghost' esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
     valid_resets = ['logdir', 'loghost', 'default-rotate',
                     'default-size', 'default-timeout', 'logdir-unique']
@@ -645,28 +764,25 @@ def reset_syslog_config(host, username, password, protocol=None, port=None, sysl
     else:
         resets = [syslog_config]
 
-    ret_dict = {}
-    all_success = True
+    ret = {}
+    if esxi_hosts:
+        if not isinstance(esxi_hosts, list):
+            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
 
-    for reset_param in resets:
-        if reset_param in valid_resets:
-            ret = salt.utils.vmware.esxcli(host, username, password, cmd + reset_param,
-                                           protocol=protocol, port=port,
-                                           esxi_host=esxi_host)
-            ret_dict[reset_param] = {}
-            ret_dict[reset_param]['success'] = ret['retcode'] == 0
-            if ret['retcode'] != 0:
-                all_success = False
-                ret_dict[reset_param]['message'] = ret['stdout']
-        else:
-            all_success = False
-            ret_dict[reset_param] = {}
-            ret_dict[reset_param]['success'] = False
-            ret_dict[reset_param]['message'] = 'Invalid syslog ' \
-                                               'configuration parameter'
+        for esxi_host in esxi_hosts:
+            response_dict = _reset_syslog_config_params(host, username, password,
+                                                        cmd, resets, valid_resets,
+                                                        protocol=protocol, port=port,
+                                                        esxi_host=esxi_host)
+            ret.update({esxi_host: response_dict})
+    else:
+        # Handles a single host or a vCenter connection when no esxi_hosts are provided.
+        response_dict = _reset_syslog_config_params(host, username, password,
+                                                    cmd, resets, valid_resets,
+                                                    protocol=protocol, port=port)
+        ret.update({host: response_dict})
 
-    ret_dict['success'] = all_success
-    return ret_dict
+    return ret
 
 
 def upload_ssh_key(host, username, password, ssh_key=None, ssh_key_file=None,
@@ -2886,6 +3002,78 @@ def _check_hosts(service_instance, host, host_names):
     return host_names
 
 
+def _format_coredump_stdout(cmd_ret):
+    '''
+    Helper function to format the stdout from the get_coredump_network_config function.
+
+    cmd_ret
+        The return dictionary that comes from a cmd.run_all call.
+    '''
+    ret_dict = {}
+    for line in cmd_ret['stdout'].splitlines():
+        line = line.strip().lower()
+        if line.startswith('enabled:'):
+            enabled = line.split(':')
+            if 'true' in enabled[1]:
+                ret_dict['enabled'] = True
+            else:
+                ret_dict['enabled'] = False
+                break
+        if line.startswith('host vnic:'):
+            host_vnic = line.split(':')
+            ret_dict['host_vnic'] = host_vnic[1].strip()
+        if line.startswith('network server ip:'):
+            ip = line.split(':')
+            ret_dict['ip'] = ip[1].strip()
+        if line.startswith('network server port:'):
+            ip_port = line.split(':')
+            ret_dict['port'] = ip_port[1].strip()
+
+    return ret_dict
+
+
+def _format_firewall_stdout(cmd_ret):
+    '''
+    Helper function to format the stdout from the get_firewall_status function.
+
+    cmd_ret
+        The return dictionary that comes from a cmd.run_all call.
+    '''
+    ret_dict = {'success': True,
+                'rulesets': {}}
+    for line in cmd_ret['stdout'].splitlines():
+        if line.startswith('Name'):
+            continue
+        if line.startswith('---'):
+            continue
+        ruleset_status = line.split()
+        ret_dict['rulesets'][ruleset_status[0]] = bool(ruleset_status[1])
+
+    return ret_dict
+
+
+def _format_syslog_config(cmd_ret):
+    '''
+    Helper function to format the stdout from the get_syslog_config function.
+
+    cmd_ret
+        The return dictionary that comes from a cmd.run_all call.
+    '''
+    ret_dict = {'success': cmd_ret['retcode'] == 0}
+
+    if cmd_ret['retcode'] != 0:
+        ret_dict['message'] = cmd_ret['stdout']
+    else:
+        for line in cmd_ret['stdout'].splitlines():
+            line = line.strip()
+            cfgvars = line.split(': ')
+            key = cfgvars[0].strip()
+            value = cfgvars[1].strip()
+            ret_dict[key] = value
+
+    return ret_dict
+
+
 def _get_date_time_mgr(host_reference):
     '''
     Helper function that returns a dateTimeManager object
@@ -3012,3 +3200,73 @@ def _get_vsan_eligible_disks(service_instance, host, host_names):
         ret.update({host_name: {'Eligible': matching}})
 
     return ret
+
+
+def _reset_syslog_config_params(host, username, password, cmd, resets, valid_resets,
+                                protocol=None, port=None, esxi_host=None):
+    '''
+    Helper function for reset_syslog_config that resets the config and populates the return dictionary.
+    '''
+    ret_dict = {}
+    all_success = True
+
+    for reset_param in resets:
+        if reset_param in valid_resets:
+            ret = salt.utils.vmware.esxcli(host, username, password, cmd + reset_param,
+                                           protocol=protocol, port=port,
+                                           esxi_host=esxi_host)
+            ret_dict[reset_param] = {}
+            ret_dict[reset_param]['success'] = ret['retcode'] == 0
+            if ret['retcode'] != 0:
+                all_success = False
+                ret_dict[reset_param]['message'] = ret['stdout']
+        else:
+            all_success = False
+            ret_dict[reset_param] = {}
+            ret_dict[reset_param]['success'] = False
+            ret_dict[reset_param]['message'] = 'Invalid syslog ' \
+                                               'configuration parameter'
+
+    ret_dict['success'] = all_success
+
+    return ret_dict
+
+
+def _set_syslog_config_helper(host, username, password, syslog_config, config_value,
+                              protocol=None, port=None, reset_service=None, esxi_host=None):
+    '''
+    Helper function for set_syslog_config that sets the config and populates the return dictionary.
+    '''
+    cmd = 'system syslog config set --{0} {1}'.format(syslog_config, config_value)
+    ret_dict = {}
+
+    valid_resets = ['logdir', 'loghost', 'default-rotate',
+                    'default-size', 'default-timeout', 'logdir-unique']
+    if syslog_config not in valid_resets:
+        return ret_dict.update({'success': False,
+                                'message': '\'{0}\' is not a valid config variable.'.format(syslog_config)})
+
+    response = salt.utils.vmware.esxcli(host, username, password, cmd,
+                                        protocol=protocol, port=port,
+                                        esxi_host=esxi_host)
+
+    # Update the return dictionary for success or error messages.
+    if response['retcode'] != 0:
+        ret_dict.update({syslog_config: {'success': False,
+                                         'message': response['stdout']}})
+    else:
+        ret_dict.update({syslog_config: {'success': True}})
+
+    # Restart syslog for each host, if desired.
+    if reset_service:
+        if esxi_host:
+            host_name = esxi_host
+            esxi_host = [esxi_host]
+        else:
+            host_name = host
+        response = syslog_service_reload(host, username, password,
+                                         protocol=protocol, port=port,
+                                         esxi_hosts=esxi_host).get(host_name)
+        ret_dict[host_name].update({'syslog_restart': {'success': response['retcode'] == 0}})
+
+    return ret_dict
