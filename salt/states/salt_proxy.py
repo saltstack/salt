@@ -42,6 +42,16 @@ def configure_proxy(name, proxyname='p8000', start=True):
             Name to be used for this proxy (should match entries in pillar)
         start:
             Boolean indicating if the process should be started
+
+    Example:
+
+    ..code-block:: yaml
+
+        salt-proxy-configure:
+            salt_proxy.configure_proxy:
+                - proxyname: p8000
+                - start: True
+
     '''
     ret = __salt__['salt_proxy.configure_proxy'](proxyname,
                                                  start=start)
