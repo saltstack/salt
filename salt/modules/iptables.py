@@ -224,8 +224,11 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     if 'match-set' in kwargs:
         if not isinstance(kwargs['match-set'], list):
             kwargs['match-set'] = kwargs['match-set'].split(',')
-        for match_s in kwargs['match-set']:
-            rule += '-m set --match-set {0} '.format(match_s)
+        for match_set in kwargs['match-set']:
+            negative_match_set = ''
+            if match_set.startswith('!') or match_set.startswith('not'):
+                negative_match_set = '!'
+            rule += '-m set {0} --match-set {1} '.format(negative_match_set, match_set)
         del kwargs['match-set']
 
     if 'connstate' in kwargs:
