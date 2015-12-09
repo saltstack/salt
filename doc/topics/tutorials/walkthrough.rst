@@ -52,7 +52,7 @@ Turning on the Salt Master is easy -- just turn it on! The default configuration
 is suitable for the vast majority of installations. The Salt Master can be
 controlled by the local Linux/Unix service manager:
 
-On Systemd based platforms (OpenSuse, Fedora):
+On Systemd based platforms (newer Debian, OpenSuse, Fedora):
 
 .. code-block:: bash
 
@@ -64,7 +64,7 @@ On Upstart based systems (Ubuntu, older Fedora/RHEL):
 
     service salt-master start
 
-On SysV Init systems (Debian, Gentoo etc.):
+On SysV Init systems (Gentoo, older Debian etc.):
 
 .. code-block:: bash
 
