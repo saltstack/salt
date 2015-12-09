@@ -84,6 +84,7 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
+import salt.utils
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 # from salt.utils import exactly_one
 # TODO: Uncomment this and s/_exactly_one/exactly_one/
@@ -183,7 +184,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
 
 
 def _filedata(infile):
-    with open(infile, 'rb') as f:
+    with salt.utils.fopen(infile, 'rb') as f:
        return f.read()
 
 def create_function(FunctionName, Runtime, Role, Handler, ZipFile=None,
