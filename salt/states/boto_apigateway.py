@@ -187,6 +187,23 @@ class ixSwagger(object):
         return models.iteritems()
 
     @property
+    def paths(self):
+        paths = self._cfg.get('paths')
+        if not paths:
+            raise ValueError('Paths Object has no values, You need to define them in your swagger file')
+        for path in paths.keys():
+            if not path.startswith("/"):
+                raise ValueError('Path object {0} should start with /. Please fix it'.format(path))
+        return paths.iteritems()
+
+    @property
+    def basePath(self):
+        basePath = self._cfg.get('basePath')
+        if not basePath:
+            return ""
+        return basePath
+
+    @property
     def restApiId(self):
         return self._restApiId
 
@@ -268,6 +285,18 @@ class ixSwagger(object):
                     return ret
         return ret
 
+    def deploy_resources(self, ret, region=None, key=None, keyid=None, profile=None):
+        for path, pathData in self.paths:
+            resource = __salt__['boto_apigateway.create_api_resources'](restApiId=self.restApiId,
+                path=self.basePath+path, region=region, key=key, keyid=keyid, profile=profile)
+            if not resource.get('created'):
+                ret['result'] = False
+                ret['abort'] = True
+                if 'error' in resource:
+                    ret['comment'] = resource.get('error')
+                return ret 
+        return ret
+
 
 def __virtual__():
     '''
@@ -313,6 +342,10 @@ def present(name,
 
         # next, deploy models of to the AWS API
         ret = swagger.deploy_models(ret, region=region, key=key, keyid=keyid, profile=profile)
+        if ret.get('abort'):
+            return ret
+
+        ret = swagger.deploy_resources(ret, region=region, key=key, keyid=keyid, profile=profile)
         if ret.get('abort'):
             return ret
 
