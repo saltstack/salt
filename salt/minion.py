@@ -728,7 +728,8 @@ class Minion(MinionBase):
         # Please read PR #23978 before changing, hopefully avoiding regressions.
         # Good luck, we're all counting on you.  Thanks.
         future_exception = self._connect_master_future.exc_info()
-        if future_exception and future_exception[0] is not salt.exceptions.SaltClientError:
+        if future_exception:
+            # This needs to be re-raised to preserve restart_on_error behavior.
             raise six.reraise(*future_exception)
 
     @tornado.gen.coroutine
