@@ -611,6 +611,7 @@ class Single(object):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
         self.mine = mine
         self.mine_functions = kwargs.get('mine_functions')
+        self.cmd_umask = kwargs.get('cmd_umask', None)
 
         self.opts = opts
         self.tty = tty
@@ -909,7 +910,8 @@ OPTIONS.version = '{5}'
 OPTIONS.ext_mods = '{6}'
 OPTIONS.wipe = {7}
 OPTIONS.tty = {8}
-ARGS = {9}\n'''.format(self.minion_config,
+OPTIONS.cmd_umask = {9}
+ARGS = {10}\n'''.format(self.minion_config,
                          RSTR,
                          self.thin_dir,
                          thin_sum,
@@ -918,6 +920,7 @@ ARGS = {9}\n'''.format(self.minion_config,
                          self.mods.get('version', ''),
                          self.wipe,
                          self.tty,
+                         self.cmd_umask,
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
         py_code_enc = py_code.encode('base64')
