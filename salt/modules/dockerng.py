@@ -3430,7 +3430,10 @@ def build(path=None,
     errors = []
     # Iterate through API response and collect information
     for item in stream_data:
-        item_type = next(iter(item))
+        try:
+            item_type = next(iter(item))
+        except StopIteration:
+            continue
         if item_type == 'status':
             _pull_status(ret, item)
         if item_type == 'stream':
@@ -3649,7 +3652,10 @@ def import_(source,
     errors = []
     # Iterate through API response and collect information
     for item in response:
-        item_type = next(iter(item))
+        try:
+            item_type = next(iter(item))
+        except StopIteration:
+            continue
         if item_type == 'status':
             _import_status(ret, item, repo_name, repo_tag)
         elif item_type == 'errorDetail':
@@ -3859,7 +3865,10 @@ def pull(image,
     errors = []
     # Iterate through API response and collect information
     for item in response:
-        item_type = next(iter(item))
+        try:
+            item_type = next(iter(item))
+        except StopIteration:
+            continue
         if item_type == 'status':
             _pull_status(ret, item)
         elif item_type == 'errorDetail':
@@ -3948,7 +3957,10 @@ def push(image,
     errors = []
     # Iterate through API response and collect information
     for item in response:
-        item_type = next(iter(item))
+        try:
+            item_type = next(iter(item))
+        except StopIteration:
+            continue
         if item_type == 'status':
             _push_status(ret, item)
         elif item_type == 'errorDetail':
