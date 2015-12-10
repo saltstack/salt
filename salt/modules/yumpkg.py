@@ -378,12 +378,19 @@ def latest_version(*names, **kwargs):
                                   output_loglevel='trace',
                                   ignore_retcode=True,
                                   python_shell=False)
-    if out['retcode'] != 0 and 'Error:' in out:
+    if out['retcode'] != 0:
         if out['stderr']:
-            log.error(
-                'Problem encountered getting list of available updates. '
-                'Stderr follows: {0}'.format(out['stderr'])
-            )
+            # Check first if this is just a matter of the packages being
+            # up-to-date.
+            cur_pkgs = list_pkgs()
+            if not all([x in cur_pkgs for x in names]):
+                log.error(
+                    'Problem encountered getting latest version for the '
+                    'following package(s): {0}. Stderr follows: \n{1}'.format(
+                        ', '.join(names),
+                        out['stderr']
+                    )
+                )
         return []
     # Find end of first line so we can skip it
     header_end = out['stdout'].find('\n')
