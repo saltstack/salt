@@ -1696,7 +1696,10 @@ class Minion(MinionBase):
         ping_interval = self.opts.get('ping_interval', 0) * 60
         if ping_interval > 0:
             def ping_master():
-                self._fire_master('ping', 'minion_ping')
+                try:
+                    self._fire_master('ping', 'minion_ping')
+                except Exception:
+                    log.warning('Attempt to ping master failed.')
             self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
 
         self.periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
