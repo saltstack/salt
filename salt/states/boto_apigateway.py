@@ -215,6 +215,12 @@ class ixSwagger(object):
         self._restApiId = restApiId
 
     # methods to interact with boto_apigateway execution modules
+    def _log_changes(self, ret, changekey, changevalue):
+        cl = ret['changes'].get('new', [])
+        cl.append({changekey: changevalue})
+        ret['changes']['new'] = cl
+        return ret
+
     def deploy_api(self, ret, region=None, key=None, keyid=None, profile=None):
         # TODO: check to see if the service by this name and description exists, 
         # matches the content of swagger.info_json, may need more elaborate checks 
@@ -246,7 +252,9 @@ class ixSwagger(object):
 
         # store the rest api id
         self.restApiId = create_api_response.get('restapi', {}).get('id')
-        return ret
+
+        # log changes on AWS
+        return self._log_changes(ret, 'deploy_api', create_api_response.get('restapi'))
 
     def deploy_models(self, ret, region=None, key=None, keyid=None, profile=None):
         for model, schema  in self.models:
@@ -264,15 +272,17 @@ class ixSwagger(object):
             if model_exists_response.get('exists'):
                 # TODO: still needs to also update model description (if there is a field we will
                 # populate it with from swagger file)
-                model_update_schema_response = __salt__['boto_apigateway.update_api_model_schema'](restApiId=self.restApiId,
+                update_model_schema_response = __salt__['boto_apigateway.update_api_model_schema'](restApiId=self.restApiId,
                     modelName=model, schema=_schema, region=region, key=key, keyid=keyid, profile=profile)
-                if not model_update_schema_response.get('updated'):
+                if not update_model_schema_response.get('updated'):
                     ret['result'] = False
                     ret['abort'] = True
-                    if 'error' in model_update_schema_response:
+                    if 'error' in update_model_schema_response:
                         ret['comment'] = 'Failed to update existing model {0} with schema {1}, error: {2}'.format(model,
-                            _dict_to_json_pretty(schema), model_update_schema_response['error']['message'])
+                            _dict_to_json_pretty(schema), update_model_schema_response['error']['message'])
                     return ret
+
+                ret = self._log_changes(ret, 'deploy_models', update_model_schema_response)
             else:    
                 # call into boto_apigateway to create models
                 create_model_response = __salt__['boto_apigateway.create_api_model'](restApiId=self.restApiId, 
@@ -286,6 +296,9 @@ class ixSwagger(object):
                         ret['comment'] = 'Failed to create model {0}, schema {1}, error: {2}'.format(model, 
                                     _dict_to_json_pretty(schema), create_model_response['error']['message'])
                     return ret
+
+                ret = self._log_changes(ret, 'deploy_models', create_model_response)
+
         return ret
 
     def deploy_resources(self, ret, region=None, key=None, keyid=None, profile=None):
