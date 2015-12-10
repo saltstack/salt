@@ -86,6 +86,9 @@ class ixSwagger(object):
     SWAGGER_OBJECT_V2_FIELDS_REQUIRED = ['swagger', 'info', 'basePath', 'schemes', 'paths', 'definitions',
                                          'x-salt-boto-apigateway-version']
 
+    # SWAGGER OPERATION NAMES
+    SWAGGER_OPERATION_NAMES = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch']
+
     # the version we expect to handle for the values for x-salt-boto-apigateway-version
     SALT_BOTO_APIGATEWAY_VERSIONS_SUPPORTED = ['0.0']
     SWAGGER_VERSIONS_SUPPORTED = ['2.0']
@@ -294,7 +297,17 @@ class ixSwagger(object):
                 ret['abort'] = True
                 if 'error' in resource:
                     ret['comment'] = resource.get('error')
-                return ret 
+                return ret
+            for method, methodData in pathData.iteritems():
+                if method in self.SWAGGER_OPERATION_NAMES:
+                    m = __salt__['boto_apigateway.create_api_method'](self.restApiId, self.basePath+path,
+                        method.upper(), "NONE", region=region, key=key, keyid=keyid, profile=profile)
+                    if not m.get('created'):
+                        ret['result'] = False
+                        ret['abort'] = True
+                        if 'error' in m:
+                            ret['comment'] = m.get('error')
+                        return ret
         return ret
 
 
