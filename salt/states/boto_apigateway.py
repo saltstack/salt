@@ -253,6 +253,25 @@ class ixSwagger(object):
         # log changes on AWS
         return self._log_changes(ret, 'deploy_api', create_api_response.get('restapi'))
 
+    def remove_api(self, ret, region=None, key=None, keyid=None, profile=None):
+        exists_response = __salt__['boto_apigateway.api_exists'](name=self.rest_api_name, description=self.info_json,
+                                                                 region=region, key=key, keyid=keyid, profile=profile)
+        if exists_response.get('exists'):
+            delete_api_response = __salt__['boto_apigateway.delete_api'](name=self.rest_api_name, description=self.info_json,
+                                                                         region=region, key=key, keyid=keyid, profile=profile)
+            if not delete_api_response.get('deleted'):
+                ret['result'] = False
+                ret['abort'] = True
+                if 'error' in delete_api_response:
+                    ret['comment'] = 'Failed to delete rest api: {0}.'.format(delete_api_response['error']['message'])
+                return ret
+                
+            ret = self._log_changes(ret, 'remove_api', delete_api_response)
+        else:
+            ret['comment'] = 'swagger file: {0}, desc: {1}, api already absent'.format(self.rest_api_name, self.info_json)
+
+        return ret           
+
     def deploy_models(self, ret, region=None, key=None, keyid=None, profile=None):
         for model, schema  in self.models:
             # add in a few attributes into the model schema that AWS expects
@@ -519,11 +538,16 @@ def absent(name, region=None, key=None, keyid=None, profile=None):
 
     try:
         swagger = ixSwagger(name)
+
+        ret = swagger.remove_api(ret, region=region, key=key, keyid=keyid, profile=profile)
+
     except Exception as e:
         ret['result'] = False
         ret['comment'] = e.message
 
     return ret
+
+
 
     '''
     r = __salt__['boto_lambda.exists'](name, region=region,
