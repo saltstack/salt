@@ -104,6 +104,8 @@ class ixSwagger(object):
             self._cfg = anyconfig.load(self._swagger_file)
             self._swagger_version = ''
             self._salt_boto_apigateway_version = ''
+            # values from AWS APIGateway
+            self._restApiId = ''
         else:
             raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
 
@@ -184,7 +186,87 @@ class ixSwagger(object):
             raise ValueError('Definitions Object has no values, You need to define them in your swagger file')
         return models.iteritems()
 
+    @property
+    def restApiId(self):
+        return self._restApiId
 
+    @restApiId.setter
+    def restApiId(self, restApiId):
+        self._restApiId = restApiId
+
+    # methods to interact with boto_apigateway execution modules
+    def deploy_api(self, ret, region=None, key=None, keyid=None, profile=None):
+        # TODO: check to see if the service by this name and description exists, 
+        # matches the content of swagger.info_json, may need more elaborate checks 
+        # on the content of the json in description field of AWS ApiGateway Rest API Object.
+        # 
+        exists_response = __salt__['boto_apigateway.api_exists'](name=self.rest_api_name, description=self.info_json,
+                                                                 region=region, key=key, keyid=keyid, profile=profile)
+        if exists_response.get('exists'):
+            ret['comment'] = 'rest api already exists'
+            ret['abort'] = True
+            return ret
+
+        if __opts__['test']:
+            ret['comment'] = 'Swagger API Spec {0} is set to be created.'.format(name)
+            ret['result'] = None
+            ret['abort'] = True
+            return ret
+
+        # call into boto_apigateway to create api, and
+        create_api_response = __salt__['boto_apigateway.create_api'](name=self.rest_api_name, description=self.info_json,
+                                                                     region=region, key=key, keyid=keyid, profile=profile)
+
+        if not create_api_response.get('created'):
+            ret['result'] = False
+            ret['abort'] = True
+            if 'error' in create_api_response:
+                ret['comment'] = 'Failed to create rest api: {0}.'.format(create_api_response['error']['message'])
+            return ret
+
+        # store the rest api id
+        self.restApiId = create_api_response.get('restapi', {}).get('id')
+        return ret
+
+    def deploy_models(self, ret, region=None, key=None, keyid=None, profile=None):
+        for model, schema  in self.models:
+            # add in a few attributes into the model schema that AWS expects
+            _schema = schema.copy()
+            _schema.update({'$schema': ixSwagger.JSON_SCHEMA_DRAFT_4,
+                            'title': '{0} Schema'.format(model), 
+                            'type': 'object'})
+
+            # check to see if model already exists, aws has 2 default models [Empty, Error] 
+            # which may need upate with data from swagger file
+            model_exists_response = __salt__['boto_apigateway.api_model_exists'](restApiId=self.restApiId,
+                modelName=model, region=region, key=key, keyid=keyid, profile=profile)
+
+            if model_exists_response.get('exists'):
+                # TODO: still needs to also update model description (if there is a field we will
+                # populate it with from swagger file)
+                model_update_schema_response = __salt__['boto_apigateway.update_api_model_schema'](restApiId=self.restApiId,
+                    modelName=model, schema=_schema, region=region, key=key, keyid=keyid, profile=profile)
+                if not model_update_schema_response.get('updated'):
+                    ret['result'] = False
+                    ret['abort'] = True
+                    if 'error' in model_update_schema_response:
+                        ret['comment'] = 'Failed to update existing model {0} with schema {1}, error: {2}'.format(model,
+                            _dict_to_json_pretty(schema), model_update_schema_response['error']['message'])
+                    return ret
+            else:    
+                # call into boto_apigateway to create models
+                create_model_response = __salt__['boto_apigateway.create_api_model'](restApiId=self.restApiId, 
+                    modelName=model, modelDescription="test123", schema=_schema, 
+                    contentType="application/json", region=region, key=key, keyid=keyid, profile=profile)
+
+                if not create_model_response.get('created'):
+                    ret['result'] = False
+                    ret['abort'] = True
+                    if 'error' in create_model_response:
+                        ret['comment'] = 'Failed to create model {0}, schema {1}, error: {2}'.format(model, 
+                                    _dict_to_json_pretty(schema), create_model_response['error']['message'])
+                    return ret
+        return ret
 
 
 def __virtual__():
@@ -224,77 +306,15 @@ def present(name,
         # try to open the swagger file and basic validation
         swagger = ixSwagger(name)
 
-        # get rest api service name
-        rest_api_name = swagger.rest_api_name
-
-        # TODO: check to see if the service by this name and description exists, 
-        # matches the content of swagger.info_json
-        # may need more elaborate checks on the content of the json in description field of 
-        # AWS ApiGateway Rest API Object.
-        # 
-        exists_response = __salt__['boto_apigateway.api_exists'](name=rest_api_name, description=swagger.info_json,
-                                                                 region=region, key=key, keyid=keyid, profile=profile)
-        if exists_response.get('exists'):
-            ret['comment'] = 'rest api already exists'
+        # first deploy a Rest Api on AWS
+        ret = swagger.deploy_api(ret, region=region, key=key, keyid=keyid, profile=profile)
+        if ret.get('abort'):
             return ret
 
-        if __opts__['test']:
-            ret['comment'] = 'Swagger API Spec {0} is set to be created.'.format(name)
-            ret['result'] = None
+        # next, deploy models of to the AWS API
+        ret = swagger.deploy_models(ret, region=region, key=key, keyid=keyid, profile=profile)
+        if ret.get('abort'):
             return ret
-
-        # call into boto_apigateway to create api, and
-        # TODO: remove default models (default Error model will cause problems later vs. swagger
-        # definition with the same model name)
-        create_api_response = __salt__['boto_apigateway.create_api'](name=rest_api_name, description=swagger.info_json,
-                                                                     region=region, key=key, keyid=keyid, profile=profile)
-
-        if not create_api_response.get('created'):
-            ret['result'] = False
-            if 'error' in create_api_response:
-                ret['comment'] = 'Failed to create rest api: {0}.'.format(create_api_response['error']['message'])
-            return ret
-
-        # store the rest api id
-        restApiId = create_api_response.get('restapi', {}).get('id')
-
-        # create models
-        for model, schema  in swagger.models:
-            # add in a few attributes into the model schema that AWS expects
-            _schema = schema.copy()
-            _schema.update({'$schema': ixSwagger.JSON_SCHEMA_DRAFT_4,
-                            'title': '{0} Schema'.format(model), 
-                            'type': 'object'})
-
-            # check to see if model already exists (e.g. amazon automatically
-            # create Empty and Error models when creating a REST API)
-            model_exists_response = __salt__['boto_apigateway.api_model_exists'](restApiId=restApiId,
-                modelName=model, region=region, key=key, keyid=keyid, profile=profile)
-
-            if model_exists_response.get('exists'):
-                # TODO: still needs to also update model description (if there is a field we will
-                # populate it with from swagger file)
-                model_update_schema_response = __salt__['boto_apigateway.update_api_model_schema'](restApiId=restApiId,
-                    modelName=model, schema=_schema, region=region, key=key, keyid=keyid, profile=profile)
-                if not model_update_schema_response.get('updated'):
-                    ret['result'] = False
-                    if 'error' in model_update_schema_response:
-                        ret['comment'] = 'Failed to update existing model {0} with schema {1}, error: {2}'.format(model,
-                            _dict_to_json_pretty(schema), model_update_schema_response['error']['message'])
-                    return ret
-            else:    
-                # call into boto_apigateway to create models
-                create_model_response = __salt__['boto_apigateway.create_api_model'](restApiId=restApiId, 
-                    modelName=model, modelDescription="test123", schema=_schema, 
-                    contentType="application/json", region=region, key=key, keyid=keyid, profile=profile)
-
-                # TODO check create model response
-                if not create_model_response.get('created'):
-                    ret['result'] = False
-                    if 'error' in create_model_response:
-                        ret['comment'] = 'Failed to create model {0}, schema {1}, error: {2}'.format(model, 
-                                    _dict_to_json_pretty(schema), create_model_response['error']['message'])
-                    return ret
 
     except Exception as e:
         ret['result'] = False
