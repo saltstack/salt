@@ -11,6 +11,7 @@ A simple example to execute a command:
 
 .. code-block:: yaml
 
+    # Store the current date in a file
     date > /tmp/salt-run:
       cmd.run
 
@@ -105,13 +106,13 @@ a simple protocol described below:
            - stateful: True
 
        Run only if myscript changed something:
-         cmd.wait:
+         cmd.run:
            - name: echo hello
            - cwd: /
-           - watch:
+           - onchanges:
                - cmd: Run myscript
 
-   Note that if the ``cmd.wait`` state also specifies ``stateful: True`` it can
+   Note that if the second ``cmd.run`` state also specifies ``stateful: True`` it can
    then be watched by some other states as well.
 
 4. :strong:`The stateful argument can optionally include a test_name parameter.`
@@ -139,26 +140,14 @@ a simple protocol described below:
            - stateful:
              - test_name: masterscript test
 
-``cmd.wait`` is not restricted to watching only cmd states. For example
-it can also watch a git state for changes
-
-.. code-block:: yaml
-
-    # Watch for changes to a git repo and rebuild the project on updates
-    my-project:
-      git.latest:
-        - name: git@github.com/repo/foo
-        - target: /opt/foo
-        - rev: master
-      cmd.wait:
-        - name: make install
-        - cwd: /opt/foo
-        - watch:
-          - git: my-project
-
 
 Should I use :mod:`cmd.run <salt.states.cmd.run>` or :mod:`cmd.wait <salt.states.cmd.wait>`?
 --------------------------------------------------------------------------------------------
+
+.. note::
+
+    Use ``cmd.run`` together with :mod:`onchanges </ref/states/requisites#onchanges>`
+    instead of ``cmd.wait``.
 
 These two states are often confused. The important thing to remember about them
 is that :mod:`cmd.run <salt.states.cmd.run>` states are run each time the SLS
@@ -173,6 +162,27 @@ executed when the state it is watching changes. Example:
     /usr/local/bin/postinstall.sh:
       cmd.wait:
         - watch:
+          - pkg: mycustompkg
+      file.managed:
+        - source: salt://utils/scripts/postinstall.sh
+
+    mycustompkg:
+      pkg.installed:
+        - require:
+          - file: /usr/local/bin/postinstall.sh
+
+``cmd.wait`` itself does not do anything; all functionality is inside its ``mod_watch``
+function, which is called by ``watch`` on changes.
+
+``cmd.wait`` will be deprecated in future due to the confusion it causes. The
+preferred format is using the :doc:`onchanges Requisite </ref/states/requisites>`, which
+works on ``cmd.run`` as well as on any other state. The example would then look as follows:
+
+.. code-block:: yaml
+
+    /usr/local/bin/postinstall.sh:
+      cmd.run:
+        - onchanges:
           - pkg: mycustompkg
       file.managed:
         - source: salt://utils/scripts/postinstall.sh
@@ -396,7 +406,11 @@ def wait(name,
          use_vt=False,
          **kwargs):
     '''
-    Run the given command only if the watch statement calls it
+    Run the given command only if the watch statement calls it.
+
+    .. note::
+
+        Use :mod:`cmd.run <salt.states.cmd.run>` with :mod:`onchange </ref/states/requisites#onchanges>` instead.
 
     name
         The command to execute, remember that the command will execute with the
