@@ -34,7 +34,7 @@ def __virtual__():
     '''
     if salt.utils.which('mock'):
         return __virtualname__
-    return False
+    return (False, 'The rpmbuild execution module failed to load: the mock package is not installed.')
 
 
 def _create_rpmmacros():

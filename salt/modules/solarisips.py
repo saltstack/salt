@@ -49,7 +49,7 @@ def __virtual__():
     '''
     if __grains__['os'] == 'Solaris' and float(__grains__['kernelrelease']) > 5.10:
         return __virtualname__
-    return False
+    return (False, 'The solarisips execution module failed to load: only available on Solaris >= 11.')
 
 
 ips_pkg_return_values = {
