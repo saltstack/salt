@@ -31,7 +31,6 @@ def __virtual__():
     )
 
 
-
 def init(**kwargs):
     '''
     Initialize a new VM
