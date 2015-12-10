@@ -42,7 +42,7 @@ def __virtual__():
             if not __salt__['kmod.is_loaded']('vboxdrv'):
                 __salt__['kmod.load']('vboxdrv')
         return True
-    return False
+    return (False, 'The vboxmanaged execution module failed to load: VBoxManage is not installed.')
 
 
 def vboxcmd():
