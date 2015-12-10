@@ -18,7 +18,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if not salt.utils.which('showmount'):
-        return False
+        return (False, 'The nfs3 execution module failed to load: the showmount binary is not in the path.')
     return True
 
 

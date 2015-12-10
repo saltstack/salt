@@ -22,7 +22,7 @@ def __virtual__():
     '''
     if salt.utils.which('qemu-img'):
         return 'qemu_img'
-    return False
+    return (False, 'The qemu_img execution module cannot be loaded: the qemu-img binary is not in the path.')
 
 
 def make_image(location, size, fmt):

@@ -70,7 +70,8 @@ def __virtual__():
     '''
     if all((salt.utils.which('psql'), HAS_CSV)):
         return True
-    return False
+    return (False, 'The postgres execution module failed to load: '
+        'either the psql binary is not in the path or the csv library is not available')
 
 
 def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
