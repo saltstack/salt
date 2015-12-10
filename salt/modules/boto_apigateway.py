@@ -267,9 +267,9 @@ def create_api(name, description, cloneFrom=None,
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 
-def delete_api(name, region=None, key=None, keyid=None, profile=None):
+def delete_api(name, description=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Delete all REST API Service with the given name
+    Delete all REST API Service with the given name and an optional API description
 
     Returns {deleted: True, count: deleted_count} if apis were deleted, and
     returns {deleted: False} if error or not found.
@@ -280,9 +280,12 @@ def delete_api(name, region=None, key=None, keyid=None, profile=None):
 
         salt myminion boto_apigateway.delete_api myapi_name
 
+        salt myminion boto_apigateway.delete_api myapi_name description="api description"
+
     '''
     try:
-        r = _get_apis_by_name(name, region=region, key=key, keyid=keyid, profile=profile)
+        r = _get_apis_by_name(name, description=description,
+                              region=region, key=key, keyid=keyid, profile=profile)
         apis = r.get('restapi')
         if (apis):
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
