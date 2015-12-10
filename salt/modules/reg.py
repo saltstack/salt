@@ -103,7 +103,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_WINDOWS_MODULES:
         return __virtualname__
-    return False
+    return (False, 'reg execution module failed to load: either the system is not Windows or the _winreg python library not available.')
 
 
 def _key_exists(hive, key, use_32bit_registry=False):
