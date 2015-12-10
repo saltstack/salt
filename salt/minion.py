@@ -920,6 +920,8 @@ class Minion(MinionBase):
         try:
             result = channel.send(load, timeout=timeout)
             return True
+        except salt.exceptions.SaltReqTimeoutError:
+            log.info('fire_master failed: master could not be contacted. Request timed out.')
         except Exception:
             log.info('fire_master failed: {0}'.format(traceback.format_exc()))
             return False
@@ -1716,7 +1718,10 @@ class Minion(MinionBase):
         self.pub_channel.on_recv(self._handle_payload)
 
         if start:
-            self.io_loop.start()
+            try:
+                self.io_loop.start()
+            except KeyboardInterrupt:
+                self.destroy()
 
     def _handle_payload(self, payload):
         if payload is not None and self._target_load(payload['load']):
