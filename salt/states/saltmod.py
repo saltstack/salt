@@ -254,7 +254,7 @@ def state(
         if not m_state:
             if minion not in fail_minions:
                 fail.add(minion)
-            failures[minion] = m_ret and m_ret or 'Minion did not respond'
+            failures[minion] = m_ret or 'Minion did not respond'
             continue
         for state_item in six.itervalues(m_ret):
             if state_item['changes']:
