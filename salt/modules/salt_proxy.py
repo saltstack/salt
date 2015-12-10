@@ -9,11 +9,12 @@
 '''
 from __future__ import absolute_import
 
-from salt.ext.six.moves import shlex_quote as quote
-from salt.utils import fopen
+import salt.ext.six.moves
 
 import os
 import logging
+
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ def _write_proxy_conf(proxyfile):
 
     if proxyfile:
         log.debug('Writing proxy conf file')
-        with fopen(proxyfile, 'w') as proxy_conf:
+        with salt.utils.fopen(proxyfile, 'w') as proxy_conf:
             proxy_conf.write('master = {0}'
                              .format(__grains__['master']))
         msg = 'Wrote proxy file {0}'.format(proxyfile)
@@ -72,7 +73,7 @@ def _is_proxy_running(proxyname):
     Check if proxy for this name is running
     '''
     cmd = ('ps ax | grep "salt-proxy --proxyid={0}" | grep -v grep'
-           .format(quote(proxyname)))
+           .format(salt.ext.six.moves.shlex_quote(proxyname)))
     cmdout = __salt__['cmd.run_all'](
         cmd,
         timeout=5,
@@ -92,7 +93,7 @@ def _proxy_process(proxyname, test):
     if not _is_proxy_running(proxyname):
         if not test:
             __salt__['cmd.run_all'](
-                'salt-proxy --proxyid={0} -l info -d'.format(quote(proxyname)),
+                'salt-proxy --proxyid={0} -l info -d'.format(salt.ext.six.moves.shlex_quote(proxyname)),
                 timeout=5)
             changes_new.append('Salt Proxy: Started proxy process for {0}'
                                .format(proxyname))
