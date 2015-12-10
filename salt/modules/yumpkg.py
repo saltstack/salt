@@ -379,6 +379,11 @@ def latest_version(*names, **kwargs):
                                   ignore_retcode=True,
                                   python_shell=False)
     if out['retcode'] != 0 and 'Error:' in out:
+        if out['stderr']:
+            log.error(
+                'Problem encountered getting list of available updates. '
+                'Stderr follows: {0}'.format(out['stderr'])
+            )
         return []
     # Find end of first line so we can skip it
     header_end = out['stdout'].find('\n')
