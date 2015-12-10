@@ -5,7 +5,7 @@ Manage VMware ESXi Hosts.
 .. versionadded:: 2015.8.4
 
 Dependencies
-~~~~~~~~~~~~
+------------
 
 - pyVmomi Python Module
 - ESXCLI
@@ -24,6 +24,17 @@ Dependencies
     Please see the `vSphere Comparison`_ page for more information.
 
 .. _vSphere Comparison: https://www.vmware.com/products/vsphere/compare
+
+About
+-----
+
+This state module was written to be used in conjunction with Salt's
+:mod:`ESXi Proxy Minion <salt.proxy.esxi>`. For a tutorial on how to use Salt's
+ESXi Proxy Minion, please refer to the
+:doc:`ESXi Proxy Minion Tutorial </topics/tutorials/esxi_proxy_minion>` for
+configuration examples, dependency installation instructions, how to run remote
+execution functions against ESXi hosts via a Salt Proxy Minion, and a larger state
+example.
 
 '''
 # Import Python Libs
@@ -80,7 +91,7 @@ def coredump_configured(name, enabled, dump_ip, host_vnic='vmk0', dump_port=6500
         configure-host-coredump:
           esxi.coredump_configured:
             - enabled: True
-            - dump_ip: 'my-coredump-ip.example.com`
+            - dump_ip: 'my-coredump-ip.example.com'
 
     '''
     ret = {'name': name,

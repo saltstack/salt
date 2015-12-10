@@ -5,7 +5,7 @@ Manage VMware vCenter servers and ESXi hosts.
 .. versionadded:: 2015.8.4
 
 Dependencies
-~~~~~~~~~~~~
+------------
 
 - pyVmomi Python Module
 - ESXCLI
@@ -25,6 +25,83 @@ Dependencies
 
 .. _vSphere Comparison: https://www.vmware.com/products/vsphere/compare
 
+
+About
+-----
+
+This execution module was designed to be able to handle connections both to a
+vCenter Server, as well as to an ESXi host. It utilizes the pyVmomi Python
+library and the ESXCLI package to run remote execution functions against either
+the defined vCenter server or the ESXi host.
+
+Whether or not the function runs against a vCenter Server or an ESXi host depends
+entirely upon the arguments passed into the function. Each function requires a
+``host`` location, ``username``, and ``password``. If the credentials provided
+apply to a vCenter Server, then the function will be run against the vCenter
+Server. For example, when listing hosts using vCenter credentials, you'll get a
+list of hosts associated with that vCenter Server:
+
+.. code-block:: bash
+
+    # salt my-minion vsphere.list_hosts <vcenter-ip> <vcenter-user> <vcenter-password>
+    my-minion:
+    - esxi-1.example.com
+    - esxi-2.example.com
+
+However, some functions should be used against ESXi hosts, not vCenter Servers.
+Functionality such as getting a host's coredump network configuration should be
+performed against a host and not a vCenter server. If the authentication information
+you're using is against a vCenter server and not an ESXi host, you can provide the
+host name that is associated with the vCenter server in the command, as a list, using
+the ``host_names`` or ``esxi_host`` kwarg. For example:
+
+.. code-block:: bash
+
+    # salt my-minion vsphere.get_coredump_network_config <vcenter-ip> <vcenter-user> \
+        <vcenter-password> esxi_hosts='[esxi-1.example.com, esxi-2.example.com]'
+    my-minion:
+    ----------
+        esxi-1.example.com:
+            ----------
+            Coredump Config:
+                ----------
+                enabled:
+                    False
+        esxi-2.example.com:
+            ----------
+            Coredump Config:
+                ----------
+                enabled:
+                    True
+                host_vnic:
+                    vmk0
+                ip:
+                    coredump-location.example.com
+                port:
+                    6500
+
+You can also use these functions against an ESXi host directly by establishing a
+connection to an ESXi host using the host's location, username, and password. If ESXi
+connection credentials are used instead of vCenter credentials, the ``host_names`` and
+``esxi_hosts`` arguments are not needed.
+
+.. code-block:: bash
+
+    # salt my-minion vsphere.get_coredump_network_config esxi-1.example.com root <host-password>
+    local:
+    ----------
+        10.4.28.150:
+            ----------
+            Coredump Config:
+                ----------
+                enabled:
+                    True
+                host_vnic:
+                    vmk0
+                ip:
+                    coredump-location.example.com
+                port:
+                    6500
 '''
 
 # Import Python Libs
