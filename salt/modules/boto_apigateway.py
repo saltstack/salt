@@ -961,7 +961,7 @@ def get_api_method_response(apiId, resourcePath, httpMethod, statusCode, region=
 
 # API Model
 
-def get_api_models(apiId, region=None, key=None, keyid=None, profile=None):
+def get_api_models(restApiId, region=None, key=None, keyid=None, profile=None):
     '''
     Get all models for a given API 
 
@@ -974,13 +974,13 @@ def get_api_models(apiId, region=None, key=None, keyid=None, profile=None):
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        models = _multi_call(conn.get_models, 'items', restApiId=apiId)
+        models = _multi_call(conn.get_models, 'items', restApiId=restApiId)
         return {'models': map(_convert_datetime_str, models)}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
 
-def get_api_model(apiId, modelName, flatten = True, region=None, key=None, keyid=None, profile=None):
+def get_api_model(restApiId, modelName, flatten = True, region=None, key=None, keyid=None, profile=None):
     '''
     Get a model by name for a given API
 
@@ -993,12 +993,53 @@ def get_api_model(apiId, modelName, flatten = True, region=None, key=None, keyid
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        model = conn.get_model(restApiId=apiId, modelName=modelName, flatten=flatten)
+        model = conn.get_model(restApiId=restApiId, modelName=modelName, flatten=flatten)
         return {'model': _convert_datetime_str(model)}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
-def delete_api_model(apiId, modelName, region=None, key=None, keyid=None, profile=None):
+def api_model_exists(restApiId, modelName, region=None, key=None, keyid=None, profile=None):
+    '''
+    Check to see if the given modelName exists in the given apiId
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.api_model_exists apiId modelName
+    '''
+    r = get_api_model(restApiId, modelName, region=region, key=key, keyid=keyid, profile=profile)
+
+    return {'exists': bool(r.get('model'))}
+
+def _api_model_patch_replace(conn, restApiId, modelName, path, value):
+    '''
+    the replace patch operation on a Model resource
+    '''
+    response = conn.update_model(restApiId=restApiId, modelName=modelName, 
+                                 patchOperations=[{'op': 'replace', 'path': path, 'value': value}])
+    return response
+
+def update_api_model_schema(restApiId, modelName, schema, region=None, key=None, keyid=None, profile=None):
+    '''
+    update the schema (in python dictionary format) for the given model in the given restApiId
+
+    CLI Example:
+
+    .. code_block:: bash
+
+        salt myminion boto_apigateway.update_api_model_schema restApiId modelName schema
+
+    '''
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        response = _api_model_patch_replace(conn, restApiId, modelName,'/schema', json.dumps(schema))
+        return {'updated': True, 'model': _convert_datetime_str(response)}
+    except ClientError as e:
+        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def delete_api_model(restApiId, modelName, region=None, key=None, keyid=None, profile=None):
     '''
     Delete a model identified by name in a given API
 
@@ -1011,12 +1052,12 @@ def delete_api_model(apiId, modelName, region=None, key=None, keyid=None, profil
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        conn.delete_model(restApiId=apiId, modelName=modelName)
+        conn.delete_model(restApiId=restApiId, modelName=modelName)
         return {'deleted': True}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)} 
 
-def create_api_model(apiId, modelName, modelDescription, schema, contentType="application/json", region=None, key=None, keyid=None, profile=None):
+def create_api_model(restApiId, modelName, modelDescription, schema, contentType="application/json", region=None, key=None, keyid=None, profile=None):
     '''
     Create a new model in a given API with a given schema
 
@@ -1028,9 +1069,8 @@ def create_api_model(apiId, modelName, modelDescription, schema, contentType="ap
 
     '''
     try:
-        log.info(json.dumps(schema));
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        model = conn.create_model(restApiId=apiId, name=modelName, description=modelDescription, schema=json.dumps(schema), contentType=contentType)
+        model = conn.create_model(restApiId=restApiId, name=modelName, description=modelDescription, schema=json.dumps(schema), contentType=contentType)
         return {'created': True, 'model': _convert_datetime_str(model)}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}

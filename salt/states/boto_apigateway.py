@@ -94,6 +94,9 @@ class ixSwagger(object):
     VENDOR_EXT_PATTERN = re.compile('^x-')
     SALT_BOTO_APIGATEWAY_EXT_PATTERN = re.compile('^x-salt-boto-apigateway-')
 
+    # JSON_SCHEMA_REF
+    JSON_SCHEMA_DRAFT_4 = 'http://json-schema.org/draft-04/schema#'
+
     def __init__(self, swagger_file_path):
         if os.path.exists(swagger_file_path) and os.path.isfile(swagger_file_path):
             self._swagger_file = swagger_file_path
@@ -174,6 +177,14 @@ class ixSwagger(object):
 
         return version
 
+    @property
+    def models(self):
+        models = self._cfg.get('definitions')
+        if not models:
+            raise ValueError('Definitions Object has no values, You need to define them in your swagger file')
+        return models.iteritems()
+
+
 
 
 def __virtual__():
@@ -227,16 +238,63 @@ def present(name,
             ret['comment'] = 'rest api already exists'
             return ret
 
-        # call into boto_apigateway to create api
-        r = __salt__['boto_apigateway.create_api'](name=rest_api_name, description=swagger.info_json,
-                                                   region=region, key=key, keyid=keyid, profile=profile)
-
-        if 'error' in r:
-            ret['result'] = False
-            ret['comment'] = 'Failed to create rest api: {0}.'.format(r['error']['message'])
+        if __opts__['test']:
+            ret['comment'] = 'Swagger API Spec {0} is set to be created.'.format(name)
+            ret['result'] = None
             return ret
 
-        ret['comment'] = r['restapi']
+        # call into boto_apigateway to create api, and
+        # TODO: remove default models (default Error model will cause problems later vs. swagger
+        # definition with the same model name)
+        create_api_response = __salt__['boto_apigateway.create_api'](name=rest_api_name, description=swagger.info_json,
+                                                                     region=region, key=key, keyid=keyid, profile=profile)
+
+        if not create_api_response.get('created'):
+            ret['result'] = False
+            if 'error' in create_api_response:
+                ret['comment'] = 'Failed to create rest api: {0}.'.format(create_api_response['error']['message'])
+            return ret
+
+        # store the rest api id
+        restApiId = create_api_response.get('restapi', {}).get('id')
+
+        # create models
+        for model, schema  in swagger.models:
+            # add in a few attributes into the model schema that AWS expects
+            _schema = schema.copy()
+            _schema.update({'$schema': ixSwagger.JSON_SCHEMA_DRAFT_4,
+                            'title': '{0} Schema'.format(model), 
+                            'type': 'object'})
+
+            # check to see if model already exists (e.g. amazon automatically
+            # create Empty and Error models when creating a REST API)
+            model_exists_response = __salt__['boto_apigateway.api_model_exists'](restApiId=restApiId,
+                modelName=model, region=region, key=key, keyid=keyid, profile=profile)
+
+            if model_exists_response.get('exists'):
+                # TODO: still needs to also update model description (if there is a field we will
+                # populate it with from swagger file)
+                model_update_schema_response = __salt__['boto_apigateway.update_api_model_schema'](restApiId=restApiId,
+                    modelName=model, schema=_schema, region=region, key=key, keyid=keyid, profile=profile)
+                if not model_update_schema_response.get('updated'):
+                    ret['result'] = False
+                    if 'error' in model_update_schema_response:
+                        ret['comment'] = 'Failed to update existing model {0} with schema {1}, error: {2}'.format(model,
+                            _dict_to_json_pretty(schema), model_update_schema_response['error']['message'])
+                    return ret
+            else:    
+                # call into boto_apigateway to create models
+                create_model_response = __salt__['boto_apigateway.create_api_model'](restApiId=restApiId, 
+                    modelName=model, modelDescription="test123", schema=_schema, 
+                    contentType="application/json", region=region, key=key, keyid=keyid, profile=profile)
+
+                # TODO check create model response
+                if not create_model_response.get('created'):
+                    ret['result'] = False
+                    if 'error' in create_model_response:
+                        ret['comment'] = 'Failed to create model {0}, schema {1}, error: {2}'.format(model, 
+                                    _dict_to_json_pretty(schema), create_model_response['error']['message'])
+                    return ret
 
     except Exception as e:
         ret['result'] = False
