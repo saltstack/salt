@@ -1,6 +1,6 @@
-==============
+=========
 Tutorials
-==============
+=========
 
 Introduction
 ============
@@ -34,7 +34,7 @@ States
     syslog_ng-state-usage
 
 Advanced Topics
-================
+===============
 .. toctree::
     :maxdepth: 2
 
@@ -54,7 +54,7 @@ Advanced Topics
     stormpath
 
 Salt Virt
-==========
+=========
 .. toctree::
     :maxdepth: 2
 
@@ -66,6 +66,13 @@ LXC
     :maxdepth: 2
 
     lxc
+
+ESXi Proxy Minion
+=================
+.. toctree::
+    :maxdepth: 2
+
+    esxi_proxy_minion
 
 Using Salt at scale
 ===================
