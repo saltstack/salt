@@ -118,7 +118,7 @@ from salt.exceptions import CommandExecutionError
 
 # Import Third Party Libs
 try:
-    from pyVmomi import vim
+    from pyVmomi import vim, vmodl
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
@@ -1484,7 +1484,30 @@ def get_vsan_eligible_disks(host, username, password, protocol=None, port=None, 
                                                               protocol=protocol,
                                                               port=port)
     host_names = _check_hosts(service_instance, host, host_names)
-    return _get_vsan_eligible_disks(service_instance, host, host_names)
+    response = _get_vsan_eligible_disks(service_instance, host, host_names)
+
+    ret = {}
+    for host_name, value in response.iteritems():
+        error = value.get('Error')
+        if error:
+            ret.update({host_name: {'Error': error}})
+            continue
+
+        disks = value.get('Eligible')
+        # If we have eligible disks, it will be a list of disk objects
+        if disks and isinstance(disks, list):
+            disk_names = []
+            # We need to return ONLY the disk names, otherwise
+            # MessagePack can't deserialize the disk objects.
+            for disk in disks:
+                disk_names.append(disk.canonicalName)
+            ret.update({host_name: {'Eligible': disk_names}})
+        else:
+            # If we have disks, but it's not a list, it's actually a
+            # string message that we're passing along.
+            ret.update({host_name: {'Eligible': disks}})
+
+    return ret
 
 
 def system_info(host, username, password, protocol=None, port=None):
@@ -2656,6 +2679,8 @@ def update_host_password(host, username, password, new_password, protocol=None, 
     # Update the password
     try:
         account_manager.UpdateUser(user_account)
+    except vmodl.fault.SystemError as err:
+        raise CommandExecutionError(err.msg)
     except vim.fault.UserNotFound:
         raise CommandExecutionError('\'vsphere.update_host_password\' failed for host {0}: '
                                     'User was not found.'.format(host))
@@ -2855,7 +2880,7 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
     response = _get_vsan_eligible_disks(service_instance, host, host_names)
 
     ret = {}
-    for host_name in response:
+    for host_name, value in response.iteritems():
         host_ref = _get_host_ref(service_instance, host, host_name=host_name)
         vsan_system = host_ref.configManager.vsanSystem
 
@@ -2867,8 +2892,8 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
             log.debug(msg)
             ret.update({host_name: {'Error': msg}})
         else:
-            eligible = host_name.get('Eligible')
-            error = host_name.get('Error')
+            eligible = value.get('Eligible')
+            error = value.get('Error')
 
             if eligible and isinstance(eligible, list):
                 # If we have eligible, matching disks, add them to VSAN.
@@ -2882,18 +2907,22 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
                     continue
 
                 log.debug('Successfully added disks to the VSAN system for host \'{0}\'.'.format(host_name))
-                ret.update({host_name: eligible})
+                # We need to return ONLY the disk names, otherwise Message Pack can't deserialize the disk objects.
+                disk_names = []
+                for disk in eligible:
+                    disk_names.append(disk.canonicalName)
+                ret.update({host_name: {'Disks Added': disk_names}})
             elif eligible and isinstance(eligible, six.string_types):
                 # If we have a string type in the eligible value, we don't
                 # have any VSAN-eligible disks. Pull the message through.
-                ret.update({host_name: eligible})
+                ret.update({host_name: {'Disks Added': eligible}})
             elif error:
                 # If we hit an error, populate the Error return dict for state functions.
                 ret.update({host_name: {'Error': error}})
             else:
                 # If we made it this far, we somehow have eligible disks, but they didn't
                 # match the disk list and just got an empty list of matching disks.
-                ret.update({host_name: 'No new VSAN-eligible disks were found to add.'})
+                ret.update({host_name: {'Disks Added': 'No new VSAN-eligible disks were found to add.'}})
 
     return ret
 
@@ -2966,6 +2995,10 @@ def vsan_disable(host, username, password, protocol=None, port=None, host_names=
                 # Disable vsan on the host
                 task = vsan_system.UpdateVsan_Task(vsan_config)
                 salt.utils.vmware.wait_for_task(task, host_name, 'Disabling VSAN', sleep_seconds=3)
+            except vmodl.fault.SystemError as err:
+                log.debug(err.msg)
+                ret.update({host_name: {'Error': err.msg}})
+                continue
             except Exception as err:
                 msg = '\'vsphere.vsan_disable\' failed for host {0}: {1}'.format(host_name, err)
                 log.debug(msg)
@@ -3045,6 +3078,10 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
                 # Enable vsan on the host
                 task = vsan_system.UpdateVsan_Task(vsan_config)
                 salt.utils.vmware.wait_for_task(task, host_name, 'Enabling VSAN', sleep_seconds=3)
+            except vmodl.fault.SystemError as err:
+                log.debug(err.msg)
+                ret.update({host_name: {'Error': err.msg}})
+                continue
             except vim.fault.VsanFault as err:
                 msg = '\'vsphere.vsan_enable\' failed for host {0}: {1}'.format(host_name, err)
                 log.debug(msg)
@@ -3344,6 +3381,6 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
         response = syslog_service_reload(host, username, password,
                                          protocol=protocol, port=port,
                                          esxi_hosts=esxi_host).get(host_name)
-        ret_dict[host_name].update({'syslog_restart': {'success': response['retcode'] == 0}})
+        ret_dict.update({'syslog_restart': {'success': response['retcode'] == 0}})
 
     return ret_dict

@@ -80,20 +80,22 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
         # Then we are connecting directly to an ESXi server,
         # 'host' points at that server, and esxi_host is a reference to the
         # ESXi instance we are manipulating
-        esx_cmd += ' -s {0} -u {1} -p {2} --protocol={3} --portnumber={4} {5}'.format(host,
-                                                                                      user,
-                                                                                      pwd,
-                                                                                      protocol,
-                                                                                      port,
-                                                                                      cmd)
+        esx_cmd += ' -s {0} -u {1} -p \'{2}\' ' \
+                   '--protocol={3} --portnumber={4} {5}'.format(host,
+                                                                user,
+                                                                pwd,
+                                                                protocol,
+                                                                port,
+                                                                cmd)
     else:
-        esx_cmd += ' -s {0} -h {1} -u {2} -p {3} --protocol={4} --portnumber={5} {6}'.format(host,
-                                                                                             esxi_host,
-                                                                                             user,
-                                                                                             pwd,
-                                                                                             protocol,
-                                                                                             port,
-                                                                                             cmd)
+        esx_cmd += ' -s {0} -h {1} -u {2} -p \'{3}\' ' \
+                   '--protocol={4} --portnumber={5} {6}'.format(host,
+                                                                esxi_host,
+                                                                user,
+                                                                pwd,
+                                                                protocol,
+                                                                port,
+                                                                cmd)
 
     ret = salt.modules.cmdmod.run_all(esx_cmd)
 
