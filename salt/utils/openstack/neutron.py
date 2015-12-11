@@ -125,6 +125,10 @@ class SaltNeutron(NeutronShell):
         resource = self._fetch_ipsecpolicy(resource)
         return resource['id']
 
+    def _find_firewall_rule_id(self, resource):
+        resource = self._fetch_firewall_rule(resource)
+        return resource['id']
+
     def _fetch_port(self, name_or_id):
         resources = self.list_ports()['ports']
         return self._fetch(resources, name_or_id)
@@ -757,6 +761,38 @@ class SaltNeutron(NeutronShell):
         Fetches information of a specific firewall rule
         '''
         return self._fetch_firewall_rule(firewall_rule)
+
+    def create_firewall_rule(self, protocol, action, **kwargs):
+        '''
+        Create a new firlwall rule
+        '''
+        body = {'protocol': protocol, 'action': action}
+        if 'tenant_id' in kwargs:
+            body['tenant_id'] = kwargs['tenant_id']
+        if 'name' in kwargs:
+            body['name'] = kwargs['name']
+        if 'description' in kwargs:
+            body['description'] = kwargs['description']
+        if 'ip_version' in kwargs:
+            body['ip_version'] = kwargs['ip_version']
+        if 'source_ip_address' in kwargs:
+            body['source_ip_address'] = kwargs['source_ip_address']
+        if 'destination_port' in kwargs:
+            body['destination_port'] = kwargs['destination_port']
+        if 'shared' in kwargs:
+            body['shared'] = kwargs['shared']
+        if 'enabled' in kwargs:
+            body['enabled'] = kwargs['enabled']
+        return self.network_conn.create_firewall_rule(body={'firewall_rule': body})
+
+    def delete_firewall_rule(self, firewall_rule):
+        '''
+        Deletes the specified firewall rule
+        '''
+        firewall_rule_id = self._find_firewall_rule_id(firewall_rule)
+        ret = self.network_conn.delete_firewall_rule(firewall_rule_id)
+        return ret if ret else True
+
 
 # The following is a list of functions that need to be incorporated in the
 # neutron module. This list should be updated as functions are added.
