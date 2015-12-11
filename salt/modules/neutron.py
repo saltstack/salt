@@ -1417,7 +1417,7 @@ def create_firewall_rule(protocol, action, profile=None, **kwargs):
                 tenant_id=TENANT_ID name=NAME description=DESCRIPTION ip_version=IP_VERSION
                 source_ip_address=SOURCE_IP_ADDRESS destination_ip_address=DESTINATION_IP_ADDRESS source_port=SOURCE_PORT
                 destination_port=DESTINATION_PORT shared=SHARED enabled=ENABLED
-    
+
     :param protocol: Protocol for the firewall rule, choose "tcp","udp","icmp" or "None".
     :param action: Action for the firewall rule, choose "allow" or "deny".
     :param tenant_id: The owner tenant ID. (Optional)
