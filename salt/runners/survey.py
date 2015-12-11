@@ -152,7 +152,7 @@ def _get_pool_results(*args, **kwargs):
 
     expr_form = kwargs.get('expr_form', 'compound')
     if expr_form not in ['compound', 'pcre']:
-        expr_form='compound'
+        expr_form = 'compound'
 
     client = salt.client.get_local_client(__opts__['conf_file'])
     try:
