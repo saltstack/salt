@@ -2065,6 +2065,8 @@ def _parse_repo_file(filename):
                         'Failed to parse line in {0}, offending line was '
                         '\'{1}\''.format(filename, line.rstrip())
                     )
+                if comps[0].strip() == 'enabled':
+                    repos[repo]['disabled'] = comps[1] != "1"
 
     return (header, repos)
 
