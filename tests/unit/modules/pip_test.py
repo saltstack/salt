@@ -317,7 +317,7 @@ class PipTestCase(TestCase):
                 python_shell=False,
             )
 
-    @patch('os.path')
+    @patch('os.access')
     def test_install_log_argument_in_resulting_command(self, mock_path):
         pkg = 'pep8'
         log_path = '/tmp/pip-install.log'
@@ -333,7 +333,11 @@ class PipTestCase(TestCase):
                 python_shell=False,
             )
 
+    @patch('os.path')
+    def test_non_writeable_log(self, mock_path):
         # Let's fake a non-writable log file
+        pkg = 'pep8'
+        log_path = '/tmp/pip-install.log'
         mock_path.exists.side_effect = IOError('Fooo!')
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
