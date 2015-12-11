@@ -1,4 +1,6 @@
 # encoding: utf-8
+from __future__ import absolute_import, print_function
+
 '''
 A non-blocking REST API for Salt
 ================================
@@ -184,11 +186,10 @@ a return like::
 .. |401| replace:: authentication required
 .. |406| replace:: requested Content-Type not available
 .. |500| replace:: internal server error
-'''
+'''  # pylint: disable=W0105
 # pylint: disable=W0232
 
 # Import Python libs
-from __future__ import absolute_import
 import time
 import math
 import fnmatch
