@@ -186,7 +186,7 @@ a return like::
 .. |401| replace:: authentication required
 .. |406| replace:: requested Content-Type not available
 .. |500| replace:: internal server error
-'''
+'''  # pylint: disable=W0105
 # pylint: disable=W0232
 
 # Import Python libs
