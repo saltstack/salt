@@ -2,7 +2,6 @@
 
 # Import python libs
 from __future__ import absolute_import
-import os
 
 # Import Salt Testing libs
 from salttesting.helpers import ensure_in_syspath
@@ -10,7 +9,6 @@ ensure_in_syspath('../../')
 
 # Import salt libs
 import integration
-import salt.utils
 
 
 class CLISummaryTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
@@ -36,4 +34,4 @@ class CLISummaryTest(integration.ShellCase, integration.ShellCaseCommonTestsMixI
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(CLIStateTest)
+    run_tests(CLISummaryTest)
