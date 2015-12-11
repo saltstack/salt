@@ -144,15 +144,8 @@ def __virtual__():
         elif OpenSSL_version <= LooseVersion('0.15'):
             log.warn('You should upgrade pyOpenSSL to at least 0.15.1 '
                      'to enable the full use of X509 extensions')
-        # never EVER reactivate this code, this has been done too many times.
-        # not having configured a cert path in the configuration does not
-        # mean that users cant use this module as we provide methods
-        # to configure it afterwards.
-        # if __opts__.get('ca.cert_base_path', None):
-        #     return True
-        # else:
-        #     log.error('tls module not loaded: ca.cert_base_path not set')
-        #     return False
+        # NOTE: Not having configured a cert path should not prevent this
+        # module from loading as it provides methods to configure the path.
         return True
     else:
         X509_EXT_ENABLED = False
