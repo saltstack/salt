@@ -139,11 +139,11 @@ def __virtual__():
     if HAS_SSL and OpenSSL_version >= LooseVersion('0.10'):
         if OpenSSL_version < LooseVersion('0.14'):
             X509_EXT_ENABLED = False
-            log.error('You should upgrade pyOpenSSL to at least 0.14.1 '
-                     'to enable the use of X509 extensions')
+            log.debug('You should upgrade pyOpenSSL to at least 0.14.1 to '
+                      'enable the use of X509 extensions in the tls module')
         elif OpenSSL_version <= LooseVersion('0.15'):
-            log.warn('You should upgrade pyOpenSSL to at least 0.15.1 '
-                     'to enable the full use of X509 extensions')
+            log.debug('You should upgrade pyOpenSSL to at least 0.15.1 to '
+                      'enable the full use of X509 extensions in the tls module')
         # NOTE: Not having configured a cert path should not prevent this
         # module from loading as it provides methods to configure the path.
         return True
