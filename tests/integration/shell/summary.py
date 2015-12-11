@@ -13,7 +13,7 @@ import integration
 
 class CLISummaryTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
-    def single_minion_single_failure(self):
+    def test_single_minion_single_failure(self):
         '''
         Verify that a failure in any of the requisite states causes an overall retcode failure to be
         returned for the applied state.
