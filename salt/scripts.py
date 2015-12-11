@@ -95,6 +95,7 @@ def minion_process(queue):
         log.info('Sleeping random_reauth_delay of {0} seconds'.format(random_delay))
         # preform delay after minion resources have been cleaned
         if minion.options.daemon:
+            time.sleep(random_delay)
             salt_minion()
         else:
             queue.put(random_delay)
