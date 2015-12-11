@@ -254,7 +254,7 @@ def ntp_configured(name,
         Name of the state.
 
     service_running
-        Ensures the running state of the ntp deamon for the host. Boolean value where
+        Ensures the running state of the ntp daemon for the host. Boolean value where
         ``True`` indicates that ntpd should be running and ``False`` indicates that it
         should be stopped.
 
@@ -263,6 +263,14 @@ def ntp_configured(name,
 
     service_policy
         The policy to set for the NTP service.
+
+        .. note::
+
+            When setting the service policy to ``off`` or ``on``, you *must* quote the
+            setting. If you don't, the yaml parser will set the string to a boolean,
+            which will cause trouble checking for stateful changes and will error when
+            trying to set the policy on the ESXi host.
+
 
     service_restart
         If set to ``True``, the ntp daemon will be restarted, regardless of its previous
@@ -283,7 +291,7 @@ def ntp_configured(name,
             - ntp_servers:
               - 192.174.1.100
               - 192.174.1.200
-            - service_policy: 'automatic'
+            - service_policy: 'on'
             - service_restart: True
 
     '''
@@ -391,8 +399,8 @@ def ntp_configured(name,
                 ret['comment'] = 'Error: {0}'.format(error)
                 return ret
         ret['changes'].update({'service_restart':
-                              {'old': ntp_running,
-                               'new': 'NTP Deamon Restarted.'}})
+                              {'old': '',
+                               'new': 'NTP Daemon Restarted.'}})
 
     ret['result'] = True
     if ret['changes'] == {}:
@@ -550,10 +558,6 @@ def vsan_configured(name, enabled, add_disks_to_vsan=False):
 
         disks = current_eligible_disks.get('Eligible')
         if disks and isinstance(disks, list):
-            ret['changes'].update({'add_disks_to_vsan':
-                                  {'old': '',
-                                   'new': disks}})
-
             # Only run the command if not using test=True
             if not __opts__['test']:
                 response = __salt__[esxi_cmd]('vsan_add_disks').get(host)
@@ -561,6 +565,10 @@ def vsan_configured(name, enabled, add_disks_to_vsan=False):
                 if error:
                     ret['comment'] = 'Error: {0}'.format(error)
                     return ret
+
+            ret['changes'].update({'add_disks_to_vsan':
+                                  {'old': '',
+                                   'new': disks}})
 
     ret['result'] = True
     if ret['changes'] == {}:
@@ -607,6 +615,13 @@ def ssh_configured(name,
     service_policy
         The policy to set for the NTP service.
 
+        .. note::
+
+            When setting the service policy to ``off`` or ``on``, you *must* quote the
+            setting. If you don't, the yaml parser will set the string to a boolean,
+            which will cause trouble checking for stateful changes and will error when
+            trying to set the policy on the ESXi host.
+
     service_restart
         If set to ``True``, the SSH service will be restarted, regardless of its
         previous running state. Default is ``False``.
@@ -623,7 +638,7 @@ def ssh_configured(name,
           esxi.ssh_configured:
             - service_running: True
             - ssh_key_file: /etc/salt/ssh_keys/my_key.pub
-            - service_policy: 'automatic'
+            - service_policy: 'on'
             - service_restart: True
             - certificate_verify: True
 
@@ -748,7 +763,7 @@ def ssh_configured(name,
                 ret['comment'] = 'Error: {0}'.format(error)
                 return ret
         ret['changes'].update({'service_restart':
-                              {'old': ssh_running,
+                              {'old': '',
                                'new': 'SSH service restarted.'}})
 
     ret['result'] = True
