@@ -156,8 +156,8 @@ def __virtual__():
         return True
     else:
         X509_EXT_ENABLED = False
-        return (False, ('PyOpenSSL version 0.10 or later must be installed '
-                        'before this module can be used.'))
+        return (False, 'PyOpenSSL version 0.10 or later must be installed '
+                       'before this module can be used.')
 
 
 def cert_base_path(cacert_path=None):
