@@ -793,6 +793,7 @@ class SaltNeutron(NeutronShell):
         ret = self.network_conn.delete_firewall_rule(firewall_rule_id)
         return ret if ret else True
 
+
 # The following is a list of functions that need to be incorporated in the
 # neutron module. This list should be updated as functions are added.
 #
