@@ -1700,7 +1700,7 @@ class Minion(MinionBase):
                 try:
                     self._fire_master('ping', 'minion_ping')
                 except Exception:
-                    log.warning('Attempt to ping master failed.')
+                    log.warning('Attempt to ping master failed.', exc_on_loglevel=logging.DEBUG)
             self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
 
         self.periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
