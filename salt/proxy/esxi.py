@@ -245,6 +245,7 @@ def init(opts):
         return False
     if 'passwords' not in opts['proxy']:
         log.critical('No \'passwords\' key found in pillar for this proxy.')
+        return False
 
     host = opts['proxy']['host']
 
