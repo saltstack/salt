@@ -36,9 +36,6 @@ import salt.utils.locales
 # Import 3rd-party libs
 import salt.ext.six as six
 
-# Import 3rd-party libs
-import salt.ext.six as six
-
 log = logging.getLogger(__name__)
 
 
@@ -469,10 +466,16 @@ def present(name,
                 continue
             # run chhome once to avoid any possible bad side-effect
             if key == 'home' and 'homeDoesNotExist' not in changes:
-                __salt__['user.chhome'](name, val, False)
+                if __grains__['kernel'] == 'Darwin':
+                        __salt__['user.chhome'](name, val)
+                else:
+                   __salt__['user.chhome'](name, val, False)
                 continue
             if key == 'homeDoesNotExist':
-                __salt__['user.chhome'](name, val, True)
+                if __grains__['kernel'] == 'Darwin':
+                    __salt__['user.chhome'](name, val)
+                else:
+                    __salt__['user.chhome'](name, val, True)
                 if not os.path.isdir(val):
                     __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0o755)
                 continue
