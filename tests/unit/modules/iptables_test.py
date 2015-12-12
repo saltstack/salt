@@ -130,6 +130,27 @@ class IptablesTestCase(TestCase):
                                              **{'new': ''}),
                          '--jump CLUSTERIP --new ')
 
+        # should build match-sets with single string
+        self.assertEqual(iptables.build_rule(**{'match-set': 'src flag1,flag2'}),
+                         '-m set --match-set src flag1,flag2')
+
+        # should build match-sets as list
+        match_sets = ['src1 flag1',
+                      'src2 flag2,flag3',
+                     ]
+        self.assertEqual(iptables.build_rule(**{'match-set': match_sets}),
+                         '-m set --match-set src1 flag1 -m set --match-set src2 flag2,flag3')
+
+        # should handle negations for string match-sets
+        self.assertEqual(iptables.build_rule(**{'match-set': '!src flag'}),
+                         '-m set ! --match-set src flag')
+
+        # should handle negations for list match-sets
+        match_sets = ['src1 flag',
+                      'not src2 flag2']
+        self.assertEqual(iptables.build_rule(**{'match-set': match_sets}),
+                         '-m set --match-set src1 flag -m set ! --match-set src2 flag2')
+
         # Should allow the --save jump option to CONNSECMARK
         #self.assertEqual(iptables.build_rule(jump='CONNSECMARK',
         #                                     **{'save': ''}),
