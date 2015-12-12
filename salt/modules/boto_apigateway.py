@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Connection module for Amazon APIGateway 
+Connection module for Amazon APIGateway
 
-.. versionadded:: 
+.. versionadded::
 
 :configuration: This module accepts explicit Lambda credentials but can also
     utilize IAM roles assigned to the instance trough Instance Profiles.
@@ -79,17 +79,15 @@ Connection module for Amazon APIGateway
 from __future__ import absolute_import
 import logging
 import socket
-from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import string
 import json
+import datetime
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
 from salt.exceptions import SaltInvocationError, CommandExecutionError
-# from salt.utils import exactly_one
-# TODO: Uncomment this and s/_exactly_one/exactly_one/
-# See note in utils.boto
 
 log = logging.getLogger(__name__)
 
@@ -135,14 +133,12 @@ def __init__(opts):
         __utils__['boto3.assign_funcs'](__name__, 'apigateway')
 
 
-import datetime
 def _convert_datetime_str(response):
     '''
     modify any key-value pair where value is a datetime object to a string.
     '''
     if response:
-        return dict(map(lambda (k,v): (k, '{0}'.format(v)) if (isinstance(v, datetime.date)) else (k, v),
-                        response.items()))
+        return dict([(k, '{0}'.format(v)) if isinstance(v, datetime.date) else (k, v) for k, v in response.iteritems()])
     return None
 
 def _filter_apis(name, apis):
@@ -159,7 +155,7 @@ def _filter_apis_desc(desc, apis):
 
 def _multi_call(function, contentkey, *args, **kwargs):
     '''
-    Retrieve full list of values for the contentkey from a boto3 ApiGateway 
+    Retrieve full list of values for the contentkey from a boto3 ApiGateway
     client function that may be paged via "position"
     '''
     ret = function(*args, **kwargs)
@@ -175,7 +171,7 @@ def _get_apis_by_name(name, description=None,
                       region=None, key=None, keyid=None, profile=None):
 
     '''
-    get and return list of matching rest api information by the given name and desc. 
+    get and return list of matching rest api information by the given name and desc.
     If rest api name evaluates to False, return all apis w/o filtering the name.
     '''
     try:
@@ -185,9 +181,9 @@ def _get_apis_by_name(name, description=None,
             apis = _filter_apis(name, apis)
         if description != None:
             apis = _filter_apis_desc(description, apis)
-        return {'restapi': map(_convert_datetime_str, apis)}
+        return {'restapi': [_convert_datetime_str(api) for api in apis]}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)} 
+        return {'error': salt.utils.boto3.get_error(e)}
 
 def get_apis(name=None, description=None, region=None, key=None, keyid=None, profile=None):
 
@@ -203,7 +199,7 @@ def get_apis(name=None, description=None, region=None, key=None, keyid=None, pro
 
         salt myminion boto_apigateway.get_apis name='api name'
 
-        salt myminion boto_apigateway.get_apis name='api name' description='desc str' 
+        salt myminion boto_apigateway.get_apis name='api name' description='desc str'
 
     '''
 
@@ -249,7 +245,7 @@ def create_api(name, description, cloneFrom=None,
     {created: False} if the rest api was not created.
 
     CLI Example:
-    
+
     .. code-block:: bash
 
         salt myminion boto_apigateway.create_api myapi_name api_description
@@ -257,7 +253,7 @@ def create_api(name, description, cloneFrom=None,
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if (cloneFrom):
+        if cloneFrom:
             api = conn.create_rest_api(name=name, description=description, cloneFrom=cloneFrom)
         else:
             api = conn.create_rest_api(name=name, description=description)
@@ -287,11 +283,11 @@ def delete_api(name, description=None, region=None, key=None, keyid=None, profil
         r = _get_apis_by_name(name, description=description,
                               region=region, key=key, keyid=keyid, profile=profile)
         apis = r.get('restapi')
-        if (apis):
+        if apis:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             for api in apis:
                 conn.delete_rest_api(restApiId=api['id'])
-            return {'deleted': True, 'count': len(apis)}  
+            return {'deleted': True, 'count': len(apis)}
         else:
             return {'deleted': False}
     except ClientError as e:
@@ -321,7 +317,7 @@ def get_api_resources(restApiId, region=None, key=None, keyid=None, profile=None
 def get_api_resource(restApiId, path,
                      region=None, key=None, keyid=None, profile=None):
     '''
-    Given rest api id, and an absolute resource path, returns the resource id for 
+    Given rest api id, and an absolute resource path, returns the resource id for
     the given path.
 
     CLI Example:
@@ -333,10 +329,10 @@ def get_api_resource(restApiId, path,
     '''
     r = get_api_resources(restApiId, region=region, key=key, keyid=keyid, profile=profile)
     resources = r.get('resources')
-    if (not resources):
+    if not resources:
         return r
     for resource in resources:
-        if (resource['path'] == path):
+        if resource['path'] == path:
             return {'resource': resource}
     return {'resource': None}
 
@@ -360,10 +356,10 @@ def create_api_resources(restApiId, path,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         for path_part in path_parts:
             current_path = '{0}/{1}'.format(current_path, path_part)
-            r = get_api_resource(restApiId, current_path, 
+            r = get_api_resource(restApiId, current_path,
                                  region=region, key=key, keyid=keyid, profile=profile)
             resource = r.get('resource')
-            if (not resource):
+            if not resource:
                 resource = conn.create_resource(restApiId=restApiId, parentId=created[-1]['id'], pathPart=path_part)
             created.append(resource)
 
@@ -379,7 +375,7 @@ def delete_api_resources(restApiId, path,
                          region=None, key=None, keyid=None, profile=None):
     '''
     Given restApiId and an absolute resource path, delete the resources starting
-    from the absoluate resource path.  If resourcepath is the root resource "/", 
+    from the absoluate resource path.  If resourcepath is the root resource "/",
     the function will return False.  Returns False on failure.
 
     CLI Example:
@@ -389,7 +385,7 @@ def delete_api_resources(restApiId, path,
         salt myminion boto_apigateway.delete_api_resources myapi_id, resource_path
 
     '''
-    if (path == "/"):
+    if path == '/':
         return {'deleted': False, 'error': 'use delete_api to remove the root resource'}
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
@@ -432,7 +428,6 @@ def get_api_resource_method(restApiId, resourcepath, httpMethod,
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
-#TODO: rest of the api resource method related methods
 
 # API Keys
 def get_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
@@ -468,9 +463,9 @@ def get_api_keys(region=None, key=None, keyid=None, profile=None):
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         apikeys = _multi_call(conn.get_api_keys, 'items')
 
-        return {'apiKeys': map(_convert_datetime_str, apikeys)}
+        return {'apiKeys': [_convert_datetime_str(apikey) for apikey in apikeys]}
     except ClientError as e:
-        return {'error': salt.utils.boto3.get_error(e)} 
+        return {'error': salt.utils.boto3.get_error(e)}
 
 
 def create_api_key(name, description, enabled=True, stageKeys=[],
@@ -478,27 +473,28 @@ def create_api_key(name, description, enabled=True, stageKeys=[],
     '''
     Create an API key given name and description.
 
-    An optional enabled argument can be provided.  If provided, the 
-    valid values are True|False.  This agrument defaults to True.
+    An optional enabled argument can be provided.  If provided, the
+    valid values are True|False.  This argument defaults to True.
 
-    An optional stageKeys argument can be provided in the form of 
+    An optional stageKeys argument can be provided in the form of
     list of dictionary with 'restApiId' and 'stageName' as keys.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.create_api_key name description 
+        salt myminion boto_apigateway.create_api_key name description
 
         salt myminion boto_apigateway.create_api_key name description enabled=False
 
-        salt myminion boto_apigateway.create_api_key name description stageKeys='[{"restApiId": "id", "stageName": "stagename"}]'
+        salt myminion boto_apigateway.create_api_key name description \
+             stageKeys='[{"restApiId": "id", "stageName": "stagename"}]'
 
     '''
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        response = conn.create_api_key(name=name, description=description, 
+        response = conn.create_api_key(name=name, description=description,
                                        enabled=enabled, stageKeys=stageKeys)
         if not response:
             return {'created': False}
@@ -520,7 +516,7 @@ def delete_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        response = conn.delete_api_key(apiKey=apiKey)
+        r = conn.delete_api_key(apiKey=apiKey)
         return {'deleted': True}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
@@ -529,11 +525,14 @@ def _api_key_patch_replace(conn, apiKey, path, value):
     '''
     the replace patch operation on an ApiKey resource
     '''
-    response = conn.update_api_key(apiKey=apiKey, 
+    response = conn.update_api_key(apiKey=apiKey,
                                    patchOperations=[{'op': 'replace', 'path': path, 'value': value}])
     return response
 
 def _api_key_patchops(op, pvlist):
+    '''
+    helper function to return patchOperations object
+    '''
     return [{'op': op, 'path': p, 'value': v} for (p, v) in pvlist]
 
 def _api_key_patch_add(conn, apiKey, pvlist):
@@ -550,6 +549,7 @@ def _api_key_patch_remove(conn, apiKey, pvlist):
     '''
     response = conn.update_api_key(apiKey=apiKey,
                                    patchOperations=_api_key_patchops('remove', pvlist))
+    return response
 
 
 def update_api_key_description(apiKey, description, region=None, key=None, keyid=None, profile=None):
@@ -577,7 +577,7 @@ def enable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
     CLI Example:
 
     .. code_block:: bash
-        
+
         salt myminion boto_apigateway.enable_api_key api_key
 
     '''
@@ -595,7 +595,7 @@ def disable_api_key(apiKey, region=None, key=None, keyid=None, profile=None):
     CLI Example:
 
     .. code_block:: bash
-        
+
         salt myminion boto_apigateway.enable_api_key api_key
 
     '''
@@ -614,7 +614,7 @@ def associate_api_key_stagekeys(apiKey, stagekeyslist, region=None, key=None, ke
     CLI Example:
 
     .. code_block:: bash
-    
+
         salt myminion boto_apigateway.associate_stagekeys_api_key api_key '["restapi id/stage name", ...]'
 
     '''
@@ -633,7 +633,7 @@ def disassociate_api_key_stagekeys(apiKey, stagekeyslist, region=None, key=None,
     CLI Example:
 
     .. code_block:: bash
-    
+
         salt myminion boto_apigateway.disassociate_stagekeys_api_key api_key '["restapi id/stage name", ...]'
 
     '''
@@ -666,13 +666,13 @@ def get_api_deployments(apiId, region=None, key=None, keyid=None, profile=None):
         _deployments = conn.get_deployments(restApiId=apiId)
 
         while True:
-            if(_deployments):
-                deployments = deployments + _deployments['items'];
+            if _deployments:
+                deployments = deployments + _deployments['items']
                 if not _deployments.has_key('position'):
-                    break;
+                    break
                 _deployments = conn.get_deployments(restApiId=apiId, position=_deployments['position'])
 
-        return {'deployments': map(_convert_datetime_str, deployments)}
+        return {'deployments': [_convert_datetime_str(deployment) for deployment in deployments]}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
@@ -695,7 +695,8 @@ def get_api_deployment(apiId, deploymentId, region=None, key=None, keyid=None, p
         return {'error': salt.utils.boto3.get_error(e)}
 
 
-def create_api_deployment(apiId, stageName, stageDescription = "", description = "", cacheClusterEnabled = False, cacheClusterSize = "0.5", variables = {},
+def create_api_deployment(apiId, stageName, stageDescription="", description="", cacheClusterEnabled=False,
+                          cacheClusterSize="0.5", variables={},
                           region=None, key=None, keyid=None, profile=None):
     '''
     Creates a new API deployment.
@@ -704,12 +705,16 @@ def create_api_deployment(apiId, stageName, stageDescription = "", description =
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.create_api_deployent apiId stagename stageDescription="" description="" cacheClusterEnabled=True|False cacheClusterSize=0.5 variables='{"name": "value"}'
+        salt myminion boto_apigateway.create_api_deployent apiId stagename stageDescription="" \
+             description="" cacheClusterEnabled=True|False cacheClusterSize=0.5 variables='{"name": "value"}'
 
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        deployment = conn.create_deployment(restApiId=apiId, stageName=stageName, stageDescription=stageDescription, description=description, cacheClusterEnabled=cacheClusterEnabled, cacheClusterSize=cacheClusterSize, variables=variables)
+        deployment = conn.create_deployment(restApiId=apiId, stageName=stageName,
+                                            stageDescription=stageDescription, description=description,
+                                            cacheClusterEnabled=cacheClusterEnabled, cacheClusterSize=cacheClusterSize,
+                                            variables=variables)
         return {'created': True, 'deployment': _convert_datetime_str(deployment)}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
@@ -722,15 +727,15 @@ def delete_api_deployment(apiId, deploymentId, region=None, key=None, keyid=None
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.delete_api_deployent apiId deploymentId 
+        salt myminion boto_apigateway.delete_api_deployent apiId deploymentId
 
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        response = conn.delete_deployment(restApiId=apiId, deploymentId=deploymentId);
+        response = conn.delete_deployment(restApiId=apiId, deploymentId=deploymentId)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto3.get_error(e) }
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
 # API Stages
 
@@ -747,7 +752,7 @@ def get_api_stage(apiId, stageName, region=None, key=None, keyid=None, profile=N
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        stage = conn.get_stage(restApiId=apiId, stageName=stageName);
+        stage = conn.get_stage(restApiId=apiId, stageName=stageName)
         return {'stage': stage}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
@@ -765,12 +770,13 @@ def get_api_stages(apiId, deploymentId, region=None, key=None, keyid=None, profi
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        stages = conn.get_stages(restApiId=apiId, deploymentId=deploymentId);
-        return {'stages': map(_convert_datetime_str, stages['item'])}
+        stages = conn.get_stages(restApiId=apiId, deploymentId=deploymentId)
+        return {'stages': [_convert_datetime_str(stage) for stage in stages['item']]}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
-def create_api_stage(apiId, stageName, deploymentId, description="", cacheClusterEnabled = False, cacheClusterSize = "0.5", variables = {},
+def create_api_stage(apiId, stageName, deploymentId, description="",
+                     cacheClusterEnabled=False, cacheClusterSize="0.5", variables={},
                      region=None, key=None, keyid=None, profile=None):
     '''
     Creates a new API stage for a given apiId and deploymentId.
@@ -779,12 +785,15 @@ def create_api_stage(apiId, stageName, deploymentId, description="", cacheCluste
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.create_api_stage apiId stagename deploymentId description="" cacheClusterEnabled=True|False cacheClusterSize=0.5 variables='{"name": "value"}'
+        salt myminion boto_apigateway.create_api_stage apiId stagename deploymentId \
+            description="" cacheClusterEnabled=True|False cacheClusterSize=0.5 variables='{"name": "value"}'
 
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        stage = conn.create_stage(restApiId=apiId, stageName=stageName, deploymentId=deploymentId, description=description, cacheClusterEnabled=cacheClusterEnabled, cacheClusterSize=cacheClusterSize, variables=variables);
+        stage = conn.create_stage(restApiId=apiId, stageName=stageName, deploymentId=deploymentId,
+                                  description=description, cacheClusterEnabled=cacheClusterEnabled,
+                                  cacheClusterSize=cacheClusterSize, variables=variables)
         return {'created': True, 'stage': _convert_datetime_str(stage)}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
@@ -802,7 +811,7 @@ def delete_api_stage(apiId, stageName, region=None, key=None, keyid=None, profil
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        conn.delete_stage(restApiId=apiId, stageName=stageName);
+        conn.delete_stage(restApiId=apiId, stageName=stageName)
         return {'deleted': True}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
@@ -820,7 +829,7 @@ def flush_api_stage_cache(apiId, stageName, region=None, key=None, keyid=None, p
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        conn.flush_stage_cache(restApiId=apiId, stageName=stageName);
+        conn.flush_stage_cache(restApiId=apiId, stageName=stageName)
         return {'flushed': True}
     except ClientError as e:
         return {'flushed': False, 'error': salt.utils.boto3.get_error(e)}
@@ -828,7 +837,8 @@ def flush_api_stage_cache(apiId, stageName, region=None, key=None, keyid=None, p
 
 # API Methods
 
-def create_api_method(apiId, resourcePath, httpMethod, authorizationType, apiKeyRequired=False, requestParameters={}, requestModels={},
+def create_api_method(apiId, resourcePath, httpMethod, authorizationType,
+                      apiKeyRequired=False, requestParameters={}, requestModels={},
                       region=None, key=None, keyid=None, profile=None):
     '''
     Creates API method for a resource in the given API
@@ -837,21 +847,23 @@ def create_api_method(apiId, resourcePath, httpMethod, authorizationType, apiKey
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.create_api_method apiId resourcePath, httpMethod, authorizationType, 
-                                                        apiKeyRequired=False, requestParameters='{"name", "value"}', requestModels='{"content-type", "value"}'
+        salt myminion boto_apigateway.create_api_method apiId resourcePath, httpMethod, authorizationType, \
+            apiKeyRequired=False, requestParameters='{"name", "value"}', requestModels='{"content-type", "value"}'
 
     '''
     try:
-        resource = get_api_resource(apiId, resourcePath, region=region, key=key, keyid=keyid, profile=profile).get('resource')
-        if resource: 
+        resource = get_api_resource(apiId, resourcePath, region=region,
+                                    key=key, keyid=keyid, profile=profile).get('resource')
+        if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-            method = conn.put_method(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, authorizationType=str(authorizationType),
-                           apiKeyRequired=apiKeyRequired, requestParameters=requestParameters, requestModels=requestModels)
-            return {'created': True, 'method': method}            
+            method = conn.put_method(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod,
+                                     authorizationType=str(authorizationType), apiKeyRequired=apiKeyRequired,
+                                     requestParameters=requestParameters, requestModels=requestModels)
+            return {'created': True, 'method': method}
         return {'created': False, 'error': 'Failed to create method'}
-        
+
     except ClientError as e:
-        return {'created': False, 'error': salt.utils.boto3.get_error(e)} 
+        return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 def get_api_method(apiId, resourcePath, httpMethod, region=None, key=None, keyid=None, profile=None):
     '''
@@ -865,12 +877,13 @@ def get_api_method(apiId, resourcePath, httpMethod, region=None, key=None, keyid
 
     '''
     try:
-        resource = get_api_resource(apiId, resourcePath, region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        resource = get_api_resource(apiId, resourcePath, region=region,
+                                    key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             method = conn.get_method(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod)
             return {'method': _convert_datetime_str(method)}
-        return {'error': 'get API method failed: no such resource'}        
+        return {'error': 'get API method failed: no such resource'}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
@@ -886,7 +899,8 @@ def delete_api_method(apiId, resourcePath, httpMethod, region=None, key=None, ke
 
     '''
     try:
-        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        resource = get_api_resource(apiId, resourcePath, region=region,
+                                    key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             method = conn.delete_method(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod)
@@ -904,14 +918,17 @@ def create_api_method_response(apiId, resourcePath, httpMethod, statusCode, resp
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.create_api_method_response apiId resourcePath httpMethod statusCode responseParameters='{"name", "True|False"}' responseModels='{"content-type", "model"}'
+        salt myminion boto_apigateway.create_api_method_response apiId resourcePath httpMethod \
+               statusCode responseParameters='{"name", "True|False"}' responseModels='{"content-type", "model"}'
 
     '''
     try:
-        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        resource = get_api_resource(apiId, resourcePath, region=region,
+                                    key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-            response = conn.put_method_response(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, statusCode=str(statusCode), 
+            response = conn.put_method_response(restApiId=apiId, resourceId=resource['id'],
+                                                httpMethod=httpMethod, statusCode=str(statusCode),
                                                 responseParameters=responseParameters, responseModels=responseModels)
             return {'created': True, 'response': response}
         return {'created': False, 'error': 'no such resource'}
@@ -919,7 +936,8 @@ def create_api_method_response(apiId, resourcePath, httpMethod, statusCode, resp
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
 
-def delete_api_method_response(apiId, resourcePath, httpMethod, statusCode, region=None, key=None, keyid=None, profile=None):
+def delete_api_method_response(apiId, resourcePath, httpMethod, statusCode,
+                               region=None, key=None, keyid=None, profile=None):
     '''
     Delete API method response for a resource in the given API
 
@@ -931,16 +949,19 @@ def delete_api_method_response(apiId, resourcePath, httpMethod, statusCode, regi
 
     '''
     try:
-        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        resource = get_api_resource(apiId, resourcePath, region=region,
+                                    key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-            conn.delete_method_response(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, statusCode=str(statusCode))
+            conn.delete_method_response(restApiId=apiId, resourceId=resource['id'],
+                                        httpMethod=httpMethod, statusCode=str(statusCode))
             return {'deleted': True}
         return {'deleted': False, 'error': 'no such resource'}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}   
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
-def get_api_method_response(apiId, resourcePath, httpMethod, statusCode, region=None, key=None, keyid=None, profile=None):
+def get_api_method_response(apiId, resourcePath, httpMethod, statusCode,
+                            region=None, key=None, keyid=None, profile=None):
     '''
     Get API method response for a resource in the given API
 
@@ -952,10 +973,12 @@ def get_api_method_response(apiId, resourcePath, httpMethod, statusCode, region=
 
     '''
     try:
-        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        resource = get_api_resource(apiId, resourcePath, region=region,
+                                    key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-            response = conn.get_method_response(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, statusCode=str(statusCode))
+            response = conn.get_method_response(restApiId=apiId, resourceId=resource['id'],
+                                                httpMethod=httpMethod, statusCode=str(statusCode))
             return {'response': _convert_datetime_str(response)}
         return {'error': 'no such resource'}
     except ClientError as e:
@@ -966,24 +989,24 @@ def get_api_method_response(apiId, resourcePath, httpMethod, statusCode, region=
 
 def get_api_models(restApiId, region=None, key=None, keyid=None, profile=None):
     '''
-    Get all models for a given API 
+    Get all models for a given API
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.get_api_models apiId 
+        salt myminion boto_apigateway.get_api_models apiId
 
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         models = _multi_call(conn.get_models, 'items', restApiId=restApiId)
-        return {'models': map(_convert_datetime_str, models)}
+        return {'models': [_convert_datetime_str(model) for model in models]}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
 
-def get_api_model(restApiId, modelName, flatten = True, region=None, key=None, keyid=None, profile=None):
+def get_api_model(restApiId, modelName, flatten=True, region=None, key=None, keyid=None, profile=None):
     '''
     Get a model by name for a given API
 
@@ -1019,7 +1042,7 @@ def _api_model_patch_replace(conn, restApiId, modelName, path, value):
     '''
     the replace patch operation on a Model resource
     '''
-    response = conn.update_model(restApiId=restApiId, modelName=modelName, 
+    response = conn.update_model(restApiId=restApiId, modelName=modelName,
                                  patchOperations=[{'op': 'replace', 'path': path, 'value': value}])
     return response
 
@@ -1036,7 +1059,7 @@ def update_api_model_schema(restApiId, modelName, schema, region=None, key=None,
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        response = _api_model_patch_replace(conn, restApiId, modelName,'/schema', json.dumps(schema))
+        response = _api_model_patch_replace(conn, restApiId, modelName, '/schema', json.dumps(schema))
         return {'updated': True, 'model': _convert_datetime_str(response)}
     except ClientError as e:
         return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
@@ -1050,7 +1073,7 @@ def delete_api_model(restApiId, modelName, region=None, key=None, keyid=None, pr
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.delete_api_model apiId modelName 
+        salt myminion boto_apigateway.delete_api_model apiId modelName
 
     '''
     try:
@@ -1058,9 +1081,10 @@ def delete_api_model(restApiId, modelName, region=None, key=None, keyid=None, pr
         conn.delete_model(restApiId=restApiId, modelName=modelName)
         return {'deleted': True}
     except ClientError as e:
-        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)} 
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
-def create_api_model(restApiId, modelName, modelDescription, schema, contentType="application/json", region=None, key=None, keyid=None, profile=None):
+def create_api_model(restApiId, modelName, modelDescription, schema, contentType="application/json",
+                     region=None, key=None, keyid=None, profile=None):
     '''
     Create a new model in a given API with a given schema
 
@@ -1073,7 +1097,8 @@ def create_api_model(restApiId, modelName, modelDescription, schema, contentType
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        model = conn.create_model(restApiId=restApiId, name=modelName, description=modelDescription, schema=json.dumps(schema), contentType=contentType)
+        model = conn.create_model(restApiId=restApiId, name=modelName, description=modelDescription,
+                                  schema=json.dumps(schema), contentType=contentType)
         return {'created': True, 'model': _convert_datetime_str(model)}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
@@ -1092,7 +1117,8 @@ def get_api_integration(apiId, resourcePath, httpMethod, region=None, key=None, 
 
     '''
     try:
-        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        resource = get_api_resource(apiId, resourcePath, region=region,
+                                    key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             integration = conn.get_integration(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod)
@@ -1102,7 +1128,8 @@ def get_api_integration(apiId, resourcePath, httpMethod, region=None, key=None, 
         return {'error': salt.utils.boto3.get_error(e)}
 
 
-def get_api_integration_response(apiId, resourcePath, httpMethod, statusCode, region=None, key=None, keyid=None, profile=None):
+def get_api_integration_response(apiId, resourcePath, httpMethod, statusCode,
+                                 region=None, key=None, keyid=None, profile=None):
     '''
     Get an integration response for a given method in a given API
 
@@ -1114,10 +1141,12 @@ def get_api_integration_response(apiId, resourcePath, httpMethod, statusCode, re
 
     '''
     try:
-        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        resource = get_api_resource(apiId, resourcePath, region=region,
+                                    key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-            response = conn.get_integration_response(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, statusCode=statusCode)
+            response = conn.get_integration_response(restApiId=apiId, resourceId=resource['id'],
+                                                     httpMethod=httpMethod, statusCode=statusCode)
             return {'response': _convert_datetime_str(response)}
         return {'error': 'no such resource'}
     except ClientError as e:
@@ -1135,7 +1164,8 @@ def delete_api_integration(apiId, resourcePath, httpMethod, region=None, key=Non
 
     '''
     try:
-        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        resource = get_api_resource(apiId, resourcePath, region=region,
+                                    key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             conn.delete_integration(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod)
@@ -1144,7 +1174,8 @@ def delete_api_integration(apiId, resourcePath, httpMethod, region=None, key=Non
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
-def delete_api_integration_response(apiId, resourcePath, httpMethod, statusCode, region=None, key=None, keyid=None, profile=None):
+def delete_api_integration_response(apiId, resourcePath, httpMethod, statusCode,
+                                    region=None, key=None, keyid=None, profile=None):
     '''
     Deletes an integration response for a given method in a given API
 
@@ -1156,17 +1187,21 @@ def delete_api_integration_response(apiId, resourcePath, httpMethod, statusCode,
 
     '''
     try:
-        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        resource = get_api_resource(apiId, resourcePath, region=region,
+                                    key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-            conn.delete_integration_response(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, statusCode=statusCode)
+            conn.delete_integration_response(restApiId=apiId, resourceId=resource['id'],
+                                             httpMethod=httpMethod, statusCode=statusCode)
             return {'deleted': True}
         return {'deleted': False, 'error': 'no such resource'}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
 
-def create_api_integration(apiId, resourcePath, httpMethod, integrationType, integrationHttpMethod, uri, credentials, requestParameters={}, requestTemplates={}, region=None, key=None, keyid=None, profile=None):
+def create_api_integration(apiId, resourcePath, httpMethod, integrationType, integrationHttpMethod,
+                           uri, credentials, requestParameters={}, requestTemplates={},
+                           region=None, key=None, keyid=None, profile=None):
     '''
     Creates an integration for a given method in a given API
 
@@ -1174,21 +1209,27 @@ def create_api_integration(apiId, resourcePath, httpMethod, integrationType, int
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.create_api_integration apiId resourcePath httpMethod integrationType integrationHttpMethod uri credentials ['{}' ['{}']]
+        salt myminion boto_apigateway.create_api_integration apiId resourcePath httpMethod \
+                             integrationType integrationHttpMethod uri credentials ['{}' ['{}']]
 
     '''
     try:
-        resource = get_api_resource(apiId, resourcePath, region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        resource = get_api_resource(apiId, resourcePath, region=region,
+                                    key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-            integration = conn.put_integration(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, type=integrationType, integrationHttpMethod=integrationHttpMethod,
-                                               uri=uri, credentials=credentials, requestParameters=requestParameters, requestTemplates=requestTemplates)
+            integration = conn.put_integration(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod,
+                                               type=integrationType, integrationHttpMethod=integrationHttpMethod,
+                                               uri=uri, credentials=credentials, requestParameters=requestParameters,
+                                               requestTemplates=requestTemplates)
             return {'created': True, 'integration': integration}
         return {'created': False, 'error': 'no such resource'}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
-def create_api_integration_response(apiId, resourcePath, httpMethod, statusCode, selectionPattern, responseParameters={}, responseTemplates={}, region=None, key=None, keyid=None, profile=None):
+def create_api_integration_response(apiId, resourcePath, httpMethod, statusCode, selectionPattern,
+                                    responseParameters={}, responseTemplates={},
+                                    region=None, key=None, keyid=None, profile=None):
     '''
     Creates an integration response for a given method in a given API
 
@@ -1196,15 +1237,20 @@ def create_api_integration_response(apiId, resourcePath, httpMethod, statusCode,
 
     .. code-block:: bash
 
-        salt myminion boto_apigateway.create_api_integration_response apiId resourcePath httpMethod statusCode selectionPattern ['{}' ['{}']]
+        salt myminion boto_apigateway.create_api_integration_response apiId resourcePath httpMethod \
+                            statusCode selectionPattern ['{}' ['{}']]
 
     '''
     try:
-        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        resource = get_api_resource(apiId, resourcePath, region=region,
+                                    key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-            response = conn.put_integration_response(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, statusCode=statusCode, 
-                                                     selectionPattern=selectionPattern, responseParameters=responseParameters, responseTemplates=responseTemplates)
+            response = conn.put_integration_response(restApiId=apiId, resourceId=resource['id'],
+                                                     httpMethod=httpMethod, statusCode=statusCode,
+                                                     selectionPattern=selectionPattern,
+                                                     responseParameters=responseParameters,
+                                                     responseTemplates=responseTemplates)
             return {'created': True, 'response': response}
         return {'created': False, 'error': 'no such resource'}
     except ClientError as e:
