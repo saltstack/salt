@@ -1163,7 +1163,7 @@ def delete_api_integration_response(apiId, resourcePath, httpMethod, statusCode,
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
 
 
-def create_api_integration(apiId, resourcePath, httpMethod, integrationType, integrationHttpMethod, uri, credentials, requestParameters={}, requestTemplates={}):
+def create_api_integration(apiId, resourcePath, httpMethod, integrationType, integrationHttpMethod, uri, credentials, requestParameters={}, requestTemplates={}, region=None, key=None, keyid=None, profile=None):
     '''
     Creates an integration for a given method in a given API
 
@@ -1175,7 +1175,7 @@ def create_api_integration(apiId, resourcePath, httpMethod, integrationType, int
 
     '''
     try:
-        resource = get_api_resource(apiId, resourcePath,  region=region, key=key, keyid=keyid, profile=profile).get('resource')
+        resource = get_api_resource(apiId, resourcePath, region=region, key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             integration = conn.put_integration(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod, type=integrationType, integrationHttpMethod=integrationHttpMethod,
@@ -1185,7 +1185,7 @@ def create_api_integration(apiId, resourcePath, httpMethod, integrationType, int
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
 
-def create_api_integration_response(apiId, resourcePath, httpMethod, statusCode, selectionPattern, responseParameters={}, responseTemplates={}):
+def create_api_integration_response(apiId, resourcePath, httpMethod, statusCode, selectionPattern, responseParameters={}, responseTemplates={}, region=None, key=None, keyid=None, profile=None):
     '''
     Creates an integration response for a given method in a given API
 

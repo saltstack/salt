@@ -100,6 +100,61 @@ class ixSwagger(object):
     # JSON_SCHEMA_REF
     JSON_SCHEMA_DRAFT_4 = 'http://json-schema.org/draft-04/schema#'
 
+    class ixParameter:
+        LOCATIONS = ['body', 'query', 'header']
+
+        def __init__(self, d):
+            self._d = d
+
+        @property
+        def location(self):
+            _location = self._d.get('in')
+            if _location in self.LOCATIONS:
+                return _location
+            raise ValueError('Unsupported parameter location: {0}'.format(_location))
+
+        @property
+        def name(self):
+            _name = self._d.get('name')
+            if _name:
+                if self.location == 'header':
+                    return 'method.request.header.' + _name;
+                elif self.location == 'query':
+                    return 'method.request.querystring.' + _name;
+                return None 
+            raise ValueError('Parameter must have a name: {0}'.format(_dict_to_json_pretty(self._d)))
+
+        @property
+        def schema(self):
+            if self.location == "body":
+                _schema = self._d.get("schema")
+                if _schema:
+                    if '$ref' in _schema:
+                        schema_name = _schema.get('$ref').split('/')[-1]
+                        return schema_name
+                    raise ValueError('Body parameter must have a JSON reference to the schema definition: {0}'.format(self.name))
+                raise ValueError('Body parameter must have a schema: {0}'.format(self.name))
+            return None
+
+    class ixMethodResponse:
+        def __init__(self, r):
+            self._r = r
+
+        @property
+        def schema(self):
+            _schema = self._r.get("schema")
+            if _schema:
+                if '$ref' in _schema:
+                    return _schema.get('$ref').split('/')[-1]
+                raise ValueError('Method response must have a JSON reference to the schema definition: {0}'.format(_schema))
+            return None
+            # raise ValueError('Method response must have a schema: {0}'.format(self))
+            
+        @property
+        def headers(self):
+            _headers = self._r.get('headers', {})
+            return _headers
+
     def __init__(self, swagger_file_path):
         if os.path.exists(swagger_file_path) and os.path.isfile(swagger_file_path):
             self._swagger_file = swagger_file_path
@@ -256,6 +311,16 @@ class ixSwagger(object):
         # log changes on AWS
         return self._log_changes(ret, 'deploy_api', create_api_response.get('restapi'))
 
+    def generate_template_from_schema(self, modelName, ret):
+        for model, schema in self.models:
+            if model == modelName:
+                prefix = "#set($inputRoot = $input.path('#'))";
+                params = {"statusCode": 200}
+                for p in schema['properties']:
+                    params[p] = "$input.params('{0}')".format(p)
+                    
+        return None
+
     def deploy_models(self, ret, region=None, key=None, keyid=None, profile=None):
         for model, schema  in self.models:
             # add in a few attributes into the model schema that AWS expects
@@ -301,28 +366,126 @@ class ixSwagger(object):
 
         return ret
 
+    def construct_lambda_uri(self, ret, resourcePath, httpMethod, region=None, key=None, keyid=None, profile=None):
+        lambda_name = "{0}{1}_{2}".format(self.rest_api_name.replace(" ", "_"), resourcePath.replace("/", "_"), httpMethod)
+        lambda_region = __salt__['pillar.get']("lambda.region")
+        if not lambda_region:
+            raise ValueError('Region for lambda function {0} has not been specified'.format(lambda_name))        
+        lambda_dsc = __salt__['boto_lambda.describe'](lambda_name, region=lambda_region, key=key, keyid=keyid, profile=profile)
+        if not lambda_dsc.get('lambda'):
+            raise ValueError('Could not find lambda function {0}'.format(lambda_name))
+            
+        lambda_arn = lambda_dsc.get('lambda').get('FunctionArn')
+        apigateway_region = __salt__['pillar.get']("apigateway.region")
+        lambda_uri = 'arn:aws:apigateway:{0}:lambda:path/2015-03-31/functions/{1}/invocations'.format(apigateway_region, lambda_arn)
+        log.info(lambda_uri)
+        return lambda_uri
+
     def deploy_resources(self, ret, region=None, key=None, keyid=None, profile=None):
         for path, pathData in self.paths:
             resource = __salt__['boto_apigateway.create_api_resources'](restApiId=self.restApiId,
                 path=self.basePath+path, region=region, key=key, keyid=keyid, profile=profile)
             if not resource.get('created'):
-                ret['result'] = False
-                ret['abort'] = True
-                if 'error' in resource:
-                    ret['comment'] = resource.get('error')
+                ret = report_error(ret, resource)
                 return ret
+            ret = self._log_changes(ret, 'deploy_resources', resource)
             for method, methodData in pathData.iteritems():
                 if method in self.SWAGGER_OPERATION_NAMES:
+                    method_params = {}
+                    method_models = {}
+                    log.info(methodData)
+                    if 'parameters' in methodData:
+                        for param in methodData['parameters']:
+                            p = self.ixParameter(param)
+                            if p.name:
+                                method_params[p.name] = True
+                            if p.schema:
+                                method_models['application/json'] = p.schema 
+                        
+                    log.info(method_params)
+                    log.info(method_models)
+
                     m = __salt__['boto_apigateway.create_api_method'](self.restApiId, self.basePath+path,
-                        method.upper(), "NONE", region=region, key=key, keyid=keyid, profile=profile)
+                        method.upper(), "NONE", requestParameters=method_params, requestModels=method_models, 
+                        region=region, key=key, keyid=keyid, profile=profile)
                     if not m.get('created'):
-                        ret['result'] = False
-                        ret['abort'] = True
-                        if 'error' in m:
-                            ret['comment'] = m.get('error')
+                        ret = report_error(ret, m)
                         return ret
+
+                    requestTemplates = {}
+                    if len(method_params) > 0 or len(method_models) > 0:
+                        requestTemplates = {"application/json": 
+                                       """#set($inputRoot = $input.path('$')) 
+                                       {
+                                       \"header-params\" : {
+                                       #set ($map = $input.params().header)
+                                       #foreach( $param in $map.entrySet() )
+                                       \"$param.key\" : \"$param.value\" #if( $foreach.hasNext ), #end
+                                       #end
+                                       },
+                                       \"query-params\" : {
+                                       #set ($map = $input.params().querystring)
+                                       #foreach( $param in $map.entrySet() )
+                                       \"$param.key\" : \"$param.value\" #if( $foreach.hasNext ), #end
+                                       #end
+                                       },
+                                       \"body-params\" : $input.json('$')
+                                       }"""}
+
+                    lambda_uri = self.construct_lambda_uri(ret, self.basePath+path, method.upper(), 
+                                                        region=region, key=key, keyid=keyid, profile=profile)
+                    log.info("!!!!!")
+                    log.info(region)
+                    log.info(profile)
+                    log.info("####")
+                    integration = __salt__['boto_apigateway.create_api_integration'](self.restApiId, self.basePath+path,
+                        method.upper(), "AWS", method.upper(), lambda_uri, "arn:aws:iam::999538448309:role/ApiGatewayTest", requestTemplates=requestTemplates,
+                        region=region, key=key, keyid=keyid, profile=profile)
+                    log.info(integration)
+                    if not integration.get('created'):
+                        ret = self.report_error(ret, integration)
+                        return ret
+
+                    if 'responses' in methodData:
+                        for response, responseData in methodData['responses'].iteritems():
+                            httpStatus = str(response)
+                            methodResponse = self.ixMethodResponse(responseData)
+
+                            method_response_models = {}
+                            if methodResponse.schema:
+                                method_response_models['application/json'] = methodResponse.schema
+                            
+                            method_response_params = {}
+                            method_integration_response_params = {}
+                            for header in methodResponse.headers:
+                                method_response_params["method.response.header."+header] = False
+                                method_integration_response_params["method.response.header."+header] = "'*'"
+
+                            mr = __salt__['boto_apigateway.create_api_method_response'](self.restApiId, self.basePath+path,
+                                  method.upper(), httpStatus, responseParameters=method_response_params, responseModels=method_response_models,
+                                  region=region, key=key, keyid=keyid, profile=profile)
+                            if not mr.get('created'):
+                                ret = report_error(ret, mr)
+                                return ret
+
+                            mir = __salt__['boto_apigateway.create_api_integration_response'](self.restApiId, self.basePath+path,
+                                  method.upper(), httpStatus, ".*", responseParameters=method_integration_response_params, 
+                                  region=region, key=key, keyid=keyid, profile=profile)
+                            if not mir.get('created'):
+                                ret = report_error(ret, mir)
+                                return ret
+                    else:
+                        raise ValueError('No responses specified for {0} {1}'.format(path,method)) 
+
+                    ret = self._log_changes(ret, 'deploy_resources - methods', m)
         return ret
 
+    def report_error(self, ret, obj):
+        ret['result'] = False
+        ret['abort'] = True
+        if 'error' in obj:
+            ret['comment'] = obj.get('error')
+        return ret
 
 def __virtual__():
     '''
