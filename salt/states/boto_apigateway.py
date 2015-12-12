@@ -390,11 +390,11 @@ class ixSwagger(object):
         lambda_region = __salt__['pillar.get']("lambda.region")
         if not lambda_region:
             raise ValueError('Region for lambda function {0} has not been specified'.format(lambda_name))        
-        lambda_dsc = __salt__['boto_lambda.describe'](lambda_name, region=lambda_region, key=key, keyid=keyid, profile=profile)
-        if not lambda_dsc.get('lambda'):
+        lambda_dsc = __salt__['boto_lambda.describe_function'](lambda_name, region=lambda_region, key=key, keyid=keyid, profile=profile)
+        if not lambda_dsc.get('function'):
             raise ValueError('Could not find lambda function {0}'.format(lambda_name))
             
-        lambda_arn = lambda_dsc.get('lambda').get('FunctionArn')
+        lambda_arn = lambda_dsc.get('function').get('FunctionArn')
         apigateway_region = __salt__['pillar.get']("apigateway.region")
         lambda_uri = 'arn:aws:apigateway:{0}:lambda:path/2015-03-31/functions/{1}/invocations'.format(apigateway_region, lambda_arn)
         log.info(lambda_uri)
@@ -453,12 +453,13 @@ class ixSwagger(object):
 
                     lambda_uri = self.construct_lambda_uri(ret, self.basePath+path, method.upper(), 
                                                         region=region, key=key, keyid=keyid, profile=profile)
-                    log.info("!!!!!")
-                    log.info(region)
-                    log.info(profile)
-                    log.info("####")
+
+                    agw_policy_arn = __salt__['pillar.get']("apigateway.policyarn")
+                    if not agw_policy_arn:
+                        raise ValueError("pillar for apigateway.policyarn not populated")
+
                     integration = __salt__['boto_apigateway.create_api_integration'](self.restApiId, self.basePath+path,
-                        method.upper(), "AWS", method.upper(), lambda_uri, "arn:aws:iam::999538448309:role/ApiGatewayTest", requestTemplates=requestTemplates,
+                        method.upper(), "AWS", method.upper(), lambda_uri, agw_policy_arn, requestTemplates=requestTemplates,
                         region=region, key=key, keyid=keyid, profile=profile)
                     log.info(integration)
                     if not integration.get('created'):
