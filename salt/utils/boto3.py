@@ -113,6 +113,7 @@ def _get_profile(service, region, key, keyid, profile):
 
     if not region:
         region = 'us-east-1'
+        log.info('Assuming default region {0}'.format(region))
 
     if not key and _option(service + '.key'):
         key = _option(service + '.key')
@@ -285,6 +286,7 @@ def assign_funcs(modname, service, module=None):
     # Leaving this way for now so boto modules can be back ported
     setattr(mod, '_exactly_one', exactly_one)
 
+
 def paged_call(function, marker_flag='NextMarker', marker_arg='Marker', *args, **kwargs):
     """Retrieve full set of values from a boto3 API call that may truncate
     its results, yielding each page as it is obtained.
@@ -295,4 +297,4 @@ def paged_call(function, marker_flag='NextMarker', marker_arg='Marker', *args, *
         yield ret
         if not marker:
             break
-        args[marker_arg] = marker
+        kwargs[marker_arg] = marker
