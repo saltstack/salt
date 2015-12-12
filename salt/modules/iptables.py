@@ -15,6 +15,7 @@ import string
 import salt.utils
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 from salt.exceptions import SaltException
+from salt.ext import six
 
 import logging
 log = logging.getLogger(__name__)
@@ -219,6 +220,17 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             if 'name' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
                 rule.append('--name {0}'.format(kwargs['name']))
         del kwargs['match']
+
+    if 'match-set' in kwargs:
+        if isinstance(kwargs['match-set'], six.string_types):
+            kwargs['match-set'] = [kwargs['match-set']]
+        for match_set in kwargs['match-set']:
+            negative_match_set = ''
+            if match_set.startswith('!') or match_set.startswith('not'):
+                negative_match_set = '! '
+                match_set = re.sub(bang_not_pat, '', match_set)
+            rule.append('-m set {0}--match-set {1}'.format(negative_match_set, match_set))
+        del kwargs['match-set']
 
     if 'connstate' in kwargs:
         if '-m state' not in rule:
