@@ -135,8 +135,8 @@ def install(pkg=None,
 
     cmd = ['npm', 'install']
     if silent:
-        cmd.append(['--silent'])
-    cmd.append(['--json'])
+        cmd.append('--silent')
+    cmd.append('--json')
 
     if dir is None:
         cmd.append(' --global')
