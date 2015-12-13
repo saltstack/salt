@@ -132,7 +132,7 @@ def install(pkg=None,
         pkgs = pkg_list
     if registry:
         registry = _cmd_quote(registry)
-        
+
     cmd = ['npm', 'install']
     if silent:
         cmd.append(['--silent'])
