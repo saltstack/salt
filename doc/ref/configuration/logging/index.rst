@@ -66,6 +66,10 @@ One of ``all``, ``garbage``, ``trace``, ``debug``, ``info``, ``warning``,
 
     log_level: warning
 
+.. note::
+    Add ``log_level: quiet```in salt configuration file to completely disable
+    logging. In case of running salt in command line use``--log-level=quiet``
+    instead.
 
 
 .. conf_log:: log_level_logfile
