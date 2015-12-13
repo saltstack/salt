@@ -441,7 +441,7 @@ def create(vm_):
     swap_disk_id = create_swap_disk(vm_, node_id)['DiskID']
     data_disk_id = None
     if get_data_disk(vm_):
-        data_disk_id = create_data_disk(vm_, node_id, get_data_disk_size(vm_, node_id, get_swap_size(vm_)))['DiskID']
+        data_disk_id = create_data_disk(vm_, node_id, get_data_disk_size(vm_, get_swap_size(vm_), node_id))['DiskID']
 
     # Add private IP address if requested
     private_ip_assignment = get_private_ip(vm_)
@@ -462,7 +462,7 @@ def create(vm_):
                                       'linode_id': node_id,
                                       'root_disk_id': root_disk_id,
                                       'swap_disk_id': swap_disk_id,
-                                      'data_disk_id': swap_disk_id,
+                                      'data_disk_id': data_disk_id,
                                       'helper_network': private_ip_assignment})['ConfigID']
     # Boot the Linode
     boot(kwargs={'linode_id': node_id,
