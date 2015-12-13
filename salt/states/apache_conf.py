@@ -30,7 +30,7 @@ def __virtual__():
     return 'apache_conf' if 'apache.a2enconf' in __salt__ and salt.utils.which('a2enconf') else False
 
 
-def enable(name):
+def enabled(name):
     '''
     Ensure an Apache conf is enabled.
 
@@ -64,7 +64,7 @@ def enable(name):
     return ret
 
 
-def disable(name):
+def disabled(name):
     '''
     Ensure an Apache conf is disabled.
 

@@ -27,7 +27,7 @@ def __virtual__():
     return 'apache_module' if 'apache.a2enmod' in __salt__ else False
 
 
-def enable(name):
+def enabled(name):
     '''
     Ensure an Apache module is enabled.
 
@@ -61,7 +61,7 @@ def enable(name):
     return ret
 
 
-def disable(name):
+def disabled(name):
     '''
     Ensure an Apache module is disabled.
 
