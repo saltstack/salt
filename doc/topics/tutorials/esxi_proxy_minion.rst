@@ -215,7 +215,16 @@ restart the proxy minion--it should just pick up the the new password
 provided in the list. You can then change pillar at will to move that
 password to the front and retire the unused ones.
 
-This also allows you to use any number of potential fallback passwords.
+Use-case/reasoning for using a list of passwords: You are setting up an
+ESXi host for the first time, and the host comes with a default password.
+You know that you'll be changing this password during your initial setup
+from the default to a new password. If you only have one password option,
+and if you have a state changing the password, any remote execution commands
+or states that run after the password change will not be able to run on the
+host until the password is updated in Pillar and the Proxy Minion process is
+restarted.
+
+This allows you to use any number of potential fallback passwords.
 
 .. note::
 

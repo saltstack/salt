@@ -97,7 +97,7 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
                                                                 port,
                                                                 cmd)
 
-    ret = salt.modules.cmdmod.run_all(esx_cmd)
+    ret = salt.modules.cmdmod.run_all(esx_cmd, output_loglevel='quiet')
 
     return ret
 
