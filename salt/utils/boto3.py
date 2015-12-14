@@ -230,6 +230,15 @@ def get_connection_func(service, module=None):
     return partial(get_connection, service, module=module)
 
 
+def get_region(service, region, profile):
+    """
+    Retrieve the region for a particular AWS service based on configured region and/or profile.
+    """
+    _, region, _, _ = _get_profile(service, region, None, None, profile)
+
+    return region
+
+
 def get_error(e):
     # The returns from boto modules vary greatly between modules. We need to
     # assume that none of the data we're looking for exists.
