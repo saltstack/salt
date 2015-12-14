@@ -1791,7 +1791,7 @@ def ls_remote(cwd=None,
         .. versionchanged:: 2015.8.0
             Argument renamed from ``branch`` to ``ref``
 
-        .. versionchanged:: 2015.8.?
+        .. versionchanged:: 2015.8.4
             Defaults to returning all refs instead of master.
 
     opts
