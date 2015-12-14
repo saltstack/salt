@@ -337,7 +337,7 @@ def rackconnect(vm_):
     Either 'False' (default) or 'True'.
     '''
     return config.get_cloud_config_value(
-        'rackconnect', vm_, __opts__, default='False',
+        'rackconnect', vm_, __opts__, default=False,
         search_global=False
     )
 
@@ -348,7 +348,7 @@ def managedcloud(vm_):
     running. Either 'False' (default) or 'True'.
     '''
     return config.get_cloud_config_value(
-        'managedcloud', vm_, __opts__, default='False',
+        'managedcloud', vm_, __opts__, default=False,
         search_global=False
     )
 
@@ -615,7 +615,7 @@ def create(vm_):
             return
 
         rackconnectv3 = config.get_cloud_config_value(
-            'rackconnectv3', vm_, __opts__, default='False',
+            'rackconnectv3', vm_, __opts__, default=False,
             search_global=False
         )
 
