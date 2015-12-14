@@ -1759,7 +1759,7 @@ def list_worktrees(cwd, stale=False, user=None, **kwargs):
 
 def ls_remote(cwd=None,
               remote='origin',
-              ref='master',
+              ref=None,
               opts='',
               user=None,
               identity=None,
@@ -1782,13 +1782,17 @@ def ls_remote(cwd=None,
         .. versionchanged:: 2015.8.0
             Argument renamed from ``repository`` to ``remote``
 
-    ref : master
-        The name of the ref to query. Can be a branch or tag name, or the full
-        name of the reference (for example, to get the hash for a Github pull
-        request number 1234, ``ref`` can be set to ``refs/pull/1234/head``
+    ref
+        The name of the ref to query. Optional, if not specified, all refs are
+        returned. Can be a branch or tag name, or the full name of the
+        reference (for example, to get the hash for a Github pull request number
+        1234, ``ref`` can be set to ``refs/pull/1234/head``
 
         .. versionchanged:: 2015.8.0
             Argument renamed from ``branch`` to ``ref``
+        
+        .. versionchanged:: 2015.8.?
+            Defaults to returning all refs instead of master.
 
     opts
         Any additional options to add to the command line, in a single string
@@ -1850,9 +1854,11 @@ def ls_remote(cwd=None,
     command.extend(_format_opts(opts))
     if not isinstance(remote, six.string_types):
         remote = str(remote)
-    if not isinstance(ref, six.string_types):
-        ref = str(ref)
-    command.extend([remote, ref])
+    command.extend([remote])
+    if ref:
+        if not isinstance(ref, six.string_types):
+            ref = str(ref)
+        command.extend([ref])
     output = _git_run(command,
                       cwd=cwd,
                       runas=user,
