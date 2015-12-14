@@ -534,7 +534,7 @@ def create_config(kwargs=None, call=None):
 
     data_disk_id
         The Data Disk ID to be used for this config.
-    
+
     kernel_id
         The ID of the kernel to use for this configuration profile.
     '''
@@ -565,9 +565,9 @@ def create_config(kwargs=None, call=None):
                 '\'root_disk_id\', and \'swap_disk_id\'.'
             )
 
-    disklist = '{0},{1}'.format(root_disk_id,swap_disk_id)
+    disklist = '{0},{1}'.format(root_disk_id, swap_disk_id)
     if data_disk_id is not None:
-       disklist = '{0},{1},{2}'.format(root_disk_id,swap_disk_id,data_disk_id)
+        disklist = '{0},{1},{2}'.format(root_disk_id, swap_disk_id, data_disk_id)
 
     config_args = {'LinodeID': linode_id,
                    'KernelID': kernel_id,
@@ -649,11 +649,12 @@ def create_swap_disk(vm_, linode_id, swap_size=None):
 
     return _clean_data(result)
 
+
 def create_data_disk(vm_=None, linode_id=None, data_size=None):
     '''
     Create a data disk for the linode (type is hardcoded to ext4 at the moment)
 
-    vm\_
+    vm_
         The VM profile to create the data disk for.
 
     linode_id
@@ -664,13 +665,13 @@ def create_data_disk(vm_=None, linode_id=None, data_size=None):
 
     '''
     kwargs = {}
-    
+
     kwargs.update({'LinodeID': linode_id,
                    'Label': vm_['name']+"_data",
                    'Type': 'ext4',
                    'Size': data_size
                    })
-    
+
     result = _query('linode', 'disk.create', args=kwargs)
     return _clean_data(result)
 
@@ -800,7 +801,8 @@ def get_disk_size(vm_, swap, linode_id):
     return config.get_cloud_config_value(
         'disk_size', vm_, __opts__, default=disk_size - swap
     )
-    
+
+
 def get_data_disk_size(vm_, swap, linode_id):
     '''
     Return the size of of the data disk in MB
@@ -1006,6 +1008,7 @@ def get_private_ip(vm_):
         'assign_private_ip', vm_, __opts__, default=False
     )
 
+
 def get_data_disk(vm_):
     '''
     Return True if a data disk is requested
@@ -1013,6 +1016,7 @@ def get_data_disk(vm_):
     return config.get_cloud_config_value(
         'allocate_data_disk', vm_, __opts__, default=False
     )
+
 
 def get_pub_key(vm_):
     r'''
