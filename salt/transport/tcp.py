@@ -733,10 +733,10 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
     # Based on default used in tornado.netutil.bind_sockets()
     backlog = 128
 
-    def __init__(self, opts, io_loop=None):
+    def __init__(self, opts):
         self.opts = opts
         self.serial = salt.payload.Serial(self.opts)  # TODO: in init?
-        self.io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        self.io_loop = None
 
     def __setstate__(self, state):
         self.__init__(state['opts'])
@@ -749,6 +749,10 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         Bind to the interface specified in the configuration file
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
+
+        # Check if io_loop was set outside
+        if self.io_loop is None:
+            self.io_loop = tornado.ioloop.IOLoop.current()
 
         # Spin up the publisher
         pub_server = PubServer(io_loop=self.io_loop)

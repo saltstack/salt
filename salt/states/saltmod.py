@@ -252,13 +252,13 @@ def state(
                 m_ret = mdata['ret']
             except KeyError:
                 m_state = False
-            if not m_state:
+            if m_state:
                 m_state = salt.utils.check_state_result(m_ret)
 
         if not m_state:
             if minion not in fail_minions:
                 fail.add(minion)
-            failures[minion] = m_ret and m_ret or 'Minion did not respond'
+            failures[minion] = m_ret or 'Minion did not respond'
             continue
         for state_item in six.itervalues(m_ret):
             if state_item['changes']:
