@@ -492,8 +492,8 @@ def create_api_key(name, description, enabled=True, stageKeys=None,
     '''
 
     try:
-        if stageKeys is None:
-            stageKeys = []
+        stageKeys = list() if stageKeys is None else stageKeys
+
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         response = conn.create_api_key(name=name, description=description,
                                        enabled=enabled, stageKeys=stageKeys)
@@ -711,8 +711,8 @@ def create_api_deployment(apiId, stageName, stageDescription='', description='',
 
     '''
     try:
-        if variables is None:
-            variables = {}
+        variables = dict() if variables is None else variables
+
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         deployment = conn.create_deployment(restApiId=apiId, stageName=stageName,
                                             stageDescription=stageDescription, description=description,
@@ -793,8 +793,8 @@ def create_api_stage(apiId, stageName, deploymentId, description='',
 
     '''
     try:
-        if variables is None:
-            variables = {}
+        variables = dict() if variables is None else variables
+
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         stage = conn.create_stage(restApiId=apiId, stageName=stageName, deploymentId=deploymentId,
                                   description=description, cacheClusterEnabled=cacheClusterEnabled,
@@ -860,10 +860,9 @@ def create_api_method(apiId, resourcePath, httpMethod, authorizationType,
         resource = get_api_resource(apiId, resourcePath, region=region,
                                     key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
-            if requestParameters is None:
-                requestParameters = {}
-            if requestModels is None:
-                requestModels = {}
+            requestParameters = dict() if requestParameters is None else requestParameters
+            requestModels = dict() if requestModels is None else requestModels
+
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             method = conn.put_method(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod,
                                      authorizationType=str(authorizationType), apiKeyRequired=apiKeyRequired,
@@ -935,10 +934,9 @@ def create_api_method_response(apiId, resourcePath, httpMethod, statusCode, resp
         resource = get_api_resource(apiId, resourcePath, region=region,
                                     key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
-            if responseParameters is None:
-                responseParameters = {}
-            if responseModels is None:
-                responseModels = {}
+            responseParameters = dict() if responseParameters is None else responseParameters
+            responseModels = dict() if responseModels is None else responseModels
+
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             response = conn.put_method_response(restApiId=apiId, resourceId=resource['id'],
                                                 httpMethod=httpMethod, statusCode=str(statusCode),
@@ -1231,10 +1229,9 @@ def create_api_integration(apiId, resourcePath, httpMethod, integrationType, int
         resource = get_api_resource(apiId, resourcePath, region=region,
                                     key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
-            if requestParameters is None:
-                requestParameters = {}
-            if requestTemplates is None:
-                requestTemplates = {}
+            requestParameters = dict() if requestParameters is None else requestParameters
+            requestTemplates = dict() if requestTemplates is None else responseTemplates
+
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             integration = conn.put_integration(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod,
                                                type=integrationType, integrationHttpMethod=integrationHttpMethod,
@@ -1263,10 +1260,9 @@ def create_api_integration_response(apiId, resourcePath, httpMethod, statusCode,
         resource = get_api_resource(apiId, resourcePath, region=region,
                                     key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
-            if responseParameters is None:
-                responseParameters = {}
-            if responseTemplates is None:
-                responseTemplates = {}
+            responseParameters = dict() if responseParameters is None else responseParameters
+            responseTemplates = dict() if responseTemplates is None else responseTemplates
+
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             response = conn.put_integration_response(restApiId=apiId, resourceId=resource['id'],
                                                      httpMethod=httpMethod, statusCode=statusCode,
