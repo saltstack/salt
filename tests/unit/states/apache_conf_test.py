@@ -27,9 +27,9 @@ class ApacheConfTestCase(TestCase):
     '''
     Test cases for salt.states.apache_conf
     '''
-    # 'enable' function tests: 1
+    # 'enabled' function tests: 1
 
-    def test_enable(self):
+    def test_enabled(self):
         '''
         Test to ensure an Apache conf is enabled.
         '''
@@ -47,22 +47,22 @@ class ApacheConfTestCase(TestCase):
                          'apache.a2enconf': mock_str}):
             comt = ('{0} already enabled.'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(apache_conf.enable(name), ret)
+            self.assertDictEqual(apache_conf.enabled(name), ret)
 
             comt = ('Apache conf {0} is set to be enabled.'.format(name))
             ret.update({'comment': comt, 'result': None,
                         'changes': {'new': name, 'old': None}})
             with patch.dict(apache_conf.__opts__, {'test': True}):
-                self.assertDictEqual(apache_conf.enable(name), ret)
+                self.assertDictEqual(apache_conf.enabled(name), ret)
 
             comt = ('Failed to enable {0} Apache conf'.format(name))
             ret.update({'comment': comt, 'result': False, 'changes': {}})
             with patch.dict(apache_conf.__opts__, {'test': False}):
-                self.assertDictEqual(apache_conf.enable(name), ret)
+                self.assertDictEqual(apache_conf.enabled(name), ret)
 
-    # 'disable' function tests: 1
+    # 'disabled' function tests: 1
 
-    def test_disable(self):
+    def test_disabled(self):
         '''
         Test to ensure an Apache conf is disabled.
         '''
@@ -81,17 +81,17 @@ class ApacheConfTestCase(TestCase):
             comt = ('Apache conf {0} is set to be disabled.'.format(name))
             ret.update({'comment': comt, 'changes': {'new': None, 'old': name}})
             with patch.dict(apache_conf.__opts__, {'test': True}):
-                self.assertDictEqual(apache_conf.disable(name), ret)
+                self.assertDictEqual(apache_conf.disabled(name), ret)
 
             comt = ('Failed to disable {0} Apache conf'.format(name))
             ret.update({'comment': comt, 'result': False,
                         'changes': {}})
             with patch.dict(apache_conf.__opts__, {'test': False}):
-                self.assertDictEqual(apache_conf.disable(name), ret)
+                self.assertDictEqual(apache_conf.disabled(name), ret)
 
             comt = ('{0} already disabled.'.format(name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(apache_conf.disable(name), ret)
+            self.assertDictEqual(apache_conf.disabled(name), ret)
 
 
 if __name__ == '__main__':
