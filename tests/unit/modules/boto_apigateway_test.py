@@ -156,7 +156,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         
         self.assertFalse(api_exists_result['exists'])                                                
 
-    def test_that_when_getting_rest_apis_and_no_name_option_the_get_apis_method_returns_list_of_all_rest_apis(self):
+    def test_that_when_getting_rest_apis_and_no_name_given_the_describe_apis_method_returns_list_of_all_rest_apis(self):
         '''
         Tests that all rest apis defined for a region is returned
         '''
@@ -186,7 +186,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                                                           u'name': u'testing123'}], 
                                               'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
         items = self.conn.get_rest_apis.return_value['items']
-        get_apis_result = boto_apigateway.get_apis()
+        get_apis_result = boto_apigateway.describe_apis()
         items_dt = map(boto_apigateway._convert_datetime_str, items)
         apis = get_apis_result.get('restapi')
         
@@ -199,7 +199,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
 
         self.assertTrue(apis and not diff)
 
-    def test_that_when_getting_rest_apis_and_name_is_testing123_the_get_apis_method_returns_list_of_two_rest_apis(self):
+    def test_that_when_getting_rest_apis_and_name_is_testing123_the_describe_apis_method_returns_list_of_two_rest_apis(self):
         '''
         Tests that exactly 2 apis are returned matching 'testing123'
         '''
@@ -233,14 +233,14 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                           {u'description': u'testing1234', u'createdDate': datetime.datetime(2015, 12, 2, 19, 51, 44, tzinfo=tzlocal()), 
                            u'id': u'vtir6ssxvd', u'name': u'testing123'}]  
 
-        get_apis_result = boto_apigateway.get_apis(name='testing123')
+        get_apis_result = boto_apigateway.describe_apis(name='testing123')
         expected_items_dt = map(boto_apigateway._convert_datetime_str, expected_items)
         apis = get_apis_result.get('restapi')
         diff = self._diff_list_dicts(apis, expected_items_dt, 'id')
 
         self.assertTrue(apis and not diff)
 
-    def test_that_when_getting_rest_apis_and_name_is_testing123_the_get_apis_method_returns_no_matching_items(self):
+    def test_that_when_getting_rest_apis_and_name_is_testing123_the_describe_apis_method_returns_no_matching_items(self):
         '''
         Tests that no apis are returned matching 'testing123'
         '''
@@ -262,7 +262,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                                                           u'name': u'API Gateway Cloudtap Service'}], 
                                               'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
                                  
-        get_apis_result = boto_apigateway.get_apis(name='testing123')
+        get_apis_result = boto_apigateway.describe_apis(name='testing123')
         apis = get_apis_result.get('restapi')
  
         self.assertTrue(not apis)
@@ -348,7 +348,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
 
         self.assertTrue(delete_api_result.get('deleted') == False)
 
-    def test_that_getting_api_keys_the_get_api_keys_method_returns_all_api_keys(self):
+    def test_that_getting_api_keys_the_describe_api_keys_method_returns_all_api_keys(self):
         '''
         tests True if all api_keys are returned.
         '''
@@ -369,7 +369,7 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
                 'RequestId': '7cc233dd-9dc8-11e5-ba47-1b7350cc2757'}}
 
         items = self.conn.get_api_keys.return_value['items']
-        get_api_keys_result = boto_apigateway.get_api_keys()
+        get_api_keys_result = boto_apigateway.describe_api_keys()
         items_dt = map(boto_apigateway._convert_datetime_str, items)
         api_keys = get_api_keys_result.get('apiKeys')
         
