@@ -10,6 +10,7 @@ https://packages.debian.org/debian-goodies) and psdel by Sam Morris.
 
 :codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 '''
+from __future__ import absolute_import
 
 # Import python libs
 import os
