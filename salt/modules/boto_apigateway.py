@@ -1230,7 +1230,7 @@ def create_api_integration(apiId, resourcePath, httpMethod, integrationType, int
                                     key=key, keyid=keyid, profile=profile).get('resource')
         if resource:
             requestParameters = dict() if requestParameters is None else requestParameters
-            requestTemplates = dict() if requestTemplates is None else responseTemplates
+            requestTemplates = dict() if requestTemplates is None else requestTemplates
 
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
             integration = conn.put_integration(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod,
