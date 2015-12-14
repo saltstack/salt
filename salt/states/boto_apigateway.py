@@ -70,7 +70,7 @@ def __virtual__():
     '''
     Only load if boto is available.
     '''
-    return 'boto_apigateway' if 'boto_apigateway.get_apis' in __salt__ else False
+    return 'boto_apigateway' if 'boto_apigateway.describe_apis' in __salt__ else False
 
 
 def _log_changes(ret, changekey, changevalue):
@@ -95,12 +95,12 @@ def _log_error_and_abort(ret, obj):
 def api_present(name, api_name, swagger_file, lambda_integration_role,
                 lambda_region=None, region=None, key=None, keyid=None, profile=None):
     '''
-    Ensure the spcified api_name with the corresponding swaggerfile is defined in 
+    Ensure the spcified api_name with the corresponding swaggerfile is defined in
     AWS ApiGateway.
 
-    This state will take the swagger definition, and perform the necessary actions 
+    This state will take the swagger definition, and perform the necessary actions
     to define a matching rest api in AWS ApiGateway and intgrate the method request
-    handling to AWS Lambda functions.  
+    handling to AWS Lambda functions.
 
     Please note that the name of the lambda function to be integrated will be derived
     via the following and lowercased:
@@ -117,8 +117,8 @@ def api_present(name, api_name, swagger_file, lambda_integration_role,
             basePath = '/api'
             path = '/a/b/c'
             method = 'POST'
-            
-            the derived Lambda Function Name that will be used for look up and 
+
+            the derived Lambda Function Name that will be used for look up and
             integration is:
 
             'test_api_api_a_b_c_post'
@@ -133,7 +133,7 @@ def api_present(name, api_name, swagger_file, lambda_integration_role,
         Name of the location of the swagger rest api definition file in YAML format.
 
     lambda_integration_role
-        The name or ARN of the IAM role that the AWS ApiGateway assumes when it 
+        The name or ARN of the IAM role that the AWS ApiGateway assumes when it
         executes your lambda function to handle incoming requests
 
     lambda_region
@@ -143,9 +143,9 @@ def api_present(name, api_name, swagger_file, lambda_integration_role,
         priority:
 
         1) lambda_region as passed in (is not None)
-        2) if lambda_region is None, use the region as if a boto_lambda function were 
-        executed without explicitly specifying lambda region.  
-        3) if region determined in (2) is different than the region used by 
+        2) if lambda_region is None, use the region as if a boto_lambda function were
+        executed without explicitly specifying lambda region.
+        3) if region determined in (2) is different than the region used by
         boto_apigateway functions, a final lookup will be attempted using the
         boto_apigateway region.
 
@@ -182,8 +182,6 @@ def api_present(name, api_name, swagger_file, lambda_integration_role,
         if ret.get('abort'):
             return ret
 
-        lambda_integration_role = _get_role_arn(lambda_integration_role, region=region,
-                                                key=key, keyid=keyid, profile=profile)
         ret = swagger.deploy_resources(ret, lambda_integration_role=lambda_integration_role,
                                        lambda_region=lambda_region, region=region,
                                        key=key, keyid=keyid, profile=profile)
@@ -195,17 +193,6 @@ def api_present(name, api_name, swagger_file, lambda_integration_role,
         ret['comment'] = e.message
 
     return ret
-
-
-def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
-    if name.startswith('arn:aws:iam:'):
-        return name
-
-    account_id = __salt__['boto_iam.get_account_id'](
-        region=region, key=key, keyid=keyid, profile=profile
-    )
-
-    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
 
 
 def api_absent(name, api_name, swagger_file, region=None, key=None, keyid=None, profile=None):
@@ -594,7 +581,7 @@ class Swagger(object):
 
     def _lambda_name(self, resourcePath, httpMethod):
         '''
-        Helper method to construct lambda name based on the rule specified in doc string of 
+        Helper method to construct lambda name based on the rule specified in doc string of
         boto_apigateway.api_present function
         '''
         lambda_name = '{0}{1}_{2}'.format(self.rest_api_name.strip(), resourcePath, httpMethod)
@@ -610,7 +597,7 @@ class Swagger(object):
         lambda_desc = __salt__['boto_lambda.describe_function'](lambda_name, region=lambda_region,
                                                                 key=key, keyid=keyid, profile=profile)
 
-        if (lambda_region != apigw_region):
+        if lambda_region != apigw_region:
             if not lambda_desc.get('function'):
                 # try look up in the same region as the apigateway as well if previous lookup failed
                 lambda_desc = __salt__['boto_lambda.describe_function'](lambda_name, region=apigw_region,
@@ -725,7 +712,8 @@ class Swagger(object):
             ret = _log_changes(ret, 'deploy_resources', resource)
             for method, method_data in pathData.iteritems():
                 if method in self.SWAGGER_OPERATION_NAMES:
-                    ret = self.deploy_method(ret, resource_path, method, method_data, lambda_integration_role, lambda_region,
+                    ret = self.deploy_method(ret, resource_path, method, method_data, 
+                                             lambda_integration_role, lambda_region,
                                              region=region, key=key, keyid=keyid, profile=profile)
         return ret
 
