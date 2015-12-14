@@ -21,7 +21,7 @@ def __virtual__():
     if __grains__['os'] == 'FreeBSD' and salt.utils.which('poudriere'):
         return 'poudriere'
     else:
-        return False
+        return (False, 'The poudriere execution module failed to load: only available on FreeBSD with the poudriere binary in the path.')
 
 
 def _config_file():
