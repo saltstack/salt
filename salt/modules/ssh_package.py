@@ -24,7 +24,7 @@ def __virtual__():
     '''
     if salt.utils.is_proxy():
         return __virtualname__
-    return False
+    return (False, 'THe ssh_service execution module failed to load: only works on a proxy minion.')
 
 
 def list_pkgs(versions_as_list=False, **kwargs):

@@ -45,7 +45,7 @@ def __virtual__():
     '''
     if HAS_WIN32NET_MODS and salt.utils.is_windows():
         return __virtualname__
-    return False
+    return (False, "Module win_system: module only works on Windows systems")
 
 
 def _convert_minutes_seconds(timeout, in_seconds=False):

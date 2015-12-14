@@ -86,18 +86,78 @@ on me". This will result in a ``require`` being inserted into the
 In the end, a single dependency map is created and everything is executed in a
 finite and predictable order.
 
-.. note:: Requisite matching
+Requisite matching
+------------------
 
-    Requisites match on both the ID Declaration and the ``name`` parameter.
-    This means that, in the example above, the ``require_in`` requisite would
-    also have been matched if the ``/etc/vimrc`` state was written as follows:
+Requisites need two pieces of information for matching: The state module name –
+e.g. ``pkg`` –, and the identifier – e.g. vim –, which can be either the ID (the
+first line in the stanza) or the ``- name`` parameter.
 
-    .. code-block:: yaml
+.. code-block:: yaml
 
-        vimrc:
-          file.managed:
-            - name: /etc/vimrc
-            - source: salt://edit/vimrc
+    - require:
+      - pkg: vim
+
+State target matching
+~~~~~~~~~~~~~~~~~~~~~
+
+In order to understand how state targets are matched, it is helpful to know
+:ref:`how the state compiler is working <compiler_ordering>`. Consider the following
+example:
+
+.. code-block:: yaml
+
+    Deploy server package:
+      file.managed:
+        - name: /usr/local/share/myapp.tar.xz
+        - source: salt://myapp.tar.xz
+
+    Extract server package:
+      archive.extracted:
+        - name: /usr/local/share/myapp
+        - source: /usr/local/share/myapp.tar.xz
+        - archive_format: tar
+        - onchanges:
+          - file: Deploy server package
+
+The first formula is converted to a dictionary which looks as follows (represented
+as YAML, some properties omitted for simplicity) as `High Data`:
+
+.. code-block:: yaml
+
+    Deploy server package:
+      file:
+        - managed
+        - name: /usr/local/share/myapp.tar.xz
+        - source: salt://myapp.tar.xz
+
+The ``file.managed`` format used in the formula is essentially syntactic sugar:
+at the end, the target is ``file``, which is used in the ``Extract server package``
+state above.
+
+Identifier matching
+~~~~~~~~~~~~~~~~~~~
+
+Requisites match on both the ID Declaration and the ``name`` parameter.
+This means that, in the "Deploy server package" example above, a ``require``
+requisite would match with with ``Deploy server package`` *or* ``/usr/local/share/myapp.tar.xz``,
+so either of the following versions for "Extract server package" works:
+
+.. code-block:: yaml
+
+    # (Archive arguments omitted for simplicity)
+
+    # Match by ID declaration
+    Extract server package:
+      archive.extracted:
+        - onchanges:
+          - file: Deploy server package
+
+    # Match by name parameter
+    Extract server package:
+      archive.extracted:
+        - onchanges:
+          - file: /usr/local/share/myapp.tar.xz
 
 
 Direct Requisite and Requisite_in types
@@ -166,7 +226,7 @@ in other states.
     If a state should only execute when another state has changes, and
     otherwise do nothing, the new ``onchanges`` requisite should be used
     instead of ``watch``. ``watch`` is designed to add *additional* behavior
-    when there are changes, but otherwise execute normally.
+    when there are changes, but otherwise the state executes normally.
 
 The state containing the ``watch`` requisite is defined as the watching
 state. The state specified in the ``watch`` statement is defined as the watched
@@ -175,36 +235,37 @@ a key named "changes". Here are two examples of state return dictionaries,
 shown in json for clarity:
 
 .. code-block:: json
-
-    "local": {
-        "file_|-/tmp/foo_|-/tmp/foo_|-directory": {
-            "comment": "Directory /tmp/foo updated",
-            "__run_num__": 0,
-            "changes": {
-                "user": "bar"
-            },
-            "name": "/tmp/foo",
-            "result": true
+    {
+        "local": {
+            "file_|-/tmp/foo_|-/tmp/foo_|-directory": {
+                "comment": "Directory /tmp/foo updated",
+                "__run_num__": 0,
+                "changes": {
+                    "user": "bar"
+                },
+                "name": "/tmp/foo",
+                "result": true
+            }
         }
     }
 
-    "local": {
-        "pkgrepo_|-salt-minion_|-salt-minion_|-managed": {
-            "comment": "Package repo 'salt-minion' already configured",
-            "__run_num__": 0,
-            "changes": {},
-            "name": "salt-minion",
-            "result": true
+    {
+        "local": {
+            "pkgrepo_|-salt-minion_|-salt-minion_|-managed": {
+                "comment": "Package repo 'salt-minion' already configured",
+                "__run_num__": 0,
+                "changes": {},
+                "name": "salt-minion",
+                "result": true
+            }
         }
     }
 
 If the "result" of the watched state is ``True``, the watching state *will
-execute normally*. This part of ``watch`` mirrors the functionality of the
-``require`` requisite. If the "result" of the watched state is ``False``, the
-watching state will never run, nor will the watching state's ``mod_watch``
-function execute.
+execute normally*, and if it is ``False``, the watching state will never run.
+This part of ``watch`` mirrors the functionality of the ``require`` requisite.
 
-However, if the "result" of the watched state is ``True``, and the "changes"
+If the "result" of the watched state is ``True`` *and* the "changes"
 key contains a populated dictionary (changes occurred in the watched state),
 then the ``watch`` requisite can add additional behavior. This additional
 behavior is defined by the ``mod_watch`` function within the watching state

@@ -35,7 +35,8 @@ def __virtual__():
     '''
     if __grains__['kernel'] == 'Linux' and salt.utils.systemd.booted(__context__):
         return __virtualname__
-    return False
+    return (False, 'The systemd execution module failed to load: '
+        "only available on Linux systems which have been booted with systemd.")
 
 
 def _canonical_unit_name(name):

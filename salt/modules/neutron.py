@@ -1387,6 +1387,72 @@ def list_firewall_rules(profile=None):
     return conn.list_firewall_rules()
 
 
+def show_firewall_rule(firewall_rule, profile=None):
+    '''
+    Fetches information of a specific firewall rule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.show_firewall_rule firewall-rule-name
+
+    :param ipsecpolicy: ID or name of firewall rule to look up
+    :param profile: Profile to build on (Optional)
+    :return: firewall rule information
+    '''
+    conn = _auth(profile)
+    return conn.show_firewall_rule(firewall_rule)
+
+
+def create_firewall_rule(protocol, action, profile=None, **kwargs):
+    '''
+    Creates a new firewall rule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.create_firewall_rule protocol action
+                tenant_id=TENANT_ID name=NAME description=DESCRIPTION ip_version=IP_VERSION
+                source_ip_address=SOURCE_IP_ADDRESS destination_ip_address=DESTINATION_IP_ADDRESS source_port=SOURCE_PORT
+                destination_port=DESTINATION_PORT shared=SHARED enabled=ENABLED
+
+    :param protocol: Protocol for the firewall rule, choose "tcp","udp","icmp" or "None".
+    :param action: Action for the firewall rule, choose "allow" or "deny".
+    :param tenant_id: The owner tenant ID. (Optional)
+    :param name: Name for the firewall rule. (Optional)
+    :param description: Description for the firewall rule. (Optional)
+    :param ip_version: IP protocol version, default: 4. (Optional)
+    :param source_ip_address: Source IP address or subnet. (Optional)
+    :param destination_ip_address: Destination IP address or subnet. (Optional)
+    :param source_port: Source port (integer in [1, 65535] or range in a:b). (Optional)
+    :param destination_port: Destination port (integer in [1, 65535] or range in a:b). (Optional)
+    :param shared: Set shared to True, default: False. (Optional)
+    :param enabled: To enable this rule, default: True. (Optional)
+    '''
+    conn = _auth(profile)
+    return conn.create_firewall_rule(protocol, action, **kwargs)
+
+
+def delete_firewall_rule(firewall_rule, profile=None):
+    '''
+    Deletes the specified firewall_rule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.delete_firewall_rule firewall-rule
+
+    :param firewall_rule: ID or name of firewall rule to delete
+    :param profile: Profile to build on (Optional)
+    :return: True(Succeed) or False
+    '''
+    conn = _auth(profile)
+    return conn.delete_firewall_rule(firewall_rule)
+
+
 # The following is a list of functions that need to be incorporated in the
 # neutron module. This list should be updated as functions are added.
 #

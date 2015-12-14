@@ -378,7 +378,19 @@ def latest_version(*names, **kwargs):
                                   output_loglevel='trace',
                                   ignore_retcode=True,
                                   python_shell=False)
-    if out['retcode'] != 0 and 'Error:' in out:
+    if out['retcode'] != 0:
+        if out['stderr']:
+            # Check first if this is just a matter of the packages being
+            # up-to-date.
+            cur_pkgs = list_pkgs()
+            if not all([x in cur_pkgs for x in names]):
+                log.error(
+                    'Problem encountered getting latest version for the '
+                    'following package(s): {0}. Stderr follows: \n{1}'.format(
+                        ', '.join(names),
+                        out['stderr']
+                    )
+                )
         return []
     # Find end of first line so we can skip it
     header_end = out['stdout'].find('\n')
@@ -2065,6 +2077,8 @@ def _parse_repo_file(filename):
                         'Failed to parse line in {0}, offending line was '
                         '\'{1}\''.format(filename, line.rstrip())
                     )
+                if comps[0].strip() == 'enabled':
+                    repos[repo]['disabled'] = comps[1] != "1"
 
     return (header, repos)
 

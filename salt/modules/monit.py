@@ -22,7 +22,7 @@ def __virtual__():
     if salt.utils.which('monit') is not None:
         # The monit binary exists, let the module load
         return True
-    return False
+    return (False, 'The monit execution module cannot be loaded: the monit binary is not in the path.')
 
 
 def start(name):

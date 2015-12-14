@@ -25,7 +25,7 @@ def __virtual__():
     '''
     if __grains__['os'] == 'proxy':
         return __virtualname__
-    return False
+    return (False, 'The rest_service execution module failed to load: only available on proxy minions.')
 
 
 def get_all():

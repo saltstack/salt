@@ -37,7 +37,7 @@ def __virtual__():
     '''
     # Disable on Windows, a specific file module exists:
     if salt.utils.is_windows():
-        return False
+        return (False, 'The network execution module cannot be loaded on Windows: use win_network instead.')
 
     return True
 
@@ -917,7 +917,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     addrs = salt.utils.network.ip_addrs6(interface=interface,
                                         include_loopback=include_loopback)
     if cidr:
-        return [i for i in addrs if salt.utils.network.ip_in_subnet(cidr, [i])]
+        return [i for i in addrs if salt.utils.network.in_subnet(cidr, [i])]
     else:
         return addrs
 

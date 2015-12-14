@@ -480,9 +480,13 @@ def _check_directory(name,
                 stats = __salt__['file.stats'](
                     path, None, follow_symlinks=False
                 )
-                if user is not None and user != stats.get('user'):
+                if (user is not None
+                        and user != stats.get('user')
+                        and user != stats.get('uid')):
                     fchange['user'] = user
-                if group is not None and group != stats.get('group'):
+                if (group is not None
+                        and group != stats.get('group')
+                        and group != stats.get('gid')):
                     fchange['group'] = group
                 if fchange:
                     changes[path] = fchange
@@ -538,9 +542,13 @@ def _check_dir_meta(name,
     if not stats:
         changes['directory'] = 'new'
         return changes
-    if user is not None and user != stats['user']:
+    if (user is not None
+            and user != stats['user']
+            and user != stats.get('uid')):
         changes['user'] = user
-    if group is not None and group != stats['group']:
+    if (group is not None
+            and group != stats['group']
+            and group != stats.get('gid')):
         changes['group'] = group
     # Normalize the dir mode
     smode = __salt__['config.manage_mode'](stats['mode'])
@@ -4116,7 +4124,7 @@ def _merge_dict(obj, k, v):
                         for x, y in six.iteritems(updates):
                             changes[k + "." + x] = y
                     else:
-                        if obj[k][a] != b:
+                        if a not in obj[k] or obj[k][a] != b:
                             changes[k + "." + a] = b
                             obj[k][a] = b
             else:

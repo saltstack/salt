@@ -69,7 +69,7 @@ def __virtual__():
     '''
     if HAS_DRIVER:
         return __virtualname__
-    return False
+    return (False, 'Cannot load cassandra_cql module: python driver not found')
 
 
 def _load_properties(property_name, config_option, set_default=False, default=None):

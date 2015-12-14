@@ -32,18 +32,19 @@ def __virtual__():
     Confine this module to rpm based systems
     '''
     if not salt.utils.which('rpm'):
-        return False
+        return (False, 'The rpm execution module failed to load: rpm binary is not in the path.')
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
     except Exception:
-        return False
+        return (False, 'The rpm execution module failed to load: failed to detect os or os_family grains.')
 
     enabled = ('amazon', 'xcp', 'xenserver')
 
     if os_family in ['redhat', 'suse'] or os_grain in enabled:
         return __virtualname__
-    return False
+    return (False, 'The rpm execution module failed to load: only available on redhat/suse type systems '
+        'or amazon, xcp or xenserver.')
 
 
 def bin_pkg_info(path, saltenv='base'):
