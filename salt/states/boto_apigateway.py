@@ -277,6 +277,7 @@ class Swagger(object):
     # JSON_SCHEMA_REF
     JSON_SCHEMA_DRAFT_4 = 'http://json-schema.org/draft-04/schema#'
 
+    # AWS integration templates for normal and options methods
     REQUEST_TEMPLATE = {'application/json':
                             '#set($inputRoot = $input.path(\'$\'))'
                             '{'
@@ -294,7 +295,7 @@ class Swagger(object):
                             '},'
                             '"body-params" : $input.json(\'$\')'
                             '}'}
-
+    REQUEST_OPTION_TEMPLATE = {'application/json': '{"statusCode": 200}'}
 
     class SwaggerParameter(object):
         '''
@@ -612,7 +613,7 @@ class Swagger(object):
         log.info('###############{0}'.format(lambda_uri))
         return lambda_uri
 
-    def _parse_method_data(self, method_data):
+    def _parse_method_data(self, method_name, method_data):
         method_params = {}
         method_models = {}
         if 'parameters' in method_data:
@@ -623,15 +624,15 @@ class Swagger(object):
                 if p.schema:
                     method_models['application/json'] = p.schema
 
-        request_templates = {}
-        if method_params or method_models:
-            request_templates = self.REQUEST_TEMPLATE
+        request_templates = self.REQUEST_OPTION_TEMPLATE if method_name == 'options' else self.REQUEST_TEMPLATE
+        integration_type = "MOCK" if method_name == 'options' else "AWS"
 
         return {'params': method_params,
                 'models': method_models,
-                'request_templates': request_templates}
+                'request_templates': request_templates,
+                'integration_type': integration_type}
 
-    def _parse_method_response(self, method_response):
+    def _parse_method_response(self, method_name, method_response):
         method_response_models = {}
         if method_response.schema:
             method_response_models['application/json'] = method_response.schema
@@ -648,7 +649,7 @@ class Swagger(object):
 
     def deploy_method(self, ret, resource_path, method_name, method_data, lambda_integration_role, lambda_region,
                       region=None, key=None, keyid=None, profile=None):
-        method = self._parse_method_data(method_data)
+        method = self._parse_method_data(method_name.lower(), method_data)
 
         # TODO: 'NONE' ??
         m = __salt__['boto_apigateway.create_api_method'](self.restApiId, resource_path,
@@ -660,11 +661,13 @@ class Swagger(object):
 
         ret = _log_changes(ret, 'deploy_method.create_api_method', m)
 
-        lambda_uri = self._lambda_uri(ret, self._lambda_name(resource_path, method_name), lambda_region=lambda_region,
-                                      region=region, key=key, keyid=keyid, profile=profile)
+        lambda_uri = ""
+        if method_name.lower() != 'options':
+            lambda_uri = self._lambda_uri(ret, self._lambda_name(resource_path, method_name), lambda_region=lambda_region,
+                                          region=region, key=key, keyid=keyid, profile=profile)
 
         integration = __salt__['boto_apigateway.create_api_integration'](
-                self.restApiId, resource_path, method_name.upper(), 'AWS', method_name.upper(),
+                self.restApiId, resource_path, method_name.upper(), method.get('integration_type'), method_name.upper(),
                 lambda_uri, lambda_integration_role, requestTemplates=method.get('request_templates'),
                 region=region, key=key, keyid=keyid, profile=profile)
         log.info(integration)
@@ -676,7 +679,7 @@ class Swagger(object):
         if 'responses' in method_data:
             for response, response_data in method_data['responses'].iteritems():
                 httpStatus = str(response)
-                method_response = self._parse_method_response(Swagger.SwaggerMethodResponse(response_data))
+                method_response = self._parse_method_response(method_name.lower(), Swagger.SwaggerMethodResponse(response_data))
 
                 mr = __salt__['boto_apigateway.create_api_method_response'](
                         self.restApiId, resource_path, method_name.upper(), httpStatus,
