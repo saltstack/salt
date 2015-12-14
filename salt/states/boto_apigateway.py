@@ -288,6 +288,25 @@ class Swagger(object):
     # JSON_SCHEMA_REF
     JSON_SCHEMA_DRAFT_4 = 'http://json-schema.org/draft-04/schema#'
 
+    REQUEST_TEMPLATE = {'application/json':
+                            '#set($inputRoot = $input.path(\'$\'))'
+                            '{'
+                            '"header-params" : {'
+                            '#set ($map = $input.params().header)'
+                            '#foreach( $param in $map.entrySet() )'
+                            '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end'
+                            '#end'
+                            '},'
+                            '"query-params" : {'
+                            '#set ($map = $input.params().querystring)'
+                            '#foreach( $param in $map.entrySet() )'
+                            '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end'
+                            '#end'
+                            '},'
+                            '"body-params" : $input.json(\'$\')'
+                            '}'}
+
+
     class SwaggerParameter(object):
         '''
         This is a helper class for the Swagger Parameter Object
@@ -596,6 +615,94 @@ class Swagger(object):
         log.info(lambda_uri)
         return lambda_uri
 
+    def _parse_method_data(self, method_data):
+        method_params = {}
+        method_models = {}
+        if 'parameters' in method_data:
+            for param in method_data['parameters']:
+                p = Swagger.SwaggerParameter(param)
+                if p.name:
+                    method_params[p.name] = True
+                if p.schema:
+                    method_models['application/json'] = p.schema
+
+        request_templates = {}
+        if method_params or method_models:
+            request_templates = self.REQUEST_TEMPLATE
+
+        return {'params': method_params,
+                'models': method_models,
+                'request_templates': request_templates}
+
+    def _parse_method_response(self, method_response):
+        method_response_models = {}
+        if method_response.schema:
+            method_response_models['application/json'] = method_response.schema
+
+        method_response_params = {}
+        method_integration_response_params = {}
+        for header in method_response.headers:
+            method_response_params['method.response.header.{0}'.format(header)] = False
+            method_integration_response_params['method.response.header.{0}'.format(header)] = "'*'"
+
+        return {'params': method_response_params,
+                'models': method_response_models,
+                'integration_params': method_integration_response_params}
+
+    def deploy_method(self, ret, resource_path, method_name, method_data, lambda_integration_role, lambda_region,
+                      region=None, key=None, keyid=None, profile=None):
+        method = self._parse_method_data(method_data)
+
+        # TODO: 'NONE' ??
+        m = __salt__['boto_apigateway.create_api_method'](self.restApiId, resource_path,
+            method_name.upper(), 'NONE', requestParameters=method.get('params'), requestModels=method.get('models'),
+            region=region, key=key, keyid=keyid, profile=profile)
+        if not m.get('created'):
+            ret = _log_error_and_abort(ret, m)
+            return ret
+
+        ret = _log_changes(ret, 'deploy_method.create_api_method', m)
+
+        lambda_uri = self._lambda_uri(ret, self._lambda_name(resource_path, method_name),
+                                      region=region, key=key, keyid=keyid, profile=profile)
+
+        integration = __salt__['boto_apigateway.create_api_integration'](
+                self.restApiId, resource_path, method_name.upper(), 'AWS', method_name.upper(),
+                lambda_uri, lambda_integration_role, requestTemplates=method.get('request_templates'),
+                region=region, key=key, keyid=keyid, profile=profile)
+        log.info(integration)
+        if not integration.get('created'):
+            ret = _log_error_and_abort(ret, integration)
+            return ret
+        ret = _log_changes(ret, 'deploy_method.create_api_integration', integration)
+
+        if 'responses' in method_data:
+            for response, response_data in method_data['responses'].iteritems():
+                httpStatus = str(response)
+                method_response = self._parse_method_response(Swagger.SwaggerMethodResponse(response_data))
+
+                mr = __salt__['boto_apigateway.create_api_method_response'](
+                        self.restApiId, resource_path, method_name.upper(), httpStatus,
+                        responseParameters=method_response.get('params'), responseModels=method_response.get('models'),
+                        region=region, key=key, keyid=keyid, profile=profile)
+                if not mr.get('created'):
+                    ret = _log_error_and_abort(ret, mr)
+                    return ret
+                ret = _log_changes(ret, 'deploy_method.create_api_method_response', mr)
+
+                mir = __salt__['boto_apigateway.create_api_integration_response'](
+                        self.restApiId, resource_path, method_name.upper(), httpStatus, '.*',
+                        responseParameters=method_response.get('integration_params'),
+                        region=region, key=key, keyid=keyid, profile=profile)
+                if not mir.get('created'):
+                    ret = _log_error_and_abort(ret, mir)
+                    return ret
+                ret = _log_changes(ret, 'deploy_method.create_api_integration_response', mir)
+        else:
+            raise ValueError('No responses specified for {0} {1}'.format(resource_path, method_name))
+
+        return ret
+
     def deploy_resources(self, ret, lambda_integration_role, lambda_region,
                          region=None, key=None, keyid=None, profile=None):
         for path, pathData in self.paths:
@@ -606,102 +713,9 @@ class Swagger(object):
                 ret = _log_error_and_abort(ret, resource)
                 return ret
             ret = _log_changes(ret, 'deploy_resources', resource)
-            for method, methodData in pathData.iteritems():
+            for method, method_data in pathData.iteritems():
                 if method in self.SWAGGER_OPERATION_NAMES:
-                    method_params = {}
-                    method_models = {}
-                    log.info(methodData)
-                    if 'parameters' in methodData:
-                        for param in methodData['parameters']:
-                            p = Swagger.SwaggerParameter(param)
-                            if p.name:
-                                method_params[p.name] = True
-                            if p.schema:
-                                method_models['application/json'] = p.schema
-
-                    log.info(method_params)
-                    log.info(method_models)
-
-                    # TODO: 'NONE' ??
-                    m = __salt__['boto_apigateway.create_api_method'](self.restApiId, resource_path,
-                        method.upper(), 'NONE', requestParameters=method_params, requestModels=method_models,
-                        region=region, key=key, keyid=keyid, profile=profile)
-                    if not m.get('created'):
-                        ret = _log_error_and_abort(ret, m)
-                        return ret
-
-                    requestTemplates = {}
-                    if method_params or method_models:
-                        # TODO: move this to a constant for the class.
-                        requestTemplates = {'application/json':
-                                       """#set($inputRoot = $input.path('$'))
-                                       {
-                                       \"header-params\" : {
-                                       #set ($map = $input.params().header)
-                                       #foreach( $param in $map.entrySet() )
-                                       \"$param.key\" : \"$param.value\" #if( $foreach.hasNext ), #end
-                                       #end
-                                       },
-                                       \"query-params\" : {
-                                       #set ($map = $input.params().querystring)
-                                       #foreach( $param in $map.entrySet() )
-                                       \"$param.key\" : \"$param.value\" #if( $foreach.hasNext ), #end
-                                       #end
-                                       },
-                                       \"body-params\" : $input.json('$')
-                                       }"""}
-
-                    lambda_uri = self._lambda_uri(ret, self._lambda_name(resource_path, method),
-                                                  region=region, key=key, keyid=keyid, profile=profile)
-
-                    # TODO: fix this by passing in the ROLE name into the presence function, and
-                    # we will get this dynamically through boto_iam instead of through the pillar.
-                    agw_policy_arn = __salt__['pillar.get']('apigateway.policyarn')
-                    if not agw_policy_arn:
-                        raise ValueError('pillar for apigateway.policyarn not populated')
-
-                    integration = __salt__['boto_apigateway.create_api_integration'](
-                            self.restApiId, resource_path, method.upper(), 'AWS', method.upper(),
-                            lambda_uri, agw_policy_arn, requestTemplates=requestTemplates,
-                            region=region, key=key, keyid=keyid, profile=profile)
-                    log.info(integration)
-                    if not integration.get('created'):
-                        ret = _log_error_and_abort(ret, integration)
-                        return ret
-
-                    if 'responses' in methodData:
-                        for response, responseData in methodData['responses'].iteritems():
-                            httpStatus = str(response)
-                            methodResponse = Swagger.SwaggerMethodResponse(responseData)
-
-                            method_response_models = {}
-                            if methodResponse.schema:
-                                method_response_models['application/json'] = methodResponse.schema
-
-                            method_response_params = {}
-                            method_integration_response_params = {}
-                            for header in methodResponse.headers:
-                                method_response_params['method.response.header.{0}'.format(header)] = False
-                                method_integration_response_params['method.response.header.{0}'.format(header)] = "'*'"
-
-                            mr = __salt__['boto_apigateway.create_api_method_response'](
-                                    self.restApiId, resource_path, method.upper(), httpStatus,
-                                    responseParameters=method_response_params, responseModels=method_response_models,
-                                    region=region, key=key, keyid=keyid, profile=profile)
-                            if not mr.get('created'):
-                                ret = _log_error_and_abort(ret, mr)
-                                return ret
-
-                            mir = __salt__['boto_apigateway.create_api_integration_response'](
-                                    self.restApiId, resource_path, method.upper(), httpStatus, '.*',
-                                    responseParameters=method_integration_response_params,
-                                    region=region, key=key, keyid=keyid, profile=profile)
-                            if not mir.get('created'):
-                                ret = _log_error_and_abort(ret, mir)
-                                return ret
-                    else:
-                        raise ValueError('No responses specified for {0} {1}'.format(path, method))
-
-                    ret = _log_changes(ret, 'deploy_resources - methods', m)
+                    ret = self.deploy_method(ret, resource_path, method, method_data, lambda_integration_role, lambda_region,
+                                             region=region, key=key, keyid=keyid, profile=profile)
         return ret
 
