@@ -170,6 +170,10 @@ class SaltNeutron(NeutronShell):
         resources = self.list_firewall_rules()['firewall_rules']
         return self._fetch(resources, name_or_id)
 
+    def _fetch_firewall(self, name_or_id):
+        resources = self.list_firewalls()['firewalls']
+        return self._fetch(resources, name_or_id)
+
     def get_quotas_tenant(self):
         '''
         Fetches tenant info in server's context
@@ -792,6 +796,18 @@ class SaltNeutron(NeutronShell):
         firewall_rule_id = self._find_firewall_rule_id(firewall_rule)
         ret = self.network_conn.delete_firewall_rule(firewall_rule_id)
         return ret if ret else True
+
+    def list_firewalls(self):
+        '''
+        Fetches a list of all firewalls for a tenant
+        '''
+        return self.network_conn.list_firewalls()
+
+    def show_firewall(self, firewall):
+        '''
+        Fetches information of a specific firewall
+        '''
+        return self._fetch_firewall(firewall)
 
 
 # The following is a list of functions that need to be incorporated in the
