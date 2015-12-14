@@ -1216,7 +1216,8 @@ def create_api_integration(apiId, resourcePath, httpMethod, integrationType, int
                            uri, credentials, requestParameters=None, requestTemplates=None,
                            region=None, key=None, keyid=None, profile=None):
     '''
-    Creates an integration for a given method in a given API
+    Creates an integration for a given method in a given API.
+    If integrationType is MOCK, uri and credential parameters will be ignored.
 
     uri is in the form of (substitute APIGATEWAY_REGION and LAMBDA_FUNC_ARN)
     "arn:aws:apigateway:APIGATEWAY_REGION:lambda:path/2015-03-31/functions/LAMBDA_FUNC_ARN/invocations"
@@ -1240,6 +1241,10 @@ def create_api_integration(apiId, resourcePath, httpMethod, integrationType, int
             requestTemplates = dict() if requestTemplates is None else requestTemplates
 
             conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+            if httpMethod.lower() == 'options':
+                uri = ""
+                credentials = ""
+
             integration = conn.put_integration(restApiId=apiId, resourceId=resource['id'], httpMethod=httpMethod,
                                                type=integrationType, integrationHttpMethod=integrationHttpMethod,
                                                uri=uri, credentials=credentials, requestParameters=requestParameters,
