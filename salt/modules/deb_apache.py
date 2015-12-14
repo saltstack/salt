@@ -27,7 +27,7 @@ def __virtual__():
     cmd = _detect_os()
     if salt.utils.which(cmd) and __grains__['os_family'] == 'Debian':
         return __virtualname__
-    return False
+    return (False, 'apache execution module not loaded: apache not installed.')
 
 
 def _detect_os():
