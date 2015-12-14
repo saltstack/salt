@@ -35,6 +35,8 @@ def useradd_all(pwfile, user, password, opts='', runas=None):
     Add a user to htpasswd file using the htpasswd command. If the htpasswd
     file does not exist, it will be created.
 
+    .. deprecated:: Nitrogen
+
     pwfile
         Path to htpasswd file
 
@@ -63,11 +65,12 @@ def useradd_all(pwfile, user, password, opts='', runas=None):
         salt '*' webutil.useradd /etc/httpd/htpasswd larry badpassword
         salt '*' webutil.useradd /etc/httpd/htpasswd larry badpass opts=ns
     '''
-    if not os.path.exists(pwfile):
-        opts += 'c'
+    salt.utils.warn_until('Nitrogen',
+                          '\'htpasswd.useradd_all\' has been deprecated in favor of \'htpasswd.useradd\'. '
+                          'It\'s functionality will be removed in Salt Nitrogen. '
+                          'Please migrate to using \'useradd\' instead of \'useradd_all\'.')
 
-    cmd = ['htpasswd', '-b{0}'.format(opts), pwfile, user, password]
-    return __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
+    return useradd(pwfile, user, password, opts=opts, runas=runas)
 
 
 def useradd(pwfile, user, password, opts='', runas=None):
@@ -103,7 +106,11 @@ def useradd(pwfile, user, password, opts='', runas=None):
         salt '*' webutil.useradd /etc/httpd/htpasswd larry badpassword
         salt '*' webutil.useradd /etc/httpd/htpasswd larry badpass opts=ns
     '''
-    return useradd_all(pwfile, user, password, opts=opts, runas=runas)
+    if not os.path.exists(pwfile):
+        opts += 'c'
+
+    cmd = ['htpasswd', '-b{0}'.format(opts), pwfile, user, password]
+    return __salt__['cmd.run_all'](cmd, runas=runas, python_shell=False)
 
 
 def userdel(pwfile, user, runas=None):
