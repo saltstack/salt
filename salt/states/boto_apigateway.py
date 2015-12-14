@@ -572,28 +572,36 @@ class Swagger(object):
         return ret
 
     def _lambda_name(self, resourcePath, httpMethod):
+        '''
+        Helper method to construct lambda name based on the rule specified in doc string of 
+        boto_apigateway.api_present function
+        '''
         lambda_name = '{0}{1}_{2}'.format(self.rest_api_name.strip(), resourcePath, httpMethod)
         return re.sub(r'\s+|/', '_', lambda_name).lower()
 
-    def _lambda_uri(self, ret, lambda_name, region=None, key=None, keyid=None, profile=None):
+    def _lambda_uri(self, ret, lambda_name, lambda_region, region, key=None, keyid=None, profile=None):
         '''
         Helper Method to construct the lambda uri for use in method integration
         '''
-        # TODO: better means of determining lambda region and apigateway_region
-        # they can't be in different regions?
-        lambda_region = __salt__['pillar.get']('lambda.region')
-        if not lambda_region:
-            raise ValueError('Region for lambda function {0} has not been specified'.format(lambda_name))
+        lambda_region = __utils__['boto3.get_region']('lambda', lambda_region, profile)
+        apigw_region = __utils__['boto3.get_region']('apigateway', region, profile)
+
         lambda_desc = __salt__['boto_lambda.describe_function'](lambda_name, region=lambda_region,
                                                                 key=key, keyid=keyid, profile=profile)
+
+        if (lambda_region != apigw_region):
+            if not lambda_desc.get('function'):
+                # try look up in the same region as the apigateway as well if previous lookup failed
+                lambda_desc = __salt__['boto_lambda.describe_function'](lambda_name, region=apigw_region,
+                                                                        key=key, keyid=keyid, profile=profile)
         if not lambda_desc.get('function'):
-            raise ValueError('Could not find lambda function {0}'.format(lambda_name))
+            raise ValueError('Could not find lambda function {0} in '
+                             'regions [{1}, {2}].'.format(lambda_name, lambda_region, apigw_region))
 
         lambda_arn = lambda_desc.get('function').get('FunctionArn')
-        apigateway_region = __salt__['pillar.get']('apigateway.region')
         lambda_uri = ('arn:aws:apigateway:{0}:lambda:path/2015-03-31'
-                      '/functions/{1}/invocations'.format(apigateway_region, lambda_arn))
-        log.info(lambda_uri)
+                      '/functions/{1}/invocations'.format(apigw_region, lambda_arn))
+        log.info('###############{0}'.format(lambda_uri))
         return lambda_uri
 
     def deploy_resources(self, ret, lambda_integration_role, lambda_region,
@@ -652,7 +660,8 @@ class Swagger(object):
                                        }"""}
 
                     lambda_uri = self._lambda_uri(ret, self._lambda_name(resource_path, method),
-                                                  region=region, key=key, keyid=keyid, profile=profile)
+                                                  lambda_region, region, 
+                                                  key=key, keyid=keyid, profile=profile)
 
                     # TODO: fix this by passing in the ROLE name into the presence function, and
                     # we will get this dynamically through boto_iam instead of through the pillar.
