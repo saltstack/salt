@@ -1053,11 +1053,8 @@ ARGS = {9}\n'''.format(self.minion_config,
 
         # FIXME: this discards output from ssh_shim if the shim succeeds.  It should
         # always save the shim output regardless of shim success or failure.
-        if re.search(RSTR_RE, stdout):
+        while re.search(RSTR_RE, stdout):
             stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
-        else:
-            # This is actually an error state prior to the shim but let it fall through
-            pass
 
         if re.search(RSTR_RE, stderr):
             # Found RSTR in stderr which means SHIM completed and only
