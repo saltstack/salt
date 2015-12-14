@@ -711,6 +711,10 @@ def ssh_configured(name,
             # Check that the first two list items of clean key lists are equal.
             if clean_current_key[0] != clean_ssh_key[0] or clean_current_key[1] != clean_ssh_key[1]:
                 ssh_key_changed = True
+        else:
+            # If current_ssh_key is None, but we're setting a new key with
+            # either ssh_key or ssh_key_file, then we need to flag the change.
+            ssh_key_changed = True
 
     # Upload SSH key, if changed.
     if ssh_key_changed:
