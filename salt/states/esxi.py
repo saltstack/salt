@@ -424,7 +424,7 @@ def vmotion_configured(name, enabled, device='vmk0'):
 
     enabled
         Ensures whether or not VMotion should be enabled on a host as a boolean
-        value where ``True`` indicates that VSAN should be enabled and ``False``
+        value where ``True`` indicates that VMotion should be enabled and ``False``
         indicates that VMotion should be disabled.
 
     device
