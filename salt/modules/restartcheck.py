@@ -8,6 +8,7 @@ binary of a shared library).
 Based on checkrestart script from debian-goodies (written  by Matt Zimmerman for the Debian GNU/Linux distribution,
 https://packages.debian.org/debian-goodies) and psdel by Sam Morris.
 
+:codeauthor: Jiri Kotlin <jiri.kotlin@ultimum.io>
 '''
 
 # Import python libs
@@ -239,8 +240,9 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
         False on failure.
         String with checkrestart output if some package seems to need to be restarted.
 
-    CLI Example:
+    .. versionadded:: 2015.8.3
 
+    CLI Example:
     .. code-block:: bash
 
         salt '*' restartcheck.restartcheck
