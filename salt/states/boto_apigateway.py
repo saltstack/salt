@@ -182,6 +182,8 @@ def api_present(name, api_name, swagger_file, lambda_integration_role,
         if ret.get('abort'):
             return ret
 
+        lambda_integration_role = _get_role_arn(lambda_integration_role, region=region,
+                                                key=key, keyid=keyid, profile=profile)
         ret = swagger.deploy_resources(ret, lambda_integration_role=lambda_integration_role,
                                        lambda_region=lambda_region, region=region,
                                        key=key, keyid=keyid, profile=profile)
@@ -194,16 +196,16 @@ def api_present(name, api_name, swagger_file, lambda_integration_role,
 
     return ret
 
-#
-#def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
-#    if name.startswith('arn:aws:iam:'):
-#        return name
-#
-#    account_id = __salt__['boto_iam.get_account_id'](
-#        region=region, key=key, keyid=keyid, profile=profile
-#    )
-#    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
-#
+
+def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
+    if name.startswith('arn:aws:iam:'):
+        return name
+
+    account_id = __salt__['boto_iam.get_account_id'](
+        region=region, key=key, keyid=keyid, profile=profile
+    )
+
+    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
 
 
 def api_absent(name, api_name, swagger_file, region=None, key=None, keyid=None, profile=None):
