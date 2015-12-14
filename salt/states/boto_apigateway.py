@@ -65,6 +65,195 @@ import anyconfig
 
 log = logging.getLogger(__name__)
 
+
+def __virtual__():
+    '''
+    Only load if boto is available.
+    '''
+    return 'boto_apigateway' if 'boto_apigateway.get_apis' in __salt__ else False
+
+
+def _log_changes(ret, changekey, changevalue):
+    '''
+    For logging create/update/delete operations to AWS ApiGateway
+    '''
+    cl = ret['changes'].get('new', [])
+    cl.append({changekey: changevalue})
+    ret['changes']['new'] = cl
+    return ret
+
+def _log_error_and_abort(ret, obj):
+    '''
+    helper function to update errors in the return structure
+    '''
+    ret['result'] = False
+    ret['abort'] = True
+    if 'error' in obj:
+        ret['comment'] = obj.get('error')
+    return ret
+
+def api_present(name, api_name, swagger_file, lambda_integration_role,
+                lambda_region=None, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure the spcified api_name with the corresponding swaggerfile is defined in 
+    AWS ApiGateway.
+
+    This state will take the swagger definition, and perform the necessary actions 
+    to define a matching rest api in AWS ApiGateway and intgrate the method request
+    handling to AWS Lambda functions.  
+
+    Please note that the name of the lambda function to be integrated will be derived
+    via the following and lowercased:
+        api_name parameter as passed in to this state function with consecutive white
+        spaces replaced with '_'  +
+
+        resource_path as derived from the swagger file basePath and paths fields with
+        '/' replaced with '_' +
+
+        resource's method type
+
+        for example, given the following:
+            api_name = 'Test  Api'
+            basePath = '/api'
+            path = '/a/b/c'
+            method = 'POST'
+            
+            the derived Lambda Function Name that will be used for look up and 
+            integration is:
+
+            'test_api_api_a_b_c_post'
+
+    name
+        The name of the state definition
+
+    api_name
+        The name of the rest api that we want to ensure exists in AWS API Gateway
+
+    swagger_file
+        Name of the location of the swagger rest api definition file in YAML format.
+
+    lambda_integration_role
+        The name or ARN of the IAM role that the AWS ApiGateway assumes when it 
+        executes your lambda function to handle incoming requests
+
+    lambda_region
+        The region where we expect to find the lambda functions.  This is used to
+        determine the region where we should look for the Lambda Function for
+        integration purposes.  The region determination is based on the following
+        priority:
+
+        1) lambda_region as passed in (is not None)
+        2) if lambda_region is None, use the region as if a boto_lambda function were 
+        executed without explicitly specifying lambda region.  
+        3) if region determined in (2) is different than the region used by 
+        boto_apigateway functions, a final lookup will be attempted using the
+        boto_apigateway region.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    try:
+        # try to open the swagger file and basic validation
+        swagger = Swagger(api_name, swagger_file)
+
+        # first deploy a Rest Api on AWS
+        ret = swagger.deploy_api(ret, region=region, key=key, keyid=keyid, profile=profile)
+        if ret.get('abort'):
+            return ret
+
+        # next, deploy models of to the AWS API
+        ret = swagger.deploy_models(ret, region=region, key=key, keyid=keyid, profile=profile)
+        if ret.get('abort'):
+            return ret
+
+        ret = swagger.deploy_resources(ret, lambda_integration_role=lambda_integration_role,
+                                       lambda_region=lambda_region, region=region,
+                                       key=key, keyid=keyid, profile=profile)
+        if ret.get('abort'):
+            return ret
+
+    except Exception as e:
+        ret['result'] = False
+        ret['comment'] = e.message
+
+    return ret
+
+#
+#def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
+#    if name.startswith('arn:aws:iam:'):
+#        return name
+#
+#    account_id = __salt__['boto_iam.get_account_id'](
+#        region=region, key=key, keyid=keyid, profile=profile
+#    )
+#    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
+#
+
+
+def api_absent(name, api_name, swagger_file, region=None, key=None, keyid=None, profile=None):
+    '''
+    Ensure AWS Apigateway Rest Api identified by a combination of the api_name and
+    the info object specified in the swagger_file is absent.
+
+    name
+        Name of the swagger file in YAML format
+
+    api_name
+        Name of the rest api on AWS ApiGateway to ensure is absent.
+
+    swagger_file
+        Name of the location of the swagger rest api definition file in YAML format.
+        The info object in the file is used in conjunction with the api_name to
+        uniquely identify a rest api to ensure absent.
+
+    region
+        Region to connect to.
+
+    key
+        Secret key to be used.
+
+    keyid
+        Access key to be used.
+
+    profile
+        A dict with region, key and keyid, or a pillar key (string) that
+        contains a dict with region, key and keyid.
+    '''
+
+    ret = {'name': name,
+           'result': True,
+           'comment': '',
+           'changes': {}
+           }
+
+    try:
+        swagger = Swagger(api_name, swagger_file)
+
+        ret = swagger.delete_api(ret, region=region, key=key, keyid=keyid, profile=profile)
+
+    except Exception as e:
+        ret['result'] = False
+        ret['comment'] = e.message
+
+    return ret
+
+
 # Helper Swagger Class for swagger version 2.0 API specification
 def _gen_md5_filehash(fname):
     '''
@@ -162,7 +351,8 @@ class Swagger(object):
             _headers = self._r.get('headers', {})
             return _headers
 
-    def __init__(self, swagger_file_path):
+    def __init__(self, api_name, swagger_file_path):
+        self._api_name = api_name
         if os.path.exists(swagger_file_path) and os.path.isfile(swagger_file_path):
             self._swagger_file = swagger_file_path
             self._md5_filehash = _gen_md5_filehash(self._swagger_file)
@@ -222,11 +412,7 @@ class Swagger(object):
 
     @property
     def rest_api_name(self):
-        api_name = self.info.get('title')
-        if not api_name:
-            raise ValueError('Missing title value in Info Object, which is used as rest api name')
-
-        return api_name
+        return self._api_name
 
     @property
     def rest_api_version(self):
@@ -410,7 +596,8 @@ class Swagger(object):
         log.info(lambda_uri)
         return lambda_uri
 
-    def deploy_resources(self, ret, region=None, key=None, keyid=None, profile=None):
+    def deploy_resources(self, ret, lambda_integration_role, lambda_region,
+                         region=None, key=None, keyid=None, profile=None):
         for path, pathData in self.paths:
             resource_path = ''.join((self.basePath, path))
             resource = __salt__['boto_apigateway.create_api_resources'](restApiId=self.restApiId,
@@ -518,130 +705,3 @@ class Swagger(object):
                     ret = _log_changes(ret, 'deploy_resources - methods', m)
         return ret
 
-
-def __virtual__():
-    '''
-    Only load if boto is available.
-    '''
-    return 'boto_apigateway' if 'boto_apigateway.get_apis' in __salt__ else False
-
-
-def _log_changes(ret, changekey, changevalue):
-    '''
-    For logging create/update/delete operations to AWS ApiGateway
-    '''
-    cl = ret['changes'].get('new', [])
-    cl.append({changekey: changevalue})
-    ret['changes']['new'] = cl
-    return ret
-
-def _log_error_and_abort(ret, obj):
-    '''
-    helper function to update errors in the return structure
-    '''
-    ret['result'] = False
-    ret['abort'] = True
-    if 'error' in obj:
-        ret['comment'] = obj.get('error')
-    return ret
-
-def present(name,
-            region=None, key=None, keyid=None, profile=None):
-    '''
-    Ensure the swagger_yaml_file specified is defined in AWS Api Gateway.
-
-    name
-        Name of the location of the swagger rest api definition file in YAML format.
-
-    region
-        Region to connect to.
-
-    key
-        Secret key to be used.
-
-    keyid
-        Access key to be used.
-
-    profile
-        A dict with region, key and keyid, or a pillar key (string) that
-        contains a dict with region, key and keyid.
-    '''
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
-
-    try:
-        # try to open the swagger file and basic validation
-        swagger = Swagger(name)
-
-        # first deploy a Rest Api on AWS
-        ret = swagger.deploy_api(ret, region=region, key=key, keyid=keyid, profile=profile)
-        if ret.get('abort'):
-            return ret
-
-        # next, deploy models of to the AWS API
-        ret = swagger.deploy_models(ret, region=region, key=key, keyid=keyid, profile=profile)
-        if ret.get('abort'):
-            return ret
-
-        ret = swagger.deploy_resources(ret, region=region, key=key, keyid=keyid, profile=profile)
-        if ret.get('abort'):
-            return ret
-
-    except Exception as e:
-        ret['result'] = False
-        ret['comment'] = e.message
-
-    return ret
-
-#
-#def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
-#    if name.startswith('arn:aws:iam:'):
-#        return name
-#
-#    account_id = __salt__['boto_iam.get_account_id'](
-#        region=region, key=key, keyid=keyid, profile=profile
-#    )
-#    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
-#
-
-
-def absent(name, region=None, key=None, keyid=None, profile=None):
-    '''
-    Ensure Lamda function with passed properties is absent.
-
-    name
-        Name of the swagger file in YAML format
-
-    region
-        Region to connect to.
-
-    key
-        Secret key to be used.
-
-    keyid
-        Access key to be used.
-
-    profile
-        A dict with region, key and keyid, or a pillar key (string) that
-        contains a dict with region, key and keyid.
-    '''
-
-    ret = {'name': name,
-           'result': True,
-           'comment': '',
-           'changes': {}
-           }
-
-    try:
-        swagger = Swagger(name)
-
-        ret = swagger.delete_api(ret, region=region, key=key, keyid=keyid, profile=profile)
-
-    except Exception as e:
-        ret['result'] = False
-        ret['comment'] = e.message
-
-    return ret
