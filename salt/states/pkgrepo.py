@@ -266,6 +266,7 @@ def managed(name, **kwargs):
 
     if 'humanname' in kwargs:
         kwargs['name'] = kwargs['humanname']
+        kwargs.pop('humanname')
 
     if kwargs.pop('enabled', None):
         kwargs['disabled'] = False
