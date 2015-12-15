@@ -92,7 +92,7 @@ def _log_error_and_abort(ret, obj):
         ret['comment'] = obj.get('error')
     return ret
 
-def api_present(name, api_name, swagger_file, lambda_integration_role,
+def api_present(name, api_name, swagger_file, api_key_required, lambda_integration_role,
                 lambda_region=None, region=None, key=None, keyid=None, profile=None):
     '''
     Ensure the spcified api_name with the corresponding swaggerfile is defined in
@@ -131,6 +131,9 @@ def api_present(name, api_name, swagger_file, lambda_integration_role,
 
     swagger_file
         Name of the location of the swagger rest api definition file in YAML format.
+
+    api_key_required
+        True or False - whether the API Key is required to call API methods
 
     lambda_integration_role
         The name or ARN of the IAM role that the AWS ApiGateway assumes when it
@@ -182,7 +185,7 @@ def api_present(name, api_name, swagger_file, lambda_integration_role,
         if ret.get('abort'):
             return ret
 
-        ret = swagger.deploy_resources(ret, lambda_integration_role=lambda_integration_role,
+        ret = swagger.deploy_resources(ret, api_key_required=api_key_required, lambda_integration_role=lambda_integration_role,
                                        lambda_region=lambda_region, region=region,
                                        key=key, keyid=keyid, profile=profile)
         if ret.get('abort'):
@@ -647,13 +650,14 @@ class Swagger(object):
                 'models': method_response_models,
                 'integration_params': method_integration_response_params}
 
-    def deploy_method(self, ret, resource_path, method_name, method_data, lambda_integration_role, lambda_region,
+    def deploy_method(self, ret, resource_path, method_name, method_data, api_key_required, 
+                      lambda_integration_role, lambda_region,
                       region=None, key=None, keyid=None, profile=None):
         method = self._parse_method_data(method_name.lower(), method_data)
 
         # TODO: 'NONE' ??
         m = __salt__['boto_apigateway.create_api_method'](self.restApiId, resource_path,
-            method_name.upper(), 'NONE', requestParameters=method.get('params'), requestModels=method.get('models'),
+            method_name.upper(), 'NONE', apiKeyRequired=api_key_required, requestParameters=method.get('params'), requestModels=method.get('models'),
             region=region, key=key, keyid=keyid, profile=profile)
         if not m.get('created'):
             ret = _log_error_and_abort(ret, m)
@@ -703,7 +707,7 @@ class Swagger(object):
 
         return ret
 
-    def deploy_resources(self, ret, lambda_integration_role, lambda_region,
+    def deploy_resources(self, ret, api_key_required, lambda_integration_role, lambda_region,
                          region=None, key=None, keyid=None, profile=None):
         for path, pathData in self.paths:
             resource_path = ''.join((self.basePath, path))
@@ -716,7 +720,7 @@ class Swagger(object):
             for method, method_data in pathData.iteritems():
                 if method in self.SWAGGER_OPERATION_NAMES:
                     ret = self.deploy_method(ret, resource_path, method, method_data, 
-                                             lambda_integration_role, lambda_region,
+                                             api_key_required, lambda_integration_role, lambda_region,
                                              region=region, key=key, keyid=keyid, profile=profile)
         return ret
 
