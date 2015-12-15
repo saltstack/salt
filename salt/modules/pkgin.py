@@ -5,9 +5,10 @@ Package support for pkgin based systems, inspired from freebsdpkg module
 
 # Import python libs
 from __future__ import absolute_import
+import copy
+import logging
 import os
 import re
-import logging
 
 # Import salt libs
 import salt.utils
@@ -243,6 +244,14 @@ def list_pkgs(versions_as_list=False, **kwargs):
             for x in ('removed', 'purge_desired')]):
         return {}
 
+    if 'pkg.list_pkgs' in __context__:
+        if versions_as_list:
+            return __context__['pkg.list_pkgs']
+        else:
+            ret = copy.deepcopy(__context__['pkg.list_pkgs'])
+            __salt__['pkg_resource.stringify'](ret)
+            return ret
+
     pkgin = _check_pkgin()
     if pkgin:
         pkg_command = '{0} ls'.format(pkgin)
@@ -262,6 +271,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         __salt__['pkg_resource.add_pkg'](ret, pkg, ver)
 
     __salt__['pkg_resource.sort_pkglist'](ret)
+    __context__['pkg.list_pkgs'] = copy.deepcopy(ret)
     if not versions_as_list:
         __salt__['pkg_resource.stringify'](ret)
     return ret
@@ -356,15 +366,30 @@ def install(name=None, refresh=False, fromrepo=None,
     args.extend(pkg_params)
 
     old = list_pkgs()
-    __salt__['cmd.run'](
+
+    out = __salt__['cmd.run_all'](
         '{0} {1}'.format(cmd, ' '.join(args)),
         env=env,
         output_loglevel='trace'
     )
+
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
+    __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
 
     _rehash()
-    return salt.utils.compare_dicts(old, new)
+    return ret
 
 
 def upgrade():
@@ -393,17 +418,22 @@ def upgrade():
         return {}
 
     old = list_pkgs()
-    call = __salt__['cmd.run_all']('{0} -y fug'.format(pkgin))
+
+    cmd = [pkgin, '-y', 'fug']
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=False,
+                                   redirect_stderr=True)
+
     if call['retcode'] != 0:
         ret['result'] = False
-        if 'stderr' in call:
-            ret['comment'] += call['stderr']
-        if 'stdout' in call:
-            ret['comment'] += call['stdout']
-    else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        if call['stdout']:
+            ret['comment'] = call['stdout']
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret['changes'] = salt.utils.compare_dicts(old, new)
+
     return ret
 
 
@@ -465,10 +495,27 @@ def remove(name=None, pkgs=None, **kwargs):
     else:
         cmd = 'pkg_remove {0}'.format(for_remove)
 
-    __salt__['cmd.run'](cmd, output_loglevel='trace')
-    new = list_pkgs()
+    out = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='trace'
+    )
 
-    return salt.utils.compare_dicts(old, new)
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def purge(name=None, pkgs=None, **kwargs):
