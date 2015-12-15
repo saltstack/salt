@@ -186,7 +186,7 @@ class CloudClient(object):
                 # to use driver: "driver: <provider-engine>"
                 if 'provider' in provider:
                    driver = provider.pop('provider')
-                else
+                else:
                    driver = provider['driver']
 
                 provider['profiles'] = {}
