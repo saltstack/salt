@@ -534,7 +534,7 @@ def create_config(kwargs=None, call=None):
 
     data_disk_id
         The Data Disk ID to be used for this config.
-    
+
     .. versionadded:: Boron
 
     kernel_id
