@@ -388,6 +388,11 @@ def install(name=None,
 
     args.extend(pkg_params)
 
+    # Make sure BATCH=yes is used in salt if it is set
+    batch = __salt__['environ.get']('BATCH')
+    if batch == 'yes':
+        __salt__['environ.setval']('BATCH', 'yes')
+
     old = list_pkgs()
     __salt__['cmd.run'](
         ['pkg_add'] + args,
