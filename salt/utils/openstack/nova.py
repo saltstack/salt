@@ -46,7 +46,7 @@ def check_nova():
         min_ver = LooseVersion(NOVACLIENT_MINVER)
         if novaclient_ver >= min_ver:
             return HAS_NOVA
-        log.debug('Newer novaclient version required.  Minimum: 2.6.1')
+        log.debug('Newer novaclient version required.  Minimum: {0}'.format(NOVACLIENT_MINVER))
     return False
 
 
@@ -143,7 +143,7 @@ class SaltNova(OpenStackComputeShell):
         self.kwargs = kwargs.copy()
 
         if not novaclient.base.Manager._hooks_map:
-            self.extensions = client.discover_extensions('1.1')
+            self.extensions = getattr(self, '_discover_extensions', client.discover_extensions)('1.1')
             for extension in self.extensions:
                 extension.run_hooks('__pre_parse_args__')
             self.kwargs['extensions'] = self.extensions

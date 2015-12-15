@@ -5,6 +5,7 @@ Proxy Minion interface module for managing VMWare ESXi hosts.
 .. versionadded:: 2015.8.4
 
 :depends: pyVmomi
+:depends: ESXCLI
 
 **Special Note: SaltStack thanks** `Adobe Corporation <http://adobe.com/>`_
 **for their support in creating this Proxy Minion integration.**
@@ -71,11 +72,12 @@ The proxy integration will try the passwords listed in order. It is
 configured this way so you can have a regular password and the password you
 may be updating for an ESXi host either via the
 :doc:`vsphere.update_host_password </ref/modules/all/salt.modules.vsphere>`
-function or via an :doc:`ESXi state </ref/modules/all/salt.states.esxi>`
+execution module function or via the
+:doc:`esxi.password_present </ref/modules/all/salt.states.esxi>` state
 function. This way, after the password is changed, you should not need to
-restart the proxy minion--it should just pick up the the new password provided in
-the list. You can then change pillar at will to move that password to the
-front and retire the unused ones.
+restart the proxy minion--it should just pick up the the new password
+provided in the list. You can then change pillar at will to move that
+password to the front and retire the unused ones.
 
 This also allows you to use any number of potential fallback passwords.
 
@@ -91,9 +93,9 @@ This also allows you to use any number of potential fallback passwords.
     minion first starts. If the correct password is not the first password
     on the list, it may take up to a minute for ``test.ping`` to respond
     with a ``True`` result. Once the initial authorization is complete, the
-    responses for commands will be faster.
+    responses for commands will be a little faster.
 
-    To avoid these longer waiting periods, SaltStack recommends moving
+    To avoid these longer waiting periods, SaltStack recommends moving the
     correct password to the top of the list and restarting the proxy minion
     at your earliest convenience.
 
@@ -168,7 +170,7 @@ It's important to understand how this particular proxy works.
 standard Salt execution module. If you pull up the docs for it you'll see
 that almost every function in the module takes credentials and a target
 host. When credentials and a host aren't passed, Salt runs commands
-through ``pyVmomi``against the local machine. If you wanted, you could run
+through ``pyVmomi`` against the local machine. If you wanted, you could run
 functions from this module on any host where an appropriate version of
 ``pyVmomi`` is installed, and that host would reach out over the network
 and communicate with the ESXi host.
@@ -243,6 +245,7 @@ def init(opts):
         return False
     if 'passwords' not in opts['proxy']:
         log.critical('No \'passwords\' key found in pillar for this proxy.')
+        return False
 
     host = opts['proxy']['host']
 

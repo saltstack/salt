@@ -65,31 +65,39 @@ def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
     :return: Dictionary
     '''
 
-    esx_cmd = salt.utils.which('esxicli')
+    esx_cmd = salt.utils.which('esxcli')
     if not esx_cmd:
         log.error('Missing dependency: The salt.utils.vmware.esxcli function requires ESXCLI.')
         return False
+
+    # Set default port and protocol if none are provided.
+    if port is None:
+        port = 443
+    if protocol is None:
+        protocol = 'https'
 
     if not esxi_host:
         # Then we are connecting directly to an ESXi server,
         # 'host' points at that server, and esxi_host is a reference to the
         # ESXi instance we are manipulating
-        esx_cmd += ' -s {0} -u {1} -p {2} --protocol={3} --portnumber={4} {5}'.format(host,
-                                                                                      user,
-                                                                                      pwd,
-                                                                                      protocol,
-                                                                                      port,
-                                                                                      cmd)
+        esx_cmd += ' -s {0} -u {1} -p \'{2}\' ' \
+                   '--protocol={3} --portnumber={4} {5}'.format(host,
+                                                                user,
+                                                                pwd,
+                                                                protocol,
+                                                                port,
+                                                                cmd)
     else:
-        esx_cmd += ' -s {0} -h {1} -u {2} -p {3} --protocol={4} --portnumber={5} {6}'.format(host,
-                                                                                             esxi_host,
-                                                                                             user,
-                                                                                             pwd,
-                                                                                             protocol,
-                                                                                             port,
-                                                                                             cmd)
+        esx_cmd += ' -s {0} -h {1} -u {2} -p \'{3}\' ' \
+                   '--protocol={4} --portnumber={5} {6}'.format(host,
+                                                                esxi_host,
+                                                                user,
+                                                                pwd,
+                                                                protocol,
+                                                                port,
+                                                                cmd)
 
-    ret = salt.modules.cmdmod.run_all(esx_cmd)
+    ret = salt.modules.cmdmod.run_all(esx_cmd, output_loglevel='quiet')
 
     return ret
 
