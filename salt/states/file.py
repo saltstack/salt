@@ -1590,11 +1590,11 @@ _RECURSE_TYPES = ['user', 'group', 'mode', 'ignore_files', 'ignore_dirs']
 
 
 def _get_recurse_set(recurse):
-    """
+    '''
     Converse *recurse* definition to a set of strings.
-    
+
     Raises TypeError or ValueError when *recurse* has wrong structure.
-    """
+    '''
     if not recurse:
         return set()
     if not isinstance(recurse, list):
