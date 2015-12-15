@@ -794,11 +794,29 @@ def install(name=None,
         # pkg add doesn't have a dryrun mode, so echo out what will be run
         return ' '.join(cmd)
 
-    __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    out = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='trace',
+        python_shell=False
+    )
+
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop(_contextkey(jail, chroot), None)
     __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
     new = list_pkgs(jail=jail, chroot=chroot)
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def remove(name=None,
@@ -945,11 +963,30 @@ def remove(name=None,
     if opts:
         cmd.append('-' + opts)
     cmd.extend(targets)
-    __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+
+    out = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='trace',
+        python_shell=False
+    )
+
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop(_contextkey(jail, chroot), None)
     __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
     new = list_pkgs(jail=jail, chroot=chroot, with_origin=True)
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 # Support pkg.delete to remove packages, since this is the CLI usage
 delete = salt.utils.alias_function(remove, 'delete')
@@ -1050,21 +1087,21 @@ def upgrade(*names, **kwargs):
     cmd.extend(names)
 
     old = list_pkgs()
-    call = __salt__['cmd.run_all'](
-        cmd,
-        output_loglevel='trace',
-        python_shell=False
-    )
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=False,
+                                   redirect_stderr=True)
+
     if call['retcode'] != 0:
         ret['result'] = False
-        if 'stderr' in call:
-            ret['comment'] += call['stderr']
-        if 'stdout' in call:
-            ret['comment'] += call['stdout']
-    else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        if call['stdout']:
+            ret['comment'] = call['stdout']
+
+    __context__.pop(_contextkey(jail, chroot), None)
+    __context__.pop(_contextkey(jail, chroot, prefix='pkg.origin'), None)
+    new = list_pkgs()
+    ret['changes'] = salt.utils.compare_dicts(old, new)
+
     return ret
 
 
