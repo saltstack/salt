@@ -26,7 +26,7 @@ def __virtual__():
     # Certain versions of hashlib do not contain
     # the necessary functions
     if not hasattr(hashlib, 'algorithms'):
-        return False
+        return (False, 'The random execution module cannot be loaded: only available in Python >= 2.7.')
     return __virtualname__
 
 
