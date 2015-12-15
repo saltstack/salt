@@ -49,3 +49,21 @@ def make_image(location, size, fmt):
                 python_shell=False):
         return location
     return ''
+
+
+def convert(orig, dest, fmt):
+    '''
+    Convert an existing disk image to another format using qemu-img
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' qemu_img.convert /path/to/original.img /path/to/new.img qcow2
+    '''
+    cmd = ('qemu-img', 'convert', '-O', fmt, orig, dest)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if ret['retcode'] == 0:
+        return True
+    else:
+        return ret['stderr']
