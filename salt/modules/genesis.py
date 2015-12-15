@@ -18,6 +18,9 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.yast
+import salt.utils.preseed
+import salt.utils.kickstart
 import salt.syspaths
 from salt.exceptions import SaltInvocationError
 
@@ -220,6 +223,8 @@ def bootstrap(
 def _mkpart(root, fs_format, fs_opts, mount_dir):
     '''
     Make a partition, and make it bootable
+
+    .. versionadded:: Beryllium
     '''
     __salt__['partition.mklabel'](root, 'msdos')
     loop1 = __salt__['cmd.run']('losetup -f')
@@ -255,6 +260,8 @@ def _mkpart(root, fs_format, fs_opts, mount_dir):
 def _mkfs(root, fs_format, fs_opts=None):
     '''
     Make a filesystem using the appropriate module
+
+    .. versionadded:: Beryllium
     '''
     if fs_opts is None:
         fs_opts = {}
@@ -451,7 +458,8 @@ def _bootstrap_pacman(
 
     pkgs
         A list of packages to be installed on this image. For Arch Linux, this
-        will include ``pacman`` and ``linux`` by default.
+        will include ``pacman``, ``linux``, ``grub``, and ``systemd-sysvcompat``
+        by default.
 
     exclude_pkgs
         A list of packages to be excluded. If you do not want to install the
@@ -684,3 +692,23 @@ def ldd_deps(filename, ret=None):
                         ret.append(dep)
 
     return ret
+
+
+def mksls(fmt, src, dst=None):
+    '''
+    Convert an installation file/script to an SLS file. Currently supports
+    ``kickstart``, ``preseed``, and ``autoyast``.
+
+    CLI Examples:
+
+        salt <minion> genesis.mksls kickstart /path/to/kickstart.cfg
+        salt <minion> genesis.mksls kickstart /path/to/kickstart.cfg /path/to/dest.sls
+
+    .. versionadded:: Beryllium
+    '''
+    if fmt == 'kickstart':
+        return salt.utils.kickstart.mksls(src, dst)
+    elif fmt == 'preseed':
+        return salt.utils.preseed.mksls(src, dst)
+    elif fmt == 'autoyast':
+        return salt.utils.yast.mksls(src, dst)
