@@ -992,13 +992,9 @@ ARGS = {10}\n'''.format(self.minion_config,
         if not self.tty:
             return self.shell.exec_cmd(cmd_str)
 
-        # Write the shim to a file
-        shim_dir = os.path.join(self.opts['cachedir'], 'ssh_shim')
-        if not os.path.exists(shim_dir):
-            os.makedirs(shim_dir)
+        # Write the shim to a temporary file in the default temp directory
         with tempfile.NamedTemporaryFile(mode='w',
                                          prefix='shim_',
-                                         dir=shim_dir,
                                          delete=False) as shim_tmp_file:
             shim_tmp_file.write(cmd_str)
 
