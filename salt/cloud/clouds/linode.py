@@ -534,6 +534,8 @@ def create_config(kwargs=None, call=None):
 
     data_disk_id
         The Data Disk ID to be used for this config.
+    
+    .. versionadded:: Boron
 
     kernel_id
         The ID of the kernel to use for this configuration profile.
@@ -573,7 +575,7 @@ def create_config(kwargs=None, call=None):
                    'KernelID': kernel_id,
                    'Label': name,
                    'DiskList': disklist
-                   }
+                  }
 
     result = _query('linode', 'config.create', args=config_args)
 
@@ -643,7 +645,7 @@ def create_swap_disk(vm_, linode_id, swap_size=None):
                    'Label': vm_['name'],
                    'Type': 'swap',
                    'Size': swap_size
-                   })
+                  })
 
     result = _query('linode', 'disk.create', args=kwargs)
 
@@ -653,6 +655,8 @@ def create_swap_disk(vm_, linode_id, swap_size=None):
 def create_data_disk(vm_=None, linode_id=None, data_size=None):
     '''
     Create a data disk for the linode (type is hardcoded to ext4 at the moment)
+
+    .. versionadded:: Boron
 
     vm_
         The VM profile to create the data disk for.
@@ -670,7 +674,7 @@ def create_data_disk(vm_=None, linode_id=None, data_size=None):
                    'Label': vm_['name']+"_data",
                    'Type': 'ext4',
                    'Size': data_size
-                   })
+                  })
 
     result = _query('linode', 'disk.create', args=kwargs)
     return _clean_data(result)
@@ -806,6 +810,8 @@ def get_disk_size(vm_, swap, linode_id):
 def get_data_disk_size(vm_, swap, linode_id):
     '''
     Return the size of of the data disk in MB
+
+    .. versionadded:: Boron
     '''
     disk_size = get_linode(kwargs={'linode_id': linode_id})['TOTALHD']
     root_disk_size = config.get_cloud_config_value(
@@ -1012,6 +1018,8 @@ def get_private_ip(vm_):
 def get_data_disk(vm_):
     '''
     Return True if a data disk is requested
+
+    .. versionadded:: Boron
     '''
     return config.get_cloud_config_value(
         'allocate_data_disk', vm_, __opts__, default=False
