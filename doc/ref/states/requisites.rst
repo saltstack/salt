@@ -462,7 +462,7 @@ Unless
 
 The ``unless`` requisite specifies that a state should only run when any of
 the specified commands return ``False``. The ``unless`` requisite operates
-as NANDg and is useful in giving more granular control over when a state should
+as NAND and is useful in giving more granular control over when a state should
 execute.
 
 **NOTE**: Under the hood ``unless`` calls ``cmd.retcode`` with
@@ -507,7 +507,7 @@ Onlyif
 .. versionadded:: 2014.7.0
 
 The ``onlyif`` requisite specifies that if each command listed in ``onlyif``
-return ``True``, then the state is run. If any of the specified commands
+returns ``True``, then the state is run. If any of the specified commands
 return ``False``, the state will not run.
 
 **NOTE**: Under the hood ``onlyif`` calls ``cmd.retcode`` with
