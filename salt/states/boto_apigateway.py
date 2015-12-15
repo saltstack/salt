@@ -178,7 +178,7 @@ def api_present(name, api_name, swagger_file, api_key_required, lambda_integrati
                             ('profile', profile)])
 
         # try to open the swagger file and basic validation
-        swagger = Swagger(api_name, swagger_file, common_args)
+        swagger = _Swagger(api_name, swagger_file, common_args)
 
         # first deploy a Rest Api on AWS
         ret = swagger.deploy_api(ret)
@@ -244,7 +244,7 @@ def api_absent(name, api_name, swagger_file, region=None, key=None, keyid=None, 
                             ('keyid', keyid),
                             ('profile', profile)])
 
-        swagger = Swagger(api_name, swagger_file, common_args)
+        swagger = _Swagger(api_name, swagger_file, common_args)
 
         ret = swagger.delete_api(ret)
 
@@ -261,7 +261,7 @@ def _gen_md5_filehash(fname):
     helper function to generate a md5 hash of the swagger definition file
     '''
     _hash = hashlib.md5()
-    with open(fname, 'rb') as f:
+    with salt.utils.fopen(fname, 'rb') as f:
         for chunk in iter(lambda: f.read(4096), b''):
             _hash.update(chunk)
     return _hash.hexdigest()
@@ -272,7 +272,7 @@ def _dict_to_json_pretty(d, sort_keys=True):
     '''
     return json.dumps(d, indent=4, separators=(',', ': '), sort_keys=sort_keys)
 
-class Swagger(object):
+class _Swagger(object):
     # SWAGGER_OBJECT_V2_FIELDS
     SWAGGER_OBJECT_V2_FIELDS = ('swagger', 'info', 'host', 'basePath', 'schemes', 'consumes', 'produces',
                                 'paths', 'definitions', 'parameters', 'responses', 'securityDefinitions',
@@ -321,7 +321,7 @@ class Swagger(object):
         @property
         def location(self):
             _location = self._paramdict.get('in')
-            if _location in Swagger.SwaggerParameter.LOCATIONS:
+            if _location in _Swagger.SwaggerParameter.LOCATIONS:
                 return _location
             raise ValueError('Unsupported parameter location: {0} in Parameter Object'.format(_location))
 
@@ -400,21 +400,21 @@ class Swagger(object):
 
         # check for any invalid fields for Swagger Object V2
         for field in self._cfg:
-            if (field not in Swagger.SWAGGER_OBJECT_V2_FIELDS and
-                not Swagger.VENDOR_EXT_PATTERN.match(field)):
+            if (field not in _Swagger.SWAGGER_OBJECT_V2_FIELDS and
+                not _Swagger.VENDOR_EXT_PATTERN.match(field)):
                 raise ValueError('Invalid Swagger Object Field: {0}'.format(field))
 
         # check for Required Swagger fields by Saltstack boto apigateway state
-        for field in Swagger.SWAGGER_OBJECT_V2_FIELDS_REQUIRED:
+        for field in _Swagger.SWAGGER_OBJECT_V2_FIELDS_REQUIRED:
             if field not in self._cfg:
                 raise ValueError('Missing Swagger Object Field: {0}'.format(field))
 
         # check for Swagger Version
         self._swagger_version = self._cfg.get('swagger')
-        if self._swagger_version not in Swagger.SWAGGER_VERSIONS_SUPPORTED:
+        if self._swagger_version not in _Swagger.SWAGGER_VERSIONS_SUPPORTED:
             raise ValueError('Unsupported Swagger version: {0},'
                              'Supported versions are {1}'.format(self._swagger_version,
-                                                                 Swagger.SWAGGER_VERSIONS_SUPPORTED))
+                                                                 _Swagger.SWAGGER_VERSIONS_SUPPORTED))
 
 
     @property
@@ -456,7 +456,7 @@ class Swagger(object):
         paths = self._cfg.get('paths')
         if not paths:
             raise ValueError('Paths Object has no values, You need to define them in your swagger file')
-        for path in paths.keys():
+        for path in paths:
             if not path.startswith('/'):
                 raise ValueError('Path object {0} should start with /. Please fix it'.format(path))
         return paths.iteritems()
@@ -514,7 +514,11 @@ class Swagger(object):
     def delete_api(self, ret):
         '''
         Method to delete a Rest Api named defined in the swagger file's Info Object's title value.
+
+        ret
+            a dictionary for returning status to Saltstack
         '''
+
         exists_response = __salt__['boto_apigateway.api_exists'](name=self.rest_api_name, description=self.info_json,
                                                                  **self._common_aws_args)
         if exists_response.get('exists'):
@@ -544,11 +548,15 @@ class Swagger(object):
     def deploy_models(self, ret):
         '''
         Method to deploy swagger file's definition objects and associated schema to AWS Apigateway as Models
+
+        ret
+            a dictionary for returning status to Saltstack
         '''
+
         for model, schema  in self.models:
             # add in a few attributes into the model schema that AWS expects
             _schema = schema.copy()
-            _schema.update({'$schema': Swagger.JSON_SCHEMA_DRAFT_4,
+            _schema.update({'$schema': _Swagger.JSON_SCHEMA_DRAFT_4,
                             'title': '{0} Schema'.format(model),
                             'type': 'object'})
 
@@ -633,17 +641,21 @@ class Swagger(object):
         return lambda_uri
 
     def _parse_method_data(self, method_name, method_data):
+        '''
+        Helper function to construct the method request params, models, request_templates and 
+        integration_type values needed to configure method request integration/mappings.
+        '''
         method_params = {}
         method_models = {}
         if 'parameters' in method_data:
             for param in method_data['parameters']:
-                p = Swagger.SwaggerParameter(param)
+                p = _Swagger.SwaggerParameter(param)
                 if p.name:
                     method_params[p.name] = True
                 if p.schema:
                     method_models['application/json'] = p.schema
 
-        request_templates = self.REQUEST_OPTION_TEMPLATE if method_name == 'options' else self.REQUEST_TEMPLATE
+        request_templates = _Swagger.REQUEST_OPTION_TEMPLATE if method_name == 'options' else _Swagger.REQUEST_TEMPLATE
         integration_type = "MOCK" if method_name == 'options' else "AWS"
 
         return {'params': method_params,
@@ -652,6 +664,10 @@ class Swagger(object):
                 'integration_type': integration_type}
 
     def _parse_method_response(self, method_name, method_response):
+        '''
+        Helper function to construct the method response params, models, and integration_params
+        values needed to configure method response integration/mappings. 
+        '''
         method_response_models = {}
         if method_response.schema:
             method_response_models['application/json'] = method_response.schema
@@ -666,8 +682,36 @@ class Swagger(object):
                 'models': method_response_models,
                 'integration_params': method_integration_response_params}
 
-    def deploy_method(self, ret, resource_path, method_name, method_data, api_key_required, 
+    def _deploy_method(self, ret, resource_path, method_name, method_data, api_key_required, 
                       lambda_integration_role, lambda_region):
+        '''
+        Method to create a method for the given resource path, along with its associated
+        request and response integrations.
+
+        ret
+            a dictionary for returning status to Saltstack
+
+        resource_path
+            the full resource path where the named method_name will be associated with.
+
+        method_name
+            a string that is one of the following values: 'delete', 'get', 'head', 'options',
+            'patch', 'post', 'put'
+
+        method_data
+            the value dictionary for this method in the swagger definition file.
+
+        api_key_required
+            True or False, whether api key is required to access this method.
+
+        lambda_integration_role
+            name of the IAM role or IAM role arn that Api Gateway will assume when executing 
+            the associated lambda function
+
+        lambda_region
+            the region for the lambda function that Api Gateway will integrate to.
+
+        '''
         method = self._parse_method_data(method_name.lower(), method_data)
 
         # TODO: 'NONE' ??
@@ -681,7 +725,7 @@ class Swagger(object):
             ret = _log_error_and_abort(ret, m)
             return ret
 
-        ret = _log_changes(ret, 'deploy_method.create_api_method', m)
+        ret = _log_changes(ret, '_deploy_method.create_api_method', m)
 
         lambda_uri = ""
         if method_name.lower() != 'options':
@@ -700,12 +744,12 @@ class Swagger(object):
         if not integration.get('created'):
             ret = _log_error_and_abort(ret, integration)
             return ret
-        ret = _log_changes(ret, 'deploy_method.create_api_integration', integration)
+        ret = _log_changes(ret, '_deploy_method.create_api_integration', integration)
 
         if 'responses' in method_data:
             for response, response_data in method_data['responses'].iteritems():
                 httpStatus = str(response)
-                method_response = self._parse_method_response(method_name.lower(), Swagger.SwaggerMethodResponse(response_data))
+                method_response = self._parse_method_response(method_name.lower(), _Swagger.SwaggerMethodResponse(response_data))
 
                 mr = __salt__['boto_apigateway.create_api_method_response'](self.restApiId,
                                                                             resource_path,
@@ -717,7 +761,7 @@ class Swagger(object):
                 if not mr.get('created'):
                     ret = _log_error_and_abort(ret, mr)
                     return ret
-                ret = _log_changes(ret, 'deploy_method.create_api_method_response', mr)
+                ret = _log_changes(ret, '_deploy_method.create_api_method_response', mr)
 
                 mir = __salt__['boto_apigateway.create_api_integration_response'](
                         self.restApiId, resource_path, method_name.upper(), httpStatus, '.*',
@@ -726,13 +770,31 @@ class Swagger(object):
                 if not mir.get('created'):
                     ret = _log_error_and_abort(ret, mir)
                     return ret
-                ret = _log_changes(ret, 'deploy_method.create_api_integration_response', mir)
+                ret = _log_changes(ret, '_deploy_method.create_api_integration_response', mir)
         else:
             raise ValueError('No responses specified for {0} {1}'.format(resource_path, method_name))
 
         return ret
 
     def deploy_resources(self, ret, api_key_required, lambda_integration_role, lambda_region):
+        '''
+        Method to deploy resources defined in the swagger file.
+
+        ret
+            a dictionary for returning status to Saltstack
+
+        api_key_required
+            True or False, whether api key is required to access this method.
+
+        lambda_integration_role
+            name of the IAM role or IAM role arn that Api Gateway will assume when executing 
+            the associated lambda function
+
+        lambda_region
+            the region for the lambda function that Api Gateway will integrate to.
+
+        '''
+
         for path, pathData in self.paths:
             resource_path = ''.join((self.basePath, path))
             resource = __salt__['boto_apigateway.create_api_resources'](restApiId=self.restApiId,
@@ -742,8 +804,8 @@ class Swagger(object):
                 return ret
             ret = _log_changes(ret, 'deploy_resources', resource)
             for method, method_data in pathData.iteritems():
-                if method in self.SWAGGER_OPERATION_NAMES:
-                    ret = self.deploy_method(ret, resource_path, method, method_data, 
-                                             api_key_required, lambda_integration_role, lambda_region)
+                if method in _Swagger.SWAGGER_OPERATION_NAMES:
+                    ret = self._deploy_method(ret, resource_path, method, method_data, 
+                                              api_key_required, lambda_integration_role, lambda_region)
         return ret
 
