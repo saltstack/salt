@@ -334,7 +334,11 @@ class MinionBase(object):
     @staticmethod
     def process_schedule(minion, loop_interval):
         try:
-            minion.schedule.eval()
+            if hasattr(minion, 'schedule'):
+                minion.schedule.eval()
+            else:
+                log.error('Minion scheduler not initialized. Scheduled jobs will not be run.')
+                return
             # Check if scheduler requires lower loop interval than
             # the loop_interval setting
             if minion.schedule.loop_interval < loop_interval:
@@ -713,16 +717,19 @@ class Minion(MinionBase):
         '''
         Block until we are connected to a master
         '''
-        log.debug("sync_connect_master")
         self._connect_master_future = self.connect_master()
         # finish connecting to master
         self._connect_master_future.add_done_callback(lambda f: self.io_loop.stop())
-        self.io_loop.start()
+        try:
+            self.io_loop.start()
+        except KeyboardInterrupt:
+            self.destroy()
         # I made the following 3 line oddity to preserve traceback.
         # Please read PR #23978 before changing, hopefully avoiding regressions.
         # Good luck, we're all counting on you.  Thanks.
         future_exception = self._connect_master_future.exc_info()
         if future_exception:
+            # This needs to be re-raised to preserve restart_on_error behavior.
             raise six.reraise(*future_exception)
 
     @tornado.gen.coroutine
@@ -920,6 +927,8 @@ class Minion(MinionBase):
         try:
             result = channel.send(load, timeout=timeout)
             return True
+        except salt.exceptions.SaltReqTimeoutError:
+            log.info('fire_master failed: master could not be contacted. Request timed out.')
         except Exception:
             log.info('fire_master failed: {0}'.format(traceback.format_exc()))
             return False
@@ -1646,9 +1655,9 @@ class Minion(MinionBase):
 
         if start:
             self.sync_connect_master()
-
-        self._fire_master_minion_start()
-        log.info('Minion is ready to receive requests!')
+        if hasattr(self, 'connected') and self.connected:
+            self._fire_master_minion_start()
+            log.info('Minion is ready to receive requests!')
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -1688,35 +1697,46 @@ class Minion(MinionBase):
         ping_interval = self.opts.get('ping_interval', 0) * 60
         if ping_interval > 0:
             def ping_master():
-                self._fire_master('ping', 'minion_ping')
+                try:
+                    self._fire_master('ping', 'minion_ping')
+                except Exception:
+                    log.warning('Attempt to ping master failed.', exc_on_loglevel=logging.DEBUG)
             self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
 
         self.periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
 
         def handle_beacons():
             # Process Beacons
+            beacons = None
             try:
                 beacons = self.process_beacons(self.functions)
             except Exception:
                 log.critical('The beacon errored: ', exc_info=True)
             if beacons:
                 self._fire_master(events=beacons)
-        self.periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
+                self.periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
 
         # TODO: actually listen to the return and change period
         def handle_schedule():
             self.process_schedule(self, loop_interval)
-        self.periodic_callbacks['schedule'] = tornado.ioloop.PeriodicCallback(handle_schedule, 1000, io_loop=self.io_loop)
+        if hasattr(self, 'schedule'):
+            self.periodic_callbacks['schedule'] = tornado.ioloop.PeriodicCallback(handle_schedule, 1000, io_loop=self.io_loop)
 
         # start all the other callbacks
         for periodic_cb in six.itervalues(self.periodic_callbacks):
             periodic_cb.start()
 
         # add handler to subscriber
-        self.pub_channel.on_recv(self._handle_payload)
+        if hasattr(self, 'pub_channel'):
+            self.pub_channel.on_recv(self._handle_payload)
+        else:
+            log.error('No connection to master found. Scheduled jobs will not run.')
 
         if start:
-            self.io_loop.start()
+            try:
+                self.io_loop.start()
+            except (KeyboardInterrupt, RuntimeError):  # A RuntimeError can be re-raised by Tornado on shutdown
+                self.destroy()
 
     def _handle_payload(self, payload):
         if payload is not None and self._target_load(payload['load']):
