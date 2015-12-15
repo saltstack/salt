@@ -72,7 +72,7 @@ def _freebsd_disks():
     devices = __salt__['cmd.run']('{0} -n kern.disks'.format(sysctl))
     SSD_TOKEN = 'non-rotating'
 
-    for device in devices.split(' ')[1:]:
+    for device in devices.split(' '):
         if device.startswith('cd'):
             log.debug('Disk grain skipping cd')
         elif _freebsd_vbox():
