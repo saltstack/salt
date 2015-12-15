@@ -56,7 +56,7 @@ def present(name,
     and groups the others.
 
     name
-        The name of the user to manage
+        The name of the system user to manage.
 
     createdb
         Is the user allowed to create databases?
@@ -83,8 +83,8 @@ def present(name,
         Should the new user be allowed to initiate streaming replication
 
     password
-        The user's password
-        It can be either a plain string or a md5 postgresql hashed password::
+        The system user's password. It can be either a plain string or a
+        md5 postgresql hashed password::
 
             'md5{MD5OF({password}{role}}'
 
@@ -113,16 +113,16 @@ def present(name,
         .. versionadded:: 0.17.0
 
     db_user
-        database username if different from config or default
+        Postres database username, if different from config or default.
 
     db_password
-        user password if any password for a specified user
+        Postgres user's password, if any password, for a specified db_user.
 
     db_host
-        Database host if different from config or default
+        Postgres database host, if different from config or default.
 
     db_port
-        Database port if different from config or default
+        Postgres database port, if different from config or default.
     '''
     ret = {'name': name,
            'changes': {},
