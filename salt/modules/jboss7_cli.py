@@ -118,7 +118,7 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
             cli_result['success'] = False
             match = re.search(r'^(JBAS\d+):', cli_result['failure-description'])
             cli_result['err_code'] = match.group(1)
-            cli_result['stdout']=cli_command_result['stdout']
+            cli_result['stdout'] = cli_command_result['stdout']
         else:
             if fail_on_error:
                 raise CommandExecutionError('''Command execution failed, return code={retcode}, stdout='{stdout}', stderr='{stderr}' '''.format(**cli_command_result))
