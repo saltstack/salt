@@ -22,10 +22,12 @@ Available Configuration Settings
 The log records can be sent to a regular file, local path name, or network location.
 Remote logging works best when configured to use rsyslogd(8) (e.g.: ``file:///dev/log``),
 with rsyslogd(8) configured for network logging.  The format for remote addresses is:
-``<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>``.
+``<file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>``. Where ``log-facility`` is the symbolic name of a syslog facility as defined in the :ref:`SysLogHandler documentation <python2:logging.handlers.SysLogHandler.encodePriority>` . It defaults to ``LOG_USER``.
 
 Default: Dependent of the binary being executed, for example, for ``salt-master``,
 ``/var/log/salt/master``.
+
+
 
 
 Examples:
@@ -44,6 +46,10 @@ Examples:
 .. code-block:: yaml
 
     log_file: file:///dev/log
+    
+.. code-block:: yaml
+
+    log_file: file:///dev/log/LOG_DAEMON
 
 .. code-block:: yaml
 
