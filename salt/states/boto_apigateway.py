@@ -172,22 +172,26 @@ def api_present(name, api_name, swagger_file, api_key_required, lambda_integrati
            }
 
     try:
+        common_args = dict([('region', region),
+                            ('key', key),
+                            ('keyid', keyid),
+                            ('profile', profile)])
+
         # try to open the swagger file and basic validation
-        swagger = Swagger(api_name, swagger_file)
+        swagger = Swagger(api_name, swagger_file, common_args)
 
         # first deploy a Rest Api on AWS
-        ret = swagger.deploy_api(ret, region=region, key=key, keyid=keyid, profile=profile)
+        ret = swagger.deploy_api(ret)
         if ret.get('abort'):
             return ret
 
         # next, deploy models of to the AWS API
-        ret = swagger.deploy_models(ret, region=region, key=key, keyid=keyid, profile=profile)
+        ret = swagger.deploy_models(ret)
         if ret.get('abort'):
             return ret
 
         ret = swagger.deploy_resources(ret, api_key_required=api_key_required, lambda_integration_role=lambda_integration_role,
-                                       lambda_region=lambda_region, region=region,
-                                       key=key, keyid=keyid, profile=profile)
+                                       lambda_region=lambda_region)
         if ret.get('abort'):
             return ret
 
@@ -235,9 +239,14 @@ def api_absent(name, api_name, swagger_file, region=None, key=None, keyid=None, 
            }
 
     try:
-        swagger = Swagger(api_name, swagger_file)
+        common_args = dict([('region', region),
+                            ('key', key),
+                            ('keyid', keyid),
+                            ('profile', profile)])
 
-        ret = swagger.delete_api(ret, region=region, key=key, keyid=keyid, profile=profile)
+        swagger = Swagger(api_name, swagger_file, common_args)
+
+        ret = swagger.delete_api(ret)
 
     except Exception as e:
         ret['result'] = False
@@ -363,8 +372,9 @@ class Swagger(object):
             _headers = self._r.get('headers', {})
             return _headers
 
-    def __init__(self, api_name, swagger_file_path):
+    def __init__(self, api_name, swagger_file_path, common_aws_args):
         self._api_name = api_name
+        self._common_aws_args = common_aws_args
         if os.path.exists(swagger_file_path) and os.path.isfile(swagger_file_path):
             self._swagger_file = swagger_file_path
             self._md5_filehash = _gen_md5_filehash(self._swagger_file)
@@ -372,6 +382,7 @@ class Swagger(object):
             self._swagger_version = ''
             # values from AWS APIGateway
             self._restApiId = ''
+
         else:
             raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
 
@@ -466,15 +477,16 @@ class Swagger(object):
 
     # methods to interact with boto_apigateway execution modules
 
-    def deploy_api(self, ret, region=None, key=None, keyid=None, profile=None):
+    def deploy_api(self, ret):
         '''
         this method create the top level rest api in AWS apigateway
         '''
         # TODO: check to see if the service by this name and description exists,
         # matches the content of swagger.info_json, may need more elaborate checks
         # on the content of the json in description field of AWS ApiGateway Rest API Object.
-        exists_response = __salt__['boto_apigateway.api_exists'](name=self.rest_api_name, description=self.info_json,
-                                                                 region=region, key=key, keyid=keyid, profile=profile)
+        exists_response = __salt__['boto_apigateway.api_exists'](name=self.rest_api_name,
+                                                                 description=self.info_json,
+                                                                 **self._common_aws_args)
         if exists_response.get('exists'):
             ret['comment'] = 'rest api already exists'
             ret['abort'] = True
@@ -487,7 +499,7 @@ class Swagger(object):
             return ret
 
         response = __salt__['boto_apigateway.create_api'](name=self.rest_api_name, description=self.info_json,
-                                                          region=region, key=key, keyid=keyid, profile=profile)
+                                                          **self._common_aws_args)
 
         if not response.get('created'):
             ret['result'] = False
@@ -500,12 +512,12 @@ class Swagger(object):
 
         return _log_changes(ret, 'deploy_api', response.get('restapi'))
 
-    def delete_api(self, ret, region=None, key=None, keyid=None, profile=None):
+    def delete_api(self, ret):
         '''
         Method to delete a Rest Api named defined in the swagger file's Info Object's title value.
         '''
         exists_response = __salt__['boto_apigateway.api_exists'](name=self.rest_api_name, description=self.info_json,
-                                                                 region=region, key=key, keyid=keyid, profile=profile)
+                                                                 **self._common_aws_args)
         if exists_response.get('exists'):
             if __opts__['test']:
                 ret['comment'] = 'Rest API named {0} is set to be deleted.'.format(self.rest_api_name)
@@ -514,8 +526,8 @@ class Swagger(object):
                 return ret
 
             delete_api_response = __salt__['boto_apigateway.delete_api'](name=self.rest_api_name,
-                                                                         description=self.info_json, region=region,
-                                                                         key=key, keyid=keyid, profile=profile)
+                                                                         description=self.info_json,
+                                                                         **self._common_aws_args)
             if not delete_api_response.get('deleted'):
                 ret['result'] = False
                 ret['abort'] = True
@@ -530,7 +542,7 @@ class Swagger(object):
 
         return ret
 
-    def deploy_models(self, ret, region=None, key=None, keyid=None, profile=None):
+    def deploy_models(self, ret):
         '''
         Method to deploy swagger file's definition objects and associated schema to AWS Apigateway as Models
         '''
@@ -543,17 +555,18 @@ class Swagger(object):
 
             # check to see if model already exists, aws has 2 default models [Empty, Error]
             # which may need upate with data from swagger file
-            model_exists_response = (
-                __salt__['boto_apigateway.api_model_exists'](restApiId=self.restApiId, modelName=model,
-                                                             region=region, key=key, keyid=keyid, profile=profile))
+            model_exists_response = __salt__['boto_apigateway.api_model_exists'](restApiId=self.restApiId,
+                                                                                 modelName=model,
+                                                                                 **self._common_aws_args)
 
             if model_exists_response.get('exists'):
                 # TODO: still needs to also update model description (if there is a field we will
                 # populate it with from swagger file)
                 update_model_schema_response = (
-                    __salt__['boto_apigateway.update_api_model_schema'](restApiId=self.restApiId, modelName=model,
-                                                                        schema=_schema, region=region, key=key,
-                                                                        keyid=keyid, profile=profile))
+                    __salt__['boto_apigateway.update_api_model_schema'](restApiId=self.restApiId,
+                                                                        modelName=model,
+                                                                        schema=_schema, 
+                                                                        **self._common_aws_args))
                 if not update_model_schema_response.get('updated'):
                     ret['result'] = False
                     ret['abort'] = True
@@ -567,9 +580,11 @@ class Swagger(object):
                 # call into boto_apigateway to create models
                 # TODO: model may have descriptions field, need to extract and pass into modelDescription
                 # as opposed to the hardcoded 'test123'.
-                create_model_response = __salt__['boto_apigateway.create_api_model'](restApiId=self.restApiId,
-                    modelName=model, modelDescription='test123', schema=_schema,
-                    contentType='application/json', region=region, key=key, keyid=keyid, profile=profile)
+                create_model_response = (
+                    __salt__['boto_apigateway.create_api_model'](restApiId=self.restApiId, modelName=model,
+                                                                 modelDescription='test123', schema=_schema,
+                                                                 contentType='application/json',
+                                                                 **self._common_aws_args))
 
                 if not create_model_response.get('created'):
                     ret['result'] = False
@@ -591,21 +606,23 @@ class Swagger(object):
         lambda_name = '{0}{1}_{2}'.format(self.rest_api_name.strip(), resourcePath, httpMethod)
         return re.sub(r'\s+|/', '_', lambda_name).lower()
 
-    def _lambda_uri(self, ret, lambda_name, lambda_region, region, key=None, keyid=None, profile=None):
+    def _lambda_uri(self, ret, lambda_name, lambda_region):
         '''
         Helper Method to construct the lambda uri for use in method integration
         '''
+        profile = self._common_aws_args.get('profile')
+        region = self._common_aws_args.get('region')
+
         lambda_region = __utils__['boto3.get_region']('lambda', lambda_region, profile)
         apigw_region = __utils__['boto3.get_region']('apigateway', region, profile)
 
-        lambda_desc = __salt__['boto_lambda.describe_function'](lambda_name, region=lambda_region,
-                                                                key=key, keyid=keyid, profile=profile)
+        lambda_desc = __salt__['boto_lambda.describe_function'](lambda_name, **self._common_aws_args)
 
         if lambda_region != apigw_region:
             if not lambda_desc.get('function'):
                 # try look up in the same region as the apigateway as well if previous lookup failed
-                lambda_desc = __salt__['boto_lambda.describe_function'](lambda_name, region=apigw_region,
-                                                                        key=key, keyid=keyid, profile=profile)
+                lambda_desc = __salt__['boto_lambda.describe_function'](lambda_name, **self._common_aws_args)
+
         if not lambda_desc.get('function'):
             raise ValueError('Could not find lambda function {0} in '
                              'regions [{1}, {2}].'.format(lambda_name, lambda_region, apigw_region))
@@ -651,14 +668,16 @@ class Swagger(object):
                 'integration_params': method_integration_response_params}
 
     def deploy_method(self, ret, resource_path, method_name, method_data, api_key_required, 
-                      lambda_integration_role, lambda_region,
-                      region=None, key=None, keyid=None, profile=None):
+                      lambda_integration_role, lambda_region):
         method = self._parse_method_data(method_name.lower(), method_data)
 
         # TODO: 'NONE' ??
         m = __salt__['boto_apigateway.create_api_method'](self.restApiId, resource_path,
-            method_name.upper(), 'NONE', apiKeyRequired=api_key_required, requestParameters=method.get('params'), requestModels=method.get('models'),
-            region=region, key=key, keyid=keyid, profile=profile)
+                                                          method_name.upper(), 'NONE',
+                                                          apiKeyRequired=api_key_required,
+                                                          requestParameters=method.get('params'),
+                                                          requestModels=method.get('models'),
+                                                          **self._common_aws_args)
         if not m.get('created'):
             ret = _log_error_and_abort(ret, m)
             return ret
@@ -667,13 +686,17 @@ class Swagger(object):
 
         lambda_uri = ""
         if method_name.lower() != 'options':
-            lambda_uri = self._lambda_uri(ret, self._lambda_name(resource_path, method_name), lambda_region=lambda_region,
-                                          region=region, key=key, keyid=keyid, profile=profile)
+            lambda_uri = self._lambda_uri(ret, self._lambda_name(resource_path, method_name), lambda_region=lambda_region)
 
-        integration = __salt__['boto_apigateway.create_api_integration'](
-                self.restApiId, resource_path, method_name.upper(), method.get('integration_type'), method_name.upper(),
-                lambda_uri, lambda_integration_role, requestTemplates=method.get('request_templates'),
-                region=region, key=key, keyid=keyid, profile=profile)
+        integration = __salt__['boto_apigateway.create_api_integration'](self.restApiId,
+                                                                         resource_path,
+                                                                         method_name.upper(),
+                                                                         method.get('integration_type'),
+                                                                         method_name.upper(),
+                                                                         lambda_uri,
+                                                                         lambda_integration_role,
+                                                                         requestTemplates=method.get('request_templates'),
+                                                                         **self._common_aws_args)
         log.info(integration)
         if not integration.get('created'):
             ret = _log_error_and_abort(ret, integration)
@@ -685,10 +708,13 @@ class Swagger(object):
                 httpStatus = str(response)
                 method_response = self._parse_method_response(method_name.lower(), Swagger.SwaggerMethodResponse(response_data))
 
-                mr = __salt__['boto_apigateway.create_api_method_response'](
-                        self.restApiId, resource_path, method_name.upper(), httpStatus,
-                        responseParameters=method_response.get('params'), responseModels=method_response.get('models'),
-                        region=region, key=key, keyid=keyid, profile=profile)
+                mr = __salt__['boto_apigateway.create_api_method_response'](self.restApiId,
+                                                                            resource_path,
+                                                                            method_name.upper(),
+                                                                            httpStatus,
+                                                                            responseParameters=method_response.get('params'),
+                                                                            responseModels=method_response.get('models'),
+                                                                            **self._common_aws_args)
                 if not mr.get('created'):
                     ret = _log_error_and_abort(ret, mr)
                     return ret
@@ -697,7 +723,7 @@ class Swagger(object):
                 mir = __salt__['boto_apigateway.create_api_integration_response'](
                         self.restApiId, resource_path, method_name.upper(), httpStatus, '.*',
                         responseParameters=method_response.get('integration_params'),
-                        region=region, key=key, keyid=keyid, profile=profile)
+                        **self._common_aws_args)
                 if not mir.get('created'):
                     ret = _log_error_and_abort(ret, mir)
                     return ret
@@ -707,12 +733,11 @@ class Swagger(object):
 
         return ret
 
-    def deploy_resources(self, ret, api_key_required, lambda_integration_role, lambda_region,
-                         region=None, key=None, keyid=None, profile=None):
+    def deploy_resources(self, ret, api_key_required, lambda_integration_role, lambda_region):
         for path, pathData in self.paths:
             resource_path = ''.join((self.basePath, path))
             resource = __salt__['boto_apigateway.create_api_resources'](restApiId=self.restApiId,
-                path=resource_path, region=region, key=key, keyid=keyid, profile=profile)
+                path=resource_path, **self._common_aws_args)
             if not resource.get('created'):
                 ret = _log_error_and_abort(ret, resource)
                 return ret
@@ -720,7 +745,6 @@ class Swagger(object):
             for method, method_data in pathData.iteritems():
                 if method in self.SWAGGER_OPERATION_NAMES:
                     ret = self.deploy_method(ret, resource_path, method, method_data, 
-                                             api_key_required, lambda_integration_role, lambda_region,
-                                             region=region, key=key, keyid=keyid, profile=profile)
+                                             api_key_required, lambda_integration_role, lambda_region)
         return ret
 
