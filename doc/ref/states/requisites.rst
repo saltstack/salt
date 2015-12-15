@@ -466,9 +466,11 @@ as NAND and is useful in giving more granular control over when a state should
 execute.
 
 **NOTE**: Under the hood ``unless`` calls ``cmd.retcode`` with
-``python_shell=True``. This means the commands referenced by unless will be
+``python_shell=True``. This means the commands referenced by ``unless`` will be
 parsed by a shell, so beware of side-effects as this shell will be run with the
-same privileges as the salt-minion.
+same privileges as the salt-minion. Also be aware that the boolean value is
+determined by the shell's concept of ``True`` and ``False``, rather than Python's
+concept of ``True`` and ``False``.
 
 .. code-block:: yaml
 
@@ -511,9 +513,11 @@ returns ``True``, then the state is run. If any of the specified commands
 return ``False``, the state will not run.
 
 **NOTE**: Under the hood ``onlyif`` calls ``cmd.retcode`` with
-``python_shell=True``. This means the commands referenced by ``unless`` will be
+``python_shell=True``. This means the commands referenced by ``onlyif`` will be
 parsed by a shell, so beware of side-effects as this shell will be run with the
-same privileges as the salt-minion.
+same privileges as the salt-minion. Also be aware that the boolean value is
+determined by the shell's concept of ``True`` and ``False``, rather than Python's
+concept of ``True`` and ``False``.
 
 .. code-block:: yaml
 
