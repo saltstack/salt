@@ -12,9 +12,6 @@ from __future__ import absolute_import
 import logging
 import re
 
-# Import Salt libs
-import salt.utils
-
 # Import Third Party Libs
 try:
     import psutil
