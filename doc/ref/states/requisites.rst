@@ -462,7 +462,7 @@ Unless
 
 The ``unless`` requisite specifies that a state should only run when any of
 the specified commands return ``False``. The ``unless`` requisite operates
-as NOR and is useful in giving more granular control over when a state should
+as NANDg and is useful in giving more granular control over when a state should
 execute.
 
 **NOTE**: Under the hood ``unless`` calls ``cmd.retcode`` with
@@ -506,12 +506,12 @@ Onlyif
 
 .. versionadded:: 2014.7.0
 
-``onlyif`` is the opposite of ``unless``. If all of the commands in ``onlyif``
+The ``onlyif`` requisite specifies that if each command listed in ``onlyif``
 return ``True``, then the state is run. If any of the specified commands
 return ``False``, the state will not run.
 
 **NOTE**: Under the hood ``onlyif`` calls ``cmd.retcode`` with
-``python_shell=True``. This means the commands referenced by unless will be
+``python_shell=True``. This means the commands referenced by ``unless`` will be
 parsed by a shell, so beware of side-effects as this shell will be run with the
 same privileges as the salt-minion.
 
