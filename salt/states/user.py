@@ -467,9 +467,9 @@ def present(name,
             # run chhome once to avoid any possible bad side-effect
             if key == 'home' and 'homeDoesNotExist' not in changes:
                 if __grains__['kernel'] == 'Darwin':
-                        __salt__['user.chhome'](name, val)
+                    __salt__['user.chhome'](name, val)
                 else:
-                   __salt__['user.chhome'](name, val, False)
+                    __salt__['user.chhome'](name, val, False)
                 continue
             if key == 'homeDoesNotExist':
                 if __grains__['kernel'] == 'Darwin':
