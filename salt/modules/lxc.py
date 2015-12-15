@@ -81,7 +81,7 @@ def __virtual__():
     #     return 'lxc'
     # return False
     #
-    return False
+    return (False, 'The lxc execution module cannot be loaded: the lxc-start binary is not in the path.')
 
 
 def get_root_path(path):
