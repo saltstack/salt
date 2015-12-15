@@ -28,9 +28,7 @@ __virtualname__ = 'diskusage'
 
 
 def __virtual__():
-    if salt.utils.is_windows():
-        return False
-    elif HAS_PSUTIL is False:
+    if HAS_PSUTIL is False:
         return False
     else:
         return __virtualname__
@@ -60,6 +58,17 @@ def beacon(config):
           diskusage:
             - /: 63%
             - /mnt/nfs: 50%
+
+    Windows drives must be quoted to avoid yaml syntax errors
+
+    .. code-block:: yaml
+
+        beacons:
+          diskusage:
+            -  interval: 120
+            - 'c:\': 90%
+            - 'd:\': 50%
+
     '''
     ret = []
     for diskusage in config:
