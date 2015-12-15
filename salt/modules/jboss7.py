@@ -173,7 +173,7 @@ def create_datasource(jboss_config, name, datasource_properties, profile=None):
 
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
 
-    
+
 def __get_properties_assignment_string(datasource_properties, ds_resource_description):
     assignment_strings = []
     ds_attributes = ds_resource_description['attributes']
@@ -379,7 +379,7 @@ def __read_simple_binding(jboss_config, binding_name, profile=None):
         operation = '/profile="{profile}"'.format(profile=profile) + operation
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation)
 
-    
+
 def __update_datasource_property(jboss_config, datasource_name, name, value, ds_attributes, profile=None):
     log.debug("======================== MODULE FUNCTION: jboss7.__update_datasource_property, datasource_name=%s, name=%s, value=%s, profile=%s", datasource_name, name, value, profile)
 
@@ -390,7 +390,7 @@ def __update_datasource_property(jboss_config, datasource_name, name, value, ds_
     )
     if profile is not None:
         operation = '/profile="{profile}"'.format(profile=profile) + operation
-   
+
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
 
 
@@ -429,7 +429,7 @@ def remove_datasource(jboss_config, name, profile=None):
         salt '*' jboss7.remove_datasource '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_datasource_name
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.remove_datasource, name=%s, profile=%s", name, profile)
-    
+
     operation = '/subsystem=datasources/data-source={name}:remove'.format(name=name)
     if profile is not None:
         operation = '/profile="{profile}"'.format(profile=profile) + operation
