@@ -58,10 +58,10 @@ import json
 
 # Import Salt Libs
 import salt.utils.dictupdate as dictupdate
+import salt.utils
 
 # Import 3rd Party Libs
-import anyconfig
-
+import yaml
 
 log = logging.getLogger(__name__)
 
@@ -375,14 +375,14 @@ class Swagger(object):
     def __init__(self, api_name, swagger_file_path, common_aws_args):
         self._api_name = api_name
         self._common_aws_args = common_aws_args
+        self._restApiId = ''
+
         if os.path.exists(swagger_file_path) and os.path.isfile(swagger_file_path):
             self._swagger_file = swagger_file_path
             self._md5_filehash = _gen_md5_filehash(self._swagger_file)
-            self._cfg = anyconfig.load(self._swagger_file)
+            with salt.utils.fopen(self._swagger_file, 'rb') as sf:
+                self._cfg = yaml.load(sf)
             self._swagger_version = ''
-            # values from AWS APIGateway
-            self._restApiId = ''
-
         else:
             raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
 
@@ -397,17 +397,16 @@ class Swagger(object):
         JSON) can be read into a dictionary, and we check for the content of the Swagger Object for version
         and info.
         '''
-        swagger_fields = self._cfg.keys()
 
         # check for any invalid fields for Swagger Object V2
-        for field in swagger_fields:
+        for field in self._cfg:
             if (field not in Swagger.SWAGGER_OBJECT_V2_FIELDS and
                 not Swagger.VENDOR_EXT_PATTERN.match(field)):
                 raise ValueError('Invalid Swagger Object Field: {0}'.format(field))
 
         # check for Required Swagger fields by Saltstack boto apigateway state
         for field in Swagger.SWAGGER_OBJECT_V2_FIELDS_REQUIRED:
-            if field not in swagger_fields:
+            if field not in self._cfg:
                 raise ValueError('Missing Swagger Object Field: {0}'.format(field))
 
         # check for Swagger Version
