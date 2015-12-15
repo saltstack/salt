@@ -9,6 +9,7 @@ import yaml
 import shlex
 import argparse  # pylint: disable=minimum-python-version
 import salt.utils
+from salt.ext.six.moves import range
 
 
 def clean_args(args):

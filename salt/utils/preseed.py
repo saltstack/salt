@@ -4,6 +4,7 @@ Utilities for managing Debian preseed
 
 .. versionadded:: Beryllium
 '''
+from __future__ import absolute_import
 import yaml
 import shlex
 import salt.utils
