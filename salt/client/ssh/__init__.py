@@ -1046,8 +1046,10 @@ ARGS = {9}\n'''.format(self.minion_config,
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
                     return 'ERROR: Failure deploying thin, undefined state: {0}'.format(stdout), stderr, retcode
-                stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
-                stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+                while re.search(RSTR_RE, stdout):
+                    stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
+                while re.search(RSTR_RE, stderr):
+                    stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             else:
                 return 'ERROR: {0}'.format(error), stderr, retcode
 
@@ -1059,7 +1061,8 @@ ARGS = {9}\n'''.format(self.minion_config,
         if re.search(RSTR_RE, stderr):
             # Found RSTR in stderr which means SHIM completed and only
             # and remaining output is only from salt.
-            stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+            while re.search(RSTR_RE, stderr):
+                stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
 
         else:
             # RSTR was found in stdout but not stderr - which means there
@@ -1078,11 +1081,13 @@ ARGS = {9}\n'''.format(self.minion_config,
                         # If RSTR is not seen in stdout with tty, then there
                         # was a thin deployment problem.
                         return 'ERROR: Failure deploying thin: {0}\n{1}'.format(stdout, stderr), stderr, retcode
-                stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
+                while re.search(RSTR_RE, stdout):
+                    stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 if self.tty:
                     stderr = ''
                 else:
-                    stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+                    while re.search(RSTR_RE, stderr):
+                        stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             elif 'ext_mods' == shim_command:
                 self.deploy_ext()
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
@@ -1090,8 +1095,10 @@ ARGS = {9}\n'''.format(self.minion_config,
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
                     return 'ERROR: Failure deploying ext_mods: {0}'.format(stdout), stderr, retcode
-                stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
-                stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+                while re.search(RSTR_RE, stdout):
+                    stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
+                while re.search(RSTR_RE, stderr):
+                    stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
 
         return stdout, stderr, retcode
 
