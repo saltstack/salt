@@ -1,9 +1,10 @@
-#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 '''
 Utilities for managing YAST
 
 .. versionadded:: Beryllium
 '''
+from __future__ import absolute_import
 from salt._compat import ElementTree as ET
 import salt.utils.xmlutil as xml
 import salt.utils

@@ -1,12 +1,13 @@
-#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 '''
 Utilities for managing kickstart
 
 .. versionadded:: Beryllium
 '''
+from __future__ import absolute_import
 import yaml
 import shlex
-import argparse
+import argparse  # pylint: disable=minimum-python-version
 import salt.utils
 
 
@@ -16,7 +17,7 @@ def clean_args(args):
     '''
     for arg in args.keys():
         if not args[arg]:
-            del(args[arg])
+            del args[arg]
     return args
 
 
@@ -215,7 +216,7 @@ def parse_driverdisk(rule):
     '''
     Parse the driverdisk line
     '''
-    if not '--' in rule:
+    if '--' not in rule:
         return {'partition': rule}
 
     parser = argparse.ArgumentParser()
@@ -1156,7 +1157,7 @@ def mksls(src, dst=None):
             sls[mode] = {'selinux': ['mode']}
 
     # Get package data together
-    if not 'nobase' in ks_opts['packages']['options']:
+    if 'nobase' not in ks_opts['packages']['options']:
         sls['base'] = {'pkg_group': ['installed']}
 
     packages = ks_opts['packages']['packages']
