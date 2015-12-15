@@ -164,21 +164,16 @@ def create_datasource(jboss_config, name, datasource_properties, profile=None):
     log.debug("======================== MODULE FUNCTION: jboss7.create_datasource, name=%s, profile=%s", name, profile)
     ds_resource_description = __get_datasource_resource_description(jboss_config, name, profile)
 
-    if profile is None:
-        operation = '/subsystem=datasources/data-source="{name}":add({properties})'.format(
-                name=name,
-                properties=__get_properties_assignment_string(datasource_properties, ds_resource_description)
-      )
-    else:
-        operation = '/profile="{profile}"/subsystem=datasources/data-source="{name}":add({properties})'.format(
-                name=name,
-                profile=profile,
-                properties=__get_properties_assignment_string(datasource_properties, ds_resource_description)
-      )
+    operation = '/subsystem=datasources/data-source="{name}":add({properties})'.format(
+        name=name,
+        properties=__get_properties_assignment_string(datasource_properties, ds_resource_description)
+    )
+    if profile is not None:
+        operation = '/profile="{profile}"'.format(profile=profile) + operation
 
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
 
-
+    
 def __get_properties_assignment_string(datasource_properties, ds_resource_description):
     assignment_strings = []
     ds_attributes = ds_resource_description['attributes']
@@ -266,11 +261,9 @@ def update_datasource(jboss_config, name, new_properties, profile=None):
 def __get_datasource_resource_description(jboss_config, name, profile=None):
     log.debug("======================== MODULE FUNCTION: jboss7.__get_datasource_resource_description, name=%s, profile=%s", name, profile)
 
-    if profile is None:
-        operation = '/subsystem=datasources/data-source="{name}":read-resource-description'.format(name=name)
-    else:
-        operation = '/profile="{profile}"/subsystem=datasources/data-source="{name}":read-resource-description'.format(name=name, profile=profile)
-
+    operation = '/subsystem=datasources/data-source="{name}":read-resource-description'.format(name=name)
+    if profile is not None:
+        operation = '/profile="{profile}"'.format(profile=profile) + operation
     operation_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation)
     if operation_result['outcome']:
         return operation_result['result']
@@ -320,17 +313,12 @@ def create_simple_binding(jboss_config, binding_name, value, profile=None):
                 my_binding_name my_binding_value
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.create_simple_binding, binding_name=%s, value=%s, profile=%s", binding_name, value, profile)
-    if profile is None:
-        operation = '/subsystem=naming/binding="{binding_name}":add(binding-type=simple, value="{value}")'.format(
+    operation = '/subsystem=naming/binding="{binding_name}":add(binding-type=simple, value="{value}")'.format(
             binding_name=binding_name,
             value=__escape_binding_value(value)
-      )
-    else:
-        operation = '/profile="{profile}"/subsystem=naming/binding="{binding_name}":add(binding-type=simple, value="{value}")'.format(
-            profile=profile,
-            binding_name=binding_name,
-            value=__escape_binding_value(value)
-      )
+    )
+    if profile is not None:
+        operation = '/profile="{profile}"'.format(profile=profile) + operation
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation)
 
 
@@ -354,17 +342,12 @@ def update_simple_binding(jboss_config, binding_name, value, profile=None):
         salt '*' jboss7.update_simple_binding '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_binding_name my_binding_value
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.update_simple_binding, binding_name=%s, value=%s, profile=%s", binding_name, value, profile)
-    if profile is None:
-        operation = '/subsystem=naming/binding="{binding_name}":write-attribute(name=value, value="{value}")'.format(
-            binding_name=binding_name,
-            value=__escape_binding_value(value)
-      )
-    else:
-        operation = '/profile="{profile}"/subsystem=naming/binding="{binding_name}":write-attribute(name=value, value="{value}")'.format(
-            profile=profile,
-            binding_name=binding_name,
-            value=__escape_binding_value(value)
-      )
+    operation = '/subsystem=naming/binding="{binding_name}":write-attribute(name=value, value="{value}")'.format(
+        binding_name=binding_name,
+        value=__escape_binding_value(value)
+    )
+    if profile is not None:
+        operation = '/profile="{profile}"'.format(profile=profile) + operation
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation)
 
 
@@ -390,39 +373,32 @@ def read_simple_binding(jboss_config, binding_name, profile=None):
 
 
 def __read_simple_binding(jboss_config, binding_name, profile=None):
-    if profile is None:
-        operation = '/subsystem=naming/binding="{binding_name}":read-resource'.format(binding_name=binding_name)
-    else:
-        operation = '/profile="{profile}"/subsystem=naming/binding="{binding_name}":read-resource'.format(binding_name=binding_name, profile=profile)
+
+    operation = '/subsystem=naming/binding="{binding_name}":read-resource'.format(binding_name=binding_name)
+    if profile is not None:
+        operation = '/profile="{profile}"'.format(profile=profile) + operation
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation)
 
-
+    
 def __update_datasource_property(jboss_config, datasource_name, name, value, ds_attributes, profile=None):
     log.debug("======================== MODULE FUNCTION: jboss7.__update_datasource_property, datasource_name=%s, name=%s, value=%s, profile=%s", datasource_name, name, value, profile)
 
-    if profile is None:
-        operation = '/subsystem=datasources/data-source="{datasource_name}":write-attribute(name="{name}",value={value})'.format(
-                      datasource_name=datasource_name,
-                      name=name,
-                      value=__format_value(name, value, ds_attributes)
-        )
-    else:
-        operation = '/profile="{profile}"/subsystem=datasources/data-source="{datasource_name}":write-attribute(name="{name}",value={value})'.format(
-                      datasource_name=datasource_name,
-                      name=name,
-                      value=__format_value(name, value, ds_attributes),
-                      profile=profile
-        )
-
+    operation = '/subsystem=datasources/data-source="{datasource_name}":write-attribute(name="{name}",value={value})'.format(
+                  datasource_name=datasource_name,
+                  name=name,
+                  value=__format_value(name, value, ds_attributes)
+    )
+    if profile is not None:
+        operation = '/profile="{profile}"'.format(profile=profile) + operation
+   
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
 
 
 def __read_datasource(jboss_config, name, profile=None):
 
-    if profile is None:
-        operation = '/subsystem=datasources/data-source="{name}":read-resource'.format(name=name)
-    else:
-        operation = '/profile="{profile}"/subsystem=datasources/data-source="{name}":read-resource'.format(profile=profile, name=name)
+    operation = '/subsystem=datasources/data-source="{name}":read-resource'.format(name=name)
+    if profile is not None:
+        operation = '/profile="{profile}"'.format(profile=profile) + operation
 
     operation_result = __salt__['jboss7_cli.run_operation'](jboss_config, operation)
 
@@ -453,10 +429,11 @@ def remove_datasource(jboss_config, name, profile=None):
         salt '*' jboss7.remove_datasource '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_datasource_name
        '''
     log.debug("======================== MODULE FUNCTION: jboss7.remove_datasource, name=%s, profile=%s", name, profile)
-    if profile is None:
-        operation = '/subsystem=datasources/data-source={name}:remove'.format(name=name)
-    else:
-        operation = '/profile="{profile}"/subsystem=datasources/data-source={name}:remove'.format(name=name, profile=profile)
+    
+    operation = '/subsystem=datasources/data-source={name}:remove'.format(name=name)
+    if profile is not None:
+        operation = '/profile="{profile}"'.format(profile=profile) + operation
+
     return __salt__['jboss7_cli.run_operation'](jboss_config, operation, fail_on_error=False)
 
 
