@@ -118,6 +118,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(vpc_present_result['changes'], {})
 
     @mock_ec2
+    @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_present_with_failure(self):
         with patch('moto.ec2.models.VPCBackend.create_vpc', side_effect=BotoServerError(400, 'Mocked error')):
             vpc_present_result = salt_states['boto_vpc.present']('test', cidr_block)
@@ -141,6 +142,7 @@ class BotoVpcTestCase(BotoVpcStateTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(vpc_absent_result['changes']['new']['vpc'], None)
 
     @mock_ec2
+    @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_absent_with_failure(self):
         vpc = self._create_vpc(name='test')
         with patch('moto.ec2.models.VPCBackend.delete_vpc', side_effect=BotoServerError(400, 'Mocked error')):
@@ -183,6 +185,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         self.assertEqual(resource_present_result['changes'], {})
 
     @mock_ec2
+    @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_present_with_failure(self):
         vpc = self._create_vpc(name='test')
         with patch('moto.ec2.models.{0}'.format(self.backend_create), side_effect=BotoServerError(400, 'Mocked error')):
@@ -213,6 +216,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
         self.assertFalse(exists)
 
     @mock_ec2
+    @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_absent_with_failure(self):
         vpc = self._create_vpc(name='test')
         self._create_resource(vpc_id=vpc.id, name='test')
