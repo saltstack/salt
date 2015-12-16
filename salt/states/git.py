@@ -104,6 +104,8 @@ def _uptodate(ret, target, comments=None):
         # Shouldn't be making any changes if the repo was up to date, but
         # report on them so we are alerted to potential problems with our
         # logic.
+        if isinstance(comments, list):
+            comments = '\n'.join(comments)
         ret['comment'] += '\n\nChanges made: ' + str(comments)
     return ret
 
