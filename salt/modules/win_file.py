@@ -149,7 +149,7 @@ def __virtual__():
             _add_flags = _namespaced_function(_add_flags, globals())
 
             return __virtualname__
-    return False
+    return (False, "Module win_file: module only works on Windows systems")
 
 __outputter__ = {
     'touch': 'txt',
