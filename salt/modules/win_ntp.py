@@ -23,7 +23,7 @@ def __virtual__():
     This only supports Windows
     '''
     if not salt.utils.is_windows():
-        return False
+        return (False, "Module win_system: module only works on Windows systems")
     return __virtualname__
 
 
