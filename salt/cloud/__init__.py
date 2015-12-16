@@ -185,9 +185,9 @@ class CloudClient(object):
                 # Since using "provider: <provider-engine>" is deprecated, alias provider
                 # to use driver: "driver: <provider-engine>"
                 if 'provider' in provider:
-                   driver = provider.pop('provider')
+                    driver = provider.pop('provider')
                 else:
-                   driver = provider['driver']
+                    driver = provider['driver']
 
                 provider['profiles'] = {}
                 self.opts['providers'].update({name: {driver: provider}})
