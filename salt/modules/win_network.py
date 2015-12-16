@@ -34,7 +34,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES is True:
         return __virtualname__
-    return False
+    return (False, "Module win_network: module only works on Windows systems")
 
 
 def ping(host):
