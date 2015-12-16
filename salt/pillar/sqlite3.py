@@ -40,7 +40,7 @@ Complete example
           fromdb:
             query: 'SELECT col1,col2,col3,col4,col5,col6,col7
                       FROM some_random_table
-                     WHERE minion_pattern LIKE %s'
+                     WHERE minion_pattern LIKE ?'
             depth: 5
             as_list: True
             with_lists: [1,3]
