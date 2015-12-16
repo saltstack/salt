@@ -1453,6 +1453,39 @@ def delete_firewall_rule(firewall_rule, profile=None):
     return conn.delete_firewall_rule(firewall_rule)
 
 
+def list_firewalls(profile=None):
+    '''
+    Fetches a list of all firewalls for a tenant
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.list_firewalls
+    :param profile: Profile to build on (Optional)
+    :return: List of firewalls
+    '''
+    conn = _auth(profile)
+    return conn.list_firewalls()
+
+
+def show_firewall(firewall, profile=None):
+    '''
+    Fetches information of a specific firewall rule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.show_firewall firewall
+
+    :param firewall: ID or name of firewall to look up
+    :param profile: Profile to build on (Optional)
+    :return: firewall information
+    '''
+    conn = _auth(profile)
+    return conn.show_firewall(firewall)
+
+
 # The following is a list of functions that need to be incorporated in the
 # neutron module. This list should be updated as functions are added.
 #
