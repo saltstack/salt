@@ -1465,10 +1465,10 @@ def list_firewalls(profile=None):
     :return: List of firewalls
     '''
     conn = _auth(profile)
-    return conn.list_firewall
+    return conn.list_firewalls()
 
 
-def show_firewall(firewall):
+def show_firewall(firewall, profile=None):
     '''
     Fetches information of a specific firewall rule
 
@@ -1483,7 +1483,7 @@ def show_firewall(firewall):
     :return: firewall information
     '''
     conn = _auth(profile)
-    return conn.show_firewall(firewall_rule)
+    return conn.show_firewall(firewall)
 
 
 # The following is a list of functions that need to be incorporated in the
