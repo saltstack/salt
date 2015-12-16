@@ -35,7 +35,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_WIN32:
         return 'win_path'
-    return False
+    return (False, "Module win_path: module only works on Windows systems")
 
 
 def _normalize_dir(string):
