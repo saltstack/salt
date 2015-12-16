@@ -954,6 +954,9 @@ class Pygit2(GitProvider):
             the empty directories within it in the "blobs" list
             '''
             for entry in iter(tree):
+                if entry.oid not in self.repo:
+                    # Entry is a submodule, skip it
+                    continue
                 blob = self.repo[entry.oid]
                 if not isinstance(blob, pygit2.Tree):
                     continue
@@ -1065,6 +1068,9 @@ class Pygit2(GitProvider):
             the file paths and symlink info in the "blobs" dict
             '''
             for entry in iter(tree):
+                if entry.oid not in self.repo:
+                    # Entry is a submodule, skip it
+                    continue
                 obj = self.repo[entry.oid]
                 if isinstance(obj, pygit2.Blob):
                     repo_path = os.path.join(prefix, entry.name)
