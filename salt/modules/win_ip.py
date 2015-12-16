@@ -32,7 +32,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return __virtualname__
-    return False
+    return (False, "Module win_ip: module only works on Windows systems")
 
 
 def _interface_configs():
