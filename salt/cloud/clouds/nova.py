@@ -82,6 +82,78 @@ accept them
         - net-id: 00000000-0000-0000-0000-000000000000
         - net-id: 11111111-1111-1111-1111-111111111111
 
+This is an example profile.
+
+.. code-block:: yaml
+
+    debian8-2-iad-cloudqe4:
+      provider: cloudqe4-iad
+      size: performance1-2
+      image: Debian 8 (Jessie) (PVHVM)
+      script_args: -UP -p python-zmq git 2015.8
+
+and one using cinder volumes already attached
+
+.. code-block:: yaml
+
+    # create the block storage device
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      block_device:
+        - source: image
+          id: <image_id>
+          dest: volume
+          size: 100
+          shutdown: <preserve/remove>
+          bootindex: 0
+
+    # with the volume already created
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      block_volume: <volume id>
+
+    # create the volume from a snapshot
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      snapshot: <cinder snapshot id>
+
+    # create the create an extra ephemeral disk
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      ephemeral:
+        - size: 100
+          format: <swap/ext4>
+
+    # create the create an extra ephemeral disk
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      swap: <size>
+
+Block Device can also be used for having more than one block storage device attached
+
+.. code-block:: yaml
+
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      block_device:
+        - source: image
+          id: <image_id>
+          dest: volume
+          size: 100
+          shutdown: <preserve/remove>
+          bootindex: 0
+        - source: blank
+          dest: volume
+          device: xvdc
+          size: 100
+          shutdown: <preserve/remove>
+
 Note: You must include the default net-ids when setting networks or the server
 will be created without the rest of the interfaces
 
