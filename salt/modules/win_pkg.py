@@ -43,7 +43,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return __virtualname__
-    return False
+    return (False, "Module win_pkg: module only works on Windows systems")
 
 
 def latest_version(*names, **kwargs):
