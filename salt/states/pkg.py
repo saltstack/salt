@@ -2135,10 +2135,9 @@ def mod_watch(name, **kwargs):
     Install/reinstall a package based on a watch requisite
     '''
     sfun = kwargs.pop('sfun', None)
-
-    if sfun == 'wait':
-        return installed(name, **kwargs)
-
+    mapfun = {'latest': latest, 'wait': installed, 'installed': installed}
+    if sfun in mapfun:
+        return mapfun[sfun](name, **kwargs)
     return {'name': name,
             'changes': {},
             'comment': 'pkg.{0} does not work with the watch requisite, '
