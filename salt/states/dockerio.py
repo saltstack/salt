@@ -18,8 +18,8 @@ wrapper. The base supported wrapper type is
 .. note::
 
     This state module requires
-    `docker-py <https://github.com/dotcloud/docker-py>`_
-    which supports `Docker Remote API version 1.6
+    `docker-py <https://github.com/dotcloud/docker-py>`_ version >= 0.6.0
+    which supports `Docker Remote API version 1.12
     <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.6>`_.
 
 Available Functions
