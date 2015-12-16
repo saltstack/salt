@@ -749,6 +749,7 @@ def create(vm_):
             for network in node['addresses'].get(networkname, []):
                 if network['version'] is 4:
                     node['extra']['access_ip'] = network['addr']
+                    access_ip = network['addr']
                     break
             vm_['cloudnetwork'] = True
 
@@ -805,7 +806,7 @@ def create(vm_):
                         result.append(private_ip)
 
         if rackconnect(vm_) is True and (ssh_interface(vm_) != 'private_ips' or rackconnectv3):
-            data.public_ips = access_ip
+            data.public_ips = [access_ip, ]
             return data
 
         # populate return data with private_ips
