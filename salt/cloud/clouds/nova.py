@@ -228,11 +228,14 @@ def get_image(conn, vm_):
     '''
     Return the image object to use
     '''
-    image_list = conn.image_list()
-
-    vm_image = config.get_cloud_config_value('image', vm_, __opts__).encode(
+    vm_image = config.get_cloud_config_value('image', vm_, __opts__, default='').encode(
         'ascii', 'salt-cloud-force-ascii'
     )
+    if not vm_image:
+        log.debug('No image set, must be boot from volume')
+        return None
+
+    image_list = conn.image_list()
 
     for img in image_list:
         if vm_image in (image_list[img]['id'], img):
@@ -248,6 +251,17 @@ def get_image(conn, vm_):
                 str(exc)
             )
         )
+
+
+def get_block_mapping_opts(vm_):
+    ret = {}
+    ret['block_device_mapping'] = config.get_cloud_config_value('block_device_mapping', vm_, __opts__, default={})
+    ret['block_device'] = config.get_cloud_config_value('block_device', vm_, __opts__, default=[])
+    ret['ephemeral'] = config.get_cloud_config_value('ephemeral', vm_, __opts__, default=[])
+    ret['swap'] = config.get_cloud_config_value('swap', vm_, __opts__, default=None)
+    ret['snapshot'] = config.get_cloud_config_value('snapshot', vm_, __opts__, default=None)
+    ret['boot_volume'] = config.get_cloud_config_value('boot_volume', vm_, __opts__, default=None)
+    return ret
 
 
 def show_instance(name, call=None):
@@ -525,12 +539,14 @@ def request_instance(vm_=None, call=None):
         'config_drive', vm_, __opts__, search_global=False
     )
 
+    kwargs.update(get_block_mapping_opts(vm_))
+
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': {'name': kwargs['name'],
-                    'image': kwargs['image_id'],
+                    'image': kwargs.get('image_id', 'Boot From Volume'),
                     'size': kwargs['flavor_id']}},
         transport=__opts__['transport']
     )
