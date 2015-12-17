@@ -985,8 +985,8 @@ def latest(name,
                         if isinstance(exc, CommandExecutionError):
                             msg += (
                                 '. Set \'force_fetch\' to True to force '
-                                'the fetch if the failure was due to it '
-                                'bein non-fast-forward. Output of the '
+                                'the fetch if the failure was due to not '
+                                'being able fast-forward. Output of the '
                                 'fetch command follows:\n\n'
                             )
                             msg += _strip_exc(exc)
