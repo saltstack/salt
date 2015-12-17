@@ -100,7 +100,8 @@ from salt.exceptions import (
     SaltInvocationError,
     SaltReqTimeoutError,
     SaltClientError,
-    SaltSystemExit
+    SaltSystemExit,
+    SaltException,
 )
 
 
@@ -613,12 +614,33 @@ class MultiMinion(MinionBase):
             log.error(
                 'Attempting to start a multimaster system with one master')
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+        # Check that for tcp ipc_mode that we have either default ports or
+        # lists of ports
+        if self.opts.get('ipc_mode') == 'tcp' and (
+                    (not isinstance(self.opts['tcp_pub_port'], list) and
+                    self.opts['tcp_pub_port'] != 4510) or
+                    (not isinstance(self.opts['tcp_pull_port'], list) and
+                    self.opts['tcp_pull_port'] != 4511)
+                ):
+            raise SaltException('For multi-master, tcp_(pub/pull)_port '
+                                'settings must be lists of ports, or the '
+                                'default 4510 and 4511')
+        masternumber = 0
         for master in set(self.opts['master']):
             s_opts = copy.deepcopy(self.opts)
             s_opts['master'] = master
             s_opts['multimaster'] = True
             s_opts['auth_timeout'] = self.MINION_CONNECT_TIMEOUT
+            if self.opts.get('ipc_mode') == 'tcp':
+                # If one is a list, we can assume both are, because of check above
+                if isinstance(self.opts['tcp_pub_port'], list):
+                    s_opts['tcp_pub_port'] = self.opts['tcp_pub_port'][masternumber]
+                    s_opts['tcp_pull_port'] = self.opts['tcp_pull_port'][masternumber]
+                else:
+                    s_opts['tcp_pub_port'] = self.opts['tcp_pub_port'] + (masternumber * 2)
+                    s_opts['tcp_pull_port'] = self.opts['tcp_pull_port'] + (masternumber * 2)
             self.io_loop.spawn_callback(self._connect_minion, s_opts)
+            masternumber += 1
 
     @tornado.gen.coroutine
     def _connect_minion(self, opts):
