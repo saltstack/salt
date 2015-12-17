@@ -438,6 +438,7 @@ def vmotion_configured(name, enabled, device='vmk0'):
         configure-vmotion:
           esxi.vmotion_configured:
             - enabled: True
+            - device: sample-device
 
     '''
     ret = {'name': name,
