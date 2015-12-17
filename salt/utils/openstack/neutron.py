@@ -827,7 +827,7 @@ class SaltNeutron(NeutronShell):
             body['shared'] = shared
         if enabled:
             body['enabled'] = enabled
-        return self.network_conn.update_firewall_rule(firewall_rule,body={'firewall_rule':body})
+        return self.network_conn.update_firewall_rule(firewall_rule, body={'firewall_rule':body})
 
     def list_firewalls(self):
         '''
