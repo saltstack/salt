@@ -810,7 +810,7 @@ class _Swagger(object):
                 update_model_schema_response = (
                     __salt__['boto_apigateway.update_api_model_schema'](restApiId=self.restApiId,
                                                                         modelName=model,
-                                                                        schema=_schema,
+                                                                        schema=_dict_to_json_pretty(_schema),
                                                                         **self._common_aws_args))
                 if not update_model_schema_response.get('updated'):
                     ret['result'] = False
@@ -824,7 +824,8 @@ class _Swagger(object):
             else:
                 create_model_response = (
                     __salt__['boto_apigateway.create_api_model'](restApiId=self.restApiId, modelName=model,
-                                                                 modelDescription=model, schema=_schema,
+                                                                 modelDescription=model,
+                                                                 schema=_dict_to_json_pretty(_schema),
                                                                  contentType='application/json',
                                                                  **self._common_aws_args))
 
