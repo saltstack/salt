@@ -512,15 +512,15 @@ def retention_policy_add(database,
     return True
 
 
-def retention_policy_modify(database,
-                            name,
-                            duration,
-                            replication,
-                            default=False,
-                            user=None,
-                            password=None,
-                            host=None,
-                            port=None):
+def retention_policy_alter(database,
+                           name,
+                           duration,
+                           replication,
+                           default=False,
+                           user=None,
+                           password=None,
+                           host=None,
+                           port=None):
     '''
     Modify an existing retention policy.
 

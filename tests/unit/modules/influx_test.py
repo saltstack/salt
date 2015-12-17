@@ -249,6 +249,42 @@ class InfluxTestCase(TestCase):
                                          host='localhost',
                                          port=8000))
 
+    def test_retention_policy_get(self):
+        client = MockInfluxDBClient()
+        policy = {'name': 'foo'}
+        with patch.object(influx, '_client', MagicMock(return_value=client)):
+            client.get_list_retention_policies = MagicMock(return_value=[policy])
+            self.assertEqual(
+                policy,
+                influx.retention_policy_get(database='db', name='foo')
+            )
+
+    def test_retention_policy_add(self):
+        client = MockInfluxDBClient()
+        with patch.object(influx, '_client', MagicMock(return_value=client)):
+            client.create_retention_policy = MagicMock()
+            self.assertTrue(influx.retention_policy_add(
+                database='db',
+                name='name',
+                duration='30d',
+                replication=1,
+            ))
+            client.create_retention_policy.assert_called_once_with(
+                'name', '30d', 1, 'db', False)
+
+    def test_retention_policy_modify(self):
+        client = MockInfluxDBClient()
+        with patch.object(influx, '_client', MagicMock(return_value=client)):
+            client.alter_retention_policy = MagicMock()
+            self.assertTrue(influx.retention_policy_alter(
+                database='db',
+                name='name',
+                duration='30d',
+                replication=1,
+            ))
+            client.alter_retention_policy.assert_called_once_with(
+                'name', 'db', '30d', 1, False)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(InfluxTestCase, needs_daemon=False)
