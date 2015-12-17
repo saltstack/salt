@@ -30,7 +30,7 @@ def __virtual__():
     '''
     if __grains__['os'] in ('Arch', 'Arch ARM'):
         return __virtualname__
-    return False
+    return (False, 'The pacman module could not be loaded: unsupported OS family.')
 
 
 def _list_removed(old, new):
