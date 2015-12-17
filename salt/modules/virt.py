@@ -2042,7 +2042,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
     if full:
         flags += libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
 
-    cpu = conn.baselineCPU([cpu.toxml()],  flags)
+    cpu = conn.baselineCPU([cpu.toxml()], flags)
 
     if out == 'libvirt':
         return cpu
