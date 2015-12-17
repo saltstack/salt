@@ -474,7 +474,7 @@ def retention_policy_exists(database,
     return policy is not None
 
 
-def retention_policy_add(database
+def retention_policy_add(database,
                          name,
                          duration,
                          replication,
