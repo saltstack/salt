@@ -233,7 +233,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
     return ret
 
 
-def absent(name, api_name, swagger_file, region=None, key=None, keyid=None, profile=None):
+def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, keyid=None, profile=None):
     '''
     Ensure AWS Apigateway Rest Api identified by a combination of the api_name and
     the info object specified in the swagger_file is absent.
@@ -244,10 +244,13 @@ def absent(name, api_name, swagger_file, region=None, key=None, keyid=None, prof
     api_name
         Name of the rest api on AWS ApiGateway to ensure is absent.
 
-    swagger_file
-        Name of the location of the swagger rest api definition file in YAML format.
-        The info object in the file is used in conjunction with the api_name to
-        uniquely identify a rest api to ensure absent.
+    stage_name
+        Name of the stage to be removed irrespective of the swagger file content.
+        All the deployments will be retained unless nuke_api is set to True
+
+    nuke_api
+        Removes the API itself, losing all the past history of deployments
+        USE WITH EXTREME CAUTION!
 
     region
         Region to connect to.
@@ -275,9 +278,13 @@ def absent(name, api_name, swagger_file, region=None, key=None, keyid=None, prof
                             ('keyid', keyid),
                             ('profile', profile)])
 
-        swagger = _Swagger(api_name, swagger_file, common_args)
+        swagger = _Swagger(api_name, None, common_args)
 
-        ret = swagger.delete_api(ret)
+        if nuke_api:
+            ret = swagger.delete_api(ret)
+        else:
+            ret = swagger.delete_stage(ret, stage_name)
+            
 
     except Exception as e:
         ret['result'] = False
@@ -436,16 +443,19 @@ class _Swagger(object):
         self._restApiId = ''
         self._deploymentId = ''
 
-        if os.path.exists(swagger_file_path) and os.path.isfile(swagger_file_path):
-            self._swagger_file = swagger_file_path
-            self._md5_filehash = _gen_md5_filehash(self._swagger_file)
-            with salt.utils.fopen(self._swagger_file, 'rb') as sf:
-                self._cfg = yaml.load(sf)
-            self._swagger_version = ''
-        else:
-            raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
+        if swagger_file_path is not None:
+            if os.path.exists(swagger_file_path) and os.path.isfile(swagger_file_path):
+                self._swagger_file = swagger_file_path
+                self._md5_filehash = _gen_md5_filehash(self._swagger_file)
+                with salt.utils.fopen(self._swagger_file, 'rb') as sf:
+                    self._cfg = yaml.load(sf)
+                self._swagger_version = ''
+            else:
+                raise IOError('Invalid swagger file path, {0}'.format(swagger_file_path))
 
-        self._validate_swagger_file()
+            self._validate_swagger_file()
+
+        self._resolve_api_id()
 
     def _validate_swagger_file(self):
         '''
@@ -474,8 +484,6 @@ class _Swagger(object):
             raise ValueError('Unsupported Swagger version: {0},'
                              'Supported versions are {1}'.format(self._swagger_version,
                                                                  _Swagger.SWAGGER_VERSIONS_SUPPORTED))
-        self._resolve_api_id()
-
 
     @property
     def md5_filehash(self):
@@ -624,7 +632,6 @@ class _Swagger(object):
         stage = __salt__['boto_apigateway.describe_api_stage'](self.restApiId, stage_name,
                                                                **self._common_aws_args).get('stage')
         if not stage:
-            log.info('creating api stage')
             stage = __salt__['boto_apigateway.create_api_stage'](apiId=self.restApiId,
                                                                  stageName=stage_name,
                                                                  deploymentId=self._deploymentId,
@@ -633,7 +640,6 @@ class _Swagger(object):
             if not stage.get('stage'):
                 return {'set': False, 'error': stage.get('error')}
 
-        log.info('activating api deployment')
         return __salt__['boto_apigateway.activate_api_deployment'](self.restApiId,
                                                                   stage_name,
                                                                   self._deploymentId,
@@ -654,6 +660,15 @@ class _Swagger(object):
                 raise ValueError('Multiple APIs matching given name {0} and '
                                  'description {1}'.format(self.rest_api_name, self.info_json))
 
+    def delete_stage(self, ret, stage_name):
+        result = __salt__['boto_apigateway.delete_api_stage'](self.restApiId, 
+                                                              stage_name,
+                                                              **self._common_aws_args)
+        if not result.get('deleted'):
+            ret['abort'] = True
+            ret['comment'] = result.get('error')
+        return ret
+
     def verify_api(self, ret, stage_name):
         '''
         this method helps determine if the given stage_name is already on a deployment
@@ -668,7 +683,6 @@ class _Swagger(object):
         if self.restApiId:
             deployed_label_json = self._get_current_deployment_label(stage_name)
             if deployed_label_json == self.deployment_label_json:
-                log.info('verify_api - found current')
                 ret['comment'] = ('Already at desired state, the stage {0} is already at the desired '
                                   'deployment label:\n{1}'.format(stage_name, deployed_label_json))
                 ret['abort'] = True
@@ -677,7 +691,6 @@ class _Swagger(object):
                 self._deploymentId = self._get_desired_deployment_id()
                 if self._deploymentId:
                     ret['publish'] = True
-        log.info(self._deploymentId)
         return ret
 
     def publish_api(self, ret, stage_name):
@@ -859,7 +872,6 @@ class _Swagger(object):
         lambda_arn = lambda_desc.get('function').get('FunctionArn')
         lambda_uri = ('arn:aws:apigateway:{0}:lambda:path/2015-03-31'
                       '/functions/{1}/invocations'.format(apigw_region, lambda_arn))
-        log.info('###############{0}'.format(lambda_uri))
         return lambda_uri
 
     def _parse_method_data(self, method_name, method_data):
@@ -965,7 +977,6 @@ class _Swagger(object):
                                                                lambda_integration_role,
                                                                requestTemplates=method.get('request_templates'),
                                                                **self._common_aws_args))
-        log.info(integration)
         if not integration.get('created'):
             ret = _log_error_and_abort(ret, integration)
             return ret
