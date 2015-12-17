@@ -1992,3 +1992,64 @@ def list_vms():
     '''
     salt.utils.warn_until('Nitrogen', 'Use "virt.list_domains" instead.')
     return list_domains()
+
+
+def _capabilities():
+    '''
+    Return connection capabilities
+    It's a huge klutz to parse right,
+    so hide func for now and pass on the XML instead
+    '''
+    conn = __get_conn()
+    caps = conn.getCapabilities()
+    caps = minidom.parseString(caps)
+
+    return caps
+
+
+def cpu_baseline(full=False, migratable=False, out='libvirt'):
+    '''
+    Return the optimal 'custom' CPU baseline config for VM's on this minion
+
+    .. versionadded:: Boron
+
+    :param full: Return all CPU features rather than the ones on top of the closest CPU model
+    :param migratable: Exclude CPU features that are unmigratable (libvirt 2.13+)
+    :param out: 'libvirt' (default) for usable libvirt XML definition, 'salt' for nice dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.cpu_baseline
+
+    '''
+    conn = __get_conn()
+    caps = _capabilities()
+
+    cpu = caps.getElementsByTagName('host')[0].getElementsByTagName('cpu')[0]
+
+    log.debug('Host CPU model definition: {0}'.format(cpu.toxml()))
+
+    flags = 0
+    if migratable:
+        # This one is only in 1.2.13+
+        if getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_MIGRATABLE', False):
+            flags += libvirt.VIR_CONNECT_BASELINE_CPU_MIGRATABLE
+        else:
+            raise ValueError
+
+    if full:
+        flags += libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
+
+    cpu = conn.baselineCPU([cpu.toxml()],  flags)
+
+    if out == 'libvirt':
+        return cpu
+    elif out == 'salt':
+        cpu = minidom.parseString(cpu)
+        return {
+            'model': cpu.getElementsByTagName('model')[0].childNodes[0].nodeValue,
+            'vendor': cpu.getElementsByTagName('vendor')[0].childNodes[0].nodeValue,
+            'features': [feature.getAttribute('name') for feature in cpu.getElementsByTagName('feature')]
+        }
