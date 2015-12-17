@@ -71,6 +71,10 @@ def latest_version(*names, **kwargs):
         ret[name] = ''
     cmd = ['pacman', '-Sp', '--needed', '--print-format', '%n %v']
     cmd.extend(names)
+
+    if 'root' in kwargs:
+        cmd.extend(('-r', kwargs['root']))
+
     out = __salt__['cmd.run_stdout'](cmd,
                                      output_loglevel='trace',
                                      python_shell=False)
@@ -127,6 +131,9 @@ def list_upgrades(refresh=False):
     '''
     upgrades = {}
     cmd = ['pacman', '-S', '-p', '-u', '--print-format', '%n %v']
+
+    if 'root' in kwargs:
+        cmd.extend(('-r', kwargs['root']))
 
     if refresh:
         cmd.append('-y')
@@ -198,6 +205,10 @@ def list_pkgs(versions_as_list=False, **kwargs):
             return ret
 
     cmd = ['pacman', '-Q']
+
+    if 'root' in kwargs:
+        cmd.extend(('-r', kwargs['root']))
+
     ret = {}
     out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in salt.utils.itertools.split(out, '\n'):
@@ -231,6 +242,10 @@ def refresh_db():
         salt '*' pkg.refresh_db
     '''
     cmd = ['pacman', '-Sy']
+
+    if 'root' in kwargs:
+        cmd.extend(('-r', kwargs['root']))
+
     ret = {}
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
@@ -345,6 +360,9 @@ def install(name=None,
             log.warning('\'version\' parameter will be ignored for multiple '
                         'package targets')
 
+    if 'root' in kwargs:
+        pkg_params['-r'] = kwargs['root']
+
     if pkg_type == 'file':
         cmd = ['pacman', '-U', '--noprogressbar', '--noconfirm'] + pkg_params
     elif pkg_type == 'repository':
@@ -428,8 +446,13 @@ def upgrade(refresh=False):
 
     old = list_pkgs()
     cmd = ['pacman', '-Su', '--noprogressbar', '--noconfirm']
+
     if salt.utils.is_true(refresh):
         cmd.append('-y')
+
+    if 'root' in kwargs:
+        cmd.extend(('-r', kwargs['root']))
+
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
                                    python_shell=False,
@@ -461,10 +484,14 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
+
     cmd = ['pacman',
            '-Rsc' if action == 'purge' else '-R',
            '--noprogressbar',
            '--noconfirm'] + targets
+
+    if 'root' in kwargs:
+        cmd.extend(('-r', kwargs['root']))
 
     out = __salt__['cmd.run_all'](
         cmd,
@@ -569,6 +596,10 @@ def file_list(*packages):
     ret = []
     cmd = ['pacman', '-Ql']
     cmd.extend(packages)
+
+    if 'root' in kwargs:
+        cmd.extend(('-r', kwargs['root']))
+
     out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in salt.utils.itertools.split(out, '\n'):
         if line.startswith('error'):
@@ -597,6 +628,10 @@ def file_dict(*packages):
     ret = {}
     cmd = ['pacman', '-Ql']
     cmd.extend(packages)
+
+    if 'root' in kwargs:
+        cmd.extend(('-r', kwargs['root']))
+
     out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in salt.utils.itertools.split(out, '\n'):
         if line.startswith('error'):
@@ -630,6 +665,10 @@ def owner(*paths):
         return ''
     ret = {}
     cmd_prefix = ['pacman', '-Qqo']
+
+    if 'root' in kwargs:
+        cmd_prefix.extend(('-r', kwargs['root']))
+
     for path in paths:
         ret[path] = __salt__['cmd.run_stdout'](cmd_prefix + [path],
                                                python_shell=False)
