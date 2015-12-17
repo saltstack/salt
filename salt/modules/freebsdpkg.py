@@ -389,16 +389,29 @@ def install(name=None,
     args.extend(pkg_params)
 
     old = list_pkgs()
-    __salt__['cmd.run'](
+    out = __salt__['cmd.run_all'](
         ['pkg_add'] + args,
         env=env,
         output_loglevel='trace',
         python_shell=False
     )
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     _rehash()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def upgrade():
@@ -453,14 +466,28 @@ def remove(name=None, pkgs=None, **kwargs):
         log.error(error)
     if not targets:
         return {}
-    __salt__['cmd.run'](
+
+    out = __salt__['cmd.run_all'](
         ['pkg_delete'] + targets,
         output_loglevel='trace',
         python_shell=False
     )
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 # Support pkg.delete to remove packages to more closely match pkg_delete
 delete = salt.utils.alias_function(remove, 'delete')
