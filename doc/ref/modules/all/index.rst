@@ -311,6 +311,7 @@ Full list of builtin execution modules
     victorops
     virt
     virtualenv_mod
+    vsphere
     win_autoruns
     win_dacl
     win_disk
