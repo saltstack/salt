@@ -92,7 +92,7 @@ def _log_error_and_abort(ret, obj):
         ret['comment'] = obj.get('error')
     return ret
 
-def api_present(name, api_name, swagger_file, api_key_required, lambda_integration_role,
+def api_present(name, api_name, swagger_file, stage_name, api_key_required, lambda_integration_role,
                 lambda_region=None, region=None, key=None, keyid=None, profile=None):
     '''
     Ensure the spcified api_name with the corresponding swaggerfile is defined in
@@ -180,8 +180,14 @@ def api_present(name, api_name, swagger_file, api_key_required, lambda_integrati
         # try to open the swagger file and basic validation
         swagger = _Swagger(api_name, swagger_file, common_args)
 
+        ret = swagger.verify_api(ret, stage_name)
+        if ret.get('publish'):
+            return swagger.publish_api(ret, stage_name)
+        if ret.get('abort'):
+            return ret
+
         # first deploy a Rest Api on AWS
-        ret = swagger.deploy_api(ret)
+        ret = swagger.deploy_api(ret, stage_name)
         if ret.get('abort'):
             return ret
 
@@ -196,6 +202,8 @@ def api_present(name, api_name, swagger_file, api_key_required, lambda_integrati
                                        lambda_region=lambda_region)
         if ret.get('abort'):
             return ret
+
+        ret = swagger.publish_api(ret, stage_name)
 
     except Exception as e:
         ret['result'] = False
@@ -400,6 +408,7 @@ class _Swagger(object):
         self._api_name = api_name
         self._common_aws_args = common_aws_args
         self._restApiId = ''
+        self._deploymentId = ''
 
         if os.path.exists(swagger_file_path) and os.path.isfile(swagger_file_path):
             self._swagger_file = swagger_file_path
@@ -439,6 +448,7 @@ class _Swagger(object):
             raise ValueError('Unsupported Swagger version: {0},'
                              'Supported versions are {1}'.format(self._swagger_version,
                                                                  _Swagger.SWAGGER_VERSIONS_SUPPORTED))
+        self._resolve_api_id()
 
 
     @property
@@ -528,21 +538,104 @@ class _Swagger(object):
         '''
         self._restApiId = restApiId
 
+    @property
+    def label(self):
+        return "{0}.{1}".format(self.rest_api_name, self.md5_filehash);
+
     # methods to interact with boto_apigateway execution modules
 
-    def deploy_api(self, ret):
+    def _get_current_deployment_label(self, stage_name):
+        stage = __salt__['boto_apigateway.describe_api_stage'](self.restApiId, stage_name, **self._common_aws_args).get('stage')
+        if stage:
+            deploymentId = stage.get('deploymentId')
+            deployment = __salt__['boto_apigateway.describe_api_deployment'](self.restApiId, 
+                                                                             deploymentId, 
+                                                                             **self._common_aws_args).get('deployment')
+            if deployment:
+                return deployment.get('description')
+        return None
+
+    def _get_deployment_for_label(self):
+        deployments = __salt__['boto_apigateway.describe_api_deployments'](self.restApiId, 
+                                                                           **self._common_aws_args).get('deployments')
+        if deployments:
+            for deployment in deployments:
+                if deployment.get('description') == self.label:
+                    return deployment.get('id')
+        return '' 
+
+    def _set_current_deployment(self, stage_name, deploymentId):
+        stage = __salt__['boto_apigateway.describe_api_stage'](self.restApiId, stage_name, **self._common_aws_args).get('stage')
+        if not stage:
+            log.info('creating api stage')
+            stage = __salt__['boto_apigateway.create_api_stage'](self.restApiId, 
+                                                                 stage_name, 
+                                                                 deploymentId, 
+                                                                 **self._common_aws_args)
+            if not stage.get('stage'):
+                return {'set': False, 'error': stage.get('error')}
+            
+        log.info('activating api deployment')
+        return __salt__['boto_apigateway.activate_api_deployment'](self.restApiId, 
+                                                                  stage_name, 
+                                                                  deploymentId,
+                                                                  **self._common_aws_args)
+
+    def _resolve_api_id(self):
+        apis = __salt__['boto_apigateway.describe_apis'](name=self.rest_api_name,
+                                                         description=self.info_json,
+                                                         **self._common_aws_args).get('restapi')
+        if apis:
+            if len(apis) == 1:
+                self.restApiId = apis[0].get('id')
+            else:
+                raise ValueError('Multiple APIs matching given name {0} and description {1}'.format(self.rest_api_name, self.info_json))
+        
+
+    def verify_api(self, ret, stage_name):
+        if self.restApiId:
+            deployed_label = self._get_current_deployment_label(stage_name) 
+            if deployed_label == self.label:
+                log.info('verify_api - found current')
+                ret['comment'] = 'this rest api version exists for the stage'
+                ret['abort'] = True
+                return ret
+            else:
+                log.info('verify_api - found old')
+                self._deploymentId = self._get_deployment_for_label()
+                if self._deploymentId:
+                    ret['publish'] = True
+        log.info(self._deploymentId)
+        return ret 
+
+    def publish_api(self, ret, stage_name):
+        if self._deploymentId:         
+            self._set_current_deployment(stage_name, self._deploymentId)
+        else:
+            res = __salt__['boto_apigateway.create_api_deployment'](self.restApiId, 
+                                                                    stage_name, 
+                                                                    stageDescription='{0}.{1}'.format(self.rest_api_name, stage_name), 
+                                                                    description=self.label,  
+                                                                    **self._common_aws_args)
+            if not res.get('created'):
+                ret['abort'] = True
+                ret['common'] = res.get('error')
+        return ret
+
+    def deploy_api(self, ret, stage_name):
         '''
         this method create the top level rest api in AWS apigateway
         '''
         # TODO: check to see if the service by this name and description exists,
         # matches the content of swagger.info_json, may need more elaborate checks
         # on the content of the json in description field of AWS ApiGateway Rest API Object.
-        exists_response = __salt__['boto_apigateway.api_exists'](name=self.rest_api_name,
-                                                                 description=self.info_json,
-                                                                 **self._common_aws_args)
-        if exists_response.get('exists'):
-            ret['comment'] = 'rest api already exists'
-            ret['abort'] = True
+        if self.restApiId:
+            res = __salt__['boto_apigateway.cleanup_api'](self.restApiId, **self._common_aws_args)
+            if not res.get('deleted'):
+                ret['comment'] = 'Failed to cleanup restAreId {0}'.format(self.restApiId)
+                ret['abort'] = True
+                ret['result'] = False
+                return ret
             return ret
 
         if __opts__['test']:
