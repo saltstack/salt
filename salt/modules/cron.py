@@ -152,7 +152,7 @@ def _get_cron_cmdstr(path, user=None):
     '''
     cmd = 'crontab'
 
-    if user:
+    if user and __grains__.get('os_family') not in ('Solaris', 'AIX'):
         cmd += ' -u {0}'.format(user)
 
     return '{0} {1}'.format(cmd, path)
