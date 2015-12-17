@@ -20,7 +20,7 @@ def __virtual__():
     '''
     Only runs on FreeBSD systems
     '''
-    return __virtualname__ if salt.utils.is_freebsd() else 
+    return __virtualname__ if salt.utils.is_freebsd() else \
         (False, 'The freebsdjail module failed to load: only supported on FreeBSD.')
 
 

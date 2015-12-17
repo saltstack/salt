@@ -22,7 +22,7 @@ def __virtual__():
     '''
     Only load module if dig binary is present
     '''
-    return True if salt.utils.which('dig') else 
+    return True if salt.utils.which('dig') else \
         (False, 'The dig module failed to load: the dig binary is not in the path.')
 
 

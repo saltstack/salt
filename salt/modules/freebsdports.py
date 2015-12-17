@@ -35,7 +35,7 @@ __virtualname__ = 'ports'
 
 
 def __virtual__():
-    return __virtualname__ if __grains__.get('os', '') == 'FreeBSD' else
+    return __virtualname__ if __grains__.get('os', '') == 'FreeBSD' else \
         (False, 'The freebsdports module failed to load: only supported on FreeBSD.')
 
 
