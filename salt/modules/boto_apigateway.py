@@ -1105,8 +1105,9 @@ def update_api_model_schema(restApiId, modelName, schema, region=None, key=None,
 
     '''
     try:
+        schema_json = json.dumps(schema) if isinstance(schema, dict) else schema
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        response = _api_model_patch_replace(conn, restApiId, modelName, '/schema', json.dumps(schema))
+        response = _api_model_patch_replace(conn, restApiId, modelName, '/schema', schema_json)
         return {'updated': True, 'model': _convert_datetime_str(response)}
     except ClientError as e:
         return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
@@ -1144,9 +1145,10 @@ def create_api_model(restApiId, modelName, modelDescription, schema, contentType
 
     '''
     try:
+        schema_json = json.dumps(schema) if isinstance(schema, dict) else schema
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         model = conn.create_model(restApiId=restApiId, name=modelName, description=modelDescription,
-                                  schema=json.dumps(schema), contentType=contentType)
+                                  schema=schema_json, contentType=contentType)
         return {'created': True, 'model': _convert_datetime_str(model)}
     except ClientError as e:
         return {'created': False, 'error': salt.utils.boto3.get_error(e)}
