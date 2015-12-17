@@ -34,7 +34,7 @@ def present(name):
     hostgroup_exists = __salt__['zabbix.hostgroup_exists'](name)
 
     # Dry run, test=true mode
-    if __opts__['test'] == True:
+    if __opts__['test']:
         if hostgroup_exists:
             ret['result'] = True
             ret['comment'] = comment_hostgroup_exists
@@ -62,7 +62,7 @@ def present(name):
 
 def absent(name):
     '''
-    Ensures that the host does not group exist, eventually delete host group.
+    Ensures that the host group does not exist, eventually delete host group.
 
     Args:
         name: name of the host group
@@ -82,7 +82,7 @@ def absent(name):
     hostgroup_exists = __salt__['zabbix.hostgroup_exists'](name)
 
     # Dry run, test=true mode
-    if __opts__['test'] == True:
+    if __opts__['test']:
         if not hostgroup_exists:
             ret['result'] = True
             ret['comment'] = comment_hostgroup_notexists

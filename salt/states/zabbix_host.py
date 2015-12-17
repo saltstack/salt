@@ -39,7 +39,7 @@ def present(host, groups, interfaces, **kwargs):
     host_exists = __salt__['zabbix.host_exists'](host)
 
     # Dry run, test=true mode
-    if __opts__['test'] == True:
+    if __opts__['test']:
         if host_exists:
             ret['result'] = True
             ret['comment'] = comment_host_exists
@@ -87,7 +87,7 @@ def absent(name):
     host_exists = __salt__['zabbix.host_exists'](name)
 
     # Dry run, test=true mode
-    if __opts__['test'] == True:
+    if __opts__['test']:
         if not host_exists:
             ret['result'] = True
             ret['comment'] = comment_host_notexists

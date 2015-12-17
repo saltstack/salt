@@ -39,7 +39,7 @@ def present(alias, passwd, usrgrps, **kwargs):
     user_exists = __salt__['zabbix.user_exists'](alias)
 
     # Dry run, test=true mode
-    if __opts__['test'] == True:
+    if __opts__['test']:
         if user_exists:
             ret['result'] = True
             ret['comment'] = comment_user_exists
@@ -86,7 +86,7 @@ def absent(name):
     user_get = __salt__['zabbix.user_get'](name)
 
     # Dry run, test=true mode
-    if __opts__['test'] == True:
+    if __opts__['test']:
         if not user_get:
             ret['result'] = True
             ret['comment'] = comment_user_notexists
