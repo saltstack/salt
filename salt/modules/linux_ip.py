@@ -14,13 +14,13 @@ def __virtual__():
     Confine this module to Non-RH/Deb Linux distros
     '''
     if salt.utils.is_windows():
-        return False
+        return (False, 'The linux_ip module failed to load: not supported on Windows.')
     if __grains__['os_family'] == 'RedHat':
-        return False
+        return (False, 'The linux_ip module failed to load: not supported on Redhat type systems.')
     if __grains__['os_family'] == 'Debian':
-        return False
+        return (False, 'The linux_ip module failed to load: not supported on Debian type systems.')
     if not salt.utils.which('ip'):
-        return False
+        return (False, 'The linux_ip module failed to load: The ip binary is not in the path.')
     return __virtualname__
 
 

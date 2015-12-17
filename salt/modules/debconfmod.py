@@ -28,10 +28,10 @@ def __virtual__():
     is installed.
     '''
     if __grains__['os_family'] != 'Debian':
-        return False
+        return (False, 'The debconfmod module failed to load: only supported on Debian-type systems.')
 
     if salt.utils.which('debconf-get-selections') is None:
-        return False
+        return (False, 'The debconfmod module failed to load: the binary debconf-get-selections is not in the path.')
 
     return __virtualname__
 

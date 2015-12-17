@@ -18,7 +18,7 @@ def __virtual__():
     '''
     if salt.utils.which('iwconfig'):
         return True
-    return False
+    return (False, 'the iwtools module failed to load: the iwconfig binary is not in the path.')
 
 
 def scan(iface, style=None):

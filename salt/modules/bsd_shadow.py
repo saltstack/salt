@@ -20,7 +20,8 @@ __virtualname__ = 'shadow'
 
 
 def __virtual__():
-    return __virtualname__ if 'BSD' in __grains__.get('os', '') else False
+    return __virtualname__ if 'BSD' in __grains__.get('os', '') else \
+        (False, 'the bsd_shadow module failed to load: only supported on *BSD systems')
 
 
 def default_hash():
