@@ -16,7 +16,8 @@ def __virtual__():
     '''
     Only run on FreeBSD systems
     '''
-    return __virtualname__ if __grains__['os'] == 'FreeBSD' else False
+    return __virtualname__ if __grains__['os'] == 'FreeBSD' else
+        (False, 'The freebsd_sysctl module failed to load: only supported on FreeBSD.')
 
 
 def _formatfor(name, value, config, tail=''):

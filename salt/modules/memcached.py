@@ -42,7 +42,8 @@ def __virtual__():
     '''
     Only load if python-memcache is installed
     '''
-    return __virtualname__ if HAS_MEMCACHE else False
+    return __virtualname__ if HAS_MEMCACHE else
+        (False, 'The memcached module failed to load: the memcache python library is not available.')
 
 
 def _connect(host=DEFAULT_HOST, port=DEFAULT_PORT):

@@ -32,7 +32,7 @@ def __virtual__():
     '''
     if salt.utils.is_proxy():
         return __virtualname__
-    return False
+    return (False, 'The chassis module failed to load: only supported on proxy minions.')
 
 
 def cmd(cmd, *args, **kwargs):

@@ -26,7 +26,7 @@ __PKGUTIL = '/usr/sbin/pkgutil'
 def __virtual__():
     if __grains__['os'] == 'MacOS':
         return 'darwin_pkgutil'
-    return False
+    return (False, 'The darwin_pkgutil module failed to load: only supported on MacOS.')
 
 
 def list_():

@@ -45,7 +45,7 @@ def __virtual__():
     if HAS_LIBS:
         return __virtualname__
 
-    return False
+    return (False, 'The github module failed to load: the github python libraries are not installed.')
 
 
 def _get_secret_key(profile):
