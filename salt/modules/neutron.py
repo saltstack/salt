@@ -1455,7 +1455,7 @@ def delete_firewall_rule(firewall_rule, profile=None):
 
 def update_firewall_rule(firewall_rule,
                          protocol=None, 
-                         action = None,
+                         action=None,
                          name=None,
                          description=None,
                          ip_version=None,
