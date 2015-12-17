@@ -54,7 +54,7 @@ def __virtual__():
     Only return if python-etcd is installed
     '''
     # Hmm - doesn't salt.utils.etcd_util catch the import error ?
-    return __virtualname__ if HAS_LIBS else 
+    return __virtualname__ if HAS_LIBS else \
         (False, 'The etc_mod module failed to load: requires both urllib3 and the etcd python modules.')
 
 

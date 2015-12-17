@@ -24,7 +24,7 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    return __virtualname__ if __grains__['os_family'] == 'Debian' else 
+    return __virtualname__ if __grains__['os_family'] == 'Debian' else \
         (False, 'The dpkg module failed to load: only supported on Debian-type systems.')
 
 
