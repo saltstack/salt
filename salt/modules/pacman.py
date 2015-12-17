@@ -119,7 +119,7 @@ def upgrade_available(name):
     return latest_version(name) != ''
 
 
-def list_upgrades(refresh=False):
+def list_upgrades(refresh=False, root=None):
     '''
     List all available package upgrades on this system
 
@@ -132,8 +132,8 @@ def list_upgrades(refresh=False):
     upgrades = {}
     cmd = ['pacman', '-S', '-p', '-u', '--print-format', '%n %v']
 
-    if 'root' in kwargs:
-        cmd.extend(('-r', kwargs['root']))
+    if root is not None:
+        cmd.extend(('-r', root))
 
     if refresh:
         cmd.append('-y')
@@ -229,7 +229,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
     return ret
 
 
-def refresh_db():
+def refresh_db(root=None):
     '''
     Just run a ``pacman -Sy``, return a dict::
 
@@ -243,8 +243,8 @@ def refresh_db():
     '''
     cmd = ['pacman', '-Sy']
 
-    if 'root' in kwargs:
-        cmd.extend(('-r', kwargs['root']))
+    if root is not None:
+        cmd.extend(('-r', root))
 
     ret = {}
     call = __salt__['cmd.run_all'](cmd,
@@ -422,7 +422,7 @@ def install(name=None,
     return ret
 
 
-def upgrade(refresh=False):
+def upgrade(refresh=False, root=None):
     '''
     Run a full system upgrade, a pacman -Syu
 
@@ -450,8 +450,8 @@ def upgrade(refresh=False):
     if salt.utils.is_true(refresh):
         cmd.append('-y')
 
-    if 'root' in kwargs:
-        cmd.extend(('-r', kwargs['root']))
+    if root is not None:
+        cmd.extend(('-r', root))
 
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
@@ -595,10 +595,11 @@ def file_list(*packages):
     errors = []
     ret = []
     cmd = ['pacman', '-Ql']
-    cmd.extend(packages)
 
-    if 'root' in kwargs:
-        cmd.extend(('-r', kwargs['root']))
+    if os.path.exists(packages[0]):
+        cmd.extend(('-r', packages.pop(0)))
+
+    cmd.extend(packages)
 
     out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in salt.utils.itertools.split(out, '\n'):
@@ -627,10 +628,11 @@ def file_dict(*packages):
     errors = []
     ret = {}
     cmd = ['pacman', '-Ql']
-    cmd.extend(packages)
 
-    if 'root' in kwargs:
-        cmd.extend(('-r', kwargs['root']))
+    if os.path.exists(packages[0]):
+        cmd.extend(('-r', packages.pop(0)))
+
+    cmd.extend(packages)
 
     out = __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
     for line in salt.utils.itertools.split(out, '\n'):
@@ -665,9 +667,6 @@ def owner(*paths):
         return ''
     ret = {}
     cmd_prefix = ['pacman', '-Qqo']
-
-    if 'root' in kwargs:
-        cmd_prefix.extend(('-r', kwargs['root']))
 
     for path in paths:
         ret[path] = __salt__['cmd.run_stdout'](cmd_prefix + [path],
