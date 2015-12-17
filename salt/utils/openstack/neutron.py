@@ -797,6 +797,38 @@ class SaltNeutron(NeutronShell):
         ret = self.network_conn.delete_firewall_rule(firewall_rule_id)
         return ret if ret else True
 
+    def update_firewall_rule(self, firewall_rule, protocol=None, action=None,
+                             name=None, description=None, ip_version=None,
+                             source_ip_address=None, destination_ip_address=None, source_port=None,
+                             destination_port=None, shared=None, enabled=None,):
+        '''
+        Update a firewall rule
+        '''
+        body = {}
+        if protocol:
+            body['protocol'] = protocol
+        if action:
+            body['action'] = action
+        if name:
+            body['name'] = name
+        if description:
+            body['description'] = description
+        if ip_version:
+            body['ip_version'] = ip_version
+        if source_ip_address:
+            body['source_ip_address'] = source_ip_address
+        if destination_ip_address:
+            body['destination_ip_address'] = destination_ip_address
+        if source_port:
+            body['source_port'] = source_port
+        if destination_port:
+            body['destination_port'] = destination_port
+        if shared:
+            body['shared'] = shared
+        if enabled:
+            body['enabled'] = enabled
+        return self.network_conn.update_firewall_rule(firewall_rule,body={'firewall_rule':body})
+
     def list_firewalls(self):
         '''
         Fetches a list of all firewalls for a tenant
