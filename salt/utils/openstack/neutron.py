@@ -800,7 +800,7 @@ class SaltNeutron(NeutronShell):
     def update_firewall_rule(self, firewall_rule, protocol=None, action=None,
                              name=None, description=None, ip_version=None,
                              source_ip_address=None, destination_ip_address=None, source_port=None,
-                             destination_port=None, shared=None, enabled=None,):
+                             destination_port=None, shared=None, enabled=None):
         '''
         Update a firewall rule
         '''
