@@ -743,17 +743,22 @@ def install(name=None,
         cmd_install.append('--download-only')
     if fromrepo:
         cmd_install.extend(fromrepoopt)
+
+    errors = []
+
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
         cmd = cmd_install + targets[:500]
         targets = targets[500:]
 
-        out = __salt__['cmd.run'](
-            cmd,
-            output_loglevel='trace',
-            python_shell=False
-        )
+        out = __salt__['cmd.run_all'](cmd,
+                                      output_loglevel='trace',
+                                      python_shell=False)
+
+        if out['retcode'] != 0 and out['stderr']:
+            errors.append(out['stderr'])
+
         for line in out.splitlines():
             match = re.match(
                 "^The selected package '([^']+)'.+has lower version",
@@ -765,11 +770,24 @@ def install(name=None,
     while downgrades:
         cmd = cmd_install + ['--force'] + downgrades[:500]
         downgrades = downgrades[500:]
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+        out = __salt__['cmd.run_all'](cmd,
+                                      output_loglevel='trace',
+                                      python_shell=False)
+
+        if out['retcode'] != 0 and out['stderr']:
+            errors.append(out['stderr'])
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def upgrade(refresh=True, skip_verify=False):
@@ -809,18 +827,19 @@ def upgrade(refresh=True, skip_verify=False):
     call = __salt__['cmd.run_all'](
         cmd,
         output_loglevel='trace',
-        python_shell=False
+        python_shell=False,
+        redirect_stderr=True
     )
+
     if call['retcode'] != 0:
         ret['result'] = False
-        if call['stderr']:
-            ret['comment'] += call['stderr']
         if call['stdout']:
-            ret['comment'] += call['stdout']
-    else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+            ret['comment'] = call['stdout']
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret['changes'] = salt.utils.compare_dicts(old, new)
+
     return ret
 
 
@@ -838,16 +857,33 @@ def _uninstall(action='remove', name=None, pkgs=None):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
+
+    errors = []
     while targets:
         cmd = ['zypper', '--non-interactive', 'remove']
         if action == 'purge':
             cmd.append('-u')
         cmd.extend(targets[:500])
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+        out = __salt__['cmd.run_all'](cmd,
+                                      output_loglevel='trace',
+                                      python_shell=False)
+
+        if out['retcode'] != 0 and out['stderr']:
+            errors.append(out['stderr'])
+
         targets = targets[500:]
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument

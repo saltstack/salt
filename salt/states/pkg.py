@@ -1140,13 +1140,17 @@ def installed(
             if os.path.isfile(rtag) and refresh:
                 os.remove(rtag)
         except CommandExecutionError as exc:
-            ret = {'name': name,
-                   'changes': {},
-                   'result': False,
-                   'comment': 'An error was encountered while installing '
-                              'package(s): {0}'.format(exc)}
+            ret = {'name': name, 'result': False}
+            if exc.info:
+                # Get information for state return from the exception.
+                ret['changes'] = exc.info.get('changes', {})
+                ret['comment'] = exc.strerror_without_changes
+            else:
+                ret['changes'] = {}
+                ret['comment'] = ('An error was encountered while installing '
+                                  'package(s): {0}'.format(exc))
             if warnings:
-                ret['comment'] += '.' + '. '.join(warnings) + '.'
+                ret['comment'] += '\n\n' + '. '.join(warnings) + '.'
             return ret
 
         if isinstance(pkg_ret, dict):
@@ -1779,16 +1783,22 @@ def removed(name, version=None, pkgs=None, normalize=True, **kwargs):
         ``name`` parameter will be ignored if this option is passed. It accepts
         version numbers as well.
 
-    .. versionadded:: 0.16.0
+        .. versionadded:: 0.16.0
     '''
     try:
         return _uninstall(action='remove', name=name, version=version,
                           pkgs=pkgs, normalize=normalize, **kwargs)
     except CommandExecutionError as exc:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': str(exc)}
+        ret = {'name': name, 'result': False}
+        if exc.info:
+            # Get information for state return from the exception.
+            ret['changes'] = exc.info.get('changes', {})
+            ret['comment'] = exc.strerror_without_changes
+        else:
+            ret['changes'] = {}
+            ret['comment'] = ('An error was encountered while removing '
+                              'package(s): {0}'.format(exc))
+        return ret
 
 
 def purged(name, version=None, pkgs=None, normalize=True, **kwargs):
@@ -1826,10 +1836,16 @@ def purged(name, version=None, pkgs=None, normalize=True, **kwargs):
         return _uninstall(action='purge', name=name, version=version,
                           pkgs=pkgs, normalize=normalize, **kwargs)
     except CommandExecutionError as exc:
-        return {'name': name,
-                'changes': {},
-                'result': False,
-                'comment': str(exc)}
+        ret = {'name': name, 'result': False}
+        if exc.info:
+            # Get information for state return from the exception.
+            ret['changes'] = exc.info.get('changes', {})
+            ret['comment'] = exc.strerror_without_changes
+        else:
+            ret['changes'] = {}
+            ret['comment'] = ('An error was encountered while purging '
+                              'package(s): {0}'.format(exc))
+        return ret
 
 
 def uptodate(name, refresh=False, **kwargs):
@@ -1878,7 +1894,19 @@ def uptodate(name, refresh=False, **kwargs):
         ret['result'] = None
         return ret
 
-    updated = __salt__['pkg.upgrade'](refresh=refresh, **kwargs)
+    try:
+        updated = __salt__['pkg.upgrade'](refresh=refresh, **kwargs)
+    except CommandExecutionError as exc:
+        ret = {'name': name, 'result': False}
+        if exc.info:
+            # Get information for state return from the exception.
+            ret['changes'] = exc.info.get('changes', {})
+            ret['comment'] = exc.strerror_without_changes
+        else:
+            ret['changes'] = {}
+            ret['comment'] = ('An error was encountered while updating '
+                              'packages: {0}'.format(exc))
+        return ret
 
     if updated.get('result') is False:
         ret.update(updated)
@@ -1997,7 +2025,20 @@ def group_installed(name, skip=None, include=None, **kwargs):
             ret['comment'] = 'Group \'{0}\' will be installed'.format(name)
         return ret
 
-    ret['changes'] = __salt__['pkg.install'](pkgs=targets, **kwargs)
+    try:
+        ret['changes'] = __salt__['pkg.install'](pkgs=targets, **kwargs)
+    except CommandExecutionError as exc:
+        ret = {'name': name, 'result': False}
+        if exc.info:
+            # Get information for state return from the exception.
+            ret['changes'] = exc.info.get('changes', {})
+            ret['comment'] = exc.strerror_without_changes
+        else:
+            ret['changes'] = {}
+            ret['comment'] = ('An error was encountered while '
+                              'installing/updating group \'{0}\': {1}'
+                              .format(name, exc))
+        return ret
 
     failed = [x for x in targets if x not in __salt__['pkg.list_pkgs']()]
     if failed:

@@ -1012,6 +1012,7 @@ def install(name=None,
         if skip_verify:
             cmd.append('--nogpgcheck')
 
+    errors = []
     if targets:
         cmd = [yum_command, '-y']
         if yum_command == 'dnf':
@@ -1019,21 +1020,42 @@ def install(name=None,
         _add_common_args(cmd)
         cmd.append('install')
         cmd.extend(targets)
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+        out = __salt__['cmd.run_all'](
+            cmd,
+            output_loglevel='trace',
+            python_shell=False,
+            redirect_stderr=True
+        )
+        if out['retcode'] != 0:
+            errors.append(out['stdout'])
 
     if downgrade:
         cmd = [yum_command, '-y']
         _add_common_args(cmd)
         cmd.append('downgrade')
         cmd.extend(downgrade)
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+        out = __salt__['cmd.run_all'](
+            cmd,
+            output_loglevel='trace',
+            python_shell=False,
+            redirect_stderr=True
+        )
+        if out['retcode'] != 0:
+            errors.append(out['stdout'])
 
     if to_reinstall:
         cmd = [yum_command, '-y']
         _add_common_args(cmd)
         cmd.append('reinstall')
         cmd.extend(six.itervalues(to_reinstall))
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+        out = __salt__['cmd.run_all'](
+            cmd,
+            output_loglevel='trace',
+            python_shell=False,
+            redirect_stderr=True
+        )
+        if out['retcode'] != 0:
+            errors.append(out['stdout'])
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -1044,8 +1066,15 @@ def install(name=None,
         if pkgname not in ret or pkgname in old:
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
-    if ret:
-        __context__.pop('pkg._avail', None)
+
+    if errors:
+        raise CommandExecutionError(
+            'Error occurred installing{0} package(s)'.format(
+                '/reinstalling' if to_reinstall else ''
+            ),
+            info={'errors': errors, 'changes': ret}
+        )
+
     return ret
 
 
@@ -1167,8 +1196,6 @@ def upgrade(refresh=True, skip_verify=False, name=None, pkgs=None, normalize=Tru
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
-    if ret:
-        __context__.pop('pkg._avail', None)
     return ret
 
 
@@ -1208,16 +1235,28 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
-    __salt__['cmd.run'](
+
+    out = __salt__['cmd.run_all'](
         [_yum(), '-q', '-y', 'remove'] + targets,
         output_loglevel='trace',
         python_shell=False
     )
+
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     ret = salt.utils.compare_dicts(old, new)
-    if ret:
-        __context__.pop('pkg._avail', None)
+
+    if errors:
+        raise CommandExecutionError(
+            'Error occurred removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
     return ret
 
 

@@ -243,10 +243,28 @@ def install(name=None,
     if refreshdb:
         refresh_db()
 
-    __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+    out = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='trace',
+        python_shell=False
+    )
+
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
@@ -285,10 +303,28 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         return {}
     cmd = ['opkg', 'remove']
     cmd.extend(targets)
-    __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+
+    out = __salt__['cmd.run_all'](
+        cmd,
+        output_loglevel='trace',
+        python_shell=False
+    )
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
@@ -348,18 +384,18 @@ def upgrade(refresh=True):
     cmd = ['opkg', 'upgrade']
     call = __salt__['cmd.run_all'](cmd,
                                    output_loglevel='trace',
-                                   python_shell=False)
+                                   python_shell=False,
+                                   redirect_stderr=True)
 
     if call['retcode'] != 0:
         ret['result'] = False
-        if 'stderr' in call:
-            ret['comment'] += call['stderr']
-        if 'stdout' in call:
-            ret['comment'] += call['stdout']
-    else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        if call['stdout']:
+            ret['comment'] = call['stdout']
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret['changes'] = salt.utils.compare_dicts(old, new)
+
     return ret
 
 
