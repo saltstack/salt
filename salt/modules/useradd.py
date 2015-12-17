@@ -77,10 +77,11 @@ def _update_gecos(name, key, value, root=None):
     gecos_data = copy.deepcopy(pre_info)
     gecos_data[key] = value
 
+    cmd = ['usermod', '-c', _build_gecos(gecos_data), name]
+
     if root is not None:
         cmd.extend(('-R', root))
 
-    cmd = ['usermod', '-c', _build_gecos(gecos_data), name]
     __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     return _get_gecos(name).get(key) == value
