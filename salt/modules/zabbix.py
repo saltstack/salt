@@ -30,7 +30,7 @@ from distutils.version import LooseVersion
 
 # Import salt libs
 import salt.utils
-from salt.ext.six.moves.urllib.error import HTTPError
+from salt.ext.six.moves.urllib.error import HTTPError  # pylint: disable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
 
