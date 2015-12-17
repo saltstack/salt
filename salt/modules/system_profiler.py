@@ -27,8 +27,8 @@ def __virtual__():
 
     if PROFILER_BINARY:
         return True
-    else:
-        return False
+    return (False, 'The system_profiler execution module cannot be loaded: '
+            'system_profiler unavailable.')
 
 
 def _call_system_profiler(datatype):
