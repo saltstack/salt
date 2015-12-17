@@ -2,6 +2,8 @@
 '''
 Retrieve Pillar data by running a SQLCipher query
 
+.. versionadded:: Boron
+
 Python SQLCipher support is provided by the pysqlcipher
 Python package. You need this module installed to query
 Pillar data from a SQLCipher database.
