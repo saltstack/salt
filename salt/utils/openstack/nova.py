@@ -39,6 +39,20 @@ log = logging.getLogger(__name__)
 # Version added to novaclient.client.Client function
 NOVACLIENT_MINVER = '2.6.1'
 
+# dict for block_device_mapping_v2
+CLIENT_BDM2_KEYS = {
+    'id': 'uuid',
+    'source': 'source_type',
+    'dest': 'destination_type',
+    'bus': 'disk_bus',
+    'device': 'device_name',
+    'size': 'volume_size',
+    'format': 'guest_format',
+    'bootindex': 'boot_index',
+    'type': 'device_type',
+    'shutdown': 'delete_on_termination',
+}
+
 
 def check_nova():
     if HAS_NOVA:
@@ -56,6 +70,60 @@ class KwargsStruct(object):
         self.__dict__.update(entries)
 
 
+def _parse_block_device_mapping_v2(block_device=None, boot_volume=None, snapshot=None, ephemeral=None, swap=None):
+    bdm = []
+    if block_device is None:
+        block_device = []
+    if ephemeral is None:
+        ephemeral = []
+
+    if boot_volume is not None:
+        bdm_dict = {'uuid': boot_volume, 'source_type': 'volume',
+                    'destination_type': 'volume', 'boot_index': 0,
+                    'delete_on_termination': False}
+        bdm.append(bdm_dict)
+
+    if snapshot is not None:
+        bdm_dict = {'uuid': snapshot, 'source_type': 'snapshot',
+                    'destination_type': 'volume', 'boot_index': 0,
+                    'delete_on_termination': False}
+        bdm.append(bdm_dict)
+
+    for device_spec in block_device:
+        bdm_dict = {}
+
+        for key, value in six.iteritems(device_spec):
+            bdm_dict[CLIENT_BDM2_KEYS[key]] = value
+
+        # Convert the delete_on_termination to a boolean or set it to true by
+        # default for local block devices when not specified.
+        if 'delete_on_termination' in bdm_dict:
+            action = bdm_dict['delete_on_termination']
+            bdm_dict['delete_on_termination'] = (action == 'remove')
+        elif bdm_dict.get('destination_type') == 'local':
+            bdm_dict['delete_on_termination'] = True
+
+        bdm.append(bdm_dict)
+
+    for ephemeral_spec in ephemeral:
+        bdm_dict = {'source_type': 'blank', 'destination_type': 'local',
+                    'boot_index': -1, 'delete_on_termination': True}
+        if 'size' in ephemeral_spec:
+            bdm_dict['volume_size'] = ephemeral_spec['size']
+        if 'format' in ephemeral_spec:
+            bdm_dict['guest_format'] = ephemeral_spec['format']
+
+        bdm.append(bdm_dict)
+
+    if swap is not None:
+        bdm_dict = {'source_type': 'blank', 'destination_type': 'local',
+                    'boot_index': -1, 'delete_on_termination': True,
+                    'guest_format': 'swap', 'volume_size': swap}
+        bdm.append(bdm_dict)
+
+    return bdm
+
+
 class NovaServer(object):
     def __init__(self, name, server, password=None):
         '''
@@ -63,7 +131,7 @@ class NovaServer(object):
         '''
         self.name = name
         self.id = server['id']
-        self.image = server['image']['id']
+        self.image = server.get('image', {}).get('id', 'Boot From Volume')
         self.size = server['flavor']['id']
         self.state = server['state']
         self._uuid = None
@@ -254,12 +322,19 @@ class SaltNova(OpenStackComputeShell):
         Boot a cloud server.
         '''
         nt_ks = self.compute_conn
-        for key in ('name', 'flavor', 'image'):
-            if key in kwargs:
-                del kwargs[key]
-        response = nt_ks.servers.create(
-            name=name, flavor=flavor_id, image=image_id, **kwargs
+        kwargs['name'] = name
+        kwargs['flavor'] = flavor_id
+        kwargs['image'] = image_id or None
+        ephemeral = kwargs.pop('ephemeral', [])
+        block_device = kwargs.pop('block_device', [])
+        boot_volume = kwargs.pop('boot_volume', None)
+        snapshot = kwargs.pop('snapshot', None)
+        swap = kwargs.pop('swap', None)
+        kwargs['block_device_mapping_v2'] = _parse_block_device_mapping_v2(
+            block_device=block_device, boot_volume=boot_volume, snapshot=snapshot,
+            ephemeral=ephemeral, swap=swap
         )
+        response = nt_ks.servers.create(**kwargs)
         self.uuid = response.id
         self.password = response.adminPass
 
@@ -694,8 +769,8 @@ class SaltNova(OpenStackComputeShell):
                     'accessIPv6': item.accessIPv6,
                     'flavor': {'id': item.flavor['id'],
                                'links': item.flavor['links']},
-                    'image': {'id': item.image['id'],
-                              'links': item.image['links']},
+                    'image': {'id': item.image['id'] if item.image else 'Boot From Volume',
+                              'links': item.image['links'] if item.image else ''},
                     }
             except TypeError:
                 pass
@@ -720,8 +795,8 @@ class SaltNova(OpenStackComputeShell):
                                'links': item.flavor['links']},
                     'hostId': item.hostId,
                     'id': item.id,
-                    'image': {'id': item.image['id'],
-                              'links': item.image['links']},
+                    'image': {'id': item.image['id'] if item.image else 'Boot From Volume',
+                              'links': item.image['links'] if item.image else ''},
                     'key_name': item.key_name,
                     'links': item.links,
                     'metadata': item.metadata,

@@ -2575,22 +2575,26 @@ def is_profile_configured(opts, provider, profile_name):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['vmware']
+    non_image_drivers = ['vmware', 'nova']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
                         'softlayer', 'softlayer_hw', 'vmware', 'vsphere']
 
+    provider_key = opts['providers'][alias][driver]
+    profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
+
     if driver not in non_image_drivers:
         required_keys.append('image')
     elif driver == 'vmware':
         required_keys.append('clonefrom')
+    elif driver == 'nova':
+        nova_image_keys = ['image', 'block_device_mapping', 'block_device']
+        if not any([key in provider_key for key in nova_image_keys]) and not any([key in profile_key for key in nova_image_keys]):
+            required_keys.extend(nova_image_keys)
 
     if driver not in non_size_drivers:
         required_keys.append('size')
-
-    provider_key = opts['providers'][alias][driver]
-    profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
 
     # Check if image and/or size are supplied in the provider config. If either
     # one is present, remove it from the required_keys list.
