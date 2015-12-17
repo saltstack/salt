@@ -37,7 +37,7 @@ def present(name, **kwargs):
     usergroup_exists = __salt__['zabbix.usergroup_exists'](name)
 
     # Dry run, test=true mode
-    if __opts__['test'] == True:
+    if __opts__['test']:
         if usergroup_exists:
             ret['result'] = True
             ret['comment'] = comment_usergroup_exists
@@ -84,7 +84,7 @@ def absent(name):
     usergroup_exists = __salt__['zabbix.usergroup_exists'](name)
 
     # Dry run, test=true mode
-    if __opts__['test'] == True:
+    if __opts__['test']:
         if not usergroup_exists:
             ret['result'] = True
             ret['comment'] = comment_usergroup_notexists
