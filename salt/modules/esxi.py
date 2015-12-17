@@ -47,7 +47,7 @@ def __virtual__():
     '''
     if salt.utils.is_proxy():
         return __virtualname__
-    return False
+    return (False, 'The esxi module failed to load: only supported on proxy minions.')
 
 
 def cmd(command, *args, **kwargs):

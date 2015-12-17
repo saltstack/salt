@@ -18,7 +18,8 @@ def __virtual__():
     '''
     Only run on NetBSD systems
     '''
-    return __virtualname__ if __grains__['os'] == 'NetBSD' else False
+    return __virtualname__ if __grains__['os'] == 'NetBSD' else
+        (False, 'The netbsdservice execution module failed to load: only available on NetBSD.')
 
 
 def show(config_file=False):

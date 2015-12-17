@@ -34,7 +34,7 @@ def __virtual__():
     '''
     Only return if requests is installed
     '''
-    return 'bigip' if HAS_LIBS else False
+    return 'bigip' if HAS_LIBS else (False, 'The bigip module failed to load: requests library is unavailable.')
 
 
 BIG_IP_URL_BASE = 'https://{host}/mgmt/tm'
