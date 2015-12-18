@@ -12,9 +12,11 @@
 #     - XCode Command Line Tools (xcode-select --install)
 #
 # Usage:
-#     This script can be passed 3 parameters
-#         $1 : <package dir> : the staging area for the package
-#                         defaults to /tmp/salt-pkg
+#     This script can be passed 2 parameters
+#         $1 : <package dir> : the staging area for the package defaults to
+#              /tmp/salt-pkg
+#         $2 : <version> : the version name to give the package (overrides
+#              version of the git repo) (Defaults to the git repo version)
 #
 #     Example:
 #         The following will build Salt and stage all files in /tmp/pkg:
