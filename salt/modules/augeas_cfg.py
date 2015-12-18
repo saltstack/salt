@@ -129,6 +129,7 @@ def execute(context=None, lens=None, commands=()):
         'remove': (1,),
     }
 
+
     def make_path(path):
         '''
         Return correct path
