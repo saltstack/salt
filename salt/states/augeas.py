@@ -32,14 +32,77 @@ from __future__ import absolute_import
 # Import python libs
 import re
 import os.path
+import logging
 import difflib
 
 # Import Salt libs
 import salt.utils
 
+log = logging.getLogger(__name__)
+
 
 def __virtual__():
     return 'augeas' if 'augeas.execute' in __salt__ else False
+
+
+def _workout_filename(filename):
+    '''
+    Recursively workout the file name from an augeas change
+    '''
+    if os.path.isfile(filename) or filename == '/':
+        if filename == '/':
+            filename = None
+        return filename
+    else:
+        return _workout_filename(os.path.dirname(filename))
+
+
+def _check_filepath(changes):
+    '''
+    Ensure all changes are fully qualified and affect only one file.
+    This ensures that the diff output works and a state change is not
+    incorrectly reported.
+    '''
+    filename = None
+    for change_ in changes:
+        try:
+            cmd, arg = change_.split(' ', 1)
+
+            if cmd not in __salt__['augeas.method_map']():
+                error = 'Command {0} is not supported (yet)'.format(cmd)
+                raise ValueError(error)
+            method = __salt__['augeas.method_map']()[cmd]
+            parts = salt.utils.shlex_split(arg)
+            if method in ['set', 'setm', 'move', 'remove']:
+                filename_ = parts[0]
+            else:
+                _, _, filename_ = parts
+            if not filename_.startswith('/files'):
+                error = 'Changes should be prefixed with ' \
+                        '/files if no context is provided,' \
+                        ' change: {0}'.format(change_)
+                raise ValueError(error)
+            filename_ = re.sub('^/files|/$', '', filename_)
+            if filename is not None:
+                if filename != filename_:
+                    error = 'Changes should be made to one ' \
+                            'file at a time, detected changes ' \
+                            'to {0} and {1}'.format(filename, filename_)
+                    raise ValueError(error)
+            filename = filename_
+        except (ValueError, IndexError) as err:
+            log.error(str(err))
+            if 'error' not in locals():
+                error = 'Invalid formatted command, ' \
+                               'see debug log for details: {0}' \
+                               .format(change_)
+            else:
+                error = str(err)
+            raise ValueError(error)
+
+    filename = _workout_filename(filename)
+
+    return filename
 
 
 def change(name, context=None, changes=None, lens=None, **kwargs):
@@ -173,6 +236,16 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
         ret['comment'] = '\'changes\' must be specified as a list'
         return ret
 
+    filename = None
+    if context is None:
+        try:
+            filename = _check_filepath(changes)
+        except ValueError as err:
+            ret['comment'] = 'Error: {0}'.format(str(err))
+            return ret
+    else:
+        filename = re.sub('^/files|/$', '', context)
+
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Executing commands'
@@ -182,8 +255,7 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
         return ret
 
     old_file = []
-    if context:
-        filename = re.sub('^/files|/$', '', context)
+    if filename is not None:
         if os.path.isfile(filename):
             with salt.utils.fopen(filename, 'r') as file_:
                 old_file = file_.readlines()
