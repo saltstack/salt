@@ -84,15 +84,22 @@ def _name_matches(name, matches):
            return True
     return False
 
-def _object_reducer(o, names = ['Id', 'Name', 'Created', 'Deleted', 'Updated', 'Flushed', 'Associated', 'Disassociated']):
+def _object_reducer(o, names = ['id', 'name', 'path', 'httpMethod', 'statusCode', 'Created', 'Deleted', 'Updated', 'Flushed', 'Associated', 'Disassociated']):
     result = {}
     if isinstance(o, dict):
         for k, v in o.iteritems():
-            # need to keep this
             if isinstance(v, dict):
                 reduced = _object_reducer(v, names)
                 if reduced or _name_matches(k, names):
                     result[k] = reduced
+            elif isinstance(v, list):
+                newlist = []
+                for val in v:
+                    reduced = _object_reducer(val, names)
+                    if reduced or _name_matches(k, names):
+                        newlist.append(reduced)
+                if newlist:
+                    result[k] = newlist
             else:
                 if _name_matches(k, names):
                     result[k] = v
