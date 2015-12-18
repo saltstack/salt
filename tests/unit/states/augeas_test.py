@@ -135,28 +135,6 @@ class AugeasTestCase(TestCase):
                                                  changes=self.fp_changes),
                                                  self.ret)
 
-    def test_change_no_context_with_full_path_pass(self):
-        '''
-        Test handling of no context with full path with execute pass
-        '''
-        self.ret.update(dict(comment='Changes have been saved',
-                            result=True,
-                            changes={'diff': '+ zabbix-agent'}))
-
-        with patch.dict(augeas.__opts__, {'test': False}):
-            mock_execute = MagicMock(return_value=dict(retval=True))
-            mock_dict_ = {'augeas.execute': mock_execute,
-                        'augeas.method_map': self.mock_method_map}
-            with patch.dict(augeas.__salt__, mock_dict_):
-                mock_filename = MagicMock(return_value='/etc/services')
-                with patch.object(augeas, '_workout_filename', mock_filename):
-                    with patch('salt.utils.fopen', MagicMock(mock_open)):
-                        mock_diff = MagicMock(return_value=['+ zabbix-agent'])
-                        with patch('difflib.unified_diff', mock_diff):
-                            self.assertDictEqual(augeas.change(self.name,
-                                                 changes=self.fp_changes),
-                                                 self.ret)
-
     def test_change_no_context_without_full_path_invalid_cmd(self):
         '''
         Test handling of invalid commands when no context supplied
