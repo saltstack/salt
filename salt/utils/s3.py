@@ -176,7 +176,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
     # This can be used to save a binary object to disk
     if local_file and method == 'GET':
         log.debug('Saving to local file: {0}'.format(local_file))
-        with salt.utils.fopen(local_file, 'w') as out:
+        with salt.utils.fopen(local_file, 'wb') as out:
             out.write(response)
         return 'Saved to local file: {0}'.format(local_file)
 
