@@ -50,11 +50,10 @@ def hash(value, algorithm='sha512'):
 
         salt '*' random.hash 'I am a string' md5
     '''
-    if hasattr(hashlib, 'algorithms'):
-        if algorithm in hashlib.algorithms:
-            hasher = hashlib.new(algorithm)
-            hasher.update(value)
-            out = hasher.hexdigest()
+    if hasattr(hashlib, 'algorithms') and algorithm in hashlib.algorithms:
+        hasher = hashlib.new(algorithm)
+        hasher.update(value)
+        out = hasher.hexdigest()
     elif hasattr(hashlib, algorithm):
         hasher = hashlib.new(algorithm)
         hasher.update(value)
