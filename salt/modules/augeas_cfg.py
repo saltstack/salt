@@ -100,13 +100,6 @@ def _lstrip_word(word, prefix):
     return word
 
 
-def method_map():
-    '''
-    Make METHOD_MAP accessible via __salt__['augeas.method_map']()
-    '''
-    return METHOD_MAP
-
-
 def execute(context=None, lens=None, commands=()):
     '''
     Execute Augeas commands
