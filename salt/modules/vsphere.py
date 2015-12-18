@@ -2900,6 +2900,10 @@ def vsan_add_disks(host, username, password, protocol=None, port=None, host_name
                 try:
                     task = vsan_system.AddDisks(eligible)
                     salt.utils.vmware.wait_for_task(task, host_name, 'Adding disks to VSAN', sleep_seconds=3)
+                except vim.fault.InsufficientDisks as err:
+                    log.debug(err.msg)
+                    ret.update({host_name: {'Error': err.msg}})
+                    continue
                 except Exception as err:
                     msg = '\'vsphere.vsan_add_disks\' failed for host {0}: {1}'.format(host_name, err)
                     log.debug(msg)
