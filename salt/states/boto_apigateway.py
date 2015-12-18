@@ -235,8 +235,9 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
 
 def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, keyid=None, profile=None):
     '''
-    Ensure AWS Apigateway Rest Api identified by a combination of the api_name and
-    the info object specified in the swagger_file is absent.
+    Ensure the stage_name associated with the given api_name deployed by boto_apigateway's
+    present state is removed.  If the currently associated deployment to the given stage_name has
+    no other stages associated with it, the deployment will also be removed.  
 
     name
         Name of the swagger file in YAML format
@@ -246,11 +247,12 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
 
     stage_name
         Name of the stage to be removed irrespective of the swagger file content.
-        All the deployments will be retained unless nuke_api is set to True
+        If the current deployment associated with the stage_name has no other stages associated
+        with it, the deployment will also be removed.
 
     nuke_api
-        Removes the API itself, losing all the past history of deployments
-        USE WITH EXTREME CAUTION!
+        If True, removes the API itself only if there are no other stages associated with any other
+        deployments once the given stage_name is removed.
 
     region
         Region to connect to.
@@ -280,11 +282,13 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
 
         swagger = _Swagger(api_name, None, common_args)
 
-        if nuke_api:
-            ret = swagger.delete_api(ret)
-        else:
-            ret = swagger.delete_stage(ret, stage_name)
-            
+        ret = swagger.delete_stage(ret, stage_name)
+
+        if ret.get('abort'):
+            return ret
+
+        if nuke_api and swagger.no_more_deployments_remain():
+            ret = swagger.delete_api(ret)           
 
     except Exception as e:
         ret['result'] = False
@@ -596,20 +600,44 @@ class _Swagger(object):
         return label
 
     # methods to interact with boto_apigateway execution modules
+    def _one_or_more_stages_remain(self, deploymentId):
+        '''
+        Helper function to find whether there are other stages still associated with a deployment
+        '''
+        stages = __salt__['boto_apigateway.describe_api_stages'](self.restApiId, deploymentId,
+                                                                   **self._common_aws_args).get('stages')
+        return bool(stages)
+
+    def no_more_deployments_remain(self):
+        '''
+        Helper function to find whether there are deployments left with stages associated
+        '''
+        deployments = __salt__['boto_apigateway.describe_api_deployments'](self.restApiId,
+                                                                           **self._common_aws_args).get('deployments')
+        return not bool(deployments)
+
+    def _get_current_deployment_id(self, stage_name):
+        '''
+        Helper method to find the deployment id that the stage name is currently assocaited with.
+        '''
+        deploymentId = ''
+        stage = __salt__['boto_apigateway.describe_api_stage'](self.restApiId, stage_name,
+                                                               **self._common_aws_args).get('stage')
+        if stage:
+            deploymentId = stage.get('deploymentId')
+        
+        return deploymentId
 
     def _get_current_deployment_label(self, stage_name):
         '''
         Helper method to find the deployment label that the stage_name is currently associated with.
         '''
-        stage = __salt__['boto_apigateway.describe_api_stage'](self.restApiId, stage_name,
-                                                               **self._common_aws_args).get('stage')
-        if stage:
-            deploymentId = stage.get('deploymentId')
-            deployment = __salt__['boto_apigateway.describe_api_deployment'](self.restApiId,
-                                                                             deploymentId,
-                                                                             **self._common_aws_args).get('deployment')
-            if deployment:
-                return deployment.get('description')
+        deploymentId = self._get_current_deployment_id(stage_name)
+        deployment = __salt__['boto_apigateway.describe_api_deployment'](self.restApiId,
+                                                                         deploymentId,
+                                                                         **self._common_aws_args).get('deployment')
+        if deployment:
+            return deployment.get('description')
         return None
 
     def _get_desired_deployment_id(self):
@@ -661,12 +689,32 @@ class _Swagger(object):
                                  'description {1}'.format(self.rest_api_name, self.info_json))
 
     def delete_stage(self, ret, stage_name):
-        result = __salt__['boto_apigateway.delete_api_stage'](self.restApiId, 
-                                                              stage_name,
-                                                              **self._common_aws_args)
-        if not result.get('deleted'):
+        deploymentId = self._get_current_deployment_id(stage_name)
+        if deploymentId:
+            result = __salt__['boto_apigateway.delete_api_stage'](self.restApiId, 
+                                                                  stage_name,
+                                                                  **self._common_aws_args)
+            if not result.get('deleted'):
+                ret['abort'] = True
+                ret['result'] = False
+                ret['comment'] = 'delete_stage delete_api_stage, {0}'.format(result.get('error'))
+            else:
+                # check if it is safe to delete the deployment as well.
+                if not self._one_or_more_stages_remain(deploymentId):
+                    result = __salt__['boto_apigateway.delete_api_deployment'](self.restApiId,
+                                                                               deploymentId,
+                                                                               **self._common_aws_args)
+                    if not result.get('deleted'):
+                        ret['abort'] = True
+                        ret['result'] = False
+                        ret['comment'] = 'delete_stage delete_api_deployment, {0}'.format(result.get('error'))
+                else:
+                    ret['comment'] = 'stage {0} has been deleted.\n'.format(stage_name)
+        else:
+            # no matching stage_name/deployment found
             ret['abort'] = True
-            ret['comment'] = result.get('error')
+            ret['comment'] = 'stage {0} does not exist'.format(stage_name)
+
         return ret
 
     def verify_api(self, ret, stage_name):
