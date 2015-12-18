@@ -2061,7 +2061,7 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
                 raise ValueError('Model {0} not found in CPU map'.format(cpu_model))
             elif len(cpu_specs) > 1:
                 raise ValueError('Multiple models {0} found in CPU map'.format(cpu_model))
-          
+
             cpu_specs = cpu_specs[0]
 
             cpu_model = cpu_specs.getElementsByTagName('model')
@@ -2069,10 +2069,10 @@ def cpu_baseline(full=False, migratable=False, out='libvirt'):
                 cpu_model = None
             else:
                 cpu_model = cpu_model[0].getAttribute('name')
-            
+
             for feature in cpu_specs.getElementsByTagName('feature'):
                 cpu.appendChild(feature)
- 
+
     if out == 'libvirt':
         return cpu.toxml()
     elif out == 'salt':
