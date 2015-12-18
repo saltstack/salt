@@ -597,7 +597,8 @@ def file_list(*packages):
     ret = []
     cmd = ['pacman', '-Ql']
 
-    if os.path.exists(packages[0]):
+    if len(packages) > 0 and os.path.exists(packages[0]):
+        packages = list(packages)
         cmd.extend(('-r', packages.pop(0)))
 
     cmd.extend(packages)
@@ -630,7 +631,8 @@ def file_dict(*packages):
     ret = {}
     cmd = ['pacman', '-Ql']
 
-    if os.path.exists(packages[0]):
+    if len(packages) > 0 and os.path.exists(packages[0]):
+        packages = list(packages)
         cmd.extend(('-r', packages.pop(0)))
 
     cmd.extend(packages)
