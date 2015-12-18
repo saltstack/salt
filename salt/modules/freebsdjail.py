@@ -20,7 +20,10 @@ def __virtual__():
     '''
     Only runs on FreeBSD systems
     '''
-    return __virtualname__ if salt.utils.is_freebsd() else False
+    if __grains__['os'] == 'FreeBSD':
+        return __virtualname__
+    return (False, 'The freebsdjail execution module cannot be loaded: '
+            'only available on FreeBSD systems.')
 
 
 def start(jail=''):
