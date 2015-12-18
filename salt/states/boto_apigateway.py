@@ -201,14 +201,34 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
             # there is a deployment label with signature matching the given api_name,
             # swagger file name, swagger file md5 sum, and swagger file info object
             # just reassociate the stage_name to the given deployment label.
+            if __opts__['test']:
+                ret['comment'] = ('[stage: {0}] will be reassociated to an already available '
+                                  'deployment that matched the given [api_name: {1}] '
+                                  'and [swagger_file: {2}].'.format(stage_name, api_name, swagger_file))
+                ret['result'] = None
+                return ret
             return swagger.publish_api(ret, stage_name)
+
         if ret.get('abort'):
             # already at desired state for the stage, swagger_file, and api_name
+            if __opts__['test']:
+                ret['comment'] = ('[stage: {0}] is already at desired state with an associated '
+                                  'deployment matching the given [api_name: {1}] '
+                                  'and [swagger_file: {2}].'.format(stage_name, api_name, swagger_file))
+                ret['result'] = None
             return ret
 
         # there doesn't exist any previous deployments for the given swagger_file, we need
         # to redeploy the content of the swagger file to the api, models, and resources object
         # and finally create a new deployment and tie the stage_name to this new deployment
+        if __opts__['test']:
+            ret['comment'] = ('There is no deployment matching the given [api_name: {0}] '
+                              'and [swagger_file: {1}].  A new deployment will be '
+                              'created and the [stage_name: {2}] will then be associated '
+                              'to the newly created deployment.'.format(api_name, swagger_file, stage_name))
+            ret['result'] = None
+            return ret
+
         ret = swagger.deploy_api(ret)
         if ret.get('abort'):
             return ret
@@ -809,12 +829,6 @@ class _Swagger(object):
                 ret['abort'] = True
                 ret['result'] = False
                 return ret
-            return ret
-
-        if __opts__['test']:
-            ret['comment'] = 'Swagger API Spec {0} is set to be created.'.format(self.rest_api_name)
-            ret['result'] = None
-            ret['abort'] = True
             return ret
 
         response = __salt__['boto_apigateway.create_api'](name=self.rest_api_name,
