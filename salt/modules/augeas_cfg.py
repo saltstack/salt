@@ -49,6 +49,17 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'augeas'
 
+METHOD_MAP = {
+    'set':    'set',
+    'setm':    'setm',
+    'mv':     'move',
+    'move':   'move',
+    'ins':    'insert',
+    'insert': 'insert',
+    'rm':     'remove',
+    'remove': 'remove',
+}
+
 
 def __virtual__():
     '''
@@ -89,6 +100,13 @@ def _lstrip_word(word, prefix):
     return word
 
 
+def method_map():
+    '''
+    Make METHOD_MAP accessible via __salt__['augeas.method_map']()
+    '''
+    return METHOD_MAP
+
+
 def execute(context=None, lens=None, commands=()):
     '''
     Execute Augeas commands
@@ -103,17 +121,6 @@ def execute(context=None, lens=None, commands=()):
     '''
     ret = {'retval': False}
 
-    method_map = {
-        'set':    'set',
-        'setm':    'setm',
-        'mv':     'move',
-        'move':   'move',
-        'ins':    'insert',
-        'insert': 'insert',
-        'rm':     'remove',
-        'remove': 'remove',
-    }
-
     arg_map = {
         'set':    (1, 2),
         'setm':   (2, 3),
@@ -122,34 +129,44 @@ def execute(context=None, lens=None, commands=()):
         'remove': (1,),
     }
 
+
     def make_path(path):
+        '''
+        Return correct path
+        '''
         if not context:
             return path
-        path = path.lstrip('/')
-        if path:
+
+        if path.lstrip('/'):
+            if path.startswith(context):
+                return path
+
+            path = path.lstrip('/')
             return os.path.join(context, path)
         else:
             return context
 
-    flags = _Augeas.NO_MODL_AUTOLOAD if lens else _Augeas.NONE
+    flags = _Augeas.NO_MODL_AUTOLOAD if lens and context else _Augeas.NONE
     aug = _Augeas(flags=flags)
 
-    if lens:
+    if lens and context:
         aug.add_transform(lens, re.sub('^/files', '', context))
         aug.load()
 
     for command in commands:
-        # first part up to space is always the command name (i.e.: set, move)
-        cmd, arg = command.split(' ', 1)
-        if cmd not in method_map:
-            ret['error'] = 'Command {0} is not supported (yet)'.format(cmd)
-            return ret
-
-        method = method_map[cmd]
-        nargs = arg_map[method]
-
         try:
+            # first part up to space is always the command name (i.e.: set, move)
+            cmd, arg = command.split(' ', 1)
+
+            if cmd not in METHOD_MAP:
+                ret['error'] = 'Command {0} is not supported (yet)'.format(cmd)
+                return ret
+
+            method = METHOD_MAP[cmd]
+            nargs = arg_map[method]
+
             parts = salt.utils.shlex_split(arg)
+
             if len(parts) not in nargs:
                 err = '{0} takes {1} args: {2}'.format(method, nargs, parts)
                 raise ValueError(err)
@@ -177,6 +194,9 @@ def execute(context=None, lens=None, commands=()):
                 args = {'path': path}
         except ValueError as err:
             log.error(str(err))
+            # if command.split fails arg will not be set
+            if 'arg' not in locals():
+                arg = command
             ret['error'] = 'Invalid formatted command, ' \
                            'see debug log for details: {0}'.format(arg)
             return ret
