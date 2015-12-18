@@ -246,7 +246,6 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
     else:
         filename = re.sub('^/files|/$', '', context)
 
-
     if __opts__['test']:
         ret['result'] = None
         ret['comment'] = 'Executing commands'
