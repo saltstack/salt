@@ -14,9 +14,12 @@ __virtualname__ = 'sysctl'
 
 def __virtual__():
     '''
-    Only run on FreeBSD systems
+    Only runs on FreeBSD systems
     '''
-    return __virtualname__ if __grains__['os'] == 'FreeBSD' else False
+    if __grains__['os'] == 'FreeBSD':
+        return __virtualname__
+    return (False, 'The freebsd_sysctl execution module cannot be loaded: '
+            'only available on FreeBSD systems.')
 
 
 def _formatfor(name, value, config, tail=''):
