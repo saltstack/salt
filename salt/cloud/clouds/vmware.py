@@ -3098,6 +3098,9 @@ def create_snapshot(name, kwargs=None, call=None):
             '-a or --action.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
 
     if not snapshot_name:
@@ -3168,6 +3171,9 @@ def revert_to_snapshot(name, kwargs=None, call=None):
             'The revert_to_snapshot action must be called with '
             '-a or --action.'
         )
+
+    if kwargs is None:
+        kwargs = {}
 
     suppress_power_on = _str_to_bool(kwargs.get('power_off', False))
 
