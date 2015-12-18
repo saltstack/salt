@@ -76,15 +76,17 @@ def __virtual__():
 # If you are interested in IDs for example, 'id', 'blah_id', 'blahId' would all match
 def _name_matches(name, matches):
     for m in matches:
-       if name.endswith(m):
-           return True
-       if name.lower().endswith('_'+m.lower()):
-           return True
-       if name.lower() == m.lower():
-           return True
+        if name.endswith(m):
+            return True
+        if name.lower().endswith('_'+m.lower()):
+            return True
+        if name.lower() == m.lower():
+            return True
     return False
 
-def _object_reducer(o, names = ['id', 'name', 'path', 'httpMethod', 'statusCode', 'Created', 'Deleted', 'Updated', 'Flushed', 'Associated', 'Disassociated']):
+def _object_reducer(o, names=('id', 'name', 'path', 'httpMethod',
+                              'statusCode', 'Created', 'Deleted',
+                              'Updated', 'Flushed', 'Associated', 'Disassociated')):
     result = {}
     if isinstance(o, dict):
         for k, v in o.iteritems():
@@ -279,7 +281,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
 
         ret = swagger.publish_api(ret, stage_name)
 
-    except Exception as e:
+    except (ValueError, IOError) as e:
         ret['result'] = False
         ret['comment'] = e.message
 
@@ -343,7 +345,7 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
         if nuke_api and swagger.no_more_deployments_remain():
             ret = swagger.delete_api(ret)
 
-    except Exception as e:
+    except (ValueError, IOError) as e:
         ret['result'] = False
         ret['comment'] = e.message
 
@@ -484,7 +486,6 @@ class _Swagger(object):
                 raise ValueError(('Method response must have a JSON reference '
                                   'to the schema definition: {0}'.format(_schema)))
             return None
-            # raise ValueError('Method response must have a schema: {0}'.format(self))
 
         @property
         def headers(self):
