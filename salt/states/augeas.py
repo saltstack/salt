@@ -38,6 +38,8 @@ import difflib
 # Import Salt libs
 import salt.utils
 
+from salt.modules.augeas_cfg import METHOD_MAP
+
 log = logging.getLogger(__name__)
 
 
@@ -68,10 +70,10 @@ def _check_filepath(changes):
         try:
             cmd, arg = change_.split(' ', 1)
 
-            if cmd not in __salt__['augeas.method_map']():
+            if cmd not in METHOD_MAP:
                 error = 'Command {0} is not supported (yet)'.format(cmd)
                 raise ValueError(error)
-            method = __salt__['augeas.method_map']()[cmd]
+            method = METHOD_MAP[cmd]
             parts = salt.utils.shlex_split(arg)
             if method in ['set', 'setm', 'move', 'remove']:
                 filename_ = parts[0]
