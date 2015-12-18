@@ -60,6 +60,7 @@ Full list of builtin state modules
     environ
     eselect
     etcd_mod
+    esxi
     event
     file
     firewalld

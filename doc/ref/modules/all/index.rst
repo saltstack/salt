@@ -95,6 +95,7 @@ Full list of builtin execution modules
     elasticsearch
     environ
     eselect
+    esxi
     etcd_mod
     event
     extfs
