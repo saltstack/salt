@@ -40,7 +40,7 @@ Complete example
           fromdb:
             query: 'SELECT col1,col2,col3,col4,col5,col6,col7
                       FROM some_random_table
-                     WHERE minion_pattern LIKE %s'
+                     WHERE minion_pattern LIKE ?'
             depth: 5
             as_list: True
             with_lists: [1,3]
@@ -79,6 +79,11 @@ class SQLite3ExtPillar(SqlBaseExtPillar):
                     'timeout': 5.0}
         _options = {}
         _opts = __opts__.get('pillar', {}).get('sqlite3', {})
+        if 'database' not in _opts:
+            _sqlite3_opts = __opts__.get('pillar', {}).get('master', {})\
+                .get('pillar', {}).get('sqlite3')
+            if _sqlite3_opts is not None:
+                _opts = _sqlite3_opts
         for attr in defaults:
             if attr not in _opts:
                 log.debug('Using default for SQLite3 pillar {0}'.format(attr))
