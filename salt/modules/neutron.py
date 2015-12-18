@@ -1453,6 +1453,51 @@ def delete_firewall_rule(firewall_rule, profile=None):
     return conn.delete_firewall_rule(firewall_rule)
 
 
+def update_firewall_rule(firewall_rule,
+                         protocol=None,
+                         action=None,
+                         name=None,
+                         description=None,
+                         ip_version=None,
+                         source_ip_address=None,
+                         destination_ip_address=None,
+                         source_port=None,
+                         destination_port=None,
+                         shared=None,
+                         enabled=None,
+                         profile=None):
+    '''
+    Update a firewall rule
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.update_firewall_rule firewall_rule protocol=PROTOCOL action=ACTION
+                name=NAME description=DESCRIPTION ip_version=IP_VERSION
+                source_ip_address=SOURCE_IP_ADDRESS destination_ip_address=DESTINATION_IP_ADDRESS
+                source_port=SOURCE_PORT destination_port=DESTINATION_PORT shared=SHARED enabled=ENABLED
+
+    :param firewall_rule: ID or name of firewall rule to update.
+    :param protocol: Protocol for the firewall rule, choose "tcp","udp","icmp" or "None". (Optional)
+    :param action: Action for the firewall rule, choose "allow" or "deny". (Optional)
+    :param name: Name for the firewall rule. (Optional)
+    :param description: Description for the firewall rule. (Optional)
+    :param ip_version: IP protocol version, default: 4. (Optional)
+    :param source_ip_address: Source IP address or subnet. (Optional)
+    :param destination_ip_address: Destination IP address or subnet. (Optional)
+    :param source_port: Source port (integer in [1, 65535] or range in a:b). (Optional)
+    :param destination_port: Destination port (integer in [1, 65535] or range in a:b). (Optional)
+    :param shared: Set shared to True, default: False. (Optional)
+    :param enabled: To enable this rule, default: True. (Optional)
+    :param profile: Profile to build on (Optional)
+    '''
+    conn = _auth(profile)
+    return conn.update_firewall_rule(firewall_rule, protocol, action, name, description, ip_version,
+                                     source_ip_address, destination_ip_address, source_port, destination_port,
+                                     shared, enabled)
+
+
 def list_firewalls(profile=None):
     '''
     Fetches a list of all firewalls for a tenant
