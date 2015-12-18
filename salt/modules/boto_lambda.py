@@ -323,7 +323,7 @@ def update_function_config(FunctionName, Role=None, Handler=None,
         args['Role'] = role_arn
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        r = conn.update_function_configuration(*args)
+        r = conn.update_function_configuration(**args)
         if r:
             keys = ('FunctionName', 'Runtime', 'Role', 'Handler', 'CodeSha256',
                 'CodeSize', 'Description', 'Timeout', 'MemorySize', 'FunctionArn',
@@ -482,7 +482,7 @@ def _find_alias(FunctionName, Name, FunctionVersion=None,
     if FunctionVersion:
         args['FunctionVersion'] = FunctionVersion
 
-    for aliases in salt.utils.boto3.paged_call(conn.list_aliases, *args):
+    for aliases in salt.utils.boto3.paged_call(conn.list_aliases, **args):
         for alias in aliases.get('Aliases'):
             if alias['Name'] == Name:
                 return alias
