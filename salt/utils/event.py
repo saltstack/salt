@@ -353,7 +353,7 @@ class SaltEvent(object):
                     )
                 try:
                     self.io_loop.run_sync(
-                        lambda: self.subscriber.connect(timeout=timeout))
+                        lambda: self.pusher.connect(timeout=timeout))
                     self.cpush = True
                 except Exception:
                     pass
