@@ -61,7 +61,7 @@ def _build_gecos(gecos_dict):
                                     gecos_dict.get('homephone', ''))
 
 
-def _update_gecos(name, key, value):
+def _update_gecos(name, key, value, root=None):
     '''
     Common code to change a user's GECOS information
     '''
@@ -76,7 +76,12 @@ def _update_gecos(name, key, value):
         return True
     gecos_data = copy.deepcopy(pre_info)
     gecos_data[key] = value
+
     cmd = ['usermod', '-c', _build_gecos(gecos_data), name]
+
+    if root is not None:
+        cmd.extend(('-R', root))
+
     __salt__['cmd.run'](cmd, python_shell=False)
     post_info = info(name)
     return _get_gecos(name).get(key) == value
@@ -95,7 +100,8 @@ def add(name,
         workphone='',
         homephone='',
         createhome=True,
-        loginclass=None):
+        loginclass=None,
+        root=None):
     '''
     Add a user to the minion
 
@@ -175,6 +181,9 @@ def add(name,
 
     cmd.append(name)
 
+    if root is not None:
+        cmd.extend(('-R', root))
+
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if ret['retcode'] != 0:
@@ -201,7 +210,7 @@ def add(name,
     return True
 
 
-def delete(name, remove=False, force=False):
+def delete(name, remove=False, force=False, root=None):
     '''
     Remove a user from the minion
 
@@ -220,6 +229,9 @@ def delete(name, remove=False, force=False):
         cmd.append('-f')
 
     cmd.append(name)
+
+    if root is not None:
+        cmd.extend(('-R', root))
 
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
 
@@ -283,7 +295,7 @@ def chuid(name, uid):
     return info(name).get('uid') == uid
 
 
-def chgid(name, gid):
+def chgid(name, gid, root=None):
     '''
     Change the default group of the user
 
@@ -297,11 +309,15 @@ def chgid(name, gid):
     if gid == pre_info['gid']:
         return True
     cmd = ['usermod', '-g', '{0}'.format(gid), name]
+
+    if root is not None:
+        cmd.extend(('-R', root))
+
     __salt__['cmd.run'](cmd, python_shell=False)
     return info(name).get('gid') == gid
 
 
-def chshell(name, shell):
+def chshell(name, shell, root=None):
     '''
     Change the default shell of the user
 
@@ -315,11 +331,15 @@ def chshell(name, shell):
     if shell == pre_info['shell']:
         return True
     cmd = ['usermod', '-s', shell, name]
+
+    if root is not None:
+        cmd.extend(('-R', root))
+
     __salt__['cmd.run'](cmd, python_shell=False)
     return info(name).get('shell') == shell
 
 
-def chhome(name, home, persist=False):
+def chhome(name, home, persist=False, root=None):
     '''
     Change the home directory of the user, pass True for persist to move files
     to the new home directory if the old home directory exist.
@@ -334,6 +354,10 @@ def chhome(name, home, persist=False):
     if home == pre_info['home']:
         return True
     cmd = ['usermod', '-d', '{0}'.format(home)]
+
+    if root is not None:
+        cmd.extend(('-R', root))
+
     if persist and __grains__['kernel'] != 'OpenBSD':
         cmd.append('-m')
     cmd.append(name)
@@ -341,7 +365,7 @@ def chhome(name, home, persist=False):
     return info(name).get('home') == home
 
 
-def chgroups(name, groups, append=False):
+def chgroups(name, groups, append=False, root=None):
     '''
     Change the groups to which this user belongs
 
@@ -368,6 +392,7 @@ def chgroups(name, groups, append=False):
     if ugrps == set(groups):
         return True
     cmd = ['usermod']
+
     if __grains__['kernel'] != 'OpenBSD':
         if append:
             cmd.append('-a')
@@ -376,9 +401,14 @@ def chgroups(name, groups, append=False):
             cmd.append('-G')
         else:
             cmd.append('-S')
+
     if __grains__['kernel'] != 'OpenBSD':
         cmd.append('-G')
     cmd.extend([','.join(groups), name])
+
+    if root is not None:
+        cmd.extend(('-R', root))
+
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
     # try to fallback on gpasswd to add user to localgroups
     # for old lib-pamldap support
@@ -445,7 +475,7 @@ def chhomephone(name, homephone):
     return _update_gecos(name, 'homephone', homephone)
 
 
-def chloginclass(name, loginclass):
+def chloginclass(name, loginclass, root=None):
     '''
     Change the default login class of the user
 
@@ -460,9 +490,15 @@ def chloginclass(name, loginclass):
     '''
     if __grains__['kernel'] != 'OpenBSD':
         return False
+
     if loginclass == get_loginclass(name):
         return True
+
     cmd = ['usermod', '-L', '{0}'.format(loginclass), '{0}'.format(name)]
+
+    if root is not None:
+        cmd.extend(('-R', root))
+
     __salt__['cmd.run'](cmd, python_shell=False)
     return get_loginclass(name) == loginclass
 
@@ -564,7 +600,7 @@ def list_users():
     return sorted([user.pw_name for user in pwd.getpwall()])
 
 
-def rename(name, new_name):
+def rename(name, new_name, root=None):
     '''
     Change the username for a named user
 
@@ -577,11 +613,17 @@ def rename(name, new_name):
     current_info = info(name)
     if not current_info:
         raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
+
     new_info = info(new_name)
     if new_info:
         raise CommandExecutionError(
             'User \'{0}\' already exists'.format(new_name)
         )
+
     cmd = ['usermod', '-l', '{0}'.format(new_name), '{0}'.format(name)]
+
+    if root is not None:
+        cmd.extend(('-R', root))
+
     __salt__['cmd.run'](cmd, python_shell=False)
     return info(name).get('name') == new_name
