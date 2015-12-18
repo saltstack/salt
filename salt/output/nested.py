@@ -90,17 +90,20 @@ class NestDisplay(object):
                 )
             )
         elif isinstance(ret, string_types):
+            first_line = True
             for line in ret.splitlines():
                 if self.strip_colors:
                     line = salt.output.strip_esc_sequence(line)
+                line_prefix = ' ' * len(prefix) if not first_line else prefix
                 out.append(
                     self.ustring(
                         indent,
                         self.GREEN,
                         line,
-                        prefix=prefix
+                        prefix=line_prefix
                     )
                 )
+                first_line = False
         elif isinstance(ret, (list, tuple)):
             for ind in ret:
                 if isinstance(ind, (list, tuple, dict)):
