@@ -415,8 +415,8 @@ class _Swagger(object):
 
     # This string should not be modified, every API created by this state will carry the description
     # below.
-    AWS_API_DESCRIPTION = ('This API is created from Salt state boto_apigateway.present, please '
-                           'see deployment description for details on the associated swagger file.')
+    AWS_API_DESCRIPTION = _dict_to_json_pretty({"provisioned_by": "Salt boto_apigateway.present State",
+                                                "context": "See deployment or stage description"})
 
     class SwaggerParameter(object):
         '''
