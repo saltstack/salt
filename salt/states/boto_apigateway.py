@@ -72,13 +72,39 @@ def __virtual__():
     '''
     return 'boto_apigateway' if 'boto_apigateway.describe_apis' in __salt__ else False
 
+# Heuristic on whether or not the property name loosely matches given set of 'interesting' factors
+# If you are interested in IDs for example, 'id', 'blah_id', 'blahId' would all match
+def _name_matches(name, matches):
+    for m in matches:
+       if name.endswith(m):
+           return True
+       if name.lower().endswith('_'+m.lower()):
+           return True
+       if name.lower() == m.lower():
+           return True
+    return False
+
+def _object_reducer(o, names = ['Id', 'Name', 'Created', 'Deleted', 'Updated', 'Flushed', 'Associated', 'Disassociated']):
+    result = {}
+    if isinstance(o, dict):
+        for k, v in o.iteritems():
+            # need to keep this
+            if isinstance(v, dict):
+                reduced = _object_reducer(v, names)
+                if reduced or _name_matches(k, names):
+                    result[k] = reduced
+            else:
+                if _name_matches(k, names):
+                    result[k] = v
+    return result
+
 
 def _log_changes(ret, changekey, changevalue):
     '''
     For logging create/update/delete operations to AWS ApiGateway
     '''
     cl = ret['changes'].get('new', [])
-    cl.append({changekey: changevalue})
+    cl.append({changekey: _object_reducer(changevalue)})
     ret['changes']['new'] = cl
     return ret
 
