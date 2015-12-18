@@ -87,11 +87,12 @@ from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=i
 import salt.utils.boto3
 import salt.utils.compat
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
 # Import third party libs
-import salt.ext.six as six
+
 #pylint: disable=import-error
 try:
     #pylint: disable=unused-import
@@ -281,32 +282,6 @@ def delete_api(name, description=None, region=None, key=None, keyid=None, profil
             return {'deleted': False}
     except ClientError as e:
         return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
-
-def cleanup_api(restApiId, region=None, key=None, keyid=None, profile=None):
-    log.info("cleanup api")
-    resources = describe_api_resources(restApiId, region=region, key=key, keyid=keyid, profile=profile)
-    if resources.get('resources'):
-        res = resources.get('resources')[1:]
-        res.reverse()
-        for resource in res:
-            delres = delete_api_resources(restApiId, resource.get('path'), region=region, key=key, keyid=keyid, profile=profile)
-            if not delres.get('deleted'):
-                return delres
-
-    log.info("cleanup api 1")
-
-    models = describe_api_models(restApiId, region=region, key=key, keyid=keyid, profile=profile)
-    if models.get('models'):
-        for model in models.get('models'):
-            delres = delete_api_model(restApiId, model.get('name'), region=region, key=key, keyid=keyid, profile=profile)
-            log.info(model)
-            log.info(delres)
-            if not delres.get('deleted'):
-                return delres
-
-    log.info("cleanup api 2")
-
-    return {'deleted': True}
 
 # rest api resource
 def describe_api_resources(restApiId, region=None, key=None, keyid=None, profile=None):
@@ -726,11 +701,13 @@ def activate_api_deployment(apiId, stageName, deploymentId,
     '''
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        response = conn.update_stage(restApiId=apiId, stageName=stageName, 
-                                     patchOperations=[{'op': 'replace', 'path': '/deploymentId', 'value': deploymentId}])
+        response = conn.update_stage(restApiId=apiId, stageName=stageName,
+                                     patchOperations=[{'op': 'replace',
+                                                       'path': '/deploymentId',
+                                                       'value': deploymentId}])
         return {'set': True, 'response': response}
     except ClientError as e:
-        return {'set': False, 'error': salt.utils.boto3.get_error(e)} 
+        return {'set': False, 'error': salt.utils.boto3.get_error(e)}
 
 def create_api_deployment(apiId, stageName, stageDescription='', description='', cacheClusterEnabled=False,
                           cacheClusterSize='0.5', variables=None,

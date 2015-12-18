@@ -237,7 +237,7 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
     '''
     Ensure the stage_name associated with the given api_name deployed by boto_apigateway's
     present state is removed.  If the currently associated deployment to the given stage_name has
-    no other stages associated with it, the deployment will also be removed.  
+    no other stages associated with it, the deployment will also be removed.
 
     name
         Name of the swagger file in YAML format
@@ -288,7 +288,7 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
             return ret
 
         if nuke_api and swagger.no_more_deployments_remain():
-            ret = swagger.delete_api(ret)           
+            ret = swagger.delete_api(ret)
 
     except Exception as e:
         ret['result'] = False
@@ -625,7 +625,6 @@ class _Swagger(object):
                                                                **self._common_aws_args).get('stage')
         if stage:
             deploymentId = stage.get('deploymentId')
-        
         return deploymentId
 
     def _get_current_deployment_label(self, stage_name):
@@ -689,9 +688,14 @@ class _Swagger(object):
                                  'description {1}'.format(self.rest_api_name, self.info_json))
 
     def delete_stage(self, ret, stage_name):
+        '''
+        Method to delete the given stage_name.  If the current deployment tied to the given
+        stage_name has no other stages associated with it, the deployment will be removed
+        as well
+        '''
         deploymentId = self._get_current_deployment_id(stage_name)
         if deploymentId:
-            result = __salt__['boto_apigateway.delete_api_stage'](self.restApiId, 
+            result = __salt__['boto_apigateway.delete_api_stage'](self.restApiId,
                                                                   stage_name,
                                                                   **self._common_aws_args)
             if not result.get('deleted'):
@@ -764,12 +768,42 @@ class _Swagger(object):
                 ret['common'] = res.get('error')
         return ret
 
+    def _cleanup_api(self):
+        '''
+        Helper method to clean up resources and models if we detected a change in the swagger file
+        for a stage
+        '''
+        resources = __salt__['boto_apigateway.describe_api_resources'](self.restApiId, **self._common_aws_args)
+        if resources.get('resources'):
+            res = resources.get('resources')[1:]
+            res.reverse()
+            for resource in res:
+                delres = __salt__['boto_apigateway.delete_api_resources'](self.restApiId,
+                                                                          resource.get('path'),
+                                                                          **self._common_aws_args)
+                if not delres.get('deleted'):
+                    return delres
+
+        models = __salt__['boto_apigateway.describe_api_models'](self.restApiId, **self._common_aws_args)
+        if models.get('models'):
+            for model in models.get('models'):
+                delres = __salt__['boto_apigateway.delete_api_model'](self.restApiId,
+                                                                      model.get('name'),
+                                                                      **self._common_aws_args)
+                log.info(model)
+                log.info(delres)
+                if not delres.get('deleted'):
+                    return delres
+
+        log.info("cleanup api 2")
+        return {'deleted': True}
+
     def deploy_api(self, ret):
         '''
         this method create the top level rest api in AWS apigateway
         '''
         if self.restApiId:
-            res = __salt__['boto_apigateway.cleanup_api'](self.restApiId, **self._common_aws_args)
+            res = self._cleanup_api()
             if not res.get('deleted'):
                 ret['comment'] = 'Failed to cleanup restAreId {0}'.format(self.restApiId)
                 ret['abort'] = True
