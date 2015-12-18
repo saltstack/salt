@@ -293,16 +293,22 @@ sudo cmake --build . --target install
 echo -n -e "\033]0;Build_Evn: PIP Dependencies\007"
 
 cd $BUILDDIR
-mkdir pip
-cd pip
 
 echo "#####################################################################"
-echo "Installing Salt dependencies with pip"
+echo "Installing Salt Dependencies with pip (normal)"
 echo "#####################################################################"
 sudo -H /opt/salt/bin/pip install \
-                          -r $SRCDIR/pkg/osx/requirements.txt \
+                          -r $SRCDIR/pkg/osx/req.txt \
+                          --no-cache-dir
+
+echo "#####################################################################"
+echo "Installing Salt Dependencies with pip (build_ext)"
+echo "#####################################################################"
+sudo -H /opt/salt/bin/pip install \
+                          -r $SRCDIR/pkg/osx/req_ext.txt \
                           --global-option=build_ext \
                           --global-option="-I/opt/salt/include" \
+                          --no-cache-dir
 
 echo "---------------------------------------------------------------------"
 echo "Create Symlink to certifi for openssl"
