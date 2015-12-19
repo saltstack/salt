@@ -30,7 +30,8 @@ def __virtual__():
     '''
     if __grains__['os'] == 'OpenBSD':
         return __virtualname__
-    return False
+    return (False, 'The openbsdpkg execution module cannot be loaded: '
+            'only available on OpenBSD systems.')
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
