@@ -747,6 +747,9 @@ def setup_extended_logging(opts):
     # Remove the temporary queue logging handler
     __remove_queue_logging_handler()
 
+    # Remove the temporary null logging handler (if it exists)
+    __remove_null_logging_handler()
+
     global __EXTERNAL_LOGGERS_CONFIGURED
     __EXTERNAL_LOGGERS_CONFIGURED = True
 
@@ -763,7 +766,7 @@ def get_multiprocessing_logging_queue():
     return __MP_LOGGING_QUEUE
 
 
-def setup_multiprocessing_logging_listener(queue=None):
+def setup_multiprocessing_logging_listener(opts, queue=None):
     global __MP_LOGGING_QUEUE_PROCESS
     global __MP_LOGGING_LISTENER_CONFIGURED
 
@@ -776,7 +779,7 @@ def setup_multiprocessing_logging_listener(queue=None):
 
     __MP_LOGGING_QUEUE_PROCESS = multiprocessing.Process(
         target=__process_multiprocessing_logging_queue,
-        args=(queue or get_multiprocessing_logging_queue(),)
+        args=(opts, queue or get_multiprocessing_logging_queue(),)
     )
     __MP_LOGGING_QUEUE_PROCESS.daemon = True
     __MP_LOGGING_QUEUE_PROCESS.start()
@@ -806,6 +809,12 @@ def setup_multiprocessing_logging(queue=None):
 
         if __MP_LOGGING_QUEUE_HANDLER is not None:
             return
+
+        # The temp null and temp queue logging handlers will store messages.
+        # Since noone will process them, memory usage will grow. If they
+        # exist, remove them.
+        __remove_null_logging_handler()
+        __remove_queue_logging_handler()
 
         # Let's add a queue handler to the logging root handlers
         __MP_LOGGING_QUEUE_HANDLER = SaltLogQueueHandler(queue or get_multiprocessing_logging_queue())
@@ -901,9 +910,14 @@ def patch_python_logging_handlers():
         logging.handlers.QueueHandler = QueueHandler
 
 
-def __process_multiprocessing_logging_queue(queue):
+def __process_multiprocessing_logging_queue(opts, queue):
     import salt.utils
     salt.utils.appendproctitle('MultiprocessingLoggingQueue')
+    if salt.utils.is_windows():
+        # On Windows, creating a new process doesn't fork (copy the parent
+        # process image). Due to this, we need to setup extended logging
+        # inside this process.
+        setup_extended_logging(opts)
     while True:
         try:
             record = queue.get()
@@ -929,12 +943,12 @@ def __remove_null_logging_handler():
     This function will run once the temporary logging has been configured. It
     just removes the NullHandler from the logging handlers.
     '''
-    if is_temp_logging_configured():
-        # In this case, the NullHandler has been removed, return!
+    global LOGGING_NULL_HANDLER
+    if LOGGING_NULL_HANDLER is None:
+        # Already removed
         return
 
     root_logger = logging.getLogger()
-    global LOGGING_NULL_HANDLER
 
     for handler in root_logger.handlers:
         if handler is LOGGING_NULL_HANDLER:
@@ -949,8 +963,12 @@ def __remove_queue_logging_handler():
     This function will run once the additional loggers have been synchronized.
     It just removes the QueueLoggingHandler from the logging handlers.
     '''
-    root_logger = logging.getLogger()
     global LOGGING_STORE_HANDLER
+    if LOGGING_STORE_HANDLER is None:
+        # Already removed
+        return
+
+    root_logger = logging.getLogger()
 
     for handler in root_logger.handlers:
         if handler is LOGGING_STORE_HANDLER:
