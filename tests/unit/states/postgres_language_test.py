@@ -42,7 +42,6 @@ class PostgresLanguageTestCase(TestCase):
         self.mock_language_list = MagicMock(
             return_value={'plpgsql': self.name})
 
-
     def test_present_existing(self):
         '''
         Test present, language is already present in database
