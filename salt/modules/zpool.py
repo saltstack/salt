@@ -1318,7 +1318,7 @@ def reguid(zpool):
 
     .. code-block:: bash
 
-        salt '*' zpool.exists myzpool
+        salt '*' zpool.reguid myzpool
     '''
     ret = {}
     ret[zpool] = {}
@@ -1349,7 +1349,7 @@ def reopen(zpool):
 
     .. code-block:: bash
 
-        salt '*' zpool.exists myzpool
+        salt '*' zpool.reopen myzpool
     '''
     ret = {}
     ret[zpool] = {}
@@ -1387,7 +1387,7 @@ def upgrade(zpool=None, version=None):
 
     .. code-block:: bash
 
-        salt '*' zpool.exists myzpool
+        salt '*' zpool.upgrade myzpool
     '''
     ret = {}
 
@@ -1408,6 +1408,54 @@ def upgrade(zpool=None, version=None):
             ret[zpool] = 'upgraded to {0}'.format('version {0}'.format(version) if version else 'the highest supported version')
         else:
             ret = 'all pools upgraded to {0}'.format('version {0}'.format(version) if version else 'the highest supported version')
+    return ret
+
+
+def history(zpool=None, internal=False, verbose=False):
+    '''
+    .. verionadded:: Boron
+
+    Displays the command history of the specified pools or all pools if no pool is specified
+
+    zpool : string
+        optional zpool
+    internal : boolean
+        toggle display of internally logged ZFS events
+    verbose : boolean
+        toggle display of the user name, the hostname, and the zone in which the operation was performed
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.upgrade myzpool
+    '''
+    ret = {}
+
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} history {verbose}{internal}{zpool}'.format(
+        zpool_cmd=zpool_cmd,
+        verbose='-l ' if verbose else '',
+        internal='-i ' if internal else '',
+        zpool=zpool if zpool else ''
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        if zpool:
+            ret[zpool] = res['stderr'] if 'stderr' in res and res['stderr'] != '' else res['stdout']
+        else:
+            ret['error'] = res['stderr'] if 'stderr' in res and res['stderr'] != '' else res['stdout']
+    else:
+        pool = 'unknown'
+        for line in res['stdout'].splitlines():
+            if line.startswith('History for'):
+                pool = line[13:-2]
+                ret[pool] = []
+            else:
+                if line == '':
+                    continue
+                ret[pool].append(line)
+
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
