@@ -421,6 +421,7 @@ def destroy(zpool):
     ret = {}
     if not exists(zpool):
         ret['Error'] = 'Storage pool {0} does not exist'.format(zpool)
+        ret['retcode'] = 1
     else:
         zpool_cmd = _check_zpool()
         cmd = '{zpool_cmd} destroy {zpool}'.format(
@@ -468,12 +469,14 @@ def scrub(zpool, stop=False):
         if res['retcode'] != 0:
             if 'stderr' in res:
                 ret['Error'] = res['stderr']
+                ret['retcode'] = res['retcode']
             else:
                 ret = False
         else:
             ret = True
     else:
         ret['Error'] = 'Storage pool {0} does not exist'.format(zpool)
+        ret['retcode'] = 2
 
     return ret
 
@@ -626,9 +629,27 @@ def add(pool_name, *vdevs):
     ret['retcode'] = 5
 
 
-def replace(pool_name, old, new):
+def replace(zpool, old_device, new_device=None, force=False):
     '''
-    Replaces old device with new device.
+    .. versionchanged:: Boron
+
+    Replaces old_device with new_device.
+
+    .. note::
+        This is equivalent to attaching new_device,
+        waiting for it to resilver, and then detaching old_device.
+
+        The size of new_device must be greater than or equal to the minimum
+        size of all the devices in a mirror or raidz configuration.
+
+    zpool : string
+        name of zpool
+    old_device : string
+        old device to be replaced
+    new_device : string
+        optional new device
+    force : boolean
+        Forces use of new_device, even if its appears to be in use.
 
     CLI Example:
 
@@ -637,35 +658,38 @@ def replace(pool_name, old, new):
         salt '*' zpool.replace myzpool /path/to/vdev1 /path/to/vdev2
     '''
     ret = {}
-    # Make sure pools there
-    if not exists(pool_name):
-        ret['Error'] = '{0}: pool does not exists.'.format(pool_name)
+    # Make sure pool is there
+    if not exists(zpool):
+        ret['Error'] = '{0}: pool does not exists.'.format(zpool)
         ret['retcode'] = 1
         return ret
 
     # make sure old, new vdevs are on filesystem
-    if not os.path.isfile(old):
-        ret['Error'] = '{0}: is not on the file system.'.format(old)
+    if not os.path.isfile(old_device):
+        ret['Error'] = '{0}: is not on the file system.'.format(old_device)
         ret['retcode'] = 2
         return ret
-    if not os.path.isfile(new):
-        ret['Error'] = '{0}: is not on the file system.'.format(new)
+    if new_device and not os.path.isfile(new_device):
+        ret['Error'] = '{0}: is not on the file system.'.format(new_device)
         ret['retcode'] = 3
         return ret
 
     # Replace vdevs
-    zpool = _check_zpool()
-    cmd = [zpool, 'replace', pool_name, old, new]
-    __salt__['cmd.run'](cmd, python_shell=False)
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} replace {force}{zpool} {old_device}{new_device}'.format(
+        zpool_cmd=zpool_cmd,
+        zpool=zpool,
+        force='-f ' if force else '',
+        old_device=old_device,
+        new_device=' {0}'.format(new_device) if new_device else ''
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        ret['retcode'] = res['retcode']
+    else:
+        ret = True
 
-    # check for new vdev in pool
-    res = status(zpool=pool_name)
-    for line in res:
-        if new in line:
-            ret['replaced'] = '{0} with {1}'.format(old, new)
-            return ret
-    ret['Error'] = 'Does not look like devices were swapped; check status'
-    ret['retcode'] = 4
     return ret
 
 
