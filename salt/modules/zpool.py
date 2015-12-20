@@ -693,8 +693,11 @@ def replace(zpool, old_device, new_device=None, force=False):
     return ret
 
 
+@salt.utils.decorators.which('mkfile')
 def create_file_vdev(size, *vdevs):
     '''
+    .. versionchanged:: Boron
+
     Creates file based ``virtual devices`` for a zpool
 
     ``*vdevs`` is a list of full paths for mkfile to create
@@ -710,8 +713,6 @@ def create_file_vdev(size, *vdevs):
         Depending on file size, the above command may take a while to return.
     '''
     ret = {}
-    if not _check_mkfile():
-        return False
     dlist = []
     # Get file names to create
     for vdev in vdevs:
