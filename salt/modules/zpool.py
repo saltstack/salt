@@ -733,7 +733,7 @@ def create_file_vdev(size, *vdevs):
             ret[vdev] = 'The vdev can\'t be created'
             ret['retcode'] = 1
     ret['status'] = True
-    ret[cmd] = cmd
+    ret['cmd'] = ' '.join(cmd)
     return ret
 
 
