@@ -86,11 +86,14 @@ def healthy():
     return res['stdout'] == 'all pools are healthy'
 
 
-def status(zpool=''):
+def status(zpool=None):
     '''
     .. versionchanged:: Boron
 
     Return the status of the named zpool
+
+    zpool : string
+        optional name of zpool to list
 
     CLI Example:
 
@@ -192,9 +195,14 @@ def status(zpool=''):
     return zp_data
 
 
-def iostat(name=''):
+def iostat(zpool=None):
     '''
+    .. versionchanged:: Boron
+
     Display I/O statistics for the given pools
+
+    zpool : string
+        optional name of zpool to list
 
     CLI Example:
 
@@ -202,10 +210,20 @@ def iostat(name=''):
 
         salt '*' zpool.iostat myzpool
     '''
-    zpool = _check_zpool()
-    cmd = [zpool, 'iostat', '-v', name]
-    res = __salt__['cmd.run'](cmd, python_shell=False)
-    ret = res.splitlines()
+    ret = OrderedDict()
+
+    # get zpool list data
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} iostat -v{zpool}'.format(
+        zpool_cmd=zpool_cmd,
+        zpool=' {0}'.format(zpool) if zpool else ''
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        return ret
+
+    ret = res['stdout'].splitlines()
     return ret
 
 
@@ -216,6 +234,8 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
 
     Return information about (all) zpools
 
+    zpool : string
+        optional name of zpool to list
     properties : string
         comma-separated list of properties to list
 
