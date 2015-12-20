@@ -466,6 +466,8 @@ def set(zpool, prop, value):
     ret[zpool] = {}
     if isinstance(value, bool):
         value = 'on' if value else 'off'
+    elif ' ' in value:
+        value = "'{0}'".format(value)
 
     # get zpool list data
     zpool_cmd = _check_zpool()
