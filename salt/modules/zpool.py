@@ -837,11 +837,22 @@ def import_(zpool=None, new_name=None, force=False, raw_options=None):
     return ret
 
 
-def online(pool_name, *vdevs, **kwargs):
+def online(zpool, *vdevs, **kwargs):
     '''
     .. versionadded:: 2015.5.0
 
     Ensure that the specified devices are online
+
+    zpool : string
+        name of zpool
+    * : string
+        one or more devices
+    expand : boolean
+        Expand the device to use all available space.
+
+        .. note::
+            If the device is part of a mirror or raidz then all devices must be
+            expanded before the new space will become available to the pool.
 
     CLI Example:
 
@@ -854,8 +865,8 @@ def online(pool_name, *vdevs, **kwargs):
     dlist = []
 
     # Check if the pool_name exists
-    if not exists(pool_name):
-        ret['Error'] = 'Storage Pool `{0}` doesn\'t exist'.format(pool_name)
+    if not exists(zpool):
+        ret['Error'] = 'Storage Pool `{0}` doesn\'t exist'.format(zpool)
         ret['retcode'] = 1
         return ret
 
@@ -863,6 +874,9 @@ def online(pool_name, *vdevs, **kwargs):
         ret['Error'] = 'Missing vdev specification. Please specify vdevs.'
         ret['retcode'] = 2
         return ret
+
+    # get expand option
+    expand = kwargs.get('expand', False)
 
     # make sure files are present on filesystem
     for vdev in vdevs:
@@ -880,8 +894,8 @@ def online(pool_name, *vdevs, **kwargs):
         dlist.append(vdev)
 
     devs = ' '.join(dlist)
-    zpool = _check_zpool()
-    cmd = '{0} online {1} {2}'.format(zpool, pool_name, devs)
+    zpool_cmd = _check_zpool()
+    cmd = '{0} online{1} {2} {3}'.format(zpool_cmd, ' -e' if expand else '', zpool, devs)
 
     # Bring all specified devices online
     res = __salt__['cmd.run'](cmd)
@@ -891,7 +905,7 @@ def online(pool_name, *vdevs, **kwargs):
         ret['Error']['Reason'] = res
         ret['retcode'] = 5
     else:
-        ret[pool_name] = 'Specified devices: {0} are online.'.format(vdevs)
+        ret[zpool] = 'Specified devices: {0} are online.'.format(', '.join(vdevs))
     return ret
 
 
