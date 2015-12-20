@@ -429,8 +429,8 @@ def destroy(zpool):
             zpool=zpool
         )
         res = __salt__['cmd.run_all'](cmd, python_shell=False)
-        if not exists(zpool):
-            if 'stderr' in res:
+        if exists(zpool):
+            if 'stderr' in res and res['stderr'] != '':
                 ret['Error'] = res['stderr']
             else:
                 ret = False
