@@ -1340,7 +1340,7 @@ def reopen(zpool):
     '''
     .. verionadded:: Boron
 
-    Reopen all the vdevs associated with the pooll
+    Reopen all the vdevs associated with the pool
 
     zpool : string
         name of zpool
@@ -1364,6 +1364,50 @@ def reopen(zpool):
         ret[zpool] = res['stderr'] if 'stderr' in res and res['stderr'] != '' else res['stdout']
     else:
         ret[zpool] = 'reopened'
+    return ret
+
+
+def upgrade(zpool=None, version=None):
+    '''
+    .. verionadded:: Boron
+
+    Enables all supported features on the given pool
+
+    .. note::
+        Once this is done, the pool will no longer be accessible on systems that do not
+        support feature flags. See zpool-features(5) for details on compatibility with
+        systems that support feature flags, but do not support all features enabled on the pool.
+
+    zpool : string
+        optional zpool, applies to all otherwize
+    version : int
+        version to upgrade to, if unspecified upgrade to the highest possible
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.exists myzpool
+    '''
+    ret = {}
+
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} upgrade {version}{zpool}'.format(
+        zpool_cmd=zpool_cmd,
+        version='-V {0} '.format(version) if version else '',
+        zpool=zpool if zpool else '-a'
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        if zpool:
+            ret[zpool] = res['stderr'] if 'stderr' in res and res['stderr'] != '' else res['stdout']
+        else:
+            ret['error'] = res['stderr'] if 'stderr' in res and res['stderr'] != '' else res['stdout']
+    else:
+        if zpool:
+            ret[zpool] = 'upgraded to {0}'.format('version {0}'.format(version) if version else 'the highest supported version')
+        else:
+            ret = 'all pools upgraded to {0}'.format('version {0}'.format(version) if version else 'the highest supported version')
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
