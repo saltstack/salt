@@ -788,59 +788,52 @@ def export(*pools, **kwargs):
     return ret
 
 
-def import_(pool_name='', new_name='', **kwargs):
+def import_(zpool=None, new_name=None, force=False, raw_options=None):
     '''
     .. versionadded:: 2015.5.0
+    .. versionchanged:: Boron
 
     Import storage pools or list pools available for import
+
+    zpool : string
+        optional name of zpool to import
+    new_name : string
+        optional new name for the zpool
+    force : boolean
+        force import of zpool(s)
+    raw_options : string
+        optionally feed in raw options
+
+    .. note::
+        dangerous! this allows to pass additional pool properties, mount options,...
+        to be flexable there is no validation for this.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' zpool.import [all=True|False]
+        salt '*' zpool.import [force=True|False]
         salt '*' zpool.import myzpool [mynewzpool] [force=True|False]
     '''
     ret = {}
-    zpool = _check_zpool()
-    import_all = kwargs.get('all', False)
-    force = kwargs.get('force', False)
 
-    if not pool_name:
-        if import_all is True:
-            cmd = '{0} import -a'.format(zpool)
-        else:
-            cmd = '{0} import'.format(zpool)
-        res = __salt__['cmd.run'](cmd, ignore_retcode=True)
-        if not res and import_all is False:
-            ret['Error'] = 'No pools available for import'
-            ret['retcode'] = 1
-        elif import_all is False:
-            pool_list = [l for l in res.splitlines()]
-            ret['pools'] = pool_list
-        else:
-            ret['pools'] = 'Imported all pools'
-        return ret
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} import{force}{zpool}{new_name}{raw_options}'.format(
+        zpool_cmd=zpool_cmd,
+        force=' -f' if force else '',
+        zpool=' {0}'.format(zpool) if zpool else ' -a',
+        new_name=' {0}'.format(new_name) if zpool and new_name else '',
+        raw_options=' {0}'.format(raw_options) if raw_options else ''
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0 and res['stdout'] != '':
+        ret['Error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        ret['retcode'] = res['retcode']
 
-    if exists(pool_name) and not new_name:
-        ret['Error'] = 'Storage pool {0} already exists. Import the pool under a different name instead'.format(pool_name)
-        ret['retcode'] = 2
-    elif exists(new_name):
-        ret['Error'] = 'Storage pool {0} already exists. Import the pool under a different name instead'.format(new_name)
-        ret['retcode'] = 3
+    if zpool and 'Error' not in ret:
+        ret = exists(zpool if not new_name else new_name)
     else:
-        if force is True:
-            cmd = '{0} import -f {1} {2}'.format(zpool, pool_name, new_name)
-        else:
-            cmd = '{0} import {1} {2}'.format(zpool, pool_name, new_name)
-        res = __salt__['cmd.run'](cmd, ignore_retcode=True)
-        if res:
-            ret['Error'] = {}
-            ret['Error']['Message'] = 'Import failed!'
-            ret['Error']['Reason'] = res
-            ret['retcode'] = 4
-        else:
-            ret[pool_name] = 'Imported'
+        ret = True
     return ret
 
 
