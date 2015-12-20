@@ -1206,4 +1206,39 @@ def offline(zpool, *vdevs, **kwargs):
         ret[zpool]['offlined'] = dlist
     return ret
 
+
+def reguid(zpool):
+    '''
+    .. verionadded:: Boron
+
+    Generates a new unique identifier for the pool
+
+    .. note::
+        You must ensure that all devices in this pool are online
+        and healthy before performing this action.
+
+    zpool : string
+        name of zpool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.exists myzpool
+    '''
+    ret = {}
+    ret[zpool] = {}
+
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} reguid {zpool}'.format(
+        zpool_cmd=zpool_cmd,
+        zpool=zpool
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret[zpool] = res['stderr'] if 'stderr' in res and res['stderr'] != '' else res['stdout']
+    else:
+        ret[zpool] = 'reguided'
+    return ret
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
