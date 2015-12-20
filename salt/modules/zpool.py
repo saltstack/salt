@@ -379,9 +379,12 @@ def zpool_list():
     return list_()
 
 
-def exists(pool_name):
+def exists(zpool):
     '''
     Check if a ZFS storage pool is active
+
+    zpool : string
+        name of zpool
 
     CLI Example:
 
@@ -389,17 +392,25 @@ def exists(pool_name):
 
         salt '*' zpool.exists myzpool
     '''
-    zpool = _check_zpool()
-    cmd = '{0} list {1}'.format(zpool, pool_name)
-    res = __salt__['cmd.run'](cmd, ignore_retcode=True)
-    if "no such pool" in res:
-        return None
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} list {zpool}'.format(
+        zpool_cmd=zpool_cmd,
+        zpool=zpool
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        return False
     return True
 
 
-def destroy(pool_name):
+def destroy(zpool):
     '''
+    .. versionchanged:: Boron
+
     Destroys a storage pool
+
+    zpool : string
+        name of zpool
 
     CLI Example:
 
@@ -408,22 +419,30 @@ def destroy(pool_name):
         salt '*' zpool.destroy myzpool
     '''
     ret = {}
-    if not exists(pool_name):
-        ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
-        ret['retcode'] = 1
-        return ret
+    if not exists(zpool):
+        ret['Error'] = 'Storage pool {0} does not exist'.format(zpool)
     else:
-        zpool = _check_zpool()
-        cmd = [zpool, 'destroy', pool_name]
-        __salt__['cmd.run'](cmd, python_shell=False)
-        if not exists(pool_name):
-            ret[pool_name] = "Deleted"
+        zpool_cmd = _check_zpool()
+        cmd = '{zpool_cmd} destroy {zpool}'.format(
+            zpool_cmd=zpool_cmd,
+            zpool=zpool
+        )
+        res = __salt__['cmd.run_all'](cmd, python_shell=False)
+        ret = not exists(zpool)
+
     return ret
 
 
-def scrub(pool_name=None):
+def scrub(zpool, stop=False):
     '''
-    Begin a scrub
+    .. versionchanged:: Boron
+
+    Scrub a zpool
+
+    zpool : string
+        name of zpool
+    stop : boolean
+        if true, cancel ongoing scrub
 
     CLI Example:
 
@@ -432,19 +451,25 @@ def scrub(pool_name=None):
         salt '*' zpool.scrub myzpool
     '''
     ret = {}
-    if not pool_name:
-        ret['Error'] = 'zpool name parameter is mandatory.'
-        ret['retcode'] = 1
-        return ret
-    if exists(pool_name):
-        zpool = _check_zpool()
-        cmd = [zpool, 'scrub', pool_name]
-        res = __salt__['cmd.run'](cmd, python_shell=False)
-        ret[pool_name] = res.splitlines()
-        return ret
+    if exists(zpool):
+        zpool_cmd = _check_zpool()
+        cmd = '{zpool_cmd} scrub {stop}{zpool}'.format(
+            zpool_cmd=zpool_cmd,
+            stop='-s ' if stop else '',
+            zpool=zpool
+        )
+        res = __salt__['cmd.run_all'](cmd, python_shell=False)
+        if res['retcode'] != 0:
+            if 'stderr' in res:
+                ret['Error'] = res['stderr']
+            else:
+                ret = False
+        else:
+            ret = True
     else:
-        ret['Error'] = 'Storage pool {0} does not exist'.format(pool_name)
-        ret['retcode'] = 2
+        ret['Error'] = 'Storage pool {0} does not exist'.format(zpool)
+
+    return ret
 
 
 def create(pool_name, *vdevs, **kwargs):
