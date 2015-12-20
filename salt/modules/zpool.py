@@ -196,7 +196,7 @@ def status(zpool=None):
     return zp_data
 
 
-def iostat(zpool=None):
+def iostat(zpool=None, sample_time=0):
     '''
     .. versionchanged:: Boron
 
@@ -204,6 +204,8 @@ def iostat(zpool=None):
 
     zpool : string
         optional name of zpool to list
+    sample_time : int
+        seconds to capture data before output
 
     CLI Example:
 
@@ -215,9 +217,10 @@ def iostat(zpool=None):
 
     # get zpool list data
     zpool_cmd = _check_zpool()
-    cmd = '{zpool_cmd} iostat -v{zpool}'.format(
+    cmd = '{zpool_cmd} iostat -v{zpool}{sample_time}'.format(
         zpool_cmd=zpool_cmd,
-        zpool=' {0}'.format(zpool) if zpool else ''
+        zpool=' {0}'.format(zpool) if zpool else '',
+        sample_time=' {0} 2'.format(sample_time) if sample_time else ''
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
     if res['retcode'] != 0:
@@ -243,6 +246,12 @@ def iostat(zpool=None):
     current_pool = None
     for line in res['stdout'].splitlines():
         if line.strip() == '':
+            continue
+
+        # ignore header
+        if line.startswith('pool') and line.endswith('write'):
+            continue
+        if line.endswith('bandwidth'):
             continue
 
         if line.startswith('-') and line.endswith('-'):
