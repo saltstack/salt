@@ -86,7 +86,7 @@ def healthy():
     return res['stdout'] == 'all pools are healthy'
 
 
-def status(name=''):
+def status(zpool=''):
     '''
     Return the status of the named zpool
 
@@ -96,11 +96,98 @@ def status(name=''):
 
         salt '*' zpool.status myzpool
     '''
-    zpool = _check_zpool()
-    cmd = [zpool, 'status', name]
-    res = __salt__['cmd.run'](cmd, python_shell=False)
-    ret = res.splitlines()
-    return ret
+    ret = OrderedDict()
+
+    # get zpool list data
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} status{zpool}'.format(
+        zpool_cmd=zpool_cmd,
+        zpool=' {0}'.format(zpool) if zpool else ''
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        return ret
+
+    # parse zpool status data
+    zp_data = {}
+    current_pool = None
+    current_prop = None
+    for zpd in res['stdout'].splitlines():
+        if zpd.strip() == '':
+            continue
+        if ':' in zpd:
+            prop = zpd.split(':')[0].strip()
+            value = zpd.split(':')[1].strip()
+            if prop == 'pool' and current_pool != value:
+                current_pool = value
+                zp_data[current_pool] = {}
+            if prop != 'pool':
+                zp_data[current_pool][prop] = value
+
+            current_prop = prop
+        else:
+            zp_data[current_pool][current_prop] = "{0}\n{1}".format(
+                zp_data[current_pool][current_prop],
+                zpd
+            )
+
+    # parse zpool config data
+    for pool in zp_data:
+        if 'config' not in zp_data[pool]:
+            continue
+        header = None
+        root_vdev = None
+        vdev = None
+        dev = None
+        config = zp_data[pool]['config']
+        config_data = OrderedDict()
+        for line in config.splitlines():
+            if not header:
+                header = line.strip().lower()
+                header = [x for x in header.split(' ') if x not in ['']]
+                continue
+
+            if line[0:1] == "\t":
+                line = line[1:]
+
+            stat_data = OrderedDict()
+            stats = [x for x in line.strip().split(' ') if x not in ['']]
+            for prop in header:
+                if prop == 'name':
+                    continue
+                if header.index(prop) < len(stats):
+                    stat_data[prop] = stats[header.index(prop)]
+
+            dev = line.strip().split()[0]
+
+            if line[0:4] != '    ':
+                if line[0:2] == '  ':
+                    vdev = line.strip().split()[0]
+                    dev = None
+                else:
+                    root_vdev = line.strip().split()[0]
+                    vdev = None
+                    dev = None
+
+            if root_vdev:
+                if root_vdev not in config_data:
+                    config_data[root_vdev] = {}
+                    if len(stat_data) > 0:
+                        config_data[root_vdev] = stat_data
+                if vdev:
+                    if vdev not in config_data[root_vdev]:
+                        config_data[root_vdev][vdev] = {}
+                        if len(stat_data) > 0:
+                            config_data[root_vdev][vdev] = stat_data
+                    if dev and dev not in config_data[root_vdev][vdev]:
+                        config_data[root_vdev][vdev][dev] = {}
+                        if len(stat_data) > 0:
+                            config_data[root_vdev][vdev][dev] = stat_data
+
+        zp_data[pool]['config'] = config_data
+
+    return zp_data
 
 
 def iostat(name=''):
@@ -452,7 +539,7 @@ def replace(pool_name, old, new):
     __salt__['cmd.run'](cmd, python_shell=False)
 
     # check for new vdev in pool
-    res = status(name=pool_name)
+    res = status(zpool=pool_name)
     for line in res:
         if new in line:
             ret['replaced'] = '{0} with {1}'.format(old, new)
