@@ -743,6 +743,11 @@ def export(*pools, **kwargs):
 
     Export storage pools
 
+    * : string
+        one or more zpools to export
+    force : boolean
+        force export of zpools
+
     CLI Example:
 
     .. code-block:: bash
