@@ -1993,3 +1993,206 @@ def schema_list(dbname,
         ret[row['name']] = retrow
 
     return ret
+
+
+def language_list(
+        maintenance_db,
+        user=None,
+        host=None,
+        port=None,
+        password=None,
+        runas=None):
+    '''
+    Return a list of languages in a database.
+
+    CLI Example:
+        .. code-block:: bash
+            salt '*' postgres.language_list dbname
+
+    maintenance_db
+        The database to check
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+
+    ret = {}
+    query = 'SELECT lanname AS "Name" FROM pg_language'
+
+    rows = psql_query(
+        query,
+        runas=runas,
+        host=host,
+        user=user,
+        port=port,
+        maintenance_db=maintenance_db,
+        password=password)
+
+    for row in rows:
+        ret[row['Name']] = row['Name']
+
+    return ret
+
+
+def language_exists(
+        name,
+        maintenance_db,
+        user=None,
+        host=None,
+        port=None,
+        password=None,
+        runas=None):
+    '''
+    Checks if language exists in a database.
+
+    CLI Example:
+        .. code-block:: bash
+            salt '*' postgres.language_exists plpgsql dbname
+
+    name
+       Language to check for
+
+    maintenance_db
+        The database to check in
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+
+    '''
+
+    languages = language_list(
+        maintenance_db, user=user, host=host,
+        port=port, password=password,
+        runas=runas)
+
+    return name in languages
+
+
+def language_create(name,
+                    maintenance_db,
+                    user=None,
+                    host=None,
+                    port=None,
+                    password=None,
+                    runas=None):
+    '''
+    Installs a language into a database
+
+    CLI Example:
+        .. code-block:: bash
+            salt '*' postgres.language_create plpgsql dbname
+
+    name
+       Language to install
+
+    maintenance_db
+        The database to install the language in
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+
+    if language_exists(name, maintenance_db):
+        log.info('Language %s already exists in %s', name, maintenance_db)
+        return False
+
+    query = 'CREATE LANGUAGE {0}'.format(name)
+
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user,
+                                host=host,
+                                port=port,
+                                maintenance_db=maintenance_db,
+                                password=password,
+                                runas=runas)
+
+    return ret['retcode'] == 0
+
+
+def language_remove(name,
+                    maintenance_db,
+                    user=None,
+                    host=None,
+                    port=None,
+                    password=None,
+                    runas=None):
+    '''
+    Removes a language from a database
+
+    CLI Example:
+        .. code-block:: bash
+            salt '*' postgres.language_remove plpgsql dbname
+
+    name
+       Language to remove
+
+    maintenance_db
+        The database to install the language in
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+
+    if not language_exists(name, maintenance_db):
+        log.info('Language %s does not exist in %s', name, maintenance_db)
+        return False
+
+    query = 'DROP LANGUAGE {0}'.format(name)
+
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user,
+                                host=host,
+                                port=port,
+                                runas=runas,
+                                maintenance_db=maintenance_db,
+                                password=password)
+
+    return ret['retcode'] == 0
