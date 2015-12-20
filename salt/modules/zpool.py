@@ -576,9 +576,16 @@ def create(pool_name, *vdevs, **kwargs):
     return ret
 
 
-def add(pool_name, *vdevs):
+def add(zpool, *vdevs, **kwargs):
     '''
     Add the specified vdev\'s to the given pool
+
+    zpool : string
+        name of zpool
+    * : string
+        one or move devices
+    force : boolean
+        forces use of vdevs
 
     CLI Example:
 
@@ -590,8 +597,8 @@ def add(pool_name, *vdevs):
     dlist = []
 
     # check for pool
-    if not exists(pool_name):
-        ret['Error'] = 'Storage Pool `{0}` doesn\'t exist'.format(pool_name)
+    if not exists(zpool):
+        ret['Error'] = 'Storage Pool `{0}` doesn\'t exist'.format(zpool)
         ret['retcode'] = 1
         return ret
 
@@ -599,6 +606,8 @@ def add(pool_name, *vdevs):
         ret['Error'] = 'Missing vdev specification. Please specify vdevs.'
         ret['retcode'] = 2
         return ret
+
+    force = kwargs.get('force', False)
 
     # make sure files are present on filesystem
     for vdev in vdevs:
@@ -619,14 +628,21 @@ def add(pool_name, *vdevs):
     devs = ' '.join(dlist)
 
     # try and add watch out for mismatched replication levels
-    zpool = _check_zpool()
-    cmd = '{0} add {1} {2}'.format(zpool, pool_name, devs)
-    res = __salt__['cmd.run'](cmd, python_shell=False)
-    if 'errors' not in res.splitlines():
-        ret['Added'] = '{0} to {1}'.format(devs, pool_name)
-        return ret
-    ret['Error'] = 'Something went wrong when adding {0} to {1}'.format(devs, pool_name)
-    ret['retcode'] = 5
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} add {force}{zpool} {devs}'.format(
+        zpool_cmd=zpool_cmd,
+        force='-f ' if force else '',
+        zpool=zpool,
+        devs=devs
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        ret['retcode'] = res['retcode']
+    else:
+        ret['Added'] = '{0} to {1}'.format(', '.join(dlist), zpool)
+
+    return ret
 
 
 def replace(zpool, old_device, new_device=None, force=False):
@@ -895,15 +911,17 @@ def online(zpool, *vdevs, **kwargs):
 
     devs = ' '.join(dlist)
     zpool_cmd = _check_zpool()
-    cmd = '{0} online{1} {2} {3}'.format(zpool_cmd, ' -e' if expand else '', zpool, devs)
-
+    cmd = '{zpool_cmd} online {expand}{zpool} {devs}'.format(
+        zpool_cmd=zpool_cmd,
+        expand='-e ' if expand else '',
+        zpool=zpool,
+        devs=devs
+    )
     # Bring all specified devices online
-    res = __salt__['cmd.run'](cmd)
-    if res:
-        ret['Error'] = {}
-        ret['Error']['Message'] = 'Failure bringing device online.'
-        ret['Error']['Reason'] = res
-        ret['retcode'] = 5
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        ret['retcode'] = res['retcode']
     else:
         ret[zpool] = 'Specified devices: {0} are online.'.format(', '.join(vdevs))
     return ret
@@ -965,16 +983,17 @@ def offline(zpool, *vdevs, **kwargs):
 
     devs = ' '.join(dlist)
     zpool_cmd = _check_zpool()
-    temporary_opt = kwargs.get('temporary', False)
-    cmd = '{0} offline{1} {2} {3}'.format(zpool_cmd, ' -t' if temporary_opt else '', zpool, devs)
-
-    # Take all specified devices offline
-    res = __salt__['cmd.run'](cmd)
-    if res:
-        ret['Error'] = {}
-        ret['Error']['Message'] = 'Failure taking specified devices offline.'
-        ret['Error']['Reason'] = res
-        ret['retcode'] = 5
+    cmd = '{zpool_cmd} offline {temp}{zpool} {devs}'.format(
+        zpool_cmd=zpool_cmd,
+        temp='-t ' if kwargs.get('temporary', False) else '',
+        zpool=zpool,
+        devs=devs
+    )
+    # Bring all specified devices online
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        ret['retcode'] = res['retcode']
     else:
         ret[zpool] = 'Specified devices: {0} are offline.'.format(', '.join(vdevs))
     return ret
