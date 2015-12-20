@@ -667,7 +667,7 @@ def attach(zpool, device, new_device, force=False):
 
     .. code-block:: bash
 
-        salt '*' zpool.add myzpool /path/to/vdev1 /path/to/vdev2 [...]
+        salt '*' zpool.attach myzpool /path/to/vdev1 /path/to/vdev2 [...]
     '''
     ret = {}
     dlist = []
@@ -717,6 +717,47 @@ def attach(zpool, device, new_device, force=False):
         ret['retcode'] = res['retcode']
     else:
         ret['Attached'] = '{0} to {1}'.format(new_device, zpool)
+
+    return ret
+
+
+def detach(zpool, device):
+    '''
+    Detach specified device to zpool
+
+    zpool : string
+        name of zpool
+    device : string
+        device to detach too
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.detach myzpool /path/to/vdev1
+    '''
+    ret = {}
+    dlist = []
+
+    # check for pool
+    if not exists(zpool):
+        ret['Error'] = 'Storage Pool `{0}` doesn\'t exist'.format(zpool)
+        ret['retcode'] = 1
+        return ret
+
+    # try and add watch out for mismatched replication levels
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} detach {zpool} {device}'.format(
+        zpool_cmd=zpool_cmd,
+        zpool=zpool,
+        device=device
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        ret['retcode'] = res['retcode']
+    else:
+        ret['Detached'] = '{0} from {1}'.format(device, zpool)
 
     return ret
 
