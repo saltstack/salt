@@ -295,6 +295,28 @@ def iostat(zpool=None):
     return ret
 
 
+def zpool_list():
+    '''
+    .. deprecated:: 2014.7.0
+       Use :py:func:`~salt.modules.zpool.list_` instead.
+
+    Return a list of all pools in the system with health status and space usage
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.zpool_list
+    '''
+    salt.utils.warn_until(
+            'Boron',
+            'The \'zpool_list()\' module function is being deprecated and is '
+            'being renamed to \'list()\'. This function \'zpool_list()\' will be removed in '
+            'Salt Boron.'
+        )
+    return list_()
+
+
 def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
     '''
     .. versionadded:: 2015.5.0
@@ -412,26 +434,44 @@ def get(zpool, prop=None, show_source=False):
     return ret
 
 
-def zpool_list():
+def set(zpool, prop, value):
     '''
-    .. deprecated:: 2014.7.0
-       Use :py:func:`~salt.modules.zpool.list_` instead.
+    .. versionadded:: Boron
 
-    Return a list of all pools in the system with health status and space usage
+    Sets the given property on the specified pool
+
+    zpool : string
+        name of zpool to list
+    prop : string
+        name of property
+    value : string
+        value to set property to
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' zpool.zpool_list
+        salt '*' zpool.set myzpool readonly yes
     '''
-    salt.utils.warn_until(
-            'Boron',
-            'The \'zpool_list()\' module function is being deprecated and is '
-            'being renamed to \'list()\'. This function \'zpool_list()\' will be removed in '
-            'Salt Boron.'
-        )
-    return list_()
+    ret = {}
+    ret[zpool] = {}
+    if isinstance(value, bool):
+        value = 'on' if value else 'off'
+
+    # get zpool list data
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} set {prop}={value} {zpool}'.format(
+        zpool_cmd=zpool_cmd,
+        prop=prop,
+        value=value,
+        zpool=zpool
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret[zpool][prop] = res['stderr'] if 'stderr' in res else res['stdout']
+    else:
+        ret[zpool][prop] = value
+    return ret
 
 
 def exists(zpool):
