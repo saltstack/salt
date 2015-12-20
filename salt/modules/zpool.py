@@ -1241,4 +1241,35 @@ def reguid(zpool):
         ret[zpool] = 'reguided'
     return ret
 
+
+def reopen(zpool):
+    '''
+    .. verionadded:: Boron
+
+    Reopen all the vdevs associated with the pooll
+
+    zpool : string
+        name of zpool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.exists myzpool
+    '''
+    ret = {}
+    ret[zpool] = {}
+
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} reopen {zpool}'.format(
+        zpool_cmd=zpool_cmd,
+        zpool=zpool
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret[zpool] = res['stderr'] if 'stderr' in res and res['stderr'] != '' else res['stdout']
+    else:
+        ret[zpool] = 'reopened'
+    return ret
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
