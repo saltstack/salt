@@ -686,13 +686,21 @@ def create(zpool, *vdevs, **kwargs):
     if properties:  # create "-o property=value" pairs
         optlist = []
         for prop in properties:
-            optlist.append('-o {0}={1}'.format(prop, properties[prop]))
+            if ' ' in properties[prop]:
+                value = "'{0}'".format(properties[prop])
+            else:
+                value = properties[prop]
+            optlist.append('-o {0}={1}'.format(prop, value))
         opts = ' '.join(optlist)
         cmd = '{0} {1}'.format(cmd, opts)
     if filesystem_properties:  # create "-O property=value" pairs
         optlist = []
         for prop in filesystem_properties:
-            optlist.append('-O {0}={1}'.format(prop, filesystem_properties[prop]))
+            if ' ' in filesystem_properties[prop]:
+                value = "'{0}'".format(filesystem_properties[prop])
+            else:
+                value = filesystem_properties[prop]
+            optlist.append('-O {0}={1}'.format(prop, value))
         opts = ' '.join(optlist)
         cmd = '{0} {1}'.format(cmd, opts)
     if mountpoint:  # set mountpoint
@@ -1134,7 +1142,11 @@ def import_(zpool=None, new_name=None, **kwargs):
     if properties:  # create "-o property=value" pairs
         optlist = []
         for prop in properties:
-            optlist.append('-o {0}={1}'.format(prop, properties[prop]))
+            if ' ' in properties[prop]:
+                value = "'{0}'".format(properties[prop])
+            else:
+                value = properties[prop]
+            optlist.append('-o {0}={1}'.format(prop, value))
         opts = ' '.join(optlist)
         cmd = '{0} {1}'.format(cmd, opts)
     if mntopts:  # set mountpoint
