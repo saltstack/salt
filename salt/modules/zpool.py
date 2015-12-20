@@ -88,6 +88,8 @@ def healthy():
 
 def status(zpool=''):
     '''
+    .. versionchanged:: Boron
+
     Return the status of the named zpool
 
     CLI Example:
