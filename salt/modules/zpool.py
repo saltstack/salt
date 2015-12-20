@@ -223,7 +223,74 @@ def iostat(zpool=None):
         ret['Error'] = res['stderr'] if 'stderr' in res else res['stdout']
         return ret
 
-    ret = res['stdout'].splitlines()
+    # note: hardcoded header fields, the double header is hard to parse
+    #                                capacity     operations    bandwidth
+    #pool                         alloc   free   read  write   read  write
+    header = [
+        'pool',
+        'capacity-alloc',
+        'capacity-free',
+        'operations-read',
+        'operations-write',
+        'bandwith-read',
+        'bandwith-write'
+    ]
+    root_vdev = None
+    vdev = None
+    dev = None
+    config_data = None
+    current_pool = None
+    for line in res['stdout'].splitlines():
+        if line.strip() == '':
+            continue
+
+        if line.startswith('-') and line.endswith('-'):
+            if config_data:
+                ret[current_pool] = config_data
+            config_data = OrderedDict()
+            current_pool = None
+        else:
+            if not isinstance(config_data, salt.utils.odict.OrderedDict):
+                continue
+
+            stat_data = OrderedDict()
+            stats = [x for x in line.strip().split(' ') if x not in ['']]
+            for prop in header:
+                if header.index(prop) < len(stats):
+                    if prop == 'pool':
+                        if not current_pool:
+                            current_pool = stats[header.index(prop)]
+                        continue
+                    if stats[header.index(prop)] == '-':
+                        continue
+                    stat_data[prop] = stats[header.index(prop)]
+
+            dev = line.strip().split()[0]
+
+            if line[0:4] != '    ':
+                if line[0:2] == '  ':
+                    vdev = line.strip().split()[0]
+                    dev = None
+                else:
+                    root_vdev = line.strip().split()[0]
+                    vdev = None
+                    dev = None
+
+            if root_vdev:
+                if root_vdev not in config_data:
+                    config_data[root_vdev] = {}
+                    if len(stat_data) > 0:
+                        config_data[root_vdev] = stat_data
+                if vdev:
+                    if vdev not in config_data[root_vdev]:
+                        config_data[root_vdev][vdev] = {}
+                        if len(stat_data) > 0:
+                            config_data[root_vdev][vdev] = stat_data
+                    if dev and dev not in config_data[root_vdev][vdev]:
+                        config_data[root_vdev][vdev][dev] = {}
+                        if len(stat_data) > 0:
+                            config_data[root_vdev][vdev][dev] = stat_data
+
     return ret
 
 
