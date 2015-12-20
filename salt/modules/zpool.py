@@ -481,11 +481,16 @@ def scrub(zpool, stop=False):
     return ret
 
 
-def create(pool_name, *vdevs, **kwargs):
+def create(zpool, *vdevs, **kwargs):
     '''
     .. versionadded:: 2015.5.0
 
     Create a simple zpool, a mirrored zpool, a zpool having nested VDEVs, a hybrid zpool with cache, spare and log drives or a zpool with RAIDZ-1, RAIDZ-2 or RAIDZ-3
+
+    zpool : string
+        name of zpool
+    * : string
+        one or move devices
 
     CLI Example:
 
@@ -515,8 +520,8 @@ def create(pool_name, *vdevs, **kwargs):
     dlist = []
 
     # Check if the pool_name is already being used
-    if exists(pool_name):
-        ret['Error'] = 'Storage Pool `{0}` already exists'.format(pool_name)
+    if exists(zpool):
+        ret['Error'] = 'Storage Pool `{0}` already exists'.format(zpool)
         ret['retcode'] = 1
         return ret
 
@@ -542,10 +547,10 @@ def create(pool_name, *vdevs, **kwargs):
         dlist.append(vdev)
 
     devs = ' '.join(dlist)
-    zpool = _check_zpool()
+    zpool_cmd = _check_zpool()
     force = kwargs.get('force', False)
     properties = kwargs.get('properties', None)
-    cmd = '{0} create'.format(zpool)
+    cmd = '{0} create'.format(zpool_cmd)
 
     if force:
         cmd = '{0} -f'.format(cmd)
@@ -558,18 +563,18 @@ def create(pool_name, *vdevs, **kwargs):
             optlist.append('-o {0}={1}'.format(prop, properties[prop]))
         opts = ' '.join(optlist)
         cmd = '{0} {1}'.format(cmd, opts)
-    cmd = '{0} {1} {2}'.format(cmd, pool_name, devs)
+    cmd = '{0} {1} {2}'.format(cmd, zpool, devs)
 
     # Create storage pool
     res = __salt__['cmd.run'](cmd, python_shell=False)
 
     # Check and see if the pools is available
-    if exists(pool_name):
-        ret[pool_name] = 'created'
+    if exists(zpool):
+        ret[zpool] = 'created'
         return ret
     else:
         ret['Error'] = {}
-        ret['Error']['Messsage'] = 'Unable to create storage pool {0}'.format(pool_name)
+        ret['Error']['Messsage'] = 'Unable to create storage pool {0}'.format(zpool)
         ret['Error']['Reason'] = res
         ret['retcode'] = 5
 
