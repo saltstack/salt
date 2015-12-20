@@ -358,6 +358,60 @@ def list_(properties='size,alloc,free,cap,frag,health', zpool=None):
     return ret
 
 
+def get(zpool, prop=None, show_source=False):
+    '''
+    .. versionadded:: Boron
+
+    Retrieves the given list of properties
+
+    zpool : string
+        name of zpool to list
+    prop : string
+        optional name of property to retrieve
+    show_source : boolean
+        show source of propery
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.get myzpool
+    '''
+    ret = OrderedDict()
+    ret[zpool] = OrderedDict()
+
+    properties = 'property,value,source'.split(',')
+
+    # get zpool list data
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} get -H -o {properties} {prop} {zpool}'.format(
+        zpool_cmd=zpool_cmd,
+        properties=','.join(properties),
+        prop=prop if prop else 'all',
+        zpool=zpool
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        return ret
+
+    # parse zpool list data
+    for zp in res['stdout'].splitlines():
+        zp = zp.split("\t")
+        zp_data = {}
+
+        for prop in properties:
+            zp_data[prop] = zp[properties.index(prop)]
+
+        if show_source:
+            ret[zpool][zp_data['property']] = zp_data
+            del ret[zpool][zp_data['property']]['property']
+        else:
+            ret[zpool][zp_data['property']] = zp_data['value']
+
+    return ret
+
+
 def zpool_list():
     '''
     .. deprecated:: 2014.7.0
