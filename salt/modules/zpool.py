@@ -909,9 +909,10 @@ def online(zpool, *vdevs, **kwargs):
     return ret
 
 
-def offline(pool_name, *vdevs, **kwargs):
+def offline(zpool, *vdevs, **kwargs):
     '''
     .. versionadded:: 2015.5.0
+    .. versionchanged:: Boron
 
     Ensure that the specified devices are offline
 
@@ -919,6 +920,13 @@ def offline(pool_name, *vdevs, **kwargs):
 
         By default, the OFFLINE state is persistent. The device remains offline when
         the system is rebooted. To temporarily take a device offline, use ``temporary=True``.
+
+    zpool : string
+        name of zpool
+    * : string
+        one or more devices
+    temporary : boolean
+        enable temporarily offline
 
     CLI Example:
 
@@ -930,8 +938,8 @@ def offline(pool_name, *vdevs, **kwargs):
     dlist = []
 
     # Check if the pool_name exists
-    if not exists(pool_name):
-        ret['Error'] = 'Storage Pool `{0}` doesn\'t exist'.format(pool_name)
+    if not exists(zpool):
+        ret['Error'] = 'Storage Pool `{0}` doesn\'t exist'.format(zpool)
         ret['retcode'] = 1
         return ret
 
@@ -956,12 +964,9 @@ def offline(pool_name, *vdevs, **kwargs):
         dlist.append(vdev)
 
     devs = ' '.join(dlist)
-    zpool = _check_zpool()
+    zpool_cmd = _check_zpool()
     temporary_opt = kwargs.get('temporary', False)
-    if temporary_opt:
-        cmd = '{0} offline -t {1} {2}'.format(zpool, pool_name, devs)
-    else:
-        cmd = '{0} offline {1} {2}'.format(zpool, pool_name, devs)
+    cmd = '{0} offline{1} {2} {3}'.format(zpool_cmd, ' -t' if temporary_opt else '', zpool, devs)
 
     # Take all specified devices offline
     res = __salt__['cmd.run'](cmd)
@@ -971,7 +976,7 @@ def offline(pool_name, *vdevs, **kwargs):
         ret['Error']['Reason'] = res
         ret['retcode'] = 5
     else:
-        ret[pool_name] = 'Specified devices: {0} are offline.'.format(vdevs)
+        ret[zpool] = 'Specified devices: {0} are offline.'.format(', '.join(vdevs))
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
