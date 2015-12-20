@@ -650,6 +650,77 @@ def add(zpool, *vdevs, **kwargs):
     return ret
 
 
+def attach(zpool, device, new_device, force=False):
+    '''
+    Attach specified device to zpool
+
+    zpool : string
+        name of zpool
+    device : string
+        device to attach too
+    new_device : string
+        device to attach
+    force : boolean
+        forces use of vdevs
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zpool.add myzpool /path/to/vdev1 /path/to/vdev2 [...]
+    '''
+    ret = {}
+    dlist = []
+
+    # check for pool
+    if not exists(zpool):
+        ret['Error'] = 'Storage Pool `{0}` doesn\'t exist'.format(zpool)
+        ret['retcode'] = 1
+        return ret
+
+    # check devices
+    if not os.path.exists(device):
+        # Path doesn't exist so error and return
+        ret[device] = '{0} not present on filesystem'.format(device)
+        ret['retcode'] = 3
+        return ret
+    mode = os.stat(device).st_mode
+    if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
+        # Not a block device or file vdev so error and return
+        ret[device] = '{0} is not a block device or a file vdev'.format(device)
+        ret['retcode'] = 4
+        return ret
+    if not os.path.exists(new_device):
+        # Path doesn't exist so error and return
+        ret[new_device] = '{0} not present on filesystem'.format(new_device)
+        ret['retcode'] = 3
+        return ret
+    mode = os.stat(new_device).st_mode
+    if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
+        # Not a block device or file vdev so error and return
+        ret[device] = '{0} is not a block device or a file vdev'.format(new_device)
+        ret['retcode'] = 4
+        return ret
+
+    # try and add watch out for mismatched replication levels
+    zpool_cmd = _check_zpool()
+    cmd = '{zpool_cmd} attach {force}{zpool} {device} {new_device}'.format(
+        zpool_cmd=zpool_cmd,
+        force='-f ' if force else '',
+        zpool=zpool,
+        device=device,
+        new_device=new_device
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    if res['retcode'] != 0:
+        ret['Error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        ret['retcode'] = res['retcode']
+    else:
+        ret['Attached'] = '{0} to {1}'.format(new_device, zpool)
+
+    return ret
+
+
 def replace(zpool, old_device, new_device=None, force=False):
     '''
     .. versionchanged:: Boron
