@@ -364,7 +364,7 @@ def key_absent(name, force=False, use_32bit_registry=False):
 
     Example:
 
-    .. codeblock:: yaml
+    .. code-block:: yaml
 
         'HKEY_CURRENT_USER\SOFTWARE\Salt':
           reg.key_absent:

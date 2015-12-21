@@ -149,7 +149,7 @@ It is capable of handling single rows or multiple rows per minion.
 Configuration of the connection depends on the adapter in use.
 
 More complete example for MySQL (to also show configuration)
-=====================================
+============================================================
 
 .. code-block:: yaml
 

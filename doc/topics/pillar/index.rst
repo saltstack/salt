@@ -410,4 +410,4 @@ protected data set ``pillar_safe_render_error`` to ``False``:
 
 .. code-block:: yaml
 
-    pillar_safe_render_error: True
+    pillar_safe_render_error: False
