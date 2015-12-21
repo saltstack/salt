@@ -63,6 +63,46 @@ class ZpoolTestCase(TestCase):
         with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertFalse(zpool.exists('myzpool'))
 
+    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
+    def test_healthy_success(self):
+        '''
+        Tests successful return of healthy function
+        '''
+        ret = {}
+        ret['stdout'] = "all pools are healthy"
+        ret['stderr'] = ""
+        ret['retcode'] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertTrue(zpool.healthy())
+
+    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
+    def test_status(self):
+        '''
+        Tests successful return of status function
+        '''
+        ret = {}
+        ret['stdout'] = "\n".join([
+            "  pool: mypool",
+            " state: ONLINE",
+            "  scan: scrub repaired 0 in 0h6m with 0 errors on Mon Dec 21 02:06:17 2015",
+            "config:",
+            "",
+            "        NAME        STATE     READ WRITE CKSUM",
+            "        mypool      ONLINE       0     0     0",
+            "          mirror-0  ONLINE       0     0     0",
+            "            c2t0d0  ONLINE       0     0     0",
+            "            c2t1d0  ONLINE       0     0     0",
+            "",
+            "errors: No known data errors",
+        ])
+        ret['stderr'] = ""
+        ret['retcode'] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
+            ret = zpool.status()
+            self.assertEqual('ONLINE', ret['mypool']['state'])
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZpoolTestCase, needs_daemon=False)
