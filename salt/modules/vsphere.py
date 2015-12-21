@@ -3361,8 +3361,9 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
     valid_resets = ['logdir', 'loghost', 'default-rotate',
                     'default-size', 'default-timeout', 'logdir-unique']
     if syslog_config not in valid_resets:
-        return ret_dict.update({'success': False,
-                                'message': '\'{0}\' is not a valid config variable.'.format(syslog_config)})
+        ret_dict.update({'success': False,
+                         'message': '\'{0}\' is not a valid config variable.'.format(syslog_config)})
+        return ret_dict
 
     response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                         protocol=protocol, port=port,
