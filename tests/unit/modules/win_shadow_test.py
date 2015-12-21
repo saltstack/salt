@@ -19,15 +19,13 @@ ensure_in_syspath('../../')
 
 # Import Salt Libs
 from salt.modules import win_shadow
+import salt.utils
 
 # Globals
 win_shadow.__salt__ = {}
 
-# Make sure this module runs on Windows system
-IS_WIN = win_shadow.__virtual__()
 
-
-@skipIf(not IS_WIN, "This test case runs only on Windows system")
+@skipIf(not salt.utils.is_windows(), 'This test case runs only on Windows systems')
 class WinShadowTestCase(TestCase):
     '''
     Test cases for salt.modules.win_shadow
