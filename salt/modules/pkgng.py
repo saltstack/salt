@@ -66,7 +66,9 @@ def __virtual__():
             log.debug('Configuration option \'providers:pkg\' is set to '
                 '\'pkgng\', using \'pkgng\' in favor of \'freebsdpkg\'.')
             return __virtualname__
-    return False
+    return (False,
+            'The pkgng execution module cannot be loaded: only available '
+            'on FreeBSD 10 or FreeBSD 9 with providers.pkg set to pkgng.')
 
 
 def _pkg(jail=None, chroot=None):
