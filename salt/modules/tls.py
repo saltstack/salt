@@ -674,8 +674,9 @@ def create_ca(ca_name,
             try:
                 key = OpenSSL.crypto.load_privatekey(
                     OpenSSL.crypto.FILETYPE_PEM, fic2.read())
-            except OpenSSL.crypto.Error:
-                pass
+            except OpenSSL.crypto.Error as err:
+                log.warn('Error loading existing private key'
+                    ' %s, generating a new key: %s', ca_keyp, str(err))
     if not key:
         key = OpenSSL.crypto.PKey()
         key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
