@@ -671,8 +671,11 @@ def create_ca(ca_name,
     if os.path.exists(ca_keyp):
         with salt.utils.fopen(ca_keyp) as fic2:
             # try to determine the key bits
-            key = OpenSSL.crypto.load_privatekey(
-                OpenSSL.crypto.FILETYPE_PEM, fic2.read())
+            try:
+                key = OpenSSL.crypto.load_privatekey(
+                    OpenSSL.crypto.FILETYPE_PEM, fic2.read())
+            except OpenSSL.crypto.Error:
+                pass
     if not key:
         key = OpenSSL.crypto.PKey()
         key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
