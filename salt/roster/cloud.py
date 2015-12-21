@@ -13,6 +13,7 @@ To connect as a user other than root, modify the cloud configuration file
 usually located at /etc/salt/cloud. For example, add the following:
 
 .. code-block:: yaml
+
     ssh_username: my_user
     sudo: True
 '''
