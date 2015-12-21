@@ -156,6 +156,7 @@ def _active_mounts_openbsd(ret):
                             'opts': parens[0].split(", ")}
     return ret
 
+
 def _active_mounts_darwin(ret):
     '''
     List active mounts on Mac OS systems
