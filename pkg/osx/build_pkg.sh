@@ -71,7 +71,8 @@ fi
 
 echo -n -e "\033]0;Build_Pkg: Clean Staging Area\007"
 
-# Create folder in the staging area
+# Clean folder in the staging area
+rm -rf $PKGDIR
 mkdir -p $PKGDIR
 
 PKGRESOURCES=$SRCDIR/pkg/osx
@@ -84,13 +85,23 @@ echo -n -e "\033]0;Build_Pkg: Create Symbolic Links\007"
 
 cd /opt/salt
 for f in /opt/salt/bin/salt-*; do
-    ln -s $f /opt/salt
+    if [ ! -f $f ]; then
+        ln -s $f /opt/salt
+    fi
 done
 
-ln -s /opt/salt/bin/spm /opt/salt
-ln -s /opt/salt/bin/raetflo /opt/salt
-ln -s /opt/salt/bin/ioflo /opt/salt
-ln -s /opt/salt/bin/ioflo2 /opt/salt
+if [ ! -f /opt/salt/bin/spm ];  then
+    ln -s /opt/salt/bin/spm /opt/salt
+fi
+if [ ! -f /opt/salt/bin/raetflo ];  then
+    ln -s /opt/salt/bin/raetflo /opt/salt
+fi
+if [ ! -f /opt/salt/bin/ioflo ];  then
+    ln -s /opt/salt/bin/ioflo /opt/salt
+fi
+if [ ! -f /opt/salt/bin/ioflo2 ];  then
+    ln -s /opt/salt/bin/ioflo2 /opt/salt
+fi
 
 ############################################################################
 # Copy Start Scripts from Salt Repo to /opt/salt
@@ -114,6 +125,16 @@ cp $PKGRESOURCES/scripts/com.saltstack.salt.minion.plist $PKGDIR/Library/LaunchD
 cp $PKGRESOURCES/scripts/com.saltstack.salt.master.plist $PKGDIR/Library/LaunchDaemons
 cp $PKGRESOURCES/scripts/com.saltstack.salt.syndic.plist $PKGDIR/Library/LaunchDaemons
 cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaemons
+
+############################################################################
+# Copy Additional Resources from Salt Repo to the Package Directory
+############################################################################
+
+echo -n -e "\033]0;Build_Pkg: Copy Additional Resources\007"
+
+mkdir -p $PKGDIR/resources
+cp $PKGRESOURCES/saltstack.png $PKGDIR/resources
+cp $PKGRESOURCES/*.rtf $PKGDIR/resources
 
 ############################################################################
 # Copy Config Files from Salt Repo to the Package Directory
@@ -147,7 +168,8 @@ pkgbuild --root $PKGDIR \
          --identifier=com.saltstack.salt \
          --version=$VERSION \
          --ownership=recommended salt-src-$VERSION.pkg
-productbuild --resources=$PKGDIR \
+
+productbuild --resources=$PKGDIR/resources \
              --distribution=distribution.xml  \
              --package-path=salt-src-$VERSION.pkg \
              --version=$VERSION salt-$VERSION.pkg
