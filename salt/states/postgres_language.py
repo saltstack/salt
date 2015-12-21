@@ -6,6 +6,8 @@ Management of PostgreSQL languages
 The postgres_language module is used to create and manage Postgres languages.
 Languages can be set as either absent or present
 
+.. versionadded:: Boron
+
 .. code-block:: yaml
     plpgsql:
       postgres_language.present:
