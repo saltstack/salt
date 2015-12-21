@@ -25,7 +25,9 @@ def __virtual__():
     '''
     if __grains__['os'] == 'Solaris' and float(__grains__['kernelrelease']) <= 5.10:
         return __virtualname__
-    return False
+    return (False,
+            'The solarispkg execution module failed to load: only available '
+            'on Solaris <= 10.')
 
 
 def _write_adminfile(kwargs):
