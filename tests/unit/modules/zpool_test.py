@@ -42,9 +42,11 @@ class ZpoolTestCase(TestCase):
         '''
         Tests successful return of exists function
         '''
-        ret = "NAME      SIZE  ALLOC   FREE    CAP  DEDUP  HEALTH  ALTROOT\nmyzpool   149G   128K   149G     0%  1.00x  ONLINE  -"
+        ret = {}
+        ret['stdout'] = "NAME      SIZE  ALLOC   FREE    CAP  DEDUP  HEALTH  ALTROOT\nmyzpool   149G   128K   149G     0%  1.00x  ONLINE  -"
+        ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
-        with patch.dict(zpool.__salt__, {'cmd.run': mock_cmd}):
+        with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertTrue(zpool.exists('myzpool'))
 
 if __name__ == '__main__':
