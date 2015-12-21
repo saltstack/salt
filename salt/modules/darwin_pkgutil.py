@@ -22,11 +22,15 @@ __func_alias__ = {
 
 __PKGUTIL = '/usr/sbin/pkgutil'
 
+# Define the module's virtual name
+__virtualname__ = 'darwin_pkgutil'
+
 
 def __virtual__():
     if __grains__['os'] == 'MacOS':
-        return 'darwin_pkgutil'
-    return False
+        return __virtualname__
+    return (False, 'The darwin_pkgutil execution module cannot be loaded: '
+            'only available on MacOS systems.')
 
 
 def list_():
