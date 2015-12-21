@@ -26,6 +26,9 @@ ensure_in_syspath('../../')
 # Import Salt Execution module to test
 from salt.modules import zpool
 
+# Import Salt Utils
+from salt.utils.odict import OrderedDict
+
 # Globals
 zpool.__salt__ = {}
 
@@ -64,7 +67,7 @@ class ZpoolTestCase(TestCase):
             self.assertFalse(zpool.exists('myzpool'))
 
     @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
-    def test_healthy_success(self):
+    def test_healthy(self):
         '''
         Tests successful return of healthy function
         '''
@@ -103,6 +106,47 @@ class ZpoolTestCase(TestCase):
             ret = zpool.status()
             self.assertEqual('ONLINE', ret['mypool']['state'])
 
+    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
+    def test_iostat(self):
+        '''
+        Tests successful return of iostat function
+        '''
+        ret = {}
+        ret['stdout'] = "\n".join([
+            "               capacity     operations    bandwidth",
+            "pool        alloc   free   read  write   read  write",
+            "----------  -----  -----  -----  -----  -----  -----",
+            "mypool      46.7G  64.3G      4     19   113K   331K",
+            "  mirror    46.7G  64.3G      4     19   113K   331K",
+            "    c2t0d0      -      -      1     10   114K   334K",
+            "    c2t1d0      -      -      1     10   114K   334K",
+            "----------  -----  -----  -----  -----  -----  -----",
+        ])
+        ret['stderr'] = ""
+        ret['retcode'] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
+            ret = zpool.iostat('mypool')
+            self.assertEqual('46.7G', ret['mypool']['mypool']['capacity-alloc'])
+
+    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
+    @patch('salt.modules.zpool._check_features', MagicMock(return_value=False))
+    def test_list(self):
+        '''
+        Tests successful return of list function
+        '''
+        ret = {}
+        ret['stdout'] = "mypool\t111G\t47.4G\t63.6G\t42%\tONLINE\n"
+        ret['stderr'] = ""
+        ret['retcode'] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
+            ret = zpool.list_()
+            res = OrderedDict([('mypool', {'alloc': '47.4G', 'cap': '42%', 'free': '63.6G', 'health': 'ONLINE', 'size': '111G'})])
+            self.assertEqual(res, ret)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZpoolTestCase, needs_daemon=False)
+
+# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
