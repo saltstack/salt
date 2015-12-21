@@ -185,7 +185,9 @@ class TestDaemon(object):
         Start a master and minion
         '''
         # Setup the multiprocessing logging queue listener
-        salt_log_setup.setup_multiprocessing_logging_listener()
+        salt_log_setup.setup_multiprocessing_logging_listener(
+            self.parser.options
+        )
 
         # Set up PATH to mockbin
         self._enter_mockbin()
