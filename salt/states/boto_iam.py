@@ -101,6 +101,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - name: mycert
 
 .. code-block:: yaml
+
     create keys for user:
       boto_iam.keys_present:
         - name: myusername

@@ -912,7 +912,7 @@ point, and should be stored immediately.
     salt-cloud -f create_keypair ec2 keyname=mykeypair
 
 Importing a Key Pair
--------------------
+--------------------
 
 .. code-block:: bash
 
