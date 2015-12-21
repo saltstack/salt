@@ -156,6 +156,7 @@ def _active_mounts_openbsd(ret):
                             'opts': _resolve_user_group_names(parens[1].split(", "))}
     return ret
 
+
 def _active_mounts_darwin(ret):
     '''
     List active mounts on Mac OS systems
