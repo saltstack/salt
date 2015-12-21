@@ -145,6 +145,21 @@ class ZpoolTestCase(TestCase):
             res = OrderedDict([('mypool', {'alloc': '47.4G', 'cap': '42%', 'free': '63.6G', 'health': 'ONLINE', 'size': '111G'})])
             self.assertEqual(res, ret)
 
+    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
+    def test_get(self):
+        '''
+        Tests successful return of get function
+        '''
+        ret = {}
+        ret['stdout'] = "readonly\toff\t-\n"
+        ret['stderr'] = ""
+        ret['retcode'] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
+            ret = zpool.get('mypool', 'readonly')
+            res = OrderedDict([('mypool', OrderedDict([('readonly', 'off')]))])
+            self.assertEqual(res, ret)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZpoolTestCase, needs_daemon=False)
