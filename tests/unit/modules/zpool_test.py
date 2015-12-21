@@ -44,10 +44,24 @@ class ZpoolTestCase(TestCase):
         '''
         ret = {}
         ret['stdout'] = "NAME      SIZE  ALLOC   FREE    CAP  DEDUP  HEALTH  ALTROOT\nmyzpool   149G   128K   149G     0%  1.00x  ONLINE  -"
+        ret['stderr'] = ""
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertTrue(zpool.exists('myzpool'))
+
+    @patch('salt.modules.zpool._check_zpool', MagicMock(return_value='/sbin/zpool'))
+    def test_exists_failure(self):
+        '''
+        Tests failure return of exists function
+        '''
+        ret = {}
+        ret['stdout'] = ""
+        ret['stderr'] = "cannot open 'mypool': no such pool"
+        ret['retcode'] = 1
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertFalse(zpool.exists('myzpool'))
 
 if __name__ == '__main__':
     from integration import run_tests
