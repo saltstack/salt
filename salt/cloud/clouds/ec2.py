@@ -2450,13 +2450,15 @@ def create(vm_=None, call=None):
         log.debug('Salt interface set to: {0}'.format(salt_ip_address))
     vm_['salt_host'] = salt_ip_address
 
-    display_ssh_output = config.get_cloud_config_value(
-        'display_ssh_output', vm_, __opts__, default=True
-    )
+    if config.get_cloud_config_value(
+            'deploy', vm_, __opts__, default=True):
+        display_ssh_output = config.get_cloud_config_value(
+            'display_ssh_output', vm_, __opts__, default=True
+        )
 
-    vm_ = wait_for_instance(
-        vm_, data, ip_address, display_ssh_output
-    )
+        vm_ = wait_for_instance(
+            vm_, data, ip_address, display_ssh_output
+        )
 
     # The instance is booted and accessible, let's Salt it!
     ret = instance.copy()
