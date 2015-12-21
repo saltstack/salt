@@ -83,7 +83,7 @@ cd $BUILDDIR
 echo "#####################################################################"
 echo "Retrieving pkg-config"
 echo "#####################################################################"
-curl -O# http://repo.saltstack.com/osx/dependencies/pkg-config-0.29.tar.gz
+curl -O# http://pkgconfig.freedesktop.org/releases/pkg-config-0.29.tar.gz
 
 echo "#####################################################################"
 echo "Building pkg-config"
@@ -107,7 +107,7 @@ cd $BUILDDIR
 echo "#####################################################################"
 echo "Retrieving libsodium"
 echo "#####################################################################"
-curl -O# https://repo.saltstack.com/osx/dependencies/libsodium-1.0.7.tar.gz
+curl -O# https://download.libsodium.org/libsodium/releases/libsodium-1.0.7.tar.gz
 
 echo "#####################################################################"
 echo "Building libsodium"
@@ -131,7 +131,7 @@ cd $BUILDDIR
 echo "#####################################################################"
 echo "Retrieving zeromq"
 echo "#####################################################################"
-curl -O# https://repo.saltstack.com/osx/dependencies/zeromq-4.1.3.tar.gz
+curl -O# http://download.zeromq.org/zeromq-4.1.3.tar.gz
 
 echo "#####################################################################"
 echo "Building zeromq"
@@ -155,7 +155,7 @@ cd $BUILDDIR
 echo "#####################################################################"
 echo "Retrieving OpenSSL 1.0.2e"
 echo "#####################################################################"
-curl -O# https://repo.saltstack.com/osx/dependencies/openssl-1.0.2e.tar.gz
+curl -O# http://openssl.org/source/openssl-1.0.2e.tar.gz
 
 echo "#####################################################################"
 echo "Building OpenSSL 1.0.2e"
@@ -179,7 +179,7 @@ cd $BUILDDIR
 echo "#####################################################################"
 echo "Retrieving gdbm 1.11"
 echo "#####################################################################"
-curl -O# https://repo.saltstack.com/osx/dependencies/gdbm-1.11.tar.gz
+curl -O# ftp://ftp.gnu.org/gnu/gdbm/gdbm-1.11.tar.gz
 
 echo "#####################################################################"
 echo "Building gdbm 1.11"
@@ -203,7 +203,7 @@ cd $BUILDDIR
 echo "#####################################################################"
 echo "Retrieving GNU Readline"
 echo "#####################################################################"
-curl -O# https://repo.saltstack.com/osx/dependencies/readline-6.3.tar.gz
+curl -O# ftp://ftp.cwru.edu/pub/bash/readline-6.3.tar.gz
 
 echo "#####################################################################"
 echo "Building GNU Readline 6.3"
@@ -226,7 +226,7 @@ cd $BUILDDIR
 echo "#####################################################################"
 echo "Retrieving Python 2.7.11"
 echo "#####################################################################"
-curl -O# https://repo.saltstack.com/osx/dependencies/Python-2.7.11.tar.xz
+curl -O# https://www.python.org/ftp/python/2.7.11/Python-2.7.11.tar.xz
 
 echo "#####################################################################"
 echo "Building Python 2.7.11"
@@ -251,7 +251,7 @@ cd $BUILDDIR
 echo "#####################################################################"
 echo "Retrieving CMake 3.4.1"
 echo "#####################################################################"
-curl -O# https://repo.saltstack.com/osx/dependencies/cmake-3.4.1.tar.gz
+curl -O# https://cmake.org/files/v3.4/cmake-3.4.1.tar.gz
 
 echo "#####################################################################"
 echo "Building CMake 3.4.1"
@@ -274,12 +274,12 @@ cd $BUILDDIR
 echo "#####################################################################"
 echo "Retrieving libgit2 0.23.4"
 echo "#####################################################################"
-curl -O# https://repo.saltstack.com/osx/dependencies/libgit2-0.23.4.tar.gz
+curl -O# https://codeload.github.com/libgit2/libgit2/tar.gz/v0.23.4
 
 echo "#####################################################################"
 echo "Building libgit2 0.23.4"
 echo "#####################################################################"
-tar -zxvf libgit2-0.23.4.tar.gz
+tar -zxvf v0.23.4
 cd libgit2-0.23.4
 mkdir build && cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/opt/salt
