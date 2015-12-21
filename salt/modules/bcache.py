@@ -948,4 +948,4 @@ def _run_all(cmd, log_lvl=None, log_msg=None, exitcode=0):
 def _alltrue(resdict):
     if resdict is None:
         return True
-    return sum(filter(None, resdict.values())) > 0
+    return len([val for val in resdict.values() if val]) > 0
