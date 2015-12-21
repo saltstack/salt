@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
-Manage BCaches
+Module for managing BCache sets
 
 https://www.kernel.org/doc/Documentation/bcache.txt
+
+
+
+.. versionadded: Boron
 
 '''
 # Import python libs
