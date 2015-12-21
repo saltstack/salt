@@ -2,9 +2,15 @@
 '''
 Module for managing BCache sets
 
+BCache is a block-level caching mechanism similar to ZFS L2ARC/ZIL, dm-cache and fscache.
+It works by formatting one block device as a cache set, then adding backend devices
+(which need to be formatted as such) to the set and activating them.
+
+It's available in Linux mainline kernel since 3.10
+
 https://www.kernel.org/doc/Documentation/bcache.txt
 
-
+This module needs the bache userspace tools to function.
 
 .. versionadded: Boron
 
@@ -50,7 +56,16 @@ def __virtual__():
 
 def uuid(dev=None):
     '''
-    Return the Cache UUID
+    Return the bcache UUID of a block device.
+    If no device is given, the Cache UUID is returned.
+
+    CLI example:
+
+    .. code-block:: bash
+        salt '*' bcache.uuid
+        salt '*' bcache.uuid /dev/sda
+        salt '*' bcache.uuid bcache0
+
     '''
     try:
         if dev is None:
@@ -65,7 +80,15 @@ def uuid(dev=None):
 
 def attach_(dev=None):
     '''
-    Attach a/all backing devices to a cache set
+    Attach a backing devices to a cache set
+    If no dev is given, all backing devices will be attached.
+
+    CLI example:
+
+    .. code-block:: bash
+        salt '*' bcache.attach sdc
+        salt '*' bcache.attach /dev/bcache1
+
 
     :return: bool or None if nuttin' happened
     '''
@@ -105,7 +128,18 @@ def attach_(dev=None):
 
 def detach(dev=None):
     '''
-    Detach a/all backing device(s) from a cache set
+    Detach a backing device(s) from a cache set
+    If no dev is given, all backing devices will be attached.
+
+    Detaching a backing device will flush it's write cache.
+    This should leave the underlying device in a consistent state, but might take a while.
+
+    CLI example:
+
+    .. code-block:: bash
+        salt '*' bcache.detach sdc
+        salt '*' bcache.detach bcache1
+
     '''
     if dev is None:
         res = {}
@@ -126,7 +160,13 @@ def detach(dev=None):
 
 def start():
     '''
-    Trigger a start of the full bcache system
+    Trigger a start of the full bcache system through udev.
+
+    CLI example:
+
+    .. code-block:: bash
+        salt '*' bcache.start
+
     '''
     if not _run_all('udevadm trigger', 'error', 'Error starting bcache: {{0}}'):
         return False
@@ -137,7 +177,18 @@ def start():
 
 def stop(dev=None):
     '''
-    Stop a dev or all of bcache
+    Stop a bcache device
+    If no device is given, all backing devices will be detached from the cache, which will subsequently be stopped.
+
+    .. warning::
+        'Stop' on an individual backing device means hard-stop;
+        no attempt at flushing will be done and the bcache device will seemingly 'disappear' from the device lists
+
+    CLI example:
+
+    .. code-block:: bash
+        salt '*' bcache.stop
+
     '''
     if dev is not None:
         log.warn('Stopping {0}, device will only reappear after reregistering!'.format(dev))
@@ -160,11 +211,19 @@ def stop(dev=None):
 
 def back_make(dev, cache_mode='writeback', force=False, attach=True, bucket_size=None):
     '''
-    Create a backing device
-    :param dev:
-    :param cache_mode:
-    :param force:
-    :param attach:
+    Create a backing device for attachment to a set.
+    Because the block size must be the same, a cache set already needs to exist.
+
+    CLI example:
+
+    .. code-block:: bash
+        salt '*' bcache.back_make sdc cache_mode=writeback attach=True
+
+
+    :param cache_mode: writethrough, writeback, writearound or none.
+    :param force: Overwrite existing bcaches
+    :param attach: Immediately attach the backing device to the set
+    :param bucket_size: Size of a bucket (see kernel doc)
     '''
     # pylint: disable=too-many-return-statements
     cache = uuid()
@@ -207,12 +266,20 @@ def back_make(dev, cache_mode='writeback', force=False, attach=True, bucket_size
 
 def cache_make(dev, reserved=None, force=False, block_size=None, bucket_size=None, attach=True):
     '''
-    Create bcache on a dev
-    :param dev: device to cache on
-    :param reserved: if dev is a full device, create a part table with this size empty
-    :param block_size: Block size; defaults to devices' logical block size
-    :param bucket_size: Bucket size; defautls to devices' discard_max_bytes
-    :return:
+    Create BCache cache on a block device.
+    If blkdiscard is available the entire device will be properly cleared in advance.
+
+    CLI example:
+
+    .. code-block:: bash
+        salt '*' bcache.cache_make sdb reserved=10% block_size=4096
+
+
+    :param reserved: if dev is a full device, create a partitition table with this size empty;
+    this increases the amount of reserved space available to SSD garbage collectors, potentially (vastly) increasing performance
+    :param block_size: Block size of the cache; defaults to devices' logical block size
+    :param force: Overwrite existing BCache sets
+    :param attach: Attach all existing backend devices immediately
     '''
     # TODO: multiple devs == md jbod
 
@@ -287,9 +354,18 @@ def cache_make(dev, reserved=None, force=False, block_size=None, bucket_size=Non
 
 def config_(dev=None, **kwargs):
     '''
-    Show or update config
-    :param dev: bcache device or None for BCache itself
-    :param kwargs: key,val with updates
+    Show or update config of a bcache device.
+
+    If no device is given, operate on the cache set itself.
+
+    CLI example:
+
+    .. code-block:: bash
+        salt '*' bcache.config
+        salt '*' bcache.config bcache1
+        salt '*' bcache.config errors=panic journal_delay_ms=150
+        salt '*' bcache.config bcache1 cache_mode=writeback writeback_percent=15
+
     :return: config or True/False
     '''
     if dev is None:
@@ -322,11 +398,18 @@ def config_(dev=None, **kwargs):
 def status(stats=False, config=False, internals=False, superblock=False, alldevs=False):
     '''
     Show the full status of the BCache system and optionally all it's involved devices
+
+    CLI example:
+
+    .. code-block:: bash
+        salt '*' bcache.status
+        salt '*' bcache.status stats=True
+        salt '*' bcache.status internals=True alldevs=True
+
     :param stats: include statistics
     :param config: include settings
     :param internals: include internals
     :param superblock: include superblock
-    :return:
     '''
     bdevs = []
     for _, links, _ in os.walk('/sys/block/'):
@@ -360,12 +443,18 @@ def status(stats=False, config=False, internals=False, superblock=False, alldevs
 
 def device(dev, stats=False, config=False, internals=False, superblock=False):
     '''
-    Check the state of a bcache device
+    Check the state of a single bcache device
+
+    CLI example:
+
+    .. code-block:: bash
+        salt '*' bcache.device bcache0
+        salt '*' bcache.device /dev/sdc stats=True
+
     :param stats: include statistics
     :param settings: include all settings
     :param internals: include all internals
-    :param superblock: include superblock
-    :return:
+    :param superblock: include superblock info
     '''
     result = {}
 
@@ -467,6 +556,13 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
 def super_(dev):
     '''
     Read out BCache SuperBlock
+
+    CLI example:
+
+    .. code-block:: bash
+        salt '*' bcache.device bcache0
+        salt '*' bcache.device /dev/sdc
+
     '''
     dev = _devpath(dev)
     ret = {}
