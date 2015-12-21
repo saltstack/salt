@@ -1531,6 +1531,41 @@ def show_firewall(firewall, profile=None):
     return conn.show_firewall(firewall)
 
 
+def list_l3_agent_hosting_routers(router, profile=None):
+    '''
+    List L3 agents hosting a router.
+   
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.list_l3_agent_hosting_routers router
+
+    :param router:router name or ID to query.
+    :param profile: Profile to build on (Optional)
+    :return: L3 agents message.
+    '''
+    conn = _auth(profile)
+    return conn.list_l3_agent_hosting_routers(router)
+
+
+def list_agents(profile=None):
+    '''
+    List agents.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' neutron.list_agents
+
+    :param profile: Profile to build on (Optional)
+    :return: agents message.
+    '''
+    conn = _auth(profile)
+    return conn.list_agents()
+
+
 # The following is a list of functions that need to be incorporated in the
 # neutron module. This list should be updated as functions are added.
 #
