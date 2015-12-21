@@ -605,10 +605,20 @@ class Client(object):
 
         if url_data.scheme == 'swift':
             try:
-                swift_conn = SaltSwift(self.opts.get('keystone.user', None),
-                                       self.opts.get('keystone.tenant', None),
-                                       self.opts.get('keystone.auth_url', None),
-                                       self.opts.get('keystone.password', None))
+                def swift_opt(key, default):
+                    '''Get value of <key> from Minion config or from Pillar'''
+                    if key in self.opts:
+                        return self.opts[key]
+                    try:
+                        return self.opts['pillar'][key]
+                    except (KeyError, TypeError):
+                        return default
+
+                swift_conn = SaltSwift(swift_opt('keystone.user', None),
+                                       swift_opt('keystone.tenant', None),
+                                       swift_opt('keystone.auth_url', None),
+                                       swift_opt('keystone.password', None))
+
                 swift_conn.get_object(url_data.netloc,
                                       url_data.path[1:],
                                       dest)
