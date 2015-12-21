@@ -2003,6 +2003,8 @@ def language_list(
         password=None,
         runas=None):
     '''
+    .. versionadded:: Boron
+
     Return a list of languages in a database.
 
     CLI Example:
@@ -2055,6 +2057,8 @@ def language_exists(
         password=None,
         runas=None):
     '''
+    .. versionadded:: Boron
+
     Checks if language exists in a database.
 
     CLI Example:
@@ -2100,6 +2104,8 @@ def language_create(name,
                     password=None,
                     runas=None):
     '''
+    .. versionadded:: Boron
+
     Installs a language into a database
 
     CLI Example:
@@ -2153,6 +2159,8 @@ def language_remove(name,
                     password=None,
                     runas=None):
     '''
+    .. versionadded:: Boron
+
     Removes a language from a database
 
     CLI Example:
