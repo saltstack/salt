@@ -307,7 +307,7 @@ def iostat(zpool=None, sample_time=0):
 def zpool_list():
     '''
     .. deprecated:: 2014.7.0
-       Use :py:func:`~salt.modules.zpool.list_` instead.
+       Use :py:func:`~salt.modules.zpool.list` instead.
 
     Return a list of all pools in the system with health status and space usage
 
@@ -602,7 +602,7 @@ def create(zpool, *vdevs, **kwargs):
 
     zpool : string
         name of storage pool
-    * : string
+    *vdevs : string
         one or move devices
     force : boolean
         forces use of vdevs, even if they appear in use or specify a conflicting replication level.
@@ -610,6 +610,10 @@ def create(zpool, *vdevs, **kwargs):
         sets the mount point for the root dataset
     altroot : string
         equivalent to "-o cachefile=none,altroot=root"
+    properties : dict
+        additional pool properties
+    filesystem_properties : dict
+        additional filesystem properties
 
     CLI Example:
 
@@ -727,7 +731,7 @@ def add(zpool, *vdevs, **kwargs):
 
     zpool : string
         name of storage pool
-    * : string
+    *vdevs : string
         one or more devices
     force : boolean
         forces use of device
@@ -1023,7 +1027,7 @@ def export(*pools, **kwargs):
 
     Export storage pools
 
-    * : string
+    *pools : string
         one or more storage pools to export
     force : boolean
         force export of storage pools
@@ -1086,6 +1090,8 @@ def import_(zpool=None, new_name=None, **kwargs):
         import the pool without mounting any file systems.
     only_destroyed : boolean
         imports destroyed pools only. this also sets force=True.
+    properties : dict
+        additional pool properties
 
     .. note::
 
@@ -1170,7 +1176,7 @@ def online(zpool, *vdevs, **kwargs):
 
     zpool : string
         name of storage pool
-    * : string
+    *vdevs : string
         one or more devices
     expand : boolean
         Expand the device to use all available space.
@@ -1250,7 +1256,7 @@ def offline(zpool, *vdevs, **kwargs):
 
     zpool : string
         name of storage pool
-    * : string
+    *vdevs : string
         one or more devices
     temporary : boolean
         enable temporarily offline
@@ -1301,7 +1307,7 @@ def reguid(zpool):
 
     Generates a new unique identifier for the pool
 
-    .. note::
+    .. warning::
         You must ensure that all devices in this pool are online
         and healthy before performing this action.
 
@@ -1367,7 +1373,7 @@ def upgrade(zpool=None, version=None):
 
     Enables all supported features on the given pool
 
-    .. note::
+    .. warning::
         Once this is done, the pool will no longer be accessible on systems that do not
         support feature flags. See zpool-features(5) for details on compatibility with
         systems that support feature flags, but do not support all features enabled on the pool.
