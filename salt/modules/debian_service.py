@@ -36,6 +36,7 @@ def __virtual__():
     '''
     if __grains__['os'] in ('Debian', 'Raspbian', 'Devuan') and not salt.utils.systemd.booted(__context__):
         return __virtualname__
+    else:
         return (False, 'The debian_service module could not be loaded: '
                 'unsupported OS family and/or systemd running.')
 
