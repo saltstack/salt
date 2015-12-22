@@ -14,13 +14,31 @@ class TimedProc(object):
     '''
     def __init__(self, args, **kwargs):
 
-        self.stdin = kwargs.pop('stdin', None)
-        if self.stdin is not None:
-            # Translate a newline submitted as '\n' on the CLI to an actual
-            # newline character.
-            self.stdin = self.stdin.replace('\\n', '\n')
-            kwargs['stdin'] = subprocess.PIPE
-        self.with_communicate = kwargs.pop('with_communicate', True)
+        self.wait = kwargs.pop('wait', True)
+
+        # If you're not willing to wait for the process
+        # you can't define any stdin, stdout or stderr
+        if not self.wait:
+            self.stdin = kwargs['stdin'] = None
+        else:
+            self.stdin = kwargs.pop('stdin', None)
+            if self.stdin is not None:
+                # Translate a newline submitted as '\n' on the CLI to an actual
+                # newline character.
+                self.stdin = self.stdin.replace('\\n', '\n')
+                kwargs['stdin'] = subprocess.PIPE
+
+        self.with_communicate = kwargs.pop('with_communicate', self.wait)
+        if not self.with_communicate:
+            self.stdout = kwargs['stdout'] = None
+            self.stderr = kwargs['stderr'] = None
+
+        if not self.wait or 'timeout' not in kwargs:
+            self.timeout = None
+        else:
+            self.timeout = kwargs.pop('timeout')
+            if not isinstance(self.timeout, (int, float)):
+                raise salt.exceptions.TimedProcTimeoutError('Error: timeout must be a number')
 
         try:
             self.process = subprocess.Popen(args, **kwargs)
@@ -35,24 +53,25 @@ class TimedProc(object):
             self.process = subprocess.Popen(args, **kwargs)
         self.command = args
 
-    def wait(self, timeout=None):
+    def run(self):
         '''
         wait for subprocess to terminate and return subprocess' return code.
         If timeout is reached, throw TimedProcTimeoutError
         '''
         def receive():
             if self.with_communicate:
-                (self.stdout, self.stderr) = self.process.communicate(input=self.stdin)
+                self.stdout, self.stderr = self.process.communicate(input=self.stdin)
+            elif not self.wait:
+                self.process.communicate()
             else:
                 self.process.wait()
-                (self.stdout, self.stderr) = (None, None)
 
-        if timeout:
-            if not isinstance(timeout, (int, float)):
-                raise salt.exceptions.TimedProcTimeoutError('Error: timeout must be a number')
+        if not self.wait or not self.timeout:
+            receive()
+        else:
             rt = threading.Thread(target=receive)
             rt.start()
-            rt.join(timeout)
+            rt.join(self.timeout)
             if rt.isAlive():
                 # Subprocess cleanup (best effort)
                 self.process.kill()
@@ -64,9 +83,7 @@ class TimedProc(object):
                 raise salt.exceptions.TimedProcTimeoutError(
                     '{0} : Timed out after {1} seconds'.format(
                         self.command,
-                        str(timeout),
+                        str(self.timeout),
                     )
                 )
-        else:
-            receive()
         return self.process.returncode
