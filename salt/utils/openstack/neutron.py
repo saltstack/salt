@@ -841,6 +841,17 @@ class SaltNeutron(NeutronShell):
         '''
         return self._fetch_firewall(firewall)
 
+    def list_l3_agent_hosting_routers(self, router):
+        '''
+        List L3 agents.
+        '''
+        return self.network_conn.list_l3_agent_hosting_routers(router)
+
+    def list_agents(self):
+        '''
+        List agents.
+        '''
+        return self.network_conn.list_agents()
 
 # The following is a list of functions that need to be incorporated in the
 # neutron module. This list should be updated as functions are added.
