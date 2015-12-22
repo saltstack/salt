@@ -7,10 +7,9 @@
 Reactor System
 ==============
 
-Salt version 0.11.0 introduced the reactor system. The premise behind the
-reactor system is that with Salt's events and the ability to execute commands,
-a logic engine could be put in place to allow events to trigger actions, or
-more accurately, reactions.
+Salt's Reactor system gives Salt the ability to trigger actions in response to
+an event. It is a simple interface to watching Salt's event bus for event tags
+that match a given pattern and then running one or more commands in response.
 
 This system binds sls files to event tags on the master. These sls files then
 define reactions. This means that the reactor system has two parts. First, the
