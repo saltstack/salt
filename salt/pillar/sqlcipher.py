@@ -23,29 +23,29 @@ Use the 'sqlcipher' key under ext_pillar for configuration of queries.
 SQLCipher database connection configuration requires the following values
 configured in the master config:
 
-   * ``pillar.sqlcipher.database`` - The SQLCipher database to connect to.
+   * ``sqlcipher.database`` - The SQLCipher database to connect to.
      Defaults to ``'/var/lib/salt/pillar-sqlcipher.db'``.
-   * ``pillar.sqlcipher.pass`` - The SQLCipher database decryption password.
-   * ``pillar.sqlcipher.timeout`` - The connection timeout in seconds.
+   * ``sqlcipher.pass`` - The SQLCipher database decryption password.
+   * ``sqlcipher.timeout`` - The connection timeout in seconds.
 
 Example configuration
 
 .. code-block:: yaml
 
-    pillar.sqlcipher.database: /var/lib/salt/pillar-sqlcipher.db
-    pillar.sqlcipher.pass: strong_pass_phrase
-    pillar.sqlcipher.timeout: 5.0
+    sqlcipher:
+      database: /var/lib/salt/pillar-sqlcipher.db
+      pass: strong_pass_phrase
+      timeout: 5.0
 
 Complete example
 =================
 
 .. code-block:: yaml
 
-    pillar:
-      sqlcipher:
-        database: '/var/lib/salt/pillar-sqlcipher.db'
-        pass: strong_pass_phrase
-        timeout: 5.0
+    sqlcipher:
+      database: '/var/lib/salt/pillar-sqlcipher.db'
+      pass: strong_pass_phrase
+      timeout: 5.0
 
     ext_pillar:
       - sqlcipher:
@@ -99,12 +99,8 @@ class SQLCipherExtPillar(SqlBaseExtPillar):
                     'pass': 'strong_pass_phrase',
                     'timeout': 5.0}
         _options = {}
-        _opts = __opts__.get('pillar', {}).get('sqlcipher', {})
-        if 'database' not in _opts:
-            _sqlcipher_opts = __opts__.get('pillar', {}).get('master', {})\
-                .get('pillar', {}).get('sqlcipher')
-            if _sqlcipher_opts is not None:
-                _opts = _sqlcipher_opts
+        _opts = __opts__.get('sqlcipher', {})
+
         for attr in defaults:
             if attr not in _opts:
                 log.debug('Using default for SQLCipher pillar %s', attr)
