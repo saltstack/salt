@@ -203,27 +203,26 @@ def uptime(human_readable=False):
     '''
 
     # Open up a subprocess to get information from WMIC
-    cmd = list2cmdline(['net', 'stats', 'srv'])
+    cmd = list2cmdline(['wmic', 'os', 'get', 'lastbootuptime'])
     outs = __salt__['cmd.run'](cmd)
 
     # Get the line that has when the computer started in it:
     stats_line = ''
-    for line in outs.split('\r\n'):
-        if "Statistics since" in line:
-            stats_line = line
+    # use second line from output
+    stats_line = outs.split('\r\n')[1]
 
     # Extract the time string from the line and parse
     #
-    # Get string
-    startup_time = stats_line[len('Statistics Since '):]
+    # Get string, just use the leading 14 characters
+    startup_time = stats_line[:14]
     # Convert to time struct
-    try:
-        startup_time = time.strptime(startup_time, '%d/%m/%Y %H:%M:%S')
-    except ValueError:
-        startup_time = time.strptime(startup_time, '%d/%m/%Y %I:%M:%S %p')
+    startup_time = time.strptime(startup_time, '%Y%m%d%H%M%S')
     # Convert to datetime object
     startup_time = datetime.datetime(*startup_time[:6])
 
+    # Subtract startup time from current time to get the uptime of the system
+    uptime = datetime.datetime.now() - startup_time
+    
     # Subtract startup time from current time to get the uptime of the system
     uptime = datetime.now() - startup_time
 
