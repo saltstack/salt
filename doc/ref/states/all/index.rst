@@ -200,3 +200,4 @@ Full list of builtin state modules
     zcbuildout
     zenoss
     zk_concurrency
+    zpool
