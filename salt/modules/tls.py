@@ -677,6 +677,11 @@ def create_ca(ca_name,
             except OpenSSL.crypto.Error as err:
                 log.warn('Error loading existing private key'
                     ' %s, generating a new key: %s', ca_keyp, str(err))
+                bck = "{0}.unloadable.{1}".format(ca_keyp,
+                    datetime.utcnow().strftime("%Y%m%d%H%M%S"))
+                log.info('Saving unloadable CA ssl key in {0}'.format(bck))
+                os.rename(ca_keyp, bck)
+
     if not key:
         key = OpenSSL.crypto.PKey()
         key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
