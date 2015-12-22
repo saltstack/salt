@@ -486,7 +486,7 @@ def delete(name, skip_final_snapshot=None, final_db_snapshot_identifier=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    if not skip_final_snapshot or final_db_snapshot_identifier:
+    if not skip_final_snapshot and not final_db_snapshot_identifier:
         raise SaltInvocationError('At least on of the following must'
                                   ' be specified: skip_final_snapshot'
                                   ' final_db_snapshot_identifier')
