@@ -1620,7 +1620,7 @@ def line(path, content, match=None, mode=None, location=None,
 
     if changed:
         if show_changes:
-            changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'r').readlines(), body.splitlines()))
+            changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'r').read().splitlines(), body.splitlines()))
         if __opts__['test'] is False:
             fh_ = None
             try:
