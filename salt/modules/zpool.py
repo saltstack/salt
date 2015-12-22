@@ -781,7 +781,8 @@ def add(zpool, *vdevs, **kwargs):
     else:
         ret[zpool] = {}
         for device in dlist:
-            ret[zpool][device] = 'added'
+            if device not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
+                ret[zpool][device] = 'added'
 
     return ret
 
@@ -1182,19 +1183,15 @@ def online(zpool, *vdevs, **kwargs):
     ret[zpool] = {}
     for vdev in vdevs:
         if not os.path.exists(vdev):
-            if 'devices' not in ret[zpool]:
-                ret[zpool]['devices'] = {}
-            ret[zpool]['devices'][vdev] = 'not present on filesystem'
+            ret[zpool][vdev] = 'not present on filesystem'
             continue
         mode = os.stat(vdev).st_mode
         if not stat.S_ISBLK(mode) and not stat.S_ISREG(mode):
-            if 'devices' not in ret[zpool]:
-                ret[zpool]['devices'] = {}
-            ret[zpool]['devices'][vdev] = 'not a block device, a file vdev or character special device'
+            ret[zpool][vdev] = 'not a block device, a file vdev or character special device'
             continue
         dlist.append(vdev)
 
-    if 'devices' in ret[zpool]:
+    if len(ret[zpool]) > 0:
         return ret
 
     devs = ' '.join(dlist)
@@ -1212,7 +1209,8 @@ def online(zpool, *vdevs, **kwargs):
     else:
         ret[zpool] = {}
         for device in dlist:
-            ret[zpool][device] = 'onlined'
+            if device not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
+                ret[zpool][device] = 'onlined'
     return ret
 
 
@@ -1242,21 +1240,20 @@ def offline(zpool, *vdevs, **kwargs):
         salt '*' zpool.offline myzpool /path/to/vdev1 [...] [temporary=True|False]
     '''
     ret = {}
-    dlist = []
 
     # Check if the pool_name exists
     if not exists(zpool):
         ret[zpool] = 'storage pool does not exist'
         return ret
 
-    if not vdevs:
+    if not vdevs or len(vdevs) <= 0:
         ret[zpool] = 'no devices specified'
         return ret
 
     # note: we don't check if the device exists
     #   a device can be offlined until a replacement is available
     ret[zpool] = {}
-    devs = ' '.join(dlist)
+    devs = ' '.join(vdevs)
     zpool_cmd = _check_zpool()
     cmd = '{zpool_cmd} offline {temp}{zpool} {devs}'.format(
         zpool_cmd=zpool_cmd,
@@ -1270,8 +1267,9 @@ def offline(zpool, *vdevs, **kwargs):
         ret[zpool] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[zpool] = {}
-        for device in dlist:
-            ret[zpool][device] = 'offlined'
+        for device in vdevs:
+            if device not in ['mirror', 'log', 'cache', 'raidz1', 'raidz2', 'raidz3', 'spare']:
+                ret[zpool][device] = 'offlined'
     return ret
 
 
