@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Module to provide Citrix Netscaler compatibility to Salt (compatible with netscaler 9.0+)
+Module to provide Citrix Netscaler compatibility to Salt (compatible with netscaler 9.2+)
 
 .. versionadded:: 2015.2.0
 
