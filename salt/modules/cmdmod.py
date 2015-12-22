@@ -2760,26 +2760,37 @@ def run_bg(cmd,
     :return:
     '''
 
-    return run(cmd,
-               cwd=cwd,
+    python_shell = _python_shell_default(python_shell,
+                                         kwargs.get('__pub_jid', ''))
+    res = _run(cmd,
                stdin=None,
+               stderr=None,
                stdout=None,
                output_loglevel=None,
                use_vt=None,
-               wait=True,
+               wait=False,
+               with_communicate=False,
 
                runas=runas,
                shell=shell,
+               python_shell=python_shell,
+               cwd=cwd,
                env=env,
                clean_env=clean_env,
                template=template,
                rstrip=rstrip,
                umask=umask,
+               # output_loglevel=output_loglevel,
                log_callback=log_callback,
-               quiet=True,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
-               ignore_retcode=True,
+               # ignore_retcode=ignore_retcode,
                saltenv=saltenv,
-               python_shell=python_shell,
-               **kwargs)
+               pillarenv=kwargs.get('pillarenv'),
+               pillar_override=kwargs.get('pillar'),
+               password=kwargs.get('password', None),
+               )
+
+    return {
+        'pid': res['pid']
+    }
