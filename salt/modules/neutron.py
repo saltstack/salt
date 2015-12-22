@@ -1534,7 +1534,7 @@ def show_firewall(firewall, profile=None):
 def list_l3_agent_hosting_routers(router, profile=None):
     '''
     List L3 agents hosting a router.
-   
+
     CLI Example:
 
     .. code-block:: bash
