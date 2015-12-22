@@ -1477,7 +1477,7 @@ def update_firewall_rule(firewall_rule,
                 name=NAME description=DESCRIPTION ip_version=IP_VERSION
                 source_ip_address=SOURCE_IP_ADDRESS destination_ip_address=DESTINATION_IP_ADDRESS
                 source_port=SOURCE_PORT destination_port=DESTINATION_PORT shared=SHARED enabled=ENABLED
-    
+
     :param firewall_rule: ID or name of firewall rule to update.
     :param protocol: Protocol for the firewall rule, choose "tcp","udp","icmp" or "None". (Optional)
     :param action: Action for the firewall rule, choose "allow" or "deny". (Optional)
