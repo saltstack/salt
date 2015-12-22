@@ -32,7 +32,8 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and psversion() >= 5:
         return __virtualname__
-    return False
+    return (False, 'Module dsc: module only works on Windows systems '
+            'with PowerShell 3 or later installed.')
 
 
 def _pshell(cmd):
