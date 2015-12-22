@@ -135,7 +135,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'boto_cfn'
+__virtualname__ = 'boto_iam'
 
 
 def __virtual__():
