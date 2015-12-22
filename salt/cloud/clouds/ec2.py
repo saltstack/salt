@@ -1187,7 +1187,7 @@ def block_device_mappings(vm_):
     )
 
 
-def _request_eip(interface):
+def _request_eip(interface, vm_=None):
     '''
     Request and return Elastic IP
     '''
@@ -1195,7 +1195,7 @@ def _request_eip(interface):
     params['Domain'] = interface.setdefault('domain', 'vpc')
     eips = aws.query(params,
                      return_root=True,
-                     location=get_location(),
+                     location=get_location(vm_),
                      provider=get_provider(),
                      opts=__opts__,
                      sigver='4')
@@ -1205,7 +1205,7 @@ def _request_eip(interface):
     return None
 
 
-def _create_eni_if_necessary(interface):
+def _create_eni_if_necessary(interface, vm_):
     '''
     Create an Elastic Interface if necessary and return a Network Interface Specification
     '''
@@ -1216,7 +1216,7 @@ def _create_eni_if_necessary(interface):
     params = {'Action': 'DescribeSubnets'}
     subnet_query = aws.query(params,
                              return_root=True,
-                             location=get_location(),
+                             location=get_location(vm_),
                              provider=get_provider(),
                              opts=__opts__,
                              sigver='4')
@@ -1254,7 +1254,7 @@ def _create_eni_if_necessary(interface):
 
     result = aws.query(params,
                        return_root=True,
-                       location=get_location(),
+                       location=get_location(vm_),
                        provider=get_provider(),
                        opts=__opts__,
                        sigver='4')
@@ -1273,20 +1273,20 @@ def _create_eni_if_necessary(interface):
     associate_public_ip = interface.get('AssociatePublicIpAddress', False)
     if isinstance(associate_public_ip, str):
         # Assume id of EIP as value
-        _associate_eip_with_interface(eni_id, associate_public_ip)
+        _associate_eip_with_interface(eni_id, associate_public_ip, vm_=vm_)
 
     if interface.get('associate_eip'):
-        _associate_eip_with_interface(eni_id, interface.get('associate_eip'))
+        _associate_eip_with_interface(eni_id, interface.get('associate_eip'), vm_=vm_)
     elif interface.get('allocate_new_eip'):
-        _new_eip = _request_eip(interface)
-        _associate_eip_with_interface(eni_id, _new_eip)
+        _new_eip = _request_eip(interface, vm_)
+        _associate_eip_with_interface(eni_id, _new_eip, vm_=vm_)
     elif interface.get('allocate_new_eips'):
         addr_list = _list_interface_private_addrs(eni_desc)
         eip_list = []
         for idx, addr in enumerate(addr_list):
-            eip_list.append(_request_eip(interface))
+            eip_list.append(_request_eip(interface, vm_))
         for idx, addr in enumerate(addr_list):
-            _associate_eip_with_interface(eni_id, eip_list[idx], addr)
+            _associate_eip_with_interface(eni_id, eip_list[idx], addr, vm_=vm_)
 
     if 'Name' in interface:
         tag_params = {'Action': 'CreateTags',
@@ -1295,7 +1295,7 @@ def _create_eni_if_necessary(interface):
                       'Tag.0.Value': interface['Name']}
         tag_response = aws.query(tag_params,
                                  return_root=True,
-                                 location=get_location(),
+                                 location=get_location(vm_),
                                  provider=get_provider(),
                                  opts=__opts__,
                                  sigver='4')
@@ -1330,7 +1330,7 @@ def _list_interface_private_addrs(eni_desc):
     return addresses
 
 
-def _modify_eni_properties(eni_id, properties=None):
+def _modify_eni_properties(eni_id, properties=None, vm_=None):
     '''
     Change properties of the interface
     with id eni_id to the values in properties dict
@@ -1351,7 +1351,7 @@ def _modify_eni_properties(eni_id, properties=None):
 
         result = aws.query(params,
                            return_root=True,
-                           location=get_location(),
+                           location=get_location(vm_),
                            provider=get_provider(),
                            opts=__opts__,
                            sigver='4')
@@ -1370,7 +1370,7 @@ def _modify_eni_properties(eni_id, properties=None):
     )
 
 
-def _associate_eip_with_interface(eni_id, eip_id, private_ip=None):
+def _associate_eip_with_interface(eni_id, eip_id, private_ip=None, vm_=None):
     '''
     Accept the id of a network interface, and the id of an elastic ip
     address, and associate the two of them, such that traffic sent to the
@@ -1392,7 +1392,7 @@ def _associate_eip_with_interface(eni_id, eip_id, private_ip=None):
         retries = retries - 1
         result = aws.query(params,
                            return_root=True,
-                           location=get_location(),
+                           location=get_location(vm_),
                            provider=get_provider(),
                            opts=__opts__,
                            sigver='4')
@@ -1420,7 +1420,7 @@ def _associate_eip_with_interface(eni_id, eip_id, private_ip=None):
     )
 
 
-def _update_enis(interfaces, instance):
+def _update_enis(interfaces, instance, vm_=None):
     config_enis = {}
     instance_enis = []
     for interface in interfaces:
@@ -1447,11 +1447,11 @@ def _update_enis(interfaces, instance):
 
         params_attachment = {'Attachment.AttachmentId': eni_data['attachmentId'],
                              'Attachment.DeleteOnTermination': delete_on_terminate}
-        set_eni_attachment_attributes = _modify_eni_properties(eni_id, params_attachment)
+        set_eni_attachment_attributes = _modify_eni_properties(eni_id, params_attachment, vm_=vm_)
 
         if 'SourceDestCheck' in config_enis[eni_data['deviceIndex']]:
             params_sourcedest = {'SourceDestCheck.Value': config_enis[eni_data['deviceIndex']]['SourceDestCheck']}
-            set_eni_sourcedest_property = _modify_eni_properties(eni_id, params_sourcedest)
+            set_eni_sourcedest_property = _modify_eni_properties(eni_id, params_sourcedest, vm_=vm_)
 
     return None
 
@@ -2422,7 +2422,7 @@ def create(vm_=None, call=None):
     )
 
     if network_interfaces:
-        _update_enis(network_interfaces, data)
+        _update_enis(network_interfaces, data, vm_)
 
     # At this point, the node is created and tagged, and now needs to be
     # bootstrapped, once the necessary port is available.
