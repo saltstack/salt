@@ -222,9 +222,6 @@ def uptime(human_readable=False):
 
     # Subtract startup time from current time to get the uptime of the system
     uptime = datetime.datetime.now() - startup_time
-    
-    # Subtract startup time from current time to get the uptime of the system
-    uptime = datetime.now() - startup_time
 
     return str(uptime) if human_readable else uptime.total_seconds()
 
