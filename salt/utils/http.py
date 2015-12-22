@@ -15,6 +15,7 @@ import pprint
 import socket
 import urllib
 import inspect
+import yaml
 
 import ssl
 try:
@@ -561,10 +562,12 @@ def query(url,
                 decode_type = 'xml'
             elif 'json' in content_type:
                 decode_type = 'json'
+            elif 'yaml' in content_type:
+                decode_type = 'yaml'
             else:
                 decode_type = 'plain'
 
-        valid_decodes = ('json', 'xml', 'plain')
+        valid_decodes = ('json', 'xml', 'yaml', 'plain')
         if decode_type not in valid_decodes:
             ret['error'] = (
                 'Invalid decode_type specified. '
@@ -582,6 +585,8 @@ def query(url,
             items = ET.fromstring(result_text)
             for item in items:
                 ret['dict'].append(xml.to_dict(item))
+        elif decode_type == 'yaml':
+            ret['dict'] = yaml.load(result_text)
         else:
             text = True
 
