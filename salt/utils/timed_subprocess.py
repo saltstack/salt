@@ -15,30 +15,27 @@ class TimedProc(object):
     def __init__(self, args, **kwargs):
 
         self.wait = kwargs.pop('wait', True)
+        self.stdin = kwargs.pop('stdin', None)
+        self.with_communicate = kwargs.pop('with_communicate', self.wait)
+        self.timeout = kwargs.pop('timeout', None)
 
         # If you're not willing to wait for the process
         # you can't define any stdin, stdout or stderr
         if not self.wait:
             self.stdin = kwargs['stdin'] = None
-        else:
-            self.stdin = kwargs.pop('stdin', None)
-            if self.stdin is not None:
-                # Translate a newline submitted as '\n' on the CLI to an actual
-                # newline character.
-                self.stdin = self.stdin.replace('\\n', '\n')
-                kwargs['stdin'] = subprocess.PIPE
+            self.with_communicate = False
+        elif self.stdin is not None:
+            # Translate a newline submitted as '\n' on the CLI to an actual
+            # newline character.
+            self.stdin = self.stdin.replace('\\n', '\n')
+            kwargs['stdin'] = subprocess.PIPE
 
-        self.with_communicate = kwargs.pop('with_communicate', self.wait)
         if not self.with_communicate:
             self.stdout = kwargs['stdout'] = None
             self.stderr = kwargs['stderr'] = None
 
-        if not self.wait or 'timeout' not in kwargs:
-            self.timeout = None
-        else:
-            self.timeout = kwargs.pop('timeout')
-            if self.timeout is not None and not isinstance(self.timeout, (int, float)):
-                raise salt.exceptions.TimedProcTimeoutError('Error: timeout {0} must be a number'.format(timeout))
+        if self.timeout and not isinstance(self.timeout, (int, float)):
+            raise salt.exceptions.TimedProcTimeoutError('Error: timeout {0} must be a number'.format(self.timeout))
 
         try:
             self.process = subprocess.Popen(args, **kwargs)
@@ -64,7 +61,7 @@ class TimedProc(object):
             elif self.wait:
                 self.process.wait()
 
-        if not self.wait or not self.timeout:
+        if not self.timeout:
             receive()
         else:
             rt = threading.Thread(target=receive)

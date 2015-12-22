@@ -666,6 +666,7 @@ def run(cmd,
         ignore_retcode=False,
         saltenv='base',
         use_vt=False,
+        wait=True,
         **kwargs):
     r'''
     Execute the passed command and return the output as a string
@@ -833,7 +834,8 @@ def run(cmd,
                pillarenv=kwargs.get('pillarenv'),
                pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
-               password=kwargs.get('password', None))
+               password=kwargs.get('password', None),
+               wait=wait)
 
     log_callback = _check_cb(log_callback)
 
@@ -892,6 +894,7 @@ def shell(cmd,
         ignore_retcode=False,
         saltenv='base',
         use_vt=False,
+        wait=False,
         **kwargs):
     '''
     Execute the passed command and return the output as a string.
@@ -1052,6 +1055,7 @@ def shell(cmd,
                saltenv=saltenv,
                use_vt=use_vt,
                python_shell=python_shell,
+               wait=wait,
                **kwargs)
 
 
@@ -1845,6 +1849,7 @@ def script(source,
            __env__=None,
            saltenv='base',
            use_vt=False,
+           wait=True,
            **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -2030,7 +2035,8 @@ def script(source,
                pillarenv=kwargs.get('pillarenv'),
                pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
-               password=kwargs.get('password', None))
+               password=kwargs.get('password', None),
+               wait=wait)
     _cleanup_tempfile(path)
     return ret
 
@@ -2320,6 +2326,7 @@ def run_chroot(root,
                ignore_retcode=False,
                saltenv='base',
                use_vt=False,
+               wait=True,
                **kwargs):
     '''
     .. versionadded:: 2014.7.0
@@ -2468,7 +2475,8 @@ def run_chroot(root,
                    saltenv=saltenv,
                    pillarenv=kwargs.get('pillarenv'),
                    pillar=kwargs.get('pillar'),
-                   use_vt=use_vt)
+                   use_vt=use_vt,
+                   wait=wait)
 
     # Kill processes running in the chroot
     for i in range(6):
@@ -2712,3 +2720,66 @@ def powershell(cmd,
     except Exception:
         log.error("Error converting PowerShell JSON return", exc_info=True)
         return {}
+
+
+def run_bg(cmd,
+        cwd=None,
+        runas=None,
+        shell=DEFAULT_SHELL,
+        python_shell=None,
+        env=None,
+        clean_env=False,
+        template=None,
+        rstrip=True,
+        umask=None,
+        output_loglevel='debug',
+        log_callback=None,
+        timeout=None,
+        reset_system_locale=True,
+        saltenv='base',
+        wait=True,
+        **kwargs):
+    '''
+    Dodadoc
+    :param cmd:
+    :param cwd:
+    :param runas:
+    :param shell:
+    :param env:
+    :param clean_env:
+    :param template:
+    :param rstrip:
+    :param umask:
+    :param log_callback:
+    :param quiet:
+    :param timeout:
+    :param reset_system_locale:
+    :param ignore_retcode:
+    :param saltenv:
+    :param kwargs:
+    :return:
+    '''
+
+    return run(cmd,
+               cwd=cwd,
+               stdin=None,
+               stdout=None,
+               output_loglevel=None,
+               use_vt=None,
+               wait=True,
+
+               runas=runas,
+               shell=shell,
+               env=env,
+               clean_env=clean_env,
+               template=template,
+               rstrip=rstrip,
+               umask=umask,
+               log_callback=log_callback,
+               quiet=True,
+               timeout=timeout,
+               reset_system_locale=reset_system_locale,
+               ignore_retcode=True,
+               saltenv=saltenv,
+               python_shell=python_shell,
+               **kwargs)
