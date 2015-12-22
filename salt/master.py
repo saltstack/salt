@@ -1960,6 +1960,8 @@ class ClearFuncs(object):
             # what the user has access to.
 
             auth_list = []
+            if '*' in self.opts['external_auth'][extra['eauth']]:
+                auth_list.extend(self.opts['external_auth'][extra['eauth']]['*'])
             if name in self.opts['external_auth'][extra['eauth']]:
                 auth_list = self.opts['external_auth'][extra['eauth']][name]
             if group_auth_match:
