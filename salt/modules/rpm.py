@@ -435,9 +435,11 @@ def info(*packages):
     # Locale needs to be en_US instead of C, because RPM otherwise will yank the timezone from the timestamps
     call = __salt__['cmd.run_all'](cmd + (" --queryformat 'Name: %{NAME}\n"
                                                           "Relocations: %|PREFIXES?{[%{PREFIXES} ]}:{(not relocatable)}|\n"
+                                                          "%|EPOCH?{Epoch: %{EPOCH}\n}|"
                                                           "Version: %{VERSION}\n"
                                                           "Vendor: %{VENDOR}\n"
                                                           "Release: %{RELEASE}\n"
+                                                          "Architecture: %{ARCH}\n"
                                                           "Build Date: %{BUILDTIME:date}\n"
                                                           "Install Date: %|INSTALLTIME?{%{INSTALLTIME:date}}:{(not installed)}|\n"
                                                           "Build Host: %{BUILDHOST}\n"
