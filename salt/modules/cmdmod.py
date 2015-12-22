@@ -418,7 +418,9 @@ def _run(cmd,
               'stdin': str(stdin) if stdin is not None else stdin,
               'stdout': stdout,
               'stderr': stderr,
-              'with_communicate': with_communicate}
+              'with_communicate': with_communicate,
+              'timeout': timeout,
+              }
 
     if umask is not None:
         _umask = str(umask).lstrip('0')
@@ -470,7 +472,7 @@ def _run(cmd,
             )
 
         try:
-            proc.wait(timeout)
+            proc.run()
         except TimedProcTimeoutError as exc:
             ret['stdout'] = str(exc)
             ret['stderr'] = ''
