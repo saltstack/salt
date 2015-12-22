@@ -1609,7 +1609,7 @@ def line(path, content, match=None, mode=None, location=None,
 
     changed = body_before != hashlib.sha256(salt.utils.to_bytes(body)).hexdigest()
 
-    if backup and changed:
+    if backup and changed and __opts__['test'] is False:
         try:
             temp_file = _mkstemp_copy(path=path, preserve_inode=True)
             shutil.move(temp_file, '{0}.{1}'.format(path, time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())))
@@ -1621,13 +1621,14 @@ def line(path, content, match=None, mode=None, location=None,
     if changed:
         if show_changes:
             changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'r').readlines(), body.splitlines()))
-        fh_ = None
-        try:
-            fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
-            fh_.write(body)
-        finally:
-            if fh_:
-                fh_.close()
+        if __opts__['test'] is False:
+            fh_ = None
+            try:
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
+                fh_.write(body)
+            finally:
+                if fh_:
+                    fh_.close()
 
     return show_changes and changes_diff or changed
 
