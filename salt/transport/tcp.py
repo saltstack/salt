@@ -744,11 +744,15 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
     def __getstate__(self):
         return {'opts': self.opts}
 
-    def _publish_daemon(self):
+    def _publish_daemon(self, log_queue=None):
         '''
         Bind to the interface specified in the configuration file
         '''
         salt.utils.appendproctitle(self.__class__.__name__)
+
+        if log_queue is not None:
+            salt.log.setup.set_multiprocessing_logging_queue(log_queue)
+        salt.log.setup.setup_multiprocessing_logging(log_queue)
 
         # Check if io_loop was set outside
         if self.io_loop is None:
@@ -786,7 +790,10 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
             os.umask(old_umask)
 
         # run forever
-        self.io_loop.start()
+        try:
+            self.io_loop.start()
+        except (KeyboardInterrupt, SystemExit):
+            salt.log.setup.shutdown_multiprocessing_logging()
 
     def pre_fork(self, process_manager):
         '''
@@ -794,7 +801,13 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
         '''
-        process_manager.add_process(self._publish_daemon)
+        kwargs = {}
+        if salt.utils.is_windows():
+            kwargs['log_queue'] = (
+                salt.log.setup.get_multiprocessing_logging_queue()
+            )
+
+        process_manager.add_process(self._publish_daemon, kwargs=kwargs)
 
     def publish(self, load):
         '''
