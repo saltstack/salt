@@ -1144,7 +1144,7 @@ class RemoteClient(Client):
                 'prefix': prefix,
                 'cmd': '_file_list'}
 
-        return self.channel.send(load)
+        return [sdecode(fn_) for fn_ in self.channel.send(load)]
 
     def file_list_emptydirs(self, saltenv='base', prefix='', env=None):
         '''
