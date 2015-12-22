@@ -132,7 +132,7 @@ def _find_vpc(vpc_id=None, name=None, cidr=None, tags=None, conn=None):
         return False
 
     if not vpc_id and not name and not tags and not cidr:
-        raise SaltInvocationError('At least on of the following must be specified: vpc id, name, cidr or tags.')
+        raise SaltInvocationError('At least one of the following must be specified: vpc id, name, cidr or tags.')
 
     try:
         filter_parameters = {'filters': {}}
@@ -375,7 +375,7 @@ def subnet_exists(subnet_id=None, name=None, tags=None, region=None, key=None, k
         return False
 
     if not subnet_id and not name and not tags:
-        raise SaltInvocationError('At least on of the following must be specified: subnet id, name or tags.')
+        raise SaltInvocationError('At least one of the following must be specified: subnet id, name or tags.')
 
     try:
         filter_parameters = {'filters': {}}
@@ -619,7 +619,7 @@ def dhcp_options_exists(dhcp_options_id=None, name=None, tags=None, region=None,
         return False
 
     if not dhcp_options_id and not name and not tags:
-        raise SaltInvocationError('At least on of the following must be specified: dhcp options id, name or tags.')
+        raise SaltInvocationError('At least one of the following must be specified: dhcp options id, name or tags.')
 
     try:
         filter_parameters = {'filters': {}}
@@ -727,7 +727,7 @@ def network_acl_exists(network_acl_id=None, name=None, tags=None, region=None, k
         return False
 
     if not network_acl_id and not name and not tags:
-        raise SaltInvocationError('At least on of the following must be specified: network ACL id, name or tags.')
+        raise SaltInvocationError('At least one of the following must be specified: network ACL id, name or tags.')
 
     try:
         filter_parameters = {'filters': {}}
@@ -1015,7 +1015,7 @@ def route_table_exists(route_table_id=None, name=None, tags=None, region=None, k
         return False
 
     if not route_table_id and not name and not tags:
-        raise SaltInvocationError('At least on of the following must be specified: route table id, name or tags.')
+        raise SaltInvocationError('At least one of the following must be specified: route table id, name or tags.')
 
     try:
         filter_parameters = {'filters': {}}
