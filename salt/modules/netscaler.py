@@ -4,7 +4,7 @@ Module to provide Citrix Netscaler compatibility to Salt (compatible with netsca
 
 .. versionadded:: 2015.2.0
 
-:depends:   
+:depends:
 
 - nsnitro Python module
 
@@ -18,7 +18,7 @@ Module to provide Citrix Netscaler compatibility to Salt (compatible with netsca
 :configuration: This module accepts connection configuration details either as
     parameters, or as configuration settings in /etc/salt/minion on the relevant
     minions
-    
+
     .. code-block:: yaml
 
         netscaler.host: 1.2.3.4
@@ -33,7 +33,7 @@ Module to provide Citrix Netscaler compatibility to Salt (compatible with netsca
     .. code-block:: bash
 
         salt-call netscaler.server_exists server_name
-    
+
     Calls passing configuration as opts
     .. code-block:: bash
 
