@@ -97,6 +97,90 @@ can be called:
 This example will execute the state.orchestrate runner and initiate an
 orchestrate execution.
 
+The Goal of Writing Reactor SLS Files
+=====================================
+
+Reactor SLS files share the familiar syntax from Salt States but there are
+important differences. The goal of a Reactor file is to process a Salt event as
+quickly as possible and then to optionally start a **new** process in response.
+
+They must be quick because Reactor sls files are matched and rendered
+sequentially in a single process. Long-running Reactor files will cause other
+reactions to queue behind the current one. The process that a Reactor file
+starts is handed off to a pool of worker threads. That process can be a long
+running, complex operation.
+
+Maybe that is a process that sends a command down to minions which is a quick
+fire-and-forget, or maybe it's complex Orchestrate run that sends commands to
+some minions, waits for the response, then later sends commands to other
+minions.
+
+tl;dr: Reactor SLS files MUST be simple and quick. The new job that they start
+can be long-running.
+
+Jinja Context
+-------------
+
+Reactor files only have access to a minimal Jinja context. ``grains`` and
+``pillar`` are not available. The ``salt`` object is available for calling
+Runner and Execution modules but it should be used sparingly and only for quick
+tasks for the reasons mentioned above.
+
+Advanced State System Capabilities
+----------------------------------
+
+Reactor SLS files, by design, do not support Requisites, ordering,
+``onlyif``/``unless`` conditionals and most other powerful constructs from
+Salt's State system.
+
+Complex Master-side operations are best performed by Salt's Orchestrate system
+so using the Reactor to kick off an Orchestrate run is a very common pairing.
+
+For example:
+
+.. code-block:: yaml
+
+    # /etc/salt/master.d/reactor.conf
+    # A custom event containing: {"foo": "Foo!", "bar: "bar*", "baz": "Baz!"}
+    reactor:
+      - myco/custom/event:
+        - /srv/reactor/some_event.sls
+
+.. code-block:: yaml
+
+    # /srv/reactor/some_event.sls
+    invoke_orchestrate_file:
+      runner.state.orchestrate:
+        - mods: orch.do_complex_thing
+        - pillar:
+            event_tag: {{ tag }}
+            event_data: {{ data | json() }}
+
+.. code-block:: yaml
+
+    # /srv/salt/orch/do_complex_thing.sls
+    {% set tag = salt.pillar.get('event_tag') %}
+    {% set data = salt.pillar.get('event_data') %}
+
+    # Pass data from the event to a custom runner function.
+    # The function expects a 'foo' argument.
+    do_first_thing:
+      salt.runner:
+        - name: custom_runner.custom_function
+        - foo: {{ data.foo }}
+
+    # Wait for the runner to finish then send an execution to minions.
+    # Forward some data from the event down to the minion's state run.
+    do_second_thing:
+      salt.state:
+        - tgt: {{ data.bar }}
+        - sls:
+          - do_thing_on_minion
+        - pillar:
+            baz: {{ data.baz }}
+        - require:
+          - salt: do_first_thing
+
 Fire an event
 =============
 
