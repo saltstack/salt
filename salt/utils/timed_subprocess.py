@@ -37,8 +37,8 @@ class TimedProc(object):
             self.timeout = None
         else:
             self.timeout = kwargs.pop('timeout')
-            if not isinstance(self.timeout, (int, float)):
-                raise salt.exceptions.TimedProcTimeoutError('Error: timeout must be a number')
+            if self.timeout is not None and not isinstance(self.timeout, (int, float)):
+                raise salt.exceptions.TimedProcTimeoutError('Error: timeout {0} must be a number'.format(timeout))
 
         try:
             self.process = subprocess.Popen(args, **kwargs)
@@ -61,9 +61,7 @@ class TimedProc(object):
         def receive():
             if self.with_communicate:
                 self.stdout, self.stderr = self.process.communicate(input=self.stdin)
-            elif not self.wait:
-                self.process.communicate()
-            else:
+            elif self.wait:
                 self.process.wait()
 
         if not self.wait or not self.timeout:

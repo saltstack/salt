@@ -237,6 +237,7 @@ def _run(cmd,
          pillar_override=None,
          use_vt=False,
          password=None,
+         wait=True,
          **kwargs):
     '''
     Do the DRY thing and only call subprocess.Popen() once
@@ -420,6 +421,7 @@ def _run(cmd,
               'stderr': stderr,
               'with_communicate': with_communicate,
               'timeout': timeout,
+              'wait': wait,
               }
 
     if umask is not None:
