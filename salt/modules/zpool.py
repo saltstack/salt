@@ -509,7 +509,7 @@ def exists(zpool):
     return True
 
 
-def destroy(zpool):
+def destroy(zpool, force=False):
     '''
     .. versionchanged:: Boron
 
@@ -517,6 +517,8 @@ def destroy(zpool):
 
     zpool : string
         name of storage pool
+    force : boolean
+        force destroy of pool
 
     CLI Example:
 
@@ -530,8 +532,9 @@ def destroy(zpool):
         ret[zpool] = 'storage pool does not exist'
     else:
         zpool_cmd = _check_zpool()
-        cmd = '{zpool_cmd} destroy {zpool}'.format(
+        cmd = '{zpool_cmd} destroy {force}{zpool}'.format(
             zpool_cmd=zpool_cmd,
+            force='-f ' if force else '',
             zpool=zpool
         )
         res = __salt__['cmd.run_all'](cmd, python_shell=False)
