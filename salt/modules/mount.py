@@ -313,6 +313,9 @@ def fstab(config='/etc/fstab'):
                     _fstab_entry.compatibility_keys)
 
                 entry['opts'] = entry['opts'].split(',')
+                while entry['name'] in ret:
+                    entry['name'] += '_'
+
                 ret[entry.pop('name')] = entry
             except _fstab_entry.ParseError:
                 pass
