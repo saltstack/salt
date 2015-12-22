@@ -467,7 +467,7 @@ def _check_directory(name,
         try:
             recurse_set = _get_recurse_set(recurse)
         except (TypeError, ValueError) as exc:
-            return False, '{0}'.format(exc)
+            return False, '{0}'.format(exc), changes
         if 'user' not in recurse_set:
             user = None
         if 'group' not in recurse_set:
