@@ -39,6 +39,7 @@ ulimit -n 1200
 
 SRCDIR=`git rev-parse --show-toplevel`
 SCRIPTDIR=`pwd`
+SHADIR=$SCRIPTDIR/shasums
 PKG_CONFIG_PATH=/opt/salt/lib/pkgconfig
 CFLAGS="-I/opt/salt/include"
 LDFLAGS="-L/opt/salt/lib"
@@ -57,6 +58,42 @@ else
     MAKE=/Applications/Xcode.app/Contents/Developer/usr/bin/make
 fi
 export PATH
+
+############################################################################
+# Functions Required for the script
+############################################################################
+download(){
+    if [ -z "$1" ]; then
+        echo "Must pass a URL to the download function"
+    fi
+
+    URL=$1
+    PKGNAME=${URL##*/}
+
+    cd $BUILDDIR
+
+    echo "################################################################################"
+    echo "Retrieving $PKGNAME"
+    echo "################################################################################"
+    curl -O# $URL
+
+    echo "################################################################################"
+    echo "Comparing Sha512 Hash"
+    echo "################################################################################"
+    FILESHA=($(shasum -a 512 $PKGNAME))
+    EXPECTEDSHA=($(cat $SHADIR/$PKGNAME.sha512))
+    if [ "$FILESHA" != "$EXPECTEDSHA" ]; then
+        echo "ERROR: Sha Check Failed for $PKGNAME"
+        return 1
+    fi
+
+    echo "################################################################################"
+    echo "Unpacking $PKGNAME"
+    echo "################################################################################"
+    tar -zxvf $PKGNAME
+
+    return $?
+}
 
 ############################################################################
 # Ensure Paths are present and clean
@@ -78,18 +115,15 @@ BUILDDIR=$SCRIPTDIR/build
 
 echo -n -e "\033]0;Build_Evn: pkg-config\007"
 
-cd $BUILDDIR
+PKGURL="http://pkgconfig.freedesktop.org/releases/pkg-config-0.29.tar.gz"
+PKGDIR="pkg-config-0.29"
 
-echo "#####################################################################"
-echo "Retrieving pkg-config"
-echo "#####################################################################"
-curl -O# http://pkgconfig.freedesktop.org/releases/pkg-config-0.29.tar.gz
+download $PKGURL
 
-echo "#####################################################################"
+echo "################################################################################"
 echo "Building pkg-config"
-echo "#####################################################################"
-tar -zxvf pkg-config-0.29.tar.gz
-cd pkg-config-0.29
+echo "################################################################################"
+cd $PKGDIR
 env LDFLAGS="-framework CoreFoundation -framework Carbon" ./configure --prefix=/opt/salt --with-internal-glib
 $MAKE
 $MAKE check
@@ -102,18 +136,15 @@ sudo $MAKE install
 
 echo -n -e "\033]0;Build_Evn: libsodium\007"
 
-cd $BUILDDIR
+PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.7.tar.gz"
+PKGDIR="libsodium-1.0.7"
 
-echo "#####################################################################"
-echo "Retrieving libsodium"
-echo "#####################################################################"
-curl -O# https://download.libsodium.org/libsodium/releases/libsodium-1.0.7.tar.gz
+download $PKGURL
 
-echo "#####################################################################"
+echo "################################################################################"
 echo "Building libsodium"
-echo "#####################################################################"
-tar -xvf libsodium-1.0.7.tar.gz
-cd libsodium-1.0.7
+echo "################################################################################"
+cd $PKGDIR
 ./configure --prefix=/opt/salt
 $MAKE
 $MAKE check
@@ -126,18 +157,15 @@ sudo $MAKE install
 
 echo -n -e "\033]0;Build_Evn: zeromq\007"
 
-cd $BUILDDIR
+PKGURL="http://download.zeromq.org/zeromq-4.1.3.tar.gz"
+PKGDIR="zeromq-4.1.3"
 
-echo "#####################################################################"
-echo "Retrieving zeromq"
-echo "#####################################################################"
-curl -O# http://download.zeromq.org/zeromq-4.1.3.tar.gz
+download $PKGURL
 
-echo "#####################################################################"
+echo "################################################################################"
 echo "Building zeromq"
-echo "#####################################################################"
-tar -zxvf zeromq-4.1.3.tar.gz
-cd zeromq-4.1.3
+echo "################################################################################"
+cd $PKGDIR
 ./configure --prefix=/opt/salt
 $MAKE
 $MAKE check
@@ -150,18 +178,15 @@ sudo $MAKE install
 
 echo -n -e "\033]0;Build_Evn: OpenSSL\007"
 
-cd $BUILDDIR
+PKGURL="http://openssl.org/source/openssl-1.0.2e.tar.gz"
+PKGDIR="openssl-1.0.2e"
 
-echo "#####################################################################"
-echo "Retrieving OpenSSL 1.0.2e"
-echo "#####################################################################"
-curl -O# http://openssl.org/source/openssl-1.0.2e.tar.gz
+download $PKGURL
 
-echo "#####################################################################"
+echo "################################################################################"
 echo "Building OpenSSL 1.0.2e"
-echo "#####################################################################"
-tar -zxvf openssl-1.0.2e.tar.gz
-cd openssl-1.0.2e
+echo "################################################################################"
+cd $PKGDIR
 ./Configure darwin64-x86_64-cc --prefix=/opt/salt --openssldir=/opt/salt/openssl
 $MAKE
 $MAKE test
@@ -174,18 +199,15 @@ sudo $MAKE install
 
 echo -n -e "\033]0;Build_Evn: GDBM\007"
 
-cd $BUILDDIR
+PKGURL="ftp://ftp.gnu.org/gnu/gdbm/gdbm-1.11.tar.gz"
+PKGDIR="gdbm-1.11"
 
-echo "#####################################################################"
-echo "Retrieving gdbm 1.11"
-echo "#####################################################################"
-curl -O# ftp://ftp.gnu.org/gnu/gdbm/gdbm-1.11.tar.gz
+download $PKGURL
 
-echo "#####################################################################"
+echo "################################################################################"
 echo "Building gdbm 1.11"
-echo "#####################################################################"
-tar -zxvf gdbm-1.11.tar.gz
-cd gdbm-1.11
+echo "################################################################################"
+cd $PKGDIR
 ./configure --prefix=/opt/salt --enable-libgdbm-compat
 $MAKE
 $MAKE check
@@ -198,18 +220,17 @@ sudo $MAKE install
 
 echo -n -e "\033]0;Build_Evn: Gnu Readline\007"
 
-cd $BUILDDIR
+PKGURL="ftp://ftp.cwru.edu/pub/bash/readline-6.3.tar.gz"
+PKGDIR="readline-6.3"
 
-echo "#####################################################################"
-echo "Retrieving GNU Readline"
-echo "#####################################################################"
+download $PKGURL
+
 curl -O# ftp://ftp.cwru.edu/pub/bash/readline-6.3.tar.gz
 
-echo "#####################################################################"
+echo "################################################################################"
 echo "Building GNU Readline 6.3"
-echo "#####################################################################"
-tar -zxvf readline-6.3.tar.gz
-cd readline-6.3
+echo "################################################################################"
+cd $PKGDIR
 ./configure --prefix=/opt/salt
 $MAKE
 sudo $MAKE install
@@ -221,19 +242,16 @@ sudo $MAKE install
 
 echo -n -e "\033]0;Build_Evn: Python\007"
 
-cd $BUILDDIR
+PKGURL="https://www.python.org/ftp/python/2.7.11/Python-2.7.11.tar.xz"
+PKGDIR="Python-2.7.11"
 
-echo "#####################################################################"
-echo "Retrieving Python 2.7.11"
-echo "#####################################################################"
-curl -O# https://www.python.org/ftp/python/2.7.11/Python-2.7.11.tar.xz
+download $PKGURL
 
-echo "#####################################################################"
+echo "################################################################################"
 echo "Building Python 2.7.11"
-echo "#####################################################################"
+echo "################################################################################"
 echo "Note there are some test failures"
-tar -zxvf Python-2.7.11.tar.xz
-cd Python-2.7.11
+cd $PKGDIR
 ./configure --prefix=/opt/salt --enable-shared --enable-toolbox-glue --with-ensurepip=install
 $MAKE
 # $MAKE test
@@ -246,18 +264,15 @@ sudo $MAKE install
 
 echo -n -e "\033]0;Build_Evn: CMake\007"
 
-cd $BUILDDIR
+PKGURL="https://cmake.org/files/v3.4/cmake-3.4.1.tar.gz"
+PKGDIR="cmake-3.4.1"
 
-echo "#####################################################################"
-echo "Retrieving CMake 3.4.1"
-echo "#####################################################################"
-curl -O# https://cmake.org/files/v3.4/cmake-3.4.1.tar.gz
+download $PKGURL
 
-echo "#####################################################################"
+echo "################################################################################"
 echo "Building CMake 3.4.1"
-echo "#####################################################################"
-tar -zxvf cmake-3.4.1.tar.gz
-cd cmake-3.4.1
+echo "################################################################################"
+cd $PKGDIR
 ./bootstrap
 $MAKE
 sudo $MAKE install
@@ -269,18 +284,15 @@ sudo $MAKE install
 
 echo -n -e "\033]0;Build_Evn: libgit2\007"
 
-cd $BUILDDIR
+PKGURL="https://codeload.github.com/libgit2/libgit2/tar.gz/v0.23.4"
+PKGDIR="libgit2-0.23.4"
 
-echo "#####################################################################"
-echo "Retrieving libgit2 0.23.4"
-echo "#####################################################################"
-curl -O# https://codeload.github.com/libgit2/libgit2/tar.gz/v0.23.4
+download $PKGURL
 
-echo "#####################################################################"
+echo "################################################################################"
 echo "Building libgit2 0.23.4"
-echo "#####################################################################"
-tar -zxvf v0.23.4
-cd libgit2-0.23.4
+echo "################################################################################"
+cd $PKGDIR
 mkdir build && cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/opt/salt
 sudo cmake --build . --target install
@@ -294,31 +306,31 @@ echo -n -e "\033]0;Build_Evn: PIP Dependencies\007"
 
 cd $BUILDDIR
 
-echo "#####################################################################"
+echo "################################################################################"
 echo "Installing Salt Dependencies with pip (normal)"
-echo "#####################################################################"
+echo "################################################################################"
 sudo -H /opt/salt/bin/pip install \
                           -r $SRCDIR/pkg/osx/req.txt \
                           --no-cache-dir
 
-echo "#####################################################################"
+echo "################################################################################"
 echo "Installing Salt Dependencies with pip (build_ext)"
-echo "#####################################################################"
+echo "################################################################################"
 sudo -H /opt/salt/bin/pip install \
                           -r $SRCDIR/pkg/osx/req_ext.txt \
                           --global-option=build_ext \
                           --global-option="-I/opt/salt/include" \
                           --no-cache-dir
 
-echo "---------------------------------------------------------------------"
+echo "--------------------------------------------------------------------------------"
 echo "Create Symlink to certifi for openssl"
-echo "---------------------------------------------------------------------"
+echo "--------------------------------------------------------------------------------"
 ln -s /opt/salt/lib/python2.7/site-packages/certifi/cacert.pem /opt/salt/openssl/cert.pem
 
 echo -n -e "\033]0;Build_Evn: Finished\007"
 
 cd $BUILDDIR
 
-echo "#####################################################################"
+echo "################################################################################"
 echo "Build Environment Script Completed"
-echo "#####################################################################"
+echo "################################################################################"
