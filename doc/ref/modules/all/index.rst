@@ -270,6 +270,7 @@ Full list of builtin execution modules
     smf
     smtp
     softwareupdate
+    solaris_fmadm
     solaris_group
     solaris_shadow
     solaris_user
