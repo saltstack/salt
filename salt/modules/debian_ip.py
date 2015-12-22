@@ -49,7 +49,9 @@ def __virtual__():
     '''
     if __grains__['os_family'] == 'Debian':
         return __virtualname__
-    return False
+    return (False, 'The debian_ip module could not be loaded: '
+            'unsupported OS family')
+
 
 _ETHTOOL_CONFIG_OPTS = {
     'speed': 'link-speed',
