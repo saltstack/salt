@@ -538,7 +538,7 @@ def destroy(zpool, force=False):
             zpool=zpool
         )
         res = __salt__['cmd.run_all'](cmd, python_shell=False)
-        if exists(zpool):
+        if res['retcode'] != 0:
             ret[zpool] = 'error destroying storage pool'
             if 'stderr' in res and res['stderr'] != '':
                 ret[zpool] = res['stderr']
@@ -1080,6 +1080,12 @@ def import_(zpool=None, new_name=None, **kwargs):
         forces import, even if the pool appears to be potentially active.
     altroot : string
         equivalent to "-o cachefile=none,altroot=root"
+    dir : string
+        searches for devices or files in dir, mutiple dirs can be specified as follows:: dir="dir1,dir2"
+    no_mount : boolean
+        import the pool without mounting any file systems.
+    only_destroyed : boolean
+        imports destroyed pools only. this also sets force=True.
 
     .. note::
 
@@ -1095,6 +1101,7 @@ def import_(zpool=None, new_name=None, **kwargs):
 
         salt '*' zpool.import [force=True|False]
         salt '*' zpool.import myzpool [mynewzpool] [force=True|False]
+        salt '*' zpool.import myzpool dir='/tmp'
     '''
     ret = {}
 
@@ -1103,11 +1110,14 @@ def import_(zpool=None, new_name=None, **kwargs):
     altroot = kwargs.get('altroot', None)
     mntopts = kwargs.get('mntopts', None)
     properties = kwargs.get('properties', None)
+    dirs = kwargs.get('dir', None)
+    no_mount = kwargs.get('no_mount', False)
+    only_destroyed = kwargs.get('only_destroyed', False)
     cmd = '{0} import'.format(zpool_cmd)
 
     # apply extra arguments from kwargs
-    if force:  # force creation
-        cmd = '{0} -f'.format(cmd)
+    if mntopts:  # set mountpoint
+        cmd = '{0} -o {1}'.format(cmd, mntopts)
     if properties:  # create "-o property=value" pairs
         optlist = []
         for prop in properties:
@@ -1118,14 +1128,23 @@ def import_(zpool=None, new_name=None, **kwargs):
             optlist.append('-o {0}={1}'.format(prop, value))
         opts = ' '.join(optlist)
         cmd = '{0} {1}'.format(cmd, opts)
-    if mntopts:  # set mountpoint
-        cmd = '{0} -o {1}'.format(cmd, mntopts)
+    if dirs:  # append -d params
+        dirs = dirs.split(',')
+        for d in dirs:
+            cmd = '{0} -d {1}'.format(cmd, d)
+    if only_destroyed:  # only import destroyed pools (-D)
+        force = True
+        cmd = '{0} -D'.format(cmd)
+    if force:  # force import (-f)
+        cmd = '{0} -f'.format(cmd)
+    if no_mount:  # set no mount (-N)
+        cmd = '{0} -N'.format(cmd)
     if altroot:  # set altroot
         cmd = '{0} -R {1}'.format(cmd, altroot)
 
     cmd = '{cmd} {zpool}{new_name}'.format(
         cmd=cmd,
-        zpool=' {0}'.format(zpool) if zpool else ' -a',
+        zpool='{0}'.format(zpool) if zpool else '-a',
         new_name=' {0}'.format(new_name) if zpool and new_name else ''
     )
     res = __salt__['cmd.run_all'](cmd, python_shell=False)
