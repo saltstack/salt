@@ -587,7 +587,7 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, r
     if not _ret['result']:
         ret['result'] = _ret['result']
         return ret
-    if users:
+    if users is not None:
         log.debug('Users are : {0}.'.format(users))
         group_result = __salt__['boto_iam.get_group'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
         ret = _case_group(ret, users, name, group_result, region, key, keyid, profile)
