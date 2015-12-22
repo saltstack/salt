@@ -179,7 +179,7 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
         ret['result'] = True
         ret['comment'] = 'IAM User {0} does not exist.'.format(name)
         return ret
-    if 'true' == str(delete_keys).lower:
+    if 'true' == str(delete_keys).lower():
         keys = __salt__['boto_iam.get_all_access_keys'](user_name=name, region=region, key=key,
                                                         keyid=keyid, profile=profile)
         log.debug('Keys for user {0} are {1}.'.format(name, keys))
@@ -190,9 +190,7 @@ def user_absent(name, delete_keys=None, region=None, key=None, keyid=None, profi
                     ret['comment'] = 'Access key {0} is set to be deleted.'.format(k['access_key_id'])
                     ret['result'] = None
                     return ret
-                if _delete_key(k['access_key_id'], name, region, key, keyid, profile):
-                    ret['comment'] = os.linesep.join([ret['comment'], 'Key {0} has been deleted.'.format(k['access_key_id'])])
-                    ret['changes'][k['access_key_id']] = 'deleted'
+                ret = _delete_key(ret, k['access_key_id'], name, region, key, keyid, profile)
     if __opts__['test']:
         ret['comment'] = 'IAM user {0} is set to be deleted.'.format(name)
         ret['result'] = None
