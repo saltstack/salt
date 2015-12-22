@@ -923,6 +923,9 @@ class AESFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
         pub_path = os.path.join(self.opts['pki_dir'], 'minions', id_)
+        if not os.path.is_file(pub_path):
+            log.error('Minion key for minion {0} not present on master')
+            return False
         with salt.utils.fopen(pub_path, 'r') as fp_:
             minion_pub = fp_.read()
         tmp_pub = salt.utils.mkstemp()
