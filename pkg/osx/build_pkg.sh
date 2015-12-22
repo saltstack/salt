@@ -136,6 +136,11 @@ mkdir -p $PKGDIR/resources
 cp $PKGRESOURCES/saltstack.png $PKGDIR/resources
 cp $PKGRESOURCES/*.rtf $PKGDIR/resources
 
+# I can't get this to work for some reason
+mkdir -p $PKGDIR/scripts
+cp $PKGRESOURCES/scripts/postflight.sh $PKGDIR/scripts
+cp $PKGRESOURCES/scripts/preflight.sh $PKGDIR/scripts
+
 ############################################################################
 # Copy Config Files from Salt Repo to the Package Directory
 ############################################################################
@@ -172,5 +177,6 @@ pkgbuild --root $PKGDIR \
 productbuild --resources=$PKGDIR/resources \
              --distribution=distribution.xml  \
              --package-path=salt-src-$VERSION.pkg \
+             --scripts $PKGDIR/scripts \
              --version=$VERSION salt-$VERSION.pkg
 
