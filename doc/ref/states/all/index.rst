@@ -158,6 +158,7 @@ Full list of builtin state modules
     serverdensity_device
     service
     slack
+    smartos
     smtp
     splunk
     splunk_search
