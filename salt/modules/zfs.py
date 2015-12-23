@@ -980,7 +980,8 @@ def hold(tag, *snapshot, **kwargs):
     *snapshot : string
         name of snapshot(s)
     recursive : boolean
-        lists the holds that are set on the named descendent snapshots also.
+        specifies that a hold with the given tag is applied recursively to
+        the snapshots of all descendent file systems.
 
     CLI Example:
 
@@ -1017,10 +1018,74 @@ def hold(tag, *snapshot, **kwargs):
     if res['retcode'] != 0:
         for err in res['stderr'].splitlines():
             if err.startswith('cannot hold snapshot'):
-                ret[err[22:err.index(':')-1]] = err[err.index(':')+1:]
+                ret[err[22:err.index(':')-1]] = err[err.index(':')+2:]
             else:
                 # all errors seem to follow the same format, but log to be safe
                 log.error('zfs.hold :: unknown error encountered: {0}'.format(err))
+
+    return ret
+
+
+def release(tag, *snapshot, **kwargs):
+    '''
+    .. versionadded:: Boron
+
+    Removes a single reference, named with the tag argument, from the
+    specified snapshot or snapshots.
+
+    .. note::
+
+        The tag must already exist for each snapshot.
+        If a hold exists on a snapshot, attempts to destroy that
+        snapshot by using the zfs destroy command return EBUSY.
+
+    tag : string
+        name of snapshot
+    *snapshot : string
+        name of snapshot(s)
+    recursive : boolean
+        recursively releases a hold with the given tag on the snapshots of
+        all descendent file systems.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.release mytag myzpool/mydataset@mysnapshot [recursive=True]
+        salt '*' zfs.release mytag myzpool/mydataset@mysnapshot myzpool/mydataset@myothersnapshot
+    '''
+    ret = {}
+
+    zfs = _check_zfs()
+    recursive = kwargs.get('recursive', False)
+
+    # verify snapshots
+    if not snapshot:
+        ret['error'] = 'one or more snapshots must be specified'
+
+    for snap in snapshot:
+        if '@' not in snap:
+            ret[snap] = 'not a snapshot'
+
+    if len(ret) > 0:
+        return ret
+
+    res = __salt__['cmd.run_all']('{zfs} release {recursive}{tag} {snapshot}'.format(
+        zfs=zfs,
+        recursive='-r ' if recursive else '',
+        tag=tag,
+        snapshot=' '.join(snapshot)
+    ))
+
+    for snap in snapshot:
+        ret[snap] = 'released (tag={0})'.format(tag)
+    if res['retcode'] != 0:
+        for err in res['stderr'].splitlines():
+            if err.startswith('cannot release hold from snapshot'):
+                ret[err[35:err.index(':')-1]] = err[err.index(':')+2:]
+            else:
+                # all errors seem to follow the same format, but log to be safe
+                log.error('zfs.relese :: unknown error encountered: {0}'.format(err))
 
     return ret
 
