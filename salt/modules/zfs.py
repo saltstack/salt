@@ -38,6 +38,23 @@ def _check_zfs():
     return salt.utils.which('zfs')
 
 
+@decorators.memoize
+def _check_features():
+    '''
+    Looks to see if zpool-features is available
+    '''
+    # get man location
+    man = salt.utils.which('man')
+    if not man:
+        return False
+
+    cmd = '{man} zpool-features'.format(
+        man=man
+    )
+    res = __salt__['cmd.run_all'](cmd, python_shell=False)
+    return res['retcode'] == 0
+
+
 def _available_commands():
     '''
     List available commands based on 'zfs -?'. Returns a dict.
@@ -641,7 +658,7 @@ def diff(name_a, name_b, **kwargs):
     show_indication = kwargs.get('show_indication', True)
 
     if '@' not in name_a:
-        ret['error'] = 'name_a MUST be a snapshot'
+        ret[name_a] = 'MUST be a snapshot'
         return ret
 
     res = __salt__['cmd.run_all']('{zfs} diff -H {changetime}{indication}{name_a} {name_b}'.format(
@@ -833,6 +850,62 @@ def promote(name):
         ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[name] = 'promoted'
+    return ret
+
+
+def bookmark(snapshot, bookmark):
+    '''
+    .. versionadded:: Boron
+
+    Creates a bookmark of the given snapshot
+
+    .. note::
+
+        Bookmarks mark the point in time when the snapshot was created,
+        and can be used as the incremental source for a zfs send command.
+
+        This feature must be enabled to be used. See zpool-features(5) for
+        details on ZFS feature flags and the bookmarks feature.
+
+    snapshot : string
+        name of snapshot to bookmark
+    bookmark : string
+        name of bookmark
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.bookmark myzpool/mydataset@yesterday myzpool/mydataset#complete
+    '''
+    ret = {}
+
+    # abort if we do not have feature flags
+    if not _check_features():
+        ret['error'] = 'bookmarks are not supported'
+        return ret
+
+    zfs = _check_zfs()
+
+    if '@' not in snapshot:
+        ret[snapshot] = 'MUST be a snapshot'
+
+    if '#' not in bookmark:
+        ret[bookmark] = 'MUST be a bookmark'
+
+    if len(ret) > 0:
+        return ret
+
+    res = __salt__['cmd.run_all']('{zfs} bookmark {snapshot} {bookmark}'.format(
+        zfs=zfs,
+        snapshot=snapshot,
+        bookmark=bookmark
+    ))
+
+    if res['retcode'] != 0:
+        ret[snapshot] = res['stderr'] if 'stderr' in res else res['stdout']
+    else:
+        ret[snapshot] = 'bookmarked as {0}'.format(bookmark)
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
