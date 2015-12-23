@@ -157,7 +157,13 @@ def policy_present(name, policyName, policyDocument,
     _describe = __salt__['boto_iot.describe_policy'](policyName=policyName,
                                   region=region, key=key, keyid=keyid, profile=profile)['policy']
 
-    describeDict = json.loads(_describe['policyDocument'])
+    if isinstance(_describe['policyDocument'], string_types):
+        describeDict = json.loads(_describe['policyDocument'])
+    else:
+        describeDict = _describe['policyDocument']
+
+    if isinstance(policyDocument, string_types):
+        policyDocument = json.loads(policyDocument)
 
     r = salt.utils.compare_dicts(describeDict, policyDocument)
     if bool(r):
@@ -405,10 +411,10 @@ def policy_detached(name, policyName, principal,
             return ret
         ret['changes']['old'] = {'attached': True}
         ret['changes']['new'] = {'attached': False}
-        ret['comment'] = 'Policy {0} attached to {1}.'.format(policyName, principal)
+        ret['comment'] = 'Policy {0} detached from {1}.'.format(policyName, principal)
         return ret
 
-    ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} is attached.'.format(policyName)])
+    ret['comment'] = os.linesep.join([ret['comment'], 'Policy {0} is detached.'.format(policyName)])
     ret['changes'] = {}
 
     return ret
