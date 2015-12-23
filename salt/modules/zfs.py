@@ -960,4 +960,68 @@ def holds(snapshot, **kwargs):
         ret[snapshot] = res['stderr'] if 'stderr' in res else res['stdout']
     return ret
 
+
+def hold(tag, *snapshot, **kwargs):
+    '''
+    .. versionadded:: Boron
+
+    Adds a single reference, named with the tag argument, to the specified
+    snapshot or snapshots.
+
+    .. note::
+
+        Each snapshot has its own tag namespace, and tags must be unique within that space.
+
+        If a hold exists on a snapshot, attempts to destroy that snapshot by
+        using the zfs destroy command return EBUSY.
+
+    tag : string
+        name of snapshot
+    *snapshot : string
+        name of snapshot(s)
+    recursive : boolean
+        lists the holds that are set on the named descendent snapshots also.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot [recursive=True]
+        salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot myzpool/mydataset@myothersnapshot
+    '''
+    ret = {}
+
+    zfs = _check_zfs()
+    recursive = kwargs.get('recursive', False)
+
+    # verify snapshots
+    if not snapshot:
+        ret['error'] = 'one or more snapshots must be specified'
+
+    for snap in snapshot:
+        if '@' not in snap:
+            ret[snap] = 'not a snapshot'
+
+    if len(ret) > 0:
+        return ret
+
+    res = __salt__['cmd.run_all']('{zfs} hold {recursive}{tag} {snapshot}'.format(
+        zfs=zfs,
+        recursive='-r ' if recursive else '',
+        tag=tag,
+        snapshot=' '.join(snapshot)
+    ))
+
+    for snap in snapshot:
+        ret[snap] = 'held'
+    if res['retcode'] != 0:
+        for err in res['stderr'].splitlines():
+            if err.startswith('cannot hold snapshot'):
+                ret[err[22:err.index(':')-1]] = err[err.index(':')+1:]
+            else:
+                # all errors seem to follow the same format, but log to be safe
+                log.error('zfs.hold :: unknown error encountered: {0}'.format(err))
+
+    return ret
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
