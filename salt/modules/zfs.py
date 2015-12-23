@@ -1013,7 +1013,7 @@ def hold(tag, *snapshot, **kwargs):
     ))
 
     for snap in snapshot:
-        ret[snap] = 'held'
+        ret[snap] = 'held (tag={0})'.format(tag)
     if res['retcode'] != 0:
         for err in res['stderr'].splitlines():
             if err.startswith('cannot hold snapshot'):
