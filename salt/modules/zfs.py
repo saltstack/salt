@@ -660,4 +660,69 @@ def diff(name_a, name_b, **kwargs):
             ret.append(line)
     return ret
 
+
+def rollback(name, **kwargs):
+    '''
+    .. versionadded:: Boron
+
+    Roll back the given dataset to a previous snapshot.
+
+    .. warning::
+
+        When a dataset is rolled back, all data that has changed since
+        the snapshot is discarded, and the dataset reverts to the state
+        at the time of the snapshot. By default, the command refuses to
+        roll back to a snapshot other than the most recent one.
+
+        In order to do so, all intermediate snapshots and bookmarks
+        must be destroyed by specifying the -r option.
+
+    name : string
+        name of snapshot
+    recursive : boolean
+        destroy any snapshots and bookmarks more recent than the one
+        specified.
+    recursive_all : boolean
+        destroy any more recent snapshots and bookmarks, as well as any
+        clones of those snapshots.
+    force : boolean
+        used with the -R option to force an unmount of any clone file
+        systems that are to be destroyed.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.rollback myzpool/mydataset@yesterday
+    '''
+    ret = {}
+
+    zfs = _check_zfs()
+    force = kwargs.get('force', False)
+    recursive = kwargs.get('recursive', False)
+    recursive_all = kwargs.get('recursive_all', False)
+
+    if '@' not in name:
+        ret[name] = 'MUST be a snapshot'
+        return ret
+
+    if force:
+        if not recursive and not recursive_all:  # -f only works with -R
+            log.warning('zfs.rollback - force=True can only be used when recursive_all=True or recursive=True')
+            force = False
+
+    res = __salt__['cmd.run_all']('{zfs} rollback {force}{recursive}{recursive_all}{snapshot}'.format(
+        zfs=zfs,
+        force='-f ' if force else '',
+        recursive='-r ' if recursive else '',
+        recursive_all='-R ' if recursive_all else '',
+        snapshot=name
+    ))
+
+    if res['retcode'] != 0:
+        ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
+    else:
+        ret[name[:name.index('@')]] = 'rolledback to snapshot {0}'.format(name[name.index('@')+1:])
+    return ret
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
