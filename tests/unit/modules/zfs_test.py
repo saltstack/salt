@@ -336,6 +336,28 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.clone('myzpool/mydataset@yesterday', 'myzpool/archive/yesterday'), res)
 
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_promote_success(self):
+        '''
+        Tests zfs promote success
+        '''
+        res = {'myzpool/yesterday': 'promoted'}
+        ret = {'pid': 69075, 'retcode': 0, 'stderr': '', 'stdout': ''}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.promote('myzpool/yesterday'), res)
+
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_promote_failure(self):
+        '''
+        Tests zfs promote failure
+        '''
+        res = {'myzpool/yesterday': "cannot promote 'myzpool/yesterday': not a cloned filesystem"}
+        ret = {'pid': 69209, 'retcode': 1, 'stderr': "cannot promote 'myzpool/yesterday': not a cloned filesystem", 'stdout': ''}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.promote('myzpool/yesterday'), res)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZfsTestCase, needs_daemon=False)
