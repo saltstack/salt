@@ -358,6 +358,17 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.promote('myzpool/yesterday'), res)
 
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_bookmark_success(self):
+        '''
+        Tests zfs bookmark success
+        '''
+        res = {'myzpool/mydataset@yesterday': 'bookmarked as myzpool/mydataset#important'}
+        ret = {'pid': 20990, 'retcode': 0, 'stderr': '', 'stdout': ''}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.bookmark('myzpool/mydataset@yesterday', 'myzpool/mydataset#important'), res)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZfsTestCase, needs_daemon=False)
