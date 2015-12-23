@@ -720,7 +720,7 @@ def rollback(name, **kwargs):
     ))
 
     if res['retcode'] != 0:
-        ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
+        ret[name[:name.index('@')]] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[name[:name.index('@')]] = 'rolledback to snapshot: {0}'.format(name[name.index('@')+1:])
     return ret
