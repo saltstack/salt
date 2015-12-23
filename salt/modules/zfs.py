@@ -1171,7 +1171,13 @@ def snapshot(*snapshot, **kwargs):
     if res['retcode'] != 0:
         for err in res['stderr'].splitlines():
             if err.startswith('cannot create snapshot'):
-                ret[err[24:err.index(':')-1]] = err[err.index(':')+2:]
+                snap = err[24:err.index(':')-1]
+                msg = err[err.index(':')+2:]
+                if snap != '':
+                    ret[snap] = msg
+                else:
+                    for snap in ret.keys():
+                        ret[snap] = msg
             elif err.startswith('cannot open'):
                 for snap in ret.keys():
                     if snap.startswith(err[13:err.index(':')-1]):
