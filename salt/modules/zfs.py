@@ -7,8 +7,8 @@ Salt interface to ZFS commands
 .. note::
     TODO
 
-    - destroy -> parse output (-P
     - list -> parse output
+    - destroy -> parse output (-P
     - snapshot
     - rollback
     - clone
@@ -41,6 +41,7 @@ import sys
 import salt.utils
 import salt.modules.cmdmod
 import salt.utils.decorators as decorators
+from salt.utils.odict import OrderedDict
 
 log = logging.getLogger(__name__)
 
@@ -62,6 +63,7 @@ def _check_zfs():
 def _available_commands():
     '''
     List available commands based on 'zfs -?'. Returns a dict.
+    Does not work on illumos or solaris
     '''
     zfs_path = _check_zfs()
     if not zfs_path:
@@ -156,7 +158,7 @@ def _make_function(cmd_name, doc):
         # Make a note of the error in the return object if retcode
         # not 0.
         if res['retcode'] != 0:
-            ret['Error'] = _exit_status(res['retcode'])
+            ret['error'] = _exit_status(res['retcode'])
 
         # Set the output to be splitlines for now.
         ret = res['stdout'].splitlines()
@@ -407,58 +409,93 @@ def rename(name, new_name, **kwargs):
     return ret
 
 
-def list_(name='', **kwargs):
+def list_(name=None, **kwargs):
     '''
     .. versionadded:: 2015.5.0
+    .. versionchanged:: Boron
 
     Return a list of all datasets or a specified dataset on the system and the
     values of their used, available, referenced, and mountpoint properties.
 
-    .. note::
-
-        Information about the dataset and all of it\'s descendent datasets can be displayed
-        by passing ``recursive=True`` on the CLI.
+    name : string
+        name of dataset, volume, or snapshot
+    recursive : boolean
+        recursively list children
+    depth : int
+        limit recursion to depth
+    properties : string
+        comma-seperated list of properties to list, the name property will always be added
+    type : string
+        comma-separated list of types to display, where type is one of
+        filesystem, snapshot, volume, bookmark, or all.
+    sort : string
+        property to sort on (default = name)
+    order : string [ascending|descending]
+        sort order (default = ascending)
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' zfs.list [recursive=True|False]
-        salt '*' zfs.list /myzpool/mydataset [recursive=True|False]
+        salt '*' zfs.list
+        salt '*' zfs.list myzpool/mydataset [recursive=True|False]
+        salt '*' zfs.list myzpool/mydataset properties="sharenfs,mountpoint"
 
-    .. note::
-
-        Dataset property value output can be customized by passing an additional argument called
-        "properties" in the form of a python list::
-
-            properties="[property1, property2, property3]"
-
-        Example:
-
-        .. code-block:: bash
-
-            salt '*' zfs.list /myzpool/mydataset properties="[name, sharenfs, mountpoint]"
 
     '''
+    ret = OrderedDict()
     zfs = _check_zfs()
-    recursive_opt = kwargs.get('recursive', False)
-    properties_opt = kwargs.get('properties', False)
-    cmd = '{0} list'.format(zfs)
+    recursive = kwargs.get('recursive', False)
+    depth = kwargs.get('depth', 0)
+    properties = kwargs.get('properties', 'used,avail,refer,mountpoint')
+    sort = kwargs.get('sort', None)
+    ltype = kwargs.get('type', None)
+    order = kwargs.get('order', 'ascending')
+    cmd = '{0} list -H'.format(zfs)
 
-    if recursive_opt:
+    # filter on type
+    if ltype:
+        cmd = '{0} -t {1}'.format(cmd, ltype)
+
+    # recursively list
+    if recursive:
         cmd = '{0} -r'.format(cmd)
+        if depth:
+            cmd = '{0} -d {1}'.format(cmd, depth)
 
-    if properties_opt:
-        cmd = '{0} -o {1}'.format(cmd, ','.join(properties_opt))
+    # add properties
+    properties = properties.split(',')
+    if 'name' in properties:  # ensure name is first property
+        properties.remove('name')
+    properties.insert(0, 'name')
+    cmd = '{0} -o {1}'.format(cmd, ','.join(properties))
 
-    cmd = '{0} {1}'.format(cmd, name)
+    # sorting
+    if sort and sort in properties:
+        if order.startswith('a'):
+            cmd = '{0} -s {1}'.format(cmd, sort)
+        else:
+            cmd = '{0} -S {1}'.format(cmd, sort)
 
+    # add name if set
+    if name:
+        cmd = '{0} {1}'.format(cmd, name)
+
+    # parse output
     res = __salt__['cmd.run_all'](cmd)
-
     if res['retcode'] == 0:
-        dataset_list = [l for l in res['stdout'].splitlines()]
-        return {'datasets': dataset_list}
+        for ds in [l for l in res['stdout'].splitlines()]:
+            ds = ds.split("\t")
+            ds_data = {}
+
+            for prop in properties:
+                ds_data[prop] = ds[properties.index(prop)]
+
+            ret[ds_data['name']] = ds_data
+            del ret[ds_data['name']]['name']
     else:
-        return {'Error': res['stderr']}
+        ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
+
+    return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
