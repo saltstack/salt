@@ -36,7 +36,7 @@ def __virtual__():
     if salt.utils.which('racadm'):
         return True
 
-    return False
+    return (False, 'The drac execution module cannot be loaded: racadm binary not in path.')
 
 
 def __parse_drac(output):
@@ -459,7 +459,11 @@ def change_password(username, password, uid=None, host=None,
     be necessary if one is not sure which user slot contains the one you want.
     Many late-model Dell chassis have 'root' as UID 1, so if you can depend
     on that then setting the password is much quicker.
+    Raises an error if the supplied password is greater than 20 chars.
     '''
+    if len(password) > 20:
+        raise CommandExecutionError('Supplied password should be 20 characters or less')
+
     if uid is None:
         user = list_users(host=host, admin_username=admin_username,
                           admin_password=admin_password, module=module)

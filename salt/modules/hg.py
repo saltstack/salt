@@ -187,7 +187,7 @@ def pull(cwd, opts=None, user=None, identity=None, repository=None):
             cmd.append(opt)
     if repository is not None:
         cmd.append(repository)
-    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False, use_vt=not utils.is_windows())
+    return __salt__['cmd.run'](cmd, cwd=cwd, runas=user, python_shell=False)
 
 
 def update(cwd, rev, force=False, user=None):
@@ -251,7 +251,7 @@ def clone(cwd, repository, opts=None, user=None, identity=None):
             cmd.append('{0}'.format(opt))
     if identity:
         cmd.append(_ssh_flag(identity))
-    return __salt__['cmd.run'](cmd, runas=user, python_shell=False, use_vt=not utils.is_windows())
+    return __salt__['cmd.run'](cmd, runas=user, python_shell=False)
 
 
 def status(cwd, opts=None, user=None):

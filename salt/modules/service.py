@@ -45,10 +45,10 @@ def __virtual__():
         'Mint'
     ))
     if __grains__.get('os', '') in disable:
-        return False
+        return (False, 'Your OS is on the disabled list')
     # Disable on all non-Linux OSes as well
     if __grains__['kernel'] != 'Linux':
-        return False
+        return (False, 'Non Linux OSes are not supported')
     # Suse >=12.0 uses systemd
     if __grains__.get('os_family', '') == 'Suse':
         try:
@@ -58,9 +58,9 @@ def __virtual__():
             # number (it'd be so much simpler if it was always "X.Y"...)
             import re
             if int(re.split(r'\D+', __grains__.get('osrelease', ''))[0]) >= 12:
-                return False
+                return (False, 'Suse version greater than or equal to 12 is not supported')
         except ValueError:
-            return False
+            return (False, 'You are missing the os_family grain')
     return 'service'
 
 

@@ -687,6 +687,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             pass
         fnd['rel'] = path
         fnd['path'] = dest
+        fnd['stat'] = list(os.stat(dest))
         repo['repo'].close()
         return fnd
     return fnd

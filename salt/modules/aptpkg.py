@@ -84,7 +84,7 @@ def __virtual__():
         return __virtualname__
     elif __grains__.get('os_family', False) == 'Debian':
         return __virtualname__
-    return False
+    return (False, 'The pkg module could not be loaded: unsupported OS family')
 
 
 def __init__(opts):
@@ -667,8 +667,13 @@ def install(name=None,
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
 
+    errors = []
     for cmd in cmds:
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+        out = __salt__['cmd.run_all'](cmd,
+                                      output_loglevel='trace',
+                                      python_shell=False)
+        if out['retcode'] != 0 and out['stderr']:
+            errors.append(out['stderr'])
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -678,6 +683,12 @@ def install(name=None,
         if pkgname not in ret or pkgname in old:
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
 
     return ret
 
@@ -703,22 +714,37 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     cmd.extend(targets)
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
-    __salt__['cmd.run'](
+    out = __salt__['cmd.run_all'](
         cmd,
         env=env,
         output_loglevel='trace',
         python_shell=False,
     )
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     new_removed = list_pkgs(removed=True)
 
-    ret = {'installed': salt.utils.compare_dicts(old, new)}
+    changes = salt.utils.compare_dicts(old, new)
     if action == 'purge':
-        ret['removed'] = salt.utils.compare_dicts(old_removed, new_removed)
-        return ret
+        ret = {
+            'removed': salt.utils.compare_dicts(old_removed, new_removed),
+            'installed': changes
+        }
     else:
-        return ret['installed']
+        ret = changes
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def autoremove(list_only=False, purge=False):
@@ -880,18 +906,20 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     else:
         cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::={0}'.format(force_conf),
                '-o', 'DPkg::Options::=--force-confdef', 'upgrade']
-    call = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='trace',
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=False,
+                                   redirect_stderr=True,
                                    env=DPKG_ENV_VARS.copy())
     if call['retcode'] != 0:
         ret['result'] = False
-        if 'stderr' in call:
-            ret['comment'] += call['stderr']
-        if 'stdout' in call:
-            ret['comment'] += call['stdout']
-    else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        if call['stdout']:
+            ret['comment'] = call['stdout']
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret['changes'] = salt.utils.compare_dicts(old, new)
+
     return ret
 
 

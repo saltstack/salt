@@ -17,7 +17,10 @@ def __virtual__():
     '''
     Only run on OpenBSD systems
     '''
-    return __virtualname__ if __grains__['os'] == 'OpenBSD' else False
+    if __grains__['os'] == 'OpenBSD':
+        return __virtualname__
+    return (False, 'The openbsd_sysctl execution module cannot be loaded: '
+            'only available on FreeBSD systems.')
 
 
 def show(config_file=False):

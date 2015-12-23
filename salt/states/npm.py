@@ -192,12 +192,8 @@ def installed(name,
             'runas': user,
             'registry': registry,
             'env': env,
+            'pkgs': pkg_list,
         }
-
-        if pkgs is not None:
-            cmd_args['pkgs'] = pkgs
-        else:
-            cmd_args['pkg'] = pkg_name
 
         call = __salt__['npm.install'](**cmd_args)
     except (CommandNotFoundError, CommandExecutionError) as err:

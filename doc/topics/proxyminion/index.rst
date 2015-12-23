@@ -33,6 +33,8 @@ run ``salt-proxy`` on a remote minion. Specify all your master side
 proxy (pillar) configuration and use this state to remotely configure proxies on one
 or more minions.
 
+See :doc:`Proxyminion Beacon </topics/proxyminion/beacon>` to help
+with easy configuration and management of ``salt-proxy`` processes.
 
 New in 2015.8.2
 ---------------

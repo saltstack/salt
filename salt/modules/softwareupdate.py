@@ -19,7 +19,10 @@ def __virtual__():
     '''
     Only for MacOS
     '''
-    return __virtualname__ if __grains__['os'] == 'MacOS' else False
+    if __grains__['os'] == 'MacOS':
+        return __virtualname__
+    return (False, 'The softwareupdate module could not be loaded: '
+            'module only works on MacOS systems.')
 
 
 def _get_upgradable(rec=False, restart=False):

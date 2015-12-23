@@ -134,7 +134,8 @@ def __virtual__():
                 return __virtualname__
         else:
             log.critical('Minimum version of docker-compose>=1.5.0')
-    return False
+    return (False, 'The dockercompose execution module not loaded: '
+            'compose python library not available.')
 
 
 def __standardize_result(status, message, data=None, debug_msg=None):

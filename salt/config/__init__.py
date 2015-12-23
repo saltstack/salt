@@ -919,8 +919,6 @@ DEFAULT_MINION_OPTS = {
     'recon_randomize': True,
     'return_retry_timer': 5,
     'return_retry_timer_max': 10,
-    'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
-    'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'random_reauth_delay': 10,
     'winrepo_source_dir': 'salt://win/repo-ng/',
     'winrepo_dir': os.path.join(salt.syspaths.BASE_FILE_ROOTS_DIR, 'win', 'repo'),
@@ -1073,6 +1071,8 @@ DEFAULT_MASTER_OPTS = {
     'peer': {},
     'preserve_minion_cache': False,
     'syndic_master': '',
+    'syndic_log_file': os.path.join(salt.syspaths.LOGS_DIR, 'syndic'),
+    'syndic_pidfile': os.path.join(salt.syspaths.PIDFILE_DIR, 'salt-syndic.pid'),
     'runner_dirs': [],
     'outputter_dirs': [],
     'client_acl': {},
@@ -2626,22 +2626,26 @@ def is_profile_configured(opts, provider, profile_name):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['vmware']
+    non_image_drivers = ['vmware', 'nova']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
                         'softlayer', 'softlayer_hw', 'vmware', 'vsphere']
 
+    provider_key = opts['providers'][alias][driver]
+    profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
+
     if driver not in non_image_drivers:
         required_keys.append('image')
     elif driver == 'vmware':
         required_keys.append('clonefrom')
+    elif driver == 'nova':
+        nova_image_keys = ['image', 'block_device_mapping', 'block_device']
+        if not any([key in provider_key for key in nova_image_keys]) and not any([key in profile_key for key in nova_image_keys]):
+            required_keys.extend(nova_image_keys)
 
     if driver not in non_size_drivers:
         required_keys.append('size')
-
-    provider_key = opts['providers'][alias][driver]
-    profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
 
     # Check if image and/or size are supplied in the provider config. If either
     # one is present, remove it from the required_keys list.

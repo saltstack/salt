@@ -56,7 +56,7 @@ def __virtual__():
     '''
     if HAS_PWD and __grains__['kernel'] == 'FreeBSD':
         return __virtualname__
-    return False
+    return (False, 'The pw_user execution module cannot be loaded: the pwd python module is not available or the system is not FreeBSD.')
 
 
 def _get_gecos(name):

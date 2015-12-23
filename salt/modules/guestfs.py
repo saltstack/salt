@@ -21,7 +21,7 @@ def __virtual__():
     '''
     if salt.utils.which('guestmount'):
         return 'guestfs'
-    return False
+    return (False, 'The guestfs execution module cannot be loaded: guestmount binary not in path.')
 
 
 def mount(location, access='rw'):

@@ -128,6 +128,15 @@ def available():
         for fn_ in files:
             if '.ko' in fn_:
                 ret.append(fn_[:fn_.index('.ko')].replace('-', '_'))
+
+    if 'Arch' in __grains__['os_family']:
+        # Sadly this path is relative to kernel major version but ignores minor version
+        mod_dir_arch = '/lib/modules/extramodules-' + os.uname()[2][0:3] + '-ARCH'
+        for root, dirs, files in os.walk(mod_dir_arch):
+            for fn_ in files:
+                if '.ko' in fn_:
+                    ret.append(fn_[:fn_.index('.ko')].replace('-', '_'))
+
     return sorted(list(ret))
 
 

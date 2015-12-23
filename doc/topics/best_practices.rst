@@ -122,7 +122,22 @@ An example ``top.sls`` may be as simple as the following:
       '*':
         - packages
 
-Or much more complicated, using a variety of matchers:
+Any number of matchers can be added to the base environment. For example, here
+is an expanded version of the Pillar top file stated above:
+
+/srv/pillar/top.sls:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - packages
+      'web*':
+        - apache
+        - vim
+
+Or an even more complicated example, using a variety of matchers in numerous
+environments:
 
 /srv/pillar/top.sls:
 

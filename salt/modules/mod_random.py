@@ -19,14 +19,15 @@ from salt.exceptions import SaltInvocationError
 __virtualname__ = 'random'
 
 
-def __virtual__():
+def __virtual__(algorithm='sha512'):
     '''
-    Confirm this module is on a Debian based system
+    Sanity check for compatibility with Python 2.6 / 2.7
     '''
-    # Certain versions of hashlib do not contain
-    # the necessary functions
-    if not hasattr(hashlib, 'algorithms'):
-        return False
+    # The hashlib function on Python <= 2.6 does not provide the attribute 'algorithms'
+    # This attribute was introduced on Python >= 2.7
+    if not hasattr(hashlib, 'algorithms') and not hasattr(hashlib, algorithm):
+        return (False, 'The random execution module cannot be loaded: only available in Python >= 2.7.')
+
     return __virtualname__
 
 
@@ -49,7 +50,11 @@ def hash(value, algorithm='sha512'):
 
         salt '*' random.hash 'I am a string' md5
     '''
-    if algorithm in hashlib.algorithms:
+    if hasattr(hashlib, 'algorithms') and algorithm in hashlib.algorithms:
+        hasher = hashlib.new(algorithm)
+        hasher.update(value)
+        out = hasher.hexdigest()
+    elif hasattr(hashlib, algorithm):
         hasher = hashlib.new(algorithm)
         hasher.update(value)
         out = hasher.hexdigest()

@@ -29,12 +29,12 @@ Installation Prerequisites
   path that is running salt. Its version should support `Docker Remote API
   v1.12 <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.12>`_.
 
-  Currently, ``docker-py 0.5.0`` is known to support `Docker Remote API v1.12
+  Currently, ``docker-py 0.6.0`` is known to support `Docker Remote API v1.12
   <http://docs.docker.io/en/latest/reference/api/docker_remote_api_v1.12>`_
 
   .. code-block:: bash
 
-      pip install docker-py==0.5.0
+      pip install docker-py==0.6.0
 
 Prerequisite Pillar Configuration for Authentication
 ----------------------------------------------------
@@ -209,7 +209,7 @@ def __virtual__():
     '''
     if HAS_DOCKER:
         return __virtualname__
-    return False
+    return (False, 'dockerio execution module not loaded: docker python library not available.')
 
 
 def _sizeof_fmt(num):

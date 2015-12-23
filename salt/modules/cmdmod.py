@@ -385,7 +385,18 @@ def _run(cmd,
             # Default to C!
             # Salt only knows how to parse English words
             # Don't override if the user has passed LC_ALL
-            env.setdefault('LC_ALL', 'C')
+            env.setdefault('LC_CTYPE', 'C')
+            env.setdefault('LC_NUMERIC', 'C')
+            env.setdefault('LC_TIME', 'C')
+            env.setdefault('LC_COLLATE', 'C')
+            env.setdefault('LC_MONETARY', 'C')
+            env.setdefault('LC_MESSAGES', 'C')
+            env.setdefault('LC_PAPER', 'C')
+            env.setdefault('LC_NAME', 'C')
+            env.setdefault('LC_ADDRESS', 'C')
+            env.setdefault('LC_TELEPHONE', 'C')
+            env.setdefault('LC_MEASUREMENT', 'C')
+            env.setdefault('LC_IDENTIFICATION', 'C')
         else:
             # On Windows set the codepage to US English.
             if python_shell:

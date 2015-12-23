@@ -36,7 +36,7 @@ def __virtual__():
     if HAS_REDIS:
         return __virtualname__
     else:
-        return False
+        return (False, 'The redis execution module failed to load: the redis python library is not available.')
 
 
 def _connect(host=None, port=None, db=None, password=None):

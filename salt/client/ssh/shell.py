@@ -341,15 +341,19 @@ class Shell(object):
         sent_passwd = 0
         ret_stdout = ''
         ret_stderr = ''
+        old_stdout = ''
 
         try:
             while term.has_unread_data:
                 stdout, stderr = term.recv()
                 if stdout:
                     ret_stdout += stdout
+                    buff = old_stdout + stdout
+                else:
+                    buff = stdout
                 if stderr:
                     ret_stderr += stderr
-                if stdout and SSH_PASSWORD_PROMPT_RE.search(stdout):
+                if buff and SSH_PASSWORD_PROMPT_RE.search(buff):
                     if not self.passwd:
                         return '', 'Permission denied, no authentication information', 254
                     if sent_passwd < passwd_retries:
@@ -359,7 +363,7 @@ class Shell(object):
                     else:
                         # asking for a password, and we can't seem to send it
                         return '', 'Password authentication failed', 254
-                elif stdout and KEY_VALID_RE.search(stdout):
+                elif buff and KEY_VALID_RE.search(buff):
                     if key_accept:
                         term.sendline('yes')
                         continue
@@ -369,9 +373,11 @@ class Shell(object):
                                       'auto accept run salt-ssh with the -i '
                                       'flag:\n{0}').format(stdout)
                         return ret_stdout, '', 254
-                elif stdout and stdout.endswith('_||ext_mods||_'):
+                elif buff and buff.endswith('_||ext_mods||_'):
                     mods_raw = json.dumps(self.mods, separators=(',', ':')) + '|_E|0|'
                     term.sendline(mods_raw)
+                if stdout:
+                    old_stdout = stdout
                 time.sleep(0.01)
             return ret_stdout, ret_stderr, term.exitstatus
         finally:

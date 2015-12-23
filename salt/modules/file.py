@@ -76,7 +76,7 @@ def __virtual__():
     '''
     # win_file takes care of windows
     if salt.utils.is_windows():
-        return False
+        return (False, 'The file execution module cannot be loaded: only available on non-Windows systems - use win_file instead.')
     return True
 
 
@@ -1609,7 +1609,7 @@ def line(path, content, match=None, mode=None, location=None,
 
     changed = body_before != hashlib.sha256(salt.utils.to_bytes(body)).hexdigest()
 
-    if backup and changed:
+    if backup and changed and __opts__['test'] is False:
         try:
             temp_file = _mkstemp_copy(path=path, preserve_inode=True)
             shutil.move(temp_file, '{0}.{1}'.format(path, time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())))
@@ -1620,14 +1620,15 @@ def line(path, content, match=None, mode=None, location=None,
 
     if changed:
         if show_changes:
-            changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'r').readlines(), body.splitlines()))
-        fh_ = None
-        try:
-            fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
-            fh_.write(body)
-        finally:
-            if fh_:
-                fh_.close()
+            changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'r').read().splitlines(), body.splitlines()))
+        if __opts__['test'] is False:
+            fh_ = None
+            try:
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
+                fh_.write(body)
+            finally:
+                if fh_:
+                    fh_.close()
 
     return show_changes and changes_diff or changed
 
@@ -1814,7 +1815,7 @@ def replace(path,
                 r_data = mmap.mmap(r_file.fileno(),
                                    0,
                                    access=mmap.ACCESS_READ)
-            except ValueError:
+            except (ValueError, mmap.error):
                 # size of file in /proc is 0, but contains data
                 r_data = "".join(r_file)
             if search_only:
@@ -3844,9 +3845,13 @@ def check_file_meta(
                 else:
                     changes['diff'] = 'Replace binary file with text file'
 
-    if user is not None and user != lstats['user']:
+    if (user is not None
+            and user != lstats['user']
+            and user != lstats['uid']):
         changes['user'] = user
-    if group is not None and group != lstats['group']:
+    if (group is not None
+            and group != lstats['group']
+            and group != lstats['gid']):
         changes['group'] = group
     # Normalize the file mode
     smode = __salt__['config.manage_mode'](lstats['mode'])
@@ -4880,7 +4885,7 @@ def delete_backup(path, backup_id):
 
     .. code-block:: bash
 
-        salt '*' file.restore_backup /foo/bar/baz.txt 0
+        salt '*' file.delete_backup /var/cache/salt/minion/file_backup/home/foo/bar/baz.txt 0
     '''
     path = os.path.expanduser(path)
 

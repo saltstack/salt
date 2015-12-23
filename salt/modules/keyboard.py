@@ -19,9 +19,10 @@ def __virtual__():
     Only works with systemd or on supported POSIX-like systems
     '''
     if salt.utils.which('localectl') \
-            or __grains__['os_family'] in ('Redhat', 'Debian', 'Gentoo'):
+            or __grains__['os_family'] in ('RedHat', 'Debian', 'Gentoo'):
         return True
-    return False
+    return (False, 'The keyboard exeuction module cannot be loaded: '
+        'only works on Redhat, Debian or Gentoo systems or if localectl binary in path.')
 
 
 def get_sys():

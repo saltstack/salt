@@ -35,7 +35,7 @@ def __virtual__():
     commands = ('tar', 'gzip', 'gunzip', 'zip', 'unzip', 'rar', 'unrar')
     # If none of the above commands are in $PATH this module is a no-go
     if not any(salt.utils.which(cmd) for cmd in commands):
-        return False
+        return (False, 'The archive module could not be loaded: unable to find commands tar,gzip,gunzip,zip,unzip,rar,unrar')
     return True
 
 

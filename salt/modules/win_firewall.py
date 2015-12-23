@@ -24,7 +24,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return __virtualname__
-    return False
+    return (False, "Module win_firewall: module only works on Windows systems")
 
 
 def get_config():

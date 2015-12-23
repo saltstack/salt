@@ -110,7 +110,8 @@ def __virtual__():
             global GPG_1_3_1
             GPG_1_3_1 = True
         return __virtualname__
-    return False
+    return (False, 'The gpg execution module cannot be loaded; either the'
+       ' gnupg module is not installed or the gpg binary is not in the path.')
 
 
 def _create_gpg(user=None, gnupghome=None):

@@ -38,7 +38,7 @@ def __virtual__():
     """
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return True
-    return False
+    return (False, "Module win_wua: module has failed dependencies or is not on Windows client")
 
 
 def _wua_search(skip_hidden=True,

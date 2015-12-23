@@ -153,7 +153,7 @@ def __virtual__():
         if not HAS_DEPENDENCIES:
             log.warn('Could not load dependencies for {0}'.format(__virtualname__))
         return __virtualname__
-    return False
+    return (False, "Module win_task: module only works on Windows systems")
 
 
 def _get_date_time_format(dt_string):

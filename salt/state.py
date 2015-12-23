@@ -2087,11 +2087,11 @@ class State(object):
             crefs[(chunk['state'], chunk['name'])] = chunk
             crefs[(chunk['state'], chunk['__id__'])] = chunk
             if 'listen' in chunk:
-                listeners.append({(chunk['state'], chunk['name']): chunk['listen']})
+                listeners.append({(chunk['state'], chunk['__id__']): chunk['listen']})
             if 'listen_in' in chunk:
                 for l_in in chunk['listen_in']:
                     for key, val in six.iteritems(l_in):
-                        listeners.append({(key, val): [{chunk['state']: chunk['name']}]})
+                        listeners.append({(key, val): [{chunk['state']: chunk['__id__']}]})
         mod_watchers = []
         errors = {}
         for l_dict in listeners:

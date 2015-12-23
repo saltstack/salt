@@ -15,8 +15,13 @@ Report any bugs or issues on the `issue tracker`__.
 Installation from the SaltStack Repository
 ==========================================
 
-2015.8.0 and later packages for RHEL 5, 6, and 7 are available in the
+2015.5 and later packages for RHEL 5, 6, and 7 are available in the
 SaltStack repository.
+
+.. important::
+  The repository folder structure changed in the 2015.8.3 release, though the
+  previous repository structure that was documented in 2015.8.1 can continue to
+  be used.
 
 To install using the SaltStack repository:
 
@@ -26,66 +31,45 @@ To install using the SaltStack repository:
 
    .. code-block:: bash
 
-       wget https://repo.saltstack.com/yum/rhel7/SALTSTACK-GPG-KEY.pub
-       rpm --import SALTSTACK-GPG-KEY.pub
-       rm -f SALTSTACK-GPG-KEY.pub
+       rpm --import https://repo.saltstack.com/yum/redhat/7/x86_64/latest/SALTSTACK-GPG-KEY.pub
 
    Version 6:
 
    .. code-block:: bash
 
-       wget https://repo.saltstack.com/yum/rhel6/SALTSTACK-GPG-KEY.pub
-       rpm --import SALTSTACK-GPG-KEY.pub
-       rm -f SALTSTACK-GPG-KEY.pub
+       rpm --import https://repo.saltstack.com/yum/redhat/6/x86_64/latest/SALTSTACK-GPG-KEY.pub
 
    Version 5:
 
    .. code-block:: bash
 
-       wget https://repo.saltstack.com/yum/rhel5/SALTSTACK-EL5-GPG-KEY.pub
+       wget https://repo.saltstack.com/yum/redhat/5/x86_64/latest/SALTSTACK-EL5-GPG-KEY.pub
        rpm --import SALTSTACK-EL5-GPG-KEY.pub
        rm -f SALTSTACK-EL5-GPG-KEY.pub
 
 #. Save the following file to ``/etc/yum.repos.d/saltstack.repo``:
 
-   Version 7:
+   Version 7 and 6:
 
    .. code-block:: cfg
 
-       ####################
-       # Enable SaltStack's package repository
        [saltstack-repo]
-       name=SaltStack repo for RHEL/CentOS 7
-       baseurl=https://repo.saltstack.com/yum/rhel7
+       name=SaltStack repo for RHEL/CentOS $releasever
+       baseurl=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest
        enabled=1
        gpgcheck=1
-       gpgkey=https://repo.saltstack.com/yum/rhel7/SALTSTACK-GPG-KEY.pub
-
-   Version 6:
-
-   .. code-block:: cfg
-
-       ####################
-       # Enable SaltStack's package repository
-       [saltstack-repo]
-       name=SaltStack repo for RHEL/CentOS 6
-       baseurl=https://repo.saltstack.com/yum/rhel6
-       enabled=1
-       gpgcheck=1
-       gpgkey=https://repo.saltstack.com/yum/rhel6/SALTSTACK-GPG-KEY.pub
+       gpgkey=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/$releasever/SALTSTACK-GPG-KEY.pub
 
    Version 5:
 
    .. code-block:: cfg
 
-       ####################
-       # Enable SaltStack's package repository
        [saltstack-repo]
-       name=SaltStack repo for RHEL/CentOS 5
-       baseurl=https://repo.saltstack.com/yum/rhel5
+       name=SaltStack repo for RHEL/CentOS $releasever
+       baseurl=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest
        enabled=1
        gpgcheck=1
-       gpgkey=https://repo.saltstack.com/yum/rhel5/SALTSTACK-EL5-GPG-KEY.pub
+       gpgkey=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/SALTSTACK-EL5-GPG-KEY.pub
 
 #. Run ``sudo yum clean expire-cache``.
 

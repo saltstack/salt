@@ -26,7 +26,7 @@ def __virtual__():
     '''
     if not salt.utils.is_windows() and salt.utils.which('setquota'):
         return 'quota'
-    return False
+    return (False, 'The quota execution module cannot be loaded: the module is only available on POSIX-like systems with the setquota binary available.')
 
 
 def report(mount):
