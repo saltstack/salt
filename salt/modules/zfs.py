@@ -267,7 +267,10 @@ def create(name, **kwargs):
     # create "-o property=value" pairs
     if properties:
         optlist = []
-        for prop in properties:
+        for prop in properties.keys():
+            if isinstance(properties[prop], bool):  # salt breaks the on/off/yes/no properties :(
+                properties[prop] = 'on' if properties[prop] else 'off'
+
             optlist.append('-o {0}={1}'.format(prop, properties[prop]))
         opts = ' '.join(optlist)
         cmd = '{0} {1}'.format(cmd, opts)
@@ -787,7 +790,9 @@ def clone(name_a, name_b, **kwargs):
     # create "-o property=value" pairs
     if properties:
         optlist = []
-        for prop in properties:
+        for prop in properties.keys():
+            if isinstance(properties[prop], bool):  # salt breaks the on/off/yes/no properties :(
+                properties[prop] = 'on' if properties[prop] else 'off'
             optlist.append('-o {0}={1}'.format(prop, properties[prop]))
         properties = ' '.join(optlist)
 
@@ -1155,7 +1160,9 @@ def snapshot(*snapshot, **kwargs):
     # create "-o property=value" pairs
     if properties:
         optlist = []
-        for prop in properties:
+        for prop in properties.keys():
+            if isinstance(properties[prop], bool):  # salt breaks the on/off/yes/no properties :(
+                properties[prop] = 'on' if properties[prop] else 'off'
             optlist.append('-o {0}={1}'.format(prop, properties[prop]))
         properties = ' '.join(optlist)
 
@@ -1189,6 +1196,88 @@ def snapshot(*snapshot, **kwargs):
                 ret = {}
                 ret['error'] = res['stderr']
                 return ret
+    return ret
+
+
+def set(*dataset, **kwargs):
+    '''
+    .. versionadded:: Boron
+
+    Sets the property or list of properties to the given value(s) for each dataset.
+
+    *dataset : string
+        name of snapshot(s), filesystem(s), or volume(s)
+    *properties : string
+        additional zfs properties pairs
+
+    .. note::
+
+        properties are passed as key-value pairs. e.g.
+
+            compression=off
+
+    .. note::
+
+        Only some properties can be edited.
+
+        See the Properties section for more information on what properties
+        can be set and acceptable values.
+
+        Numeric values can be specified as exact values, or in a human-readable
+        form with a suffix of B, K, M, G, T, P, E, Z (for bytes, kilobytes,
+        megabytes, gigabytes, terabytes, petabytes, exabytes, or zettabytes,
+        respectively).
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.set myzpool/mydataset compression=off
+        salt '*' zfs.set myzpool/mydataset myzpool/myotherdataset compression=off
+        salt '*' zfs.set myzpool/mydataset myzpool/myotherdataset compression=lz4 canmount=off
+    '''
+    ret = {}
+
+    zfs = _check_zfs()
+
+    # verify snapshots
+    if not dataset:
+        ret['error'] = 'one or more snapshots must be specified'
+
+    # clean kwargs
+    properties = salt.utils.clean_kwargs(**kwargs)
+    if len(properties) < 1:
+        ret['error'] = '{0}one or more properties must be specified'.format(
+            '{0},\n'.format(ret['error']) if 'error' in ret else ''
+        )
+
+    if len(ret) > 0:
+        return ret
+
+    # for better error handling we don't do one big set command
+    for ds in dataset:
+        for prop in properties.keys():
+
+            if isinstance(properties[prop], bool):  # salt breaks the on/off/yes/no properties :(
+                properties[prop] = 'on' if properties[prop] else 'off'
+
+            res = __salt__['cmd.run_all']('{zfs} set {prop}={value} {dataset}'.format(
+                zfs=zfs,
+                prop=prop,
+                value=properties[prop],
+                dataset=ds
+            ))
+            log.warning(res)
+            if ds not in ret:
+                ret[ds] = {}
+
+            if res['retcode'] != 0:
+                ret[ds][prop] = res['stderr'] if 'stderr' in res else res['stdout']
+                if ':' in ret[ds][prop]:
+                    ret[ds][prop] = ret[ds][prop][ret[ds][prop].index(':')+2:]
+            else:
+                ret[ds][prop] = 'set'
+
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
