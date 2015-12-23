@@ -276,6 +276,17 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.inherit('canmount', 'myzpool/mydataset'), res)
 
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_diff(self):
+        '''
+        Tests zfs diff
+        '''
+        res = ['M\t/\t/myzpool/mydataset/', '+\tF\t/myzpool/mydataset/hello']
+        ret = {'pid': 51495, 'retcode': 0, 'stderr': '', 'stdout': 'M\t/\t/myzpool/mydataset/\n+\tF\t/myzpool/mydataset/hello'}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.diff('myzpool/mydataset@yesterday', 'myzpool/mydataset'), res)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZfsTestCase, needs_daemon=False)
