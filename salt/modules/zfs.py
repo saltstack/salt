@@ -421,8 +421,6 @@ def list_(name=None, **kwargs):
         salt '*' zfs.list
         salt '*' zfs.list myzpool/mydataset [recursive=True|False]
         salt '*' zfs.list myzpool/mydataset properties="sharenfs,mountpoint"
-
-
     '''
     ret = OrderedDict()
     zfs = _check_zfs()
@@ -477,6 +475,55 @@ def list_(name=None, **kwargs):
     else:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
 
+    return ret
+
+
+def mount(name='*', **kwargs):
+    '''
+    .. versionadded:: 2015.5.0
+
+    Mounts ZFS file systems
+
+    name : string
+        name of the filesystem, use ``*`` to mount all filesystems (-a).
+    overlay : boolean
+        perform an overlay mount.
+    options : string
+        optional comma-separated list of mount options to use temporarily for
+        the duration of the mount.
+
+    .. note::
+
+        If the ``name`` paramter is not provided, zfs.mount displays the mounted
+        filesystems.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.mount
+        salt '*' zfs.mount myzpool/mydataset
+        salt '*' zfs.mount myzpool/mydataset options=ro
+    '''
+    zfs = _check_zfs()
+    overlay = kwargs.get('overlay', False)
+    options = kwargs.get('options', None)
+
+    res = __salt__['cmd.run_all']('{zfs} mount {overlay}{options}{filesystem}'.format(
+        zfs=zfs,
+        overlay='-O ' if overlay else '',
+        options='-o {0} '.format(options) if options else '',
+        filesystem='-a' if name == '*' else name
+    ))
+
+    ret = {}
+    if name == '*':
+        ret = res['retcode'] == 0
+    else:
+        if res['retcode'] != 0:
+            ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
+        else:
+            ret[name] = 'mounted'
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
