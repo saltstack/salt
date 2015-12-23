@@ -475,27 +475,24 @@ def list_(name=None, **kwargs):
     else:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
 
+    log.warning(res)
+    log.warning(ret)
     return ret
 
 
-def mount(name='*', **kwargs):
+def mount(name='-a', **kwargs):
     '''
-    .. versionadded:: 2015.5.0
+    .. versionadded:: Borson
 
     Mounts ZFS file systems
 
     name : string
-        name of the filesystem, use ``*`` to mount all filesystems (-a).
+        name of the filesystem, you can use '-a' to mount all unmounted filesystems. (this is the default)
     overlay : boolean
         perform an overlay mount.
     options : string
         optional comma-separated list of mount options to use temporarily for
         the duration of the mount.
-
-    .. note::
-
-        If the ``name`` paramter is not provided, zfs.mount displays the mounted
-        filesystems.
 
     CLI Example:
 
@@ -513,17 +510,58 @@ def mount(name='*', **kwargs):
         zfs=zfs,
         overlay='-O ' if overlay else '',
         options='-o {0} '.format(options) if options else '',
-        filesystem='-a' if name == '*' else name
+        filesystem=name
     ))
 
     ret = {}
-    if name == '*':
+    if name == '-a':
         ret = res['retcode'] == 0
     else:
         if res['retcode'] != 0:
             ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
         else:
             ret[name] = 'mounted'
+    return ret
+
+
+def unmount(name, **kwargs):
+    '''
+    .. versionadded:: Borson
+
+    Mounts ZFS file systems
+
+    name : string
+        name of the filesystem, you can use '-a' to unmount all mounted filesystems.
+    force : boolean
+        forcefully unmount the file system, even if it is currently in use.
+
+    .. warning::
+
+        Using ``-a`` for the name parameter will probably break your system, unless your rootfs is not on zfs.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.unmount myzpool/mydataset [force=True|False]
+    '''
+    zfs = _check_zfs()
+    force = kwargs.get('force', False)
+
+    res = __salt__['cmd.run_all']('{zfs} unmount {force}{filesystem}'.format(
+        zfs=zfs,
+        force='-f ' if force else '',
+        filesystem=name
+    ))
+
+    ret = {}
+    if name == '-a':
+        ret = res['retcode'] == 0
+    else:
+        if res['retcode'] != 0:
+            ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
+        else:
+            ret[name] = 'unmounted'
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
