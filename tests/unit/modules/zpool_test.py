@@ -60,7 +60,7 @@ class ZpoolTestCase(TestCase):
         '''
         ret = {}
         ret['stdout'] = ""
-        ret['stderr'] = "cannot open 'mypool': no such pool"
+        ret['stderr'] = "cannot open 'myzpool': no such pool"
         ret['retcode'] = 1
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zpool.__salt__, {'cmd.run_all': mock_cmd}):
