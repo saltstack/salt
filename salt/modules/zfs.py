@@ -3,6 +3,29 @@
 Salt interface to ZFS commands
 
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+
+.. note::
+    TODO
+
+    - destroy -> parse output (-P
+    - list -> parse output
+    - snapshot
+    - rollback
+    - clone
+    - promote
+    - set
+    - get
+    - inherit
+    - mount
+    - unmount
+    - bookmark
+    - hold
+    - holds
+    - release
+    - diff
+    - allow
+    - unallow
+
 '''
 from __future__ import absolute_import
 
@@ -157,7 +180,6 @@ def _build_zfs_cmd_list():
     if _check_zfs():
         available_cmds = _available_commands()
         for available_cmd in available_cmds:
-
             # Set the output from _make_function to be 'available_cmd_'.
             # i.e. 'list' becomes 'list_' in local module.
             setattr(
@@ -176,6 +198,9 @@ def exists(name):
 
     Check if a ZFS filesystem or volume or snapshot exists.
 
+    name : string
+        name of dataset
+
     CLI Example:
 
     .. code-block:: bash
@@ -184,23 +209,29 @@ def exists(name):
     '''
     zfs = _check_zfs()
     cmd = '{0} list {1}'.format(zfs, name)
-    res = __salt__['cmd.run'](cmd, ignore_retcode=True)
-    if "dataset does not exist" in res or "invalid dataset name" in res:
-        return False
-    return True
+    res = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
+
+    return res['retcode'] == 0
 
 
 def create(name, **kwargs):
     '''
     .. versionadded:: 2015.5.0
+    .. versionchanged:: Boron
 
     Create a ZFS File System.
 
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' zfs.create myzpool/mydataset [create_parent=True|False]
+    name : string
+        name of dataset or volume
+    volume_size : string
+        if specified, a zvol will be created instead of a dataset
+    sparse : boolean
+        create sparse volume
+    create_parent : boolean
+        creates all the non-existing parent datasets. any property specified on the
+        command line using the -o option is ignored.
+    properties : dict
+        additional zfs properties (-o)
 
     .. note::
 
@@ -210,21 +241,30 @@ def create(name, **kwargs):
 
             properties="{'property1': 'value1', 'property2': 'value2'}"
 
-        Example:
+    CLI Example:
 
-        .. code-block:: bash
+    .. code-block:: bash
 
-            salt '*' zfs.create myzpool/mydataset properties="{'mountpoint': '/export/zfs', 'sharenfs': 'on'}"
+        salt '*' zfs.create myzpool/mydataset [create_parent=True|False]
+        salt '*' zfs.create myzpool/mydataset properties="{'mountpoint': '/export/zfs', 'sharenfs': 'on'}"
+        salt '*' zfs.create myzpool/volume volume_size=1G [sparse=True|False]`
+        salt '*' zfs.create myzpool/volume volume_size=1G properties="{'volblocksize': '512'}" [sparse=True|False]
+
     '''
     ret = {}
 
     zfs = _check_zfs()
     properties = kwargs.get('properties', None)
     create_parent = kwargs.get('create_parent', False)
+    volume_size = kwargs.get('volume_size', None)
+    sparse = kwargs.get('sparse', False)
     cmd = '{0} create'.format(zfs)
 
     if create_parent:
         cmd = '{0} -p'.format(cmd)
+
+    if volume_size and sparse:
+        cmd = '{0} -s'.format(cmd)
 
     # if zpool properties specified, then
     # create "-o property=value" pairs
@@ -234,17 +274,22 @@ def create(name, **kwargs):
             optlist.append('-o {0}={1}'.format(prop, properties[prop]))
         opts = ' '.join(optlist)
         cmd = '{0} {1}'.format(cmd, opts)
+
+    if volume_size:
+        cmd = '{0} -V {1}'.format(cmd, volume_size)
+
+    # append name
     cmd = '{0} {1}'.format(cmd, name)
 
     # Create filesystem
-    res = __salt__['cmd.run'](cmd)
+    res = __salt__['cmd.run_all'](cmd)
 
     # Check and see if the dataset is available
-    if not res:
-        ret[name] = 'created'
-        return ret
+    if res['retcode'] != 0:
+        ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        ret['Error'] = res
+        ret[name] = 'created'
+
     return ret
 
 
@@ -253,6 +298,16 @@ def destroy(name, **kwargs):
     .. versionadded:: 2015.5.0
 
     Destroy a ZFS File System.
+
+    name : string
+        name of dataset, volume, or snapshot
+    force : boolean
+        force an unmount of any file systems using the unmount -f command.
+    recursive : boolean
+        recursively destroy all children. (-r)
+    recursive_all : boolean
+        recursively destroy all dependents, including cloned file systems
+        outside the target hierarchy. (-R)
 
     CLI Example:
 
@@ -263,29 +318,55 @@ def destroy(name, **kwargs):
     ret = {}
     zfs = _check_zfs()
     force = kwargs.get('force', False)
-    cmd = '{0} destroy {1}'.format(zfs, name)
+    recursive = kwargs.get('recursive', False)
+    recursive_all = kwargs.get('recursive_all', False)
+    cmd = '{0} destroy'.format(zfs)
+
+    if recursive_all:
+        cmd = '{0} -R'.format(cmd)
 
     if force:
-        cmd = '{0} destroy -f {1}'.format(zfs, name)
+        cmd = '{0} -f'.format(cmd)
 
-    res = __salt__['cmd.run'](cmd)
-    if not res:
-        ret[name] = 'Destroyed'
-        return ret
-    elif "dataset does not exist" in res:
-        ret['Error'] = 'Cannot destroy {0}: dataset does not exist'.format(name)
-    elif "operation does not apply to pools" in res:
-        ret['Error'] = 'Cannot destroy {0}: use zpool.destroy to destroy the pool'.format(name)
+    if recursive:
+        cmd = '{0} -r'.format(cmd)
+
+    cmd = '{0} {1}'.format(cmd, name)
+    res = __salt__['cmd.run_all'](cmd)
+
+    if res['retcode'] != 0:
+        if "operation does not apply to pools" in res['stderr']:
+            ret[name] = '{0}, use zpool.destroy to destroy the pool'.format(res['stderr'].splitlines()[0])
+        if "filesystem has children" in res['stderr']:
+            ret[name] = '{0}, you can add the "recursive=True" parameter'.format(res['stderr'].splitlines()[0])
+        else:
+            ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        ret['Error'] = res
+        ret[name] = 'destroyed'
+
     return ret
 
 
-def rename(name, new_name):
+def rename(name, new_name, **kwargs):
     '''
     .. versionadded:: 2015.5.0
+    .. versionchanged:: Boron
 
     Rename or Relocate a ZFS File System.
+
+    name : string
+        name of dataset, volume, or snapshot
+    new_name : string
+        new name of dataset, volume, or snapshot
+    force : boolean
+        force unmount any filesystems that need to be unmounted in the process.
+    create_parent : boolean
+        creates all the nonexistent parent datasets. Datasets created in
+        this manner are automatically mounted according to the mountpoint
+        property inherited from their parent.
+    recursive : boolean
+        recursively rename the snapshots of all descendent datasets.
+        snapshots are the only dataset that can be renamed recursively.
 
     CLI Example:
 
@@ -295,14 +376,34 @@ def rename(name, new_name):
     '''
     ret = {}
     zfs = _check_zfs()
-    cmd = '{0} rename {1} {2}'.format(zfs, name, new_name)
+    create_parent = kwargs.get('create_parent', False)
+    force = kwargs.get('force', False)
+    recursive = kwargs.get('recursive', False)
 
-    res = __salt__['cmd.run'](cmd)
-    if not res:
-        ret[name] = 'Renamed/Relocated to {0}'.format(new_name)
-        return ret
+    # fix up conflicting parameters
+    if recursive:
+        if '@' in name:  # -p and -f don't work with -r
+            create_parent = False
+            force = False
+        else:  # -r only works with snapshots
+            recursive = False
+    if create_parent and '@' in name:  # doesn't work with snapshots
+        create_parent = False
+
+    res = __salt__['cmd.run_all']('{zfs} rename {force}{create_parent}{recursive}{name} {new_name}'.format(
+        zfs=zfs,
+        force='-f ' if force else '',
+        create_parent='-p ' if create_parent else '',
+        recursive='-r ' if recursive else '',
+        name=name,
+        new_name=new_name
+    ))
+
+    if res['retcode'] != 0:
+        ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
-        ret['Error'] = res
+        ret[name] = 'renamed to {0}'.format(new_name)
+
     return ret
 
 
@@ -359,3 +460,5 @@ def list_(name='', **kwargs):
         return {'datasets': dataset_list}
     else:
         return {'Error': res['stderr']}
+
+# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
