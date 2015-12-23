@@ -1364,8 +1364,9 @@ def os_data():
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['osfullname'],
             ver=grains['osrelease'].partition('.')[0])
-    elif grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+    elif grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD', 'MacOS'):
         grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
+        grains['osfullname'] = grains['os']
 
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['os'],
