@@ -17,7 +17,7 @@ def __virtual__():
     '''
     if os.path.exists('/usr/lib/libpam.so'):
         return 'pam'
-    return False
+    return (False, 'Cannot load pam module: /usr/lib/libpam.so not found')
 
 
 def _parse(contents=None, file_name=None):
