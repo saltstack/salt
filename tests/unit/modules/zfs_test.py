@@ -25,6 +25,7 @@ ensure_in_syspath('../../')
 
 # Import Salt Execution module to test
 from salt.modules import zfs
+from salt.utils.odict import OrderedDict
 
 # Globals
 zfs.__salt__ = {}
@@ -181,6 +182,17 @@ class ZfsTestCase(TestCase):
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.create('myzpool/mydataset/mysubdataset'), res)
+
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_list_success(self):
+        '''
+        Tests zfs list
+        '''
+        res = OrderedDict([('myzpool', {'avail': '79.9M', 'mountpoint': '/myzpool', 'used': '113K', 'refer': '19K'})])
+        ret = {'pid': 31817, 'retcode': 0, 'stderr': '', 'stdout': 'myzpool\t113K\t79.9M\t19K\t/myzpool'}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.list_('myzpool'), res)
 
     @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
     def test_mount_success(self):
