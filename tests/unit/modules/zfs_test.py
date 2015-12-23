@@ -250,6 +250,32 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.unmount('myzpool/mydataset'), res)
 
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_inherit_success(self):
+        '''
+        Tests zfs inherit of compression property
+        '''
+        res = {'myzpool/mydataset': {'compression': 'cleared'}}
+        ret = {'pid': 45193, 'retcode': 0, 'stderr': '', 'stdout': ''}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.inherit('compression', 'myzpool/mydataset'), res)
+
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_inherit_failure(self):
+        '''
+        Tests zfs inherit of canmount
+        '''
+        res = {
+            'myzpool/mydataset': {
+                'canmount': "'canmount' property cannot be inherited, use revert=True to try and reset it to it's default value."
+            }
+        }
+        ret = {'pid': 43898, 'retcode': 1, 'stderr': "'canmount' property cannot be inherited", 'stdout': ''}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.inherit('canmount', 'myzpool/mydataset'), res)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZfsTestCase, needs_daemon=False)
