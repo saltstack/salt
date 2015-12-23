@@ -314,6 +314,28 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.rollback('myzpool/mydataset@yesterday'), res)
 
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_clone_success(self):
+        '''
+        Tests zfs clone success
+        '''
+        res = {'myzpool/yesterday': 'cloned from myzpool/mydataset@yesterday'}
+        ret = {'pid': 64532, 'retcode': 0, 'stderr': '', 'stdout': ''}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.clone('myzpool/mydataset@yesterday', 'myzpool/yesterday'), res)
+
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_clone_failure(self):
+        '''
+        Tests zfs clone failure
+        '''
+        res = {'myzpool/archive/yesterday': "cannot create 'myzpool/archive/yesterday': parent does not exist"}
+        ret = {'pid': 64864, 'retcode': 1, 'stderr': "cannot create 'myzpool/archive/yesterday': parent does not exist", 'stdout': ''}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.clone('myzpool/mydataset@yesterday', 'myzpool/archive/yesterday'), res)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZfsTestCase, needs_daemon=False)
