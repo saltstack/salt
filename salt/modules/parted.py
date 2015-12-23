@@ -49,13 +49,13 @@ def __virtual__():
     These are usually provided by the ``parted`` and ``util-linux`` packages.
     '''
     if salt.utils.is_windows():
-        return False
+        return (False, 'Cannot load parted module: This cannot run on a windows host’)
     if not salt.utils.which('parted'):
-        return False
+        return (False, 'Cannot load parted module: Parted command is missing’)
     if not salt.utils.which('lsblk'):
-        return False
+        return (False, 'Cannot load parted module: lsblk command is missing’)
     if not salt.utils.which('partprobe'):
-        return False
+        return (False, 'Cannot load parted module: part probe command is missing’)
     return __virtualname__
 
 
