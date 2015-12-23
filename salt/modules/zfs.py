@@ -482,7 +482,7 @@ def list_(name=None, **kwargs):
 
 def mount(name='-a', **kwargs):
     '''
-    .. versionadded:: Borson
+    .. versionadded:: Boron
 
     Mounts ZFS file systems
 
@@ -526,9 +526,9 @@ def mount(name='-a', **kwargs):
 
 def unmount(name, **kwargs):
     '''
-    .. versionadded:: Borson
+    .. versionadded:: Boron
 
-    Mounts ZFS file systems
+    Unmounts ZFS file systems
 
     name : string
         name of the filesystem, you can use '-a' to unmount all mounted filesystems.
