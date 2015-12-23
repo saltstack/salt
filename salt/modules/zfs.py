@@ -908,4 +908,56 @@ def bookmark(snapshot, bookmark):
         ret[snapshot] = 'bookmarked as {0}'.format(bookmark)
     return ret
 
+
+def holds(snapshot, **kwargs):
+    '''
+    .. versionadded:: Boron
+
+    Lists all existing user references for the given snapshot or snapshots.
+
+    snapshot : string
+        name of snapshot
+    recursive : boolean
+        lists the holds that are set on the named descendent snapshots also.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.holds myzpool/mydataset@baseline
+    '''
+    ret = {}
+
+    if '@' not in snapshot:
+        ret[snapshot] = 'MUST be a snapshot'
+        return ret
+
+    zfs = _check_zfs()
+    recursive = kwargs.get('recursive', False)
+
+    res = __salt__['cmd.run_all']('{zfs} holds -H {recursive}{snapshot}'.format(
+        zfs=zfs,
+        recursive='-r ' if recursive else '',
+        snapshot=snapshot
+    ))
+
+    if res['retcode'] == 0:
+        if res['stdout'] != '':
+            properties = "name,tag,timestamp".split(",")
+            for hold in [l for l in res['stdout'].splitlines()]:
+                hold = hold.split("\t")
+                hold_data = {}
+
+                for prop in properties:
+                    hold_data[prop] = hold[properties.index(prop)]
+
+                if hold_data['name'] not in ret:
+                    ret[hold_data['name']] = {}
+                ret[hold_data['name']][hold_data['tag']] = hold_data['timestamp']
+        else:
+            ret[snapshot] = 'no holds'
+    else:
+        ret[snapshot] = res['stderr'] if 'stderr' in res else res['stdout']
+    return ret
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
