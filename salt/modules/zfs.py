@@ -610,4 +610,54 @@ def inherit(prop, name, **kwargs):
         ret[name][prop] = 'cleared'
     return ret
 
+
+def diff(name_a, name_b, **kwargs):
+    '''
+    .. versionadded:: Boron
+
+    Display the difference between a snapshot of a given filesystem and
+    another snapshot of that filesystem from a later time or the current
+    contents of the filesystem.
+
+    name_a : string
+        name of snapshot
+    name_b : string
+        name of snapshot or filesystem
+    show_changetime : boolean
+        display the path's inode change time as the first column of output. (default = False)
+    show_indication : boolean
+        display an indication of the type of file. (default = True)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.diff myzpool/mydataset@yesterday myzpool/mydataset
+    '''
+    ret = {}
+
+    zfs = _check_zfs()
+    show_changetime = kwargs.get('show_changetime', False)
+    show_indication = kwargs.get('show_indication', True)
+
+    if '@' not in name_a:
+        ret['error'] = 'name_a MUST be a snapshot'
+        return ret
+
+    res = __salt__['cmd.run_all']('{zfs} diff -H {changetime}{indication}{name_a} {name_b}'.format(
+        zfs=zfs,
+        changetime='-t ' if show_changetime else '',
+        indication='-F ' if show_indication else '',
+        name_a=name_a,
+        name_b=name_b
+    ))
+
+    if res['retcode'] != 0:
+        ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
+    else:
+        ret = []
+        for line in res['stdout'].splitlines():
+            ret.append(line)
+    return ret
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
