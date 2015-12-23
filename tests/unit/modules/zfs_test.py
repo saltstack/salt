@@ -391,6 +391,28 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.holds('myzpool/mydataset@baseline'), res)
 
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_hold_success(self):
+        '''
+        Tests zfs hold success
+        '''
+        res = {'myzpool/mydataset@baseline': 'held (tag=important)', 'myzpool/mydataset@release-1.0': 'held (tag=important)'}
+        ret = {'pid': 50876, 'retcode': 0, 'stderr': '', 'stdout': ''}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.hold('important', 'myzpool/mydataset@baseline', 'myzpool/mydataset@release-1.0'), res)
+
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_hold_failure(self):
+        '''
+        Tests zfs hold failure
+        '''
+        res = {'myzpool/mydataset@baseline': ' tag already exists on this dataset'}
+        ret = {'pid': 51006, 'retcode': 1, 'stderr': "cannot hold snapshot 'myzpool/mydataset@baseline': tag already exists on this dataset", 'stdout': ''}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.hold('important', 'myzpool/mydataset@baseline'), res)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZfsTestCase, needs_daemon=False)
