@@ -53,7 +53,10 @@ def __virtual__():
     '''
     Only return if python-etcd is installed
     '''
-    return __virtualname__ if HAS_LIBS else False
+    if HAS_LIBS:
+        return __virtualname__
+    return (False, 'The etcd_mod execution module cannot be loaded: '
+            'python etcd library not available.')
 
 
 def get_(key, recurse=False, profile=None):
