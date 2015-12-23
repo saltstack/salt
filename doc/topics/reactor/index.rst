@@ -104,19 +104,21 @@ Reactor SLS files share the familiar syntax from Salt States but there are
 important differences. The goal of a Reactor file is to process a Salt event as
 quickly as possible and then to optionally start a **new** process in response.
 
-They must be quick because Reactor sls files are matched and rendered
-sequentially in a single process. Long-running Reactor files will cause other
-reactions to queue behind the current one. The process that a Reactor file
-starts is handed off to a pool of worker threads. That process can be a long
-running, complex operation.
+1.  The Salt Reactor watches Salt's event bus for new events.
+2.  The event tag is matched against the list of event tags under the
+    ``reactor`` section in the Salt Master config.
+3.  The SLS files for any matches are Rendered into a data structure that
+    represents one or more function calls.
+4.  That data structure is given to a pool of worker threads for execution.
 
-Maybe that is a process that sends a command down to minions which is a quick
-fire-and-forget, or maybe it's complex Orchestrate run that sends commands to
-some minions, waits for the response, then later sends commands to other
-minions.
+Matching and rendering Reactor SLS files is done sequentially in a single
+process. Complex Jinja that calls out to slow Execution or Runner modules slows
+down the rendering and causes other reactions to pile up behind the current
+one. The worker pool is designed to handle complex and long-running processes
+such as Salt Orchestrate.
 
-tl;dr: Reactor SLS files MUST be simple and quick. The new job that they start
-can be long-running.
+tl;dr: Rendering Reactor SLS files MUST be simple and quick. The new process
+started by the worker threads can be long-running.
 
 Jinja Context
 -------------
