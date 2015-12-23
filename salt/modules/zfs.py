@@ -4,28 +4,6 @@ Salt interface to ZFS commands
 
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
 
-.. note::
-    TODO
-
-    - list -> parse output
-    - destroy -> parse output (-P
-    - snapshot
-    - rollback
-    - clone
-    - promote
-    - set
-    - get
-    - inherit
-    - mount
-    - unmount
-    - bookmark
-    - hold
-    - holds
-    - release
-    - diff
-    - allow
-    - unallow
-
 '''
 from __future__ import absolute_import
 
@@ -310,6 +288,9 @@ def destroy(name, **kwargs):
     recursive_all : boolean
         recursively destroy all dependents, including cloned file systems
         outside the target hierarchy. (-R)
+
+    .. warning::
+        watch out when using recursive and recursive_all
 
     CLI Example:
 
