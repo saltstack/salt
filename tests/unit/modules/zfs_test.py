@@ -468,6 +468,28 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.snapshot('myzpool/mydataset@baseline'), res)
 
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_set_success(self):
+        '''
+        Tests zfs set success
+        '''
+        res = {'myzpool/mydataset': {'compression': 'set'}}
+        ret = {'pid': 79736, 'retcode': 0, 'stderr': '', 'stdout': ''}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.set('myzpool/mydataset', compression='lz4'), res)
+
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_set_failure(self):
+        '''
+        Tests zfs set failure
+        '''
+        res = {'myzpool/mydataset': {'canmount': "'canmount' must be one of 'on | off | noauto'"}}
+        ret = {'pid': 79887, 'retcode': 1, 'stderr': "cannot set property for 'myzpool/mydataset': 'canmount' must be one of 'on | off | noauto'", 'stdout': ''}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.set('myzpool/mydataset', canmount='lz4'), res)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZfsTestCase, needs_daemon=False)
