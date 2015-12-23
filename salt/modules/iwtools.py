@@ -18,7 +18,8 @@ def __virtual__():
     '''
     if salt.utils.which('iwconfig'):
         return True
-    return False
+    return (False, 'The iwtools execution module cannot be loaded: '
+            'iwconfig is not installed.')
 
 
 def scan(iface, style=None):
