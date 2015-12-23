@@ -725,4 +725,77 @@ def rollback(name, **kwargs):
         ret[name[:name.index('@')]] = 'rolledback to snapshot: {0}'.format(name[name.index('@')+1:])
     return ret
 
+
+def clone(name_a, name_b, **kwargs):
+    '''
+    .. versionadded:: Boron
+
+    Roll back the given dataset to a previous snapshot.
+
+    .. warning::
+
+        When a dataset is rolled back, all data that has changed since
+        the snapshot is discarded, and the dataset reverts to the state
+        at the time of the snapshot. By default, the command refuses to
+        roll back to a snapshot other than the most recent one.
+
+        In order to do so, all intermediate snapshots and bookmarks
+        must be destroyed by specifying the -r option.
+
+    name_a : string
+        name of snapshot
+    name_b : string
+        name of filesystem or volume
+    create_parent : boolean
+        creates all the non-existing parent datasets. any property specified on the
+        command line using the -o option is ignored.
+    properties : dict
+        additional zfs properties (-o)
+
+    .. note::
+
+        ZFS properties can be specified at the time of creation of the filesystem by
+        passing an additional argument called "properties" and specifying the properties
+        with their respective values in the form of a python dictionary::
+
+            properties="{'property1': 'value1', 'property2': 'value2'}"
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.clone myzpool/mydataset@yesterday myzpool/mydataset_yesterday
+    '''
+    ret = {}
+
+    zfs = _check_zfs()
+    create_parent = kwargs.get('create_parent', False)
+    properties = kwargs.get('properties', None)
+
+    if '@' not in name_a:
+        ret[name_b] = 'failed to clone from {0} because it is not a snapshot'.format(name_a)
+        return ret
+
+    # if zpool properties specified, then
+    # create "-o property=value" pairs
+    if properties:
+        optlist = []
+        for prop in properties:
+            optlist.append('-o {0}={1}'.format(prop, properties[prop]))
+        properties = ' '.join(optlist)
+
+    res = __salt__['cmd.run_all']('{zfs} clone {create_parent}{properties}{name_a} {name_b}'.format(
+        zfs=zfs,
+        create_parent='-p ' if create_parent else '',
+        properties='{0} '.format(properties) if properties else '',
+        name_a=name_a,
+        name_b=name_b
+    ))
+
+    if res['retcode'] != 0:
+        ret[name_b] = res['stderr'] if 'stderr' in res else res['stdout']
+    else:
+        ret[name_b] = 'cloned from {0}'.format(name_a)
+    return ret
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
