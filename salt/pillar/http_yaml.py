@@ -46,7 +46,7 @@ def ext_pillar(minion_id,
 
     log.error('Error caught on query to' + url + '\nMore Info:\n')
 
-    for k, v in dict.iteritems():
+    for k, v in data.iteritems():
         log.error(k + ' : ' + v)
 
     return {}
