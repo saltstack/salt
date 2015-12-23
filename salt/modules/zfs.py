@@ -1019,9 +1019,17 @@ def hold(tag, *snapshot, **kwargs):
         for err in res['stderr'].splitlines():
             if err.startswith('cannot hold snapshot'):
                 ret[err[22:err.index(':')-1]] = err[err.index(':')+2:]
+            elif err.startswith('cannot open'):
+                for snap in ret.keys():
+                    if snap.startswith(err[13:err.index(':')-1]):
+                        ret[snap] = err[err.index(':')+2:]
             else:
-                # all errors seem to follow the same format, but log to be safe
-                log.error('zfs.hold :: unknown error encountered: {0}'.format(err))
+                # fallback in case we hit a weird error
+                if err == 'usage:':
+                    break
+                ret = {}
+                ret['error'] = res['stderr']
+                return ret
 
     return ret
 
@@ -1083,10 +1091,98 @@ def release(tag, *snapshot, **kwargs):
         for err in res['stderr'].splitlines():
             if err.startswith('cannot release hold from snapshot'):
                 ret[err[35:err.index(':')-1]] = err[err.index(':')+2:]
+            elif err.startswith('cannot open'):
+                for snap in ret.keys():
+                    if snap.startswith(err[13:err.index(':')-1]):
+                        ret[snap] = err[err.index(':')+2:]
             else:
-                # all errors seem to follow the same format, but log to be safe
-                log.error('zfs.relese :: unknown error encountered: {0}'.format(err))
+                # fallback in case we hit a weird error
+                if err == 'usage:':
+                    break
+                ret = {}
+                ret['error'] = res['stderr']
+                return ret
 
+    return ret
+
+
+def snapshot(*snapshot, **kwargs):
+    '''
+    .. versionadded:: Boron
+
+    Creates snapshots with the given names.
+
+    *snapshot : string
+        name of snapshot(s)
+    recursive : boolean
+        recursively create snapshots of all descendent datasets.
+    properties : dict
+        additional zfs properties (-o)
+
+    .. note::
+
+        ZFS properties can be specified at the time of creation of the filesystem by
+        passing an additional argument called "properties" and specifying the properties
+        with their respective values in the form of a python dictionary::
+
+            properties="{'property1': 'value1', 'property2': 'value2'}"
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.snapshot myzpool/mydataset@yesterday [recursive=True]
+        salt '*' zfs.snapshot myzpool/mydataset@yesterday myzpool/myotherdataset@yesterday [recursive=True]
+    '''
+    ret = {}
+
+    zfs = _check_zfs()
+    recursive = kwargs.get('recursive', False)
+    properties = kwargs.get('properties', None)
+
+    # verify snapshots
+    if not snapshot:
+        ret['error'] = 'one or more snapshots must be specified'
+
+    for snap in snapshot:
+        if '@' not in snap:
+            ret[snap] = 'not a snapshot'
+
+    if len(ret) > 0:
+        return ret
+
+    # if zpool properties specified, then
+    # create "-o property=value" pairs
+    if properties:
+        optlist = []
+        for prop in properties:
+            optlist.append('-o {0}={1}'.format(prop, properties[prop]))
+        properties = ' '.join(optlist)
+
+    res = __salt__['cmd.run_all']('{zfs} snapshot {recursive}{properties}{snapshot}'.format(
+        zfs=zfs,
+        recursive='-r ' if recursive else '',
+        properties='{0} '.format(properties) if properties else '',
+        snapshot=' '.join(snapshot)
+    ))
+
+    for snap in snapshot:
+        ret[snap] = 'snapshotted'
+    if res['retcode'] != 0:
+        for err in res['stderr'].splitlines():
+            if err.startswith('cannot create snapshot'):
+                ret[err[24:err.index(':')-1]] = err[err.index(':')+2:]
+            elif err.startswith('cannot open'):
+                for snap in ret.keys():
+                    if snap.startswith(err[13:err.index(':')-1]):
+                        ret[snap] = err[err.index(':')+2:]
+            else:
+                # fallback in case we hit a weird error
+                if err == 'usage:':
+                    break
+                ret = {}
+                ret['error'] = res['stderr']
+                return ret
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
