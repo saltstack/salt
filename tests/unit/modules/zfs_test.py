@@ -182,6 +182,34 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.create('myzpool/mydataset/mysubdataset'), res)
 
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_mount_success(self):
+        '''
+        Tests zfs mount of filesystem
+        '''
+        res = {'myzpool/mydataset': 'mounted'}
+        ret = {}
+        ret['stdout'] = ""
+        ret['stderr'] = ""
+        ret['retcode'] = 0
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.mount('myzpool/mydataset'), res)
+
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_mount_failure(self):
+        '''
+        Tests zfs mount of already mounted filesystem
+        '''
+        res = {'myzpool/mydataset': "cannot mount 'myzpool/mydataset': filesystem already mounted"}
+        ret = {}
+        ret['stdout'] = ""
+        ret['stderr'] = "cannot mount 'myzpool/mydataset': filesystem already mounted"
+        ret['retcode'] = 1
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.mount('myzpool/mydataset'), res)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZfsTestCase, needs_daemon=False)
