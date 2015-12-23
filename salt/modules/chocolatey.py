@@ -323,6 +323,7 @@ def install(name,
             version=None,
             source=None,
             force=False,
+            pre_versions=False,
             install_args=None,
             override_args=False,
             force_x86=False,
@@ -342,6 +343,9 @@ def install(name,
 
     force
         Reinstall the current version of an existing package.
+    
+    pre_versions
+        Include pre-release packages. Defaults to False.
 
     install_args
         A list of install arguments you want to pass to the installation process
@@ -375,6 +379,8 @@ def install(name,
         cmd.extend(['-Source', source])
     if salt.utils.is_true(force):
         cmd.extend(['-Force'])
+    if salt.utils.is_true(pre_versions):
+        cmd.extend(['-PreRelease'])
     if install_args:
         cmd.extend(['-InstallArguments', install_args])
     if override_args:
