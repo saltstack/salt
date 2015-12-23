@@ -36,7 +36,7 @@ def __virtual__():
     '''
     if salt.utils.which('nft'):
         return 'nftables'
-    return False
+    return (False, 'The nftables execution module failed to load: nftables is not installed.')
 
 
 def _nftables_cmd():

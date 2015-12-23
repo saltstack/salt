@@ -91,6 +91,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             and not salt.fileserver.is_file_ignored(__opts__, full):
         fnd['path'] = full
         fnd['rel'] = path
+        fnd['stat'] = list(os.stat(full))
         return fnd
     return fnd
 

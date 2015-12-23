@@ -50,6 +50,8 @@ The information which can be stored in a roster ``target`` is the following:
         minion_opts: # Dictionary of minion opts
         thin_dir:    # The target system's storage directory for Salt
                      # components. Defaults to /tmp/salt-<hash>.
+        cmd_umask:   # umask to enforce for the salt-call command. Should be in
+                     # octal (so for 0o077 in YAML you would do 0077, or 63)
 
 thin_dir
 --------

@@ -20,7 +20,7 @@ def __virtual__():
     '''
     if 'Solaris' in __grains__['os_family']:
         return True
-    return False
+    return (False, 'The logadm execution module cannot be loaded: only available on Solaris.')
 
 
 def _parse_conf(conf_file=default_conf):

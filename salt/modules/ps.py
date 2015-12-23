@@ -30,7 +30,7 @@ except ImportError:
 
 def __virtual__():
     if not HAS_PSUTIL:
-        return False
+        return (False, 'The ps execution module cannot be loaded: the psutil python module is not available.')
 
     # Functions and attributes used in this execution module seem to have been
     # added as of psutil 0.3.0, from an inspection of the source code. Only
@@ -41,7 +41,7 @@ def __virtual__():
     # as of Dec. 2013 EPEL is on 0.6.1, Debian 7 is on 0.5.1, etc.).
     if psutil.version_info >= (0, 3, 0):
         return True
-    return False
+    return (False, 'The ps execution module cannot be loaded: the psutil python module version {0} is less than 0.3.0'.format(psutil.version_info))
 
 
 def _get_proc_cmdline(proc):

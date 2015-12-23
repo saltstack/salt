@@ -37,8 +37,7 @@ def __virtual__():
     '''
     # Disable on Windows, a specific file module exists:
     if salt.utils.is_windows():
-        return False
-
+        return (False, 'The network execution module cannot be loaded on Windows: use win_network instead.')
     return True
 
 
@@ -917,7 +916,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     addrs = salt.utils.network.ip_addrs6(interface=interface,
                                         include_loopback=include_loopback)
     if cidr:
-        return [i for i in addrs if salt.utils.network.ip_in_subnet(cidr, [i])]
+        return [i for i in addrs if salt.utils.network.in_subnet(cidr, [i])]
     else:
         return addrs
 
@@ -969,19 +968,23 @@ def mod_hostname(hostname):
         uname_cmd = '/usr/bin/uname' if salt.utils.is_smartos() else salt.utils.which('uname')
         check_hostname_cmd = salt.utils.which('check-hostname')
 
-    if hostname_cmd.endswith('hostnamectl'):
-        __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
-        return True
-
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
-    if not salt.utils.is_sunos():
+    if hostname_cmd.endswith('hostnamectl'):
+        out = __salt__['cmd.run']('{0} status'.format(hostname_cmd))
+        for line in out.splitlines():
+            line = line.split(':')
+            if 'Static hostname' in line[0]:
+                o_hostname = line[1].strip()
+    elif not salt.utils.is_sunos():
         o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
     else:
         # output: Hostname core OK: fully qualified as core.acheron.be
         o_hostname = __salt__['cmd.run'](check_hostname_cmd).split(' ')[-1]
 
-    if not salt.utils.is_sunos():
+    if hostname_cmd.endswith('hostnamectl'):
+        __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
+    elif not salt.utils.is_sunos():
         __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
     else:
         __salt__['cmd.run']('{0} -S {1}'.format(uname_cmd, hostname.split('.')[0]))

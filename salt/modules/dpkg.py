@@ -24,7 +24,10 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    return __virtualname__ if __grains__['os_family'] == 'Debian' else False
+    if __grains__['os_family'] == 'Debian':
+        return __virtualname__
+    return (False, 'The dpkg execution module cannot be loaded: '
+            'only works on Debian family systems.')
 
 
 def bin_pkg_info(path, saltenv='base'):

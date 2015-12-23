@@ -207,7 +207,7 @@ Extended Changelog Courtesy of Todd Stansell (https://github.com/tjstansell/salt
 
   * 608da5e modules/lxc: merge resolution
 
-  * 27c4689 modules/lxc: more consistent comparsion
+  * 27c4689 modules/lxc: more consistent comparison
 
   * 07c365a lxc: merge conflict spotted
 

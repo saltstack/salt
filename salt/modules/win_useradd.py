@@ -56,7 +56,7 @@ def __virtual__():
     '''
     if HAS_WIN32NET_MODS and salt.utils.is_windows():
         return __virtualname__
-    return False
+    return (False, "Module win_useradd: module has failed dependencies or is not on Windows client")
 
 
 def _get_date_time_format(dt_string):

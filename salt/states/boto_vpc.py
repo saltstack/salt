@@ -33,7 +33,17 @@ config:
     myprofile:
         keyid: GKTADJGHEIQSXMKKRBJ08H
         key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+        region: us-east-1
+
+.. code-block:: yaml
+
+    aws:
+        region:
+            us-east-1:
+                profile:
+                    keyid: GKTADJGHEIQSXMKKRBJ08H
+                    key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+                    region: us-east-1
 
 .. code-block:: yaml
 
@@ -52,16 +62,14 @@ config:
             - vpc_id: vpc-123456
             - cidr_block: 10.0.0.0/16
             - region: us-east-1
-            - keyid: GKTADJGHEIQSXMKKRBJ08H
-            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            - profile: myprofile
 
+    {% set profile = salt['pillar.get']('aws:region:us-east-1:profile' ) %}
     Ensure internet gateway exists:
         boto_vpc.internet_gateway_present:
             - name: myigw
             - vpc_name: myvpc
-            - region: us-east-1
-            - keyid: GKTADJGHEIQSXMKKRBJ08H
-            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            - profile: {{ profile }}
 
     Ensure route table exists:
         boto_vpc.route_table_present:
@@ -70,13 +78,13 @@ config:
             - routes:
               - destination_cidr_block: 0.0.0.0/0
                 instance_id: i-123456
-                interface_id: eni-123456
-            - subnets:
-              - name: subnet1
-              - name: subnet2
+            - subnet_names:
+              - subnet1
+              - subnet2
             - region: us-east-1
-            - keyid: GKTADJGHEIQSXMKKRBJ08H
-            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+            - profile:
+                keyid: GKTADJGHEIQSXMKKRBJ08H
+                key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
 
 # Import Python Libs
@@ -703,8 +711,7 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
     '''
     Ensure route table with routes exists and is associated to a VPC.
 
-
-    Example::
+    Example:
 
     .. code-block:: yaml
 
@@ -713,8 +720,13 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
             - vpc_id: vpc-123456
             - routes:
               - destination_cidr_block: 0.0.0.0/0
+                internet_gateway_name: InternetGateway
+              - destination_cidr_block: 10.10.11.0/24
                 instance_id: i-123456
+              - destination_cidr_block: 10.10.12.0/24
                 interface_id: eni-123456
+              - destination_cidr_block: 10.10.13.0/24
+                instance_name: mygatewayserver
             - subnet_names:
               - subnet1
               - subnet2
@@ -730,7 +742,7 @@ def route_table_present(name, vpc_name=None, vpc_id=None, routes=None,
         Either vpc_name or vpc_id must be provided.
 
     routes
-        A list of routes.
+        A list of routes.  Each route has a cidr and a target.
 
     subnet_ids
         A list of subnet ids to associate

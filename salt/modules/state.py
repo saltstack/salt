@@ -12,7 +12,7 @@ states themselves.
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import copy
 import fnmatch
 import json

@@ -67,7 +67,7 @@ def _check_xenapi():
 def __virtual__():
     if _check_xenapi() is not False:
         return __virtualname__
-    return False
+    return (False, "Module xapi: xenapi check failed")
 
 
 @contextlib.contextmanager

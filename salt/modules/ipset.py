@@ -109,7 +109,7 @@ def __virtual__():
     '''
     if salt.utils.which('ipset'):
         return True
-    return False
+    return (False, 'The ipset execution modules cannot be loaded: ipset binary not in path.')
 
 
 def _ipset_cmd():

@@ -48,6 +48,9 @@ service, then set the reload value to True:
 from __future__ import absolute_import
 import time
 
+# Import Salt libs
+from salt.exceptions import CommandExecutionError
+
 
 def __virtual__():
     '''
@@ -76,7 +79,12 @@ def _enable(name, started, result=True, **kwargs):
     ret = {}
 
     # is service available?
-    if not _available(name, ret):
+    try:
+        if not _available(name, ret):
+            return ret
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
         return ret
 
     # Check to see if this minion supports enable
@@ -160,8 +168,13 @@ def _disable(name, started, result=True, **kwargs):
     ret = {}
 
     # is service available?
-    if not _available(name, ret):
-        ret['result'] = True
+    try:
+        if not _available(name, ret):
+            ret['result'] = True
+            return ret
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
         return ret
 
     # is enable/disable available?
@@ -287,7 +300,12 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
         return _enabled_used_error(ret)
 
     # Check if the service is available
-    if not _available(name, ret):
+    try:
+        if not _available(name, ret):
+            return ret
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
         return ret
 
     # lot of custom init script wont or mis implement the status
@@ -298,17 +316,11 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     # See if the service is already running
     if before_toggle_status:
         ret['comment'] = 'The service {0} is already running'.format(name)
-        if __opts__['test']:
-            ret['result'] = True
-            return ret
         if enable is True and not before_toggle_enable_status:
             ret.update(_enable(name, None, **kwargs))
-            return ret
         elif enable is False and before_toggle_enable_status:
             ret.update(_disable(name, None, **kwargs))
-            return ret
-        else:
-            return ret
+        return ret
 
     # Run the tests
     if __opts__['test']:
@@ -375,8 +387,13 @@ def dead(name, enable=None, sig=None, **kwargs):
         return _enabled_used_error(ret)
 
     # Check if the service is available
-    if not _available(name, ret):
-        ret['result'] = True
+    try:
+        if not _available(name, ret):
+            ret['result'] = True
+            return ret
+    except CommandExecutionError as exc:
+        ret['result'] = False
+        ret['comment'] = exc.strerror
         return ret
 
     # lot of custom init script wont or mis implement the status
@@ -385,14 +402,10 @@ def dead(name, enable=None, sig=None, **kwargs):
     before_toggle_enable_status = __salt__['service.enabled'](name)
     if not before_toggle_status:
         ret['comment'] = 'The service {0} is already dead'.format(name)
-        if not __opts__['test']:
-            if enable is True and not before_toggle_enable_status:
-                ret.update(_enable(name, None, **kwargs))
-            elif enable is False and before_toggle_enable_status:
-                ret.update(_disable(name, None, **kwargs))
-            return ret
-        else:
-            ret['result'] = True
+        if enable is True and not before_toggle_enable_status:
+            ret.update(_enable(name, None, **kwargs))
+        elif enable is False and before_toggle_enable_status:
+            ret.update(_disable(name, None, **kwargs))
         return ret
 
     if __opts__['test']:

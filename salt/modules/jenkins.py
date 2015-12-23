@@ -46,7 +46,8 @@ def __virtual__():
     '''
     if HAS_JENKINS:
         return __virtualname__
-    return False
+    return (False, 'The jenkins execution module cannot be loaded: '
+            'python jenkins library is not installed.')
 
 
 def _connect():

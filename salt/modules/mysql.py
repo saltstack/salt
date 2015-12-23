@@ -196,7 +196,7 @@ def __virtual__():
     '''
     if HAS_MYSQLDB:
         return True
-    return False
+    return (False, 'The mysql execution module cannot be loaded: neither MySQLdb nor PyMySQL is available.')
 
 
 def __check_table(name, table, **connection_args):

@@ -36,9 +36,9 @@ def __virtual__():
     salt-minion running as SYSTEM.
     '''
     if not salt.utils.is_windows():
-        return False
+        return (False, 'Cannot load module chocolatey: Chocolatey requires Windows')
     elif __grains__['osrelease'] in ('XP', '2003Server'):
-        return False
+        return (False, 'Cannot load module chocolatey: Chocolatey requires Windows Vista or later')
     return 'chocolatey'
 
 

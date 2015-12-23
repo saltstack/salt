@@ -39,7 +39,7 @@ def __virtual__():
     '''
     if DMIDECODER is None:
         log.debug('SMBIOS: neither dmidecode nor smbios found!')
-        return False
+        return (False, 'The smbios execution module failed to load: neither dmidecode nor smbios in the path.')
     else:
         return True
 

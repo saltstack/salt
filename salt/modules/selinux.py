@@ -35,11 +35,11 @@ def __virtual__():
     # each of them are available in the standard PATH to prevent breakage
     for cmd in required_cmds:
         if not salt.utils.which(cmd):
-            return False
+            return (False, cmd + ' is not in the path')
     # SELinux only makes sense on Linux *obviously*
     if __grains__['kernel'] == 'Linux' and selinux_fs_path():
         return 'selinux'
-    return False
+    return (False, 'Module only works on Linux with selinux installed')
 
 
 # Cache the SELinux directory to not look it up over and over
