@@ -730,17 +730,7 @@ def clone(name_a, name_b, **kwargs):
     '''
     .. versionadded:: Boron
 
-    Roll back the given dataset to a previous snapshot.
-
-    .. warning::
-
-        When a dataset is rolled back, all data that has changed since
-        the snapshot is discarded, and the dataset reverts to the state
-        at the time of the snapshot. By default, the command refuses to
-        roll back to a snapshot other than the most recent one.
-
-        In order to do so, all intermediate snapshots and bookmarks
-        must be destroyed by specifying the -r option.
+    Creates a clone of the given snapshot.
 
     name_a : string
         name of snapshot
@@ -796,6 +786,53 @@ def clone(name_a, name_b, **kwargs):
         ret[name_b] = res['stderr'] if 'stderr' in res else res['stdout']
     else:
         ret[name_b] = 'cloned from {0}'.format(name_a)
+    return ret
+
+
+def promote(name):
+    '''
+    .. versionadded:: Boron
+
+    Promotes a clone file system to no longer be dependent on its "origin"
+    snapshot.
+
+    .. note::
+
+        This makes it possible to destroy the file system that the
+        clone was created from. The clone parent-child dependency relationship
+        is reversed, so that the origin file system becomes a clone of the
+        specified file system.
+
+        The snapshot that was cloned, and any snapshots previous to this
+        snapshot, are now owned by the promoted clone. The space they use moves
+        from the origin file system to the promoted clone, so enough space must
+        be available to accommodate these snapshots. No new space is consumed
+        by this operation, but the space accounting is adjusted. The promoted
+        clone must not have any conflicting snapshot names of its own. The
+        rename subcommand can be used to rename any conflicting snapshots.
+
+    name : string
+        name of clone-filesystem
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.promote myzpool/myclone
+    '''
+    ret = {}
+
+    zfs = _check_zfs()
+
+    res = __salt__['cmd.run_all']('{zfs} promote {name}'.format(
+        zfs=zfs,
+        name=name
+    ))
+
+    if res['retcode'] != 0:
+        ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
+    else:
+        ret[name] = 'promoted'
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
