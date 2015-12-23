@@ -475,8 +475,6 @@ def list_(name=None, **kwargs):
     else:
         ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
 
-    log.warning(res)
-    log.warning(ret)
     return ret
 
 
@@ -562,6 +560,54 @@ def unmount(name, **kwargs):
             ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
         else:
             ret[name] = 'unmounted'
+    return ret
+
+
+def inherit(prop, name, **kwargs):
+    '''
+    .. versionadded:: Boron
+
+    Clears the specified property
+
+    prop : string
+        name of property
+    name : string
+        name of the filesystem, volume, or snapshot
+    recursive : boolean
+        recursively inherit the given property for all children.
+    revert : boolean
+        revert the property to the received value if one exists; otherwise
+        operate as if the -S option was not specified.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.inherit canmount myzpool/mydataset [recursive=True|False]
+    '''
+    zfs = _check_zfs()
+    recursive = kwargs.get('recursive', False)
+    revert = kwargs.get('revert', False)
+
+    res = __salt__['cmd.run_all']('{zfs} inherit {recursive}{revert}{prop} {name}'.format(
+        zfs=zfs,
+        recursive='-r ' if recursive else '',
+        revert='-S ' if revert else '',
+        prop=prop,
+        name=name
+    ))
+
+    ret = {}
+    ret[name] = {}
+    if res['retcode'] != 0:
+        ret[name][prop] = res['stderr'] if 'stderr' in res else res['stdout']
+        if 'property cannot be inherited' in res['stderr']:
+            ret[name][prop] = '{0}, {1}'.format(
+                ret[name][prop],
+                'use revert=True to try and reset it to it\'s default value.'
+            )
+    else:
+        ret[name][prop] = 'cleared'
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
