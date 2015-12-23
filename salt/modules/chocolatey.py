@@ -107,7 +107,6 @@ def chocolatey_version():
     __context__['chocolatey._version'] = out
     
     return __context__['chocolatey._version']
-    
 
 
 def bootstrap(force=False):
