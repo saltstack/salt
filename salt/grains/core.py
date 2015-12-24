@@ -1336,7 +1336,8 @@ def os_data():
         osrelease = __salt__['cmd.run']('sw_vers -productVersion')
         osname = __salt__['cmd.run']('sw_vers -productName')
         osbuild = __salt__['cmd.run']('sw_vers -buildVersion')
-        grains['os'] = osname
+        grains['os'] = "Mac"
+        grains['osfullname'] = "{0} {1}".format(osname, osrelease)
         grains['osrelease'] = osrelease
         grains['osmajorrelease'] = osrelease.rsplit('.', 1)[0]
         grains['osbuild'] = osbuild
@@ -1398,7 +1399,6 @@ def os_data():
             ver=grains['osrelease'].partition('.')[0])
     elif grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac'):
         grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
-        grains['osfullname'] = grains['os']
 
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['os'],
