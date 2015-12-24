@@ -1795,7 +1795,7 @@ class State(object):
                             continue
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
-                            if chunk['state'] == req_key:
+                            if req_key == 'id' or chunk['state'] == req_key:
                                 found = True
                                 reqs[r_state].append(chunk)
                     if not found:
