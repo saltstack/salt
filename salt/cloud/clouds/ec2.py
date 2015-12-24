@@ -1209,7 +1209,7 @@ def block_device_mappings(vm_):
     )
 
 
-def _request_eip(interface, vm_=None):
+def _request_eip(interface, vm_):
     '''
     Request and return Elastic IP
     '''
@@ -1707,7 +1707,7 @@ def request_instance(vm_=None, call=None):
         eni_devices = []
         for interface in network_interfaces:
             log.debug('Create network interface: {0}'.format(interface))
-            _new_eni = _create_eni_if_necessary(interface)
+            _new_eni = _create_eni_if_necessary(interface, vm_)
             eni_devices.append(_new_eni)
         params.update(_param_from_config(spot_prefix + 'NetworkInterface',
                                          eni_devices))
@@ -1748,7 +1748,7 @@ def request_instance(vm_=None, call=None):
         }
         try:
             rd_data = aws.query(rd_params,
-                                location=get_location(),
+                                location=get_location(vm_),
                                 provider=get_provider(),
                                 opts=__opts__,
                                 sigver='4')
