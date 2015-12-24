@@ -651,7 +651,7 @@ def _manage_devices(devices, vm=None):
         for disk_label in disks_to_create:
             # create the disk
             size_gb = float(devices['disk'][disk_label]['size'])
-            thin_provision = bool(evices['disk'][disk_label]['thin_provision'])
+            thin_provision = bool(devices['disk'][disk_label]['thin_provision'])
             disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number, thin_provision)
 
             # when creating both SCSI controller and Hard disk at the same time we need the randomly
