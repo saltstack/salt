@@ -128,6 +128,8 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
 
             zpool create mypool mirror /tmp/vdisk3 /tmp/vdisk2 mirror /tmp/vdisk0 /tmp/vdisk1
 
+    .. warning::
+
         Pay attention to the order of your dict!
 
         .. code-block:: yaml
