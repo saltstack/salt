@@ -16,7 +16,7 @@ A REST API for Salt
       introduced in version 3.2.5. The issue was reportedly resolved with
       CherryPy milestone 3.3, but the patch was committed for version 3.6.1.
 :optdepends:    - ws4py Python module for websockets support.
-:client_libraries:
+:client_libraries:o
     - Java: https://github.com/SUSE/saltstack-netapi-client-java
     - Python: https://github.com/saltstack/pepper
 :setup:
@@ -1795,11 +1795,12 @@ class Events(object):
         .. code-block:: javascript
 
             var source = new EventSource('/events');
-            source.onopen = function() { console.debug('opening') };
-            source.onerror = function(e) { console.debug('error!', e) };
-            source.onmessage = function(e) {
-                console.debug('Tag: ', e.data.tag)
-                console.debug('Data: ', e.data.data)
+            source.onopen = function() { console.info('Listening ...') };
+            source.onerror = function(err) { console.error(err) };
+            source.onmessage = function(message) {
+              var saltEvent = JSON.parse(message.data);
+              console.info(saltEvent.tag)
+              console.debug(saltEvent.data)
             };
 
         Or using CORS:
