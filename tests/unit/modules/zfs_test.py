@@ -490,6 +490,17 @@ class ZfsTestCase(TestCase):
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
             self.assertEqual(zfs.set('myzpool/mydataset', canmount='lz4'), res)
 
+    @patch('salt.modules.zfs._check_zfs', MagicMock(return_value='/sbin/zfs'))
+    def test_get_success(self):
+        '''
+        Tests zfs get success
+        '''
+        res = OrderedDict([('myzpool', {'compression': {'value': 'off'}})])
+        ret = {'pid': 562, 'retcode': 0, 'stderr': '', 'stdout': 'myzpool\tcompression\toff'}
+        mock_cmd = MagicMock(return_value=ret)
+        with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
+            self.assertEqual(zfs.get('myzpool', properties='compression', fields='value'), res)
+
 if __name__ == '__main__':
     from integration import run_tests
     run_tests(ZfsTestCase, needs_daemon=False)
