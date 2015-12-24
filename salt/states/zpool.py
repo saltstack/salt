@@ -30,12 +30,12 @@ Management zpool
               /dev/disk2
               /dev/disk3
 
-    .. note::
+.. warning::
 
-        The layout will never be updated, it will only be used at time of creation.
-        It's a whole lot of work to figure out if a devices needs to be detached, removed, ... this is best done by the sysadmin on a case per case basis.
+    The layout will never be updated, it will only be used at time of creation.
+    It's a whole lot of work to figure out if a devices needs to be detached, removed, ... this is best done by the sysadmin on a case per case basis.
 
-        Filesystem properties are also not updated, this should be managed by the zfs state module.
+    Filesystem properties are also not updated, this should be managed by the zfs state module.
 
 '''
 from __future__ import absolute_import
