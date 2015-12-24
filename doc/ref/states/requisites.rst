@@ -98,6 +98,20 @@ first line in the stanza) or the ``- name`` parameter.
     - require:
       - pkg: vim
 
+Omitting state module in requisites
+-----------------------------------
+
+.. versionadded:: Boron
+
+In version Boron, the state module name was made optional. If the state module
+is omitted, all states matching the ID will be required, regardless of which
+module they are using.
+
+.. code-block:: yaml
+
+    - require:
+      - vim
+
 State target matching
 ~~~~~~~~~~~~~~~~~~~~~
 
