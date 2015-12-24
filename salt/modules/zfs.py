@@ -1280,4 +1280,106 @@ def set(*dataset, **kwargs):
 
     return ret
 
+
+def get(*dataset, **kwargs):
+    '''
+    .. versionadded:: Boron
+
+    Displays properties for the given datasets.
+
+    *dataset : string
+        name of snapshot(s), filesystem(s), or volume(s)
+    properties : string
+        comma-seperated list of properties to list, defaults to all
+    recursive : boolean
+        recursively list children
+    depth : int
+        recursively list children to depth
+    fields : string
+        comma-seperated list of fields to include, the name and property field will always be added
+    type : string
+        comma-separated list of types to display, where type is one of
+        filesystem, snapshot, volume, bookmark, or all.
+    source : string
+        comma-separated list of sources to display. Must be one of the following:
+        local, default, inherited, temporary, and none. The default value is all sources.
+
+    .. note::
+
+        If no datasets are specified, then the command displays properties
+        for all datasets on the system.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' zfs.list
+        salt '*' zfs.list myzpool/mydataset [recursive=True|False]
+        salt '*' zfs.list myzpool/mydataset properties="sharenfs,mountpoint"
+    '''
+    ret = OrderedDict()
+    zfs = _check_zfs()
+    properties = kwargs.get('properties', 'all')
+    recursive = kwargs.get('recursive', False)
+    depth = kwargs.get('depth', 0)
+    fields = kwargs.get('fields', 'value,source')
+    ltype = kwargs.get('type', None)
+    source = kwargs.get('source', None)
+    cmd = '{0} get -H'.format(zfs)
+
+    # recursively get
+    if depth:
+        cmd = '{0} -d {1}'.format(cmd, depth)
+    elif recursive:
+        cmd = '{0} -r'.format(cmd)
+
+    # fields
+    fields = fields.split(',')
+    if 'name' in fields:  # ensure name is first
+        fields.remove('name')
+    if 'property' in fields:  # ensure property is second
+        fields.remove('property')
+    fields.insert(0, 'name')
+    fields.insert(1, 'property')
+    cmd = '{0} -o {1}'.format(cmd, ','.join(fields))
+
+    # filter on type
+    if source:
+        cmd = '{0} -s {1}'.format(cmd, source)
+
+    # filter on type
+    if ltype:
+        cmd = '{0} -t {1}'.format(cmd, ltype)
+
+    # properties
+    cmd = '{0} {1}'.format(cmd, properties)
+
+    # datasets
+    cmd = '{0} {1}'.format(cmd, ' '.join(dataset))
+
+    # parse output
+    res = __salt__['cmd.run_all'](cmd)
+    if res['retcode'] == 0:
+        for ds in [l for l in res['stdout'].splitlines()]:
+            ds = ds.split("\t")
+            ds_data = {}
+
+            for field in fields:
+                ds_data[field] = ds[fields.index(field)]
+
+            ds_name = ds_data['name']
+            ds_prop = ds_data['property']
+            del ds_data['name']
+            del ds_data['property']
+
+            if ds_name not in ret:
+                ret[ds_name] = {}
+
+            ret[ds_name][ds_prop] = ds_data
+    else:
+        ret['error'] = res['stderr'] if 'stderr' in res else res['stdout']
+
+    log.warning(res)
+    return ret
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
