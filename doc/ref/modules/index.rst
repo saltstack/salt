@@ -518,7 +518,7 @@ If a "fallback_function" is defined, it will replace the function instead of rem
         '''
         return True
 
-In addition to global dependancies the depends decorator also supports raw booleans.
+In addition to global dependencies the depends decorator also supports raw booleans.
 
 .. code-block:: python
 

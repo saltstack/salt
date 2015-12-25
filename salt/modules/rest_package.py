@@ -22,7 +22,7 @@ def __virtual__():
     '''
     if salt.utils.is_proxy():
         return __virtualname__
-    return False
+    return (False, 'The rest_package execution module failed to load: only available on proxy minions.')
 
 
 def list_pkgs(versions_as_list=False, **kwargs):

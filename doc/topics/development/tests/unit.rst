@@ -288,7 +288,7 @@ success condition, the test function is simply named ``test_get()``.  As
 described, the single function call parameter, ``name`` is mocked with
 ``net.ipv4.ip_forward`` and ``__salt__['cmd.run']`` is replaced by a MagicMock
 function object.  We are only interested in the return value of
-``__salt__['cmd.run']``, which MagicMock allows to be specified via
+``__salt__['cmd.run']``, which MagicMock allows us by specifying via
 ``return_value=1``.  Finally, the test itself tests for equality between the
 return value of ``get()`` and the expected return of ``1``.  This assertion is
 expected to succeed because ``get()`` will determine its return value from

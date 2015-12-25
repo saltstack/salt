@@ -35,7 +35,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_WIN32:
         return 'win_path'
-    return False
+    return (False, "Module win_path: module only works on Windows systems")
 
 
 def _normalize_dir(string):
@@ -75,11 +75,7 @@ def get_path():
     '''
     ret = __salt__['reg.read_value']('HKEY_LOCAL_MACHINE',
                                    'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment',
-                                   'PATH')
-    if isinstance(ret, dict):
-        ret = ret['vdata'].split(';')
-    if isinstance(ret, str):
-        ret = ret.split(';')
+                                   'PATH')['vdata'].split(';')
 
     # Trim ending backslash
     return list(map(_normalize_dir, ret))

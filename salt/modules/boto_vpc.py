@@ -117,9 +117,9 @@ def __virtual__():
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_vpc module could not be loaded: boto libraries not found')
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return False
+        return (False, 'The boto_vpc module could not be loaded: boto library is not required version 2.8.0')
     else:
 
         return True
@@ -2163,7 +2163,7 @@ def describe_route_table(route_table_id=None, route_table_name=None,
         route_tables = conn.get_all_route_tables(**filter_parameters)
 
         if not route_tables:
-            return False
+            return {}
 
         route_table = {}
         keys = ['id', 'vpc_id', 'tags', 'routes', 'associations']

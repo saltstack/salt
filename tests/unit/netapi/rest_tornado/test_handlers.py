@@ -109,7 +109,7 @@ class SaltnadoTestCase(integration.ModuleCase, AsyncHTTPTestCase):
 class TestBaseSaltAPIHandler(SaltnadoTestCase):
     def get_app(self):
         class StubHandler(saltnado.BaseSaltAPIHandler):  # pylint: disable=W0223
-            def get(self):
+            def get(self, *args, **kwargs):
                 return self.echo_stuff()
 
             def post(self):
@@ -126,7 +126,8 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
                     ret_dict[attr] = getattr(self, attr)
 
                 self.write(self.serialize(ret_dict))
-        urls = [('/', StubHandler)]
+        urls = [('/', StubHandler),
+                ('/(.*)', StubHandler)]
         return self.build_tornado_app(urls)
 
     def test_accept_content_type(self):
@@ -327,6 +328,23 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
         self.assertEqual(headers['Access-Control-Allow-Methods'], 'OPTIONS, GET, POST')
 
         self.assertEqual(response.code, 204)
+
+    def test_cors_origin_url_with_arguments(self):
+        '''
+        Check that preflight requests works with url with components
+        like jobs or minions endpoints.
+        '''
+        self._app.mod_opts['cors_origin'] = '*'
+
+        request_headers = 'X-Auth-Token, accept, content-type'
+        preflight_headers = {'Access-Control-Request-Headers': request_headers,
+                             'Access-Control-Request-Method': 'GET'}
+        response = self.fetch('/1234567890', method='OPTIONS',
+                              headers=preflight_headers)
+        headers = response.headers
+
+        self.assertEqual(response.code, 204)
+        self.assertEqual(headers["Access-Control-Allow-Origin"], "*")
 
 
 class TestSaltAuthHandler(SaltnadoTestCase):

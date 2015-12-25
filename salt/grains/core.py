@@ -14,6 +14,7 @@ as those returned here
 from __future__ import absolute_import
 import itertools
 import os
+import json
 import socket
 import sys
 import re
@@ -23,6 +24,7 @@ import locale
 import salt.exceptions
 
 __proxyenabled__ = ['*']
+__FQDN__ = None
 
 # Extend the default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of platform.linux_distribution()
@@ -477,7 +479,7 @@ def _virtual(osdata):
     # Skip the below loop on platforms which have none of the desired cmds
     # This is a temporary measure until we can write proper virtual hardware
     # detection.
-    skip_cmds = ('AIX',)
+    skip_cmds = ('AIX', 'SunOS',)
 
     # list of commands to be executed to determine the 'virtual' grain
     _cmds = ['systemd-detect-virt', 'virt-what', 'dmidecode']
@@ -565,7 +567,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'LXC'
                 break
         elif command == 'virt-what':
-            if output in ('kvm', 'qemu', 'uml', 'xen'):
+            if output in ('kvm', 'qemu', 'uml', 'xen', 'lxc'):
                 grains['virtual'] = output
                 break
             elif 'vmware' in output:
@@ -750,6 +752,8 @@ def _virtual(osdata):
             )
             if product.startswith('VMware'):
                 grains['virtual'] = 'VMware'
+            if product.startswith('VirtualBox'):
+                grains['virtual'] = 'VirtualBox'
             if maker.startswith('Xen'):
                 grains['virtual_subtype'] = '{0} {1}'.format(maker, product)
                 grains['virtual'] = 'xen'
@@ -949,6 +953,7 @@ _OS_NAME_MAP = {
     'synology': 'Synology',
     'nilrt': 'NILinuxRT',
     'manjaro': 'Manjaro',
+    'sles': 'SUSE',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -979,6 +984,8 @@ _OS_FAMILY_MAP = {
     'SLED': 'Suse',
     'openSUSE': 'Suse',
     'SUSE': 'Suse',
+    'openSUSE Leap': 'Suse',
+    'openSUSE Tumbleweed': 'Suse',
     'Solaris': 'Solaris',
     'SmartOS': 'Solaris',
     'OpenIndiana Development': 'Solaris',
@@ -1029,6 +1036,31 @@ def _get_interfaces():
     if not _INTERFACES:
         _INTERFACES = salt.utils.network.interfaces()
     return _INTERFACES
+
+
+def _parse_os_release():
+    '''
+    Parse /etc/os-release and return a parameter dictionary
+
+    See http://www.freedesktop.org/software/systemd/man/os-release.html
+    for specification of the file format.
+    '''
+
+    filename = '/etc/os-release'
+    if not os.path.isfile(filename):
+        filename = '/usr/lib/os-release'
+
+    data = dict()
+    with salt.utils.fopen(filename) as ifile:
+        regex = re.compile('^([\\w]+)=(?:\'|")?(.*?)(?:\'|")?$')
+        for line in ifile:
+            match = regex.match(line.strip())
+            if match:
+                # Shell special characters ("$", quotes, backslash, backtick)
+                # are escaped with backslashes
+                data[match.group(1)] = re.sub(r'\\([$"\'\\`])', r'\1', match.group(2))
+
+    return data
 
 
 def os_data():
@@ -1172,41 +1204,30 @@ def os_data():
                                 'lsb_{0}'.format(match.groups()[0].lower())
                             ] = match.groups()[1].rstrip()
             if 'lsb_distrib_id' not in grains:
-                if os.path.isfile('/etc/os-release'):
-                    # Arch ARM Linux - SUSE 12+ - openSUSE 13+
-                    with salt.utils.fopen('/etc/os-release') as ifile:
-                        # Imitate lsb-release
-                        for line in ifile:
-                            # NAME="Arch Linux ARM"
-                            # ID=archarm
-                            # ID_LIKE=arch
-                            # PRETTY_NAME="Arch Linux ARM"
-                            # ANSI_COLOR="0;36"
-                            # HOME_URL="http://archlinuxarm.org/"
-                            # SUPPORT_URL="https://archlinuxarm.org/forum"
-                            # BUG_REPORT_URL=
-                            #   "https://github.com/archlinuxarm/PKGBUILDs/issues"
-                            regex = re.compile(
-                                '^([\\w]+)=(?:\'|")?([\\w\\s\\.\\-_]+)(?:\'|")?'
-                            )
-                            match = regex.match(line.rstrip('\n'))
-                            if match:
-                                name, value = match.groups()
-                                if name.lower() == 'name':
-                                    grains['lsb_distrib_id'] = value.strip()
-                                elif name.lower() == 'version_id':
-                                    grains['lsb_distrib_release'] = value
-                                elif name.lower() == 'pretty_name':
-                                    grains['lsb_distrib_codename'] = value
+                if os.path.isfile('/etc/os-release') or os.path.isfile('/usr/lib/os-release'):
+                    os_release = _parse_os_release()
+                    if 'NAME' in os_release:
+                        grains['lsb_distrib_id'] = os_release['NAME'].strip()
+                    if 'VERSION_ID' in os_release:
+                        grains['lsb_distrib_release'] = os_release['VERSION_ID']
+                    if 'PRETTY_NAME' in os_release:
+                        grains['lsb_distrib_codename'] = os_release['PRETTY_NAME']
                 elif os.path.isfile('/etc/SuSE-release'):
                     grains['lsb_distrib_id'] = 'SUSE'
+                    version = ''
+                    patch = ''
                     with salt.utils.fopen('/etc/SuSE-release') as fhr:
-                        rel = re.sub("[^0-9]", "", fhr.read().split('\n')[1])
-                    with salt.utils.fopen('/etc/SuSE-release') as fhr:
-                        patch = re.sub("[^0-9]", "", fhr.read().split('\n')[2])
-                    release = rel + " SP" + patch
-                    grains['lsb_distrib_release'] = release
-                    grains['lsb_distrib_codename'] = "n.a"
+                        for line in fhr:
+                            if 'enterprise' in line.lower():
+                                grains['lsb_distrib_id'] = 'SLES'
+                            elif 'version' in line.lower():
+                                version = re.sub(r'[^0-9]', '', line)
+                            elif 'patchlevel' in line.lower():
+                                patch = re.sub(r'[^0-9]', '', line)
+                    grains['lsb_distrib_release'] = version
+                    if patch:
+                        grains['lsb_distrib_release'] += ' SP' + patch
+                    grains['lsb_distrib_codename'] = 'n.a'
                 elif os.path.isfile('/etc/altlinux-release'):
                     # ALT Linux
                     grains['lsb_distrib_id'] = 'altlinux'
@@ -1294,6 +1315,8 @@ def os_data():
             uname_v = __salt__['cmd.run']('uname -v')
             grains['os'] = grains['osfullname'] = 'SmartOS'
             grains['osrelease'] = uname_v[uname_v.index('_')+1:]
+        if salt.utils.is_smartos_globalzone():
+            grains.update(_smartos_computenode_data())
         elif os.path.isfile('/etc/release'):
             with salt.utils.fopen('/etc/release', 'r') as fp_:
                 rel_data = fp_.read()
@@ -1449,13 +1472,16 @@ def hostname():
     #   host
     #   localhost
     #   domain
+    global __FQDN__
     grains = {}
 
     if salt.utils.is_proxy():
         return grains
 
     grains['localhost'] = socket.gethostname()
-    grains['fqdn'] = salt.utils.network.get_fqhostname()
+    if __FQDN__ is None:
+        __FQDN__ = salt.utils.network.get_fqhostname()
+    grains['fqdn'] = __FQDN__
     (grains['host'], grains['domain']) = grains['fqdn'].partition('.')[::2]
     return grains
 
@@ -1494,11 +1520,14 @@ def fqdn_ip4():
     if salt.utils.is_proxy():
         return {}
 
+    addrs = []
     try:
-        info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET)
-        addrs = list(set(item[4][0] for item in info))
+        hostname_grains = hostname()
+        if hostname_grains['domain']:
+            info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET)
+            addrs = list(set(item[4][0] for item in info))
     except socket.error:
-        addrs = []
+        pass
     return {'fqdn_ip4': addrs}
 
 
@@ -1521,17 +1550,21 @@ def fqdn_ip6():
     if salt.utils.is_proxy():
         return {}
 
+    addrs = []
     try:
-        info = socket.getaddrinfo(hostname()['fqdn'], None, socket.AF_INET6)
-        addrs = list(set(item[4][0] for item in info))
+        hostname_grains = hostname()
+        if hostname_grains['domain']:
+            info = socket.getaddrinfo(hostname_grains['fqdn'], None, socket.AF_INET6)
+            addrs = list(set(item[4][0] for item in info))
     except socket.error:
-        addrs = []
+        pass
     return {'fqdn_ip6': addrs}
 
 
 def ip_interfaces():
     '''
     Provide a dict of the connected interfaces and their ip addresses
+    The addresses will be passed as a list for each interface
     '''
     # Provides:
     #   ip_interfaces
@@ -1559,6 +1592,7 @@ def ip_interfaces():
 def ip4_interfaces():
     '''
     Provide a dict of the connected interfaces and their ip4 addresses
+    The addresses will be passed as a list for each interface
     '''
     # Provides:
     #   ip_interfaces
@@ -1583,6 +1617,7 @@ def ip4_interfaces():
 def ip6_interfaces():
     '''
     Provide a dict of the connected interfaces and their ip6 addresses
+    The addresses will be passed as a list for each interface
     '''
     # Provides:
     #   ip_interfaces
@@ -1853,6 +1888,43 @@ def _hw_data(osdata):
             value = __salt__['cmd.run']('{0} -b {1}'.format(sysctl, oid))
             if not value.endswith(' is invalid'):
                 grains[key] = value
+
+    return grains
+
+
+def _smartos_computenode_data():
+    '''
+    Return useful information from a SmartOS compute node
+    '''
+    # Provides:
+    #   vms_total
+    #   vms_running
+    #   vms_stopped
+    #   sdc_version
+    #   vm_capable
+    #   vm_hw_virt
+
+    if salt.utils.is_proxy():
+        return {}
+
+    grains = {}
+
+    # *_vms grains
+    grains['computenode_vms_total'] = len(__salt__['cmd.run']('vmadm list -p').split("\n"))
+    grains['computenode_vms_running'] = len(__salt__['cmd.run']('vmadm list -p state=running').split("\n"))
+    grains['computenode_vms_stopped'] = len(__salt__['cmd.run']('vmadm list -p state=stopped').split("\n"))
+
+    # sysinfo derived grains
+    sysinfo = json.loads(__salt__['cmd.run']('sysinfo'))
+    grains['computenode_sdc_version'] = sysinfo['SDC Version']
+    grains['computenode_vm_capable'] = sysinfo['VM Capable']
+    if sysinfo['VM Capable']:
+        grains['computenode_vm_hw_virt'] = sysinfo['CPU Virtualization']
+
+    # sysinfo derived smbios grains
+    grains['manufacturer'] = sysinfo['Manufacturer']
+    grains['productname'] = sysinfo['Product']
+    grains['uuid'] = sysinfo['UUID']
 
     return grains
 

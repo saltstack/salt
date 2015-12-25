@@ -194,7 +194,15 @@ def access_keys(opts):
     '''
     users = []
     keys = {}
-    acl_users = set(opts['client_acl'].keys())
+    if opts['client_acl'] or opts['client_acl_blacklist']:
+        salt.utils.warn_until(
+                'Nitrogen',
+                'ACL rules should be configured with \'publisher_acl\' and '
+                '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
+                'This functionality will be removed in Salt Nitrogen.'
+                )
+    publisher_acl = opts['publisher_acl'] or opts['client_acl']
+    acl_users = set(publisher_acl.keys())
     if opts.get('user'):
         acl_users.add(opts['user'])
     acl_users.add(salt.utils.get_user())
@@ -457,6 +465,7 @@ class RemoteFuncs(object):
         good = self.ckminions.auth_check(
                 perms,
                 load['fun'],
+                load['arg'],
                 load['tgt'],
                 load.get('tgt_type', 'glob'),
                 publish_validate=True)
@@ -1331,13 +1340,21 @@ class LocalFuncs(object):
         # check blacklist/whitelist
         good = True
         # Check if the user is blacklisted
-        for user_re in self.opts['client_acl_blacklist'].get('users', []):
+        if self.opts['client_acl'] or self.opts['client_acl_blacklist']:
+            salt.utils.warn_until(
+                    'Nitrogen',
+                    'ACL rules should be configured with \'publisher_acl\' and '
+                    '\'publisher_acl_blacklist\' not \'client_acl\' and \'client_acl_blacklist\'. '
+                    'This functionality will be removed in Salt Nitrogen.'
+                    )
+        blacklist = self.opts['publisher_acl_blacklist'] or self.opts['client_acl_blacklist']
+        for user_re in blacklist.get('users', []):
             if re.match(user_re, load['user']):
                 good = False
                 break
 
         # check if the cmd is blacklisted
-        for module_re in self.opts['client_acl_blacklist'].get('modules', []):
+        for module_re in blacklist.get('modules', []):
             # if this is a regular command, its a single function
             if isinstance(load['fun'], str):
                 funs_to_check = [load['fun']]
@@ -1393,6 +1410,7 @@ class LocalFuncs(object):
                         if token['name'] in self.opts['external_auth'][token['eauth']]
                         else self.opts['external_auth'][token['eauth']]['*'],
                     load['fun'],
+                    load['arg'],
                     load['tgt'],
                     load.get('tgt_type', 'glob'))
             if not good:
@@ -1434,6 +1452,7 @@ class LocalFuncs(object):
                         if name in self.opts['external_auth'][extra['eauth']]
                         else self.opts['external_auth'][extra['eauth']]['*'],
                     load['fun'],
+                    load['arg'],
                     load['tgt'],
                     load.get('tgt_type', 'glob'))
             if not good:
@@ -1481,14 +1500,16 @@ class LocalFuncs(object):
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
-                    if load['user'] not in self.opts['client_acl']:
+                    acl = self.opts['publisher_acl'] or self.opts['client_acl']
+                    if load['user'] not in acl:
                         log.warning(
                             'Authentication failure of type "user" occurred.'
                         )
                         return ''
                     good = self.ckminions.auth_check(
-                            self.opts['client_acl'][load['user']],
+                            acl[load['user']],
                             load['fun'],
+                            load['arg'],
                             load['tgt'],
                             load.get('tgt_type', 'glob'))
                     if not good:

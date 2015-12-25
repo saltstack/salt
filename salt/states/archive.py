@@ -15,6 +15,9 @@ from contextlib import closing
 # Import 3rd-party libs
 import salt.ext.six as six
 
+# # Use salt.utils.fopen
+import salt.utils
+
 # remove after archive_user deprecation.
 from salt.utils import warn_until
 
@@ -32,6 +35,35 @@ def __virtual__():
         else False
 
 
+def updateChecksum(fname, target, checksum):
+    lines = []
+    compare_string = '{0}:{1}'.format(target, checksum)
+    if os.path.exists(fname):
+        with salt.utils.fopen(fname, 'r') as f:
+            lines = f.readlines()
+    with salt.utils.fopen(fname, 'w') as f:
+        f.write('{0}:{1}\n'.format(target, checksum))
+        for line in lines:
+            if line.startswith(target):
+                continue
+            f.write(line)
+
+
+def compareChecksum(fname, target, checksum):
+    if os.path.exists(fname):
+        compare_string = '{0}:{1}'.format(target, checksum)
+        with salt.utils.fopen(fname, 'r') as f:
+            while True:
+                current_line = f.readline()
+                if not current_line:
+                    break
+                if current_line.endswith('\n'):
+                    current_line = current_line[:-1]
+                if compare_string == current_line:
+                    return True
+    return False
+
+
 def extracted(name,
               source,
               archive_format,
@@ -42,7 +74,8 @@ def extracted(name,
               source_hash=None,
               if_missing=None,
               keep=False,
-              trim_output=False):
+              trim_output=False,
+              source_hash_update=None):
     '''
     .. versionadded:: 2014.1.0
 
@@ -84,6 +117,21 @@ def extracted(name,
             - group: root
             - if_missing: /opt/graylog2-server-0.9.6p1/
 
+    Example, tar with flag for lmza compression and update based if source_hash differs from what was
+    previously extracted:
+
+    .. code-block:: yaml
+
+        graylog2-server:
+          archive.extracted:
+            - name: /opt/
+            - source: https://github.com/downloads/Graylog2/graylog2-server/graylog2-server-0.9.6p1.tar.lzma
+            - source_hash: md5=499ae16dcae71eeb7c3a30c75ea7a1a6
+            - source_hash_update: true
+            - tar_options: J
+            - archive_format: tar
+            - if_missing: /opt/graylog2-server-0.9.6p1/
+
     name
         Directory name where to extract the archive
 
@@ -94,20 +142,29 @@ def extracted(name,
         Hash of source file, or file with list of hash-to-file mappings.
         It uses the same syntax as the file.managed source_hash argument.
 
+    source_hash_update
+        Set this to true if archive should be extracted if source_hash has
+        changed. This would extract regardless of the `if_missing`
+        parameter.
+
     archive_format
         tar, zip or rar
 
     archive_user
         The user to own each extracted file.
 
-        .. deprecated:: 2014.7.2
+        .. deprecated:: Boron
             replaced by standardized `user` parameter.
 
     user
         The user to own each extracted file.
 
+        .. versionadded:: 2015.8.0
+
     group
         The group to own each extracted file.
+
+        .. versionadded:: 2015.8.0
 
     if_missing
         Some archives, such as tar, extract themselves in a subfolder.
@@ -158,7 +215,18 @@ def extracted(name,
 
     if if_missing is None:
         if_missing = name
-    if (
+    if source_hash and source_hash_update:
+        hash = source_hash.split("=")
+        source_file = '{0}.{1}'.format(os.path.basename(source), hash[0])
+        hash_fname = os.path.join(__opts__['cachedir'],
+                            'files',
+                            __env__,
+                            source_file)
+        if compareChecksum(hash_fname, name, hash[1]):
+            ret['result'] = True
+            ret['comment'] = 'Hash {0} has not changed'.format(hash[1])
+            return ret
+    elif (
         __salt__['file.directory_exists'](if_missing)
         or __salt__['file.file_exists'](if_missing)
     ):
@@ -275,6 +343,9 @@ def extracted(name,
         ret['comment'] = '{0} extracted in {1}'.format(source, name)
         if not keep:
             os.unlink(filename)
+        if source_hash and source_hash_update:
+            updateChecksum(hash_fname, name, hash[1])
+
     else:
         __salt__['file.remove'](if_missing)
         ret['result'] = False

@@ -73,14 +73,14 @@ def beacon(config):
     .. code-block:: yaml
 
         beacons:
-          - load:
-            - 1m:
+          load:
+            1m:
               - 0.0
               - 2.0
-            - 5m:
+            5m:
               - 0.0
               - 1.5
-            - 15m:
+            15m:
               - 0.1
               - 1.0
 
@@ -94,11 +94,11 @@ def beacon(config):
         avg_keys = ['1m', '5m', '15m']
         avg_dict = dict(zip(avg_keys, avgs))
         # Check each entry for threshold
-        if float(avgs[0]) < float(config[0]['1m'][0]) or \
-        float(avgs[0]) > float(config[0]['1m'][1]) or \
-        float(avgs[1]) < float(config[1]['5m'][0]) or \
-        float(avgs[1]) > float(config[1]['5m'][1]) or \
-        float(avgs[2]) < float(config[2]['15m'][0]) or \
-        float(avgs[2]) > float(config[2]['15m'][1]):
+        if float(avgs[0]) < float(config['1m'][0]) or \
+        float(avgs[0]) > float(config['1m'][1]) or \
+        float(avgs[1]) < float(config['5m'][0]) or \
+        float(avgs[1]) > float(config['5m'][1]) or \
+        float(avgs[2]) < float(config['15m'][0]) or \
+        float(avgs[2]) > float(config['15m'][1]):
             ret.append(avg_dict)
     return ret

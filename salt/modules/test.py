@@ -190,7 +190,7 @@ def versions_report():
     return '\n'.join(salt.version.versions_report())
 
 
-versions = versions_report
+versions = salt.utils.alias_function(versions_report, 'versions')
 
 
 def conf_test():
@@ -541,7 +541,7 @@ def try_(module, return_try_exception=False, **kwargs):
     '''
     Try to run a module command. On an exception return None.
     If `return_try_exception` is set True return the exception.
-    This can be helpfull in templates where running a module might fail as expected.
+    This can be helpful in templates where running a module might fail as expected.
 
     CLI Example:
 

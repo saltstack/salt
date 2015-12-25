@@ -11,6 +11,7 @@ A simple example to execute a command:
 
 .. code-block:: yaml
 
+    # Store the current date in a file
     date > /tmp/salt-run:
       cmd.run
 
@@ -54,6 +55,11 @@ of the command is unknown to Salt's state system. Therefore, by default, the
 This means that if a ``cmd`` state is watched by another state then the
 state that's watching will always be executed due to the `changed` state in
 the ``cmd`` state.
+
+.. _stateful-argument:
+
+Using the "Stateful" Argument
+-----------------------------
 
 Many state functions in this module now also accept a ``stateful`` argument.
 If ``stateful`` is specified to be true then it is assumed that the command
@@ -105,13 +111,13 @@ a simple protocol described below:
            - stateful: True
 
        Run only if myscript changed something:
-         cmd.wait:
+         cmd.run:
            - name: echo hello
            - cwd: /
-           - watch:
+           - onchanges:
                - cmd: Run myscript
 
-   Note that if the ``cmd.wait`` state also specifies ``stateful: True`` it can
+   Note that if the second ``cmd.run`` state also specifies ``stateful: True`` it can
    then be watched by some other states as well.
 
 4. :strong:`The stateful argument can optionally include a test_name parameter.`
@@ -139,26 +145,14 @@ a simple protocol described below:
            - stateful:
              - test_name: masterscript test
 
-``cmd.wait`` is not restricted to watching only cmd states. For example
-it can also watch a git state for changes
-
-.. code-block:: yaml
-
-    # Watch for changes to a git repo and rebuild the project on updates
-    my-project:
-      git.latest:
-        - name: git@github.com/repo/foo
-        - target: /opt/foo
-        - rev: master
-      cmd.wait:
-        - name: make install
-        - cwd: /opt/foo
-        - watch:
-          - git: my-project
-
 
 Should I use :mod:`cmd.run <salt.states.cmd.run>` or :mod:`cmd.wait <salt.states.cmd.wait>`?
 --------------------------------------------------------------------------------------------
+
+.. note::
+
+    Use ``cmd.run`` together with :mod:`onchanges </ref/states/requisites#onchanges>`
+    instead of ``cmd.wait``.
 
 These two states are often confused. The important thing to remember about them
 is that :mod:`cmd.run <salt.states.cmd.run>` states are run each time the SLS
@@ -173,6 +167,27 @@ executed when the state it is watching changes. Example:
     /usr/local/bin/postinstall.sh:
       cmd.wait:
         - watch:
+          - pkg: mycustompkg
+      file.managed:
+        - source: salt://utils/scripts/postinstall.sh
+
+    mycustompkg:
+      pkg.installed:
+        - require:
+          - file: /usr/local/bin/postinstall.sh
+
+``cmd.wait`` itself does not do anything; all functionality is inside its ``mod_watch``
+function, which is called by ``watch`` on changes.
+
+``cmd.wait`` will be deprecated in future due to the confusion it causes. The
+preferred format is using the :doc:`onchanges Requisite </ref/states/requisites>`, which
+works on ``cmd.run`` as well as on any other state. The example would then look as follows:
+
+.. code-block:: yaml
+
+    /usr/local/bin/postinstall.sh:
+      cmd.run:
+        - onchanges:
           - pkg: mycustompkg
       file.managed:
         - source: salt://utils/scripts/postinstall.sh
@@ -206,7 +221,6 @@ from __future__ import absolute_import
 import os
 import copy
 import json
-import shlex
 import logging
 
 HAS_GRP = False
@@ -217,6 +231,7 @@ except ImportError:
     pass
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError, SaltRenderError
 from salt.ext.six import string_types
 
@@ -252,7 +267,7 @@ def _reinterpreted_state(state):
             out = out[idx + 1:]
         data = {}
         try:
-            for item in shlex.split(out):
+            for item in salt.utils.shlex_split(out):
                 key, val = item.split('=')
                 data[key] = val
         except ValueError:
@@ -396,7 +411,11 @@ def wait(name,
          use_vt=False,
          **kwargs):
     '''
-    Run the given command only if the watch statement calls it
+    Run the given command only if the watch statement calls it.
+
+    .. note::
+
+        Use :mod:`cmd.run <salt.states.cmd.run>` with :mod:`onchange </ref/states/requisites#onchanges>` instead.
 
     name
         The command to execute, remember that the command will execute with the
@@ -469,7 +488,7 @@ def wait(name,
 
     stateful
         The command being executed is expected to return data about executing
-        a state
+        a state. For more information, see the :ref:`stateful-argument` section.
 
     creates
         Only run if the file specified by ``creates`` does not exist.
@@ -494,7 +513,7 @@ def wait(name,
 
 
 # Alias "cmd.watch" to "cmd.wait", as this is a common misconfiguration
-watch = wait
+watch = salt.utils.alias_function(wait, 'watch')
 
 
 def wait_script(name,
@@ -598,7 +617,7 @@ def wait_script(name,
 
     stateful
         The command being executed is expected to return data about executing
-        a state
+        a state. For more information, see the :ref:`stateful-argument` section.
 
     use_vt
         Use VT utils (saltstack) to stream the command output more
@@ -707,7 +726,7 @@ def run(name,
 
     stateful
         The command being executed is expected to return data about executing
-        a state
+        a state. For more information, see the :ref:`stateful-argument` section.
 
     umask
         The umask (in octal) to use when running the command.
@@ -865,6 +884,8 @@ def script(name,
            timeout=None,
            use_vt=False,
            output_loglevel='debug',
+           defaults=None,
+           context=None,
            **kwargs):
     '''
     Download a script and execute it with specified arguments.
@@ -950,7 +971,7 @@ def script(name,
 
     stateful
         The command being executed is expected to return data about executing
-        a state
+        a state. For more information, see the :ref:`stateful-argument` section.
 
     timeout
         If the command has not terminated after timeout seconds, send the
@@ -971,6 +992,16 @@ def script(name,
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs.
         This is experimental.
+
+    context
+        .. version_added:: Boron
+
+        Overrides default context variables passed to the template.
+
+    defaults
+        .. version_added:: Boron
+
+        Default context passed to the template.
 
     output_loglevel
         Control the loglevel at which the output from the command is logged.
@@ -1005,6 +1036,19 @@ def script(name,
                           'documentation.')
         return ret
 
+    if context and not isinstance(context, dict):
+        ret['comment'] = ('Invalidly-formatted \'context\' parameter. Must '
+                          'be formed as a dict.')
+        return ret
+    if defaults and not isinstance(defaults, dict):
+        ret['comment'] = ('Invalidly-formatted \'defaults\' parameter. Must '
+                          'be formed as a dict.')
+        return ret
+
+    tmpctx = defaults if defaults else {}
+    if context:
+        tmpctx.update(context)
+
     if HAS_GRP:
         pgid = os.getegid()
 
@@ -1022,6 +1066,7 @@ def script(name,
                        'timeout': timeout,
                        'output_loglevel': output_loglevel,
                        'use_vt': use_vt,
+                       'context': tmpctx,
                        'saltenv': __env__})
 
     run_check_cmd_kwargs = {

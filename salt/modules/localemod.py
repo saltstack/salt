@@ -32,9 +32,9 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if HAS_DBUS is False and _uses_dbus():
-        return False
+        return (False, 'Cannot load locale module: dbus python module unavailable')
     if salt.utils.is_windows():
-        return False
+        return (False, 'Cannot load locale module: windows platforms are unsupported')
 
     return __virtualname__
 

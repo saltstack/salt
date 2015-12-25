@@ -110,7 +110,8 @@ def __virtual__():
             global GPG_1_3_1
             GPG_1_3_1 = True
         return __virtualname__
-    return False
+    return (False, 'The gpg execution module cannot be loaded; either the'
+       ' gnupg module is not installed or the gpg binary is not in the path.')
 
 
 def _create_gpg(user=None, gnupghome=None):
@@ -667,11 +668,6 @@ def import_key(user=None,
 
     imported_data = gpg.import_keys(text)
 
-    # include another check for Salt unit tests
-    gnupg_version = distutils.version.LooseVersion(gnupg.__version__)
-    if gnupg_version >= '1.3.1':
-        GPG_1_3_1 = True
-
     if GPG_1_3_1:
         counts = imported_data.counts
         if counts.get('imported') or counts.get('imported_rsa'):
@@ -1080,13 +1076,13 @@ def encrypt(user=None,
         result = gpg.encrypt(text, recipients, passphrase=gpg_passphrase)
     elif filename:
         if GPG_1_3_1:
-            # This version does not allows us to encrypt using the
+            # This version does not allow us to encrypt using the
             # file stream # have to read in the contents and encrypt.
             with salt.utils.flopen(filename, 'rb') as _fp:
                 _contents = _fp.read()
             result = gpg.encrypt(_contents, recipients, passphrase=gpg_passphrase, output=output)
         else:
-            # This version allows to encrypt using the stream
+            # This version allows encrypting the file stream
             with salt.utils.flopen(filename, 'rb') as _fp:
                 if output:
                     result = gpg.encrypt_file(_fp, recipients, passphrase=gpg_passphrase, output=output, sign=sign)

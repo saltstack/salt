@@ -49,7 +49,6 @@ from salt.modules.dockerng import (
     CLIENT_TIMEOUT,
     STOP_TIMEOUT,
     VALID_CREATE_OPTS,
-    VALID_RUNTIME_OPTS,
     _validate_input,
     _get_repo_tag
 )
@@ -76,7 +75,7 @@ def __virtual__():
             _validate_input, globals()
         )
         return __virtualname__
-    return False
+    return (False, __salt__.missing_fun_string('dockerng.version'))
 
 
 def _format_comments(comments):
@@ -122,7 +121,7 @@ def _prep_input(kwargs):
                 raise SaltInvocationError(err)
 
 
-def _compare(actual, create_kwargs, runtime_kwargs):
+def _compare(actual, create_kwargs):
     '''
     Compare the desired configuration against the actual configuration returned
     by dockerng.inspect_container
@@ -131,250 +130,247 @@ def _compare(actual, create_kwargs, runtime_kwargs):
         salt.utils.traverse_dict(actual, path, NOTSET, delimiter=':')
     )
     ret = {}
-    for desired, valid_opts in ((create_kwargs, VALID_CREATE_OPTS),
-                                (runtime_kwargs, VALID_RUNTIME_OPTS)):
-        for item, data, in six.iteritems(desired):
-            if item not in valid_opts:
-                log.error(
-                    'Trying to compare \'{0}\', but it is not a valid '
-                    'parameter. Skipping.'.format(item)
-                )
-                continue
-            log.trace('dockerng.running: comparing ' + item)
-            conf_path = valid_opts[item]['path']
-            if isinstance(conf_path, tuple):
-                actual_data = [_get(x) for x in conf_path]
-                for val in actual_data:
-                    if val is NOTSET:
-                        _api_mismatch(item)
-            else:
-                actual_data = _get(conf_path)
-                if actual_data is NOTSET:
+    for item, data, in six.iteritems(create_kwargs):
+        if item not in VALID_CREATE_OPTS:
+            log.error(
+                'Trying to compare \'{0}\', but it is not a valid '
+                'parameter. Skipping.'.format(item)
+            )
+            continue
+        log.trace('dockerng.running: comparing ' + item)
+        conf_path = VALID_CREATE_OPTS[item]['path']
+        if isinstance(conf_path, tuple):
+            actual_data = [_get(x) for x in conf_path]
+            for val in actual_data:
+                if val is NOTSET:
                     _api_mismatch(item)
-            log.trace('dockerng.running ({0}): desired value: {1}'
-                      .format(item, data))
-            log.trace('dockerng.running ({0}): actual value: {1}'
-                      .format(item, actual_data))
+        else:
+            actual_data = _get(conf_path)
+            if actual_data is NOTSET:
+                _api_mismatch(item)
+        log.trace('dockerng.running ({0}): desired value: {1}'
+                    .format(item, data))
+        log.trace('dockerng.running ({0}): actual value: {1}'
+                    .format(item, actual_data))
 
-            if actual_data is None and data is not None \
-                    or actual_data is not None and data is None:
-                ret.update({item: {'old': actual_data, 'new': data}})
-                continue
+        if actual_data is None and data is not None \
+                or actual_data is not None and data is None:
+            ret.update({item: {'old': actual_data, 'new': data}})
+            continue
 
-            # 'create' comparison params
-            if item == 'detach':
-                # Something unique here. Two fields to check, if both are False
-                # then detach is True
-                actual_detach = all(x is False for x in actual_data)
-                log.trace('dockerng.running ({0}): munged actual value: {1}'
-                          .format(item, actual_detach))
-                if actual_detach != data:
-                    ret.update({item: {'old': actual_detach, 'new': data}})
-                continue
+        # 'create' comparison params
+        if item == 'detach':
+            # Something unique here. Two fields to check, if both are False
+            # then detach is True
+            actual_detach = all(x is False for x in actual_data)
+            log.trace('dockerng.running ({0}): munged actual value: {1}'
+                        .format(item, actual_detach))
+            if actual_detach != data:
+                ret.update({item: {'old': actual_detach, 'new': data}})
+            continue
 
-            elif item == 'environment':
-                actual_env = {}
-                for env_var in actual_data:
-                    try:
-                        key, val = env_var.split('=', 1)
-                    except (AttributeError, ValueError):
-                        log.warning(
-                            'Unexpected environment variable in inspect '
-                            'output {0}'.format(env_var)
-                        )
-                        continue
-                    else:
-                        actual_env[key] = val
-                log.trace('dockerng.running ({0}): munged actual value: {1}'
-                          .format(item, actual_env))
-                env_diff = {}
-                for key in data:
-                    actual_val = actual_env.get(key)
-                    if data[key] != actual_val:
-                        env_ptr = env_diff.setdefault(item, {})
-                        env_ptr.setdefault('old', {})[key] = actual_val
-                        env_ptr.setdefault('new', {})[key] = data[key]
-                if env_diff:
-                    ret.update(env_diff)
-                continue
-
-            elif item == 'ports':
-                # Munge the desired configuration instead of the actual
-                # configuration here, because the desired configuration is a
-                # list of ints or tuples, and that won't look as good in the
-                # nested outputter as a simple comparison of lists of
-                # port/protocol pairs (as found in the "actual" dict).
-                actual_ports = sorted(actual_data)
-                desired_ports = []
-                for port_def in data:
-                    if isinstance(port_def, tuple):
-                        desired_ports.append('{0}/{1}'.format(*port_def))
-                    else:
-                        desired_ports.append('{0}/tcp'.format(port_def))
-                desired_ports.sort()
-                log.trace('dockerng.running ({0}): munged actual value: {1}'
-                          .format(item, actual_ports))
-                log.trace('dockerng.running ({0}): munged desired value: {1}'
-                          .format(item, desired_ports))
-                if actual_ports != desired_ports:
-                    ret.update({item: {'old': actual_ports,
-                                       'new': desired_ports}})
-                continue
-
-            # 'runtime' comparison params
-            elif item == 'binds':
-                actual_binds = []
-                for bind in actual_data:
-                    bind_parts = bind.split(':')
-                    if len(bind_parts) == 2:
-                        actual_binds.append(bind + ':rw')
-                    else:
-                        actual_binds.append(bind)
-                desired_binds = []
-                for host_path, bind_data in six.iteritems(data):
-                    desired_binds.append(
-                        '{0}:{1}:{2}'.format(
-                            host_path,
-                            bind_data['bind'],
-                            'ro' if bind_data['ro'] else 'rw'
-                        )
+        elif item == 'environment':
+            actual_env = {}
+            for env_var in actual_data:
+                try:
+                    key, val = env_var.split('=', 1)
+                except (AttributeError, ValueError):
+                    log.warning(
+                        'Unexpected environment variable in inspect '
+                        'output {0}'.format(env_var)
                     )
-                actual_binds.sort()
-                desired_binds.sort()
-                if actual_binds != desired_binds:
-                    ret.update({item: {'old': actual_binds,
-                                       'new': desired_binds}})
                     continue
+                else:
+                    actual_env[key] = val
+            log.trace('dockerng.running ({0}): munged actual value: {1}'
+                        .format(item, actual_env))
+            env_diff = {}
+            for key in data:
+                actual_val = actual_env.get(key)
+                if data[key] != actual_val:
+                    env_ptr = env_diff.setdefault(item, {})
+                    env_ptr.setdefault('old', {})[key] = actual_val
+                    env_ptr.setdefault('new', {})[key] = data[key]
+            if env_diff:
+                ret.update(env_diff)
+            continue
 
-            elif item == 'port_bindings':
-                actual_binds = []
-                for container_port, bind_list in six.iteritems(actual_data):
+        elif item == 'ports':
+            # Munge the desired configuration instead of the actual
+            # configuration here, because the desired configuration is a
+            # list of ints or tuples, and that won't look as good in the
+            # nested outputter as a simple comparison of lists of
+            # port/protocol pairs (as found in the "actual" dict).
+            actual_ports = sorted(actual_data)
+            desired_ports = []
+            for port_def in data:
+                if isinstance(port_def, tuple):
+                    desired_ports.append('{0}/{1}'.format(*port_def))
+                else:
+                    desired_ports.append('{0}/tcp'.format(port_def))
+            desired_ports.sort()
+            log.trace('dockerng.running ({0}): munged actual value: {1}'
+                        .format(item, actual_ports))
+            log.trace('dockerng.running ({0}): munged desired value: {1}'
+                        .format(item, desired_ports))
+            if actual_ports != desired_ports:
+                ret.update({item: {'old': actual_ports,
+                                    'new': desired_ports}})
+            continue
+
+        elif item == 'binds':
+            actual_binds = []
+            for bind in actual_data:
+                bind_parts = bind.split(':')
+                if len(bind_parts) == 2:
+                    actual_binds.append(bind + ':rw')
+                else:
+                    actual_binds.append(bind)
+            desired_binds = []
+            for host_path, bind_data in six.iteritems(data):
+                desired_binds.append(
+                    '{0}:{1}:{2}'.format(
+                        host_path,
+                        bind_data['bind'],
+                        'ro' if bind_data['ro'] else 'rw'
+                    )
+                )
+            actual_binds.sort()
+            desired_binds.sort()
+            if actual_binds != desired_binds:
+                ret.update({item: {'old': actual_binds,
+                                    'new': desired_binds}})
+                continue
+
+        elif item == 'port_bindings':
+            actual_binds = []
+            for container_port, bind_list in six.iteritems(actual_data):
+                if container_port.endswith('/tcp'):
+                    container_port = container_port[:-4]
+                for bind_data in bind_list:
+                    # Port range will have to be updated for future Docker
+                    # versions (see
+                    # https://github.com/docker/docker/issues/10220).  Note
+                    # that Docker 1.5.0 (released a few weeks after the fix
+                    # was merged) does not appear to have this fix in it,
+                    # so we're probably looking at 1.6.0 for this fix.
+                    if bind_data['HostPort'] == '' or \
+                            49153 <= int(bind_data['HostPort']) <= 65535:
+                        host_port = ''
+                    else:
+                        host_port = bind_data['HostPort']
+                    if bind_data['HostIp'] in ('0.0.0.0', ''):
+                        if host_port:
+                            bind_def = (host_port, container_port)
+                        else:
+                            bind_def = (container_port,)
+                    else:
+                        bind_def = (bind_data['HostIp'],
+                                    host_port,
+                                    container_port)
+                    actual_binds.append(':'.join(bind_def))
+
+            desired_binds = []
+            for container_port, bind_list in six.iteritems(data):
+                try:
                     if container_port.endswith('/tcp'):
                         container_port = container_port[:-4]
-                    for bind_data in bind_list:
-                        # Port range will have to be updated for future Docker
-                        # versions (see
-                        # https://github.com/docker/docker/issues/10220).  Note
-                        # that Docker 1.5.0 (released a few weeks after the fix
-                        # was merged) does not appear to have this fix in it,
-                        # so we're probably looking at 1.6.0 for this fix.
-                        if bind_data['HostPort'] == '' or \
-                                49153 <= int(bind_data['HostPort']) <= 65535:
+                except AttributeError:
+                    # The port's protocol was not specified, so it is
+                    # assumed to be TCP. Thus, according to docker-py usage
+                    # examples, the port was passed as an int. Convert it
+                    # to a string here.
+                    container_port = str(container_port)
+                for bind_data in bind_list:
+                    if isinstance(bind_data, tuple):
+                        try:
+                            host_ip, host_port = bind_data
+                            host_port = str(host_port)
+                        except ValueError:
+                            host_ip = bind_data[0]
                             host_port = ''
-                        else:
-                            host_port = bind_data['HostPort']
-                        if bind_data['HostIp'] in ('0.0.0.0', ''):
-                            if host_port:
-                                bind_def = (host_port, container_port)
-                            else:
-                                bind_def = (container_port,)
-                        else:
-                            bind_def = (bind_data['HostIp'],
-                                        host_port,
-                                        container_port)
-                        actual_binds.append(':'.join(bind_def))
-
-                desired_binds = []
-                for container_port, bind_list in six.iteritems(data):
-                    try:
-                        if container_port.endswith('/tcp'):
-                            container_port = container_port[:-4]
-                    except AttributeError:
-                        # The port's protocol was not specified, so it is
-                        # assumed to be TCP. Thus, according to docker-py usage
-                        # examples, the port was passed as an int. Convert it
-                        # to a string here.
-                        container_port = str(container_port)
-                    for bind_data in bind_list:
-                        if isinstance(bind_data, tuple):
-                            try:
-                                host_ip, host_port = bind_data
-                                host_port = str(host_port)
-                            except ValueError:
-                                host_ip = bind_data[0]
-                                host_port = ''
-                            bind_def = '{0}:{1}:{2}'.format(
-                                host_ip, host_port, container_port
+                        bind_def = '{0}:{1}:{2}'.format(
+                            host_ip, host_port, container_port
+                        )
+                    else:
+                        if bind_data is not None:
+                            bind_def = '{0}:{1}'.format(
+                                bind_data, container_port
                             )
                         else:
-                            if bind_data is not None:
-                                bind_def = '{0}:{1}'.format(
-                                    bind_data, container_port
-                                )
-                            else:
-                                bind_def = container_port
-                        desired_binds.append(bind_def)
-                actual_binds.sort()
-                desired_binds.sort()
-                log.trace('dockerng.running ({0}): munged actual value: {1}'
-                          .format(item, actual_binds))
-                log.trace('dockerng.running ({0}): munged desired value: {1}'
-                          .format(item, desired_binds))
-                if actual_binds != desired_binds:
-                    ret.update({item: {'old': actual_binds,
-                                       'new': desired_binds}})
-                    continue
-
-            elif item == 'links':
-                actual_links = []
-                for link in actual_data:
-                    try:
-                        link_name, alias_info = link.split(':')
-                    except ValueError:
-                        log.error(
-                            'Failed to compare link {0}, unrecognized format'
-                            .format(link)
-                        )
-                        continue
-                    container_name, _, link_alias = alias_info.rpartition('/')
-                    if not container_name:
-                        log.error(
-                            'Failed to interpret link alias from {0}, '
-                            'unrecognized format'.format(alias_info)
-                        )
-                        continue
-                    actual_links.append((link_name, link_alias))
-                actual_links.sort()
-                desired_links = sorted(data)
-                if actual_links != desired_links:
-                    ret.update({item: {'old': actual_links,
-                                       'new': desired_links}})
-                    continue
-
-            elif item == 'extra_hosts':
-                actual_hosts = sorted(actual_data)
-                desired_hosts = sorted(
-                    ['{0}:{1}'.format(x, y) for x, y in six.iteritems(data)]
-                )
-                if actual_hosts != desired_hosts:
-                    ret.update({item: {'old': actual_hosts,
-                                       'new': desired_hosts}})
-                    continue
-
-            elif isinstance(data, list):
-                # Compare two sorted lists of items. Won't work for "command"
-                # or "entrypoint" because those are both shell commands and the
-                # original order matters. It will, however, work for "volumes"
-                # because even though "volumes" is a sub-dict nested within the
-                # "actual" dict sorted(somedict) still just gives you a sorted
-                # list of the dictionary's keys. And we don't care about the
-                # value for "volumes", just its keys.
-                actual_data = sorted(actual_data)
-                desired_data = sorted(data)
-                log.trace('dockerng.running ({0}): munged actual value: {1}'
-                          .format(item, actual_data))
-                log.trace('dockerng.running ({0}): munged desired value: {1}'
-                          .format(item, desired_data))
-                if actual_data != desired_data:
-                    ret.update({item: {'old': actual_data,
-                                       'new': desired_data}})
+                            bind_def = container_port
+                    desired_binds.append(bind_def)
+            actual_binds.sort()
+            desired_binds.sort()
+            log.trace('dockerng.running ({0}): munged actual value: {1}'
+                        .format(item, actual_binds))
+            log.trace('dockerng.running ({0}): munged desired value: {1}'
+                        .format(item, desired_binds))
+            if actual_binds != desired_binds:
+                ret.update({item: {'old': actual_binds,
+                                    'new': desired_binds}})
                 continue
 
-            else:
-                # Generic comparison, works on strings, numeric types, and
-                # booleans
-                if actual_data != data:
-                    ret.update({item: {'old': actual_data, 'new': data}})
+        elif item == 'links':
+            actual_links = []
+            for link in actual_data:
+                try:
+                    link_name, alias_info = link.split(':')
+                except ValueError:
+                    log.error(
+                        'Failed to compare link {0}, unrecognized format'
+                        .format(link)
+                    )
+                    continue
+                container_name, _, link_alias = alias_info.rpartition('/')
+                if not container_name:
+                    log.error(
+                        'Failed to interpret link alias from {0}, '
+                        'unrecognized format'.format(alias_info)
+                    )
+                    continue
+                actual_links.append((link_name, link_alias))
+            actual_links.sort()
+            desired_links = sorted(data)
+            if actual_links != desired_links:
+                ret.update({item: {'old': actual_links,
+                                    'new': desired_links}})
+                continue
+
+        elif item == 'extra_hosts':
+            actual_hosts = sorted(actual_data)
+            desired_hosts = sorted(
+                ['{0}:{1}'.format(x, y) for x, y in six.iteritems(data)]
+            )
+            if actual_hosts != desired_hosts:
+                ret.update({item: {'old': actual_hosts,
+                                   'new': desired_hosts}})
+                continue
+
+        elif isinstance(data, list):
+            # Compare two sorted lists of items. Won't work for "command"
+            # or "entrypoint" because those are both shell commands and the
+            # original order matters. It will, however, work for "volumes"
+            # because even though "volumes" is a sub-dict nested within the
+            # "actual" dict sorted(somedict) still just gives you a sorted
+            # list of the dictionary's keys. And we don't care about the
+            # value for "volumes", just its keys.
+            actual_data = sorted(actual_data)
+            desired_data = sorted(data)
+            log.trace('dockerng.running ({0}): munged actual value: {1}'
+                        .format(item, actual_data))
+            log.trace('dockerng.running ({0}): munged desired value: {1}'
+                        .format(item, desired_data))
+            if actual_data != desired_data:
+                ret.update({item: {'old': actual_data,
+                                    'new': desired_data}})
+            continue
+
+        else:
+            # Generic comparison, works on strings, numeric types, and
+            # booleans
+            if actual_data != data:
+                ret.update({item: {'old': actual_data, 'new': data}})
     return ret
 
 
@@ -1222,6 +1218,8 @@ def running(name,
           ``--net=none``)
         - ``container:<name_or_id>`` - Reuses another container's network stack
         - ``host`` - Use the host's network stack inside the container
+        - Any name that identifies an existing network that might be created
+          with ``dockerng.network_present``.
 
           .. warning::
 
@@ -1450,19 +1448,10 @@ def running(name,
 
     # Strip __pub kwargs and divide the remaining arguments into the ones for
     # container creation and the ones for starting containers.
-    invalid_kwargs = []
-    create_kwargs = {}
-    runtime_kwargs = {}
-    kwargs_copy = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
-    send_signal = kwargs_copy.pop('send_signal', False)
+    create_kwargs = salt.utils.clean_kwargs(**copy.deepcopy(kwargs))
+    send_signal = create_kwargs.pop('send_signal', False)
 
-    for key, val in six.iteritems(kwargs_copy):
-        if key in VALID_CREATE_OPTS:
-            create_kwargs[key] = val
-        elif key in VALID_RUNTIME_OPTS:
-            runtime_kwargs[key] = val
-        else:
-            invalid_kwargs.append(key)
+    invalid_kwargs = set(create_kwargs.keys()).difference(set(VALID_CREATE_OPTS.keys()))
     if invalid_kwargs:
         ret['comment'] = (
             'The following arguments are invalid: {0}'
@@ -1473,18 +1462,14 @@ def running(name,
     # Input validation
     try:
         # Repack any dictlists that need it
-        _prep_input(runtime_kwargs)
         _prep_input(create_kwargs)
         # Perform data type validation and, where necessary, munge
         # the data further so it is in a format that can be passed
-        # to dockerng.start.
-        _validate_input('runtime',
-                        runtime_kwargs,
+        # to dockerng.create.
+        _validate_input(create_kwargs,
                         validate_ip_addrs=validate_ip_addrs)
 
-        # Add any needed container creation arguments based on the validated
-        # runtime arguments.
-        if runtime_kwargs.get('binds') is not None:
+        if create_kwargs.get('binds') is not None:
             if 'volumes' not in create_kwargs:
                 # Check if there are preconfigured volumes in the image
                 for step in __salt__['dockerng.history'](image, quiet=True):
@@ -1495,9 +1480,9 @@ def running(name,
                     # the ones from the "binds" configuration.
                     create_kwargs['volumes'] = [
                         x['bind']
-                        for x in six.itervalues(runtime_kwargs['binds'])
+                        for x in six.itervalues(create_kwargs['binds'])
                     ]
-        if runtime_kwargs.get('port_bindings') is not None:
+        if create_kwargs.get('port_bindings') is not None:
             if 'ports' not in create_kwargs:
                 # Check if there are preconfigured ports in the image
                 for step in __salt__['dockerng.history'](image, quiet=True):
@@ -1507,14 +1492,8 @@ def running(name,
                     # No preconfigured ports, we need to make our own. Use
                     # the ones from the "port_bindings" configuration.
                     create_kwargs['ports'] = list(
-                        runtime_kwargs['port_bindings'])
+                        create_kwargs['port_bindings'])
 
-        # Perform data type validation and, where necessary, munge
-        # the data further so it is in a format that can be passed
-        # to dockerng.create.
-        _validate_input('create',
-                        create_kwargs,
-                        validate_ip_addrs=validate_ip_addrs)
     except SaltInvocationError as exc:
         ret['comment'] = '{0}'.format(exc)
         return ret
@@ -1540,9 +1519,7 @@ def running(name,
                 # Container is the correct image, let's check the container
                 # config and see if we need to replace the container
                 try:
-                    changes_needed = _compare(pre_config,
-                                              create_kwargs,
-                                              runtime_kwargs)
+                    changes_needed = _compare(pre_config, create_kwargs)
                     if changes_needed:
                         log.debug(
                             'dockerng.running: Analysis of container \'{0}\' '
@@ -1634,6 +1611,7 @@ def running(name,
             create_result = __salt__['dockerng.create'](
                 image,
                 name=name,
+                validate_ip_addrs=False,
                 # Already validated input
                 validate_input=False,
                 client_timeout=client_timeout,
@@ -1653,10 +1631,6 @@ def running(name,
             # Start container
             __salt__['dockerng.start'](
                 name,
-                # Already validated input earlier, no need to repeat it
-                validate_ip_addrs=False,
-                validate_input=False,
-                **runtime_kwargs
             )
         except Exception as exc:
             comments.append(
@@ -1678,9 +1652,7 @@ def running(name,
     if changes_needed:
         try:
             post_config = __salt__['dockerng.inspect_container'](name)
-            changes_still_needed = _compare(post_config,
-                                            create_kwargs,
-                                            runtime_kwargs)
+            changes_still_needed = _compare(post_config, create_kwargs)
             if changes_still_needed:
                 log.debug(
                     'dockerng.running: Analysis of container \'{0}\' after '
@@ -1989,6 +1961,249 @@ def absent(name, force=False):
             method = 'Successfully'
         ret['comment'] = '{0} removed container \'{1}\''.format(method, name)
         ret['result'] = True
+    return ret
+
+
+def network_present(name, driver=None, containers=None):
+    '''
+    Ensure that a network is present.
+
+    name
+        Name of the network
+
+    driver
+        Type of driver for that network.
+
+    containers:
+        List of container names that should be part of this network
+    Usage Examples:
+
+    .. code-block:: yaml
+
+        network_foo:
+          dockerng.network_present
+
+
+    .. code-block:: yaml
+
+        network_bar:
+          dockerng.network_present
+            - name: bar
+            - containers:
+                - cont1
+                - cont2
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+    if containers is None:
+        containers = []
+    networks = __salt__['dockerng.networks'](names=[name])
+    if networks:
+        network = networks[0]  # we expect network's name to be unique
+        if all(c in network['Containers'] for c in containers):
+            ret['result'] = True
+            ret['comment'] = 'Network \'{0}\' already exists.'.format(name)
+            return ret
+        result = True
+        for container in containers:
+            if container not in network['Containers']:
+                try:
+                    ret['changes']['connected'] = __salt__['dockerng.connect_container_to_network'](
+                        container, name)
+                except Exception as exc:
+                    ret['comment'] = ('Failed to connect container \'{0}\' to network \'{1}\' {2}'.format(
+                        container, name, exc))
+                    result = False
+            ret['result'] = result
+
+    else:
+        try:
+            ret['changes']['created'] = __salt__['dockerng.create_network'](
+                name, driver=driver)
+        except Exception as exc:
+            ret['comment'] = ('Failed to create network \'{0}\': {1}'
+                              .format(name, exc))
+        else:
+            result = True
+            for container in containers:
+                try:
+                    ret['changes']['connected'] = __salt__['dockerng.connect_container_to_network'](
+                        container, name)
+                except Exception as exc:
+                    ret['comment'] = ('Failed to connect container \'{0}\' to network \'{1}\' {2}'.format(
+                        container, name, exc))
+                    result = False
+            ret['result'] = result
+    return ret
+
+
+def network_absent(name, driver=None):
+    '''
+    Ensure that a network is absent.
+
+    name
+        Name of the network
+
+    Usage Examples:
+
+    .. code-block:: yaml
+
+        network_foo:
+          dockerng.network_absent
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    networks = __salt__['dockerng.networks'](names=[name])
+    if not networks:
+        ret['result'] = True
+        ret['comment'] = 'Network \'{0}\' already absent'.format(name)
+        return ret
+
+    for container in networks[0]['Containers']:
+        try:
+            ret['changes']['disconnected'] = __salt__['dockerng.disconnect_container_from_network'](container, name)
+        except Exception as exc:
+            ret['comment'] = ('Failed to disconnect container \'{0}\' to network \'{1}\' {2}'.format(
+                container, name, exc))
+    try:
+        ret['changes']['removed'] = __salt__['dockerng.remove_network'](name)
+        ret['result'] = True
+    except Exception as exc:
+        ret['comment'] = ('Failed to remove network \'{0}\': {1}'
+                          .format(name, exc))
+    return ret
+
+
+def volume_present(name, driver=None, driver_opts=None):
+    '''
+    Ensure that a volume is present.
+
+    .. versionadded:: 2015.8.4
+
+    name
+        Name of the volume
+
+    driver
+        Type of driver for that volume.
+
+    driver_opts
+        Option for tha volume driver
+
+    Usage Examples:
+
+    .. code-block:: yaml
+
+        volume_foo:
+          dockerng.volume_present
+
+
+    .. code-block:: yaml
+
+        volume_bar:
+          dockerng.volume_present
+            - name: bar
+            - driver: local
+            - driver_opts:
+                foo: bar
+
+    .. code-block:: yaml
+
+        volume_bar:
+          dockerng.volume_present
+            - name: bar
+            - driver: local
+            - driver_opts:
+                - foo: bar
+                - option: value
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+    if salt.utils.is_dictlist(driver_opts):
+        driver_opts = salt.utils.repack_dictlist(driver_opts)
+    volumes = [v for v in __salt__['dockerng.volumes']()['Volumes'] if v['Name'] == name]
+    if not volumes:
+        try:
+            ret['changes']['created'] = __salt__['dockerng.create_volume'](
+                name, driver=driver, driver_opts=driver_opts)
+        except Exception as exc:
+            ret['comment'] = ('Failed to create volume \'{0}\': {1}'
+                              .format(name, exc))
+            return ret
+        else:
+            result = True
+            ret['result'] = result
+            return ret
+    # volume exits, check if driver is the same.
+    volume = volumes[0]
+    if volume['Driver'] != driver:
+        try:
+            ret['changes']['removed'] = __salt__['dockerng.remove_volume'](name)
+        except Exception as exc:
+            ret['comment'] = ('Failed to remove volume \'{0}\': {1}'
+                              .format(name, exc))
+            return ret
+        else:
+            try:
+                ret['changes']['created'] = __salt__['dockerng.create_volume'](
+                    name, driver=driver, driver_opts=driver_opts)
+            except Exception as exc:
+                ret['comment'] = ('Failed to create volume \'{0}\': {1}'
+                                .format(name, exc))
+                return ret
+            else:
+                result = True
+                ret['result'] = result
+                return ret
+
+    ret['result'] = True
+    ret['comment'] = 'Volume \'{0}\' already exists.'.format(name)
+    return ret
+
+
+def volume_absent(name, driver=None):
+    '''
+    Ensure that a volume is absent.
+
+    .. versionadded:: 2015.8.4
+
+    name
+        Name of the volume
+
+    Usage Examples:
+
+    .. code-block:: yaml
+
+        volume_foo:
+          dockerng.volume_absent
+
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': False,
+           'comment': ''}
+
+    volumes = [v for v in __salt__['dockerng.volumes']()['Volumes'] if v['Name'] == name]
+    if not volumes:
+        ret['result'] = True
+        ret['comment'] = 'Volume \'{0}\' already absent'.format(name)
+        return ret
+
+    try:
+        ret['changes']['removed'] = __salt__['dockerng.remove_volume'](name)
+        ret['result'] = True
+    except Exception as exc:
+        ret['comment'] = ('Failed to remove volume \'{0}\': {1}'
+                          .format(name, exc))
     return ret
 
 

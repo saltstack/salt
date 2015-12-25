@@ -355,6 +355,50 @@ to enable set grains_cache to ``True``.
     grains_cache: False
 
 
+.. conf_minion:: grains_deep_merge
+
+``grains_deep_merge``
+---------------------
+
+.. versionadded:: Boron
+
+Default: ``False``
+
+The grains can be merged, instead of overridden, using this option.
+This allows custom grains to defined different subvalues of a dictionary
+grain. By default this feature is disabled, to enable set grains_deep_merge
+to ``True``.
+
+.. code-block:: yaml
+
+    grains_deep_merge: False
+
+For example, with these custom grains functions:
+
+.. code-block:: python
+
+    def custom1_k1():
+        return {'custom1': {'k1': 'v1'}}
+
+    def custom1_k2():
+        return {'custom1': {'k2': 'v2'}}
+
+Without ``grains_deep_merge``, the result would be:
+
+.. code-block:: yaml
+
+    custom1:
+      k1: v1
+
+With ``grains_deep_merge``, the result will be:
+
+.. code-block:: yaml
+
+    custom1:
+      k1: v1
+      k2: v2
+
+
 .. conf_minion:: sock_dir
 
 ``sock_dir``
@@ -480,6 +524,35 @@ behavior is to have time-frame within all minions try to reconnect.
 .. code-block:: yaml
 
     recon_randomize: True
+
+.. conf_minion:: return_retry_timer
+
+``return_retry_timer``
+-------------------
+
+Default: ``5``
+
+The default timeout for a minion return attempt.
+
+.. code-block:: yaml
+
+    return_retry_timer: 5
+
+
+.. conf_minion:: return_retry_timer_max
+
+``return_retry_timer_max``
+-------------------
+
+Default: ``10``
+
+The maximum timeout for a minion return attempt. If non-zero the minion return
+retry timeout will be a random int beween ``return_retry_timer`` and
+``return_retry_timer_max``
+
+.. code-block:: yaml
+
+    return_retry_timer_max: 10
 
 .. conf_minion:: cache_sreqs
 
@@ -986,8 +1059,11 @@ Thread Settings
 
 Default: ``True``
 
-Disable multiprocessing support by default when a minion receives a
+If `multiprocessing` is enabled when a minion receives a
 publication a new process is spawned and the command is executed therein.
+Conversely, if `multiprocessing` is disabled the new publication will be run
+executed in a thread.
+
 
 .. code-block:: yaml
 

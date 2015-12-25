@@ -39,6 +39,12 @@ SPM (Salt Package Manager)
 
 Allows Salt formulas to be packaged for ease of deployment. See :ref:`spm <spm>`.
 
+.. note::
+   The spm executable was not included in the Debian or Ubuntu packages for the
+   2015.8.0 or the 2015.8.1 releases. This executable will be included in an
+   upcoming release. As a workaround, copy the SPM script from the salt library
+   installation into ``/usr/local/bin`` or your local equivalent.
+
 Specify a Single Environment for Top Files
 ==========================================
 
@@ -247,6 +253,13 @@ Deprecations
 
 - The use of ``delim`` was removed from the following functions in the ``match``
   execution module: ``pillar_pcre``, ``pillar``, ``grain_pcre``,
+
+Security Fixes
+==============
+
+CVE-2015-6918 - Git modules leaking HTTPS auth credentials to debug log
+
+Updated the Git state and execution modules to no longer display HTTPS basic authentication credentials in loglevel debug output on the Salt master. These credentials are now replaced with ``REDACTED`` in the debug output. Thanks to Andreas Stieger <asteiger@suse.com> for bringing this to our attention.
 
 Major Bug Fixes
 ===============

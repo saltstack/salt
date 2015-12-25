@@ -7,7 +7,6 @@ from __future__ import absolute_import
 
 import tornado.ioloop
 import tornado.concurrent
-LOOP_CLASS = tornado.ioloop.IOLoop
 # attempt to use zmq-- if we have it otherwise fallback to tornado loop
 try:
     import zmq.eventloop.ioloop
@@ -15,8 +14,10 @@ try:
     if not hasattr(zmq.eventloop.ioloop, 'ZMQIOLoop'):
         zmq.eventloop.ioloop.ZMQIOLoop = zmq.eventloop.ioloop.IOLoop
     LOOP_CLASS = zmq.eventloop.ioloop.ZMQIOLoop
+    HAS_ZMQ = True
 except ImportError:
-    pass  # salt-ssh doesn't dep zmq
+    LOOP_CLASS = tornado.ioloop.IOLoop
+    HAS_ZMQ = False
 
 import contextlib
 
@@ -52,7 +53,7 @@ class SyncWrapper(object):
         if kwargs is None:
             kwargs = {}
 
-        self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        self.io_loop = LOOP_CLASS()
         kwargs['io_loop'] = self.io_loop
 
         with current_ioloop(self.io_loop):
@@ -86,6 +87,15 @@ class SyncWrapper(object):
         '''
         On deletion of the async wrapper, make sure to clean up the async stuff
         '''
-        self.io_loop.close()
         if hasattr(self, 'async'):
+            if hasattr(self.async, 'close'):
+                # Certain things such as streams should be closed before
+                # their associated io_loop is closed to allow for proper
+                # cleanup.
+                self.async.close()
+            self.io_loop.close()
+            # Other things should be deallocated after the io_loop closes.
+            # See Issue #26889.
             del self.async
+        else:
+            self.io_loop.close()

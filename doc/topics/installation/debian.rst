@@ -9,8 +9,13 @@ Debian Installation
 Installation from the SaltStack Repository
 ==========================================
 
-2015.8.0 and later packages for Debian 8 (Jessie) are available in the
+2015.5 and later packages for Debian 8 (Jessie) are available in the
 SaltStack repository.
+
+.. important::
+  The repository folder structure changed in the 2015.8.3 release, though the
+  previous repository structure that was documented in 2015.8.1 can continue to
+  be used.
 
 To install using the SaltStack repository:
 
@@ -18,13 +23,13 @@ To install using the SaltStack repository:
 
    .. code-block:: bash
 
-       wget -O - https://repo.saltstack.com/apt/debian/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
+       wget -O - https://repo.saltstack.com/apt/debian/8/amd64/latest/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
 
 #. Add the following line to ``/etc/apt/sources.list``:
 
    .. code-block:: bash
 
-       deb http://repo.saltstack.com/apt/debian jessie contrib
+       deb http://repo.saltstack.com/apt/debian/8/amd64/latest jessie main
 
 #. Run ``sudo apt-get update``.
 
@@ -34,6 +39,7 @@ To install using the SaltStack repository:
    - ``apt-get install salt-minion``
    - ``apt-get install salt-ssh``
    - ``apt-get install salt-syndic``
+   - ``apt-get install salt-cloud``
 
 Post-installation tasks
 -----------------------

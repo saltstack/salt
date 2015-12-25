@@ -303,12 +303,12 @@ Set up an initial profile at ``/etc/salt/cloud.profiles``:
           SubnetId: subnet-813d4bbf
           SecurityGroupId:
             - sg-750af413
+      del_root_vol_on_destroy: True
+      del_all_vol_on_destroy: True
       volumes:
         - { size: 10, device: /dev/sdf }
         - { size: 10, device: /dev/sdg, type: io1, iops: 1000 }
         - { size: 10, device: /dev/sdh, type: io1, iops: 1000 }
-      del_root_vol_on_destroy: True
-      del_all_vol_on_destroy: True
       tag: {'Environment': 'production', 'Role': 'database'}
       sync_after_install: grains
 
@@ -353,6 +353,16 @@ The following settings are always required for EC2:
 
 Optional Settings
 =================
+
+EC2 allows a userdata file to be passed to the instance to be created. This
+functionality was added to Salt in the 2015.5.0 release.
+
+.. code-block:: yaml
+
+    my-ec2-config:
+      # Pass userdata to the instance to be created
+      userdata_file: /etc/salt/my-userdata-file
+
 
 EC2 allows a location to be set for servers to be deployed in. Availability
 zones exist inside regions, and may be added to increase specificity.
@@ -490,6 +500,10 @@ its size to 100G by using the following configuration.
           Ebs.VolumeSize: 100
           Ebs.VolumeType: gp2
           Ebs.SnapshotId: dummy0
+        - DeviceName: /dev/sdb
+          # required for devices > 2TB
+          Ebs.VolumeType: gp2
+          Ebs.VolumeSize: 3001
 
 Existing EBS volumes may also be attached (not created) to your instances or
 you can create new EBS volumes based on EBS snapshots. To simply attach an
@@ -890,6 +904,13 @@ point, and should be stored immediately.
 
     salt-cloud -f create_keypair ec2 keyname=mykeypair
 
+Importing a Key Pair
+-------------------
+
+.. code-block:: bash
+
+    salt-cloud -f import_keypair ec2 keyname=mykeypair file=/path/to/id_rsa.pub
+
 
 Show a Key Pair
 ---------------
@@ -962,7 +983,7 @@ the network interfaces of your virtual machines, for example:-
           # Uncomment this to associate an existing Elastic IP Address with
           # this network interface:
           #
-          # associate_eip: eni-XXXXXXXX
+          # associate_eip: eipalloc-XXXXXXXX
 
           # You can allocate more than one IP address to an interface. Use the
           # 'ip addr list' command to see them.

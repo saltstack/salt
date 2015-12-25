@@ -287,6 +287,228 @@ class DockerngTestCase(TestCase):
             name='ctn',
         )
 
+    @skipIf(_docker_py_version() < (1, 5, 0),
+            'docker module must be installed to run this test or is too old. >=1.5.0')
+    def test_list_networks(self, *args):
+        '''
+        test list networks.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {}
+        client = Mock()
+        client.api_version = '1.21'
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.networks(
+                    names=['foo'],
+                    ids=['01234'],
+                )
+        client.networks.assert_called_once_with(
+                    names=['foo'],
+                    ids=['01234'],
+        )
+
+    @skipIf(_docker_py_version() < (1, 5, 0),
+            'docker module must be installed to run this test or is too old. >=1.5.0')
+    def test_create_network(self, *args):
+        '''
+        test create network.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {}
+        client = Mock()
+        client.api_version = '1.21'
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.create_network(
+                    'foo',
+                    driver='bridge',
+                )
+        client.create_network.assert_called_once_with(
+                    'foo',
+                    driver='bridge',
+        )
+
+    @skipIf(_docker_py_version() < (1, 5, 0),
+            'docker module must be installed to run this test or is too old. >=1.5.0')
+    def test_remove_network(self, *args):
+        '''
+        test remove network.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {}
+        client = Mock()
+        client.api_version = '1.21'
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.remove_network('foo')
+        client.remove_network.assert_called_once_with('foo')
+
+    @skipIf(_docker_py_version() < (1, 5, 0),
+            'docker module must be installed to run this test or is too old. >=1.5.0')
+    def test_inspect_network(self, *args):
+        '''
+        test inspect network.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {}
+        client = Mock()
+        client.api_version = '1.21'
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.inspect_network('foo')
+        client.inspect_network.assert_called_once_with('foo')
+
+    @skipIf(_docker_py_version() < (1, 5, 0),
+            'docker module must be installed to run this test or is too old. >=1.5.0')
+    def test_connect_container_to_network(self, *args):
+        '''
+        test inspect network.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {}
+        client = Mock()
+        client.api_version = '1.21'
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.connect_container_to_network('container', 'foo')
+        client.connect_container_to_network.assert_called_once_with(
+            'container', 'foo')
+
+    @skipIf(_docker_py_version() < (1, 5, 0),
+            'docker module must be installed to run this test or is too old. >=1.5.0')
+    def test_disconnect_container_from_network(self, *args):
+        '''
+        test inspect network.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        host_config = {}
+        client = Mock()
+        client.api_version = '1.21'
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.disconnect_container_from_network('container', 'foo')
+        client.disconnect_container_from_network.assert_called_once_with(
+            'container', 'foo')
+
+    @skipIf(_docker_py_version() < (1, 5, 0),
+            'docker module must be installed to run this test or is too old. >=1.5.0')
+    def test_list_volumes(self, *args):
+        '''
+        test list volumes.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        client = Mock()
+        client.api_version = '1.21'
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.volumes(
+                    filters={'dangling': [True]},
+                )
+        client.volumes.assert_called_once_with(
+            filters={'dangling': [True]},
+        )
+
+    @skipIf(_docker_py_version() < (1, 5, 0),
+            'docker module must be installed to run this test or is too old. >=1.5.0')
+    def test_create_volume(self, *args):
+        '''
+        test create volume.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        client = Mock()
+        client.api_version = '1.21'
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.create_volume(
+                    'foo',
+                    driver='bridge',
+                    driver_opts={},
+                )
+        client.create_volume.assert_called_once_with(
+                    'foo',
+                    driver='bridge',
+                    driver_opts={},
+        )
+
+    @skipIf(_docker_py_version() < (1, 5, 0),
+            'docker module must be installed to run this test or is too old. >=1.5.0')
+    def test_remove_volume(self, *args):
+        '''
+        test remove volume.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        client = Mock()
+        client.api_version = '1.21'
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.remove_volume('foo')
+        client.remove_volume.assert_called_once_with('foo')
+
+    @skipIf(_docker_py_version() < (1, 5, 0),
+            'docker module must be installed to run this test or is too old. >=1.5.0')
+    def test_inspect_volume(self, *args):
+        '''
+        test inspect volume.
+        '''
+        __salt__ = {
+            'config.get': Mock(),
+            'mine.send': Mock(),
+        }
+        client = Mock()
+        client.api_version = '1.21'
+        with patch.dict(dockerng_mod.__dict__,
+                        {'__salt__': __salt__}):
+            with patch.dict(dockerng_mod.__context__,
+                            {'docker.client': client}):
+                dockerng_mod.inspect_volume('foo')
+        client.inspect_volume.assert_called_once_with('foo')
+
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -856,7 +856,8 @@ class VMwareTestCase(ExtendedTestCase):
                 call='function')
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
-    @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
+    @patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None))
+    @patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None))
     def test_add_host_cluster_not_exists(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the specified cluster present
@@ -880,7 +881,8 @@ class VMwareTestCase(ExtendedTestCase):
                 call='function')
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
-    @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
+    @patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None))
+    @patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None))
     def test_add_host_datacenter_not_exists(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the specified datacenter
@@ -926,7 +928,8 @@ class VMwareTestCase(ExtendedTestCase):
             call='function')
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
-    @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
+    @patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None))
+    @patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None))
     def test_remove_host_not_exists(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the specified host present
@@ -962,7 +965,8 @@ class VMwareTestCase(ExtendedTestCase):
             call='function')
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
-    @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
+    @patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None))
+    @patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None))
     def test_connect_host_not_exists(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the specified host present
@@ -998,7 +1002,8 @@ class VMwareTestCase(ExtendedTestCase):
             call='function')
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
-    @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
+    @patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None))
+    @patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None))
     def test_disconnect_host_not_exists(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the specified host present
@@ -1034,7 +1039,8 @@ class VMwareTestCase(ExtendedTestCase):
             call='function')
 
     @skipIf(HAS_LIBS is False, "Install pyVmomi to be able to run this unit test.")
-    @patch('salt.cloud.clouds.vmware._get_mor_by_property', MagicMock(return_value=None))
+    @patch('salt.cloud.clouds.vmware._get_si', MagicMock(return_value=None))
+    @patch('salt.utils.vmware.get_mor_by_property', MagicMock(return_value=None))
     def test_reboot_host_not_exists(self):
         '''
         Tests that a SaltCloudSystemExit is raised when the specified host present

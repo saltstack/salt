@@ -275,6 +275,28 @@ class WinSystemTestCase(TestCase):
         with patch.dict(win_system.__salt__, {'service.stop': mock}):
             self.assertTrue(win_system.stop_time_service())
 
+    def test_set_hostname(self):
+        '''
+            Test setting a new hostname
+        '''
+        cmd_run_mock = MagicMock(return_value="Method execution successful.")
+        get_hostname = MagicMock(return_value="MINION")
+        with patch.dict(win_system.__salt__, {'cmd.run': cmd_run_mock}):
+            with patch.object(win_system, 'get_hostname', get_hostname):
+                win_system.set_hostname("NEW")
+
+        cmd_run_mock.assert_called_once_with(cmd="wmic computersystem where name='MINION' call rename name='NEW'")
+
+    def test_get_hostname(self):
+        '''
+            Test setting a new hostname
+        '''
+        cmd_run_mock = MagicMock(return_value="Name\nMINION")
+        with patch.dict(win_system.__salt__, {'cmd.run': cmd_run_mock}):
+            ret = win_system.get_hostname()
+            self.assertEqual(ret, "MINION")
+        cmd_run_mock.assert_called_once_with(cmd="wmic computersystem get name")
+
 
 if __name__ == '__main__':
     from integration import run_tests

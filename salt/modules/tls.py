@@ -104,7 +104,8 @@ import os
 import time
 import calendar
 import logging
-import hashlib
+import math
+import binascii
 import salt.utils
 from salt._compat import string_types
 from salt.ext.six.moves import range as _range
@@ -139,25 +140,28 @@ def __virtual__():
     if HAS_SSL and OpenSSL_version >= LooseVersion('0.10'):
         if OpenSSL_version < LooseVersion('0.14'):
             X509_EXT_ENABLED = False
-            log.error('You should upgrade pyOpenSSL to at least 0.14.1 '
-                     'to enable the use of X509 extensions')
+            log.debug('You should upgrade pyOpenSSL to at least 0.14.1 to '
+                      'enable the use of X509 extensions in the tls module')
         elif OpenSSL_version <= LooseVersion('0.15'):
-            log.warn('You should upgrade pyOpenSSL to at least 0.15.1 '
-                     'to enable the full use of X509 extensions')
-        # never EVER reactivate this code, this has been done too many times.
-        # not having configured a cert path in the configuration does not
-        # mean that users cant use this module as we provide methods
-        # to configure it afterwards.
-        # if __opts__.get('ca.cert_base_path', None):
-        #     return True
-        # else:
-        #     log.error('tls module not loaded: ca.cert_base_path not set')
-        #     return False
+            log.debug('You should upgrade pyOpenSSL to at least 0.15.1 to '
+                      'enable the full use of X509 extensions in the tls module')
+        # NOTE: Not having configured a cert path should not prevent this
+        # module from loading as it provides methods to configure the path.
         return True
     else:
         X509_EXT_ENABLED = False
-        return False, ['PyOpenSSL version 0.10 or later must be installed '
-                       'before this module can be used.']
+        return (False, 'PyOpenSSL version 0.10 or later must be installed '
+                       'before this module can be used.')
+
+
+def _microtime():
+    '''
+    Return a Unix timestamp as a string of digits
+    :return:
+    '''
+    val1, val2 = math.modf(time.time())
+    val2 = int(val2)
+    return '{0:f}{1}'.format(val1, val2)
 
 
 def cert_base_path(cacert_path=None):
@@ -207,25 +211,21 @@ def set_ca_path(cacert_path):
     return cert_base_path()
 
 
-def _new_serial(ca_name, CN):
+def _new_serial(ca_name):
     '''
-    Return a serial number in hex using md5sum, based upon the ca_name and
-    CN values
+    Return a serial number in hex using os.urandom() and a Unix timestamp
+    in microseconds.
 
     ca_name
         name of the CA
     CN
         common name in the request
     '''
-    opts_hash_type = __opts__.get('hash_type', 'md5')
-    hashtype = getattr(hashlib, opts_hash_type)
     hashnum = int(
-        hashtype(
-            '{0}_{1}_{2}'.format(
-                ca_name,
-                CN,
-                int(calendar.timegm(time.gmtime())))
-        ).hexdigest(),
+        binascii.hexlify(
+            '{0}_{1}'.format(
+                _microtime(),
+                os.urandom(5))),
         16
     )
     log.debug('Hashnum: {0}'.format(hashnum))
@@ -671,15 +671,24 @@ def create_ca(ca_name,
     if os.path.exists(ca_keyp):
         with salt.utils.fopen(ca_keyp) as fic2:
             # try to determine the key bits
-            key = OpenSSL.crypto.load_privatekey(
-                OpenSSL.crypto.FILETYPE_PEM, fic2.read())
+            try:
+                key = OpenSSL.crypto.load_privatekey(
+                    OpenSSL.crypto.FILETYPE_PEM, fic2.read())
+            except OpenSSL.crypto.Error as err:
+                log.warn('Error loading existing private key'
+                    ' %s, generating a new key: %s', ca_keyp, str(err))
+                bck = "{0}.unloadable.{1}".format(ca_keyp,
+                    datetime.utcnow().strftime("%Y%m%d%H%M%S"))
+                log.info('Saving unloadable CA ssl key in {0}'.format(bck))
+                os.rename(ca_keyp, bck)
+
     if not key:
         key = OpenSSL.crypto.PKey()
         key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
 
     ca = OpenSSL.crypto.X509()
     ca.set_version(2)
-    ca.set_serial_number(_new_serial(ca_name, CN))
+    ca.set_serial_number(_new_serial(ca_name))
     ca.get_subject().C = C
     ca.get_subject().ST = ST
     ca.get_subject().L = L
@@ -711,7 +720,7 @@ def create_ca(ca_name,
                 issuer=ca)])
     ca.sign(key, digest)
 
-    # alway backup existing keys in case
+    # always backup existing keys in case
     keycontent = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM,
                                                 key)
     write_key = True
@@ -1158,7 +1167,7 @@ def create_self_signed_cert(tls_dir='tls',
     cert.get_subject().CN = CN
     cert.get_subject().emailAddress = emailAddress
 
-    cert.set_serial_number(_new_serial(tls_dir, CN))
+    cert.set_serial_number(_new_serial(tls_dir))
     cert.set_issuer(cert.get_subject())
     cert.set_pubkey(key)
     cert.sign(key, digest)
@@ -1406,7 +1415,7 @@ def create_ca_signed_cert(ca_name,
     cert.set_subject(req.get_subject())
     cert.gmtime_adj_notBefore(0)
     cert.gmtime_adj_notAfter(int(days) * 24 * 60 * 60)
-    cert.set_serial_number(_new_serial(ca_name, CN))
+    cert.set_serial_number(_new_serial(ca_name))
     cert.set_issuer(ca_cert.get_subject())
     cert.set_pubkey(req.get_pubkey())
 
@@ -1567,14 +1576,13 @@ def cert_info(cert_path, digest='sha256'):
 
     if 'subjectAltName' in ret.get('extensions', {}):
         valid_names = set()
-        for name in ret['extensions']['subjectAltName'] \
-                ._subjectAltNameString().split(", "):
+        for name in str(ret['extensions']['subjectAltName']).split(", "):
             if not name.startswith('DNS:'):
                 log.error('Cert {0} has an entry ({1}) which does not start '
                           'with DNS:'.format(cert_path, name))
             else:
                 valid_names.add(name[4:])
-        ret['subject_alt_names'] = valid_names
+        ret['subject_alt_names'] = ' '.join(valid_names)
 
     if hasattr(cert, 'get_signature_algorithm'):
         ret['signature_algorithm'] = cert.get_signature_algorithm()

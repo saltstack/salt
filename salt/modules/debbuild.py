@@ -12,16 +12,18 @@ This module impliments the pkgbuild interface
 
 # import python libs
 from __future__ import absolute_import, print_function
+import errno
+import logging
 import os
 import tempfile
 import shutil
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltInvocationError
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
 
-# pylint: disable=import-error
+log = logging.getLogger(__name__)
 
 __virtualname__ = 'pkgbuild'
 
@@ -32,7 +34,7 @@ def __virtual__():
     '''
     if __grains__.get('os_family', False) in ('Kali', 'Debian'):
         return __virtualname__
-    return False
+    return (False, 'The debbuild module could not be loaded: unsupported OS family')
 
 
 def _get_build_env(env):
@@ -329,7 +331,16 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     return ret
 
 
-def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='base'):
+def build(runas,
+          tgt,
+          dest_dir,
+          spec,
+          sources,
+          deps,
+          env,
+          template,
+          saltenv='base',
+          log_dir='/var/log/salt/pkgbuild'):  # pylint: disable=unused-argument
     '''
     Given the package destination directory, the tarball containing debian files (e.g. control)
     and package sources, use pbuilder to safely build the platform package
@@ -337,19 +348,24 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
     CLI Example:
 
     Debian
-        salt '*' pkgbuild.make_src_pkg deb-8-x86_64 /var/www/html/ https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/deb/python-libnacl.control https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
+        salt '*' pkgbuild.make_src_pkg deb-8-x86_64 /var/www/html https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/deb/python-libnacl.control https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
 
     This example command should build the libnacl package for Debian using pbuilder
     and place it in /var/www/html/ on the minion
     '''
     ret = {}
-    if not os.path.isdir(dest_dir):
-        try:
-            os.makedirs(dest_dir)
-        except (IOError, OSError):
-            pass
+    try:
+        os.makedirs(dest_dir)
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise
     dsc_dir = tempfile.mkdtemp()
-    dscs = make_src_pkg(dsc_dir, spec, sources, env, template, saltenv)
+    try:
+        dscs = make_src_pkg(dsc_dir, spec, sources, env, template, saltenv)
+    except Exception as exc:
+        shutil.rmtree(dsc_dir)
+        log.error('Failed to make src package')
+        return ret
 
     # dscs should only contain salt orig and debian tarballs and dsc file
     for dsc in dscs:
@@ -359,23 +375,26 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
 
         if dsc.endswith('.dsc'):
             dbase = os.path.dirname(dsc)
-            cmd = 'chown {0} -R {1}'.format(runas, dbase)
-            __salt__['cmd.run'](cmd)
-
             results_dir = tempfile.mkdtemp()
-            cmd = 'chown {0} -R {1}'.format(runas, results_dir)
-            __salt__['cmd.run'](cmd)
+            try:
+                __salt__['cmd.run']('chown {0} -R {1}'.format(runas, dbase))
+                __salt__['cmd.run']('chown {0} -R {1}'.format(runas, results_dir))
 
-            cmd = 'pbuilder --create'
-            __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
-            cmd = 'pbuilder --build --buildresult {1} {0}'.format(dsc, results_dir)
-            __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
+                cmd = 'pbuilder --create'
+                __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
+                cmd = 'pbuilder --build --buildresult {1} {0}'.format(
+                    dsc, results_dir)
+                __salt__['cmd.run'](cmd, runas=runas, python_shell=True)
 
-            for bfile in os.listdir(results_dir):
-                full = os.path.join(results_dir, bfile)
-                bdist = os.path.join(dest_dir, bfile)
-                shutil.copy(full, bdist)
-            shutil.rmtree(results_dir)
+                for bfile in os.listdir(results_dir):
+                    full = os.path.join(results_dir, bfile)
+                    bdist = os.path.join(dest_dir, bfile)
+                    shutil.copy(full, bdist)
+                    ret.setdefault('Packages', []).append(bdist)
+            except Exception as exc:
+                log.error('Error building from {0}: {1}'.format(dsc, exc))
+            finally:
+                shutil.rmtree(results_dir)
     shutil.rmtree(dsc_dir)
     return ret
 

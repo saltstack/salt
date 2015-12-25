@@ -22,7 +22,10 @@ def __virtual__():
     '''
     Only load module if dig binary is present
     '''
-    return True if salt.utils.which('dig') else False
+    if salt.utils.which('dig'):
+        return __virtualname__
+    return (False, 'The dig execution module cannot be loaded: '
+            'the dig binary is not in the path.')
 
 
 def check_ip(addr):

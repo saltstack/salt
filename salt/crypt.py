@@ -8,16 +8,20 @@ authenticating peers
 from __future__ import absolute_import, print_function
 import os
 import sys
+import copy
 import time
 import hmac
+import base64
 import hashlib
 import logging
+import stat
 import traceback
 import binascii
 import weakref
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 
 # Import third party libs
+import salt.ext.six as six
+from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 try:
     from Crypto.Cipher import AES, PKCS1_OAEP
     from Crypto.Hash import SHA
@@ -56,6 +60,9 @@ def dropfile(cachedir, user=None):
     try:
         log.info('Rotating AES key')
 
+        if (salt.utils.is_windows() and os.path.isfile(dfn) and
+                not os.access(dfn, os.W_OK)):
+            os.chmod(dfn, stat.S_IWUSR)
         with salt.utils.fopen(dfn, 'wb+') as fp_:
             fp_.write('')
         if user:
@@ -374,6 +381,19 @@ class AsyncAuth(object):
             self._authenticate_future.set_result(True)
         else:
             self.authenticate()
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls, copy.deepcopy(self.opts, memo), io_loop=None)
+        memo[id(self)] = result
+        for key in self.__dict__:
+            if key in ('io_loop',):
+                # The io_loop has a thread Lock which will fail to be deep
+                # copied. Skip it because it will just be recreated on the
+                # new copy.
+                continue
+            setattr(result, key, copy.deepcopy(self.__dict__[key], memo))
+        return result
 
     @property
     def creds(self):
@@ -1113,7 +1133,10 @@ class Crypticle(object):
     @classmethod
     def generate_key_string(cls, key_size=192):
         key = os.urandom(key_size // 8 + cls.SIG_SIZE)
-        return key.encode('base64').replace('\n', '')
+        b64key = base64.b64encode(key)
+        if six.PY3:
+            b64key = b64key.decode('utf-8')
+        return b64key.replace('\n', '')
 
     @classmethod
     def extract_keys(cls, key_string, key_size):

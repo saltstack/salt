@@ -693,7 +693,7 @@ def lowdata_fmt():
     # if the data was sent as urlencoded, we need to make it a list.
     # this is a very forgiving implementation as different clients set different
     # headers for form encoded data (including charset or something similar)
-    if not isinstance(data, list):
+    if data and not isinstance(data, list):
         # Make the 'arg' param a list if not already
         if 'arg' in data and not isinstance(data['arg'], list):
             data['arg'] = [data['arg']]
@@ -1193,6 +1193,7 @@ class Keys(LowDataAdapter):
     module <salt.wheel.key>` functions.
     '''
 
+    @cherrypy.config(**{'tools.salt_token.on': True})
     def GET(self, mid=None):
         '''
         Show the list of minion keys or detail on a specific key
@@ -1260,8 +1261,6 @@ class Keys(LowDataAdapter):
               minions:
                 jerry: 51:93:b3:d0:9f:3a:6d:e5:28:67:c2:4b:27:d6:cd:2b
         '''
-        self._cp_config['tools.salt_token.on'] = True
-
         if mid:
             lowstate = [{
                 'client': 'wheel',
@@ -1279,11 +1278,13 @@ class Keys(LowDataAdapter):
 
         return {'return': next(result, {}).get('data', {}).get('return', {})}
 
-    def POST(self, mid, keysize=None, force=None, **kwargs):
+    @cherrypy.config(**{'tools.hypermedia_out.on': False, 'tools.sessions.on': False})
+    def POST(self, **kwargs):
         r'''
         Easily generate keys for a minion and auto-accept the new key
 
-        .. versionadded:: 2014.7.0
+        Accepts all the same parameters as the :py:func:`key.gen_accept
+        <salt.wheel.key.gen_accept>`.
 
         Example partial kickstart script to bootstrap a new minion:
 
@@ -1339,24 +1340,15 @@ class Keys(LowDataAdapter):
 
             jerry.pub0000644000000000000000000000070300000000000010730 0ustar  00000000000000
         '''
-        self._cp_config['tools.hypermedia_out.on'] = False
-        self._cp_config['tools.sessions.on'] = False
-
-        lowstate = [{
+        lowstate = cherrypy.request.lowstate
+        lowstate[0].update({
             'client': 'wheel',
             'fun': 'key.gen_accept',
-            'id_': mid,
-        }]
+        })
 
-        if keysize:
-            lowstate[0]['keysize'] = keysize
+        if 'mid' in lowstate[0]:
+            lowstate[0]['id_'] = lowstate[0].pop('mid')
 
-        if force:
-            lowstate[0]['force'] = force
-
-        lowstate[0].update(kwargs)
-
-        cherrypy.request.lowstate = lowstate
         result = self.exec_lowstate()
         ret = next(result, {}).get('data', {}).get('return', {})
 
@@ -1375,7 +1367,7 @@ class Keys(LowDataAdapter):
         tarball.close()
 
         headers = cherrypy.response.headers
-        headers['Content-Disposition'] = 'attachment; filename="saltkeys-{0}.tar"'.format(mid)
+        headers['Content-Disposition'] = 'attachment; filename="saltkeys-{0}.tar"'.format(lowstate[0]['id_'])
         headers['Content-Type'] = 'application/x-tar'
         headers['Content-Length'] = fileobj.len
         headers['Cache-Control'] = 'no-cache'
@@ -2225,7 +2217,9 @@ class Webhook(object):
         '''
         tag = '/'.join(itertools.chain(self.tag_base, args))
         data = cherrypy.serving.request.unserialized_data
-        raw_body = cherrypy.serving.request.raw_body
+        if not data:
+            data = {}
+        raw_body = getattr(cherrypy.serving.request, 'raw_body', '')
         headers = dict(cherrypy.request.headers)
 
         ret = self.event.fire_event({

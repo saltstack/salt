@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Support for htpasswd module. Requires apache2-utils package.
+Support for htpasswd module. Requires the apache2-utils package for Debian-based distros.
 
 .. versionadded:: 2014.7.0
 

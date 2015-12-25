@@ -71,9 +71,9 @@ class TestWhich(integration.TestCase):
             False,
             # The second, iterating through $PATH, should also return False,
             # still checking for Linux
-            False,
-            # Lastly return True, this is the windows check.
-            True
+            # which() will add 4 extra paths to the given one, os.access will
+            # be called 5 times
+            False, False, False, False, False
         ]
         # Let's patch os.environ to provide a custom PATH variable
         with patch.dict(os.environ, {'PATH': '/bin'}):

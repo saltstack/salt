@@ -53,6 +53,7 @@ Full list of builtin execution modules
     cabal
     cassandra
     cassandra_cql
+    chassis
     chef
     chocolatey
     cloud
@@ -87,12 +88,14 @@ Full list of builtin execution modules
     dockerng
     dpkg
     drac
+    dracr
     drbd
     ebuild
     eix
     elasticsearch
     environ
     eselect
+    esxi
     etcd_mod
     event
     extfs
@@ -267,6 +270,7 @@ Full list of builtin execution modules
     smf
     smtp
     softwareupdate
+    solaris_fmadm
     solaris_group
     solaris_shadow
     solaris_user
@@ -313,6 +317,7 @@ Full list of builtin execution modules
     victorops
     virt
     virtualenv_mod
+    vsphere
     win_autoruns
     win_dacl
     win_disk

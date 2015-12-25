@@ -29,47 +29,53 @@ passed in as a dict, or as a string to pull from pillars or minion config:
 .. code-block:: yaml
 
     myprofile:
-        keyid: GKTADJGHEIQSXMKKRBJ08H
-        key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-        region: us-east-1
+      keyid: GKTADJGHEIQSXMKKRBJ08H
+      key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      region: us-east-1
 
 .. code-block:: yaml
 
     mycnamerecord:
-        boto_route53.present:
-            - name: test.example.com.
-            - value: my-elb.us-east-1.elb.amazonaws.com.
-            - zone: example.com.
-            - ttl: 60
-            - record_type: CNAME
-            - region: us-east-1
-            - keyid: GKTADJGHEIQSXMKKRBJ08H
-            - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      boto_route53.present:
+        - name: test.example.com.
+        - value: my-elb.us-east-1.elb.amazonaws.com.
+        - zone: example.com.
+        - ttl: 60
+        - record_type: CNAME
+        - region: us-east-1
+        - keyid: GKTADJGHEIQSXMKKRBJ08H
+        - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
     # Using a profile from pillars
     myarecord:
-        boto_route53.present:
-            - name: test.example.com.
-            - value: 1.1.1.1
-            - zone: example.com.
-            - ttl: 60
-            - record_type: A
-            - region: us-east-1
-            - profile: myprofile
+      boto_route53.present:
+        - name: test.example.com.
+        - value: 1.1.1.1
+        - zone: example.com.
+        - ttl: 60
+        - record_type: A
+        - region: us-east-1
+        - profile: myprofile
 
     # Passing in a profile
     myarecord:
-        boto_route53.present:
-            - name: test.example.com.
-            - value: 1.1.1.1
-            - zone: example.com.
-            - ttl: 60
-            - record_type: A
-            - region: us-east-1
-            - profile:
-                keyid: GKTADJGHEIQSXMKKRBJ08H
-                key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+      boto_route53.present:
+        - name: test.example.com.
+        - value: 1.1.1.1
+        - zone: example.com.
+        - ttl: 60
+        - record_type: A
+        - region: us-east-1
+        - profile:
+            keyid: GKTADJGHEIQSXMKKRBJ08H
+            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 '''
+
+# Import Python Libs
+from __future__ import absolute_import
+
+# Import Salt Libs
+from salt.utils import SaltInvocationError
 
 
 def __virtual__():
@@ -144,10 +150,15 @@ def present(
     if isinstance(value, list):
         value = ','.join(value)
 
-    record = __salt__['boto_route53.get_record'](name, zone, record_type,
-                                                 False, region, key, keyid,
-                                                 profile, split_dns,
-                                                 private_zone)
+    try:
+        record = __salt__['boto_route53.get_record'](name, zone, record_type,
+                                                     False, region, key, keyid,
+                                                     profile, split_dns,
+                                                     private_zone)
+    except SaltInvocationError as err:
+        ret['comment'] = 'Error: {0}'.format(err)
+        ret['result'] = False
+        return ret
 
     if isinstance(record, dict) and not record:
         if __opts__['test']:

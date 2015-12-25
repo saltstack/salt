@@ -100,11 +100,15 @@ def get_minion_data(minion, opts):
     return minion if minion else None, None, None
 
 
-def nodegroup_comp(nodegroup, nodegroups, skip=None):
+def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
     '''
     Recursively expand ``nodegroup`` from ``nodegroups``; ignore nodegroups in ``skip``
-    '''
 
+    If a top-level (non-recursive) call finds no nodegroups, return the original
+    nodegroup definition (for backwards compatibility). Keep track of recursive
+    calls via `first_call` argument
+    '''
+    expanded_nodegroup = False
     if skip is None:
         skip = set()
     elif nodegroup in skip:
@@ -134,7 +138,8 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None):
         if word in opers:
             ret.append(word)
         elif len(word) >= 3 and word.startswith('N@'):
-            ret.extend(nodegroup_comp(word[2:], nodegroups, skip=skip))
+            expanded_nodegroup = True
+            ret.extend(nodegroup_comp(word[2:], nodegroups, skip=skip, first_call=False))
         else:
             ret.append(word)
 
@@ -145,7 +150,15 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None):
     skip.remove(nodegroup)
 
     log.debug('nodegroup_comp({0}) => {1}'.format(nodegroup, ret))
-    return ret
+    # Only return list form if a nodegroup was expanded. Otherwise return
+    # the original string to conserve backwards compat
+    if expanded_nodegroup or not first_call:
+        return ret
+    else:
+        log.debug('No nested nodegroups detected. '
+                  'Using original nodegroup definition: {0}'
+                  .format(nodegroups[nodegroup]))
+        return nodegroups[nodegroup]
 
 
 class CkMinions(object):
@@ -677,9 +690,9 @@ class CkMinions(object):
                     vals.append(False)
             except Exception:
                 log.error('Invalid regular expression: {0}'.format(regex))
-        return all(vals)
+        return vals and all(vals)
 
-    def any_auth(self, form, auth_list, fun, tgt=None, tgt_type='glob'):
+    def any_auth(self, form, auth_list, fun, arg, tgt=None, tgt_type='glob'):
         '''
         Read in the form and determine which auth check routine to execute
         '''
@@ -687,6 +700,7 @@ class CkMinions(object):
             return self.auth_check(
                     auth_list,
                     fun,
+                    arg,
                     tgt,
                     tgt_type)
         return self.spec_check(
@@ -697,6 +711,7 @@ class CkMinions(object):
     def auth_check(self,
                    auth_list,
                    funs,
+                   args,
                    tgt,
                    tgt_type='glob',
                    groups=None,
@@ -723,8 +738,9 @@ class CkMinions(object):
         # compound commands will come in a list so treat everything as a list
         if not isinstance(funs, list):
             funs = [funs]
+            args = [args]
         try:
-            for fun in funs:
+            for num, fun in enumerate(funs):
                 for ind in auth_list:
                     if isinstance(ind, six.string_types):
                         # Allowed for all minions
@@ -745,9 +761,65 @@ class CkMinions(object):
                                 if self.match_check(ind[valid], fun):
                                     return True
                             elif isinstance(ind[valid], list):
-                                for regex in ind[valid]:
-                                    if self.match_check(regex, fun):
-                                        return True
+                                for cond in ind[valid]:
+                                    # Function name match
+                                    if isinstance(cond, six.string_types):
+                                        if self.match_check(cond, fun):
+                                            return True
+                                    # Function and args match
+                                    elif isinstance(cond, dict):
+                                        if len(cond) != 1:
+                                            # Invalid argument
+                                            continue
+                                        fcond = next(six.iterkeys(cond))
+                                        # cond: {
+                                        #   'mod.func': {
+                                        #       'args': [
+                                        #           'one.*', 'two\\|three'],
+                                        #       'kwargs': {
+                                        #           'functioin': 'teach\\|feed',
+                                        #           'user': 'mother\\|father'
+                                        #           }
+                                        #       }
+                                        #   }
+                                        if self.match_check(fcond, fun):  # check key that is function name match
+                                            acond = cond[fcond]
+                                            if not isinstance(acond, dict):
+                                                # Invalid argument
+                                                continue
+                                            # whitelist args, kwargs
+                                            arg_list = args[num]
+                                            cond_args = acond.get('args', [])
+                                            good = True
+                                            for i, cond_arg in enumerate(cond_args):
+                                                if len(arg_list) <= i:
+                                                    good = False
+                                                    break
+                                                if cond_arg is None:  # None == '.*' i.e. allow any
+                                                    continue
+                                                if not self.match_check(cond_arg, arg_list[i]):
+                                                    good = False
+                                                    break
+                                            if not good:
+                                                continue
+                                            # Check kwargs
+                                            cond_kwargs = acond.get('kwargs', {})
+                                            arg_kwargs = {}
+                                            for a in arg_list:
+                                                if isinstance(a, dict) and '__kwarg__' in a:
+                                                    arg_kwargs = a
+                                                    break
+                                            for k, v in six.iteritems(cond_kwargs):
+                                                if k not in arg_kwargs:
+                                                    good = False
+                                                    break
+                                                if v is None:  # None == '.*' i.e. allow any
+                                                    continue
+                                                if not self.match_check(v, arg_kwargs[k]):
+                                                    good = False
+                                                    break
+                                            if good:
+                                                return True
         except TypeError:
             return False
         return False

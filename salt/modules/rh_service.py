@@ -44,6 +44,7 @@ def __virtual__():
     '''
     # Enable on these platforms only.
     enable = set((
+        'XenServer',
         'RedHat',
         'CentOS',
         'ScientificLinux',
@@ -57,23 +58,24 @@ def __virtual__():
         'McAfee  OS Server'
     ))
     if __grains__['os'] in enable:
-        if __grains__['os'] == 'SUSE':
-            if str(__grains__['osrelease']).startswith('11'):
-                return __virtualname__
-            else:
-                return False
+        if __grains__['os'] == 'XenServer':
+            return __virtualname__
         try:
             osrelease = float(__grains__.get('osrelease', 0))
         except ValueError:
-            return False
+            return (False, 'Cannot load rh_service module: '
+                           'osrelease grain, {0}, not a float,'.format(osrelease))
+        if __grains__['os'] == 'SUSE':
+            if osrelease > 11:
+                return (False, 'Cannot load rh_service module on SUSE >= 11')
         if __grains__['os'] == 'Fedora':
             if osrelease > 15:
-                return False
+                return (False, 'Cannot load rh_service module on Fedora >= 15')
         if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux', 'OEL'):
             if osrelease >= 7:
-                return False
+                return (False, 'Cannot load rh_service module on RedHat >= 7')
         return __virtualname__
-    return False
+    return (False, 'Cannot load rh_service module: OS not in {0}'.format(enable))
 
 
 def _runlevel():
@@ -153,23 +155,22 @@ def _sysv_is_enabled(name, runlevel=None):
 
 def _chkconfig_is_enabled(name, runlevel=None):
     '''
-    Return True if the service is enabled according to chkconfig; otherwise
-    return False.  If `runlevel` is None, then use the current runlevel.
+    Return ``True`` if the service is enabled according to chkconfig; otherwise
+    return ``False``.  If ``runlevel`` is ``None``, then use the current
+    runlevel.
     '''
     cmdline = '/sbin/chkconfig --list {0}'.format(name)
     result = __salt__['cmd.run_all'](cmdline, python_shell=False)
+
+    if runlevel is None:
+        runlevel = _runlevel()
     if result['retcode'] == 0:
-        cols = result['stdout'].splitlines()[0].split()
-        try:
-            if cols[0].strip(':') == name:
-                if runlevel is None:
-                    runlevel = _runlevel()
-                if len(cols) > 3 and '{0}:on'.format(runlevel) in cols:
+        for row in result['stdout'].splitlines():
+            if '{0}:on'.format(runlevel) in row:
+                if row.split()[0] == name:
                     return True
-                elif len(cols) < 3 and cols[1] and cols[1] == 'on':
-                    return True
-        except IndexError:
-            pass
+            elif row.split() == [name + ':', 'on']:
+                return True
     return False
 
 

@@ -12,12 +12,23 @@ import time
 from salt.utils import warn_until
 
 # Import OpenStack libs
-from keystoneclient.apiclient.exceptions import \
-    Unauthorized as kstone_Unauthorized
-from glanceclient.exc import \
-    HTTPUnauthorized as glance_Unauthorized
+try:
+    from keystoneclient.apiclient.exceptions import \
+        Unauthorized as kstone_Unauthorized
+    from glanceclient.exc import \
+        HTTPUnauthorized as glance_Unauthorized
+    HAS_DEPENDENCIES = True
+except ImportError:
+    HAS_DEPENDENCIES = False
 
 log = logging.getLogger(__name__)
+
+
+def __virtual__():
+    '''
+    Only load if dependencies are loaded
+    '''
+    return HAS_DEPENDENCIES
 
 
 def _find_image(name):

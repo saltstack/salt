@@ -446,10 +446,12 @@ class Pillar(object):
                         self.opts.get('nodegroups', {}),
                         ):
                     if saltenv not in matches:
-                        matches[saltenv] = []
+                        matches[saltenv] = env_matches = []
+                    else:
+                        env_matches = matches[saltenv]
                     for item in data:
-                        if isinstance(item, six.string_types):
-                            matches[saltenv].append(item)
+                        if isinstance(item, six.string_types) and item not in env_matches:
+                            env_matches.append(item)
         return matches
 
     def render_pstate(self, sls, saltenv, mods, defaults=None):
@@ -528,20 +530,20 @@ class Pillar(object):
                                         mods,
                                         defaults
                                         )
-                            if nstate:
-                                if key:
-                                    nstate = {
-                                        key: nstate
-                                    }
+                                if nstate:
+                                    if key:
+                                        nstate = {
+                                            key: nstate
+                                        }
 
-                                state = merge(
-                                    state,
-                                    nstate,
-                                    self.merge_strategy,
-                                    self.opts.get('renderer', 'yaml'))
+                                    state = merge(
+                                        state,
+                                        nstate,
+                                        self.merge_strategy,
+                                        self.opts.get('renderer', 'yaml'))
 
-                            if err:
-                                errors += err
+                                if err:
+                                    errors += err
         return state, mods, errors
 
     def render_pillar(self, matches):
@@ -624,6 +626,8 @@ class Pillar(object):
         # Bring in CLI pillar data
         pillar.update(self.pillar_override)
         for run in self.opts['ext_pillar']:
+            if run in self.opts.get('exclude_ext_pillar', []):
+                continue
             if not isinstance(run, dict):
                 log.critical('The "ext_pillar" option is malformed')
                 return {}

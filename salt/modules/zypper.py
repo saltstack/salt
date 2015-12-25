@@ -33,6 +33,7 @@ HAS_ZYPP = False
 ZYPP_HOME = '/etc/zypp'
 LOCKS = '{0}/locks'.format(ZYPP_HOME)
 REPOS = '{0}/repos.d'.format(ZYPP_HOME)
+DEFAULT_PRIORITY = 99
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -43,10 +44,10 @@ def __virtual__():
     Set the virtual pkg module if the os is openSUSE
     '''
     if __grains__.get('os_family', '') != 'Suse':
-        return False
+        return (False, "Module zypper: non SUSE OS not suppored by zypper package manager")
     # Not all versions of Suse use zypper, check that it is available
     if not salt.utils.which('zypper'):
-        return False
+        return (False, "Module zypper: zypper package manager not found")
     return __virtualname__
 
 
@@ -95,7 +96,7 @@ def list_upgrades(refresh=True):
     return ret
 
 # Provide a list_updates function for those used to using zypper list-updates
-list_updates = list_upgrades
+list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
 
 
 def info_installed(*names):
@@ -175,10 +176,10 @@ def info_available(*names, **kwargs):
         if nfo.get('name'):
             name = nfo.pop('name')
             ret[name] = nfo
-        if nfo.get("status"):
-            nfo['status'] = nfo.get("status").split(" ")[0]
-        if nfo.get("installed"):
-            nfo['installed'] = nfo.get("installed").lower() == "yes" and True or False
+        if nfo.get('status'):
+            nfo['status'] = nfo.get('status')
+        if nfo.get('installed'):
+            nfo['installed'] = nfo.get('installed').lower() == 'yes' and True or False
 
     return ret
 
@@ -227,13 +228,17 @@ def latest_version(*names, **kwargs):
     for name in names:
         pkg_info = package_info.get(name, {})
         if pkg_info.get('status', '').lower() in ['not installed', 'out-of-date']:
-            ret[name] = pkg_info
+            ret[name] = pkg_info.get('version')
+
+    # Return a string if only one package name passed
+    if len(names) == 1 and len(ret):
+        return ret[names[0]]
 
     return ret
 
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def upgrade_available(name):
@@ -534,6 +539,12 @@ def mod_repo(repo, **kwargs):
     if kwargs.get('gpgautoimport') is True:
         cmd_opt.append('--gpg-auto-import-keys')
 
+    if 'priority' in kwargs:
+        cmd_opt.append("--priority='{0}'".format(kwargs.get('priority', DEFAULT_PRIORITY)))
+
+    if 'humanname' in kwargs:
+        cmd_opt.append("--name='{0}'".format(kwargs.get('humanname')))
+
     if cmd_opt:
         cmd = ['zypper', '-x', 'mr']
         cmd.extend(cmd_opt)
@@ -732,17 +743,22 @@ def install(name=None,
         cmd_install.append('--download-only')
     if fromrepo:
         cmd_install.extend(fromrepoopt)
+
+    errors = []
+
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
     while targets:
         cmd = cmd_install + targets[:500]
         targets = targets[500:]
 
-        out = __salt__['cmd.run'](
-            cmd,
-            output_loglevel='trace',
-            python_shell=False
-        )
+        out = __salt__['cmd.run_all'](cmd,
+                                      output_loglevel='trace',
+                                      python_shell=False)
+
+        if out['retcode'] != 0 and out['stderr']:
+            errors.append(out['stderr'])
+
         for line in out.splitlines():
             match = re.match(
                 "^The selected package '([^']+)'.+has lower version",
@@ -754,11 +770,24 @@ def install(name=None,
     while downgrades:
         cmd = cmd_install + ['--force'] + downgrades[:500]
         downgrades = downgrades[500:]
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+        out = __salt__['cmd.run_all'](cmd,
+                                      output_loglevel='trace',
+                                      python_shell=False)
+
+        if out['retcode'] != 0 and out['stderr']:
+            errors.append(out['stderr'])
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def upgrade(refresh=True, skip_verify=False):
@@ -798,18 +827,19 @@ def upgrade(refresh=True, skip_verify=False):
     call = __salt__['cmd.run_all'](
         cmd,
         output_loglevel='trace',
-        python_shell=False
+        python_shell=False,
+        redirect_stderr=True
     )
+
     if call['retcode'] != 0:
         ret['result'] = False
-        if call['stderr']:
-            ret['comment'] += call['stderr']
         if call['stdout']:
-            ret['comment'] += call['stdout']
-    else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+            ret['comment'] = call['stdout']
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret['changes'] = salt.utils.compare_dicts(old, new)
+
     return ret
 
 
@@ -827,16 +857,33 @@ def _uninstall(action='remove', name=None, pkgs=None):
     targets = [x for x in pkg_params if x in old]
     if not targets:
         return {}
+
+    errors = []
     while targets:
         cmd = ['zypper', '--non-interactive', 'remove']
         if action == 'purge':
             cmd.append('-u')
         cmd.extend(targets[:500])
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+        out = __salt__['cmd.run_all'](cmd,
+                                      output_loglevel='trace',
+                                      python_shell=False)
+
+        if out['retcode'] != 0 and out['stderr']:
+            errors.append(out['stderr'])
+
         targets = targets[500:]
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
@@ -1241,54 +1288,32 @@ def _get_first_aggregate_text(node_list):
     return '\n'.join(out)
 
 
-def _parse_suse_product(path, *info):
+def list_products(all=False):
     '''
-    Parse SUSE LLC product.
-    '''
-    doc = dom.parse(path)
-    product = {}
-    for nfo in info:
-        product.update(
-            {nfo: _get_first_aggregate_text(
-                doc.getElementsByTagName(nfo)
-            )}
-        )
+    List all available or installed SUSE products.
 
-    return product
-
-
-def list_products():
-    '''
-    List all installed SUSE products.
+    all
+        List all products available or only installed. Default is False.
 
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' pkg.list_products
+        salt '*' pkg.list_products all=True
     '''
-    products_dir = '/etc/products.d'
-    if not os.path.exists(products_dir):
-        raise CommandExecutionError(
-            'Directory {0} does not exist'.format(products_dir)
-        )
-
-    p_data = {}
-    for fname in os.listdir(products_dir):
-        pth_name = os.path.join(products_dir, fname)
-        r_pth_name = os.path.realpath(pth_name)
-        p_data[r_pth_name] = r_pth_name != pth_name and 'baseproduct' or None
-
-    info = ['vendor', 'name', 'version', 'baseversion', 'patchlevel',
-            'predecessor', 'release', 'endoflife', 'arch', 'cpeid',
-            'productline', 'updaterepokey', 'summary', 'shortsummary',
-            'description']
-
-    ret = {}
-    for prod_meta, is_base_product in six.iteritems(p_data):
-        product = _parse_suse_product(prod_meta, *info)
-        product['baseproduct'] = is_base_product is not None
-        ret[product.pop('name')] = product
+    ret = list()
+    doc = dom.parseString(__salt__['cmd.run'](("zypper -x products{0}".format(not all and ' -i' or '')),
+                                              output_loglevel='trace'))
+    for prd in doc.getElementsByTagName('product-list')[0].getElementsByTagName('product'):
+        p_data = dict()
+        p_nfo = dict(prd.attributes.items())
+        p_name = p_nfo.pop('name')
+        p_data[p_name] = p_nfo
+        p_data[p_name]['eol'] = prd.getElementsByTagName('endoflife')[0].getAttribute('text')
+        descr = _get_first_aggregate_text(prd.getElementsByTagName('description'))
+        p_data[p_name]['description'] = " ".join([line.strip() for line in descr.split(os.linesep)])
+        ret.append(p_data)
 
     return ret
 

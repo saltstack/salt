@@ -93,7 +93,7 @@ def __virtual__():
         return 'solr'
     if salt.utils.which('apache-solr'):
         return 'solr'
-    return False
+    return (False, 'The solr execution module failed to load: requires both the solr and apache-solr binaries in the path.')
 
 
 def _get_none_or_value(value):

@@ -274,3 +274,12 @@ The default configuration for the ``file_roots`` is:
        - /srv/salt
 
 So the top file is defaulted to the location ``/srv/salt/top.sls``
+
+
+Salt Master Umask
+=================
+
+The salt master uses a cache to track jobs as they are published and returns come back.
+The recommended umask for a salt-master is `022`, which is the default for most users
+on a system. Incorrect umasks can result in permission-denied errors when the master
+tries to access files in its cache.

@@ -33,7 +33,7 @@ def __virtual__():
     """Only works on Windows systems."""
     if salt.utils.is_windows():
         return __virtualname__
-    return False
+    return (False, 'Module cyg: module only works on Windows systems.')
 
 
 __func_alias__ = {

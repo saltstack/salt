@@ -216,6 +216,7 @@ class UtilsTestCase(TestCase):
         test_two_level_dict_and_list = {
             'abc': ['def', 'ghi', {'lorem': {'ipsum': [{'dolor': 'sit'}]}}],
         }
+        test_three_level_dict = {'a': {'b': {'c': 'v'}}}
 
         self.assertTrue(
             utils.subdict_match(
@@ -262,6 +263,24 @@ class UtilsTestCase(TestCase):
         self.assertTrue(
             utils.subdict_match(
                 test_two_level_dict_and_list, 'abc:lorem:ipsum:dolor:sit'
+            )
+        )
+        # Test four level dict match for reference
+        self.assertTrue(
+            utils.subdict_match(
+                test_three_level_dict, 'a:b:c:v'
+            )
+        )
+        self.assertFalse(
+        # Test regression in 2015.8 where 'a:c:v' would match 'a:b:c:v'
+            utils.subdict_match(
+                test_three_level_dict, 'a:c:v'
+            )
+        )
+        # Test wildcard match
+        self.assertTrue(
+            utils.subdict_match(
+                test_three_level_dict, 'a:*:c:v'
             )
         )
 

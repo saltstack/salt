@@ -3,7 +3,7 @@
 ====================
 Salt Package Manager
 ====================
-The Salt Package Manager, or SPM, allows Salt formulas to be packaged, for ease
+The Salt Package Manager, or :ref:`SPM <spm-cli>`, allows Salt formulas to be packaged, for ease
 of deployment. The design of SPM was influenced by other existing packaging
 systems including RPM, Yum, and Pacman.
 
@@ -24,7 +24,6 @@ describes the package. An example of this file is:
     name: apache
     os: RedHat, Debian, Ubuntu, Suse, FreeBSD
     os_family: RedHat, Debian, Suse, FreeBSD
-    dependencies: None
     version: 201506
     release: 2
     summary: Formula for installing Apache
@@ -57,8 +56,12 @@ version
 The version of the package. While it is up to the organization that manages this
 package, it is suggested that this version is specified in a ``YYYYMM`` format.
 For instance, if this version was released in June 2015, the package version
-should be ``201506``. If multiple released are made in a month, the ``release``
+should be ``201506``. If multiple releases are made in a month, the ``release``
 field should be used.
+
+minimum_version
+~~~~~~~~~~~~~~~
+Minimum recommended version of Salt to use this formula. Not currently enforced.
 
 release
 ~~~~~~~
@@ -71,6 +74,7 @@ summary
 A one-line description of the package.
 
 description
+~~~~~~~~~~~
 A more detailed description of the package which can contain more than one line.
 
 Optional Fields
@@ -92,9 +96,11 @@ Files outside the ``top_level_dir``, such as ``README.rst``, ``FORMULA``, and
 ``LICENSE`` will not be installed. The exceptions to this rule are files that
 are already treated specially, such as ``pillar.example`` and ``_modules/``.
 
-dependencies
-~~~~~~~~~~~~
-A list of packages which must be installed before this package can function.
+recommended
+~~~~~~~~~~~
+A list of optional packages that are recommended to be installed with the
+package. This list is displayed in an informational message
+when the package is installed to SPM.
 
 Building a Package
 ------------------
@@ -167,11 +173,11 @@ To install from a repository, use the ``spm install`` command:
 
     spm install apache
 
-To install from a local file, use the ``spm local_install`` command:
+To install from a local file, use the ``spm local install`` command:
 
 .. code-block:: bash
 
-    spm local_install /srv/spm/apache-201506-1.spm
+    spm local install /srv/spm/apache-201506-1.spm
 
 Currently, SPM does not check to see if files are already in place before
 installing them. That means that existing files will be overwritten without
@@ -243,8 +249,8 @@ By default, package files are installed using the ``local`` module. This module
 applies files to the local filesystem, on the machine that the package is
 installed on.
 
-Please see the SPM Development Guide for information on creating new modules
-for package file management.
+Please see the :ref:`SPM Development Guide <spm-development>` for information
+on creating new modules for package file management.
 
 
 SPM Configuration

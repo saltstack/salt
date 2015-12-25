@@ -82,6 +82,78 @@ accept them
         - net-id: 00000000-0000-0000-0000-000000000000
         - net-id: 11111111-1111-1111-1111-111111111111
 
+This is an example profile.
+
+.. code-block:: yaml
+
+    debian8-2-iad-cloudqe4:
+      provider: cloudqe4-iad
+      size: performance1-2
+      image: Debian 8 (Jessie) (PVHVM)
+      script_args: -UP -p python-zmq git 2015.8
+
+and one using cinder volumes already attached
+
+.. code-block:: yaml
+
+    # create the block storage device
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      block_device:
+        - source: image
+          id: <image_id>
+          dest: volume
+          size: 100
+          shutdown: <preserve/remove>
+          bootindex: 0
+
+    # with the volume already created
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      block_volume: <volume id>
+
+    # create the volume from a snapshot
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      snapshot: <cinder snapshot id>
+
+    # create the create an extra ephemeral disk
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      ephemeral:
+        - size: 100
+          format: <swap/ext4>
+
+    # create the create an extra ephemeral disk
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      swap: <size>
+
+Block Device can also be used for having more than one block storage device attached
+
+.. code-block:: yaml
+
+    centos7-2-iad-rackspace:
+      provider: rackspace-iad
+      size: general1-2
+      block_device:
+        - source: image
+          id: <image_id>
+          dest: volume
+          size: 100
+          shutdown: <preserve/remove>
+          bootindex: 0
+        - source: blank
+          dest: volume
+          device: xvdc
+          size: 100
+          shutdown: <preserve/remove>
+
 Note: You must include the default net-ids when setting networks or the server
 will be created without the rest of the interfaces
 
@@ -102,12 +174,11 @@ import yaml
 import salt.ext.six as six
 import salt.utils
 import salt.client
+from salt.utils.openstack import nova
 try:
-    from salt.utils.openstack import nova
     import novaclient.exceptions
-    HAS_NOVA = True
-except NameError as exc:
-    HAS_NOVA = False
+except ImportError as exc:
+    pass
 
 # Import Salt Cloud Libs
 from salt.cloud.libcloudfuncs import *  # pylint: disable=W0614,W0401
@@ -175,7 +246,7 @@ def get_dependencies():
     '''
     deps = {
         'netaddr': HAS_NETADDR,
-        'python-novaclient': HAS_NOVA,
+        'python-novaclient': nova.check_nova(),
     }
     return config.check_driver_dependencies(
         __virtualname__,
@@ -229,11 +300,14 @@ def get_image(conn, vm_):
     '''
     Return the image object to use
     '''
-    image_list = conn.image_list()
-
-    vm_image = config.get_cloud_config_value('image', vm_, __opts__).encode(
+    vm_image = config.get_cloud_config_value('image', vm_, __opts__, default='').encode(
         'ascii', 'salt-cloud-force-ascii'
     )
+    if not vm_image:
+        log.debug('No image set, must be boot from volume')
+        return None
+
+    image_list = conn.image_list()
 
     for img in image_list:
         if vm_image in (image_list[img]['id'], img):
@@ -249,6 +323,17 @@ def get_image(conn, vm_):
                 str(exc)
             )
         )
+
+
+def get_block_mapping_opts(vm_):
+    ret = {}
+    ret['block_device_mapping'] = config.get_cloud_config_value('block_device_mapping', vm_, __opts__, default={})
+    ret['block_device'] = config.get_cloud_config_value('block_device', vm_, __opts__, default=[])
+    ret['ephemeral'] = config.get_cloud_config_value('ephemeral', vm_, __opts__, default=[])
+    ret['swap'] = config.get_cloud_config_value('swap', vm_, __opts__, default=None)
+    ret['snapshot'] = config.get_cloud_config_value('snapshot', vm_, __opts__, default=None)
+    ret['boot_volume'] = config.get_cloud_config_value('boot_volume', vm_, __opts__, default=None)
+    return ret
 
 
 def show_instance(name, call=None):
@@ -341,7 +426,7 @@ def rackconnect(vm_):
     Either 'False' (default) or 'True'.
     '''
     return config.get_cloud_config_value(
-        'rackconnect', vm_, __opts__, default='False',
+        'rackconnect', vm_, __opts__, default=False,
         search_global=False
     )
 
@@ -363,7 +448,7 @@ def managedcloud(vm_):
     running. Either 'False' (default) or 'True'.
     '''
     return config.get_cloud_config_value(
-        'managedcloud', vm_, __opts__, default='False',
+        'managedcloud', vm_, __opts__, default=False,
         search_global=False
     )
 
@@ -526,12 +611,14 @@ def request_instance(vm_=None, call=None):
         'config_drive', vm_, __opts__, search_global=False
     )
 
+    kwargs.update(get_block_mapping_opts(vm_))
+
     salt.utils.cloud.fire_event(
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_['name']),
         {'kwargs': {'name': kwargs['name'],
-                    'image': kwargs['image_id'],
+                    'image': kwargs.get('image_id', 'Boot From Volume'),
                     'size': kwargs['flavor_id']}},
         transport=__opts__['transport']
     )
@@ -645,7 +732,7 @@ def create(vm_):
             return
 
         rackconnectv3 = config.get_cloud_config_value(
-            'rackconnectv3', vm_, __opts__, default='False',
+            'rackconnectv3', vm_, __opts__, default=False,
             search_global=False
         )
 
@@ -662,6 +749,7 @@ def create(vm_):
             for network in node['addresses'].get(networkname, []):
                 if network['version'] is 4:
                     node['extra']['access_ip'] = network['addr']
+                    access_ip = network['addr']
                     break
             vm_['cloudnetwork'] = True
 
@@ -718,22 +806,30 @@ def create(vm_):
                         result.append(private_ip)
 
         if rackconnect(vm_) is True and (ssh_interface(vm_) != 'private_ips' or rackconnectv3):
-            data.public_ips = access_ip
+            data.public_ips = [access_ip, ]
             return data
+
+        # populate return data with private_ips
+        # when ssh_interface is set to private_ips and public_ips exist
+        if not result and ssh_interface(vm_) == 'private_ips':
+            for private_ip in private:
+                ignore_ip = ignore_cidr(vm_, private_ip)
+                if private_ip not in data.private_ips and not ignore_ip:
+                    result.append(private_ip)
 
         if cloudnetwork(vm_) is True:
             data.public_ips = access_ip
             return data
 
+        if public:
+            data.public_ips = public
+            if ssh_interface(vm_) != 'private_ips':
+                return data
+
         if result:
             log.debug('result = {0}'.format(result))
             data.private_ips = result
             if ssh_interface(vm_) == 'private_ips':
-                return data
-
-        if public:
-            data.public_ips = public
-            if ssh_interface(vm_) != 'private_ips':
                 return data
 
     try:

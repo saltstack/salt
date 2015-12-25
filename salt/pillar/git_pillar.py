@@ -13,8 +13,9 @@ This external pillar allows for a Pillar top file and Pillar SLS files to be
 sourced from a git repository.
 
 However, since git_pillar does not have an equivalent to the
-:conf_master:`pillar_roots` parameter, configuration is slightly different. The
-Pillar top file must still contain the relevant environment, like so:
+:conf_master:`pillar_roots` parameter, configuration is slightly different. A
+Pillar top file is required to be in the git repository and must still contain
+the relevant environment, like so:
 
 .. code-block:: yaml
 
@@ -115,7 +116,20 @@ GitPython_ (Dulwich_ will not be supported for the forseeable future). The
 requirements for GitPython_ and pygit2_ are the same as for gitfs, as described
 :ref:`here <gitfs-dependencies>`.
 
-Here is an example git_pillar configuration.
+.. important::
+    git_pillar has its own set of global configuration parameters. While it may
+    seem intuitive to use the global gitfs configuration parameters
+    (:conf_master:`gitfs_base`, etc.) to manage git_pillar, this will not work.
+    The main difference for this is the fact that the different components
+    which use Salt's git backend code do not all function identically. For
+    instance, in git_pillar it is necessary to specify which branch/tag to be
+    used for git_pillar remotes. This is the reverse behavior from gitfs, where
+    branches/tags make up your environments.
+
+    See :ref:`here <git_pillar-config-opts>` for documentation on the
+    git_pillar configuration options and their usage.
+
+Here is an example git_pillar configuration:
 
 .. code-block:: yaml
 
@@ -158,9 +172,6 @@ the :ref:`Git Fileserver Backend Walkthrough <gitfs-authentication>`), only
 with the global authenication parameter names prefixed with ``git_pillar``
 instead of ``gitfs`` (e.g. :conf_master:`git_pillar_pubkey`,
 :conf_master:`git_pillar_privkey`, :conf_master:`git_pillar_passphrase`, etc.).
-
-A full list of the git_pillar configuration options can be found :ref:`here
-<git_pillar-config-opts>`.
 
 .. _GitPython: https://github.com/gitpython-developers/GitPython
 .. _pygit2: https://github.com/libgit2/pygit2
@@ -251,7 +262,14 @@ def ext_pillar(minion_id, repo, pillar_dirs):
             'smart'
         )
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
-            opts['pillar_roots'] = {env: [pillar_dir]}
+            log.debug(
+                'git_pillar is processing pillar SLS from {0} for pillar '
+                'env \'{1}\''.format(pillar_dir, env)
+            )
+            opts['pillar_roots'] = {
+                env: [d for (d, e) in six.iteritems(pillar.pillar_dirs)
+                      if env == e]
+            }
             local_pillar = Pillar(opts, __grains__, minion_id, env)
             ret = salt.utils.dictupdate.merge(
                 ret,
@@ -397,9 +415,9 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
             log.warning('Unrecognized extra parameter: {0}'.format(key))
 
     # environment is "different" from the branch
-    branch, _, environment = branch_env.partition(':')
+    cfg_branch, _, environment = branch_env.partition(':')
 
-    gitpil = _LegacyGitPillar(branch, repo_location, __opts__)
+    gitpil = _LegacyGitPillar(cfg_branch, repo_location, __opts__)
     branch = gitpil.branch
 
     if environment == '':
@@ -413,7 +431,9 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
 
     pillar_dirs.setdefault(pillar_dir, {})
 
-    if pillar_dirs[pillar_dir].get(branch, False):
+    if cfg_branch == '__env__' and branch not in ['master', 'base']:
+        gitpil.update()
+    elif pillar_dirs[pillar_dir].get(branch, False):
         return {}  # we've already seen this combo
 
     pillar_dirs[pillar_dir].setdefault(branch, True)
@@ -429,7 +449,7 @@ def _legacy_git_pillar(minion_id, repo_string, pillar_dirs):
 
     pil = Pillar(opts, __grains__, minion_id, branch)
 
-    return pil.compile_pillar()
+    return pil.compile_pillar(ext=False)
 
 
 def _update(branch, repo_location):

@@ -186,7 +186,7 @@ def remove_section(file_name, section):
 
 class _Section(OrderedDict):
     def __init__(self, name, inicontents='', seperator='=', commenter='#'):
-        super(_Section, self).__init__()
+        super(_Section, self).__init__(self)
         self.name = name
         self.inicontents = inicontents
         self.sep = seperator

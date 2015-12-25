@@ -37,7 +37,7 @@ Salt Master
 Overview
 --------
 
-The salt-master deamon runs on the designated Salt master and performs
+The salt-master daemon runs on the designated Salt master and performs
 functions such as authenticating minions, sending, and receiving requests
 from connected minions and sending and receiving requests and replies to the
 'salt' CLI.

@@ -8,7 +8,6 @@ Discover all instances of unittest.TestCase in this directory.
 # Import python libs
 from __future__ import absolute_import, print_function
 import os
-import resource
 import tempfile
 import time
 
@@ -16,6 +15,10 @@ import time
 from integration import TestDaemon, TMP  # pylint: disable=W0403
 from integration import INTEGRATION_TEST_DIR
 from integration import CODE_DIR as SALT_ROOT
+import salt.utils
+
+if not salt.utils.is_windows():
+    import resource
 
 # Import Salt Testing libs
 from salttesting.parser import PNUM, print_header
@@ -119,6 +122,14 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             help='Run salt/runners/*.py tests'
         )
         self.test_selection_group.add_option(
+            '-R',
+            '--renderers',
+            dest='renderers',
+            default=False,
+            action='store_true',
+            help='Run salt/renderers/*.py tests'
+        )
+        self.test_selection_group.add_option(
             '-l',
             '--loader',
             default=False,
@@ -200,6 +211,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 self.options.unit,
                 self.options.state,
                 self.options.runners,
+                self.options.renderers,
                 self.options.loader,
                 self.options.name,
                 self.options.outputter,
@@ -220,13 +232,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     self.options.shell, self.options.unit, self.options.state,
                     self.options.runners, self.options.loader, self.options.name,
                     self.options.outputter, self.options.cloud_provider_tests,
-                    self.options.fileserver, self.options.wheel, self.options.api)):
+                    self.options.fileserver, self.options.wheel, self.options.api,
+                    self.options.renderers)):
             self.options.module = True
             self.options.cli = True
             self.options.client = True
             self.options.shell = True
             self.options.unit = True
             self.options.runners = True
+            self.options.renderers = True
             self.options.state = True
             self.options.loader = True
             self.options.outputter = True
@@ -255,7 +269,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         return self.run_suite(path, display_name)
 
     def start_daemons_only(self):
-        self.prep_filehandles()
+        if not salt.utils.is_windows():
+            self.prep_filehandles()
         try:
             print_header(
                 ' * Setting up Salt daemons for interactive use',
@@ -344,6 +359,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         if (self.options.unit or named_unit_test) and not \
                 (self.options.runners or
+                 self.options.renderers or
                  self.options.state or
                  self.options.module or
                  self.options.cli or
@@ -360,7 +376,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             # passing only `unit.<whatever>` to --name.
             # We don't need the tests daemon running
             return [True]
-        self.prep_filehandles()
+        if not salt.utils.is_windows():
+            self.prep_filehandles()
 
         try:
             print_header(
@@ -374,7 +391,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if not any([self.options.cli, self.options.client, self.options.module,
                     self.options.runners, self.options.shell, self.options.state,
                     self.options.loader, self.options.outputter, self.options.name,
-                    self.options.cloud_provider_tests, self.options.api,
+                    self.options.cloud_provider_tests, self.options.api, self.options.renderers,
                     self.options.fileserver, self.options.wheel]):
             return status
 
@@ -409,6 +426,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                 status.append(self.run_integration_suite('cloud/providers', 'Cloud Provider'))
             if self.options.api:
                 status.append(self.run_integration_suite('netapi', 'NetAPI'))
+            if self.options.renderers:
+                status.append(self.run_integration_suite('renderers', 'Renderers'))
         return status
 
     def run_unit_tests(self):

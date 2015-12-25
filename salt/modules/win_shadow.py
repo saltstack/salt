@@ -16,7 +16,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return __virtualname__
-    return False
+    return (False, 'Module win_shadow: module only works on Windows systems.')
 
 
 def info(name):
@@ -24,27 +24,86 @@ def info(name):
     Return information for the specified user
     This is just returns dummy data so that salt states can work.
 
+    :param str name: The name of the user account to show.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' shadow.info root
     '''
-    ret = {
-            'name': name,
-            'passwd': '',
-            'lstchg': '',
-            'min': '',
-            'max': '',
-            'warn': '',
-            'inact': '',
-            'expire': ''}
+    info = __salt__['user.info'](name=name)
+
+    ret = {'name': name,
+           'passwd': '',
+           'lstchg': '',
+           'min': '',
+           'max': '',
+           'warn': '',
+           'inact': '',
+           'expire': ''}
+
+    if info:
+        ret = {'name': info['name'],
+               'passwd': 'Unavailable',
+               'lstchg': info['password_changed'],
+               'min': '',
+               'max': '',
+               'warn': '',
+               'inact': '',
+               'expire': info['expiration_date']}
+
     return ret
+
+
+def set_expire(name, expire):
+    '''
+    Set the expiration date for a user account.
+
+    :param name: The name of the user account to edit.
+
+    :param expire: The date the account will expire.
+
+    :return: True if successful. False if unsuccessful.
+    :rtype: bool
+    '''
+    return __salt__['user.update'](name, expiration_date=expire)
+
+
+def require_password_change(name):
+    '''
+    Require the user to change their password the next time they log in.
+
+    :param name: The name of the user account to require a password change.
+
+    :return: True if successful. False if unsuccessful.
+    :rtype: bool
+    '''
+    return __salt__['user.update'](name, expired=True)
+
+
+def unlock_account(name):
+    '''
+    Unlocks a user account.
+
+    :param name: The name of the user account to unlock.
+
+    :return: True if successful. False if unsuccessful.
+    :rtype: bool
+    '''
+    return __salt__['user.update'](name, unlock_account=True)
 
 
 def set_password(name, password):
     '''
     Set the password for a named user.
+
+    :param str name: The name of the user account
+
+    :param str password: The new password
+
+    :return: True if successful. False if unsuccessful.
+    :rtype: bool
 
     CLI Example:
 
@@ -52,7 +111,4 @@ def set_password(name, password):
 
         salt '*' shadow.set_password root mysecretpassword
     '''
-    cmd = ['net', 'user', name, password]
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
-
-    return not ret['retcode']
+    return __salt__['user.update'](name=name, password=password)

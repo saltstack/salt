@@ -218,7 +218,7 @@ class AESReqServerMixin(object):
 
         elif os.path.isfile(pubfn):
             # The key has been accepted, check it
-            if salt.utils.fopen(pubfn, 'r').read() != load['pub']:
+            if salt.utils.fopen(pubfn, 'r').read().strip() != load['pub'].strip():
                 log.error(
                     'Authentication attempt from {id} failed, the public '
                     'keys did not match. This may be an attempt to compromise '

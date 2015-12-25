@@ -394,6 +394,18 @@ def absent(name,
            'result': True,
            'comment': ''}
 
+    if __opts__['test']:
+        ret['result'], ret['comment'] = _absent_test(
+                user,
+                name,
+                enc,
+                comment,
+                options or [],
+                source,
+                config,
+                )
+        return ret
+
     # Extract Key from file if source is present
     if source != '':
         key = __salt__['cp.get_file_str'](
@@ -437,18 +449,6 @@ def absent(name,
             if len(comps) == 3:
                 comment = comps[2]
         ret['comment'] = __salt__['ssh.rm_auth_key'](user, name, config)
-
-    if __opts__['test']:
-        ret['result'], ret['comment'] = _absent_test(
-                user,
-                name,
-                enc,
-                comment,
-                options or [],
-                source,
-                config,
-                )
-        return ret
 
     if ret['comment'] == 'User authorized keys file not present':
         ret['result'] = False

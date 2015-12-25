@@ -12,6 +12,7 @@ from __future__ import absolute_import
 import logging
 
 # Import salt libs
+import salt.utils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six import integer_types
 
@@ -41,7 +42,10 @@ def __virtual__():
     '''
     Only load if python-memcache is installed
     '''
-    return __virtualname__ if HAS_MEMCACHE else False
+    if HAS_MEMCACHE:
+        return __virtualname__
+    return (False, 'The memcached execution module cannot be loaded: '
+            'python memcache library not available.')
 
 
 def _connect(host=DEFAULT_HOST, port=DEFAULT_PORT):
@@ -234,7 +238,7 @@ def increment(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
     except ValueError:
         raise SaltInvocationError('Delta value must be an integer')
 
-incr = increment
+incr = salt.utils.alias_function(increment, 'incr')
 
 
 def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
@@ -265,4 +269,4 @@ def decrement(key, delta=1, host=DEFAULT_HOST, port=DEFAULT_PORT):
     except ValueError:
         raise SaltInvocationError('Delta value must be an integer')
 
-decr = decrement
+decr = salt.utils.alias_function(decrement, 'decr')

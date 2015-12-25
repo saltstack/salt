@@ -156,7 +156,8 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             'open_mode': True,
             'log_file': logfile,
             'log_level': 'quiet',
-            'log_level_logfile': 'info'
+            'log_level_logfile': 'info',
+            'transport': self.master_opts['transport'],
         }
 
         # Remove existing logfile
@@ -307,7 +308,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
             # Let's create an initial output file with some data
             ret = self.run_script(
                 'salt-call',
-                '-c {0} --output-file={1} -g'.format(
+                '-c {0} --output-file={1} test.versions'.format(
                     self.get_config_dir(),
                     output_file_append
                 ),
@@ -320,7 +321,7 @@ class CallTest(integration.ShellCase, integration.ShellCaseCommonTestsMixIn):
 
             self.run_script(
                 'salt-call',
-                '-c {0} --output-file={1} --output-file-append -g'.format(
+                '-c {0} --output-file={1} --output-file-append test.versions'.format(
                     self.get_config_dir(),
                     output_file_append
                 ),

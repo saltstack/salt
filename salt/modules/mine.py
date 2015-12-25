@@ -67,7 +67,7 @@ def _mine_send(load, opts):
 
 
 def _mine_get(load, opts):
-    if opts.get('transport', '') == 'zeromq':
+    if opts.get('transport', '') in ('zeromq', 'tcp'):
         try:
             load['tok'] = _auth().gen_token('salt')
         except AttributeError:
@@ -103,6 +103,10 @@ def update(clear=False):
         salt '*' mine.update
     '''
     m_data = __salt__['config.option']('mine_functions', {})
+    # If we don't have any mine functions configured, then we should just bail out
+    if not m_data:
+        return
+
     data = {}
     for func in m_data:
         try:
@@ -199,7 +203,7 @@ def send(func, *args, **kwargs):
     return _mine_send(load, __opts__)
 
 
-def get(tgt, fun, expr_form='glob'):
+def get(tgt, fun, expr_form='glob', exclude_minion=False):
     '''
     Get data from the mine based on the target, function and expr_form
 
@@ -216,6 +220,9 @@ def get(tgt, fun, expr_form='glob'):
 
     Note that all pillar matches, whether using the compound matching system or
     the pillar matching system, will be exact matches, with globbing disabled.
+
+    exclude_minion
+        Excludes the current minion from the result set
 
     CLI Example:
 
@@ -265,7 +272,11 @@ def get(tgt, fun, expr_form='glob'):
             'fun': fun,
             'expr_form': expr_form,
     }
-    return _mine_get(load, __opts__)
+    ret = _mine_get(load, __opts__)
+    if exclude_minion:
+        if __opts__['id'] in ret:
+            del ret[__opts__['id']]
+    return ret
 
 
 def delete(fun):

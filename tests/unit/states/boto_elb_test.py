@@ -115,7 +115,7 @@ class BotoElbTestCase(TestCase):
                     self.assertTrue(ret['result'])
 
         mock = MagicMock(return_value={})
-        mock_elb = MagicMock(return_value={'dns_name': 'myelb.amazon.com', 'policies': [], 'listeners': []})
+        mock_elb = MagicMock(return_value={'dns_name': 'myelb.amazon.com', 'policies': [], 'listeners': [], 'backends': []})
         with patch.dict(boto_elb.__salt__,
                         {'config.option': MagicMock(side_effect=mock_config_option),
                          'boto_elb.exists': mock_false_bool,

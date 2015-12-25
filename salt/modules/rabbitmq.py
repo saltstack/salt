@@ -18,6 +18,7 @@ import salt.utils.itertools
 import salt.ext.six as six
 from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import range
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -30,14 +31,15 @@ def __virtual__():
 
 
 def _format_response(response, msg):
+    error = 'RabbitMQ command failed: {0}'.format(response)
     if isinstance(response, dict):
         if response['retcode'] != 0:
-            msg = 'Error'
+            raise CommandExecutionError(error)
         else:
             msg = response['stdout']
     else:
         if 'Error' in response:
-            msg = 'Error'
+            raise CommandExecutionError(error)
     return {
         msg: response
     }
@@ -61,25 +63,27 @@ def _get_rabbitmq_plugin():
     return rabbitmq
 
 
+def _safe_output(line):
+    '''
+    Looks for rabbitmqctl warning, or general formatting, strings that aren't
+    intended to be parsed as output.
+    Returns a boolean whether the line can be parsed as rabbitmqctl output.
+    '''
+    return not any([
+        line.startswith('Listing') and line.endswith('...'),
+        '...done' in line,
+        line.startswith('WARNING:')
+    ])
+
+
 def _strip_listing_to_done(output_list):
-    '''Conditionally remove non-relevant first and last line,
+    '''
+    Conditionally remove non-relevant first and last line,
     "Listing ..." - "...done".
     outputlist: rabbitmq command output split by newline
     return value: list, conditionally modified, may be empty.
     '''
-
-    # conditionally remove non-relevant first line
-    f_line = ''.join(output_list[:1])
-    if f_line.startswith('Listing') and f_line.endswith('...'):
-        output_list.pop(0)
-
-    # some versions of rabbitmq have no trailing '...done' line,
-    # which some versions do not output.
-    l_line = ''.join(output_list[-1:])
-    if '...done' in l_line:
-        output_list.pop()
-
-    return output_list
+    return [line for line in output_list if _safe_output(line)]
 
 
 def _output_to_dict(cmdoutput, values_mapper=None):
@@ -134,13 +138,9 @@ def list_vhosts(runas=None):
     '''
     if runas is None:
         runas = salt.utils.get_user()
-    res = __salt__['cmd.run'](
-        ['rabbitmqctl', 'list_vhosts'],
-        runas=runas,
-        python_shell=False)
-
-    # remove first and last line: Listing ... - ...done
-    return _strip_listing_to_done(res.splitlines())
+    res = __salt__['cmd.run']('rabbitmqctl list_vhosts -q',
+                              runas=runas).splitlines()
+    return res
 
 
 def user_exists(name, runas=None):
@@ -703,8 +703,12 @@ def plugin_is_enabled(name, runas=None):
     if runas is None:
         runas = salt.utils.get_user()
     cmd = [_get_rabbitmq_plugin(), 'list', '-m', '-e']
-    ret = __salt__['cmd.run'](cmd, runas=runas, python_shell=False)
-    return bool(name in ret)
+    ret = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    if ret['retcode'] != 0:
+        raise CommandExecutionError(
+            'RabbitMQ command failed: {0}'.format(ret['stderr'])
+        )
+    return bool(name in ret['stdout'])
 
 
 def enable_plugin(name, runas=None):

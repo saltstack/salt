@@ -6,7 +6,7 @@
 !define PRODUCT_UNINST_ROOT_KEY "HKLM"
 
 ; MUI 1.67 compatible ------
-!include "MUI.nsh"
+!include "MUI2.nsh"
 
 !include "nsDialogs.nsh"
 !include "LogicLib.nsh"
@@ -36,6 +36,7 @@ Var MasterHost
 Var MasterHost_State
 Var MinionName
 Var MinionName_State
+Var StartService
 
 ; MUI Settings
 !define MUI_ABORTWARNING
@@ -54,6 +55,7 @@ Page custom nsDialogsPage nsDialogsPageLeave
 !insertmacro MUI_PAGE_INSTFILES
 
 ; Finish page
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW FinishPage.Show
 !define MUI_FINISHPAGE_RUN "$INSTDIR\nssm"
 !define MUI_FINISHPAGE_RUN_PARAMETERS "start salt-minion"
 !insertmacro MUI_PAGE_FINISH
@@ -76,6 +78,7 @@ Page custom nsDialogsPage nsDialogsPageLeave
 
 
 Function nsDialogsPage
+
   nsDialogs::Create 1018
   Pop $Dialog
 
@@ -106,6 +109,68 @@ Function nsDialogsPageLeave
   #MessageBox MB_OK "Master Hostname is:$\n$\n$MasterHost_State"
   ${NSD_GetText} $MinionName $MinionName_State
   #MessageBox MB_OK "Minion name is:$\n$\n$MinionName_State"
+
+FunctionEnd
+
+
+Function getMinionConfig
+
+  confFind:
+  IfFileExists "$INSTDIR\conf\minion" confFound confNotFound
+
+  confNotFound:
+    ${If} $INSTDIR == "c:\salt\bin\Scripts"
+      StrCpy $INSTDIR "C:\salt"
+      goto confFind
+    ${Else}
+      goto confReallyNotFound
+    ${EndIf}
+
+  confFound:
+    FileOpen $0 "$INSTDIR\conf\minion" r
+
+    confLoop:
+      FileRead $0 $1
+      IfErrors EndOfFile
+      ${StrLoc} $2 $1 "master:" ">"
+      ${If} $2 == 0
+        ${StrStrAdv} $2 $1 "master: " ">" ">" "0" "0" "0"
+        ${Trim} $2 $2
+          StrCpy $MasterHost_State $2
+      ${EndIf}
+
+      ${StrLoc} $2 $1 "id:" ">"
+      ${If} $2 == 0
+        ${StrStrAdv} $2 $1 "id: " ">" ">" "0" "0" "0"
+        ${Trim} $2 $2
+        StrCpy $MinionName_State $2
+      ${EndIf}
+
+      Goto confLoop
+
+    EndOfFile:
+      FileClose $0
+
+  confReallyNotFound:
+    Push $R0
+    Push $R1
+    Push $R2
+    ${GetParameters} $R0
+    ${GetOptions} $R0 "/master=" $R1
+    ${GetOptions} $R0 "/minion-name=" $R2
+    ${IfNot} $R1 == ""
+      StrCpy $MasterHost_State $R1
+    ${ElseIf} $MasterHost_State == ""
+      StrCpy $MasterHost_State "salt"
+    ${EndIf}
+    ${IfNot} $R2 == ""
+      StrCpy $MinionName_State $R2
+    ${ElseIf} $MinionName_State == ""
+      StrCpy $MinionName_State "hostname"
+    ${EndIf}
+    Pop $R2
+    Pop $R1
+    Pop $R0
 
 FunctionEnd
 
@@ -181,13 +246,54 @@ Section -Post
   RMDir /R "$INSTDIR\var\cache\salt" ; removing cache from old version
 
   Call updateMinionConfig
+
+  Call checkStartService
+
 SectionEnd
 
 
+Function FinishPage.Show
+
+  ${IfNot} $StartService == 1
+    SendMessage $mui.FinishPage.Run ${BM_SETCHECK} ${BST_UNCHECKED} 0
+  ${EndIf}
+
+FunctionEnd
+
+
+Function checkStartService
+
+    ; Check if the start-service option was passed
+    Push $R0
+    Push $R1
+    ${GetParameters} $R0
+    ${GetOptions} $R0 "/start-service=" $R1
+    ; If start-service was passed something, then set it
+    ${IfNot} $R1 == ""
+      StrCpy $StartService $R1
+    ; Otherwise default to 1
+    ${Else}
+      StrCpy $StartService 1
+    ${EndIf}
+    Pop $R0
+    Pop $R1
+
+FunctionEnd
+
+
 Function .onInstSuccess
-; If the installer is running Silently, start the service
-  IfSilent 0 +2
-  Exec 'net start salt-minion'
+  ; If the installer is running Silently, start the service
+  IfSilent silentOption notSilent
+
+  silentOption:
+
+    ; If start-service is 1, then start the service
+    ${If} $StartService == 1
+      Exec 'net start salt-minion'
+    ${EndIf}
+
+  notSilent:
+
 FunctionEnd
 
 
@@ -205,9 +311,11 @@ FunctionEnd
 
 Function .onInit
 
+  Call getMinionConfig
+
   ; Check for existing installation
   ReadRegStr $R0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}" "UninstallString"
-  StrCmp $R0 "" confFind
+  StrCmp $R0 "" skipUninstall
 
   ; Found existing installation, prompt to uninstall
   MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION "${PRODUCT_NAME} is already installed. $\n$\nClick `OK` to remove the existing installation." /SD IDOK IDOK uninst
@@ -233,62 +341,7 @@ Function .onInit
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
     DeleteRegKey HKLM "${PRODUCT_DIR_REGKEY}"
 
-  confFind:
-  IfFileExists "$INSTDIR\conf\minion" confFound confNotFound
-
-  confNotFound:
-    ${If} $INSTDIR == "c:\salt\bin\Scripts"
-      StrCpy $INSTDIR "C:\salt"
-      goto confFind
-    ${Else}
-      goto confReallyNotFound
-    ${EndIf}
-
-  confFound:
-    FileOpen $0 "$INSTDIR\conf\minion" r
-
-    confLoop:
-      FileRead $0 $1
-      IfErrors EndOfFile
-      ${StrLoc} $2 $1 "master:" ">"
-      ${If} $2 == 0
-        ${StrStrAdv} $2 $1 "master: " ">" ">" "0" "0" "0"
-        ${Trim} $2 $2
-          StrCpy $MasterHost_State $2
-      ${EndIf}
-
-      ${StrLoc} $2 $1 "id:" ">"
-      ${If} $2 == 0
-        ${StrStrAdv} $2 $1 "id: " ">" ">" "0" "0" "0"
-        ${Trim} $2 $2
-        StrCpy $MinionName_State $2
-      ${EndIf}
-
-      Goto confLoop
-
-    EndOfFile:
-      FileClose $0
-
-  confReallyNotFound:
-    Push $R0
-    Push $R1
-    Push $R2
-    ${GetParameters} $R0
-    ${GetOptions} $R0 "/master=" $R1
-    ${GetOptions} $R0 "/minion-name=" $R2
-    ${IfNot} $R1 == ""
-      StrCpy $MasterHost_State $R1
-    ${ElseIf} $MasterHost_State == ""
-      StrCpy $MasterHost_State "salt"
-    ${EndIf}
-    ${IfNot} $R2 == ""
-      StrCpy $MinionName_State $R2
-    ${ElseIf} $MinionName_State == ""
-      StrCpy $MinionName_State "hostname"
-    ${EndIf}
-    Pop $R2
-    Pop $R1
-    Pop $R0
+  skipUninstall:
 
 FunctionEnd
 

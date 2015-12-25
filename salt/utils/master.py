@@ -11,7 +11,6 @@
 from __future__ import absolute_import
 import os
 import logging
-import multiprocessing
 import signal
 import tempfile
 from threading import Thread, Event
@@ -27,6 +26,7 @@ import salt.payload
 from salt.exceptions import SaltException
 import salt.config
 from salt.utils.cache import CacheCli as cache_cli
+from salt.utils.process import MultiprocessingProcess
 
 # Import third party libs
 import salt.ext.six as six
@@ -445,7 +445,7 @@ class CacheTimer(Thread):
                 count = 0
 
 
-class CacheWorker(multiprocessing.Process):
+class CacheWorker(MultiprocessingProcess):
     '''
     Worker for ConnectedCache which runs in its
     own process to prevent blocking of ConnectedCache
@@ -470,7 +470,7 @@ class CacheWorker(multiprocessing.Process):
         log.debug('ConCache CacheWorker update finished')
 
 
-class ConnectedCache(multiprocessing.Process):
+class ConnectedCache(MultiprocessingProcess):
     '''
     Provides access to all minions ids that the master has
     successfully authenticated. The cache is cleaned up regularly by

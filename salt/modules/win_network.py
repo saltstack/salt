@@ -34,7 +34,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES is True:
         return __virtualname__
-    return False
+    return (False, "Module win_network: module only works on Windows systems")
 
 
 def ping(host):
@@ -231,7 +231,7 @@ def hw_addr(iface):
     return salt.utils.network.hw_addr(iface)
 
 # Alias hwaddr to preserve backward compat
-hwaddr = hw_addr
+hwaddr = salt.utils.alias_function(hw_addr, 'hwaddr')
 
 
 def subnets():
@@ -275,7 +275,7 @@ def ip_addrs(interface=None, include_loopback=False):
     return salt.utils.network.ip_addrs(interface=interface,
                                        include_loopback=include_loopback)
 
-ipaddrs = ip_addrs
+ipaddrs = salt.utils.alias_function(ip_addrs, 'ipaddrs')
 
 
 def ip_addrs6(interface=None, include_loopback=False):
@@ -293,7 +293,7 @@ def ip_addrs6(interface=None, include_loopback=False):
     return salt.utils.network.ip_addrs6(interface=interface,
                                         include_loopback=include_loopback)
 
-ipaddrs6 = ip_addrs6
+ipaddrs6 = salt.utils.alias_function(ip_addrs6, 'ipaddrs6')
 
 
 def connect(host, port=None, **kwargs):

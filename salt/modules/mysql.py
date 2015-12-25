@@ -196,7 +196,7 @@ def __virtual__():
     '''
     if HAS_MYSQLDB:
         return True
-    return False
+    return (False, 'The mysql execution module cannot be loaded: neither MySQLdb nor PyMySQL is available.')
 
 
 def __check_table(name, table, **connection_args):
@@ -832,6 +832,57 @@ def db_list(**connection_args):
 
     log.debug(ret)
     return ret
+
+
+def alter_db(name, character_set=None, collate=None, **connection_args):
+    '''
+    Modify database using ``ALTER DATABASE %(dbname)s CHARACTER SET %(charset)s
+    COLLATE %(collation)s;`` query.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.alter_db testdb charset='latin1'
+    '''
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
+    cur = dbc.cursor()
+    existing = db_get(name, **connection_args)
+    qry = 'ALTER DATABASE {0} CHARACTER SET {1} COLLATE {2};'.format(
+        name.replace('%', r'\%').replace('_', r'\_'),
+        character_set or existing.get('character_set'),
+        collate or existing.get('collate'))
+    args = {}
+    _execute(cur, qry, args)
+
+
+def db_get(name, **connection_args):
+    '''
+    Return a list of databases of a MySQL server using the output
+    from the ``SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM
+    INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='dbname';`` query.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' mysql.db_get test
+    '''
+    dbc = _connect(**connection_args)
+    if dbc is None:
+        return []
+    cur = dbc.cursor()
+    qry = ('SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM '
+           'INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME=%(dbname)s;')
+    args = {"dbname": name.replace('%', r'\%').replace('_', r'\_')}
+    _execute(cur, qry, args)
+    if cur.rowcount:
+        rows = cur.fetchall()
+        return {'character_set': rows[0][0],
+                'collate': rows[0][1]}
+    return {}
 
 
 def db_tables(name, **connection_args):

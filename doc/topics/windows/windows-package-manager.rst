@@ -280,7 +280,7 @@ project's wiki_:
 .. code-block:: yaml
 
     7zip:
-      9.20.00.0:
+      '9.20.00.0':
         installer: salt://win/repo/7zip/7z920-x64.msi
         full_name: 7-Zip 9.20 (x64 edition)
         reboot: False
@@ -294,7 +294,7 @@ Alternatively the ``uninstaller`` can also simply repeat the URL of the msi file
 .. code-block:: yaml
 
     7zip:
-      9.20.00.0:
+      '9.20.00.0':
         installer: salt://win/repo/7zip/7z920-x64.msi
         full_name: 7-Zip 9.20 (x64 edition)
         reboot: False
@@ -310,7 +310,7 @@ Only applies to salt: installer URLs.
 .. code-block:: yaml
 
     sqlexpress:
-      12.0.2000.8:
+      '12.0.2000.8':
         installer: 'salt://win/repo/sqlexpress/setup.exe'
         full_name: Microsoft SQL Server 2014 Setup (English)
         reboot: False
@@ -334,8 +334,8 @@ of ``salt-run``:
 
 .. code-block:: bash
 
-    salt-call win_repo.update_git_repos
-    salt-call win_repo.genrepo
+    salt-call winrepo.update_git_repos
+    salt-call winrepo.genrepo
     salt-call pkg.refresh_db
 
 After executing the previous commands the repository on the standalone system

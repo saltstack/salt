@@ -15,6 +15,12 @@
 # resolved, then the minion will fail to start.
 #master: salt
 
+# Set http proxy information for the minion when doing requests
+#proxy_host:
+#proxy_port:
+#proxy_username:
+#proxy_password:
+
 # If multiple masters are specified in the 'master' setting, the default behavior
 # is to always try to connect to them in the order they are listed. If random_master is
 # set to True, the order will be randomized instead. This can be helpful in distributing
@@ -31,7 +37,9 @@
 # master_type: str
 
 # Poll interval in seconds for checking if the master is still there.  Only
-# respected if master_type above is "failover".
+# respected if master_type above is "failover". To disable the interval entirely,
+# set the value to -1. (This may be necessary on machines which have high numbers
+# of TCP connections, such as load balancers.)
 # master_alive_interval: 30
 
 # Set whether the minion should connect to the master via IPv6:
@@ -242,6 +250,12 @@
 # often lower this value
 #loop_interval: 60
 
+# The grains can be merged, instead of overridden, using this option.
+# This allows custom grains to defined different subvalues of a dictionary
+# grain. By default this feature is disabled, to enable set grains_deep_merge
+# to ``True``.
+#grains_deep_merge: False
+
 # The grains_refresh_every setting allows for a minion to periodically check
 # its grains to see if they have changed and, if so, to inform the master
 # of the new grains. This operation is moderately expensive, therefore
@@ -402,7 +416,8 @@
 
 # Set the file client. The client defaults to looking on the master server for
 # files, but can be directed to look at the local file directory setting
-# defined below by setting it to local.
+# defined below by setting it to "local". Setting a local file_client runs the
+# minion in masterless mode.
 #file_client: remote
 
 # The file directory works on environments passed to the minion, each environment
@@ -648,3 +663,9 @@
 ############################################
 # Which returner(s) will be used for minion's result:
 #return: mysql
+
+
+######    Miscellaneous  settings     ######
+############################################
+# Default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
+#event_match_type: startswith

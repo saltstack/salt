@@ -341,7 +341,7 @@ class GrainsModuleTestCase(TestCase):
                                                 'c': 8})
 
     def test_set_nested_fails_replace_simple_value(self):
-        # Fails to replace a simple value with a new dictionnary consisting
+        # Fails to replace a simple value with a new dictionary consisting
         # of the specified key and value
         grainsmod.__grains__ = {'a': 'aval', 'b': 'l1', 'c': 8}
         res = grainsmod.set('b,l3', 'val3', delimiter=',')

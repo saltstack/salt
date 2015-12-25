@@ -21,7 +21,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
         '''
         Configure an eauth user to test with
         '''
-        self.wheel = salt.wheel.Wheel(self.get_config('client_config'))
+        self.wheel = salt.wheel.Wheel(dict(self.get_config('client_config')))
 
     def test_master_call(self):
         '''
@@ -45,7 +45,7 @@ class WheelModuleTest(integration.TestCase, integration.AdaptedConfigurationTest
         The choice of using key.list_all for this is arbitrary and should be
         changed to some mocked function that is more testing friendly.
         '''
-        auth = salt.auth.LoadAuth(self.get_config('client_config'))
+        auth = salt.auth.LoadAuth(dict(self.get_config('client_config')))
         token = auth.mk_token(self.eauth_creds)
 
         token = auth.mk_token({

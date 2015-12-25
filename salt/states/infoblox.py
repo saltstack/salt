@@ -79,45 +79,54 @@ def present(name,
                                               infoblox_api_version=infoblox_api_version,
                                               sslVerify=sslVerify)
     if records:
-        #check records for updates
+        # check records for updates
         for record in records:
+            update_record = False
             if record_type == 'cname':
                 if record['Canonical Name'] != value:
-                    if __opts__['test']:
-                        ret['result'] = None
-                        ret['comment'] = ' '.join([ret['comment'],
-                                         'DNS {0} record {1} in view {2} will be update'.format(record_type,
-                                                                                                name,
-                                                                                                dns_view)])
+                    update_record = True
+            elif record_type == 'a':
+                if record['IP Address'] != value:
+                    update_record = True
+            elif record_type == 'host':
+                if record['IP Addresses'] != value:
+                    update_record = True
+            if update_record:
+                if __opts__['test']:
+                    ret['result'] = None
+                    ret['comment'] = ' '.join([ret['comment'],
+                                     'DNS {0} record {1} in view {2} will be update'.format(record_type,
+                                                                                            name,
+                                                                                            dns_view)])
+                else:
+                    retval = __salt__['infoblox.update_record'](name,
+                                                                value,
+                                                                dns_view,
+                                                                record_type,
+                                                                infoblox_server=infoblox_server,
+                                                                infoblox_user=infoblox_user,
+                                                                infoblox_password=infoblox_password,
+                                                                infoblox_api_version=infoblox_api_version,
+                                                                sslVerify=sslVerify)
+                    if retval:
+                        if 'old' not in ret['changes']:
+                            ret['changes']['old'] = []
+                        if 'new' not in ret['changes']:
+                            ret['changes']['new'] = []
+                        ret['changes']['old'].append(record)
+                        ret['changes']['new'].append(__salt__['infoblox.get_record'](name,
+                                                                                     record_type,
+                                                                                     infoblox_server=infoblox_server,
+                                                                                     infoblox_user=infoblox_user,
+                                                                                     infoblox_password=infoblox_password,
+                                                                                     dns_view=dns_view,
+                                                                                     infoblox_api_version=infoblox_api_version,
+                                                                                     sslVerify=sslVerify))
                     else:
-                        retval = __salt__['infoblox.update_record'](name,
-                                                                    value,
-                                                                    dns_view,
-                                                                    record_type,
-                                                                    infoblox_server=infoblox_server,
-                                                                    infoblox_user=infoblox_user,
-                                                                    infoblox_password=infoblox_password,
-                                                                    infoblox_api_version=infoblox_api_version,
-                                                                    sslVerify=sslVerify)
-                        if retval:
-                            if 'old' not in ret['changes']:
-                                ret['changes']['old'] = []
-                            if 'new' not in ret['changes']:
-                                ret['changes']['new'] = []
-                            ret['changes']['old'].append(record)
-                            ret['changes']['new'].append(__salt__['infoblox.get_record'](name,
-                                                                                         record_type,
-                                                                                         infoblox_server=infoblox_server,
-                                                                                         infoblox_user=infoblox_user,
-                                                                                         infoblox_password=infoblox_password,
-                                                                                         dns_view=dns_view,
-                                                                                         infoblox_api_version=infoblox_api_version,
-                                                                                         sslVerify=sslVerify))
-                        else:
-                            ret['result'] = False
-                            return ret
+                        ret['result'] = False
+                        return ret
     else:
-        #no records
+        # no records
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = ' '.join([ret['comment'],
@@ -219,7 +228,7 @@ def absent(name,
                 ret['result'] = False
                 return ret
     else:
-        #record not found
+        # record not found
         ret['result'] = True
         ret['changes']['old'] = None
         ret['changes']['new'] = None

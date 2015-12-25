@@ -38,7 +38,9 @@ override the ordering defined in the files, and the ``order`` option described
 below will also override the order in which states are defined in sls files.
 
 If the classic ordering is preferred (lexicographic), then set
-``state_auto_order`` to ``False`` in the master configuration file.
+``state_auto_order`` to ``False`` in the master configuration file. Otherwise,
+``state_auto_order`` defaults to ``True``.
+
 
 .. _ordering_requisites:
 

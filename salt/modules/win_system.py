@@ -16,8 +16,11 @@ from datetime import datetime
 
 # Import 3rd Party Libs
 try:
+    import pythoncom
+    import wmi
     import win32net
     import win32api
+    import win32con
     import pywintypes
     from ctypes import windll
     HAS_WIN32NET_MODS = True
@@ -42,7 +45,7 @@ def __virtual__():
     '''
     if HAS_WIN32NET_MODS and salt.utils.is_windows():
         return __virtualname__
-    return False
+    return (False, "Module win_system: module only works on Windows systems")
 
 
 def _convert_minutes_seconds(timeout, in_seconds=False):
@@ -133,30 +136,26 @@ def reboot(timeout=5, in_seconds=False, wait_for_reboot=False):
     Reboot a running system.
 
     :param int timeout:
-        Number of seconds before rebooting the system.
-        Default is 5 seconds.
+        Number of minutes/seconds before rebooting the system. Minutes vs
+        seconds depends on the value of ``in_seconds``.
+        Default is 5 minutes.
 
-    :return: True if successful
-    :rtype: bool
-
-    timeout
-        The wait time before the system will be shutdown.
-
-    in_seconds
+    :param bool in_seconds:
         Whether to treat timeout as seconds or minutes.
 
         .. versionadded:: 2015.8.0
 
-        The amount of seconds to wait before rebooting
-
-    wait_for_reboot
-
-        .. versionadded:: Beryllium
+    :param bool wait_for_reboot:
 
         Sleeps for timeout + 30 seconds after reboot has been initiated.
         This is useful for use in a highstate for example where
         you have many states that could be ran after this one. Which you don't want
         to start until after the restart i.e You could end up with a half finished state.
+
+        .. versionadded:: 2015.8.0
+
+    :return: True if successful
+    :rtype: bool
 
     CLI Example:
 
@@ -187,18 +186,18 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False, in_seconds
         seconds. While this dialog box is displayed, the shutdown can be stopped
         by the shutdown_abort function.
 
-        If dwTimeout is not zero, InitiateSystemShutdown displays a dialog box
-        on the specified computer. The dialog box displays the name of the user
-        who called the function, displays the message specified by the lpMessage
-        parameter, and prompts the user to log off. The dialog box beeps when it
-        is created and remains on top of other windows in the system. The dialog
-        box can be moved but not closed. A timer counts down the remaining time
-        before a forced shutdown.
+        If timeout is not zero, InitiateSystemShutdown displays a dialog box on
+        the specified computer. The dialog box displays the name of the user
+        who called the function, displays the message specified by the
+        lpMessage parameter, and prompts the user to log off. The dialog box
+        beeps when it is created and remains on top of other windows in the
+        system. The dialog box can be moved but not closed. A timer counts down
+        the remaining time before a forced shutdown.
 
-        If dwTimeout is zero, the computer shuts down without displaying the
+        If timeout is zero, the computer shuts down without displaying the
         dialog box, and the shutdown cannot be stopped by shutdown_abort.
 
-        Default is 5
+        Default is 5 minutes
 
     :param bool in_seconds:
         Whether to treat timeout as seconds or minutes.
@@ -242,10 +241,6 @@ def shutdown(message=None, timeout=5, force_close=True, reboot=False, in_seconds
 def shutdown_hard():
     '''
     Shutdown a running system with no timeout or warning.
-
-    :param int timeout:
-        Number of seconds before shutting down the system.
-        Default is 5 seconds.
 
     :return: True if successful
     :rtype: bool
@@ -309,7 +304,8 @@ def set_computer_name(name):
     if name:
         name = name.decode('utf-8')
 
-    if windll.kernel32.SetComputerNameW(name):
+    if windll.kernel32.SetComputerNameExW(win32con.ComputerNamePhysicalDnsHostname,
+                                          name):
         ret = {'Computer Name': {'Current': get_system_info()['name']}}
         pending = get_pending_computer_name()
         if pending not in (None, False):
@@ -401,7 +397,7 @@ def set_computer_desc(desc=None):
     return {'Computer Description': get_computer_desc()}
 
 
-set_computer_description = set_computer_desc
+set_computer_description = salt.utils.alias_function(set_computer_desc, 'set_computer_description')
 
 
 def get_system_info():
@@ -434,17 +430,88 @@ def get_computer_desc():
     return desc if desc else False
 
 
-get_computer_description = get_computer_desc
+get_computer_description = salt.utils.alias_function(get_computer_desc, 'get_computer_description')
 
 
-def join_domain(
-        domain=None,
-        username=None,
-        password=None,
-        account_ou=None,
-        account_exists=False):
+def get_hostname():
     '''
-    Join a computer to an Active Directory domain
+    .. versionadded:: Boron
+
+    Get the hostname of the windows minion
+
+    :return:
+        Returns the hostname of the windows minion
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.get_hostname
+    '''
+    cmd = 'wmic computersystem get name'
+    ret = __salt__['cmd.run'](cmd=cmd)
+    _, hostname = ret.split("\n")
+    return hostname
+
+
+def set_hostname(hostname):
+    '''
+    .. versionadded:: Boron
+
+    Set the hostname of the windows minion, requires a restart before this
+    will be updated.
+
+    :param str hostname:
+        The hostname to set
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion-id' system.set_hostname newhostname
+    '''
+    curr_hostname = get_hostname()
+    cmd = "wmic computersystem where name='{0}' call rename name='{1}'".format(curr_hostname, hostname)
+    ret = __salt__['cmd.run'](cmd=cmd)
+
+    return "successful" in ret
+
+
+def _lookup_error(number):
+    '''
+    Lookup the error based on the passed number
+    .. versionadded:: 2015.5.7
+    .. versionadded:: 2015.8.2
+
+    :param int number: Number code to lookup
+
+    :return: The text that corresponds to the error number
+    :rtype: str
+    '''
+    return_values = {
+        2:    'Invalid OU or specifying OU is not supported',
+        5:    'Access is denied',
+        53:   'The network path was not found',
+        87:   'The parameter is incorrect',
+        110:  'The system cannot open the specified object',
+        1323: 'Unable to update the password',
+        1326: 'Logon failure: unknown username or bad password',
+        1355: 'The specified domain either does not exist or could not be contacted',
+        2224: 'The account already exists',
+        2691: 'The machine is already joined to the domain',
+        2692: 'The machine is not currently joined to a domain',
+    }
+    return return_values[number]
+
+
+def join_domain(domain,
+                username=None,
+                password=None,
+                account_ou=None,
+                account_exists=False,
+                restart=False):
+    '''
+    Join a computer to an Active Directory domain. Requires reboot.
 
     :param str domain:
         The domain to which the computer should be joined, e.g.
@@ -466,6 +533,13 @@ def join_domain(
     :param bool account_exists:
         Needs to be set to ``True`` to allow re-using an existing account
 
+    :param bool restart: Restarts the computer after a successful join
+    .. versionadded:: 2015.5.7
+    .. versionadded:: 2015.8.2
+
+    :returns: Returns a dictionary if successful. False if unsuccessful.
+    :rtype: dict, bool
+
     CLI Example:
 
     .. code-block:: bash
@@ -473,98 +547,169 @@ def join_domain(
         salt 'minion-id' system.join_domain domain='domain.tld' \\
                          username='joinuser' password='joinpassword' \\
                          account_ou='ou=clients,ou=org,dc=domain,dc=tld' \\
-                         account_exists=False
+                         account_exists=False, restart=True
     '''
+    status = get_domain_workgroup()
+    if 'Domain' in status:
+        if status['Domain'] == domain:
+            return 'Already joined to {0}'.format(domain)
 
-    if '@' not in username:
+    if username and '\\' not in username and '@' not in username:
         username = '{0}@{1}'.format(username, domain)
+
+    if username and password is None:
+        return 'Must specify a password if you pass a username'
 
     # remove any escape characters
     if isinstance(account_ou, str):
         account_ou = account_ou.split('\\')
         account_ou = ''.join(account_ou)
 
-    join_options = 3
-    if account_exists:
-        join_options = 1
+    NETSETUP_JOIN_DOMAIN = 0x1
+    NETSETUP_ACCOUNT_CREATE = 0x2
+    NETSETUP_DOMAIN_JOIN_IF_JOINED = 0x20
 
-    ret = windll.netapi32.NetJoinDomain(None,
-                                        domain,
-                                        account_ou,
-                                        username,
-                                        password,
-                                        join_options)
-    if ret == 0:
-        return {'Domain': domain}
+    join_options = 0x0
+    join_options |= NETSETUP_JOIN_DOMAIN
+    join_options |= NETSETUP_DOMAIN_JOIN_IF_JOINED
+    if not account_exists:
+        join_options |= NETSETUP_ACCOUNT_CREATE
 
-    return_values = {
-        2:    'Invalid OU or specifying OU is not supported',
-        5:    'Access is denied',
-        53:   'The network path was not found',
-        87:   'The parameter is incorrect',
-        110:  'The system cannot open the specified object',
-        1323: 'Unable to update the password',
-        1326: 'Logon failure: unknown username or bad password',
-        1355: 'The specified domain either does not exist or could not be contacted',
-        2224: 'The account already exists',
-        2691: 'The machine is already joined to the domain',
-        2692: 'The machine is not currently joined to a domain',
-    }
-    log.error(return_values[ret])
+    pythoncom.CoInitialize()
+    c = wmi.WMI()
+    comp = c.Win32_ComputerSystem()[0]
+    err = comp.JoinDomainOrWorkgroup(Name=domain,
+                                     Password=password,
+                                     UserName=username,
+                                     AccountOU=account_ou,
+                                     FJoinOptions=join_options)
+
+    # you have to do this because JoinDomainOrWorkgroup returns a strangely
+    # formatted value that looks like (0,)
+    if not err[0]:
+        ret = {'Domain': domain,
+               'Restart': False}
+        if restart:
+            ret['Restart'] = reboot()
+        return ret
+
+    log.error(_lookup_error(err[0]))
     return False
 
 
-def unjoin_domain(username=None, password=None, disable=False):
-    '''
-    Unjoin a computer from an Active Directory Domain
+def unjoin_domain(username=None,
+                  password=None,
+                  domain=None,
+                  workgroup='WORKGROUP',
+                  disable=False,
+                  restart=False):
+    r'''
+    Unjoin a computer from an Active Directory Domain. Requires restart.
 
     :param username:
-        Username of an account which is authorized to join computers to the
-        specified domain. Need to be either fully qualified like
-        ``user@domain.tld`` or simply ``user``
+        Username of an account which is authorized to manage computer accounts
+        on the domain. Need to be fully qualified like ``user@domain.tld`` or
+        ``domain.tld\user``. If domain not specified, the passed domain will be
+        used. If computer account doesn't need to be disabled, can be None.
 
     :param str password:
         Password of the specified user
 
+    :param str domain: The domain from which to unjoin the computer. Can be None
+
+    :param str workgroup: The workgroup to join the computer to. Default is
+    ``WORKGROUP``
+
+    .. versionadded:: 2015.5.7
+    .. versionadded:: 2015.8.2
+
     :param bool disable:
         Disable the user account in Active Directory. True to disable.
 
-    :return: True if successful. False if not. Log contains error code.
-    :rtype: bool
+    :param bool restart: Restart the computer after successful unjoin
+
+    .. versionadded:: 2015.5.7
+    .. versionadded:: 2015.8.2
+
+    :returns: Returns a dictionary if successful. False if unsuccessful.
+    :rtype: dict, bool
 
     CLI Example:
 
     .. code-block:: bash
 
+        salt 'minion-id' system.unjoin_domain restart=True
+
         salt 'minion-id' system.unjoin_domain username='unjoinuser' \\
-                         password='unjoinpassword' disable=True
+                         password='unjoinpassword' disable=True \\
+                         restart=True
     '''
-    unjoin_options = 0
+    status = get_domain_workgroup()
+    if 'Workgroup' in status:
+        if status['Workgroup'] == workgroup:
+            return 'Already joined to {0}'.format(workgroup)
+
+    if username and '\\' not in username and '@' not in username:
+        if domain:
+            username = '{0}@{1}'.format(username, domain)
+        else:
+            return 'Must specify domain if not supplied in username'
+
+    if username and password is None:
+        return 'Must specify a password if you pass a username'
+
+    NETSETUP_ACCT_DELETE = 0x2
+
+    unjoin_options = 0x0
     if disable:
-        unjoin_options = 2
+        unjoin_options |= NETSETUP_ACCT_DELETE
 
-    ret = windll.netapi32.NetUnjoinDomain(None,
-                                          username,
-                                          password,
-                                          unjoin_options)
-    if ret == 0:
-        return True
+    pythoncom.CoInitialize()
+    c = wmi.WMI()
+    comp = c.Win32_ComputerSystem()[0]
+    err = comp.UnjoinDomainOrWorkgroup(Password=password,
+                                       UserName=username,
+                                       FUnjoinOptions=unjoin_options)
 
-    return_values = {
-        2:    'Invalid OU or specifying OU is not supported',
-        5:    'Access is denied',
-        53:   'The network path was not found',
-        87:   'The parameter is incorrect',
-        110:  'The system cannot open the specified object',
-        1323: 'Unable to update the password',
-        1326: 'Logon failure: unknown username or bad password',
-        1355: 'The specified domain either does not exist or could not be contacted',
-        2224: 'The account already exists',
-        2691: 'The machine is already joined to the domain',
-        2692: 'The machine is not currently joined to a domain',
-    }
-    log.error(return_values[ret])
-    return False
+    # you have to do this because UnjoinDomainOrWorkgroup returns a
+    # strangely formatted value that looks like (0,)
+    if not err[0]:
+        err = comp.JoinDomainOrWorkgroup(Name=workgroup)
+        if not err[0]:
+            ret = {'Workgroup': workgroup,
+                   'Restart': False}
+            if restart:
+                ret['Restart'] = reboot()
+
+            return ret
+        else:
+            log.error(_lookup_error(err[0]))
+            log.error('Failed to join the computer to {0}'.format(workgroup))
+            return False
+    else:
+        log.error(_lookup_error(err[0]))
+        log.error('Failed to unjoin computer from {0}'.format(status['Domain']))
+        return False
+
+
+def get_domain_workgroup():
+    '''
+    Get the domain or workgroup the computer belongs to.
+
+    .. versionadded:: 2015.5.7
+    .. versionadded:: 2015.8.2
+
+    :return: The name of the domain or workgroup
+    :rtype: str
+
+    '''
+    pythoncom.CoInitialize()
+    c = wmi.WMI()
+    for computer in c.Win32_ComputerSystem():
+        if computer.PartOfDomain:
+            return {'Domain': computer.Domain}
+        else:
+            return {'Workgroup': computer.Domain}
 
 
 def _get_date_time_format(dt_string):

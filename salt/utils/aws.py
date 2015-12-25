@@ -14,10 +14,12 @@ from __future__ import absolute_import
 import sys
 import time
 import binascii
-import datetime
+from datetime import datetime
 import hashlib
 import hmac
 import logging
+import salt.config
+import re
 
 # Import Salt libs
 import salt.utils.xmlutil as xml
@@ -53,6 +55,7 @@ __SecretAccessKey__ = ''
 __Token__ = ''
 __Expiration__ = ''
 __Location__ = ''
+__AssumeCache__ = {}
 
 
 def creds(provider):
@@ -70,27 +73,33 @@ def creds(provider):
     if provider['id'] == IROLE_CODE or provider['key'] == IROLE_CODE:
         # Check to see if we have cache credentials that are still good
         if __Expiration__ != '':
-            timenow = datetime.datetime.utcnow()
+            timenow = datetime.utcnow()
             timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
             if timestamp < __Expiration__:
                 # Current timestamp less than expiration fo cached credentials
                 return __AccessKeyId__, __SecretAccessKey__, __Token__
         # We don't have any cached credentials, or they are expired, get them
-        # TODO: Wrap this with a try and handle exceptions gracefully
 
         # Connections to instance meta-data must fail fast and never be proxied
-        result = requests.get(
-            "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
-            proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
-        )
-        result.raise_for_status()
-        role = result.text
-        # TODO: Wrap this with a try and handle exceptions gracefully
-        result = requests.get(
-            "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role),
-            proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
-        )
-        result.raise_for_status()
+        try:
+            result = requests.get(
+                "http://169.254.169.254/latest/meta-data/iam/security-credentials/",
+                proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
+            )
+            result.raise_for_status()
+            role = result.text
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
+            return provider['id'], provider['key'], ''
+
+        try:
+            result = requests.get(
+                "http://169.254.169.254/latest/meta-data/iam/security-credentials/{0}".format(role),
+                proxies={'http': ''}, timeout=AWS_METADATA_TIMEOUT,
+            )
+            result.raise_for_status()
+        except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
+            return provider['id'], provider['key'], ''
+
         data = result.json()
         __AccessKeyId__ = data['AccessKeyId']
         __SecretAccessKey__ = data['SecretAccessKey']
@@ -108,7 +117,7 @@ def sig2(method, endpoint, params, provider, aws_api_version):
 
     http://docs.aws.amazon.com/general/latest/gr/signature-version-2.html
     '''
-    timenow = datetime.datetime.utcnow()
+    timenow = datetime.utcnow()
     timestamp = timenow.strftime('%Y-%m-%dT%H:%M:%SZ')
 
     # Retrieve access credentials from meta-data, or use provided
@@ -141,9 +150,59 @@ def sig2(method, endpoint, params, provider, aws_api_version):
     return params_with_headers
 
 
+def assumed_creds(prov_dict, role_arn, location=None):
+    valid_session_name_re = re.compile("[^a-z0-9A-Z+=,.@-]")
+
+    now = (datetime.utcnow() - datetime(1970, 1, 1)).total_seconds()
+    for key, creds in __AssumeCache__.items():
+        if (creds["Expiration"] - now) <= 120:
+            __AssumeCache__.delete(key)
+
+    if role_arn in __AssumeCache__:
+        c = __AssumeCache__[role_arn]
+        return c["AccessKeyId"], c["SecretAccessKey"], c["SessionToken"]
+
+    version = "2011-06-15"
+    session_name = valid_session_name_re.sub('', salt.config.get_id({"root_dir": None})[0])[0:63]
+
+    headers, requesturl = sig4(
+        'GET',
+        'sts.amazonaws.com',
+        params={
+            "Version": version,
+            "Action": "AssumeRole",
+            "RoleSessionName": session_name,
+            "RoleArn": role_arn,
+            "Policy": '{"Version":"2012-10-17","Statement":[{"Sid":"Stmt1", "Effect":"Allow","Action":"*","Resource":"*"}]}',
+            "DurationSeconds": "3600"
+        },
+        aws_api_version=version,
+        data='',
+        uri='/',
+        prov_dict=prov_dict,
+        product='sts',
+        location=location,
+        requesturl="https://sts.amazonaws.com/"
+    )
+    headers["Accept"] = "application/json"
+    result = requests.request('GET', requesturl, headers=headers,
+                              data='',
+                              verify=True)
+
+    if result.status_code >= 400:
+        LOG.info('AssumeRole response: {0}'.format(result.content))
+    result.raise_for_status()
+    resp = result.json()
+
+    data = resp["AssumeRoleResponse"]["AssumeRoleResult"]["Credentials"]
+    __AssumeCache__[role_arn] = data
+    return data["AccessKeyId"], data["SecretAccessKey"], data["SessionToken"]
+
+
 def sig4(method, endpoint, params, prov_dict,
          aws_api_version=DEFAULT_AWS_API_VERSION, location=None,
-         product='ec2', uri='/', requesturl=None, data='', headers=None):
+         product='ec2', uri='/', requesturl=None, data='', headers=None,
+         role_arn=None):
     '''
     Sign a query against AWS services using Signature Version 4 Signing
     Process. This is documented at:
@@ -152,10 +211,13 @@ def sig4(method, endpoint, params, prov_dict,
     http://docs.aws.amazon.com/general/latest/gr/sigv4-signed-request-examples.html
     http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
     '''
-    timenow = datetime.datetime.utcnow()
+    timenow = datetime.utcnow()
 
     # Retrieve access credentials from meta-data, or use provided
-    access_key_id, secret_access_key, token = creds(prov_dict)
+    if role_arn is None:
+        access_key_id, secret_access_key, token = creds(prov_dict)
+    else:
+        access_key_id, secret_access_key, token = assumed_creds(prov_dict, role_arn, location=location)
 
     if location is None:
         location = get_region_from_metadata()
@@ -206,9 +268,7 @@ def sig4(method, endpoint, params, prov_dict,
     ))
 
     # Create the string to sign
-    credential_scope = '/'.join((
-        datestamp, location, product, 'aws4_request'
-    ))
+    credential_scope = '/'.join((datestamp, location, product, 'aws4_request'))
     string_to_sign = '\n'.join((
         algorithm,
         amzdate,
@@ -274,8 +334,11 @@ def _sig_key(key, date_stamp, regionName, serviceName):
     http://docs.aws.amazon.com/general/latest/gr/signature-v4-examples.html#signature-v4-examples-python
     '''
     kDate = _sign(('AWS4' + key).encode('utf-8'), date_stamp)
-    kRegion = _sign(kDate, regionName)
-    kService = _sign(kRegion, serviceName)
+    if regionName:
+        kRegion = _sign(kDate, regionName)
+        kService = _sign(kRegion, serviceName)
+    else:
+        kService = _sign(kDate, serviceName)
     kSigning = _sign(kService, 'aws4_request')
     return kSigning
 

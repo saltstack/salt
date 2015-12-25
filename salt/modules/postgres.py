@@ -70,7 +70,8 @@ def __virtual__():
     '''
     if all((salt.utils.which('psql'), HAS_CSV)):
         return True
-    return False
+    return (False, 'The postgres execution module failed to load: '
+        'either the psql binary is not in the path or the csv library is not available')
 
 
 def _run_psql(cmd, runas=None, password=None, host=None, port=None, user=None):
@@ -456,7 +457,7 @@ def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
     '''
 
     # db doesn't exist, proceed
-    query = 'DROP DATABASE {0}'.format(name)
+    query = 'DROP DATABASE "{0}"'.format(name)
     ret = _psql_prepare_and_run(['-c', query],
                                 user=user,
                                 host=host,
@@ -540,13 +541,13 @@ def tablespace_create(name, location, options=None, owner=None, user=None,
     owner_query = ''
     options_query = ''
     if owner:
-        owner_query = 'OWNER {0}'.format(owner)
+        owner_query = 'OWNER "{0}"'.format(owner)
         # should come out looking like: 'OWNER postgres'
     if options:
         optionstext = ['{0} = {1}'.format(k, v) for k, v in options.items()]
         options_query = 'WITH ( {0} )'.format(', '.join(optionstext))
         # should come out looking like: 'WITH ( opt1 = 1.0, opt2 = 4.0 )'
-    query = 'CREATE TABLESPACE {0} {1} LOCATION \'{2}\' {3}'.format(name,
+    query = 'CREATE TABLESPACE "{0}" {1} LOCATION \'{2}\' {3}'.format(name,
                                                                 owner_query,
                                                                 location,
                                                                 options_query)
@@ -582,16 +583,16 @@ def tablespace_alter(name, user=None, host=None, port=None, maintenance_db=None,
     queries = []
 
     if new_name:
-        queries.append('ALTER TABLESPACE {0} RENAME TO {1}'.format(
+        queries.append('ALTER TABLESPACE "{0}" RENAME TO "{1}"'.format(
                        name, new_name))
     if new_owner:
-        queries.append('ALTER TABLESPACE {0} OWNER TO {1}'.format(
+        queries.append('ALTER TABLESPACE "{0}" OWNER TO "{1}"'.format(
                        name, new_owner))
     if set_option:
-        queries.append('ALTER TABLESPACE {0} SET ({1} = {2})'.format(
+        queries.append('ALTER TABLESPACE "{0}" SET ({1} = {2})'.format(
                        name, set_option.keys()[0], set_option.values()[0]))
     if reset_option:
-        queries.append('ALTER TABLESPACE {0} RESET ({1})'.format(
+        queries.append('ALTER TABLESPACE "{0}" RESET ({1})'.format(
                        name, reset_option))
 
     for query in queries:
@@ -618,7 +619,7 @@ def tablespace_remove(name, user=None, host=None, port=None,
 
     .. versionadded:: 2015.8.0
     '''
-    query = 'DROP TABLESPACE {0}'.format(name)
+    query = 'DROP TABLESPACE "{0}"'.format(name)
     ret = _psql_prepare_and_run(['-c', query],
                                 user=user,
                                 host=host,
@@ -1147,7 +1148,7 @@ def _role_remove(name, user=None, host=None, port=None, maintenance_db=None,
         return False
 
     # user exists, proceed
-    sub_cmd = 'DROP ROLE {0}'.format(name)
+    sub_cmd = 'DROP ROLE "{0}"'.format(name)
     _psql_prepare_and_run(
         ['-c', sub_cmd],
         runas=runas, host=host, user=user, port=port,
@@ -1494,7 +1495,7 @@ def create_extension(name,
             args.append('"{0}"'.format(name))
             sargs = []
             if schema:
-                sargs.append('SCHEMA {0}'.format(schema))
+                sargs.append('SCHEMA "{0}"'.format(schema))
             if ext_version:
                 sargs.append('VERSION {0}'.format(ext_version))
             if from_version:
@@ -1507,7 +1508,7 @@ def create_extension(name,
         else:
             args = []
             if schema and _EXTENSION_TO_MOVE in mtdata:
-                args.append('ALTER EXTENSION "{0}" SET SCHEMA {1};'.format(
+                args.append('ALTER EXTENSION "{0}" SET SCHEMA "{1}";'.format(
                     name, schema))
             if ext_version and _EXTENSION_TO_UPGRADE in mtdata:
                 args.append('ALTER EXTENSION "{0}" UPDATE TO {1};'.format(
@@ -1706,7 +1707,7 @@ def owner_to(dbname,
     sqlfile = tempfile.NamedTemporaryFile()
     sqlfile.write('begin;\n')
     sqlfile.write(
-        'alter database {0} owner to {1};\n'.format(
+        'alter database "{0}" owner to "{1}";\n'.format(
             dbname, ownername
         )
     )
@@ -1786,9 +1787,9 @@ def schema_create(dbname, name, owner=None,
         log.info('\'{0}\' already exists in \'{1}\''.format(name, dbname))
         return False
 
-    sub_cmd = 'CREATE SCHEMA {0}'.format(name)
+    sub_cmd = 'CREATE SCHEMA "{0}"'.format(name)
     if owner is not None:
-        sub_cmd = '{0} AUTHORIZATION {1}'.format(sub_cmd, owner)
+        sub_cmd = '{0} AUTHORIZATION "{1}"'.format(sub_cmd, owner)
 
     ret = _psql_prepare_and_run(['-c', sub_cmd],
                                 user=db_user, password=db_password,
@@ -1842,7 +1843,7 @@ def schema_remove(dbname, name,
         return False
 
     # schema exists, proceed
-    sub_cmd = 'DROP SCHEMA {0}'.format(name)
+    sub_cmd = 'DROP SCHEMA "{0}"'.format(name)
     _psql_prepare_and_run(
         ['-c', sub_cmd],
         runas=user,
@@ -1992,3 +1993,214 @@ def schema_list(dbname,
         ret[row['name']] = retrow
 
     return ret
+
+
+def language_list(
+        maintenance_db,
+        user=None,
+        host=None,
+        port=None,
+        password=None,
+        runas=None):
+    '''
+    .. versionadded:: Boron
+
+    Return a list of languages in a database.
+
+    CLI Example:
+        .. code-block:: bash
+            salt '*' postgres.language_list dbname
+
+    maintenance_db
+        The database to check
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+
+    ret = {}
+    query = 'SELECT lanname AS "Name" FROM pg_language'
+
+    rows = psql_query(
+        query,
+        runas=runas,
+        host=host,
+        user=user,
+        port=port,
+        maintenance_db=maintenance_db,
+        password=password)
+
+    for row in rows:
+        ret[row['Name']] = row['Name']
+
+    return ret
+
+
+def language_exists(
+        name,
+        maintenance_db,
+        user=None,
+        host=None,
+        port=None,
+        password=None,
+        runas=None):
+    '''
+    .. versionadded:: Boron
+
+    Checks if language exists in a database.
+
+    CLI Example:
+        .. code-block:: bash
+            salt '*' postgres.language_exists plpgsql dbname
+
+    name
+       Language to check for
+
+    maintenance_db
+        The database to check in
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+
+    '''
+
+    languages = language_list(
+        maintenance_db, user=user, host=host,
+        port=port, password=password,
+        runas=runas)
+
+    return name in languages
+
+
+def language_create(name,
+                    maintenance_db,
+                    user=None,
+                    host=None,
+                    port=None,
+                    password=None,
+                    runas=None):
+    '''
+    .. versionadded:: Boron
+
+    Installs a language into a database
+
+    CLI Example:
+        .. code-block:: bash
+            salt '*' postgres.language_create plpgsql dbname
+
+    name
+       Language to install
+
+    maintenance_db
+        The database to install the language in
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+
+    if language_exists(name, maintenance_db):
+        log.info('Language %s already exists in %s', name, maintenance_db)
+        return False
+
+    query = 'CREATE LANGUAGE {0}'.format(name)
+
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user,
+                                host=host,
+                                port=port,
+                                maintenance_db=maintenance_db,
+                                password=password,
+                                runas=runas)
+
+    return ret['retcode'] == 0
+
+
+def language_remove(name,
+                    maintenance_db,
+                    user=None,
+                    host=None,
+                    port=None,
+                    password=None,
+                    runas=None):
+    '''
+    .. versionadded:: Boron
+
+    Removes a language from a database
+
+    CLI Example:
+        .. code-block:: bash
+            salt '*' postgres.language_remove plpgsql dbname
+
+    name
+       Language to remove
+
+    maintenance_db
+        The database to install the language in
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+
+    if not language_exists(name, maintenance_db):
+        log.info('Language %s does not exist in %s', name, maintenance_db)
+        return False
+
+    query = 'DROP LANGUAGE {0}'.format(name)
+
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user,
+                                host=host,
+                                port=port,
+                                runas=runas,
+                                maintenance_db=maintenance_db,
+                                password=password)
+
+    return ret['retcode'] == 0

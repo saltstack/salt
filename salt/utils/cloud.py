@@ -493,6 +493,9 @@ def bootstrap(vm_, opts):
         deploy_kwargs['use_winrm'] = salt.config.get_cloud_config_value(
             'use_winrm', vm_, opts, default=False
         )
+        deploy_kwargs['winrm_port'] = salt.config.get_cloud_config_value(
+            'winrm_port', vm_, opts, default=5986
+        )
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
@@ -841,6 +844,7 @@ def wait_for_winrm(host, port, username, password, timeout=900):
                     host, port, trycount
                 )
             )
+            time.sleep(1)
 
 
 def validate_windows_cred(host,
@@ -965,6 +969,7 @@ def deploy_windows(host,
                    opts=None,
                    master_sign_pub_file=None,
                    use_winrm=False,
+                   winrm_port=5986,
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
@@ -989,7 +994,7 @@ def deploy_windows(host,
     winrm_session = None
 
     if HAS_WINRM and use_winrm:
-        winrm_session = wait_for_winrm(host=host, port=5986,
+        winrm_session = wait_for_winrm(host=host, port=winrm_port,
                                            username=username, password=password,
                                            timeout=port_timeout * 60)
         if winrm_session is not None:
@@ -1255,7 +1260,7 @@ def deploy_script(host,
                     )
             if sudo:
                 comps = tmp_dir.lstrip('/').rstrip('/').split('/')
-                if comps and comps[0] != 'tmp':
+                if len(comps) > 1 or comps[0] != 'tmp':
                     ret = root_cmd(
                         'chown {0} \'{1}\''.format(username, tmp_dir),
                         tty, sudo, **ssh_kwargs
@@ -2792,10 +2797,10 @@ def cache_node(node, provider, opts):
     if 'update_cachedir' not in opts or not opts['update_cachedir']:
         return
 
-    if not os.path.exists(os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')):
+    base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
+    if not os.path.exists(base):
         init_cachedir()
 
-    base = os.path.join(syspaths.CACHE_DIR, 'cloud', 'active')
     provider, driver = provider.split(':')
     prov_dir = os.path.join(base, driver, provider)
     if not os.path.exists(prov_dir):
@@ -2823,8 +2828,6 @@ def missing_node_cache(prov_dir, node_list, provider, opts):
     for node in os.listdir(prov_dir):
         cached_nodes.append(os.path.splitext(node)[0])
 
-    log.debug(sorted(cached_nodes))
-    log.debug(sorted(node_list))
     for node in cached_nodes:
         if node not in node_list:
             delete_minion_cachedir(node, provider, opts)
@@ -2857,8 +2860,7 @@ def diff_node_cache(prov_dir, node, new_data, opts):
 
     if node is None:
         return
-    path = os.path.join(prov_dir, node)
-    path = '{0}.p'.format(path)
+    path = '{0}.p'.format(os.path.join(prov_dir, node))
 
     if not os.path.exists(path):
         event_data = _strip_cache_events(new_data, opts)

@@ -23,4 +23,4 @@ Req Channel
 The req channel is implemented using zeromq's req/rep sockets. These sockets
 enforce a send/recv pattern, which forces salt to serialize messages through these
 socket pairs. This means that although the interface is asynchronous on the minion
-we cannot send a second message until we have recieved the reply of the first message.
+we cannot send a second message until we have received the reply of the first message.

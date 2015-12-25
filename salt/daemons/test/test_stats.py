@@ -10,10 +10,11 @@ if sys.version_info < (2, 7):
     import unittest2 as unittest
 else:
     import unittest
+import time
 
 from ioflo.base.consoling import getConsole
 console = getConsole()
-from ioflo.base.odicting import odict
+from ioflo.aid.odicting import odict
 from ioflo.test import testing
 
 from raet.abiding import ns2u
@@ -101,7 +102,7 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         testStack = self.store.fetch('.salt.test.lane.stack')
         if testStack:
             testStack.value.server.close()
-
+        act.actor.road_stack.value.server.close()
 
     def testMasterRoadStats(self):
         """
@@ -156,7 +157,7 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         testStack = self.store.fetch('.salt.test.lane.stack')
         if testStack:
             testStack.value.server.close()
-
+        time.sleep(0.1)
 
     def testMasterLaneStats(self):
         """
@@ -212,7 +213,6 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testMasterStatsWrongMissingTag(self):
         """
         Test Master Stats requests with unknown and missing tag (A3, A4)
@@ -267,7 +267,6 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testMasterStatsUnknownRemote(self):
         """
         Test Master Stats request with unknown remote (B1)
@@ -318,7 +317,6 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testMasterStatsNoRequest(self):
         """
         Test Master Stats no requests (nothing to do) (B2)
@@ -364,7 +362,6 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         testStack = self.store.fetch('.salt.test.lane.stack')
         if testStack:
             testStack.value.server.close()
-
 
     def testMinionContextSetup(self):
         """
@@ -412,7 +409,7 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         testStack = self.store.fetch('.salt.test.road.stack')
         if testStack:
             testStack.value.server.close()
-
+        act.actor.road_stack.value.server.close()
 
     def testMinionRoadStats(self):
         """
@@ -471,7 +468,6 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testMinionLaneStats(self):
         """
         Test Minion Road Stats request (A2)
@@ -529,7 +525,6 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testMinionStatsWrongMissingTag(self):
         """
         Test Minion Stats requests with unknown and missing tag (A3, A4)
@@ -586,7 +581,6 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         if testStack:
             testStack.value.server.close()
 
-
     def testMinionStatsUnknownRemote(self):
         """
         Test Minion Stats request with unknown remote (B1)
@@ -637,7 +631,6 @@ class StatsEventerTestCase(testing.FrameIofloTestCase):
         testStack = self.store.fetch('.salt.test.road.stack')
         if testStack:
             testStack.value.server.close()
-
 
     def testMinionStatsNoRequest(self):
         """
@@ -728,8 +721,8 @@ if __name__ == '__main__' and __package__ is None:
 
     # console.reinit(verbosity=console.Wordage.concise)
 
-    runAll()  # run all unittests
+    #runAll()  # run all unittests
 
-    # runSome()  #only run some
+    runSome()  #only run some
 
-    # runOne('testMasterContextSetup')
+    #runOne('testMasterLaneStats')

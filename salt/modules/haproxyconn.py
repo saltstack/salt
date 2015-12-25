@@ -31,7 +31,7 @@ def __virtual__():
     '''
     if HAS_HAPROXY:
         return __virtualname__
-    return False
+    return (False, 'The haproxyconn execution module cannot be loaded: haproxyctl module not available')
 
 
 def _get_conn(socket='/var/run/haproxy.sock'):

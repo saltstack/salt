@@ -116,7 +116,7 @@ class SaltCacheLoader(BaseLoader):
             tpldir = path.dirname(template).replace('\\', '/')
             tpldata = {
                 'tplfile': template,
-                'tpldir': tpldir,
+                'tpldir': '.' if tpldir == '' else tpldir,
                 'tpldot': tpldir.replace('/', '.'),
             }
             environment.globals.update(tpldata)
@@ -221,7 +221,7 @@ class SerializerExtension(Extension, object):
 
     **Format filters**
 
-    Allows to jsonify or yamlify any data structure. For example, this dataset:
+    Allows jsonifying or yamlifying any data structure. For example, this dataset:
 
     .. code-block:: python
 
@@ -281,11 +281,11 @@ class SerializerExtension(Extension, object):
 
     **Load tags**
 
-    Salt implements **import_yaml** and **import_json** tags. They work like
+    Salt implements ``import_yaml`` and ``import_json`` tags. They work like
     the `import tag`_, except that the document is also deserialized.
 
-    Syntaxes are {% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}
-    and {% load_json as [VARIABLE] %}[YOUR DATA]{% endload %}
+    Syntaxes are ``{% load_yaml as [VARIABLE] %}[YOUR DATA]{% endload %}``
+    and ``{% load_json as [VARIABLE] %}[YOUR DATA]{% endload %}``
 
     For example:
 

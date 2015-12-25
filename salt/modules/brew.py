@@ -25,7 +25,7 @@ def __virtual__():
 
     if salt.utils.which('brew') and __grains__['os'] == 'MacOS':
         return __virtualname__
-    return False
+    return (False, 'The brew module could not be loaded: brew not found or grain os != MacOS')
 
 
 def _list_taps():
@@ -61,7 +61,7 @@ def _homebrew_bin():
     return ret
 
 
-def _call_brew(cmd):
+def _call_brew(cmd, redirect_stderr=False):
     '''
     Calls the brew command with the user account of brew
     '''
@@ -70,7 +70,8 @@ def _call_brew(cmd):
     return __salt__['cmd.run_all'](cmd,
                                    runas=runas,
                                    output_loglevel='trace',
-                                   python_shell=False)
+                                   python_shell=False,
+                                   redirect_stderr=redirect_stderr)
 
 
 def list_pkgs(versions_as_list=False, **kwargs):
@@ -164,7 +165,7 @@ def latest_version(*names, **kwargs):
         return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def remove(name=None, pkgs=None, **kwargs):
@@ -206,10 +207,24 @@ def remove(name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
     cmd = 'brew uninstall {0}'.format(' '.join(targets))
-    _call_brew(cmd)
+
+    out = _call_brew(cmd)
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def refresh_db():
@@ -320,11 +335,23 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
     else:
         cmd = 'brew install {0}'.format(formulas)
 
-    _call_brew(cmd)
+    out = _call_brew(cmd)
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
-    return salt.utils.compare_dicts(old, new)
+    ret = salt.utils.compare_dicts(old, new)
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def list_upgrades(refresh=True):
@@ -398,16 +425,15 @@ def upgrade(refresh=True):
         refresh_db()
 
     cmd = 'brew upgrade'
-    call = _call_brew(cmd)
+    call = _call_brew(cmd, redirect_stderr=True)
 
     if call['retcode'] != 0:
         ret['result'] = False
-        if 'stderr' in call:
-            ret['comment'] += call['stderr']
-        if 'stdout' in call:
-            ret['comment'] += call['stdout']
-    else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        if call['stdout']:
+            ret['comment'] = call['stdout']
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret['changes'] = salt.utils.compare_dicts(old, new)
+
     return ret

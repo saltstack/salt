@@ -284,6 +284,48 @@ packets. Default is ``False``.
 
 .. versionadded:: 2015.8.1
 
+Profile with scopes
+-------------------
+
+Scopes can be specified by setting the optional ``ex_service_accounts``
+key in your cloud profile. The following example enables the bigquery scope.
+
+.. code-block:: yaml
+
+  my-gce-profile:
+   image: centos-6
+    ssh_username: salt
+    size: f1-micro
+    location: us-central1-a
+    network: default
+    tags: '["one", "two", "three"]'
+    metadata: '{"one": "1", "2": "two",
+                "sshKeys": ""}'
+    use_persistent_disk: True
+    delete_boot_pd: False
+    deploy: False
+    make_master: False
+    provider: gce-config
+    ex_service_accounts:
+      - scopes:
+        - bigquery
+
+
+Email can also be specified as an (optional) parameter.
+
+.. code-block:: yaml
+
+  my-gce-profile:
+  ...snip
+    ex_service_accounts:
+      - scopes:
+        - bigquery
+        email: default
+
+There can be multiple entries for scopes since ``ex-service_accounts`` accepts
+a list of dictionaries. For more information refer to the libcloud documentation
+on `specifying service account scopes`__.
+
 SSH Remote Access
 =================
 
@@ -596,3 +638,5 @@ Both the instance and load-balancer must exist before using these functions.
 
     salt-cloud -f attach_lb gce name=lb member=w4
     salt-cloud -f detach_lb gce name=lb member=oops
+
+__ http://libcloud.readthedocs.org/en/latest/compute/drivers/gce.html#specifying-service-account-scopes

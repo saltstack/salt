@@ -42,13 +42,14 @@ from salt.exceptions import (
     SaltReqTimeoutError
 )
 from salt.utils.odict import OrderedDict, DefaultOrderedDict
+from salt.utils.locales import sdecode
 # Explicit late import to avoid circular import. DO NOT MOVE THIS.
 import salt.utils.yamlloader as yamlloader
 
 # Import third party libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
-from salt.ext.six.moves import range
+from salt.ext.six.moves import map, range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -174,25 +175,31 @@ def state_args(id_, state, high):
 
 def find_name(name, state, high):
     '''
-    Scan high data for the id referencing the given name
+    Scan high data for the id referencing the given name and return a list of (IDs, state) tuples that match
+
+    Note: if `state` is sls, then we are looking for all IDs that match the given SLS
     '''
-    ext_id = ''
+    ext_id = []
     if name in high:
-        ext_id = name
+        ext_id.append((name, state))
+    # if we are requiring an entire SLS, then we need to add ourselves to everything in that SLS
+    elif state == 'sls':
+        for nid, item in high.iteritems():
+            if item['__sls__'] == name:
+                ext_id.append((nid, next(iter(item))))
+    # otherwise we are requiring a single state, lets find it
     else:
         # We need to scan for the name
         for nid in high:
             if state in high[nid]:
-                if isinstance(
-                        high[nid][state],
-                        list):
+                if isinstance(high[nid][state], list):
                     for arg in high[nid][state]:
                         if not isinstance(arg, dict):
                             continue
                         if len(arg) != 1:
                             continue
                         if arg[next(iter(arg))] == name:
-                            ext_id = nid
+                            ext_id.append((name, state))
     return ext_id
 
 
@@ -269,16 +276,6 @@ class Compiler(object):
     def __init__(self, opts, renderers):
         self.opts = opts
         self.rend = renderers
-
-    # We need __setstate__ and __getstate__ to avoid pickling errors since
-    # 'self.rend' contains a function reference which is not picklable.
-    # These methods are only used when pickling so will not be used on
-    # non-Windows platforms.
-    def __setstate__(self, state):
-        self.__init__(state['opts'])
-
-    def __getstate__(self):
-        return {'opts': self.opts}
 
     def render_template(self, template, **kwargs):
         '''
@@ -507,6 +504,7 @@ class Compiler(object):
                 chunk['order'] = chunk['order'] + chunk.pop('name_order') / 10000.0
             if chunk['order'] < 0:
                 chunk['order'] = cap + 1000000 + chunk['order']
+            chunk['name'] = sdecode(chunk['name'])
         chunks.sort(key=lambda chunk: (chunk['order'], '{0[state]}{0[name]}{0[fun]}'.format(chunk)))
         return chunks
 
@@ -549,7 +547,7 @@ class Compiler(object):
                         if isinstance(entry, dict):
                             low_name = next(six.iterkeys(entry))
                             live['name'] = low_name
-                            live.update(entry[low_name][0])
+                            list(map(live.update, entry[low_name]))
                         else:
                             live['name'] = entry
                         live['name_order'] = name_order
@@ -705,7 +703,7 @@ class State(object):
         Execute the aggregation systems to runtime modify the low chunk
         '''
         agg_opt = self.functions['config.option']('state_aggregate')
-        if low.get('aggregate') is True:
+        if 'aggregate' in low:
             agg_opt = low['aggregate']
         if agg_opt is True:
             agg_opt = [low['state']]
@@ -822,7 +820,8 @@ class State(object):
                                         func[func.rindex('.'):]
                                         )
                                 self.functions[f_key] = funcs[func]
-        self.states = salt.loader.states(self.opts, self.functions, self.utils)
+        self.serializers = salt.loader.serializers(self.opts)
+        self.states = salt.loader.states(self.opts, self.functions, self.utils, self.serializers)
         self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
 
     def module_refresh(self):
@@ -1228,7 +1227,7 @@ class State(object):
                         if isinstance(entry, dict):
                             low_name = next(six.iterkeys(entry))
                             live['name'] = low_name
-                            live.update(entry[low_name][0])
+                            list(map(live.update, entry[low_name]))
                         else:
                             live['name'] = entry
                         live['name_order'] = name_order
@@ -1259,10 +1258,8 @@ class State(object):
                         x for x in body if not x.startswith('__')
                     )
                     # Check for a matching 'name' override in high data
-                    id_ = find_name(name, state_type, high)
-                    if id_:
-                        name = id_
-                    else:
+                    ids = find_name(name, state_type, high)
+                    if len(ids) != 1:
                         errors.append(
                             'Cannot extend ID \'{0}\' in \'{1}:{2}\'. It is not '
                             'part of the high state.\n'
@@ -1275,6 +1272,9 @@ class State(object):
                                 body.get('__sls__', 'base'))
                             )
                         continue
+                    else:
+                        name = ids[0][0]
+
                 for state, run in six.iteritems(body):
                     if state.startswith('__'):
                         continue
@@ -1470,68 +1470,69 @@ class State(object):
                                             )
                                 if key == 'prereq':
                                     # Add prerequired to prereqs
-                                    ext_id = find_name(name, _state, high)
-                                    if not ext_id:
-                                        continue
-                                    if ext_id not in extend:
-                                        extend[ext_id] = {}
-                                    if _state not in extend[ext_id]:
-                                        extend[ext_id][_state] = []
-                                    extend[ext_id][_state].append(
-                                            {'prerequired': [{state: id_}]}
-                                            )
+                                    ext_ids = find_name(name, _state, high)
+                                    for ext_id, _req_state in ext_ids:
+                                        if ext_id not in extend:
+                                            extend[ext_id] = {}
+                                        if _req_state not in extend[ext_id]:
+                                            extend[ext_id][_req_state] = []
+                                        extend[ext_id][_req_state].append(
+                                                {'prerequired': [{state: id_}]}
+                                                )
                                     continue
                                 if key == 'use_in':
                                     # Add the running states args to the
                                     # use_in states
-                                    ext_id = find_name(name, _state, high)
-                                    if not ext_id:
-                                        continue
-                                    ext_args = state_args(ext_id, _state, high)
-                                    if ext_id not in extend:
-                                        extend[ext_id] = {}
-                                    if _state not in extend[ext_id]:
-                                        extend[ext_id][_state] = []
-                                    ignore_args = req_in_all.union(ext_args)
-                                    for arg in high[id_][state]:
-                                        if not isinstance(arg, dict):
+                                    ext_ids = find_name(name, _state, high)
+                                    for ext_id, _req_state in ext_ids:
+                                        if not ext_id:
                                             continue
-                                        if len(arg) != 1:
-                                            continue
-                                        if next(iter(arg)) in ignore_args:
-                                            continue
-                                        # Don't use name or names
-                                        if next(six.iterkeys(arg)) == 'name':
-                                            continue
-                                        if next(six.iterkeys(arg)) == 'names':
-                                            continue
-                                        extend[ext_id][_state].append(arg)
+                                        ext_args = state_args(ext_id, _state, high)
+                                        if ext_id not in extend:
+                                            extend[ext_id] = {}
+                                        if _req_state not in extend[ext_id]:
+                                            extend[ext_id][_req_state] = []
+                                        ignore_args = req_in_all.union(ext_args)
+                                        for arg in high[id_][state]:
+                                            if not isinstance(arg, dict):
+                                                continue
+                                            if len(arg) != 1:
+                                                continue
+                                            if next(iter(arg)) in ignore_args:
+                                                continue
+                                            # Don't use name or names
+                                            if next(six.iterkeys(arg)) == 'name':
+                                                continue
+                                            if next(six.iterkeys(arg)) == 'names':
+                                                continue
+                                            extend[ext_id][_req_state].append(arg)
                                     continue
                                 if key == 'use':
                                     # Add the use state's args to the
                                     # running state
-                                    ext_id = find_name(name, _state, high)
-                                    if not ext_id:
-                                        continue
-                                    loc_args = state_args(id_, state, high)
-                                    if id_ not in extend:
-                                        extend[id_] = {}
-                                    if state not in extend[id_]:
-                                        extend[id_][state] = []
-                                    ignore_args = req_in_all.union(loc_args)
-                                    for arg in high[ext_id][_state]:
-                                        if not isinstance(arg, dict):
+                                    ext_ids = find_name(name, _state, high)
+                                    for ext_id, _req_state in ext_ids:
+                                        if not ext_id:
                                             continue
-                                        if len(arg) != 1:
-                                            continue
-                                        if next(iter(arg)) in ignore_args:
-                                            continue
-                                        # Don't use name or names
-                                        if next(six.iterkeys(arg)) == 'name':
-                                            continue
-                                        if next(six.iterkeys(arg)) == 'names':
-                                            continue
-                                        extend[id_][state].append(arg)
+                                        loc_args = state_args(id_, state, high)
+                                        if id_ not in extend:
+                                            extend[id_] = {}
+                                        if state not in extend[id_]:
+                                            extend[id_][state] = []
+                                        ignore_args = req_in_all.union(loc_args)
+                                        for arg in high[ext_id][_req_state]:
+                                            if not isinstance(arg, dict):
+                                                continue
+                                            if len(arg) != 1:
+                                                continue
+                                            if next(iter(arg)) in ignore_args:
+                                                continue
+                                            # Don't use name or names
+                                            if next(six.iterkeys(arg)) == 'name':
+                                                continue
+                                            if next(six.iterkeys(arg)) == 'names':
+                                                continue
+                                            extend[id_][state].append(arg)
                                     continue
                                 found = False
                                 if name not in extend:
@@ -1907,9 +1908,9 @@ class State(object):
                 for req in low[requisite]:
                     req = trim_req(req)
                     found = False
+                    req_key = next(iter(req))
+                    req_val = req[req_key]
                     for chunk in chunks:
-                        req_key = next(iter(req))
-                        req_val = req[req_key]
                         if req_val is None:
                             continue
                         if req_key == 'sls':
@@ -2086,11 +2087,11 @@ class State(object):
             crefs[(chunk['state'], chunk['name'])] = chunk
             crefs[(chunk['state'], chunk['__id__'])] = chunk
             if 'listen' in chunk:
-                listeners.append({(chunk['state'], chunk['name']): chunk['listen']})
+                listeners.append({(chunk['state'], chunk['__id__']): chunk['listen']})
             if 'listen_in' in chunk:
                 for l_in in chunk['listen_in']:
                     for key, val in six.iteritems(l_in):
-                        listeners.append({(key, val): [{chunk['state']: chunk['name']}]})
+                        listeners.append({(key, val): [{chunk['state']: chunk['__id__']}]})
         mod_watchers = []
         errors = {}
         for l_dict in listeners:
@@ -2161,8 +2162,7 @@ class State(object):
         # Check for any disabled states
         disabled = {}
         if 'state_runs_disabled' in self.opts['grains']:
-            _chunks = copy.deepcopy(chunks)
-            for low in _chunks:
+            for low in chunks[:]:
                 state_ = '{0}.{1}'.format(low['state'], low['fun'])
                 for pat in self.opts['grains']['state_runs_disabled']:
                     if fnmatch.fnmatch(state_, pat):
@@ -3289,7 +3289,8 @@ class MasterState(State):
         # Load the states, but they should not be used in this class apart
         # from inspection
         self.utils = salt.loader.utils(self.opts)
-        self.states = salt.loader.states(self.opts, self.functions, self.utils)
+        self.serializers = salt.loader.serializers(self.opts)
+        self.states = salt.loader.states(self.opts, self.functions, self.utils, self.serializers)
         self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
 
 

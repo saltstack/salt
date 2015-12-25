@@ -7,6 +7,9 @@ Virtual machine image management tools
 from __future__ import absolute_import
 import logging
 
+# Import salt libs
+import salt.utils
+
 # Import 3rd-party libs
 import salt.ext.six as six
 
@@ -36,7 +39,7 @@ def mount_image(location):
     return ''
 
 # compatibility for api change
-mnt_image = mount_image
+mnt_image = salt.utils.alias_function(mount_image, 'mnt_image')
 
 
 def umount_image(mnt):

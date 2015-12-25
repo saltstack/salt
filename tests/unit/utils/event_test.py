@@ -103,13 +103,13 @@ class TestSaltEvent(TestCase):
     def test_master_event(self):
         me = event.MasterEvent(SOCK_DIR, listen=False)
         self.assertEqual(
-            me.puburi, 'ipc://{0}'.format(
+            me.puburi, '{0}'.format(
                 os.path.join(SOCK_DIR, 'master_event_pub.ipc')
             )
         )
         self.assertEqual(
             me.pulluri,
-            'ipc://{0}'.format(
+            '{0}'.format(
                 os.path.join(SOCK_DIR, 'master_event_pull.ipc')
             )
         )
@@ -120,7 +120,7 @@ class TestSaltEvent(TestCase):
         me = event.MinionEvent(opts, listen=False)
         self.assertEqual(
             me.puburi,
-            'ipc://{0}'.format(
+            '{0}'.format(
                 os.path.join(
                     SOCK_DIR, 'minion_event_{0}_pub.ipc'.format(id_hash)
                 )
@@ -128,7 +128,7 @@ class TestSaltEvent(TestCase):
         )
         self.assertEqual(
             me.pulluri,
-            'ipc://{0}'.format(
+            '{0}'.format(
                 os.path.join(
                     SOCK_DIR, 'minion_event_{0}_pull.ipc'.format(id_hash)
                 )
@@ -138,15 +138,15 @@ class TestSaltEvent(TestCase):
     def test_minion_event_tcp_ipc_mode(self):
         opts = dict(id='foo', ipc_mode='tcp')
         me = event.MinionEvent(opts, listen=False)
-        self.assertEqual(me.puburi, 'tcp://127.0.0.1:4510')
-        self.assertEqual(me.pulluri, 'tcp://127.0.0.1:4511')
+        self.assertEqual(me.puburi, 4510)
+        self.assertEqual(me.pulluri, 4511)
 
     def test_minion_event_no_id(self):
         me = event.MinionEvent(dict(sock_dir=SOCK_DIR), listen=False)
         id_hash = hashlib.md5('').hexdigest()[:10]
         self.assertEqual(
             me.puburi,
-            'ipc://{0}'.format(
+            '{0}'.format(
                 os.path.join(
                     SOCK_DIR, 'minion_event_{0}_pub.ipc'.format(id_hash)
                 )
@@ -154,7 +154,7 @@ class TestSaltEvent(TestCase):
         )
         self.assertEqual(
             me.pulluri,
-            'ipc://{0}'.format(
+            '{0}'.format(
                 os.path.join(
                     SOCK_DIR, 'minion_event_{0}_pull.ipc'.format(id_hash)
                 )

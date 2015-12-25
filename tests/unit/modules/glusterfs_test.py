@@ -24,7 +24,7 @@ glusterfs.__salt__ = {}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class GitTestCase(TestCase):
+class GlusterfsTestCase(TestCase):
     '''
     Test cases for salt.modules.glusterfs
     '''
@@ -130,26 +130,29 @@ class GitTestCase(TestCase):
         '''
         Test if it start a gluster volume.
         '''
-        mock = MagicMock(return_value=['Newvolume1', 'Newvolume2'])
-        with patch.object(glusterfs, 'list_volumes', mock):
-            mock = MagicMock(return_value='creation success')
-            with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-                self.assertEqual(glusterfs.start_volume('Newvolume1'),
-                                 'Volume already started')
+        mock_list = MagicMock(return_value=['Newvolume1', 'Newvolume2'])
+        with patch.object(glusterfs, 'list_volumes', mock_list):
+            mock_status = MagicMock(return_value={})
+            with patch.object(glusterfs, 'status', mock_status):
+                mock = MagicMock(return_value='creation success')
+                with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
+                    self.assertEqual(glusterfs.start_volume('Newvolume1'),
+                                     'Volume already started')
 
-            mock = MagicMock(side_effect=['does not exist',
-                                          'creation success'])
-            with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-                self.assertEqual(glusterfs.start_volume('Newvolume1'),
-                                 'Volume Newvolume1 started')
+            mock_status = MagicMock(return_value='')
+            with patch.object(glusterfs, 'status', mock_status):
+                mock_run = MagicMock(return_value='creation success')
+                with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
+                    self.assertEqual(glusterfs.start_volume('Newvolume1'),
+                                     'Volume Newvolume1 started')
 
-            mock = MagicMock(return_value='does not exist')
-            with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-                self.assertEqual(glusterfs.start_volume('Newvolume1'),
-                                 'does not exist')
+                mock = MagicMock(return_value='does not exist')
+                with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
+                    self.assertEqual(glusterfs.start_volume('Newvolume1'),
+                                     'does not exist')
 
-        mock = MagicMock(return_value='No volumes present in cluster')
-        with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
+        mock_run = MagicMock(return_value='No volumes present in cluster')
+        with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
             self.assertEqual(glusterfs.start_volume('mycluster'),
                              'Volume does not exist')
 
@@ -245,4 +248,4 @@ class GitTestCase(TestCase):
 
 if __name__ == '__main__':
     from integration import run_tests
-    run_tests(GitTestCase, needs_daemon=False)
+    run_tests(GlusterfsTestCase, needs_daemon=False)

@@ -1,4 +1,6 @@
 # encoding: utf-8
+from __future__ import absolute_import, print_function
+
 '''
 A non-blocking REST API for Salt
 ================================
@@ -184,11 +186,10 @@ a return like::
 .. |401| replace:: authentication required
 .. |406| replace:: requested Content-Type not available
 .. |500| replace:: internal server error
-'''
+'''  # pylint: disable=W0105
 # pylint: disable=W0232
 
 # Import Python libs
-from __future__ import absolute_import
 import time
 import math
 import fnmatch
@@ -204,7 +205,7 @@ import tornado.ioloop
 import tornado.web
 import tornado.gen
 from tornado.concurrent import Future
-from zmq.eventloop import ioloop, zmqstream
+from zmq.eventloop import ioloop
 import salt.ext.six as six
 # pylint: enable=import-error
 
@@ -298,6 +299,7 @@ class EventListener(object):
             opts['transport'],
             opts=opts,
             listen=True,
+            io_loop=tornado.ioloop.IOLoop.current()
         )
 
         # tag -> list of futures
@@ -309,11 +311,7 @@ class EventListener(object):
         # map of future -> timeout_callback
         self.timeout_map = {}
 
-        self.stream = zmqstream.ZMQStream(
-            self.event.sub,
-            io_loop=tornado.ioloop.IOLoop.current(),
-        )
-        self.stream.on_recv(self._handle_event_socket_recv)
+        self.event.set_event_handler(self._handle_event_socket_recv)
 
     def clean_timeout_futures(self, request):
         '''
@@ -378,7 +376,7 @@ class EventListener(object):
         '''
         Callback for events on the event sub socket
         '''
-        mtag, data = self.event.unpack(raw[0], self.event.serial)
+        mtag, data = self.event.unpack(raw, self.event.serial)
         # see if we have any futures that need this info:
         for tag_prefix, futures in six.iteritems(self.tag_map):
             if mtag.startswith(tag_prefix):
@@ -542,7 +540,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
             'application/json': json.loads,
             'application/x-yaml': yaml.safe_load,
             'text/yaml': yaml.safe_load,
-            # because people are terrible and dont mean what they say
+            # because people are terrible and don't mean what they say
             'text/plain': json.loads
         }
 
@@ -587,7 +585,7 @@ class BaseSaltAPIHandler(tornado.web.RequestHandler, SaltClientsMixIn):  # pylin
             if allowed_origin:
                 self.set_header("Access-Control-Allow-Origin", allowed_origin)
 
-    def options(self):
+    def options(self, *args, **kwargs):
         '''
         Return CORS headers for preflight requests
         '''
@@ -1701,7 +1699,12 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         ret = self.event.fire_event({
             'post': self.raw_data,
-            'headers': self.request.headers,
+            # In Tornado >= v4.0.3, the headers come
+            # back as an HTTPHeaders instance, which
+            # is a dictionary. We must cast this as
+            # a dictionary in order for msgpack to
+            # serialize it.
+            'headers': dict(self.request.headers),
         }, tag)
 
         self.write(self.serialize({'success': ret}))

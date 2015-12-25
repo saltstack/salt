@@ -73,7 +73,7 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return (False, 'The modle boto_elasticache could not be loaded: boto libraries not found')
     __utils__['boto.assign_funcs'](__name__, 'elasticache')
     return True
 
@@ -338,7 +338,7 @@ def subnet_group_exists(name, tags=None, region=None, key=None, keyid=None, prof
         salt myminion boto_elasticache.subnet_group_exists my-param-group \
                 region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return False
     try:
@@ -364,7 +364,7 @@ def create_subnet_group(name, description, subnet_ids, tags=None, region=None,
             "group description" '[subnet-12345678, subnet-87654321]' \
             region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return False
     if subnet_group_exists(name, tags, region, key, keyid, profile):
@@ -438,7 +438,7 @@ def delete_subnet_group(name, region=None, key=None, keyid=None, profile=None):
         salt myminion boto_elasticache.delete_subnet_group my-subnet-group \
                 region=us-east-1
     '''
-    conn = _get_conn(region, key, keyid, profile)
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     if not conn:
         return False
     try:

@@ -101,7 +101,7 @@ class CronTestCase(TestCase):
             hour='1',
             identifier='1',
             user='root')
-        self.assertEqual(
+        self.assertMultiLineEqual(
             get_crontab(),
             '# Lines below here are managed by Salt, do not edit\n'
             '# SALT_CRON_IDENTIFIER:1\n'
@@ -111,23 +111,55 @@ class CronTestCase(TestCase):
             hour='2',
             identifier='1',
             user='root')
-        self.assertEqual(
+        self.assertMultiLineEqual(
             get_crontab(),
             '# Lines below here are managed by Salt, do not edit\n'
             '# SALT_CRON_IDENTIFIER:1\n'
             '* 2 * * * foo')
         cron.present(
-            name='foo',
-            hour='2',
-            identifier='2',
+            name='cmd1',
+            minute='0',
+            comment='Commented cron job',
+            commented=True,
+            identifier='commented_1',
             user='root')
-        self.assertEqual(
+        self.assertMultiLineEqual(
             get_crontab(),
             '# Lines below here are managed by Salt, do not edit\n'
             '# SALT_CRON_IDENTIFIER:1\n'
             '* 2 * * * foo\n'
+            '# Commented cron job SALT_CRON_IDENTIFIER:commented_1\n'
+            '#DISABLED#0 * * * * cmd1')
+        cron.present(
+            name='foo',
+            hour='2',
+            identifier='2',
+            user='root')
+        self.assertMultiLineEqual(
+            get_crontab(),
+            '# Lines below here are managed by Salt, do not edit\n'
+            '# SALT_CRON_IDENTIFIER:1\n'
+            '* 2 * * * foo\n'
+            '# Commented cron job SALT_CRON_IDENTIFIER:commented_1\n'
+            '#DISABLED#0 * * * * cmd1\n'
             '# SALT_CRON_IDENTIFIER:2\n'
             '* 2 * * * foo')
+        cron.present(
+            name='cmd2',
+            commented=True,
+            identifier='commented_2',
+            user='root')
+        self.assertMultiLineEqual(
+            get_crontab(),
+            '# Lines below here are managed by Salt, do not edit\n'
+            '# SALT_CRON_IDENTIFIER:1\n'
+            '* 2 * * * foo\n'
+            '# Commented cron job SALT_CRON_IDENTIFIER:commented_1\n'
+            '#DISABLED#0 * * * * cmd1\n'
+            '# SALT_CRON_IDENTIFIER:2\n'
+            '* 2 * * * foo\n'
+            '# SALT_CRON_IDENTIFIER:commented_2\n'
+            '#DISABLED#* * * * * cmd2')
         set_crontab(
             '# Lines below here are managed by Salt, do not edit\n'
             '# SALT_CRON_IDENTIFIER:1\n'

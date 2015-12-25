@@ -84,7 +84,7 @@ def __virtual__():
         return __virtualname__
     elif __grains__.get('os_family', False) == 'Debian':
         return __virtualname__
-    return False
+    return (False, 'The pkg module could not be loaded: unsupported OS family')
 
 
 def __init__(opts):
@@ -298,7 +298,7 @@ def latest_version(*names, **kwargs):
     return ret
 
 # available_version is being deprecated
-available_version = latest_version
+available_version = salt.utils.alias_function(latest_version, 'available_version')
 
 
 def version(*names, **kwargs):
@@ -473,7 +473,7 @@ def install(name=None,
 
         .. versionadded:: 2015.5.0
 
-   force_conf_new
+    force_conf_new
         Always install the new version of any configuration files.
 
         .. versionadded:: 2015.8.0
@@ -667,8 +667,13 @@ def install(name=None,
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
 
+    errors = []
     for cmd in cmds:
-        __salt__['cmd.run'](cmd, output_loglevel='trace', python_shell=False)
+        out = __salt__['cmd.run_all'](cmd,
+                                      output_loglevel='trace',
+                                      python_shell=False)
+        if out['retcode'] != 0 and out['stderr']:
+            errors.append(out['stderr'])
 
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
@@ -678,6 +683,12 @@ def install(name=None,
         if pkgname not in ret or pkgname in old:
             ret.update({pkgname: {'old': old.get(pkgname, ''),
                                   'new': new.get(pkgname, '')}})
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered installing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
 
     return ret
 
@@ -703,22 +714,37 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     cmd.extend(targets)
     env = _parse_env(kwargs.get('env'))
     env.update(DPKG_ENV_VARS.copy())
-    __salt__['cmd.run'](
+    out = __salt__['cmd.run_all'](
         cmd,
         env=env,
         output_loglevel='trace',
         python_shell=False,
     )
+    if out['retcode'] != 0 and out['stderr']:
+        errors = [out['stderr']]
+    else:
+        errors = []
+
     __context__.pop('pkg.list_pkgs', None)
     new = list_pkgs()
     new_removed = list_pkgs(removed=True)
 
-    ret = {'installed': salt.utils.compare_dicts(old, new)}
+    changes = salt.utils.compare_dicts(old, new)
     if action == 'purge':
-        ret['removed'] = salt.utils.compare_dicts(old_removed, new_removed)
-        return ret
+        ret = {
+            'removed': salt.utils.compare_dicts(old_removed, new_removed),
+            'installed': changes
+        }
     else:
-        return ret['installed']
+        ret = changes
+
+    if errors:
+        raise CommandExecutionError(
+            'Problem encountered removing package(s)',
+            info={'errors': errors, 'changes': ret}
+        )
+
+    return ret
 
 
 def autoremove(list_only=False, purge=False):
@@ -839,7 +865,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     '''
     Upgrades all packages via ``apt-get dist-upgrade``
 
-    Returns a dict containing the changes.
+    Returns a dict containing the changes::
 
         {'<package>':  {'old': '<old-version>',
                         'new': '<new-version>'}}
@@ -848,9 +874,9 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         Whether to perform the upgrade using dist-upgrade vs upgrade.  Default
         is to use upgrade.
 
-    .. versionadded:: 2014.7.0
+        .. versionadded:: 2014.7.0
 
-   force_conf_new
+    force_conf_new
         Always install the new version of any configuration files.
 
         .. versionadded:: 2015.8.0
@@ -880,18 +906,20 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
     else:
         cmd = ['apt-get', '-q', '-y', '-o', 'DPkg::Options::={0}'.format(force_conf),
                '-o', 'DPkg::Options::=--force-confdef', 'upgrade']
-    call = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='trace',
+    call = __salt__['cmd.run_all'](cmd,
+                                   output_loglevel='trace',
+                                   python_shell=False,
+                                   redirect_stderr=True,
                                    env=DPKG_ENV_VARS.copy())
     if call['retcode'] != 0:
         ret['result'] = False
-        if 'stderr' in call:
-            ret['comment'] += call['stderr']
-        if 'stdout' in call:
-            ret['comment'] += call['stdout']
-    else:
-        __context__.pop('pkg.list_pkgs', None)
-        new = list_pkgs()
-        ret['changes'] = salt.utils.compare_dicts(old, new)
+        if call['stdout']:
+            ret['comment'] = call['stdout']
+
+    __context__.pop('pkg.list_pkgs', None)
+    new = list_pkgs()
+    ret['changes'] = salt.utils.compare_dicts(old, new)
+
     return ret
 
 
@@ -1622,19 +1650,30 @@ def mod_repo(repo, saltenv='base', **kwargs):
     '''
     Modify one or more values for a repo.  If the repo does not exist, it will
     be created, so long as the definition is well formed.  For Ubuntu the
-    "ppa:<project>/repo" format is acceptable. "ppa:" format can only be
+    ``ppa:<project>/repo`` format is acceptable. ``ppa:`` format can only be
     used to create a new repository.
 
-    The following options are available to modify a repo definition::
+    The following options are available to modify a repo definition:
 
-        comps (a comma separated list of components for the repo, e.g. "main")
-        file (a file name to be used)
-        keyserver (keyserver to get gpg key from)
-        keyid (key id to load with the keyserver argument)
-        key_url (URL to a gpg key to add to the apt gpg keyring)
-        consolidate (if true, will attempt to de-dup and consolidate sources)
+        comps
+            a comma separated list of components for the repo, e.g. ``main``
 
-        * Note: Due to the way keys are stored for apt, there is a known issue
+        file
+            a file name to be used
+
+        keyserver
+            keyserver to get gpg key from
+
+        keyid
+            key id to load with the keyserver argument
+
+        key_url
+            URL to a GPG key to add to the APT GPG keyring
+
+        consolidate
+            if ``True``, will attempt to de-dup and consolidate sources
+
+        .. note:: Due to the way keys are stored for APT, there is a known issue
                 where the key wont be updated unless another change is made
                 at the same time.  Keys should be properly added on initial
                 configuration.
@@ -2043,10 +2082,10 @@ def set_selections(path=None, selection=None, clear=False, saltenv='base'):
 
     The state can be any one of, documented in ``dpkg(1)``:
 
-     - install
-     - hold
-     - deinstall
-     - purge
+    - install
+    - hold
+    - deinstall
+    - purge
 
     This command is commonly used to mark specific packages to be held from
     being upgraded, that is, to be kept at a certain version. When a state is

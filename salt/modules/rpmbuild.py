@@ -12,14 +12,18 @@ This module impliments the pkgbuild interface
 
 # Import python libs
 from __future__ import absolute_import, print_function
+import errno
+import logging
 import os
-import tempfile
 import shutil
-from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
+import tempfile
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import SaltInvocationError
+from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=no-name-in-module,import-error
+
+log = logging.getLogger(__name__)
 
 __virtualname__ = 'pkgbuild'
 
@@ -30,7 +34,7 @@ def __virtual__():
     '''
     if salt.utils.which('mock'):
         return __virtualname__
-    return False
+    return (False, 'The rpmbuild execution module failed to load: the mock package is not installed.')
 
 
 def _create_rpmmacros():
@@ -164,26 +168,42 @@ def make_src_pkg(dest_dir, spec, sources, env=None, template=None, saltenv='base
     return ret
 
 
-def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='base'):
+def build(runas,
+          tgt,
+          dest_dir,
+          spec,
+          sources,
+          deps,
+          env,
+          template,
+          saltenv='base',
+          log_dir='/var/log/salt/pkgbuild'):
     '''
     Given the package destination directory, the spec file source and package
     sources, use mock to safely build the rpm defined in the spec file
 
     CLI Example:
 
-        salt '*' pkgbuild.build mock epel-7-x86_64 /var/www/html/ https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/rpm/python-libnacl.spec https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
+        salt '*' pkgbuild.build mock epel-7-x86_64 /var/www/html https://raw.githubusercontent.com/saltstack/libnacl/master/pkg/rpm/python-libnacl.spec https://pypi.python.org/packages/source/l/libnacl/libnacl-1.3.5.tar.gz
 
     This example command should build the libnacl package for rhel 7 using user
     mock and place it in /var/www/html/ on the minion
     '''
     ret = {}
-    if not os.path.isdir(dest_dir):
-        try:
-            os.makedirs(dest_dir)
-        except (IOError, OSError):
-            pass
-    srpm_dir = tempfile.mkdtemp()
-    srpms = make_src_pkg(srpm_dir, spec, sources, env, template, saltenv)
+    try:
+        os.makedirs(dest_dir)
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise
+    srpm_dir = os.path.join(dest_dir, 'SRPMS')
+    srpm_build_dir = tempfile.mkdtemp()
+    try:
+        srpms = make_src_pkg(srpm_build_dir, spec, sources,
+                             env, template, saltenv)
+    except Exception as exc:
+        shutil.rmtree(srpm_build_dir)
+        log.error('Failed to make src package')
+        return ret
 
     distset = _get_distset(tgt)
 
@@ -197,37 +217,51 @@ def build(runas, tgt, dest_dir, spec, sources, deps, env, template, saltenv='bas
 
     for srpm in srpms:
         dbase = os.path.dirname(srpm)
-        cmd = 'chown {0} -R {1}'.format(runas, dbase)
-        __salt__['cmd.run'](cmd)
         results_dir = tempfile.mkdtemp()
-        cmd = 'chown {0} -R {1}'.format(runas, results_dir)
-        __salt__['cmd.run'](cmd)
-        cmd = 'mock --root={0} --resultdir={1} {2} {3} {4}'.format(
-            tgt,
-            results_dir,
-            distset,
-            noclean,
-            srpm)
-        __salt__['cmd.run'](cmd, runas=runas)
-        for rpm in os.listdir(results_dir):
-            full = os.path.join(results_dir, rpm)
-            if rpm.endswith('src.rpm'):
-                sdest = os.path.join(dest_dir, 'SRPMS', rpm)
-                if not os.path.isdir(sdest):
+        try:
+            __salt__['cmd.run']('chown {0} -R {1}'.format(runas, dbase))
+            __salt__['cmd.run']('chown {0} -R {1}'.format(runas, results_dir))
+            cmd = 'mock --root={0} --resultdir={1} {2} {3} {4}'.format(
+                tgt,
+                results_dir,
+                distset,
+                noclean,
+                srpm)
+            __salt__['cmd.run'](cmd, runas=runas)
+            cmd = ['rpm', '-qp', '--queryformat',
+                   '{0}/%{{name}}/%{{version}}-%{{release}}'.format(log_dir),
+                   srpm]
+            log_dest = __salt__['cmd.run_stdout'](cmd, python_shell=False)
+            for filename in os.listdir(results_dir):
+                full = os.path.join(results_dir, filename)
+                if filename.endswith('src.rpm'):
+                    sdest = os.path.join(srpm_dir, filename)
                     try:
-                        os.makedirs(sdest)
-                    except (IOError, OSError):
-                        pass
-                shutil.copy(full, sdest)
-            elif rpm.endswith('.rpm'):
-                bdist = os.path.join(dest_dir, rpm)
-                shutil.copy(full, bdist)
-            else:
-                with salt.utils.fopen(full, 'r') as fp_:
-                    ret[rpm] = fp_.read()
-        shutil.rmtree(results_dir)
+                        os.makedirs(srpm_dir)
+                    except OSError as exc:
+                        if exc.errno != errno.EEXIST:
+                            raise
+                    shutil.copy(full, sdest)
+                    ret.setdefault('Source Packages', []).append(sdest)
+                elif filename.endswith('.rpm'):
+                    bdist = os.path.join(dest_dir, filename)
+                    shutil.copy(full, bdist)
+                    ret.setdefault('Packages', []).append(bdist)
+                else:
+                    log_file = os.path.join(log_dest, filename)
+                    try:
+                        os.makedirs(log_dest)
+                    except OSError as exc:
+                        if exc.errno != errno.EEXIST:
+                            raise
+                    shutil.copy(full, log_file)
+                    ret.setdefault('Log Files', []).append(log_file)
+        except Exception as exc:
+            log.error('Error building from {0}: {1}'.format(srpm, exc))
+        finally:
+            shutil.rmtree(results_dir)
     shutil.rmtree(deps_dir)
-    shutil.rmtree(srpm_dir)
+    shutil.rmtree(srpm_build_dir)
     return ret
 
 

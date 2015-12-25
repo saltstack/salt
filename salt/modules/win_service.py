@@ -28,7 +28,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return __virtualname__
-    return False
+    return (False, "Module win_service: module only works on Windows systems")
 
 
 def get_enabled():
@@ -228,11 +228,14 @@ def create_win_salt_restart_task():
 
         salt '*' service.create_win_salt_restart_task()
     '''
-    cmd = 'cmd /c ping -n 3 127.0.0.1 && net stop salt-minion && net start salt-minion'
+    cmd = 'cmd'
+    args = '/c ping -n 3 127.0.0.1 && net stop salt-minion && net start salt-minion'
     return __salt__['task.create_task'](name='restart-salt-minion',
                                         user_name='System',
+                                        force=True,
                                         action_type='Execute',
                                         cmd=cmd,
+                                        arguments=args,
                                         trigger_type='Once',
                                         start_date='1975-01-01',
                                         start_time='01:00')
@@ -406,7 +409,7 @@ def create(name,
     group: Specifies the name of the group of which this service is a member
     tag: Specifies whether or not to obtain a TagID from the CreateService call. For boot-start and system-start drivers
       - yes/no
-    depend: Specifies the names of services or groups that myust start before this service. The names are seperated by forward slashes.
+    depend: Specifies the names of services or groups that myust start before this service. The names are separated by forward slashes.
     obj: Specifies th ename of an account in which a service will run. Default is LocalSystem
     password: Specifies a password. Required if other than LocalSystem account is used.
 

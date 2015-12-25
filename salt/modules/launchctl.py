@@ -25,7 +25,7 @@ def __virtual__():
     '''
     if __grains__['os'] == 'MacOS':
         return __virtualname__
-    return False
+    return (False, 'launchctl execution module cannot be loaded: only available on MacOS.')
 
 
 def _launchd_paths():

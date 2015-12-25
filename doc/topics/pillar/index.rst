@@ -58,6 +58,22 @@ pillar available to it. Assuming the ``pillar_roots`` value of ``/srv/pillar``
 taken from above, the ``packages`` pillar would be located at
 ``/srv/pillar/packages.sls``.
 
+Any number of matchers can be added to the base environment. For example, here
+is an expanded version of the Pillar top file stated above:
+
+/srv/pillar/top.sls:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - packages
+      'web*':
+        - vim
+
+In this expanded top file, minions that match ``web*`` will have access to the
+``/srv/pillar/pacakges.sls`` file, as well as the ``/srv/pillar/vim.sls`` file.
+
 Another example shows how to use other standard top matching types
 to deliver specific salt pillar data to minions with different properties.
 
@@ -84,6 +100,10 @@ by their ``os`` grain:
     {% endif %}
 
     company: Foo Industries
+
+.. important::
+  See :ref:`Is Targeting using Grain Data Secure? <faq-grain-security>` for
+  important security information.
 
 The above pillar sets two key/value pairs. If a minion is running RedHat, then
 the ``apache`` key is set to ``httpd`` and the ``git`` key is set to the value
@@ -211,7 +231,10 @@ The resulting pillar will be as follows:
             9.9.5
 
 .. note::
-       Remember: conflicting keys will be overwritten in a non-deterministic manner!
+    Pillar files are applied in the order they are listed in the top file.
+    Therefore conflicting keys will be overwritten in a 'last one wins' manner!
+    For example, in the above scenario conflicting key values in ``services``
+    will overwrite those in ``packages`` because it's at the bottom of the list.
 
 Including Other Pillars
 =======================

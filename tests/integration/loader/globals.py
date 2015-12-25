@@ -130,7 +130,7 @@ class LoaderGlobalsTest(integration.ModuleCase):
             - __grains__
             - __context__
         '''
-        self._verify_globals(salt.loader.states(self.master_opts, {}, {}))
+        self._verify_globals(salt.loader.states(self.master_opts, {}, {}, {}))
 
     def test_renderers(self):
         '''

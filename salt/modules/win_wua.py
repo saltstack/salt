@@ -9,10 +9,13 @@ Module for managing Windows Updates using the Windows Update Agent.
         - pythoncom
 """
 from __future__ import absolute_import
-from salt.ext.six.moves import range  # pylint: disable=no-name-in-module,redefined-builtin
 
 # Import Python libs
 import logging
+
+# Import Salt libs
+from salt.ext import six
+from salt.ext.six.moves import range  # pylint: disable=no-name-in-module,redefined-builtin
 
 # Import 3rd-party libs
 try:
@@ -35,7 +38,7 @@ def __virtual__():
     """
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return True
-    return False
+    return (False, "Module win_wua: module has failed dependencies or is not on Windows client")
 
 
 def _wua_search(skip_hidden=True,
@@ -1060,9 +1063,15 @@ def set_wu_settings(level=None,
                 ret['Success'] = False
 
     if time is not None:
+        # Check for time as a string: if the time is not quoted, yaml will
+        # treat it as an integer
+        if not isinstance(time, six.string_types):
+            ret['Comment'] = "Time argument needs to be a string; it may need to"\
+                             "be quoted. Passed {0}. Time not set.".format(time)
+            ret['Success'] = False
         # Check for colon in the time
-        if ':' not in time:
-            ret['Comment'] = "Time needs to be in 00:00 format." \
+        elif ':' not in time:
+            ret['Comment'] = "Time argument needs to be in 00:00 format." \
                              " Passed {0}. Time not set.".format(time)
             ret['Success'] = False
         else:

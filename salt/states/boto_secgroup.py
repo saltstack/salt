@@ -132,6 +132,8 @@ def present(
 
         .. versionadded:: Boron
 
+        .. versionadded:: 2015.8.2
+
     rules
         A list of ingress rule dicts. If not specified, ``rules=None``,
         the ingress rules will be unmanaged. If set to an empty list, ``[]``,
@@ -169,6 +171,8 @@ def present(
     if not _ret['result']:
         ret['result'] = _ret['result']
         if ret['result'] is False:
+            return ret
+        elif ret['result'] is None:
             return ret
     if rules is not None:
         _ret = _rules_present(name, rules, vpc_id=vpc_id, vpc_name=vpc_name,
@@ -320,7 +324,7 @@ def _get_rule_changes(rules, _rules):
                                       ' required arguments for security group'
                                       ' rules.')
         supported_protocols = ['tcp', 'udp', 'icmp', 'all', '-1']
-        if ip_protocol not in supported_protocols:
+        if ip_protocol not in supported_protocols and (not ip_protocol.isdigit() or int(ip_protocol) > 255):
             msg = ('Invalid ip_protocol {0} specified in security group rule.')
             raise SaltInvocationError(msg.format(ip_protocol))
         # For the 'all' case, we need to change the protocol name to '-1'.
@@ -597,6 +601,11 @@ def _tags_present(name, tags, vpc_id=None, vpc_name=None, region=None,
     if tags:
         sg = __salt__['boto_secgroup.get_config'](name, None, region, key,
                                                   keyid, profile, vpc_id, vpc_name)
+        if not sg:
+            msg = '{0} security group configuration could not be retrieved.'
+            ret['comment'] = msg.format(name)
+            ret['result'] = False
+            return ret
         tags_to_add = tags
         tags_to_update = {}
         tags_to_remove = []

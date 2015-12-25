@@ -42,17 +42,31 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 import json
-import xml.etree.cElementTree as xml
+
+# Import 3rd party libs
+try:
+    from salt._compat import ElementTree as ET
+    HAS_ELEMENT_TREE = True
+except ImportError:
+    HAS_ELEMENT_TREE = False
 
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'boto_cfn'
+
 
 def __virtual__():
     '''
-    Only load if boto is available.
+    Only load if elementtree xml library and boto are available.
     '''
-    return 'boto_cfn.exists' in __salt__
+    if not HAS_ELEMENT_TREE:
+        return (False, 'Cannot load {0} state: ElementTree library unavailable'.format(__virtualname__))
+
+    if 'boto_cfn.exists' in __salt__:
+        return True
+    else:
+        return (False, 'Cannot load {0} state: boto_cfn module unavailable'.format(__virtualname__))
 
 
 def present(name, template_body=None, template_url=None, parameters=None, notification_arns=None, disable_rollback=None,
@@ -246,7 +260,7 @@ def _validate(template_body=None, template_url=None, region=None, key=None, keyi
 def _get_error(error):
     # Converts boto exception to string that can be used to output error.
     error = '\n'.join(error.split('\n')[1:])
-    error = xml.fromstring(error)
+    error = ET.fromstring(error)
     code = error[0][1].text
     message = error[0][2].text
     return code, message

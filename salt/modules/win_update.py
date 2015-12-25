@@ -40,7 +40,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_DEPENDENCIES:
         return True
-    return False
+    return (False, "Module win_update: module has failed dependencies or is not on Windows client")
 
 
 def _gather_update_categories(updateCollection):

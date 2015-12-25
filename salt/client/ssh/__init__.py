@@ -116,32 +116,66 @@ RSTR_RE = r'(?:^|\r?\n)' + RSTR + '(?:\r?\n|$)'
 # 1. Identify a suitable python
 # 2. Jump to python
 
-SSH_SH_SHIM = r'''/bin/sh << 'EOF'
+# Note the list-comprehension syntax to define SSH_SH_SHIM is needed
+# to be able to define the string with indentation for readability but
+# still strip the white space for compactness and to avoid issues with
+# some multi-line embedded python code having indentation errors
+SSH_SH_SHIM = \
+    '\n'.join(
+        [s.strip() for s in r'''/bin/sh << 'EOF'
 set -e
 set -u
 DEBUG="{{DEBUG}}"
 if [ -n "$DEBUG" ]
-then set -x
+    then set -x
 fi
 SUDO=""
 if [ -n "{{SUDO}}" ]
-then SUDO="sudo "
+    then SUDO="sudo "
 fi
 EX_PYTHON_INVALID={EX_THIN_PYTHON_INVALID}
 PYTHON_CMDS="python3 python27 python2.7 python26 python2.6 python2 python"
 for py_cmd in $PYTHON_CMDS
-do if "$py_cmd" -c "import sys; sys.exit(not (sys.version_info >= (2, 6) and sys.version_info[0] == {{HOST_PY_MAJOR}}));"
-then py_cmd_path=`"$py_cmd" -c 'from __future__ import print_function; import sys; print(sys.executable);'`
-exec $SUDO "$py_cmd_path" -c 'import base64; exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
-exit 0
-else continue
-fi
+do
+    if "$py_cmd" -c \
+        "import sys; sys.exit(not (sys.version_info >= (2, 6)
+                              and sys.version_info[0] == {{HOST_PY_MAJOR}}));"
+    then
+        py_cmd_path=`"$py_cmd" -c \
+                   'from __future__ import print_function;
+                   import sys; print(sys.executable);'`
+        cmdpath=$(which $py_cmd 2>&1)
+        if [[ "$(file $cmdpath)" == *"shell script"* ]]
+        then
+            ex_vars="'PATH', 'LD_LIBRARY_PATH', 'MANPATH', \
+                   'XDG_DATA_DIRS', 'PKG_CONFIG_PATH'"
+            export $($py_cmd -c \
+                  "from __future__ import print_function;
+                  import sys;
+                  import os;
+                  map(sys.stdout.write, ['{{{{0}}}}={{{{1}}}} ' \
+                  .format(x, os.environ[x]) for x in [$ex_vars]])")
+            exec $SUDO PATH=$PATH LD_LIBRARY_PATH=$LD_LIBRARY_PATH \
+                     MANPATH=$MANPATH XDG_DATA_DIRS=$XDG_DATA_DIRS \
+                     PKG_CONFIG_PATH=$PKG_CONFIG_PATH \
+                     "$py_cmd_path" -c \
+                   'import base64;
+                   exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
+        else
+            exec $SUDO "$py_cmd_path" -c \
+                   'import base64;
+                   exec(base64.b64decode("""{{SSH_PY_CODE}}""").decode("utf-8"))'
+        fi
+        exit 0
+    else
+        continue
+    fi
 done
 echo "ERROR: Unable to locate appropriate python command" >&2
 exit $EX_PYTHON_INVALID
 EOF'''.format(
-    EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
-)
+            EX_THIN_PYTHON_INVALID=salt.defaults.exitcodes.EX_THIN_PYTHON_INVALID,
+            ).split('\n')])
 
 if not is_windows():
     shim_file = os.path.join(os.path.dirname(__file__), 'ssh_py_shim.py')
@@ -531,7 +565,10 @@ class SSH(object):
         try:
             if isinstance(jid, bytes):
                 jid = jid.decode('utf-8')
-            self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
+            if self.opts['master_job_cache'] == 'local_cache':
+                self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load, minions=self.targets.keys())
+            else:
+                self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
         except Exception as exc:
             log.exception(exc)
             log.error('Could not save load with returner {0}: {1}'.format(self.opts['master_job_cache'], exc))
@@ -556,6 +593,10 @@ class SSH(object):
 
             self.cache_job(jid, host, ret[host], fun)
             ret = self.key_deploy(host, ret)
+
+            if isinstance(ret[host], dict) and ret[host].get('stderr', '').startswith('ssh:'):
+                ret[host] = ret[host]['stderr']
+
             if not isinstance(ret[host], dict):
                 p_data = {host: ret[host]}
             elif 'return' not in ret[host]:
@@ -616,6 +657,7 @@ class Single(object):
         # Get mine setting and mine_functions if defined in kwargs (from roster)
         self.mine = mine
         self.mine_functions = kwargs.get('mine_functions')
+        self.cmd_umask = kwargs.get('cmd_umask', None)
 
         self.opts = opts
         self.tty = tty
@@ -914,7 +956,8 @@ OPTIONS.version = '{5}'
 OPTIONS.ext_mods = '{6}'
 OPTIONS.wipe = {7}
 OPTIONS.tty = {8}
-ARGS = {9}\n'''.format(self.minion_config,
+OPTIONS.cmd_umask = {9}
+ARGS = {10}\n'''.format(self.minion_config,
                          RSTR,
                          self.thin_dir,
                          thin_sum,
@@ -923,6 +966,7 @@ ARGS = {9}\n'''.format(self.minion_config,
                          self.mods.get('version', ''),
                          self.wipe,
                          self.tty,
+                         self.cmd_umask,
                          self.argv)
         py_code = SSH_PY_SHIM.replace('#%%OPTS', arg_str)
         if six.PY2:
@@ -948,13 +992,9 @@ ARGS = {9}\n'''.format(self.minion_config,
         if not self.tty:
             return self.shell.exec_cmd(cmd_str)
 
-        # Write the shim to a file
-        shim_dir = os.path.join(self.opts['cachedir'], 'ssh_shim')
-        if not os.path.exists(shim_dir):
-            os.makedirs(shim_dir)
+        # Write the shim to a temporary file in the default temp directory
         with tempfile.NamedTemporaryFile(mode='w',
                                          prefix='shim_',
-                                         dir=shim_dir,
                                          delete=False) as shim_tmp_file:
             shim_tmp_file.write(cmd_str)
 
@@ -1005,23 +1045,23 @@ ARGS = {9}\n'''.format(self.minion_config,
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
                     return 'ERROR: Failure deploying thin, undefined state: {0}'.format(stdout), stderr, retcode
-                stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
-                stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+                while re.search(RSTR_RE, stdout):
+                    stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
+                while re.search(RSTR_RE, stderr):
+                    stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             else:
                 return 'ERROR: {0}'.format(error), stderr, retcode
 
         # FIXME: this discards output from ssh_shim if the shim succeeds.  It should
         # always save the shim output regardless of shim success or failure.
-        if re.search(RSTR_RE, stdout):
+        while re.search(RSTR_RE, stdout):
             stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
-        else:
-            # This is actually an error state prior to the shim but let it fall through
-            pass
 
         if re.search(RSTR_RE, stderr):
             # Found RSTR in stderr which means SHIM completed and only
             # and remaining output is only from salt.
-            stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+            while re.search(RSTR_RE, stderr):
+                stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
 
         else:
             # RSTR was found in stdout but not stderr - which means there
@@ -1040,11 +1080,13 @@ ARGS = {9}\n'''.format(self.minion_config,
                         # If RSTR is not seen in stdout with tty, then there
                         # was a thin deployment problem.
                         return 'ERROR: Failure deploying thin: {0}\n{1}'.format(stdout, stderr), stderr, retcode
-                stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
+                while re.search(RSTR_RE, stdout):
+                    stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
                 if self.tty:
                     stderr = ''
                 else:
-                    stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+                    while re.search(RSTR_RE, stderr):
+                        stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
             elif 'ext_mods' == shim_command:
                 self.deploy_ext()
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
@@ -1052,8 +1094,10 @@ ARGS = {9}\n'''.format(self.minion_config,
                     # If RSTR is not seen in both stdout and stderr then there
                     # was a thin deployment problem.
                     return 'ERROR: Failure deploying ext_mods: {0}'.format(stdout), stderr, retcode
-                stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
-                stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
+                while re.search(RSTR_RE, stdout):
+                    stdout = re.split(RSTR_RE, stdout, 1)[1].strip()
+                while re.search(RSTR_RE, stderr):
+                    stderr = re.split(RSTR_RE, stderr, 1)[1].strip()
 
         return stdout, stderr, retcode
 

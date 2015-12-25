@@ -9,7 +9,7 @@ import copy
 import errno
 import logging
 import os
-import shlex
+import re
 from distutils.version import LooseVersion as _LooseVersion
 
 # Import salt libs
@@ -31,7 +31,11 @@ def __virtual__():
     '''
     Only load if git exists on the system
     '''
-    return True if salt.utils.which('git') else False
+    if salt.utils.which('git') is None:
+        return (False,
+                'The git execution module cannot be loaded: git unavailable.')
+    else:
+        return True
 
 
 def _config_getter(get_opt,
@@ -113,7 +117,7 @@ def _format_opts(opts):
         if not isinstance(opts, six.string_types):
             opts = [str(opts)]
         else:
-            opts = shlex.split(opts)
+            opts = salt.utils.shlex_split(opts)
     try:
         if opts[-1] == '--':
             # Strip the '--' if it was passed at the end of the opts string,
@@ -127,7 +131,8 @@ def _format_opts(opts):
 
 
 def _git_run(command, cwd=None, runas=None, identity=None,
-             ignore_retcode=False, failhard=True, **kwargs):
+             ignore_retcode=False, failhard=True, redirect_stderr=False,
+             **kwargs):
     '''
     simple, throw an exception with the error message on an error return code.
 
@@ -201,6 +206,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
                     python_shell=False,
                     log_callback=salt.utils.url.redact_http_basic_auth,
                     ignore_retcode=ignore_retcode,
+                    redirect_stderr=redirect_stderr,
                     **kwargs)
             finally:
                 if not salt.utils.is_windows() and 'GIT_SSH' in env:
@@ -228,6 +234,7 @@ def _git_run(command, cwd=None, runas=None, identity=None,
             python_shell=False,
             log_callback=salt.utils.url.redact_http_basic_auth,
             ignore_retcode=ignore_retcode,
+            redirect_stderr=redirect_stderr,
             **kwargs)
 
         if result['retcode'] == 0:
@@ -619,7 +626,8 @@ def checkout(cwd,
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
-                    ignore_retcode=ignore_retcode)['stderr']
+                    ignore_retcode=ignore_retcode,
+                    redirect_stderr=True)['stdout']
 
 
 def clone(cwd,
@@ -974,7 +982,7 @@ def config_get_regexp(key,
         ret.setdefault(param, []).append(value)
     return ret
 
-config_get_regex = config_get_regexp
+config_get_regex = salt.utils.alias_function(config_get_regexp, 'config_get_regex')
 
 
 def config_set(key,
@@ -1321,6 +1329,10 @@ def fetch(cwd,
           identity=None,
           ignore_retcode=False):
     '''
+    .. versionchanged:: 2015.8.2
+        Return data is now a dictionary containing information on branches and
+        tags that were added/updated
+
     Interface to `git-fetch(1)`_
 
     cwd
@@ -1394,9 +1406,9 @@ def fetch(cwd,
     command.extend(
         [x for x in _format_opts(opts) if x not in ('-f', '--force')]
     )
-    if remote and not isinstance(remote, six.string_types):
-        remote = str(remote)
     if remote:
+        if not isinstance(remote, six.string_types):
+            remote = str(remote)
         command.append(remote)
     if refspecs is not None:
         if isinstance(refspecs, (list, tuple)):
@@ -1411,11 +1423,38 @@ def fetch(cwd,
                 refspecs = str(refspecs)
             refspec_list = refspecs.split(',')
         command.extend(refspec_list)
-    return _git_run(command,
-                    cwd=cwd,
-                    runas=user,
-                    identity=identity,
-                    ignore_retcode=ignore_retcode)['stdout']
+    output = _git_run(command,
+                      cwd=cwd,
+                      runas=user,
+                      identity=identity,
+                      ignore_retcode=ignore_retcode,
+                      redirect_stderr=True)['stdout']
+
+    update_re = re.compile(
+        r'[\s*]*(?:([0-9a-f]+)\.\.([0-9a-f]+)|'
+        r'\[(?:new (tag|branch)|tag update)\])\s+(.+)->'
+    )
+    ret = {}
+    for line in salt.utils.itertools.split(output, '\n'):
+        match = update_re.match(line)
+        if match:
+            old_sha, new_sha, new_ref_type, ref_name = \
+                match.groups()
+            ref_name = ref_name.rstrip()
+            if new_ref_type is not None:
+                # ref is a new tag/branch
+                ref_key = 'new tags' \
+                    if new_ref_type == 'tag' \
+                    else 'new branches'
+                ret.setdefault(ref_key, []).append(ref_name)
+            elif old_sha is not None:
+                # ref is a branch update
+                ret.setdefault('updated branches', {})[ref_name] = \
+                    {'old': old_sha, 'new': new_sha}
+            else:
+                # ref is an updated tag
+                ret.setdefault('updated tags', []).append(ref_name)
+    return ret
 
 
 def init(cwd,
@@ -1742,7 +1781,7 @@ def list_worktrees(cwd, stale=False, user=None, **kwargs):
 
 def ls_remote(cwd=None,
               remote='origin',
-              ref='master',
+              ref=None,
               opts='',
               user=None,
               identity=None,
@@ -1765,13 +1804,17 @@ def ls_remote(cwd=None,
         .. versionchanged:: 2015.8.0
             Argument renamed from ``repository`` to ``remote``
 
-    ref : master
-        The name of the ref to query. Can be a branch or tag name, or the full
-        name of the reference (for example, to get the hash for a Github pull
-        request number 1234, ``ref`` can be set to ``refs/pull/1234/head``
+    ref
+        The name of the ref to query. Optional, if not specified, all refs are
+        returned. Can be a branch or tag name, or the full name of the
+        reference (for example, to get the hash for a Github pull request number
+        1234, ``ref`` can be set to ``refs/pull/1234/head``
 
         .. versionchanged:: 2015.8.0
             Argument renamed from ``branch`` to ``ref``
+
+        .. versionchanged:: 2015.8.4
+            Defaults to returning all refs instead of master.
 
     opts
         Any additional options to add to the command line, in a single string
@@ -1837,9 +1880,11 @@ def ls_remote(cwd=None,
     command.extend(_format_opts(opts))
     if not isinstance(remote, six.string_types):
         remote = str(remote)
-    if not isinstance(ref, six.string_types):
-        ref = str(ref)
-    command.extend([remote, ref])
+    command.extend([remote])
+    if ref:
+        if not isinstance(ref, six.string_types):
+            ref = str(ref)
+        command.extend([ref])
     output = _git_run(command,
                       cwd=cwd,
                       runas=user,
@@ -2396,7 +2441,7 @@ def rebase(cwd, rev='master', opts='', user=None, ignore_retcode=False):
     command.extend(opts)
     if not isinstance(rev, six.string_types):
         rev = str(rev)
-    command.extend(shlex.split(rev))
+    command.extend(salt.utils.shlex_split(rev))
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
@@ -3362,7 +3407,8 @@ def worktree_add(cwd,
     return _git_run(command,
                     cwd=cwd,
                     runas=user,
-                    ignore_retcode=ignore_retcode)['stderr']
+                    ignore_retcode=ignore_retcode,
+                    redirect_stderr=True)['stdout']
 
 
 def worktree_prune(cwd,

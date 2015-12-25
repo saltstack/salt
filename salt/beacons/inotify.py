@@ -6,7 +6,9 @@ Watch files and translate the changes into salt events
 
 :Caution:   Using generic mask options like open, access, ignored, and
             closed_nowrite with reactors can easily cause the reactor
-            to loop on itself.
+            to loop on itself. To mitigate this behavior, consider
+            setting the `disable_during_state_run` flag to `True` in
+            the beacon configuration.
 
 '''
 # Import Python libs
@@ -94,7 +96,7 @@ def validate(config):
         'unmount'
     ]
 
-    # Configuration for diskusage beacon should be a list of dicts
+    # Configuration for inotify beacon should be a dict of dicts
     if not isinstance(config, dict):
         log.info('Configuration for inotify beacon must be a dictionary.')
         return False
@@ -159,25 +161,25 @@ def beacon(config):
     The mask list can contain the following events (the default mask is create,
     delete, and modify):
 
-    * access            File accessed
-    * attrib            File metadata changed
-    * close_nowrite     Unwritable file closed
-    * close_write       Writable file closed
-    * create            File created in watched directory
-    * delete            File deleted from watched directory
-    * delete_self       Watched file or directory deleted
-    * modify            File modified
-    * moved_from        File moved out of watched directory
-    * moved_to          File moved into watched directory
-    * move_self         Watched file moved
-    * open              File opened
+    * access            - File accessed
+    * attrib            - File metadata changed
+    * close_nowrite     - Unwritable file closed
+    * close_write       - Writable file closed
+    * create            - File created in watched directory
+    * delete            - File deleted from watched directory
+    * delete_self       - Watched file or directory deleted
+    * modify            - File modified
+    * moved_from        - File moved out of watched directory
+    * moved_to          - File moved into watched directory
+    * move_self         - Watched file moved
+    * open              - File opened
 
     The mask can also contain the following options:
 
-    * dont_follow       Don't dereference symbolic links
-    * excl_unlink       Omit events for children after they have been unlinked
-    * oneshot           Remove watch after one event
-    * onlydir           Operate only if name is directory
+    * dont_follow       - Don't dereference symbolic links
+    * excl_unlink       - Omit events for children after they have been unlinked
+    * oneshot           - Remove watch after one event
+    * onlydir           - Operate only if name is directory
 
     recurse:
       Recursively watch files in the directory

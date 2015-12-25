@@ -137,6 +137,7 @@ def _check_cron(user,
                 month=None,
                 dayweek=None,
                 comment=None,
+                commented=None,
                 identifier=None):
     '''
     Return the changes
@@ -153,6 +154,8 @@ def _check_cron(user,
         dayweek = str(dayweek).lower()
     if identifier is not None:
         identifier = str(identifier)
+    if commented is not None:
+        commented = commented is True
     if cmd is not None:
         cmd = str(cmd)
     lst = __salt__['cron.list_tab'](user)
@@ -162,7 +165,8 @@ def _check_cron(user,
                     ((cron['minute'], minute), (cron['hour'], hour),
                      (cron['daymonth'], daymonth), (cron['month'], month),
                      (cron['dayweek'], dayweek), (cron['identifier'], identifier),
-                     (cron['cmd'], cmd), (cron['comment'], comment))]):
+                     (cron['cmd'], cmd), (cron['comment'], comment),
+                     (cron['commented'], commented))]):
                 return 'update'
             return 'present'
     return 'absent'
@@ -216,6 +220,7 @@ def present(name,
             month='*',
             dayweek='*',
             comment=None,
+            commented=False,
             identifier=False):
     '''
     Verifies that the specified cron job is present for the specified user.
@@ -251,6 +256,12 @@ def present(name,
     comment
         User comment to be added on line previous the cron job
 
+    commented
+        The cron job is set commented (prefixed with ``#DISABLED#``).
+        Defaults to False.
+
+        .. versionadded:: Boron
+
     identifier
         Custom-defined identifier for tracking the cron line for future crontab
         edits. This defaults to the state id
@@ -271,6 +282,7 @@ def present(name,
                              month=month,
                              dayweek=dayweek,
                              comment=comment,
+                             commented=commented,
                              identifier=identifier)
         ret['result'] = None
         if status == 'absent':
@@ -290,6 +302,7 @@ def present(name,
                                     dayweek=dayweek,
                                     cmd=name,
                                     comment=comment,
+                                    commented=commented,
                                     identifier=identifier)
     if data == 'present':
         ret['comment'] = 'Cron {0} already present'.format(name)

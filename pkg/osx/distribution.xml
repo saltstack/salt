@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<installer-gui-script minSpecVersion="1">
+    <title>Salt 2015.5.2</title>
+    <organization>com.saltstack.salt</organization>
+    <domains enable_localSystem="true"/>
+    <options rootVolumeOnly="true" />
+    <!-- Define documents displayed at various steps -->
+    <welcome    file="welcome.html"    mime-type="text/html" />
+    <license    file="license.html"    mime-type="text/html" />
+    <conclusion file="conclusion.html" mime-type="text/html" />
+    <!-- List all component packages -->
+    <pkg-ref id="com.saltstack.salt"
+             version="2015.5.2"
+             auth="root">salt-src-2015.5.2.pkg</pkg-ref>
+    <!-- List them again here. They can now be organized
+         as a hierarchy if you want. -->
+    <choices-outline>
+        <line choice="com.saltstack.salt"/>
+    </choices-outline>
+    <!-- Define each choice above -->
+    <choice
+        id="com.saltstack.salt"
+        visible="false"
+        title="Salt 2015.5.2"
+        description="Salt 2015.5.2"
+        start_selected="true">
+      <pkg-ref id="com.saltstack.salt"/>
+    </choice>
+</installer-gui-script>

@@ -108,7 +108,7 @@ def __virtual__():
     '''
     if __catalina_home() or _auth('dummy'):
         return 'tomcat'
-    return False
+    return (False, 'Tomcat execution module not loaded: neither Tomcat installed locally nor tomcat-manager credentials set in grains/pillar/config.')
 
 
 def __catalina_home():

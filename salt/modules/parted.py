@@ -413,16 +413,15 @@ def mklabel(device, label_type):
 
         salt '*' partition.mklabel /dev/sda msdos
     '''
-    _validate_device(device)
-
-    if label_type not in set(['aix', 'amiga', 'bsd', 'dvh', 'gpt', 'loop', 'mac',
-                             'msdos', 'pc98', 'sun']):
+    if label_type not in set([
+        'aix', 'amiga', 'bsd', 'dvh', 'gpt', 'loop', 'mac', 'msdos', 'pc98', 'sun'
+    ]):
         raise CommandExecutionError(
             'Invalid label_type passed to partition.mklabel'
         )
 
-    cmd = 'parted -m -s {0} mklabel {1}'.format(device, label_type)
-    out = __salt__['cmd.run'](cmd).splitlines()
+    cmd = ('parted', '-m', '-s', device, 'mklabel', label_type)
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out
 
 
@@ -441,13 +440,6 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
         salt '*' partition.mkpart /dev/sda primary fs_type=fat32 start=0 end=639
         salt '*' partition.mkpart /dev/sda primary start=0 end=639
     '''
-    _validate_device(device)
-
-    if not start or not end:
-        raise CommandExecutionError(
-            'partition.mkpart requires a start and an end'
-        )
-
     if part_type not in set(['primary', 'logical', 'extended']):
         raise CommandExecutionError(
             'Invalid part_type passed to partition.mkpart'
@@ -459,19 +451,22 @@ def mkpart(device, part_type, fs_type=None, start=None, end=None):
             'Invalid fs_type passed to partition.mkpart'
         )
 
-    _validate_partition_boundary(start)
-    _validate_partition_boundary(end)
+    if start is not None and end is not None:
+        _validate_partition_boundary(start)
+        _validate_partition_boundary(end)
+
+    if start is None:
+        start = ''
+
+    if end is None:
+        end = ''
 
     if fs_type:
-        cmd = 'parted -m -s -- {0} mkpart {1} {2} {3} {4}'.format(
-            device, part_type, fs_type, start, end
-        )
+        cmd = ('parted', '-m', '-s', '--', device, 'mkpart', part_type, fs_type, start, end)
     else:
-        cmd = 'parted -m -s -- {0} mkpart {1} {2} {3}'.format(
-            device, part_type, start, end
-        )
+        cmd = ('parted', '-m', '-s', '--', device, 'mkpart', part_type, start, end)
 
-    out = __salt__['cmd.run'](cmd).splitlines()
+    out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
     return out
 
 

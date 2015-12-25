@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Manage IAM roles
+================
 
 .. versionadded:: 2014.7.0
 

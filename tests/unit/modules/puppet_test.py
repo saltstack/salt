@@ -38,15 +38,13 @@ class PuppetTestCase(TestCase):
         '''
             Test to execute a puppet run
         '''
-        mock = MagicMock(return_value=True)
-        with patch.object(puppet, '_check_puppet', mock):
-            mock = MagicMock(return_value={"A": "B"})
-            with patch.object(salt.utils, 'clean_kwargs', mock):
-                mock = MagicMock(return_value={'retcode': 0})
-                mock_lst = MagicMock(return_value=[])
-                with patch.dict(puppet.__salt__, {'cmd.run_all': mock,
-                                                  'cmd.run': mock_lst}):
-                    self.assertTrue(puppet.run())
+        mock = MagicMock(return_value={"A": "B"})
+        with patch.object(salt.utils, 'clean_kwargs', mock):
+            mock = MagicMock(return_value={'retcode': 0})
+            mock_lst = MagicMock(return_value=[])
+            with patch.dict(puppet.__salt__, {'cmd.run_all': mock,
+                                                'cmd.run': mock_lst}):
+                self.assertTrue(puppet.run())
 
     def test_noop(self):
         '''
@@ -62,19 +60,17 @@ class PuppetTestCase(TestCase):
         '''
         mock_lst = MagicMock(return_value=[])
         with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-            mock = MagicMock(side_effect=[True, True, False])
-            with patch.object(puppet, '_check_puppet', mock):
+            mock = MagicMock(return_value=True)
+            with patch.object(os.path, 'isfile', mock):
                 mock = MagicMock(return_value=True)
-                with patch.object(os.path, 'isfile', mock):
-                    mock = MagicMock(return_value=True)
-                    with patch.object(os, 'remove', mock):
-                        self.assertTrue(puppet.enable())
+                with patch.object(os, 'remove', mock):
+                    self.assertTrue(puppet.enable())
 
-                    with patch.object(os, 'remove',
-                                      MagicMock(side_effect=IOError)):
-                        self.assertRaises(CommandExecutionError, puppet.enable)
+                with patch.object(os, 'remove',
+                                    MagicMock(side_effect=IOError)):
+                    self.assertRaises(CommandExecutionError, puppet.enable)
 
-                self.assertFalse(puppet.enable())
+            self.assertFalse(puppet.enable())
 
     def test_disable(self):
         '''
@@ -82,19 +78,17 @@ class PuppetTestCase(TestCase):
         '''
         mock_lst = MagicMock(return_value=[])
         with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-            mock = MagicMock(return_value=True)
-            with patch.object(puppet, '_check_puppet', mock):
-                mock = MagicMock(side_effect=[True, False])
-                with patch.object(os.path, 'isfile', mock):
-                    self.assertFalse(puppet.disable())
+            mock = MagicMock(side_effect=[True, False])
+            with patch.object(os.path, 'isfile', mock):
+                self.assertFalse(puppet.disable())
 
-                    with patch('salt.utils.fopen', mock_open()):
-                        self.assertTrue(puppet.disable())
+                with patch('salt.utils.fopen', mock_open()):
+                    self.assertTrue(puppet.disable())
 
-                    with patch('salt.utils.fopen', mock_open()) as m_open:
-                        helper_open = m_open()
-                        helper_open.write.assertRaises(CommandExecutionError,
-                                                       puppet.disable)
+                with patch('salt.utils.fopen', mock_open()) as m_open:
+                    helper_open = m_open()
+                    helper_open.write.assertRaises(CommandExecutionError,
+                                                    puppet.disable)
 
     def test_status(self):
         '''
@@ -102,45 +96,43 @@ class PuppetTestCase(TestCase):
         '''
         mock_lst = MagicMock(return_value=[])
         with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-            mock = MagicMock(return_value=True)
-            with patch.object(puppet, '_check_puppet', mock):
-                mock = MagicMock(side_effect=[True])
-                with patch.object(os.path, 'isfile', mock):
-                    self.assertEqual(puppet.status(),
-                                     "Administratively disabled")
+            mock = MagicMock(side_effect=[True])
+            with patch.object(os.path, 'isfile', mock):
+                self.assertEqual(puppet.status(),
+                                    "Administratively disabled")
 
-                mock = MagicMock(side_effect=[False, True])
-                with patch.object(os.path, 'isfile', mock):
-                    with patch('salt.utils.fopen', mock_open(read_data="1")):
-                        mock = MagicMock(return_value=True)
-                        with patch.object(os, 'kill', mock):
-                            self.assertEqual(puppet.status(),
-                                             "Applying a catalog")
+            mock = MagicMock(side_effect=[False, True])
+            with patch.object(os.path, 'isfile', mock):
+                with patch('salt.utils.fopen', mock_open(read_data="1")):
+                    mock = MagicMock(return_value=True)
+                    with patch.object(os, 'kill', mock):
+                        self.assertEqual(puppet.status(),
+                                            "Applying a catalog")
 
-                mock = MagicMock(side_effect=[False, True])
-                with patch.object(os.path, 'isfile', mock):
-                    with patch('salt.utils.fopen', mock_open()):
-                        mock = MagicMock(return_value=True)
-                        with patch.object(os, 'kill', mock):
-                            self.assertEqual(puppet.status(), "Stale lockfile")
+            mock = MagicMock(side_effect=[False, True])
+            with patch.object(os.path, 'isfile', mock):
+                with patch('salt.utils.fopen', mock_open()):
+                    mock = MagicMock(return_value=True)
+                    with patch.object(os, 'kill', mock):
+                        self.assertEqual(puppet.status(), "Stale lockfile")
 
-                mock = MagicMock(side_effect=[False, False, True])
-                with patch.object(os.path, 'isfile', mock):
-                    with patch('salt.utils.fopen', mock_open(read_data="1")):
-                        mock = MagicMock(return_value=True)
-                        with patch.object(os, 'kill', mock):
-                            self.assertEqual(puppet.status(), "Idle daemon")
+            mock = MagicMock(side_effect=[False, False, True])
+            with patch.object(os.path, 'isfile', mock):
+                with patch('salt.utils.fopen', mock_open(read_data="1")):
+                    mock = MagicMock(return_value=True)
+                    with patch.object(os, 'kill', mock):
+                        self.assertEqual(puppet.status(), "Idle daemon")
 
-                mock = MagicMock(side_effect=[False, False, True])
-                with patch.object(os.path, 'isfile', mock):
-                    with patch('salt.utils.fopen', mock_open()):
-                        mock = MagicMock(return_value=True)
-                        with patch.object(os, 'kill', mock):
-                            self.assertEqual(puppet.status(), "Stale pidfile")
+            mock = MagicMock(side_effect=[False, False, True])
+            with patch.object(os.path, 'isfile', mock):
+                with patch('salt.utils.fopen', mock_open()):
+                    mock = MagicMock(return_value=True)
+                    with patch.object(os, 'kill', mock):
+                        self.assertEqual(puppet.status(), "Stale pidfile")
 
-                mock = MagicMock(side_effect=[False, False, False])
-                with patch.object(os.path, 'isfile', mock):
-                    self.assertEqual(puppet.status(), "Stopped")
+            mock = MagicMock(side_effect=[False, False, False])
+            with patch.object(os.path, 'isfile', mock):
+                self.assertEqual(puppet.status(), "Stopped")
 
     def test_summary(self):
         '''
@@ -148,16 +140,14 @@ class PuppetTestCase(TestCase):
         '''
         mock_lst = MagicMock(return_value=[])
         with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-            mock = MagicMock(return_value=True)
-            with patch.object(puppet, '_check_puppet', mock):
-                with patch('salt.utils.fopen',
-                           mock_open(read_data="resources: 1")):
-                    self.assertDictEqual(puppet.summary(), {'resources': 1})
+            with patch('salt.utils.fopen',
+                        mock_open(read_data="resources: 1")):
+                self.assertDictEqual(puppet.summary(), {'resources': 1})
 
-                with patch('salt.utils.fopen', mock_open()) as m_open:
-                    helper_open = m_open()
-                    helper_open.write.assertRaises(CommandExecutionError,
-                                                   puppet.summary)
+            with patch('salt.utils.fopen', mock_open()) as m_open:
+                helper_open = m_open()
+                helper_open.write.assertRaises(CommandExecutionError,
+                                                puppet.summary)
 
     def test_plugin_sync(self):
         '''
@@ -165,13 +155,11 @@ class PuppetTestCase(TestCase):
         '''
         mock_lst = MagicMock(return_value=[])
         with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-            mock = MagicMock(return_value=True)
-            with patch.object(puppet, '_check_puppet', mock):
-                mock_lst = MagicMock(side_effect=[False, True])
-                with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-                    self.assertEqual(puppet.plugin_sync(), "")
+            mock_lst = MagicMock(side_effect=[False, True])
+            with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
+                self.assertEqual(puppet.plugin_sync(), "")
 
-                    self.assertTrue(puppet.plugin_sync())
+                self.assertTrue(puppet.plugin_sync())
 
     def test_facts(self):
         '''
@@ -179,13 +167,11 @@ class PuppetTestCase(TestCase):
         '''
         mock_lst = MagicMock(return_value=[])
         with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-            mock = MagicMock(return_value=True)
-            with patch.object(puppet, '_check_facter', mock):
-                mock_lst = MagicMock(return_value="True")
-                with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-                    mock = MagicMock(return_value=["a", "b"])
-                    with patch.object(puppet, '_format_fact', mock):
-                        self.assertDictEqual(puppet.facts(), {'a': 'b'})
+            mock_lst = MagicMock(return_value="True")
+            with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
+                mock = MagicMock(return_value=["a", "b"])
+                with patch.object(puppet, '_format_fact', mock):
+                    self.assertDictEqual(puppet.facts(), {'a': 'b'})
 
     def test_fact(self):
         '''
@@ -193,13 +179,11 @@ class PuppetTestCase(TestCase):
         '''
         mock_lst = MagicMock(return_value=[])
         with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-            mock = MagicMock(return_value=True)
-            with patch.object(puppet, '_check_facter', mock):
-                mock_lst = MagicMock(side_effect=[False, True])
-                with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
-                    self.assertEqual(puppet.fact("salt"), "")
+            mock_lst = MagicMock(side_effect=[False, True])
+            with patch.dict(puppet.__salt__, {'cmd.run': mock_lst}):
+                self.assertEqual(puppet.fact("salt"), "")
 
-                    self.assertTrue(puppet.fact("salt"))
+                self.assertTrue(puppet.fact("salt"))
 
 if __name__ == '__main__':
     from integration import run_tests

@@ -313,7 +313,7 @@ def __virtual__():
     '''
     if salt.utils.is_windows() and HAS_WINDOWS_MODULES:
         return __virtualname__
-    return False
+    return (False, "Module win_dacl: module only works on Windows systems")
 
 
 def _get_dacl(path, objectType):

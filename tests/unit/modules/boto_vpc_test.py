@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
-# TODO: Update skipped tests to expect dicttionary results from the execution
+# TODO: Update skipped tests to expect dictionary results from the execution
 #       module functions.
 
 # Import Python libs
 from __future__ import absolute_import
-
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt Testing libs
@@ -132,14 +131,14 @@ class BotoVpcTestCaseMixin(object):
         _maybe_set_tags(tags, vpc)
         return vpc
 
-    def _create_subnet(self, vpc_id, cidr_block='10.0.0.0/25', name=None, tags=None):
+    def _create_subnet(self, vpc_id, cidr_block='10.0.0.0/25', name=None, tags=None, availability_zone=None):
         '''
         Helper function to create a test subnet
         '''
         if not self.conn:
             self.conn = boto.vpc.connect_to_region(region)
 
-        subnet = self.conn.create_subnet(vpc_id, cidr_block)
+        subnet = self.conn.create_subnet(vpc_id, cidr_block, availability_zone=availability_zone)
         _maybe_set_name_tag(name, subnet)
         _maybe_set_tags(tags, subnet)
         return subnet
@@ -450,6 +449,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(vpc_creation_result)
 
     @mock_ec2
+    @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_that_when_creating_a_vpc_fails_the_create_vpc_method_returns_false(self):
         '''
         tests False VPC not created.
@@ -510,6 +510,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertFalse(describe_vpc['vpc'])
 
     @mock_ec2
+    @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_that_when_describing_vpc_by_id_on_connection_error_it_returns_error(self):
         '''
         Tests describing parameters failure
@@ -615,6 +616,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(subnet_creation_result['created'])
 
     @mock_ec2
+    @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_that_when_creating_a_subnet_fails_the_create_subnet_method_returns_error(self):
         '''
         Tests creating a subnet failure
@@ -795,6 +797,16 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertEqual(set(describe_subnet_results['subnets'][0].keys()),
                          set(['id', 'cidr_block', 'availability_zone', 'tags']))
 
+    @mock_ec2
+    def test_create_subnet_passes_availability_zone(self):
+        '''
+        Tests that the availability_zone kwarg is passed on to _create_resource
+        '''
+        vpc = self._create_vpc()
+        self._create_subnet(vpc.id, name='subnet1', availability_zone='us-east-1a')
+        describe_subnet_results = boto_vpc.describe_subnets(subnet_names=['subnet1'])
+        self.assertEqual(describe_subnet_results['subnets'][0]['availability_zone'], 'us-east-1a')
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -925,6 +937,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(dhcp_options_creation_result['created'])
 
     @mock_ec2
+    @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_that_when_creating_dhcp_options_fails_the_create_dhcp_options_method_returns_error(self):
         '''
         Tests creating dhcp options failure
@@ -987,6 +1000,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         self.assertTrue(dhcp_creation_and_association_result['created'])
 
     @mock_ec2
+    @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_creating_the_dhcp_options_the_associate_new_dhcp_options_method_raises_exception(
             self):
         '''
@@ -1000,6 +1014,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
             self.assertTrue('error' in r)
 
     @mock_ec2
+    @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
     def test_that_when_creating_and_associating_dhcp_options_set_to_an_existing_vpc_fails_associating_the_dhcp_options_the_associate_new_dhcp_options_method_raises_exception(self):
         '''
         Tests association failure during creation/association of dchp options to existing vpc

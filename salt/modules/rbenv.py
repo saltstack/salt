@@ -15,7 +15,6 @@ from __future__ import absolute_import
 import os
 import re
 import logging
-import shlex
 
 # Import Salt libs
 import salt.utils
@@ -42,17 +41,17 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if salt.utils.is_windows():
-        return False
+        return (False, 'The rbenv execution module failed to load: only available on non-Windows systems.')
     return True
 
 
 def _shlex_split(s):
-    # from python:shlex.split: passing None for s will read
+    # from python:salt.utils.shlex_split: passing None for s will read
     # the string to split from standard input.
     if s is None:
-        ret = shlex.split('')
+        ret = salt.utils.shlex_split('')
     else:
-        ret = shlex.split(s)
+        ret = salt.utils.shlex_split(s)
 
     return ret
 
@@ -358,7 +357,7 @@ def rehash(runas=None):
     return True
 
 
-def do(cmdline, runas=None):
+def do(cmdline, runas=None, env=None):
     '''
     Execute a ruby command with rbenv's shims from the user or the system
 
@@ -376,17 +375,20 @@ def do(cmdline, runas=None):
         raise SaltInvocationError('Command must be specified')
 
     path = _rbenv_path(runas)
-    environ = {'PATH': '{0}/shims:{1}'.format(path, os.environ['PATH'])}
+    if not env:
+        env = {}
+
+    env['PATH'] = '{0}/shims:{1}'.format(path, os.environ['PATH'])
 
     try:
-        cmdline = shlex.split(cmdline)
+        cmdline = salt.utils.shlex_split(cmdline)
     except AttributeError:
-        cmdline = shlex.split(str(cmdline))
+        cmdline = salt.utils.shlex_split(str(cmdline))
 
     result = __salt__['cmd.run_all'](
         cmdline,
         runas=runas,
-        env=environ,
+        env=env,
         python_shell=False
     )
 
@@ -415,13 +417,15 @@ def do_with_ruby(ruby, cmdline, runas=None):
         raise SaltInvocationError('Command must be specified')
 
     try:
-        cmdline = shlex.split(cmdline)
+        cmdline = salt.utils.shlex_split(cmdline)
     except AttributeError:
-        cmdline = shlex.split(str(cmdline))
+        cmdline = salt.utils.shlex_split(str(cmdline))
 
+    env = {}
     if ruby:
-        cmd = ['RBENV_VERSION={0}'.format(ruby)] + cmdline
+        env['RBENV_VERSION'] = ruby
+        cmd = cmdline
     else:
         cmd = cmdline
 
-    return do(cmd, runas=runas)
+    return do(cmd, runas=runas, env=env)

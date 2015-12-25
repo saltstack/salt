@@ -54,13 +54,21 @@ from salt.exceptions import SaltSystemExit
 
 # Let's instantiate logger using salt.log.setup.logging.getLogger() so pylint
 # leaves us alone and stops complaining about an un-used import
-logger = salt.log.setup.logging.getLogger(__name__)
+log = salt.log.setup.logging.getLogger(__name__)
 
 
 class Master(parsers.MasterOptionParser):
     '''
     Creates a master server
     '''
+    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+        # escalate signal to the process manager processes
+        self.master.process_manager.stop_restarting()
+        self.master.process_manager.send_signal_to_processes(signum)
+        # kill any remaining processes
+        self.master.process_manager.kill_children()
+        super(Master, self)._handle_signals(signum, sigframe)
+
     def prepare(self):
         '''
         Run the preparation sequence required to start a salt master server.
@@ -69,7 +77,7 @@ class Master(parsers.MasterOptionParser):
 
             super(YourSubClass, self).prepare()
         '''
-        self.parse_args()
+        super(Master, self).prepare()
 
         try:
             if self.config['verify_env']:
@@ -106,17 +114,19 @@ class Master(parsers.MasterOptionParser):
                                                                    'udp://',
                                                                    'file://')):
                     # Logfile is not using Syslog, verify
+                    current_umask = os.umask(0o027)
                     verify_files([logfile], self.config['user'])
+                    os.umask(current_umask)
                 # Clear out syndics from cachedir
                 for syndic_file in os.listdir(self.config['syndic_dir']):
                     os.remove(os.path.join(self.config['syndic_dir'], syndic_file))
         except OSError as err:
-            logger.exception('Failed to prepare salt environment')
+            log.exception('Failed to prepare salt environment')
             self.shutdown(err.errno)
 
         self.setup_logfile_logger()
         verify_log(self.config)
-        logger.info('Setting up the Salt Master')
+        log.info('Setting up the Salt Master')
 
         # TODO: AIO core is separate from transport
         if self.config['transport'].lower() in ('zeromq', 'tcp'):
@@ -148,28 +158,37 @@ class Master(parsers.MasterOptionParser):
 
         NOTE: Run any required code before calling `super()`.
         '''
-        self.prepare()
+        super(Master, self).start()
         if check_user(self.config['user']):
-            logger.info('The salt master is starting up')
-            try:
-                self.master.start()
-            except KeyboardInterrupt:
-                logger.warn('The salt master is shutting down')
-            finally:
-                self.shutdown()
+            log.info('The salt master is starting up')
+            self.master.start()
 
     def shutdown(self, exitcode=0, exitmsg=None):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        logger.info('The salt master is shut down')
-        self.exit(exitcode, exitmsg)
+        log.info('The salt master is shutting down..')
+        msg = 'The salt master is shutdown. '
+        if exitmsg is not None:
+            exitmsg = msg + exitmsg
+        else:
+            exitmsg = msg.strip()
+        super(Master, self).shutdown(exitcode, exitmsg)
 
 
 class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
     '''
     Create a minion server
     '''
+
+    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+        # escalate signal to the process manager processes
+        self.minion.process_manager.stop_restarting()
+        self.minion.process_manager.send_signal_to_processes(signum)
+        # kill any remaining processes
+        self.minion.process_manager.kill_children()
+        super(Minion, self)._handle_signals(signum, sigframe)
+
     # pylint: disable=no-member
     def prepare(self):
         '''
@@ -179,7 +198,7 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
 
             super(YourSubClass, self).prepare()
         '''
-        self.parse_args()
+        super(Minion, self).prepare()
 
         try:
             if self.config['verify_env']:
@@ -230,12 +249,12 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
                     verify_files([logfile], self.config['user'])
                     os.umask(current_umask)
         except OSError as err:
-            logger.exception('Failed to prepare salt environment')
+            log.exception('Failed to prepare salt environment')
             self.shutdown(err.errno)
 
         self.setup_logfile_logger()
         verify_log(self.config)
-        logger.info(
+        log.info(
             'Setting up the Salt Minion "{0}"'.format(
                 self.config['id']
             )
@@ -244,7 +263,7 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
 
         # Bail out if we find a process running and it matches out pidfile
         if self.check_running():
-            logger.exception('Salt minion is already running. Exiting.')
+            log.exception('Salt minion is already running. Exiting.')
             self.shutdown(1)
 
         # TODO: AIO core is separate from transport
@@ -280,18 +299,18 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
 
         NOTE: Run any required code before calling `super()`.
         '''
+        super(Minion, self).start()
         try:
-            self.prepare()
             if check_user(self.config['user']):
-                logger.info('The salt minion is starting up')
+                log.info('The salt minion is starting up')
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            logger.warn('Stopping the Salt Minion')
+            log.warn('Stopping the Salt Minion')
             if isinstance(exc, KeyboardInterrupt):
-                logger.warn('Exiting on Ctrl-c')
+                log.warn('Exiting on Ctrl-c')
                 self.shutdown()
             else:
-                logger.error(str(exc))
+                log.error(str(exc))
                 self.shutdown(exc.code)
 
     def call(self, cleanup_protecteds):
@@ -314,20 +333,27 @@ class Minion(parsers.MinionOptionParser):  # pylint: disable=no-init
                 self.minion.opts['raet_cleanup_protecteds'] = cleanup_protecteds
                 self.minion.call_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            logger.warn('Stopping the Salt Minion')
+            log.warn('Stopping the Salt Minion')
             if isinstance(exc, KeyboardInterrupt):
-                logger.warn('Exiting on Ctrl-c')
+                log.warn('Exiting on Ctrl-c')
                 self.shutdown()
             else:
-                logger.error(str(exc))
+                log.error(str(exc))
                 self.shutdown(exc.code)
 
     def shutdown(self, exitcode=0, exitmsg=None):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        logger.info('The salt minion is shut down')
-        self.exit(exitcode, exitmsg)
+        log.info('The salt minion is shutting down..')
+        if hasattr(self, 'minion'):
+            self.minion.destroy()
+        msg = 'The salt minion is shutdown. '
+        if exitmsg is not None:
+            exitmsg = msg + exitmsg
+        else:
+            exitmsg = msg.strip()
+        super(Minion, self).shutdown(exitcode, exitmsg)
     # pylint: enable=no-member
 
 
@@ -345,7 +371,7 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
 
             super(YourSubClass, self).prepare()
         '''
-        self.parse_args()
+        super(ProxyMinion, self).prepare()
 
         if not self.values.proxyid:
             raise SaltSystemExit('salt-proxy requires --proxyid')
@@ -407,12 +433,12 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
                     os.umask(current_umask)
 
         except OSError as err:
-            logger.exception('Failed to prepare salt environment')
+            log.exception('Failed to prepare salt environment')
             self.shutdown(err.errno)
 
         self.setup_logfile_logger()
         verify_log(self.config)
-        logger.info(
+        log.info(
             'Setting up a Salt Proxy Minion "{0}"'.format(
                 self.config['id']
             )
@@ -447,18 +473,18 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
 
         NOTE: Run any required code before calling `super()`.
         '''
+        super(ProxyMinion, self).start()
         try:
-            self.prepare()
             if check_user(self.config['user']):
-                logger.info('The proxy minion is starting up')
+                log.info('The proxy minion is starting up')
                 self.minion.tune_in()
         except (KeyboardInterrupt, SaltSystemExit) as exc:
-            logger.warn('Stopping the Salt Proxy Minion')
+            log.warn('Stopping the Salt Proxy Minion')
             if isinstance(exc, KeyboardInterrupt):
-                logger.warn('Exiting on Ctrl-c')
+                log.warn('Exiting on Ctrl-c')
                 self.shutdown()
             else:
-                logger.error(str(exc))
+                log.error(str(exc))
                 self.shutdown(exc.code)
 
     def shutdown(self, exitcode=0, exitmsg=None):
@@ -468,8 +494,13 @@ class ProxyMinion(parsers.ProxyMinionOptionParser):  # pylint: disable=no-init
         if hasattr(self, 'minion') and 'proxymodule' in self.minion.opts:
             proxy_fn = self.minion.opts['proxymodule'].loaded_base_name + '.shutdown'
             self.minion.opts['proxymodule'][proxy_fn](self.minion.opts)
-        logger.info('The proxy minion is shut down')
-        self.exit(exitcode, exitmsg)
+        log.info('The proxy minion is shutting down..')
+        msg = 'The proxy minion is shutdown. '
+        if exitmsg is not None:
+            exitmsg = msg + exitmsg
+        else:
+            exitmsg = msg.strip()
+        super(ProxyMinion, self).shutdown(exitcode, exitmsg)
     # pylint: enable=no-member
 
 
@@ -486,7 +517,7 @@ class Syndic(parsers.SyndicOptionParser):
 
             super(YourSubClass, self).prepare()
         '''
-        self.parse_args()
+        super(Syndic, self).prepare()
         try:
             if self.config['verify_env']:
                 verify_env(
@@ -505,14 +536,16 @@ class Syndic(parsers.SyndicOptionParser):
                                                                    'udp://',
                                                                    'file://')):
                     # Logfile is not using Syslog, verify
+                    current_umask = os.umask(0o027)
                     verify_files([logfile], self.config['user'])
+                    os.umask(current_umask)
         except OSError as err:
-            logger.exception('Failed to prepare salt environment')
+            log.exception('Failed to prepare salt environment')
             self.shutdown(err.errno)
 
         self.setup_logfile_logger()
         verify_log(self.config)
-        logger.info(
+        log.info(
             'Setting up the Salt Syndic Minion "{0}"'.format(
                 self.config['id']
             )
@@ -538,18 +571,23 @@ class Syndic(parsers.SyndicOptionParser):
 
         NOTE: Run any required code before calling `super()`.
         '''
-        self.prepare()
+        super(Syndic, self).start()
         if check_user(self.config['user']):
-            logger.info('The salt syndic is starting up')
+            log.info('The salt syndic is starting up')
             try:
                 self.syndic.tune_in()
             except KeyboardInterrupt:
-                logger.warn('Stopping the Salt Syndic Minion')
+                log.warn('Stopping the Salt Syndic Minion')
                 self.shutdown()
 
     def shutdown(self, exitcode=0, exitmsg=None):
         '''
         If sub-classed, run any shutdown operations on this method.
         '''
-        logger.info('The salt syndic is shut down')
-        self.exit(exitcode, exitmsg)
+        log.info('The salt syndic is shutting down..')
+        msg = 'The salt syndic is shutdown. '
+        if exitmsg is not None:
+            exitmsg = msg + exitmsg
+        else:
+            exitmsg = msg.strip()
+        super(Syndic, self).shutdown(exitcode, exitmsg)

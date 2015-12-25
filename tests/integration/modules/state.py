@@ -692,6 +692,13 @@ class StateModuleTest(integration.ModuleCase,
         #ret = self.run_function('state.sls', mods='requisites.fullsls_prereq')
         #self.assertEqual(['sls command can only be used with require requisite'], ret)
 
+    def test_requisites_full_sls_import(self):
+        '''
+        Test full sls requisite with nothing but an import
+        '''
+        ret = self.run_function('state.sls', mods='requisites.fullsls_require_import')
+        self.assertSaltTrueReturn(ret)
+
     def test_requisites_prereq_simple_ordering_and_errors(self):
         '''
         Call sls file containing several prereq_in and prereq.
@@ -859,6 +866,9 @@ class StateModuleTest(integration.ModuleCase,
         #    ret,
         #    ['A recursive requisite was found, SLS "requisites.prereq_recursion_error" ID "B" ID "A"']
         #)
+    def test_infinite_recursion_sls_prereq(self):
+        ret = self.run_function('state.sls', mods='requisites.prereq_sls_infinite_recursion')
+        self.assertSaltTrueReturn(ret)
 
     def test_requisites_use(self):
         '''
@@ -1041,6 +1051,32 @@ class StateModuleTest(integration.ModuleCase,
         absent_state = 'cmd_|-listener_test_listening_non_changing_state_|-echo "Only run once"_|-mod_watch'
         self.assertNotIn(absent_state, state_run)
 
+    def test_listen_in_requisite_resolution(self):
+        '''
+        Verify listen_in requisite lookups use ID declaration to check for changes
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_in_simple')
+
+        # Test the result of the state run when a listener is expected to trigger
+        listener_state = 'cmd_|-listener_test_listen_in_resolution_|-echo "Successful listen_in resolution"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
+
+    def test_listen_requisite_resolution(self):
+        '''
+        Verify listen requisite lookups use ID declaration to check for changes
+        '''
+
+        # Only run the state once and keep the return data
+        state_run = self.run_function('state.sls', mods='requisites.listen_simple')
+
+        # Both listeners are expected to trigger
+        listener_state = 'cmd_|-listener_test_listening_resolution_one_|-echo "Successful listen resolution"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
+
+        listener_state = 'cmd_|-listener_test_listening_resolution_two_|-echo "Successful listen resolution"_|-mod_watch'
+        self.assertIn(listener_state, state_run)
 
 if __name__ == '__main__':
     from integration import run_tests

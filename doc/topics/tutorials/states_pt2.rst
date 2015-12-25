@@ -31,6 +31,14 @@ You can specify multiple :ref:`state-declaration` under an
 Try stopping Apache before running ``state.highstate`` once again and observe
 the output.
 
+.. note::
+
+    For those running RedhatOS derivatives (Centos, AWS), you will want to specify the
+    service name to be httpd. More on state service here, :mod:`service state
+    <salt.states.service>`.  With the example above, just add "- name: httpd"
+    above the require line and with the same spacing.
+
+
 Require other states
 ====================
 

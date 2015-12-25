@@ -32,18 +32,19 @@ def __virtual__():
     Confine this module to rpm based systems
     '''
     if not salt.utils.which('rpm'):
-        return False
+        return (False, 'The rpm execution module failed to load: rpm binary is not in the path.')
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
     except Exception:
-        return False
+        return (False, 'The rpm execution module failed to load: failed to detect os or os_family grains.')
 
     enabled = ('amazon', 'xcp', 'xenserver')
 
     if os_family in ['redhat', 'suse'] or os_grain in enabled:
         return __virtualname__
-    return False
+    return (False, 'The rpm execution module failed to load: only available on redhat/suse type systems '
+        'or amazon, xcp or xenserver.')
 
 
 def bin_pkg_info(path, saltenv='base'):
@@ -359,7 +360,7 @@ def owner(*paths):
         return ''
     ret = {}
     for path in paths:
-        cmd = ['rpm', '-qf', '--queryformat', '%{{NAME}}', path]
+        cmd = ['rpm', '-qf', '--queryformat', '%{name}', path]
         ret[path] = __salt__['cmd.run_stdout'](cmd,
                                                output_loglevel='trace',
                                                python_shell=False)
@@ -429,10 +430,29 @@ def info(*packages):
         salt '*' lowpkg.info apache2 bash
     '''
 
-    cmd = packages and "rpm -qi {0}".format(' '.join(packages)) or "rpm -qai"
+    cmd = packages and "rpm -q {0}".format(' '.join(packages)) or "rpm -qa"
 
     # Locale needs to be en_US instead of C, because RPM otherwise will yank the timezone from the timestamps
-    call = __salt__['cmd.run_all'](cmd + " --queryformat '-----\n'",
+    call = __salt__['cmd.run_all'](cmd + (" --queryformat 'Name: %{NAME}\n"
+                                                          "Relocations: %|PREFIXES?{[%{PREFIXES} ]}:{(not relocatable)}|\n"
+                                                          "%|EPOCH?{Epoch: %{EPOCH}\n}|"
+                                                          "Version: %{VERSION}\n"
+                                                          "Vendor: %{VENDOR}\n"
+                                                          "Release: %{RELEASE}\n"
+                                                          "Architecture: %{ARCH}\n"
+                                                          "Build Date: %{BUILDTIME:date}\n"
+                                                          "Install Date: %|INSTALLTIME?{%{INSTALLTIME:date}}:{(not installed)}|\n"
+                                                          "Build Host: %{BUILDHOST}\n"
+                                                          "Group: %{GROUP}\n"
+                                                          "Source RPM: %{SOURCERPM}\n"
+                                                          "Size: %{LONGSIZE}\n"
+                                                          "%|LICENSE?{License: %{LICENSE}\n}|"
+                                                          "Signature: %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:{%|SIGGPG?{%{SIGGPG:pgpsig}}:{%|SIGPGP?{%{SIGPGP:pgpsig}}:{(none)}|}|}|}|\n"
+                                                          "%|PACKAGER?{Packager: %{PACKAGER}\n}|"
+                                                          "%|URL?{URL: %{URL}\n}|"
+                                                          "Summary: %{SUMMARY}\n"
+                                                          "Description:\n%{DESCRIPTION}\n"
+                                                          "-----\n'"),
                                    output_loglevel='trace', env={'LC_ALL': 'en_US', 'TZ': 'UTC'}, clean_env=True)
     if call['retcode'] != 0:
         comment = ''

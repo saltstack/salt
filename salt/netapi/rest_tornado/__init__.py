@@ -41,7 +41,7 @@ def start():
     '''
     try:
         from . import saltnado
-    except ImportError:
+    except ImportError as err:
         logger.error('ImportError! {0}'.format(str(err)))
         return None
 

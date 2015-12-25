@@ -125,7 +125,8 @@ def _get_pip_bin(bin_env):
     # try to get pip bin from virtualenv, bin_env
     if os.path.isdir(bin_env):
         if salt.utils.is_windows():
-            pip_bin = os.path.join(bin_env, 'Scripts', 'pip.exe').encode('string-escape')
+            pip_bin = os.path.join(
+                bin_env, 'Scripts', 'pip.exe').encode('string-escape')
         else:
             pip_bin = os.path.join(bin_env, 'bin', 'pip')
         if os.path.isfile(pip_bin):
@@ -468,10 +469,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     if activate:
         salt.utils.warn_until(
-                'Boron',
-                'Passing \'activate\' to the pip module is deprecated. If '
-                'bin_env refers to a virtualenv, there is no need to activate '
-                'that virtualenv before using pip to install packages in it.'
+            'Boron',
+            'Passing \'activate\' to the pip module is deprecated. If '
+            'bin_env refers to a virtualenv, there is no need to activate '
+            'that virtualenv before using pip to install packages in it.'
         )
 
     if isinstance(__env__, string_types):
@@ -525,10 +526,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             cmd.append('--no-use-wheel')
 
     if log:
-        try:
-            # TODO make this check if writeable
-            os.path.exists(log)
-        except IOError:
+        if os.path.isdir(log):
+            raise IOError(
+                '\'{0}\' is a directory. Use --log path_to_file'.format(log))
+        elif not os.access(log, os.W_OK):
             raise IOError('\'{0}\' is not writeable'.format(log))
 
         cmd.extend(['--log', log])
@@ -646,7 +647,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             cmd.append('--pre')
 
     if cert:
-        cmd.append(['--cert', cert])
+        cmd.extend(['--cert', cert])
 
     if global_options:
         if isinstance(global_options, string_types):
@@ -697,7 +698,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             allow_external = [p.strip() for p in allow_external.split(',')]
 
         for pkg in allow_external:
-            cmd.append('--allow-external {0}'.format(pkg))
+            cmd.extend(['--allow-external', pkg])
 
     if allow_unverified:
         if isinstance(allow_unverified, string_types):
@@ -705,7 +706,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 [p.strip() for p in allow_unverified.split(',')]
 
         for pkg in allow_unverified:
-            cmd.append('--allow-unverified {0}'.format(pkg))
+            cmd.extend(['--allow-unverified', pkg])
 
     if process_dependency_links:
         cmd.append('--process-dependency-links')
@@ -714,10 +715,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         if isinstance(env_vars, dict):
             os.environ.update(env_vars)
         else:
-            raise CommandExecutionError('env_vars {0} is not a dictionary'.format(env_vars))
+            raise CommandExecutionError(
+                'env_vars {0} is not a dictionary'.format(env_vars))
 
     if trusted_host:
-        cmd.append('--trusted-host {0}'.format(trusted_host))
+        cmd.extend(['--trusted-host', trusted_host])
 
     try:
         cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt, runas=user)
@@ -856,7 +858,8 @@ def uninstall(pkgs=None,
                             pass
         cmd.extend(pkgs)
 
-    cmd_kwargs = dict(python_shell=False, runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt)
+    cmd_kwargs = dict(python_shell=False, runas=user,
+                      cwd=cwd, saltenv=saltenv, use_vt=use_vt)
     if bin_env and os.path.isdir(bin_env):
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
 
@@ -983,7 +986,8 @@ def version(bin_env=None):
     '''
     pip_bin = _get_pip_bin(bin_env)
 
-    output = __salt__['cmd.run']('{0} --version'.format(pip_bin), python_shell=False)
+    output = __salt__['cmd.run'](
+        '{0} --version'.format(pip_bin), python_shell=False)
     try:
         return re.match(r'^pip (\S+)', output).group(1)
     except AttributeError:

@@ -18,6 +18,7 @@ import time
 import shutil
 import optparse
 import subprocess
+import random
 
 # Import Salt libs
 import salt.utils
@@ -404,6 +405,11 @@ def run(opts):
                 **opts.__dict__
             )
         )
+    if opts.splay is not None:
+        # Sleep a random number of seconds
+        cloud_downtime = random.randint(0, opts.splay)
+        print('Sleeping random period before calling salt-cloud: {0}'.format(cloud_downtime))
+        time.sleep(cloud_downtime)
     print('Running CMD: {0}'.format(cmd))
     sys.stdout.flush()
 
@@ -428,9 +434,11 @@ def run(opts):
     print('VM Bootstrapped. Exit code: {0}'.format(retcode))
     sys.stdout.flush()
 
-    print('Sleeping for 5 seconds to allow the minion to breathe a little')
+    # Sleep a random number of seconds
+    bootstrap_downtime = random.randint(0, opts.splay)
+    print('Sleeping for {0} seconds to allow the minion to breathe a little'.format(bootstrap_downtime))
     sys.stdout.flush()
-    time.sleep(5)
+    time.sleep(bootstrap_downtime)
 
     if opts.bootstrap_salt_commit is not None:
         # Let's find out if the installed version matches the passed in pillar
@@ -491,7 +499,8 @@ def run(opts):
 
     if opts.cloud_only:
         # Run Cloud Provider tests preparation SLS
-        time.sleep(3)
+        cloud_provider_downtime = random.randint(3, opts.splay)
+        time.sleep(cloud_provider_downtime)
         cmd = (
             'salt -t 900 {target} state.sls {cloud_prep_sls} pillar="{pillar}" '
             '--no-color'.format(
@@ -502,7 +511,8 @@ def run(opts):
         )
     else:
         # Run standard preparation SLS
-        time.sleep(3)
+        standard_sls_downtime = random.randint(3, opts.splay)
+        time.sleep(standard_sls_downtime)
         cmd = (
             'salt -t 1800 {target} state.sls {prep_sls} pillar="{pillar}" '
             '--no-color'.format(
@@ -537,7 +547,8 @@ def run(opts):
         sys.exit(retcode)
 
     if opts.cloud_only:
-        time.sleep(3)
+        cloud_provider_pillar = random.randint(3, opts.splay)
+        time.sleep(cloud_provider_pillar)
         # Run Cloud Provider tests pillar preparation SLS
         cmd = (
             'salt -t 600 {target} state.sls {cloud_prep_sls} pillar="{pillar}" '
@@ -574,7 +585,8 @@ def run(opts):
             sys.exit(retcode)
 
     if opts.prep_sls_2 is not None:
-        time.sleep(3)
+        sls_2_downtime = random.randint(3, opts.splay)
+        time.sleep(sls_2_downtime)
 
         # Run the 2nd preparation SLS
         cmd = (
@@ -612,7 +624,8 @@ def run(opts):
 
     # Run remote checks
     if opts.test_git_url is not None:
-        time.sleep(1)
+        test_git_downtime = random.randint(1, opts.splay)
+        time.sleep(test_git_downtime)
         # Let's find out if the cloned repository if checked out from the
         # desired repository
         print('Grabbing the cloned repository remotes information ... ')
@@ -657,7 +670,8 @@ def run(opts):
             print('Failed to load any JSON from \'{0}\''.format(salt.utils.to_str(stdout).strip()))
 
     if opts.test_git_commit is not None:
-        time.sleep(1)
+        test_git_commit_downtime = random.randint(1, opts.splay)
+        time.sleep(test_git_commit_downtime)
 
         # Let's find out if the cloned repository is checked out at the desired
         # commit
@@ -703,7 +717,8 @@ def run(opts):
             print('Failed to load any JSON from \'{0}\''.format(salt.utils.to_str(stdout).strip()))
 
     # Run tests here
-    time.sleep(3)
+    test_begin_downtime = random.randint(3, opts.splay)
+    time.sleep(test_begin_downtime)
     cmd = (
         'salt -t 1800 {target} state.sls {sls} pillar="{pillar}" --no-color'.format(
             sls=opts.sls,
@@ -945,6 +960,11 @@ def parse():
         default='/tmp/salt-packages',
         help='Location on the minion from which packages should be '
              'retrieved (default: %default)',
+    )
+    parser.add_option(
+        '--splay',
+        default='10',
+        help='The number of seconds across which calls to provisioning components should be made'
     )
 
     options, args = parser.parse_args()

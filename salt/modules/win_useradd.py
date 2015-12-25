@@ -15,6 +15,8 @@ Module for managing Windows Users
     This currently only works with local user accounts, not domain accounts
 '''
 from __future__ import absolute_import
+from datetime import datetime
+import time
 
 try:
     from shlex import quote as _cmd_quote  # pylint: disable=E0611
@@ -54,6 +56,59 @@ def __virtual__():
     '''
     if HAS_WIN32NET_MODS and salt.utils.is_windows():
         return __virtualname__
+    return (False, "Module win_useradd: module has failed dependencies or is not on Windows client")
+
+
+def _get_date_time_format(dt_string):
+    '''
+    Copied from win_system.py (_get_date_time_format)
+
+    Function that detects the date/time format for the string passed.
+
+    :param str dt_string:
+        A date/time string
+
+    :return: The format of the passed dt_string
+    :rtype: str
+    '''
+    valid_formats = [
+        '%Y-%m-%d %I:%M:%S %p',
+        '%m-%d-%y %I:%M:%S %p',
+        '%m-%d-%Y %I:%M:%S %p',
+        '%m/%d/%y %I:%M:%S %p',
+        '%m/%d/%Y %I:%M:%S %p',
+        '%Y/%m/%d %I:%M:%S %p',
+        '%Y-%m-%d %I:%M:%S',
+        '%m-%d-%y %I:%M:%S',
+        '%m-%d-%Y %I:%M:%S',
+        '%m/%d/%y %I:%M:%S',
+        '%m/%d/%Y %I:%M:%S',
+        '%Y/%m/%d %I:%M:%S',
+        '%Y-%m-%d %I:%M %p',
+        '%m-%d-%y %I:%M %p',
+        '%m-%d-%Y %I:%M %p',
+        '%m/%d/%y %I:%M %p',
+        '%m/%d/%Y %I:%M %p',
+        '%Y/%m/%d %I:%M %p',
+        '%Y-%m-%d %I:%M',
+        '%m-%d-%y %I:%M',
+        '%m-%d-%Y %I:%M',
+        '%m/%d/%y %I:%M',
+        '%m/%d/%Y %I:%M',
+        '%Y/%m/%d %I:%M',
+        '%Y-%m-%d',
+        '%m-%d-%y',
+        '%m-%d-%Y',
+        '%m/%d/%y',
+        '%m/%d/%Y',
+        '%Y/%m/%d',
+    ]
+    for dt_format in valid_formats:
+        try:
+            datetime.strptime(dt_string, dt_format)
+            return dt_format
+        except ValueError:
+            continue
     return False
 
 
@@ -147,7 +202,13 @@ def update(name,
            home=None,
            homedrive=None,
            logonscript=None,
-           profile=None):
+           profile=None,
+           expiration_date=None,
+           expired=None,
+           account_disabled=None,
+           unlock_account=None,
+           password_never_expires=None,
+           disallow_change_password=None):
     r'''
     Updates settings for the windows user. Name is the only required parameter.
     Settings will only be changed if the parameter is passed a value.
@@ -178,6 +239,27 @@ def update(name,
 
     :param str profile:
         The path to the user's profile directory.
+
+    :param date expiration_date: The date and time when the account expires. Can
+    be a valid date/time string. To set to never expire pass the string 'Never'.
+
+    :param bool expired: Pass `True` to expire the account. The user will be
+    prompted to change their password at the next logon. Pass `False` to mark
+    the account as 'not expired'. You can't use this to negate the expiration if
+    the expiration was caused by the account expiring. You'll have to change
+    the `expiration_date` as well.
+
+    :param bool account_disabled: True disables the account. False enables the
+    account.
+
+    :param bool unlock_account: True unlocks a locked user account. False is
+    ignored.
+
+    :param bool password_never_expires: True sets the password to never expire.
+    False allows the password to expire.
+
+    :param bool disallow_change_password: True blocks the user from changing
+    the password. False allows the user to change the password.
 
     :return:
         True if successful. False is unsuccessful.
@@ -219,6 +301,39 @@ def update(name,
         user_info['full_name'] = fullname
     if profile:
         user_info['profile'] = profile
+    if expiration_date:
+        if expiration_date == 'Never':
+            user_info['acct_expires'] = win32netcon.TIMEQ_FOREVER
+        else:
+            date_format = _get_date_time_format(expiration_date)
+            if date_format:
+                dt_obj = datetime.strptime(expiration_date, date_format)
+            else:
+                return 'Invalid start_date'
+            user_info['acct_expires'] = time.mktime(dt_obj.timetuple())
+    if expired is not None:
+        if expired:
+            user_info['password_expired'] = 1
+        else:
+            user_info['password_expired'] = 0
+    if account_disabled is not None:
+        if account_disabled:
+            user_info['flags'] |= win32netcon.UF_ACCOUNTDISABLE
+        else:
+            user_info['flags'] ^= win32netcon.UF_ACCOUNTDISABLE
+    if unlock_account is not None:
+        if unlock_account:
+            user_info['flags'] ^= win32netcon.UF_LOCKOUT
+    if password_never_expires is not None:
+        if password_never_expires:
+            user_info['flags'] |= win32netcon.UF_DONT_EXPIRE_PASSWD
+        else:
+            user_info['flags'] ^= win32netcon.UF_DONT_EXPIRE_PASSWD
+    if disallow_change_password is not None:
+        if disallow_change_password:
+            user_info['flags'] |= win32netcon.UF_PASSWD_CANT_CHANGE
+        else:
+            user_info['flags'] ^= win32netcon.UF_PASSWD_CANT_CHANGE
 
     # Apply new settings
     try:
@@ -626,6 +741,14 @@ def info(name):
             - home
             - homedrive
             - groups
+            - password_changed
+            - successful_logon_attempts
+            - failed_logon_attempts
+            - last_logon
+            - account_disabled
+            - account_locked
+            - password_never_expires
+            - disallow_change_password
             - gid
     :rtype: dict
 
@@ -658,6 +781,19 @@ def info(name):
         ret['active'] = (not bool(items['flags'] & win32netcon.UF_ACCOUNTDISABLE))
         ret['logonscript'] = items['script_path']
         ret['profile'] = items['profile']
+        ret['failed_logon_attempts'] = items['bad_pw_count']
+        ret['successful_logon_attempts'] = items['num_logons']
+        secs = time.mktime(datetime.now().timetuple()) - items['password_age']
+        ret['password_changed'] = datetime.fromtimestamp(secs). \
+            strftime('%Y-%m-%d %H:%M:%S')
+        if items['last_logon'] == 0:
+            ret['last_logon'] = 'Never'
+        else:
+            ret['last_logon'] = datetime.fromtimestamp(items['last_logon']).\
+                strftime('%Y-%m-%d %H:%M:%S')
+        ret['expiration_date'] = datetime.fromtimestamp(items['acct_expires']).\
+            strftime('%Y-%m-%d %H:%M:%S')
+        ret['expired'] = items['password_expired'] == 1
         if not ret['profile']:
             ret['profile'] = _get_userprofile_from_registry(name, ret['uid'])
         ret['home'] = items['home_dir']
@@ -665,9 +801,30 @@ def info(name):
         if not ret['home']:
             ret['home'] = ret['profile']
         ret['groups'] = groups
+        if items['flags'] & win32netcon.UF_DONT_EXPIRE_PASSWD == 0:
+            ret['password_never_expires'] = False
+        else:
+            ret['password_never_expires'] = True
+        if items['flags'] & win32netcon.UF_ACCOUNTDISABLE == 0:
+            ret['account_disabled'] = False
+        else:
+            ret['account_disabled'] = True
+        if items['flags'] & win32netcon.UF_LOCKOUT == 0:
+            ret['account_locked'] = False
+        else:
+            ret['account_locked'] = True
+        if items['flags'] & win32netcon.UF_PASSWD_CANT_CHANGE == 0:
+            ret['disallow_change_password'] = False
+        else:
+            ret['disallow_change_password'] = True
+
         ret['gid'] = ''
 
-    return ret
+        return ret
+
+    else:
+
+        return False
 
 
 def _get_userprofile_from_registry(user, sid):
@@ -675,10 +832,11 @@ def _get_userprofile_from_registry(user, sid):
     In case net user doesn't return the userprofile
     we can get it from the registry
     '''
-    profile_dir = __salt__['reg.read_key'](
-        'HKEY_LOCAL_MACHINE', u'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
+    profile_dir = __salt__['reg.read_value'](
+        'HKEY_LOCAL_MACHINE',
+        u'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\{0}'.format(sid),
         'ProfileImagePath'
-    )
+    )['vdata']
     log.debug(u'user {0} with sid={2} profile is located at "{1}"'.format(user, profile_dir, sid))
     return profile_dir
 

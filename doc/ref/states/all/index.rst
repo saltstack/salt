@@ -50,6 +50,7 @@ Full list of builtin state modules
     cyg
     ddns
     debconfmod
+    dellchassis
     disk
     dockerio
     dockerng
@@ -59,6 +60,7 @@ Full list of builtin state modules
     environ
     eselect
     etcd_mod
+    esxi
     event
     file
     firewalld
@@ -156,6 +158,7 @@ Full list of builtin state modules
     serverdensity_device
     service
     slack
+    smartos
     smtp
     splunk
     splunk_search
@@ -197,3 +200,4 @@ Full list of builtin state modules
     zcbuildout
     zenoss
     zk_concurrency
+    zpool

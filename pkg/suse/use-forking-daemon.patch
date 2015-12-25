@@ -1,17 +1,13 @@
-Index: salt-2014.1.8/pkg/salt-master.service
+Index: salt-2015.8.0/pkg/salt-master.service
 ===================================================================
---- salt-2014.1.13.orig/pkg/salt-master.service
-+++ salt-2014.1.13/pkg/salt-master.service
-@@ -3,8 +3,10 @@ Description=The Salt Master Server
- After=syslog.target network.target
+--- salt-2015.8.0.orig/pkg/salt-master.service
++++ salt-2015.8.0/pkg/salt-master.service
+@@ -4,7 +4,7 @@ After=syslog.target network.target
  
  [Service]
+ LimitNOFILE=16384
 -Type=notify
--ExecStart=/usr/bin/salt-master
-+Type=forking
-+ExecStart=/usr/bin/salt-master --daemon
-+# Daemon mode doesn't seem to work reliably without PIDFile
-+PIDFile=/var/run/salt-master.pid
++Type=simple
+ ExecStart=/usr/bin/salt-master
  
  [Install]
- WantedBy=multi-user.target

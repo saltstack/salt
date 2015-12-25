@@ -272,7 +272,7 @@
 # This setting should be treated with care since it opens up execution
 # capabilities to non root users. By default this capability is completely
 # disabled.
-#client_acl:
+#pulisher_acl:
 #  larry:
 #    - test.ping
 #    - network.*
@@ -283,14 +283,18 @@
 # running any commands. It would also blacklist any use of the "cmd"
 # module. This is completely disabled by default.
 #
-#client_acl_blacklist:
+#publisher_acl_blacklist:
 #  users:
 #    - root
 #    - '^(?!sudo_).*$'   #  all non sudo users
 #  modules:
 #    - cmd
+#
+# WARNING: client_acl and client_acl_blacklist options are deprecated and will
+# be removed in the future releases. Use publisher_acl and
+# publisher_acl_blacklist instead.
 
-# Enforce client_acl & client_acl_blacklist when users have sudo
+# Enforce publisher_acl & publisher_acl_blacklist when users have sudo
 # access to the salt command. 
 #
 #sudo_acl: False
@@ -811,3 +815,9 @@
 ############################################
 # Which returner(s) will be used for minion's result:
 #return: mysql
+
+
+######    Miscellaneous  settings     ######
+############################################
+# Default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
+#event_match_type: startswith

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 '''
-Create virtualenv environments
+Create virtualenv environments.
+
+.. versionadded:: 0.17.0
 '''
 from __future__ import absolute_import
 
@@ -105,8 +107,19 @@ def create(path,
         .. deprecated:: 2014.1.0
             ``user`` should be used instead
 
-    use_vt
+    use_vt : False
         Use VT terminal emulation (see ouptut while installing)
+
+        .. versionadded:: 2015.5.0
+
+    saltenv : 'base'
+        Specify a different environment. The default environment is ``base``.
+
+        .. versionadded:: 2014.1.0
+
+    .. note::
+        The ``runas`` argument is deprecated as of 2014.1.0. ``user`` should be
+        used instead.
 
     CLI Example:
 
@@ -383,6 +396,8 @@ def get_resource_path(venv,
         .. deprecated:: Boron
 
 
+    .. versionadded:: 2015.5.0
+
     venv
         Path to the virtualenv.
     package_or_requirement
@@ -471,6 +486,8 @@ def get_resource_content(venv,
 
         .. deprecated:: Boron
 
+
+    .. versionadded:: 2015.5.0
 
     venv
         Path to the virtualenv.

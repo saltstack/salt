@@ -43,7 +43,7 @@ def __virtual__():
     '''
     if HAS_PORTAGE and __grains__['os'] == 'Gentoo':
         return 'portage_config'
-    return False
+    return (False, 'portage_config execution module cannot be loaded: only available on Gentoo with portage installed.')
 
 
 def _get_portage():

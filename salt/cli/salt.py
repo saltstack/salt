@@ -98,7 +98,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
 
             # If using eauth and a token hasn't already been loaded into
             # kwargs, prompt the user to enter auth credentials
-            if 'token' not in kwargs and self.options.eauth:
+            if 'token' not in kwargs and 'key' not in kwargs and self.options.eauth:
                 resolver = salt.auth.Resolver(self.config)
                 res = resolver.cli(self.options.eauth)
                 if self.options.mktoken and res:
@@ -255,6 +255,7 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         not_return_minions = []
         not_response_minions = []
         not_connected_minions = []
+        failed_minions = []
         for each_minion in ret:
             minion_ret = ret[each_minion].get('ret')
             if (
@@ -269,6 +270,8 @@ class SaltCMD(parsers.SaltCMDOptionParser):
                 not_return_minions.append(each_minion)
             else:
                 return_counter += 1
+                if salt.utils.job.get_retcode(ret[each_minion]):
+                    failed_minions.append(each_minion)
         print_cli('\n')
         print_cli('-------------------------------------------')
         print_cli('Summary')
@@ -276,11 +279,14 @@ class SaltCMD(parsers.SaltCMDOptionParser):
         print_cli('# of minions targeted: {0}'.format(return_counter + not_return_counter))
         print_cli('# of minions returned: {0}'.format(return_counter))
         print_cli('# of minions that did not return: {0}'.format(not_return_counter))
+        print_cli('# of minions with errors: {0}'.format(len(failed_minions)))
         if self.options.verbose:
             if not_connected_minions:
                 print_cli('Minions not connected: {0}'.format(" ".join(not_connected_minions)))
             if not_response_minions:
                 print_cli('Minions not responding: {0}'.format(" ".join(not_response_minions)))
+            if failed_minions:
+                print_cli('Minions with failures: {0}'.format(" ".join(failed_minions)))
         print_cli('-------------------------------------------')
 
     def _progress_end(self, out):

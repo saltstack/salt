@@ -11,6 +11,7 @@ import hashlib
 import logging
 import os
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -53,6 +54,7 @@ _INVALID_REPO = (
 
 # Import salt libs
 import salt.utils
+import salt.utils.itertools
 import salt.utils.url
 import salt.fileserver
 from salt.exceptions import FileserverConfigError
@@ -267,6 +269,59 @@ class GitProvider(object):
             log.critical(msg, exc_info_on_loglevel=logging.DEBUG)
             failhard(self.role)
 
+    def _get_envs_from_ref_paths(self, refs):
+        '''
+        Return the names of remote refs (stripped of the remote name) and tags
+        which are exposed as environments. If a branch or tag matches
+        '''
+        def _check_ref(env_set, base_ref, rname):
+            '''
+            Check the ref and resolve it as the base_ref if it matches. If the
+            resulting env is exposed via whitelist/blacklist, add it to the
+            env_set.
+            '''
+            if base_ref is not None and base_ref == rname:
+                rname = 'base'
+            if self.env_is_exposed(rname):
+                env_set.add(rname)
+
+        ret = set()
+        base_ref = getattr(self, 'base', None)
+        for ref in refs:
+            ref = re.sub('^refs/', '', ref)
+            rtype, rname = ref.split('/', 1)
+            if rtype == 'remotes':
+                parted = rname.partition('/')
+                rname = parted[2] if parted[2] else parted[0]
+                _check_ref(ret, base_ref, rname)
+            elif rtype == 'tags':
+                _check_ref(ret, base_ref, rname)
+        return ret
+
+    def check_lock(self):
+        '''
+        Used by the provider-specific fetch() function to check the existence
+        of an update lock, and set the lock if not present. If the lock exists
+        already, or if there was a problem setting the lock, this function
+        returns False. If the lock was successfully set, return True.
+        '''
+        if os.path.exists(self.lockfile):
+            log.warning(
+                'Update lockfile is present for {0} remote \'{1}\', '
+                'skipping. If this warning persists, it is possible that the '
+                'update process was interrupted. Removing {2} or running '
+                '\'salt-run cache.clear_git_lock {0}\' will allow updates to '
+                'continue for this remote.'
+                .format(self.role, self.id, self.lockfile)
+            )
+            return False
+        errors = self.lock()[-1]
+        if errors:
+            log.error('Unable to set update lock for {0} remote \'{1}\', '
+                      'skipping.'.format(self.role, self.id))
+            return False
+        return True
+
     def check_root(self):
         '''
         Check if the relative root path exists in the checked-out copy of the
@@ -316,7 +371,10 @@ class GitProvider(object):
                 else:
                     _add_error(failed, exc)
             else:
-                msg = 'Removed lock for {0}'.format(self.url)
+                msg = 'Removed lock for {0} remote \'{1}\''.format(
+                    self.role,
+                    self.id
+                )
                 log.debug(msg)
                 success.append(msg)
         return success, failed
@@ -334,10 +392,13 @@ class GitProvider(object):
             except (IOError, OSError) as exc:
                 msg = ('Unable to set update lock for {0} ({1}): {2} '
                        .format(self.url, self.lockfile, exc))
-                log.debug(msg)
+                log.error(msg)
                 failed.append(msg)
             else:
-                msg = 'Set lock for {0}'.format(self.url)
+                msg = 'Set lock for {0} remote \'{1}\''.format(
+                    self.role,
+                    self.id
+                )
                 log.debug(msg)
                 success.append(msg)
         return success, failed
@@ -421,6 +482,7 @@ class GitProvider(object):
         '''
         Override this function in a sub-class to implement auth checking.
         '''
+        self.credentials = None
         return True
 
     def write_file(self, blob, dest):
@@ -539,31 +601,52 @@ class GitPython(GitProvider):
         Check the refs and return a list of the ones which can be used as salt
         environments.
         '''
-        ret = set()
-        for ref in self.repo.refs:
-            parted = ref.name.partition('/')
-            rspec = parted[2] if parted[2] else parted[0]
-            if isinstance(ref, git.Head):
-                if hasattr(self, 'base') and self.base == rspec:
-                    rspec = 'base'
-                if self.env_is_exposed(rspec):
-                    ret.add(rspec)
-            elif isinstance(ref, git.Tag) and self.env_is_exposed(rspec):
-                ret.add(rspec)
-        return ret
+        ref_paths = [x.path for x in self.repo.refs]
+        return self._get_envs_from_ref_paths(ref_paths)
 
     def fetch(self):
         '''
         Fetch the repo. If the local copy was updated, return True. If the
         local copy was already up-to-date, return False.
         '''
+        if not self.check_lock():
+            return False
         origin = self.repo.remotes[0]
         try:
             fetch_results = origin.fetch()
         except AssertionError:
             fetch_results = origin.fetch()
+
+        new_objs = False
+        for fetchinfo in fetch_results:
+            if fetchinfo.old_commit is not None:
+                log.debug(
+                    '{0} has updated \'{1}\' for remote \'{2}\' '
+                    'from {3} to {4}'.format(
+                        self.role,
+                        fetchinfo.name,
+                        self.id,
+                        fetchinfo.old_commit.hexsha[:7],
+                        fetchinfo.commit.hexsha[:7]
+                    )
+                )
+                new_objs = True
+            elif fetchinfo.flags in (fetchinfo.NEW_TAG,
+                                     fetchinfo.NEW_HEAD):
+                log.debug(
+                    '{0} has fetched new {1} \'{2}\' for remote \'{3}\' '
+                    .format(
+                        self.role,
+                        'tag' if fetchinfo.flags == fetchinfo.NEW_TAG
+                            else 'head',
+                        fetchinfo.name,
+                        self.id
+                    )
+                )
+                new_objs = True
+
         cleaned = self.clean_stale_refs()
-        return bool(fetch_results or cleaned)
+        return bool(new_objs or cleaned)
 
     def file_list(self, tgt_env):
         '''
@@ -675,6 +758,9 @@ class Pygit2(GitProvider):
     def __init__(self, opts, remote, per_remote_defaults,
                  override_params, cache_root, role='gitfs'):
         self.provider = 'pygit2'
+        self.use_callback = \
+            distutils.version.LooseVersion(pygit2.__version__) >= \
+            distutils.version.LooseVersion('0.23.2')
         GitProvider.__init__(self, opts, remote, per_remote_defaults,
                              override_params, cache_root, role)
 
@@ -682,10 +768,6 @@ class Pygit2(GitProvider):
         '''
         Checkout the configured branch/tag
         '''
-        def _log_error(exc):
-            '''
-            Log an exception caught during the checkout process
-            '''
         local_ref = 'refs/heads/' + self.branch
         remote_ref = 'refs/remotes/origin/' + self.branch
         tag_ref = 'refs/tags/' + self.branch
@@ -699,6 +781,34 @@ class Pygit2(GitProvider):
                     # No local branch for this remote, so create one and point
                     # it at the commit id of the remote ref
                     self.repo.create_reference(local_ref, oid)
+
+                # Check HEAD ref existence (checking out local_ref when HEAD
+                # ref doesn't exist will raise an exception in pygit2 >= 0.21),
+                # and create the HEAD ref if it is missing.
+                head_ref = self.repo.lookup_reference('HEAD').target
+                if head_ref not in refs and head_ref != local_ref:
+                    branch_name = head_ref.partition('refs/heads/')[-1]
+                    if not branch_name:
+                        # Shouldn't happen, but log an error if it does
+                        log.error(
+                            'pygit2 was unable to resolve branch name from '
+                            'HEAD ref \'{0}\' in {1} remote \'{2}\''.format(
+                                head_ref, self.role, self.id
+                            )
+                        )
+                        return None
+                    remote_head = 'refs/remotes/origin/' + branch_name
+                    if remote_head not in refs:
+                        log.error(
+                            'Unable to find remote ref \'{0}\' in {1} remote '
+                            '\'{2}\''.format(head_ref, self.role, self.id)
+                        )
+                        return None
+                    self.repo.create_reference(
+                        head_ref,
+                        self.repo.lookup_reference(remote_head).target
+                    )
+
                 # Point HEAD at the local ref
                 self.repo.checkout(local_ref)
                 # Reset HEAD to the commit id of the remote ref
@@ -728,7 +838,7 @@ class Pygit2(GitProvider):
         '''
         Clean stale local refs so they don't appear as fileserver environments
         '''
-        if hasattr(self, 'credentials'):
+        if self.credentials is not None:
             log.debug(
                 'pygit2 does not support detecting stale refs for '
                 'authenticated remotes, saltenvs will not reflect '
@@ -739,15 +849,28 @@ class Pygit2(GitProvider):
         if local_refs is None:
             local_refs = self.repo.listall_references()
         remote_refs = []
-        for line in subprocess.Popen(
-                'git ls-remote origin',
-                shell=True,
-                close_fds=not salt.utils.is_windows(),
-                cwd=self.repo.workdir,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT).communicate()[0].splitlines():
+        cmd_str = 'git ls-remote origin'
+        cmd = subprocess.Popen(
+            shlex.split(cmd_str),
+            close_fds=not salt.utils.is_windows(),
+            cwd=self.repo.workdir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+        output = cmd.communicate()[0]
+        if cmd.returncode != 0:
+            log.warning(
+                'Failed to list remote references for {0} remote \'{1}\'. '
+                'Output from \'{2}\' follows:\n{3}'.format(
+                    self.role,
+                    self.id,
+                    cmd_str,
+                    output
+                )
+            )
+            return []
+        for line in salt.utils.itertools.split(output, '\n'):
             try:
-                # Rename heads to match the ref names from
+                # Rename heads to match the remote ref names from
                 # pygit2.Repository.listall_references()
                 remote_refs.append(
                     line.split()[-1].replace(b'refs/heads/',
@@ -756,9 +879,14 @@ class Pygit2(GitProvider):
             except IndexError:
                 continue
         cleaned = []
-        for ref in [x for x in local_refs if x not in remote_refs]:
-            self.repo.lookup_reference(ref).delete()
-            cleaned.append(ref)
+        if remote_refs:
+            for ref in local_refs:
+                if ref.startswith('refs/heads/'):
+                    # Local head, ignore it
+                    continue
+                elif ref not in remote_refs:
+                    self.repo.lookup_reference(ref).delete()
+                    cleaned.append(ref)
         if cleaned:
             log.debug('{0} cleaned the following stale refs: {1}'
                       .format(self.role, cleaned))
@@ -778,7 +906,17 @@ class Pygit2(GitProvider):
         else:
             # Repo cachedir exists, try to attach
             try:
-                self.repo = pygit2.Repository(self.cachedir)
+                try:
+                    self.repo = pygit2.Repository(self.cachedir)
+                except pygit2.GitError as exc:
+                    import pwd
+                    # https://github.com/libgit2/pygit2/issues/339
+                    # https://github.com/libgit2/libgit2/issues/2122
+                    if "Error stat'ing config file" not in str(exc):
+                        raise
+                    home = pwd.getpwnam(salt.utils.get_user).pw_dir
+                    pygit2.settings.search_path[pygit2.GIT_CONFIG_LEVEL_GLOBAL] = home
+                    self.repo = pygit2.Repository(self.cachedir)
             except KeyError:
                 log.error(_INVALID_REPO.format(self.cachedir, self.url))
                 return new
@@ -816,6 +954,9 @@ class Pygit2(GitProvider):
             the empty directories within it in the "blobs" list
             '''
             for entry in iter(tree):
+                if entry.oid not in self.repo:
+                    # Entry is a submodule, skip it
+                    continue
                 blob = self.repo[entry.oid]
                 if not isinstance(blob, pygit2.Tree):
                     continue
@@ -853,45 +994,50 @@ class Pygit2(GitProvider):
         Check the refs and return a list of the ones which can be used as salt
         environments.
         '''
-        ret = set()
-        for ref in self.repo.listall_references():
-            ref = re.sub('^refs/', '', ref)
-            rtype, rspec = ref.split('/', 1)
-            if rtype == 'remotes':
-                parted = rspec.partition('/')
-                rspec = parted[2] if parted[2] else parted[0]
-                if hasattr(self, 'base') and self.base == rspec:
-                    rspec = 'base'
-                if self.env_is_exposed(rspec):
-                    ret.add(rspec)
-            elif rtype == 'tags' and self.env_is_exposed(rspec):
-                ret.add(rspec)
-        return ret
+        ref_paths = self.repo.listall_references()
+        return self._get_envs_from_ref_paths(ref_paths)
 
     def fetch(self):
         '''
         Fetch the repo. If the local copy was updated, return True. If the
         local copy was already up-to-date, return False.
         '''
+        if not self.check_lock():
+            return False
         origin = self.repo.remotes[0]
         refs_pre = self.repo.listall_references()
-        credentials = getattr(self, 'credentials', None)
-        if credentials is not None:
-            origin.credentials = credentials
+        fetch_kwargs = {}
+        if self.credentials is not None:
+            if self.use_callback:
+                fetch_kwargs['callbacks'] = \
+                    pygit2.RemoteCallbacks(credentials=self.credentials)
+            else:
+                origin.credentials = self.credentials
         try:
-            fetch_results = origin.fetch()
+            fetch_results = origin.fetch(**fetch_kwargs)
         except GitError as exc:
             # Using exc.__str__() here to avoid deprecation warning
             # when referencing exc.message
-            if 'unsupported url protocol' in exc.__str__().lower() \
-                    and isinstance(credentials, pygit2.Keypair):
+            exc_str = exc.__str__().lower()
+            if 'unsupported url protocol' in exc_str \
+                    and isinstance(self.credentials, pygit2.Keypair):
                 log.error(
                     'Unable to fetch SSH-based {0} remote \'{1}\'. '
                     'libgit2 must be compiled with libssh2 to support '
                     'SSH authentication.'.format(self.role, self.id)
                 )
-                return False
-            raise
+            elif 'authentication required but no callback set' in exc_str:
+                log.error(
+                    '{0} remote \'{1}\' requires authentication, but no '
+                    'authentication configured'.format(self.role, self.id)
+                )
+            else:
+                log.error(
+                    'Error occured fetching {0} remote \'{1}\': {2}'.format(
+                        self.role, self.id, exc
+                    )
+                )
+            return False
         try:
             # pygit2.Remote.fetch() returns a dict in pygit2 < 0.21.0
             received_objects = fetch_results['received_objects']
@@ -922,6 +1068,9 @@ class Pygit2(GitProvider):
             the file paths and symlink info in the "blobs" dict
             '''
             for entry in iter(tree):
+                if entry.oid not in self.repo:
+                    # Entry is a submodule, skip it
+                    continue
                 obj = self.repo[entry.oid]
                 if isinstance(obj, pygit2.Blob):
                     repo_path = os.path.join(prefix, entry.name)
@@ -1024,11 +1173,14 @@ class Pygit2(GitProvider):
     def verify_auth(self):
         '''
         Check the username and password/keypair info for validity. If valid,
-        set a 'credentials' attribute (consisting of the appropriate
-        credentials object) to the repo config dict passed to this function.
-        Return False if a required auth param is not present. Return True if
-        the required auth parameters are present, otherwise return False.
+        set a 'credentials' attribute consisting of the appropriate Pygit2
+        credentials object. Return False if a required auth param is not
+        present. Return True if the required auth parameters are present (or
+        auth is not configured), otherwise failhard if there is a problem with
+        authenticaion.
         '''
+        self.credentials = None
+
         if os.path.isabs(self.url):
             # If the URL is an absolute file path, there is no authentication.
             return True
@@ -1138,7 +1290,7 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
     def __init__(self, opts, remote, per_remote_defaults,
                  override_params, cache_root, role='gitfs'):
         self.get_env_refs = lambda refs: [
-            x for x in refs if re.match('refs/(heads|tags)', x)
+            x for x in refs if re.match('refs/(remotes|tags)', x)
             and not x.endswith('^{}')
         ]
         self.provider = 'dulwich'
@@ -1186,24 +1338,16 @@ class Dulwich(GitProvider):  # pylint: disable=abstract-method
         Check the refs and return a list of the ones which can be used as salt
         environments.
         '''
-        ret = set()
-        for ref in self.get_env_refs(self.repo.get_refs()):
-            # ref will be something like 'refs/heads/master'
-            rtype, rspec = ref[5:].split('/', 1)
-            if rtype == 'heads':
-                if hasattr(self, 'base') and self.base == rspec:
-                    rspec = 'base'
-                if self.env_is_exposed(rspec):
-                    ret.add(rspec)
-            elif rtype == 'tags' and self.env_is_exposed(rspec):
-                ret.add(rspec)
-        return ret
+        ref_paths = self.get_env_refs(self.repo.get_refs())
+        return self._get_envs_from_ref_paths(ref_paths)
 
     def fetch(self):
         '''
         Fetch the repo. If the local copy was updated, return True. If the
         local copy was already up-to-date, return False.
         '''
+        if not self.check_lock():
+            return False
         # origin is just a url here, there is no origin object
         origin = self.url
         client, path = \
@@ -1680,24 +1824,6 @@ class GitBase(object):
         '''
         changed = False
         for repo in self.remotes:
-            if os.path.exists(repo.lockfile):
-                log.warning(
-                    'Update lockfile is present for {0} remote \'{1}\', '
-                    'skipping. If this warning persists, it is possible that '
-                    'the update process was interrupted. Removing {2} or '
-                    'running \'salt-run cache.clear_git_lock {0}\' will '
-                    'allow updates to continue for this remote.'
-                    .format(self.role, repo.id, repo.lockfile)
-                )
-                continue
-            _, errors = repo.lock()
-            if errors:
-                log.error('Unable to set update lock for {0} remote \'{1}\', '
-                          'skipping.'.format(self.role, repo.id))
-                continue
-            log.debug(
-                '{0} is fetching from \'{1}\''.format(self.role, repo.id)
-            )
             try:
                 if repo.fetch():
                     # We can't just use the return value from repo.fetch()
@@ -1707,7 +1833,6 @@ class GitBase(object):
                     # this value and make it incorrect.
                     changed = True
             except Exception as exc:
-                # Do not use {0} in the error message, as exc is not a string
                 log.error(
                     'Exception \'{0}\' caught while fetching {1} remote '
                     '\'{2}\''.format(exc, self.role, repo.id),
@@ -2309,7 +2434,7 @@ class GitPillar(GitBase):
                 if repo.env:
                     env = repo.env
                 else:
-                    base_branch = self.opts['{0}_branch'.format(self.role)]
+                    base_branch = self.opts['{0}_base'.format(self.role)]
                     env = 'base' if repo.branch == base_branch else repo.branch
                 self.pillar_dirs[cachedir] = env
 

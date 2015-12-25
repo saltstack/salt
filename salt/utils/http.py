@@ -15,6 +15,7 @@ import pprint
 import socket
 import urllib
 import inspect
+import yaml
 
 import ssl
 try:
@@ -57,6 +58,12 @@ from salt.ext.six.moves.urllib.error import URLError
 import tornado.httputil
 import tornado.simple_httpclient
 from tornado.httpclient import HTTPClient
+
+try:
+    import tornado.curl_httpclient
+    HAS_CURL_HTTPCLIENT = True
+except ImportError:
+    HAS_CURL_HTTPCLIENT = False
 
 try:
     import requests
@@ -187,10 +194,11 @@ def query(url,
         # Make sure no secret fields show up in logs
         if isinstance(data, dict):
             log_data = data.copy()
-            for item in data:
-                for field in hide_fields:
-                    if item == field:
-                        log_data[item] = 'XXXXXXXXXX'
+            if isinstance(hide_fields, list):
+                for item in data:
+                    for field in hide_fields:
+                        if item == field:
+                            log_data[item] = 'XXXXXXXXXX'
             log.trace('Request POST Data: {0}'.format(pprint.pformat(log_data)))
         else:
             log.trace('Request POST Data: {0}'.format(pprint.pformat(data)))
@@ -298,14 +306,18 @@ def query(url,
         )
         result.raise_for_status()
         if stream is True or handle is True:
-            return {'handle': result}
+            return {
+                'handle': result,
+                'body': result.content,
+            }
 
         log.debug('Final URL location of Response: {0}'.format(sanitize_url(result.url, hide_fields)))
 
         result_status_code = result.status_code
         result_headers = result.headers
-        result_text = result.text
+        result_text = result.content
         result_cookies = result.cookies
+        ret['body'] = result.content
     elif backend == 'urllib2':
         request = urllib_request.Request(url_full, data)
         handlers = [
@@ -382,11 +394,15 @@ def query(url,
         except URLError as exc:
             return {'Error': str(exc)}
         if stream is True or handle is True:
-            return {'handle': result}
+            return {
+                'handle': result,
+                'body': result.content,
+            }
 
         result_status_code = result.code
         result_headers = result.headers.headers
         result_text = result.read()
+        ret['body'] = result_text
     else:
         # Tornado
         req_kwargs = {}
@@ -413,7 +429,26 @@ def query(url,
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
 
-        client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+        client_argspec = None
+
+        proxy_host = opts.get('proxy_host', None)
+        proxy_port = opts.get('proxy_port', None)
+        proxy_username = opts.get('proxy_username', None)
+        proxy_password = opts.get('proxy_password', None)
+
+        # We want to use curl_http if we have a proxy defined
+        if proxy_host and proxy_port:
+            if HAS_CURL_HTTPCLIENT is False:
+                ret['error'] = ('proxy_host and proxy_port has been set. This requires pycurl, but the '
+                                'pycurl library does not seem to be installed')
+                log.error(ret['error'])
+                return ret
+
+            tornado.httpclient.AsyncHTTPClient.configure('tornado.curl_httpclient.CurlAsyncHTTPClient')
+            client_argspec = inspect.getargspec(tornado.curl_httpclient.CurlAsyncHTTPClient.initialize)
+        else:
+            client_argspec = inspect.getargspec(tornado.simple_httpclient.SimpleAsyncHTTPClient.initialize)
+
         supports_max_body_size = 'max_body_size' in client_argspec.args
 
         try:
@@ -429,6 +464,10 @@ def query(url,
                     allow_nonstandard_methods=True,
                     streaming_callback=streaming_callback,
                     request_timeout=timeout,
+                    proxy_host=proxy_host,
+                    proxy_port=proxy_port,
+                    proxy_username=proxy_username,
+                    proxy_password=proxy_password,
                     **req_kwargs
                 )
             else:
@@ -443,6 +482,10 @@ def query(url,
                     allow_nonstandard_methods=True,
                     streaming_callback=streaming_callback,
                     request_timeout=timeout,
+                    proxy_host=proxy_host,
+                    proxy_port=proxy_port,
+                    proxy_username=proxy_username,
+                    proxy_password=proxy_password,
                     **req_kwargs
                 )
         except tornado.httpclient.HTTPError as exc:
@@ -451,11 +494,15 @@ def query(url,
             return ret
 
         if stream is True or handle is True:
-            return {'handle': result}
+            return {
+                'handle': result,
+                'body': result.body,
+            }
 
         result_status_code = result.code
         result_headers = result.headers
         result_text = result.body
+        ret['body'] = result.body
         if 'Set-Cookie' in result_headers.keys() and cookies is not None:
             result_cookies = parse_cookie_header(result_headers['Set-Cookie'])
             for item in result_cookies:
@@ -515,10 +562,12 @@ def query(url,
                 decode_type = 'xml'
             elif 'json' in content_type:
                 decode_type = 'json'
+            elif 'yaml' in content_type:
+                decode_type = 'yaml'
             else:
                 decode_type = 'plain'
 
-        valid_decodes = ('json', 'xml', 'plain')
+        valid_decodes = ('json', 'xml', 'yaml', 'plain')
         if decode_type not in valid_decodes:
             ret['error'] = (
                 'Invalid decode_type specified. '
@@ -536,6 +585,8 @@ def query(url,
             items = ET.fromstring(result_text)
             for item in items:
                 ret['dict'].append(xml.to_dict(item))
+        elif decode_type == 'yaml':
+            ret['dict'] = yaml.load(result_text)
         else:
             text = True
 
@@ -572,8 +623,9 @@ def get_ca_bundle(opts=None):
     # Check Salt first
     for salt_root in file_roots.get('base', []):
         for path in ('cacert.pem', 'ca-bundle.crt'):
-            if os.path.exists(path):
-                return path
+            cert_path = os.path.join(salt_root, path)
+            if os.path.exists(cert_path):
+                return cert_path
 
     locations = (
         # Debian has paths that often exist on other distros
@@ -581,7 +633,7 @@ def get_ca_bundle(opts=None):
         # RedHat is also very common
         '/etc/pki/tls/certs/ca-bundle.crt',
         '/etc/pki/tls/certs/ca-bundle.trust.crt',
-        # RedHat's link for Debian compatability
+        # RedHat's link for Debian compatibility
         '/etc/ssl/certs/ca-bundle.crt',
         # Suse has an unusual path
         '/var/lib/ca-certificates/ca-bundle.pem',
