@@ -24,9 +24,9 @@ from salt.config import cloud_providers_config, vm_profiles_config
 
 log = logging.getLogger()
 log_handler = logging.StreamHandler()
-log_handler.setLevel(logging.DEBUG)
+log_handler.setLevel(logging.INFO)
 log.addHandler(log_handler)
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 info = log.info
 
 # Create the cloud instance name to be used throughout the tests
@@ -52,7 +52,8 @@ class VirtualboxProviderTest(integration.ShellCase):
             'conf'
         )
         arg_str = '-c {0} {1}'.format(config_path, arg_str)
-        log.debug("running salt-cloud with ", arg_str)
+        # arg_str = "%s --log-level=error" % arg_str
+        log.debug("running salt-cloud with %s" % arg_str)
         return self.run_script('salt-cloud', arg_str, catch_stderr, timeout)
 
     def setUp(self):
@@ -64,7 +65,7 @@ class VirtualboxProviderTest(integration.ShellCase):
         # check if appropriate cloud provider and profile files are present
         profile_str = 'virtualbox-config'
         providers = self.run_cloud('--list-providers')
-        log.debug("providers: ", providers)
+        log.debug("providers: %s" % providers)
 
         if profile_str + ':' not in providers:
             self.skipTest(
@@ -140,7 +141,7 @@ class VirtualboxProviderTest(integration.ShellCase):
         query = self.run_cloud('--query')
         ret = '        {0}:'.format(INSTANCE_NAME)
 
-        log.debug("query: ", query)
+        log.debug("query: %s" % query)
 
         # if test instance is still present, delete it
         # if ret in query:
