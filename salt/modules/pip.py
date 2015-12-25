@@ -84,6 +84,7 @@ import shutil
 
 # Import salt libs
 import salt.utils
+import tempfile
 import salt.utils.locales
 import salt.utils.url
 from salt.ext.six import string_types
@@ -98,6 +99,8 @@ __func_alias__ = {
 }
 
 VALID_PROTOS = ['http', 'https', 'ftp', 'file']
+
+rex_pip_chain_read = re.compile(r'-r\s(.*)\n?', re.MULTILINE)
 
 
 def __virtual__():
@@ -189,11 +192,42 @@ def _get_env_activate(bin_env):
     raise CommandNotFoundError('Could not find a `activate` binary')
 
 
-def _process_requirements(requirements, cmd, saltenv, user, no_chown):
+def _find_req(link):
+
+    logger.debug('_find_req -- link = %s', str(link))
+
+    with salt.utils.fopen(link) as fh_link:
+        child_links = rex_pip_chain_read.findall(fh_link.read())
+
+    base_path = os.path.dirname(link)
+    child_links = [os.path.join(base_path, d) for d in child_links]
+
+    return child_links
+
+def _resolve_requirements_chain(requirements):
+    '''
+    Return an array of requirements file paths that can be used to complete
+    the no_chown==False && user != None conundrum
+    '''
+
+    chain = []
+
+    if isinstance(requirements, string_types):
+        requirements = [requirements]
+
+    for req_file in requirements:
+        chain.append(req_file)
+        chain.extend(_resolve_requirements_chain(_find_req(req_file)))
+
+    return chain
+
+
+def _process_requirements(requirements, cmd, cwd, saltenv, user, no_chown):
     '''
     Process the requirements argument
     '''
     cleanup_requirements = []
+
     if requirements is not None:
         if isinstance(requirements, string_types):
             requirements = [r.strip() for r in requirements.split(',')]
@@ -214,15 +248,46 @@ def _process_requirements(requirements, cmd, saltenv, user, no_chown):
             if user and not no_chown:
                 # Need to make a temporary copy since the user will, most
                 # likely, not have the right permissions to read the file
-                treq = salt.utils.mkstemp()
-                shutil.copyfile(requirement, treq)
-                logger.debug(
-                    'Changing ownership of requirements file \'{0}\' to '
-                    'user \'{1}\''.format(treq, user)
-                )
+                treq = tempfile.mkdtemp()
+
                 __salt__['file.chown'](treq, user, None)
+
+                current_directory = os.path.abspath(os.curdir)
+                logger.debug(
+                    '_process_requirements from directory, ' +
+                    '%s -- requirement: %s', (cwd, requirement)
+                )
+
+                os.chdir(cwd)
+
+                reqs = _resolve_requirements_chain(requirement)
+
+                os.chdir(current_directory)
+
+                logger.debug('request files: %s', str(reqs))
+
+                for req_file in reqs:
+
+                    source_path = os.path.join(cwd, req_file)
+                    target_path = os.path.join(treq, req_file)
+                    target_base = os.path.dirname(target_path)
+
+                    if not os.path.exists(target_base):
+                        os.makedirs(target_base, mode=0755)
+                        __salt__['file.chown'](target_base, user, None)
+
+                    shutil.copyfile(source_path, target_path)
+
+                    logger.debug(
+                        'Changing ownership of requirements file \'{0}\' to '
+                        'user \'{1}\''.format(target_path, user)
+                    )
+
+                    __salt__['file.chown'](target_path, user, None)
+
                 cleanup_requirements.append(treq)
-            cmd.extend(['--requirement', treq or requirement])
+
+            cmd.extend(['--requirement', os.path.join(treq, requirement) or requirement])
     return cleanup_requirements, None
 
 
@@ -492,6 +557,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     cleanup_requirements, error = _process_requirements(
         requirements=requirements,
         cmd=cmd,
+        cwd=cwd,
         saltenv=saltenv,
         user=user,
         no_chown=no_chown)
@@ -811,9 +877,15 @@ def uninstall(pkgs=None,
         # Backwards compatibility
         saltenv = __env__
 
-    cleanup_requirements, error = _process_requirements(requirements=requirements, cmd=cmd,
-                                                        saltenv=saltenv, user=user,
-                                                        no_chown=no_chown)
+    cleanup_requirements, error = _process_requirements(
+        requirements=requirements,
+        cmd=cmd,
+        cwd=cwd,
+        saltenv=saltenv,
+        user=user,
+        no_chown=no_chown
+    )
+
     if error:
         return error
 
