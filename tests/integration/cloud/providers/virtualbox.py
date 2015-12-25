@@ -20,7 +20,7 @@ ensure_in_syspath('../../../')
 
 # Import Salt Libs
 import integration
-from salt.config import cloud_providers_config
+from salt.config import cloud_providers_config, vm_profiles_config
 
 log = logging.getLogger()
 log_handler = logging.StreamHandler()
@@ -31,8 +31,10 @@ info = log.info
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = random_name()
-PROVIDER_NAME = 'virtualbox'
-DRIVER_NAME = 'virtualbox'
+PROVIDER_NAME = "virtualbox"
+PROFILE_NAME = PROVIDER_NAME + "-test"
+DRIVER_NAME = "virtualbox"
+BASE_BOX_NAME = "__temp_test_vm__"
 
 
 @skipIf(virtualbox.HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')
@@ -78,19 +80,32 @@ class VirtualboxProviderTest(integration.ShellCase):
             'cloud.providers.d',
             PROVIDER_NAME + '.conf'
         )
-        log.debug("config_path: ", config_path)
-        config = cloud_providers_config(config_path)
-        log.debug("config: ", config)
+        log.debug("config_path: %s" % config_path)
+        providers = cloud_providers_config(config_path)
+        log.debug("config: %s" % providers)
+        config_path = os.path.join(
+            integration.FILES,
+            'conf',
+            'cloud.profiles.d',
+            PROVIDER_NAME + '.conf'
+        )
+        profiles = vm_profiles_config(config_path, providers)
+        profile = profiles.get(PROFILE_NAME)
+        if not profile:
+            self.skipTest(
+                'Profile {0} was not found. Check {1}.conf files '
+                'in tests/integration/files/conf/cloud.profiles.d/ to run these tests.'
+                    .format(PROFILE_NAME, PROVIDER_NAME)
+            )
+        base_box_name = profile.get("clonefrom")
 
-        # user = config[profile_str][DRIVER_NAME]['user']
-        # tenant = config[profile_str][DRIVER_NAME]['tenant']
-        # api = config[profile_str][DRIVER_NAME]['apikey']
-        # if api == '' or tenant == '' or user == '':
-        #     self.skipTest(
-        #         'A user, tenant, and an api key must be provided to run these '
-        #         'tests. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
-        #             .format(PROVIDER_NAME)
-        #     )
+        if base_box_name != BASE_BOX_NAME:
+            self.skipTest(
+                'Profile {0} does not have a base box to clone from. Check {1}.conf files '
+                'in tests/integration/files/conf/cloud.profiles.d/ to run these tests.'
+                'And add a "clone_from: {2}" to the profile'
+                    .format(PROFILE_NAME, PROVIDER_NAME, BASE_BOX_NAME)
+            )
 
     def test_whatever(self):
         self.assertTrue(True)
