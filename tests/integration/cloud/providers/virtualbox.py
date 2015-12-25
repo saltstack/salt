@@ -10,7 +10,7 @@ import logging
 
 # Import Salt Testing Libs
 from salttesting import skipIf
-from salttesting.helpers import ensure_in_syspath, expensiveTest
+from salttesting.helpers import ensure_in_syspath
 
 from integration.cloud.helpers import random_name
 from integration.cloud.helpers.virtualbox import VirtualboxTestCase
