@@ -2626,18 +2626,18 @@ def is_profile_configured(opts, provider, profile_name):
     alias, driver = provider.split(':')
 
     # Most drivers need an image to be specified, but some do not.
-    non_image_drivers = ['vmware', 'nova']
+    non_image_drivers = ['vmware', 'nova', 'virtualbox']
 
     # Most drivers need a size, but some do not.
     non_size_drivers = ['opennebula', 'parallels', 'proxmox', 'scaleway',
-                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere']
+                        'softlayer', 'softlayer_hw', 'vmware', 'vsphere', 'virtualbox']
 
     provider_key = opts['providers'][alias][driver]
     profile_key = opts['providers'][alias][driver]['profiles'][profile_name]
 
     if driver not in non_image_drivers:
         required_keys.append('image')
-    elif driver == 'vmware':
+    elif driver in ['vmware', 'virtualbox']:
         required_keys.append('clonefrom')
     elif driver == 'nova':
         nova_image_keys = ['image', 'block_device_mapping', 'block_device']
