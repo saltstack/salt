@@ -3,7 +3,7 @@
 import unittest
 import logging
 
-from integration.cloud.helpers import VirtualboxTestCase
+from integration.cloud.helpers.virtualbox import VirtualboxTestCase
 from cloud.clouds import virtualbox
 
 log = logging.getLogger()
