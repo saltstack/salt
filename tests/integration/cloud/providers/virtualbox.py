@@ -37,14 +37,14 @@ DRIVER_NAME = 'virtualbox'
 
 @skipIf(virtualbox.HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')
 class VirtualboxProviderTest(integration.ShellCase):
-    '''
+    """
     Integration tests for the Virtualbox cloud provider using the Virtualbox driver
-    '''
+    """
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
-        '''
+        """
         Execute salt-cloud
-        '''
+        """
         config_path = os.path.join(
             integration.FILES,
             'conf'
@@ -54,9 +54,9 @@ class VirtualboxProviderTest(integration.ShellCase):
         return self.run_script('salt-cloud', arg_str, catch_stderr, timeout)
 
     def setUp(self):
-        '''
+        """
         Sets up the test requirements
-        '''
+        """
         super(VirtualboxProviderTest, self).setUp()
 
         # check if appropriate cloud provider and profile files are present
@@ -96,9 +96,9 @@ class VirtualboxProviderTest(integration.ShellCase):
         self.assertTrue(True)
 
     # def test_instance(self):
-    #     '''
+    #     """
     #     Test creating an instance on virtualbox with the virtualbox driver
-    #     '''
+    #     """
     #     # check if instance with salt installed returned
     #     try:
     #         self.assertIn(
@@ -119,9 +119,9 @@ class VirtualboxProviderTest(integration.ShellCase):
     #         raise
 
     def tearDown(self):
-        '''
+        """
         Clean up after tests
-        '''
+        """
         query = self.run_cloud('--query')
         ret = '        {0}:'.format(INSTANCE_NAME)
 
