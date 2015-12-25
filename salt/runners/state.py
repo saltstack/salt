@@ -8,6 +8,7 @@ import logging
 
 # Import salt libs
 import salt.loader
+import salt.utils
 import salt.utils.event
 from salt.exceptions import SaltInvocationError
 
@@ -62,8 +63,8 @@ def orchestrate(mods, saltenv='base', test=None, exclude=None, pillar=None):
     return ret
 
 # Aliases for orchestrate runner
-orch = orchestrate  # pylint: disable=invalid-name
-sls = orchestrate  # pylint: disable=invalid-name
+orch = salt.utils.alias_function(orchestrate, 'orch')
+sls = salt.utils.alias_function(orchestrate, 'sls')
 
 
 def orchestrate_single(fun, name, test=None, queue=False, pillar=None, **kwargs):

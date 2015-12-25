@@ -36,9 +36,9 @@ Connection module for Amazon Route53
     .. code-block:: yaml
 
         myprofile:
-            keyid: GKTADJGHEIQSXMKKRBJ08H
-            key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
-            region: us-east-1
+          keyid: GKTADJGHEIQSXMKKRBJ08H
+          key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+          region: us-east-1
 
 :depends: boto
 '''
@@ -49,11 +49,13 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import time
 
 # Import salt libs
 import salt.utils.compat
 import salt.utils.odict as odict
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +66,12 @@ try:
     import boto.route53
     from boto.route53.exception import DNSServerError
     #pylint: enable=unused-import
+    # create_zone params were changed in boto 2.35+
+    required_boto_version = '2.35.0'
+    if _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
+        msg = 'boto_route53 requires at least boto {0}.'.format(required_boto_version)
+        log.error(msg)
+        raise ImportError()
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -75,7 +83,7 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_route53 module could not be loaded: boto libraries not found')
     return True
 
 
@@ -138,6 +146,30 @@ def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
 
     .. versionadded:: 2015.8.0
 
+    zone
+        DNZ zone to create
+
+    private
+        True/False if the zone will be a private zone
+
+    vpc_id
+        VPC ID to associate the zone to (required if private is True)
+
+    vpc_region
+        VPC Region (required if private is True)
+
+    region
+        region endpoint to connect to
+
+    key
+        AWS key
+
+    keyid
+        AWS keyid
+
+    profile
+        AWS pillar profile
+
     CLI Example::
 
         salt myminion boto_route53.create_zone example.org
@@ -145,15 +177,20 @@ def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
     if region is None:
         region = 'universal'
 
+    if private:
+        if not vpc_id or not vpc_region:
+            msg = 'vpc_id and vpc_region must be specified for a private zone'
+            raise SaltInvocationError(msg)
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    _zone = conn.get_zone(zone, private_zone=private, vpc_id=vpc_id,
-                          vpc_region=vpc_region)
+    _zone = conn.get_zone(zone)
 
     if _zone:
         return False
 
-    conn.create_zone(zone)
+    conn.create_zone(zone, private_zone=private, vpc_id=vpc_id,
+                     vpc_region=vpc_region)
     return True
 
 
@@ -246,6 +283,13 @@ def get_record(name, zone, record_type, fetch_all=False, region=None, key=None,
     return ret
 
 
+def _munge_value(value, _type):
+    split_types = ['A', 'MX', 'AAAA', 'TXT', 'SRV', 'SPF', 'NS']
+    if _type in split_types:
+        return value.split(',')
+    return value
+
+
 def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                region=None, key=None, keyid=None, profile=None,
                wait_for_sync=True, split_dns=False, private_zone=False,
@@ -284,22 +328,23 @@ def add_record(name, value, zone, record_type, identifier=None, ttl=None,
                 continue  # the while True; try again if not out of retries
             raise e
 
+    _value = _munge_value(value, _type)
     while rate_limit_retries > 0:
         try:
             if _type == 'A':
-                status = _zone.add_a(name, value, ttl, identifier)
+                status = _zone.add_a(name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
             elif _type == 'CNAME':
-                status = _zone.add_cname(name, value, ttl, identifier)
+                status = _zone.add_cname(name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
             elif _type == 'MX':
-                status = _zone.add_mx(name, value, ttl, identifier)
+                status = _zone.add_mx(name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
             else:
                 # add_record requires a ttl value, annoyingly.
                 if ttl is None:
                     ttl = 60
-                status = _zone.add_record(_type, name, value, ttl, identifier)
+                status = _zone.add_record(_type, name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:
@@ -338,22 +383,23 @@ def update_record(name, value, zone, record_type, identifier=None, ttl=None,
         return False
     _type = record_type.upper()
 
+    _value = _munge_value(value, _type)
     while rate_limit_retries > 0:
         try:
             if _type == 'A':
-                status = _zone.update_a(name, value, ttl, identifier)
+                status = _zone.update_a(name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
             elif _type == 'CNAME':
-                status = _zone.update_cname(name, value, ttl, identifier)
+                status = _zone.update_cname(name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
             elif _type == 'MX':
-                status = _zone.update_mx(name, value, ttl, identifier)
+                status = _zone.update_mx(name, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
             else:
                 old_record = _zone.find_records(name, _type)
                 if not old_record:
                     return False
-                status = _zone.update_record(old_record, value, ttl, identifier)
+                status = _zone.update_record(old_record, _value, ttl, identifier)
                 return _wait_for_sync(status.id, conn, wait_for_sync)
 
         except DNSServerError as e:

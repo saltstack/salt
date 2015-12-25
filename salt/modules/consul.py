@@ -26,6 +26,11 @@ log = logging.getLogger(__name__)
 
 from salt.exceptions import SaltInvocationError
 
+# Don't shadow built-ins.
+__func_alias__ = {
+    'list_': 'list'
+}
+
 __virtualname__ = 'consul'
 
 
@@ -63,6 +68,10 @@ def _query(function,
     base_url = _urljoin(consul_url, '{0}/'.format(api_version))
     url = _urljoin(base_url, function, False)
 
+    if data is None:
+        data = {}
+    data = json.dumps(data)
+
     result = salt.utils.http.query(
         url,
         method=method,
@@ -92,7 +101,7 @@ def _query(function,
     return ret
 
 
-def list(consul_url=None, key=None, **kwargs):
+def list_(consul_url=None, key=None, **kwargs):
     '''
     List keys in Consul
 
@@ -304,7 +313,7 @@ def put(consul_url=None, key=None, value=None, **kwargs):
     ret = _query(consul_url=consul_url,
                  function=function,
                  method=method,
-                 data=json.dumps(data),
+                 data=data,
                  query_params=query_params)
 
     if ret['res']:
@@ -690,9 +699,7 @@ def agent_check_register(consul_url=None, **kwargs):
     if 'name' in kwargs:
         data['Name'] = kwargs['name']
     else:
-        ret['message'] = 'Required parameter "name" is missing.'
-        ret['res'] = False
-        return ret
+        raise SaltInvocationError('Required argument "name" is missing.')
 
     if True not in [True for item in ('script', 'http') if item in kwargs]:
         ret['message'] = 'Required parameter "script" or "http" is missing.'
@@ -968,6 +975,8 @@ def agent_service_register(consul_url=None, **kwargs):
 
     if 'name' in kwargs:
         data['Name'] = kwargs['name']
+    else:
+        raise SaltInvocationError('Required argument "name" is missing.')
 
     if 'address' in kwargs:
         data['Address'] = kwargs['address']
@@ -1026,7 +1035,7 @@ def agent_service_deregister(consul_url=None, serviceid=None):
     Used to remove a service.
 
     :param consul_url: The Consul server URL.
-    :param name: A name describing the service.
+    :param serviceid: A serviceid describing the service.
     :return: Boolean and message indicating success or failure.
 
     CLI Example:
@@ -1171,6 +1180,8 @@ def session_create(consul_url=None, **kwargs):
 
     if 'name' in kwargs:
         data['Name'] = kwargs['name']
+    else:
+        raise SaltInvocationError('Required argument "name" is missing.')
 
     if 'checks' in kwargs:
         data['Touch'] = kwargs['touch']
@@ -1450,11 +1461,11 @@ def catalog_register(consul_url=None, **kwargs):
     if res['res']:
         ret['res'] = True
         ret['message'] = ('Catalog registration '
-                          'for {0} successful.'.format(kwargs['name']))
+                          'for {0} successful.'.format(kwargs['node']))
     else:
         ret['res'] = False
         ret['message'] = ('Catalog registration '
-                          'for {0} failed.'.format(kwargs['name']))
+                          'for {0} failed.'.format(kwargs['node']))
     return ret
 
 
@@ -1511,11 +1522,11 @@ def catalog_deregister(consul_url=None, **kwargs):
                  data=data)
     if res['res']:
         ret['res'] = True
-        ret['message'] = 'Catalog item {0} removed.'.format(kwargs['name'])
+        ret['message'] = 'Catalog item {0} removed.'.format(kwargs['node'])
     else:
         ret['res'] = False
         ret['message'] = ('Removing Catalog '
-                          'item {0} failed.'.format(kwargs['name']))
+                          'item {0} failed.'.format(kwargs['node']))
     return ret
 
 
@@ -1975,6 +1986,8 @@ def acl_create(consul_url=None, **kwargs):
 
     if 'name' in kwargs:
         data['Name'] = kwargs['name']
+    else:
+        raise SaltInvocationError('Required argument "name" is missing.')
 
     if 'type' in kwargs:
         data['Type'] = kwargs['type']
@@ -2032,12 +2045,14 @@ def acl_update(consul_url=None, **kwargs):
     if 'id' in kwargs:
         data['ID'] = kwargs['id']
     else:
-        ret['message'] = 'Required paramter "id" is missing.'
+        ret['message'] = 'Required parameter "id" is missing.'
         ret['res'] = False
         return ret
 
     if 'name' in kwargs:
         data['Name'] = kwargs['name']
+    else:
+        raise SaltInvocationError('Required argument "name" is missing.')
 
     if 'type' in kwargs:
         data['Type'] = kwargs['type']
@@ -2088,7 +2103,7 @@ def acl_delete(consul_url=None, **kwargs):
             return ret
 
     if 'id' not in kwargs:
-        ret['message'] = 'Required paramter "id" is missing.'
+        ret['message'] = 'Required parameter "id" is missing.'
         ret['res'] = False
         return ret
 
@@ -2135,7 +2150,7 @@ def acl_info(consul_url=None, **kwargs):
             return ret
 
     if 'id' not in kwargs:
-        ret['message'] = 'Required paramter "id" is missing.'
+        ret['message'] = 'Required parameter "id" is missing.'
         ret['res'] = False
         return ret
 
@@ -2174,7 +2189,7 @@ def acl_clone(consul_url=None, **kwargs):
             return ret
 
     if 'id' not in kwargs:
-        ret['message'] = 'Required paramter "id" is missing.'
+        ret['message'] = 'Required parameter "id" is missing.'
         ret['res'] = False
         return ret
 
@@ -2219,7 +2234,7 @@ def acl_list(consul_url=None, **kwargs):
             return ret
 
     if 'id' not in kwargs:
-        ret['message'] = 'Required paramter "id" is missing.'
+        ret['message'] = 'Required parameter "id" is missing.'
         ret['res'] = False
         return ret
 
@@ -2320,6 +2335,8 @@ def event_list(consul_url=None, **kwargs):
 
     if 'name' in kwargs:
         query_params = kwargs['name']
+    else:
+        raise SaltInvocationError('Required argument "name" is missing.')
 
     function = 'event/list/'
     ret = _query(consul_url=consul_url,

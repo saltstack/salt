@@ -43,11 +43,10 @@ def defaults():
 
 
 def facts():
-    if 'proxymodule' in __opts__:
-        if 'junos.facts' in __opts__['proxymodule']:
-            facts = __opts__['proxymodule']['junos.facts']()
-            facts['version_info'] = 'override'
-            return facts
+    if 'junos.facts' in __proxy__:
+        facts = __proxy__['junos.facts']()
+        facts['version_info'] = 'override'
+        return facts
     return None
 
 

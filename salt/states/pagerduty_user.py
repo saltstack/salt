@@ -25,7 +25,7 @@ def __virtual__():
 def present(profile='pagerduty', subdomain=None, api_key=None, **kwargs):
     '''
     Ensure pagerduty user exists.
-    Arguments match those suppored by
+    Arguments match those supported by
     https://developer.pagerduty.com/documentation/rest/users/create.
     '''
     return __salt__['pagerduty_util.resource_present']('users',

@@ -182,9 +182,13 @@ def returner(load):
         )
 
 
-def save_load(jid, clear_load):
+def save_load(jid, clear_load, minions=None):
     '''
     Save the load to the specified jid
+
+    minions argument is to provide a pre-computed list of matched minions for
+    the job, for cases when this function can't compute that list itself (such
+    as for salt-ssh)
     '''
     jid_dir = _jid_dir(jid)
 
@@ -194,6 +198,14 @@ def save_load(jid, clear_load):
     try:
         if not os.path.exists(jid_dir):
             os.makedirs(jid_dir)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST:
+            # rarely, the directory can be already concurrently created between
+            # the os.path.exists and the os.makedirs lines above
+            pass
+        else:
+            raise
+    try:
         serial.dump(
             clear_load,
             salt.utils.fopen(os.path.join(jid_dir, LOAD_P), 'w+b')
@@ -203,12 +215,13 @@ def save_load(jid, clear_load):
 
     # if you have a tgt, save that for the UI etc
     if 'tgt' in clear_load:
-        ckminions = salt.utils.minions.CkMinions(__opts__)
-        # Retrieve the minions list
-        minions = ckminions.check_minions(
-                clear_load['tgt'],
-                clear_load.get('tgt_type', 'glob')
-                )
+        if minions is None:
+            ckminions = salt.utils.minions.CkMinions(__opts__)
+            # Retrieve the minions list
+            minions = ckminions.check_minions(
+                    clear_load['tgt'],
+                    clear_load.get('tgt_type', 'glob')
+                    )
         # save the minions to a cache so we can see in the UI
         try:
             serial.dump(

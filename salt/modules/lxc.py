@@ -81,7 +81,7 @@ def __virtual__():
     #     return 'lxc'
     # return False
     #
-    return False
+    return (False, 'The lxc execution module cannot be loaded: the lxc-start binary is not in the path.')
 
 
 def get_root_path(path):
@@ -106,7 +106,7 @@ def version():
     '''
     Return the actual lxc client version
 
-        .. versionadded:: 2015.8.0
+    .. versionadded:: 2015.8.0
 
     CLI Example:
 
@@ -291,67 +291,69 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         autostart the container at boot time
     password
         administrative password for the container
+    bootstrap_delay
+        delay before launching bootstrap script at Container init
 
 
     .. warning::
 
         Legacy but still supported options:
 
-    from_container
-        which container we use as a template
-        when running lxc.clone
-    image
-        which template do we use when we
-        are using lxc.create. This is the default
-        mode unless you specify something in from_container
-    backing
-        which backing store to use.
-        Values can be: overlayfs, dir(default), lvm, zfs, brtfs
-    fstype
-        When using a blockdevice level backing store,
-        which filesystem to use on
-    size
-        When using a blockdevice level backing store,
-        which size for the filesystem to use on
-    snapshot
-        Use snapshot when cloning the container source
-    vgname
-        if using LVM: vgname
-    lvname
-        if using LVM: lvname
-    ip
-        ip for the primary nic
-    mac
-        mac address for the primary nic
-    netmask
-        netmask for the primary nic (24)
-        = ``vm_.get('netmask', '24')``
-    bridge
-        bridge for the primary nic (lxcbr0)
-    gateway
-        network gateway for the container
-    additional_ips
-        additional ips which will be wired on the main bridge (br0)
-        which is connected to internet.
-        Be aware that you may use manual virtual mac addresses
-        providen by you provider (online, ovh, etc).
-        This is a list of mappings {ip: '', mac: '', netmask:''}
-        Set gateway to None and an interface with a gateway
-        to escape from another interface that eth0.
-        eg::
+        from_container
+            which container we use as a template
+            when running lxc.clone
+        image
+            which template do we use when we
+            are using lxc.create. This is the default
+            mode unless you specify something in from_container
+        backing
+            which backing store to use.
+            Values can be: overlayfs, dir(default), lvm, zfs, brtfs
+        fstype
+            When using a blockdevice level backing store,
+            which filesystem to use on
+        size
+            When using a blockdevice level backing store,
+            which size for the filesystem to use on
+        snapshot
+            Use snapshot when cloning the container source
+        vgname
+            if using LVM: vgname
+        lvname
+            if using LVM: lvname
+        ip
+            ip for the primary nic
+        mac
+            mac address for the primary nic
+        netmask
+            netmask for the primary nic (24)
+            = ``vm_.get('netmask', '24')``
+        bridge
+            bridge for the primary nic (lxcbr0)
+        gateway
+            network gateway for the container
+        additional_ips
+            additional ips which will be wired on the main bridge (br0)
+            which is connected to internet.
+            Be aware that you may use manual virtual mac addresses
+            providen by you provider (online, ovh, etc).
+            This is a list of mappings {ip: '', mac: '', netmask:''}
+            Set gateway to None and an interface with a gateway
+            to escape from another interface that eth0.
+            eg::
 
-              - {'mac': '00:16:3e:01:29:40',
-                 'gateway': None, (default)
-                 'link': 'br0', (default)
-                 'netmask': '', (default)
-                 'ip': '22.1.4.25'}
+                  - {'mac': '00:16:3e:01:29:40',
+                     'gateway': None, (default)
+                     'link': 'br0', (default)
+                     'netmask': '', (default)
+                     'ip': '22.1.4.25'}
 
-    users
-        administrative users for the container
-        default: [root] and [root, ubuntu] on ubuntu
-    default_nic
-        name of the first interface, you should
-        really not override this
+        users
+            administrative users for the container
+            default: [root] and [root, ubuntu] on ubuntu
+        default_nic
+            name of the first interface, you should
+            really not override this
 
     CLI Example:
 
@@ -521,6 +523,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['bootstrap_url'] = script
     lxc_init_interface['bootstrap_args'] = script_args
     lxc_init_interface['bootstrap_shell'] = _cloud_get('bootstrap_shell', 'sh')
+    lxc_init_interface['bootstrap_delay'] = _cloud_get('bootstrap_delay', None)
     lxc_init_interface['autostart'] = autostart
     lxc_init_interface['users'] = users
     lxc_init_interface['password'] = password
@@ -609,7 +612,7 @@ def get_container_profile(name=None, **kwargs):
     of variable names and values. See the :ref:`LXC Tutorial
     <tutorial-lxc-profiles>` for more information on how to use LXC profiles.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -669,7 +672,7 @@ def get_network_profile(name=None, **kwargs):
         ``/etc/sysconfig/network-scripts/ifcfg-<interface_name>`` on
         RHEL/CentOS, or ``/etc/network/interfaces`` on Debian/Ubuntu/etc.)
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
@@ -876,6 +879,10 @@ def _network_conf(conf_tuples=None, **kwargs):
 def _get_lxc_default_data(**kwargs):
     kwargs = copy.deepcopy(kwargs)
     ret = {}
+    for k in ['utsname', 'rootfs']:
+        val = kwargs.get(k, None)
+        if val is not None:
+            ret['lxc.{0}'.format(k)] = val
     autostart = kwargs.get('autostart')
     # autostart can have made in kwargs, but with the None
     # value which is invalid, we need an explicit boolean
@@ -1388,7 +1395,8 @@ def init(name,
     # If using a volume group then set up to make snapshot cow clones
     if vgname and not clone_from:
         try:
-            clone_from = _get_base(vgname=vgname, profile=profile, **kwargs)
+            kwargs['vgname'] = vgname
+            clone_from = _get_base(profile=profile, **kwargs)
         except (SaltInvocationError, CommandExecutionError) as exc:
             ret['comment'] = exc.strerror
             if changes:
@@ -2091,7 +2099,7 @@ def clone(name,
         cmd += ' -B {0}'.format(backing)
         if backing not in ('dir', 'overlayfs'):
             if size:
-                cmd += ' --fssize {0}'.format(size)
+                cmd += ' -L {0}'.format(size)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     # please do not merge extra conflicting stuff
     # inside those two line (ret =, return)
@@ -2354,7 +2362,6 @@ def restart(name, path=None, lxc_config=None, force=False):
         .. versionadded:: 2015.8.0
 
     lxc_config
-
         path to a lxc config file
         config file will be guessed from container name otherwise
 
@@ -2398,7 +2405,6 @@ def start(name, **kwargs):
         .. versionadded:: 2015.8.0
 
     lxc_config
-
         path to a lxc config file
         config file will be guessed from container name otherwise
 
@@ -2612,7 +2618,7 @@ def destroy(name, stop=False, path=None):
     return _change_state('lxc-destroy', name, None, path=path)
 
 # Compatibility between LXC and nspawn
-remove = destroy
+remove = salt.utils.alias_function(destroy, 'remove')
 
 
 def exists(name, path=None):
@@ -2955,7 +2961,7 @@ def set_password(name, users, password, encrypted=True, path=None):
         )
     return True
 
-set_pass = set_password
+set_pass = salt.utils.alias_function(set_password, 'set_pass')
 
 
 def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
@@ -2963,7 +2969,6 @@ def update_lxc_conf(name, lxc_conf, lxc_conf_unset, path=None):
     Edit LXC configuration options
 
     path
-
         path to the container parent
         default: /var/lib/lxc (system default)
 
@@ -3416,7 +3421,7 @@ def bootstrap(name,
         that the salt-master be configured to either auto-accept all keys or
         expect a signing request from the target host. Default: ``True``
 
-   path
+    path
         path to the container parent
         default: /var/lib/lxc (system default)
 
@@ -3467,6 +3472,8 @@ def bootstrap(name,
     wait_started(name, path=path)
     if bootstrap_delay is not None:
         try:
+            log.info('LXC {0}: bootstrap_delay: {1}'.format(
+                name, bootstrap_delay))
             time.sleep(bootstrap_delay)
         except TypeError:
             # Bad input, but assume since a value was passed that
@@ -4272,7 +4279,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False, path=None):
         overwrite=overwrite,
         makedirs=makedirs)
 
-cp = copy_to
+cp = salt.utils.alias_function(copy_to, 'cp')
 
 
 def read_conf(conf_file, out_format='simple'):
@@ -4281,9 +4288,9 @@ def read_conf(conf_file, out_format='simple'):
     dict, but can also return a more detailed structure including blank lines
     and comments.
 
-        out_format:
-            set to 'simple' if you need the old and unsupported behavior.
-            This wont support the multiple lxc values (eg: multiple network nics)
+    out_format:
+        set to 'simple' if you need the old and unsupported behavior.
+        This wont support the multiple lxc values (eg: multiple network nics)
 
     CLI Examples:
 
@@ -4395,7 +4402,7 @@ def edit_conf(conf_file,
     they already exist in the file.
 
     out_format:
-        Set to simple if you need backward compatbility (multiple items for a
+        Set to simple if you need backward compatibility (multiple items for a
         simple key is not supported)
     read_only:
         return only the edited configuration without applying it
@@ -4547,6 +4554,8 @@ def reconfigure(name,
                 bridge=None,
                 gateway=None,
                 autostart=None,
+                utsname=None,
+                rootfs=None,
                 path=None,
                 **kwargs):
     '''
@@ -4556,6 +4565,16 @@ def reconfigure(name,
 
     name
         Name of the container.
+    utsname
+        utsname of the container.
+
+        .. versionadded:: Boron
+
+    rootfs
+        rootfs of the container.
+
+        .. versionadded:: Boron
+
     cpu
         Select a random number of cpu cores and assign it to the cpuset, if the
         cpuset option is set then this option will be ignored
@@ -4622,9 +4641,13 @@ def reconfigure(name,
         autostart = select('autostart', autostart)
     else:
         autostart = 'keep'
+    if not utsname:
+        utsname = select('utsname', utsname)
     if os.path.exists(path):
         old_chunks = read_conf(path, out_format='commented')
         make_kw = salt.utils.odict.OrderedDict([
+            ('utsname', utsname),
+            ('rootfs', rootfs),
             ('autostart', autostart),
             ('cpu', cpu),
             ('gateway', gateway),

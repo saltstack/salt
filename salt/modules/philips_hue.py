@@ -16,6 +16,8 @@
 
 '''
 Philips HUE lamps module for proxy.
+
+.. versionadded:: 2015.8.3
 '''
 
 from __future__ import absolute_import
@@ -29,17 +31,26 @@ def _proxy():
     '''
     Get proxy.
     '''
-    return __opts__['proxymodule']
+    return __proxy__
 
 
 def __virtual__():
     '''
     Start the Philips HUE only for proxies.
     '''
+    if not _proxy():
+        return False
 
     def _mkf(cmd_name, doc):
+        '''
+        Nested function to help move proxy functions into sys.modules
+        '''
         def _cmd(*args, **kw):
-            return _proxy()[_proxy().loaded_base_name + "." + cmd_name](*args, **kw)
+            '''
+            Call commands in proxy
+            '''
+            proxyfn = 'philips_hue.'+cmd_name
+            return __proxy__[proxyfn](*args, **kw)
         return _cmd
 
     import salt.proxy.philips_hue as hue

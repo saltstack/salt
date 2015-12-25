@@ -82,9 +82,9 @@ def __virtual__():
     # a groupId attribute when a GroupOrCIDR object authorizes an IP range
     # Support for Boto < 2.4.0 can be added if needed
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_secgroup module could not be loaded: boto libraries not found')
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return False
+        return (False, 'The boto_secgroup module could not be loaded: boto library v2.4.0 not found')
     else:
         __utils__['boto.assign_funcs'](__name__, 'ec2')
         return True
@@ -177,6 +177,11 @@ def _get_group(conn=None, name=None, vpc_id=None, vpc_name=None, group_id=None,
                 # a group in EC2-Classic will have vpc_id set to None
                 if group.vpc_id is None:
                     return group
+            # If there are more security groups, and no vpc_id, we can't know which one to choose.
+            if len(filtered_groups) > 1:
+                raise Exception('Security group belongs to more VPCs, specify the VPC ID!')
+            elif len(filtered_groups) == 1:
+                return filtered_groups[0]
             return None
         elif vpc_id:
             log.debug('getting group for {0} in vpc_id {1}'.format(name, vpc_id))
@@ -249,7 +254,7 @@ def get_group_id(name, vpc_id=None, vpc_name=None, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    group = _get_group(conn, name, vpc_id=vpc_id, vpc_name=vpc_name,
+    group = _get_group(conn=conn, name=name, vpc_id=vpc_id, vpc_name=vpc_name,
                        region=region, key=key, keyid=keyid, profile=profile)
     if group:
         return group.id

@@ -266,13 +266,13 @@ def get_jids():
     '''
     conn = _get_conn(ret=None)
     cur = conn.cursor()
-    sql = '''SELECT jid FROM jids'''
+    sql = '''SELECT jid, load FROM jids'''
 
     cur.execute(sql)
     data = cur.fetchall()
-    ret = []
-    for jid in data:
-        ret.append(jid[0])
+    ret = {}
+    for jid, load in data:
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, json.loads(load))
     _close_conn(conn)
     return ret
 

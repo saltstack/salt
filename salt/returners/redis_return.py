@@ -171,7 +171,12 @@ def get_jids():
     Return a list of all job ids
     '''
     serv = _get_serv(ret=None)
-    return list(serv.smembers('jids'))
+    ret = {}
+    for s in serv.mget(serv.smembers('jids')):
+        load = json.loads(s)
+        jid = load['jid']
+        ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
+    return ret
 
 
 def get_minions():

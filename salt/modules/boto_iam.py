@@ -68,7 +68,7 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_iam module could not be loaded: boto libraries not found')
     return True
 
 
@@ -367,7 +367,8 @@ def create_group(group_name, path=None, region=None, key=None, keyid=None,
     '''
     if not path:
         path = '/'
-    if get_group(group_name, region=region, key=key, keyid=keyid, profile=profile):
+    if get_group(group_name, region=region, key=key, keyid=keyid,
+                 profile=profile):
         return True
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
@@ -381,8 +382,7 @@ def create_group(group_name, path=None, region=None, key=None, keyid=None,
         return False
 
 
-def get_group(group_name, marker=None, max_items=None, region=None, key=None,
-              keyid=None, profile=None):
+def get_group(group_name, region=None, key=None, keyid=None, profile=None):
     '''
     Get group information.
 
@@ -396,13 +396,49 @@ def get_group(group_name, marker=None, max_items=None, region=None, key=None,
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
-        info = conn.get_group(group_name, marker, max_items)
+        info = conn.get_group(group_name, max_items=1)
         if not info:
             return False
-        return info
+        return info['get_group_response']['get_group_result']['group']
     except boto.exception.BotoServerError as e:
         log.debug(e)
         msg = 'Failed to get group {0} info.'
+        log.error(msg.format(group_name))
+        return False
+
+
+def get_group_members(group_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Get group information.
+
+    .. versionadded:: Boron
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.get_group mygroup
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        marker = None
+        truncated = True
+        users = []
+        while truncated:
+            info = conn.get_group(group_name, marker=marker, max_items=1000)
+            if not info:
+                return False
+            truncated = bool(info['get_group_response']['get_group_result']['is_truncated'])
+            if truncated and 'marker' in info['get_group_response']['get_group_result']:
+                marker = info['get_group_response']['get_group_result']['marker']
+            else:
+                marker = None
+                truncated = False
+            users += info['get_group_response']['get_group_result']['users']
+        return users
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        msg = 'Failed to get group {0} members.'
         log.error(msg.format(group_name))
         return False
 
@@ -425,8 +461,8 @@ def add_user_to_group(user_name, group_name, region=None, key=None, keyid=None,
         msg = 'Username : {0} does not exist.'
         log.error(msg.format(user_name, group_name))
         return False
-    if user_exists_in_group(user_name, group_name, region=region, key=key, keyid=keyid,
-                            profile=profile):
+    if user_exists_in_group(user_name, group_name, region=region, key=key,
+                            keyid=keyid, profile=profile):
         return True
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
@@ -454,11 +490,14 @@ def user_exists_in_group(user_name, group_name, region=None, key=None, keyid=Non
 
         salt myminion boto_iam.user_exists_in_group myuser mygroup
     '''
-    group = get_group(group_name, region=region, key=key, keyid=keyid,
-                      profile=profile)
-    if group:
-        for _users in group['get_group_response']['get_group_result']['users']:
-            if user_name == _users['user_name']:
+    # TODO this should probably use boto.iam.get_groups_for_user
+    users = get_group_members(
+        group_name=group_name, region=region, key=key, keyid=keyid,
+        profile=profile
+    )
+    if users:
+        for _user in users:
+            if user_name == _user['user_name']:
                 msg = 'Username : {0} is already in group {1}.'
                 log.info(msg.format(user_name, group_name))
                 return True
@@ -512,7 +551,8 @@ def put_group_policy(group_name, policy_name, policy_json, region=None, key=None
 
         salt myminion boto_iam.put_group_policy mygroup policyname policyrules
     '''
-    group = get_group(group_name, region=region, key=key, keyid=keyid, profile=profile)
+    group = get_group(group_name, region=region, key=key, keyid=keyid,
+                      profile=profile)
     if not group:
         log.error('Group {0} does not exist'.format(group_name))
         return False
@@ -649,6 +689,106 @@ def create_login_profile(user_name, password, region=None, key=None,
             return 'Conflict'
         msg = 'Failed to update profile for user {0}.'
         log.error(msg.format(user_name))
+        return False
+
+
+def delete_login_profile(user_name, region=None, key=None, keyid=None,
+                         profile=None):
+    '''
+    Deletes a login profile for the specified user.
+
+    .. versionadded::
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.delete_login_profile user_name
+    '''
+    user = get_user(user_name, region, key, keyid, profile)
+    if not user:
+        msg = 'Username {0} does not exist'
+        log.error(msg.format(user_name))
+        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        info = conn.delete_login_profile(user_name)
+        log.info('Deleted login profile for user {0}.'.format(user_name))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        if 'Not Found' in e:
+            log.info('Login profile already deleted for user {0}.'.format(user_name))
+            return True
+        msg = 'Failed to delete login profile for user {0}.'
+        log.error(msg.format(user_name))
+        return False
+
+
+def get_all_mfa_devices(user_name, region=None, key=None, keyid=None,
+                        profile=None):
+    '''
+    Get all MFA devices associated with an IAM user.
+
+    .. versionadded::
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.get_all_mfa_devices user_name
+    '''
+    user = get_user(user_name, region, key, keyid, profile)
+    if not user:
+        msg = 'Username {0} does not exist'
+        log.error(msg.format(user_name))
+        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        result = conn.get_all_mfa_devices(user_name)
+        devices = result['list_mfa_devices_response']['list_mfa_devices_result']['mfa_devices']
+        return devices
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        if 'Not Found' in e:
+            log.info('Could not find user {0}.'.format(user_name))
+            return []
+        msg = 'Failed to get all MFA devices for user {0}.'
+        log.error(msg.format(user_name, serial))
+        return False
+
+
+def deactivate_mfa_device(user_name, serial, region=None, key=None, keyid=None,
+                          profile=None):
+    '''
+    Deactivates the specified MFA device and removes it from association with
+    the user.
+
+    .. versionadded::
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_iam.deactivate_mfa_device user_name serial_num
+    '''
+    user = get_user(user_name, region, key, keyid, profile)
+    if not user:
+        msg = 'Username {0} does not exist'
+        log.error(msg.format(user_name))
+        return False
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    try:
+        conn.deactivate_mfa_device(user_name, serial)
+        log.info('Deactivated MFA device {1} for user {0}.'.format(user_name, serial))
+        return True
+    except boto.exception.BotoServerError as e:
+        log.debug(e)
+        if 'Not Found' in e:
+            log.info('MFA device {1} not associated with user {0}.'.format(user_name, serial))
+            return True
+        msg = 'Failed to deactivate MFA device {1} for user {0}.'
+        log.error(msg.format(user_name, serial))
         return False
 
 
@@ -1343,6 +1483,5 @@ def export_users(path_prefix='/', region=None, key=None, keyid=None,
         user_sls.append({"name": name})
         user_sls.append({"policies": policies})
         user_sls.append({"path": user.path})
-        results["manage user " + name] = {"boto_iam.user_present":
-                                          user_sls}
+        results["manage user " + name] = {"boto_iam.user_present": user_sls}
     return _safe_dump(results)

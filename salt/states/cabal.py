@@ -84,10 +84,11 @@ def installed(name,
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     try:
-        call = __salt__['cabal.update']()
+        call = __salt__['cabal.update'](user=user, env=env)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Could not run cabal update {0}'.format(err)
+        return ret
 
     if pkgs is not None:
         pkg_list = pkgs
@@ -100,6 +101,7 @@ def installed(name,
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error looking up  {0!r}: {1}'.format(name, err)
+        return ret
 
     pkgs_satisfied = []
     pkgs_to_install = []

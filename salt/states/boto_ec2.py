@@ -58,6 +58,7 @@ from time import time, sleep
 
 # Import salt libs
 import salt.utils.dictupdate as dictupdate
+from salt.utils import exactly_one
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -164,11 +165,14 @@ def key_absent(name, region=None, key=None, keyid=None, profile=None):
 
 def eni_present(
         name,
-        subnet_id,
+        subnet_id=None,
+        subnet_name=None,
         private_ip_address=None,
         description=None,
         groups=None,
         source_dest_check=True,
+        allocate_eip=False,
+        arecords=None,
         region=None,
         key=None,
         keyid=None,
@@ -182,7 +186,11 @@ def eni_present(
         Name tag associated with the ENI.
 
     subnet_id
-        The VPC subnet the ENI will exist within.
+        The VPC subnet ID the ENI will exist within.
+
+    subnet_name
+        The VPC subnet name the ENI will exist within.
+
 
     private_ip_address
         The private ip address to use for this ENI. If this is not specified
@@ -199,6 +207,18 @@ def eni_present(
         Boolean specifying whether source/destination checking is enabled on
         the ENI.
 
+    allocate_eip
+        .. versionadded:: Boron
+        True/False - allocate and associate an EIP to the ENI
+
+    arecords
+        .. versionadded:: Boron
+        A list of arecord dicts with attributes needed for the DNS add_record state.
+        By default the boto_route53.add_record state will be used, which requires: name, zone, ttl, and identifier.
+        See the boto_route53 state for information about these attributes.
+        Other DNS modules can be called by specifying the provider keyword.
+        By default, the private ENI IP address will be used, set 'public: True' in the arecord dict to use the ENI's public IP address
+
     region
         Region to connect to.
 
@@ -212,8 +232,9 @@ def eni_present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    if not subnet_id:
-        raise SaltInvocationError('subnet_id is a required argument.')
+    if not exactly_one((subnet_id, subnet_name)):
+        raise SaltInvocationError('One (but not both) of subnet_id or '
+                                  'subnet_name must be provided.')
     if not groups:
         raise SaltInvocationError('groups is a required argument.')
     if not isinstance(groups, list):
@@ -233,10 +254,14 @@ def eni_present(
     if not r['result']:
         if __opts__['test']:
             ret['comment'] = 'ENI is set to be created.'
+            if allocate_eip:
+                ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated/assocaited to the ENI.'])
+            if arecords:
+                ret['comment'] = ' '.join([ret['comment'], 'A records are set to be created.'])
             ret['result'] = None
             return ret
         result_create = __salt__['boto_ec2.create_network_interface'](
-            name, subnet_id, private_ip_address=private_ip_address,
+            name, subnet_id=subnet_id, subnet_name=subnet_name, private_ip_address=private_ip_address,
             description=description, groups=groups, region=region, key=key,
             keyid=keyid, profile=profile
         )
@@ -278,6 +303,87 @@ def eni_present(
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
         ret['result'] = _ret['result']
+        return ret
+    if allocate_eip:
+        if 'allocationId' not in r['result']:
+            if __opts__['test']:
+                ret['comment'] = ' '.join([ret['comment'], 'An EIP is set to be allocated and assocaited to the ENI.'])
+            else:
+                eip_alloc = __salt__['boto_ec2.allocate_eip_address'](domain=None,
+                                                                      region=region,
+                                                                      key=key,
+                                                                      keyid=keyid,
+                                                                      profile=profile)
+                if eip_alloc:
+                    _ret = __salt__['boto_ec2.associate_eip_address'](instance_id=None,
+                                                                      instance_name=None,
+                                                                      public_ip=None,
+                                                                      allocation_id=eip_alloc['allocation_id'],
+                                                                      network_interface_id=r['result']['id'],
+                                                                      private_ip_address=None,
+                                                                      allow_reassociation=False,
+                                                                      region=region,
+                                                                      key=key,
+                                                                      keyid=keyid,
+                                                                      profile=profile)
+                    if not _ret:
+                        _ret = __salt__['boto_ec2.release_eip_address'](public_ip=None,
+                                                                        allocation_id=eip_alloc['allocation_id'],
+                                                                        region=region,
+                                                                        key=key,
+                                                                        keyid=keyid,
+                                                                        profile=profile)
+                        ret['result'] = False
+                        msg = 'Failed to assocaite the allocated EIP address with the ENI.  The EIP {0}'.format('was successfully released.' if _ret else 'was NOT RELEASED.')
+                        ret['comment'] = ' '.join([ret['comment'], msg])
+                        return ret
+                else:
+                    ret['result'] = False
+                    ret['comment'] = ' '.join([ret['comment'], 'Failed to allocate an EIP address'])
+                    return ret
+        else:
+            ret['comment'] = ' '.join([ret['comment'], 'An EIP is already allocated/assocaited to the ENI'])
+    if arecords:
+        for arecord in arecords:
+            if 'name' not in arecord:
+                msg = 'The arecord must contain a "name" property.'
+                raise SaltInvocationError(msg)
+            log.debug('processing arecord {0}'.format(arecord))
+            _ret = None
+            dns_provider = 'boto_route53'
+            arecord['record_type'] = 'A'
+            public_ip_arecord = False
+            if 'public' in arecord:
+                public_ip_arecord = arecord.pop('public')
+            if public_ip_arecord:
+                if 'publicIp' in r['result']:
+                    arecord['value'] = r['result']['publicIp']
+                elif 'public_ip' in eip_alloc:
+                    arecord['value'] = eip_alloc['public_ip']
+                else:
+                    msg = 'Unable to add an A record for the public IP address, a public IP address does not seem to be allocated to this ENI.'
+                    raise CommandExecutionError(msg)
+            else:
+                arecord['value'] = r['result']['private_ip_address']
+            if 'provider' in arecord:
+                dns_provider = arecord.pop('provider')
+            if dns_provider == 'boto_route53':
+                if 'profile' not in arecord:
+                    arecord['profile'] = profile
+                if 'key' not in arecord:
+                    arecord['key'] = key
+                if 'keyid' not in arecord:
+                    arecord['keyid'] = keyid
+                if 'region' not in arecord:
+                    arecord['region'] = region
+            _ret = __states__['.'.join([dns_provider, 'present'])](**arecord)
+            log.debug('ret from dns_provider.present = {0}'.format(_ret))
+            ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
+            ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
+            if not _ret['result']:
+                ret['result'] = _ret['result']
+                if ret['result'] is False:
+                    return ret
     return ret
 
 
@@ -343,6 +449,7 @@ def _eni_groups(metadata, groups, region, key, keyid, profile):
 
 def eni_absent(
         name,
+        release_eip=False,
         region=None,
         key=None,
         keyid=None,
@@ -354,6 +461,9 @@ def eni_absent(
 
     name
         Name tag associated with the ENI.
+
+    release_eip
+        True/False - release any EIP associated with the ENI
 
     region
         Region to connect to.
@@ -386,6 +496,8 @@ def eni_absent(
     else:
         if __opts__['test']:
             ret['comment'] = 'ENI is set to be deleted.'
+            if release_eip and 'allocationId' in r['result']:
+                ret['comment'] = ' '.join([ret['comment'], 'Allocated/associated EIP is set to be released'])
             ret['result'] = None
             return ret
         if 'id' in r['result']['attachment']:
@@ -412,6 +524,20 @@ def eni_absent(
             return ret
         ret['comment'] = 'Deleted ENI {0}'.format(name)
         ret['changes']['id'] = None
+        if release_eip and 'allocationId' in r['result']:
+            _ret = __salt__['boto_ec2.release_eip_address'](public_ip=None,
+                                                            allocation_id=r['result']['allocationId'],
+                                                            region=region,
+                                                            key=key,
+                                                            keyid=keyid,
+                                                            profile=profile)
+            if not _ret:
+                ret['comment'] = ' '.join([ret['comment'], 'Failed to release EIP allocated to the ENI.'])
+                ret['result'] = False
+                return ret
+            else:
+                ret['comment'] = ' '.join([ret['comment'], 'EIP released.'])
+                ret['changes']['eip released'] = True
     return ret
 
 
@@ -663,29 +789,30 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
         ret['changes']['old']['instance_id'] = None
         ret['changes']['new']['instance_id'] = instance_id
 
-    for k, v in attributes.iteritems():
-        curr = __salt__['boto_ec2.get_attribute'](k, instance_id=instance_id, region=region, key=key,
-                                                  keyid=keyid, profile=profile)
-        if isinstance(curr, dict):
-            curr = {}
-        if curr and curr.get(k) == v:
-            continue
-        else:
-            if __opts__['test']:
-                changed_attrs[k] = 'The instance attribute {0} is set to be changed from \'{1}\' to \'{2}\'.'.format(
-                                   k, curr.get(k), v)
+    if attributes:
+        for k, v in attributes.iteritems():
+            curr = __salt__['boto_ec2.get_attribute'](k, instance_id=instance_id, region=region, key=key,
+                                                      keyid=keyid, profile=profile)
+            if isinstance(curr, dict):
+                curr = {}
+            if curr and curr.get(k) == v:
                 continue
-            try:
-                r = __salt__['boto_ec2.set_attribute'](attribute=k, attribute_value=v,
-                                                       instance_id=instance_id, region=region,
-                                                       key=key, keyid=keyid, profile=profile)
-            except SaltInvocationError as e:
-                ret['result'] = False
-                ret['comment'] = 'Failed to set attribute {0} to {1} on instance {2}.'.format(k, v, instance_name)
-                return ret
-            ret['changes'] = ret['changes'] if ret['changes'] else {'old': {}, 'new': {}}
-            ret['changes']['old'][k] = curr.get(k)
-            ret['changes']['new'][k] = v
+            else:
+                if __opts__['test']:
+                    changed_attrs[k] = 'The instance attribute {0} is set to be changed from \'{1}\' to \'{2}\'.'.format(
+                                       k, curr.get(k), v)
+                    continue
+                try:
+                    r = __salt__['boto_ec2.set_attribute'](attribute=k, attribute_value=v,
+                                                           instance_id=instance_id, region=region,
+                                                           key=key, keyid=keyid, profile=profile)
+                except SaltInvocationError as e:
+                    ret['result'] = False
+                    ret['comment'] = 'Failed to set attribute {0} to {1} on instance {2}.'.format(k, v, instance_name)
+                    return ret
+                ret['changes'] = ret['changes'] if ret['changes'] else {'old': {}, 'new': {}}
+                ret['changes']['old'][k] = curr.get(k)
+                ret['changes']['new'][k] = v
 
     if __opts__['test']:
         if changed_attrs:
