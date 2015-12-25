@@ -158,7 +158,7 @@ class CreationDestructionVirtualboxTests(VirtualboxTestCase):
         super(CreationDestructionVirtualboxTests, self).setUp()
 
     def test_vm_creation_and_destruction(self):
-        vm_name = "__temp_test_vm__"
+        vm_name = BASE_BOX_NAME
         virtualbox.vb_create_machine(vm_name)
         self.assertMachineExists(vm_name)
 
