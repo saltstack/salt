@@ -276,7 +276,7 @@ def gen_locale(locale, **kwargs):
         __salt__['file.replace'](
             '/etc/locale.gen',
             r'^\s*#\s*{0}\s*$'.format(locale),
-            '{0}\\n'.format(locale),
+            '{0}\n'.format(locale),
             append_if_not_found=True
         )
     elif on_ubuntu:
