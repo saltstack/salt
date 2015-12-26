@@ -18,6 +18,8 @@ Dicts provided by salt:
 import logging
 
 # Import salt libs
+import re
+
 import config as config
 import utils.cloud
 
@@ -41,6 +43,20 @@ The name salt will identify the lib by
 """
 __virtualname__ = 'virtualbox'
 _virtualboxManager = None
+
+"""
+Attributes we expect to have when converting an XPCOM object to a dict
+"""
+XPCOM_ATTRIBUTES = {
+    "IMachine": [
+        "id",
+        "name",
+        "accessible",
+        "description",
+        "groups",
+        "OSTypeId",
+    ]
+}
 
 
 def __virtual__():
@@ -249,7 +265,7 @@ def vb_clone_vm(
 
     vbox.registerMachine(new_machine)
 
-    # TODO return a struct/class that describes a virtual machine
+    return vb_xpcom_to_attribute_dict(new_machine, "IMachine")
 
 
 def vb_start_vm(**kwargs):
@@ -274,3 +290,43 @@ def vb_destroy_machine(name=None, timeout=10000):
     progress = machine.deleteConfig(files)
     progress.waitForCompletion(timeout)
     log.info("Finished destroying machine %s" % name)
+
+
+def vb_xpcom_to_attribute_dict(xpcom
+                               , interface_name=None
+                               , attributes=None
+                               , excluded_attributes=None
+                               ):
+    """
+    Attempts to build a dict from an XPCOM object.
+    Attributes that don't exist in the object aren't included.
+
+    @param xpcom:
+    @type xpcom:
+    @param interface_name: Which interface we will be converting from.
+                           Without this it's best to specify the list of attributes you want
+    @type interface_name: str
+    @param attributes: Overrides the attributes used from XPCOM_ATTRIBUTES
+    @type attributes: list
+    @param excluded_attributes: Which should be excluded in the returned dict
+    @type excluded_attributes: list
+    @return:
+    @rtype:
+    """
+    # Check the interface
+    if interface_name:
+        m = re.search(r"XPCOM.+implementing %s" % interface_name, str(xpcom))
+        if not m:
+            # TODO maybe raise error here?
+            return dict()
+
+    interface_attributes = attributes or XPCOM_ATTRIBUTES.get(interface_name, [])
+    excluded_attributes = excluded_attributes or []
+
+    attribute_tuples = [
+        (attribute, getattr(xpcom, attribute))
+        for attribute in interface_attributes
+        if hasattr(xpcom, attribute) and attribute not in excluded_attributes
+        ]
+
+    return dict(attribute_tuples)
