@@ -396,7 +396,7 @@ class ZfsTestCase(TestCase):
         '''
         Tests zfs hold success
         '''
-        res = {'myzpool/mydataset@baseline': 'held (tag=important)', 'myzpool/mydataset@release-1.0': 'held (tag=important)'}
+        res = {'myzpool/mydataset@baseline': {'important': 'held'}, 'myzpool/mydataset@release-1.0': {'important': 'held'}}
         ret = {'pid': 50876, 'retcode': 0, 'stderr': '', 'stdout': ''}
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
@@ -407,7 +407,7 @@ class ZfsTestCase(TestCase):
         '''
         Tests zfs hold failure
         '''
-        res = {'myzpool/mydataset@baseline': 'tag already exists on this dataset'}
+        res = {'myzpool/mydataset@baseline': {'important': 'tag already exists on this dataset'}}
         ret = {'pid': 51006, 'retcode': 1, 'stderr': "cannot hold snapshot 'myzpool/mydataset@baseline': tag already exists on this dataset", 'stdout': ''}
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
@@ -418,7 +418,7 @@ class ZfsTestCase(TestCase):
         '''
         Tests zfs release success
         '''
-        res = {'myzpool/mydataset@baseline': 'released (tag=important)', 'myzpool/mydataset@release-1.0': 'released (tag=important)'}
+        res = {'myzpool/mydataset@baseline': {'important': 'released'}, 'myzpool/mydataset@release-1.0': {'important': 'released'}}
         ret = {'pid': 50876, 'retcode': 0, 'stderr': '', 'stdout': ''}
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
@@ -429,7 +429,7 @@ class ZfsTestCase(TestCase):
         '''
         Tests zfs release failure
         '''
-        res = {'myzpool/mydataset@baseline': 'no such tag on this dataset'}
+        res = {'myzpool/mydataset@baseline': {'important': 'no such tag on this dataset'}}
         ret = {'pid': 51006, 'retcode': 1, 'stderr': "cannot release hold from snapshot 'myzpool/mydataset@baseline': no such tag on this dataset", 'stdout': ''}
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(zfs.__salt__, {'cmd.run_all': mock_cmd}):
