@@ -5,7 +5,7 @@ from cloud.clouds import virtualbox
 
 class VirtualboxTestCase(unittest.TestCase):
     def setUp(self):
-        self.vbox = virtualbox.vb_get_manager()
+        self.vbox = virtualbox.vb_get_box()
 
     def assertMachineExists(self, name, msg=None):
         try:
@@ -21,7 +21,7 @@ class VirtualboxTestCase(unittest.TestCase):
 
 
 def list_machines():
-    vbox = virtualbox.vb_get_manager()
+    vbox = virtualbox.vb_get_box()
     for machine in vbox.getArray(vbox, "Machines"):
         print "Machine '%s' logs in '%s'" % (
             machine.name,
