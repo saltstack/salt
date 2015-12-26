@@ -167,7 +167,8 @@ class VirtualboxProviderTest(integration.ShellCase):
         # # if test instance is still present, delete it
         # if ret in query:
         #     # self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
-        virtualbox.vb_destroy_machine(INSTANCE_NAME)
+        if virtualbox.vb_machine_exists(INSTANCE_NAME):
+            virtualbox.vb_destroy_machine(INSTANCE_NAME)
 
 
 class BaseVirtualboxTests(unittest.TestCase):

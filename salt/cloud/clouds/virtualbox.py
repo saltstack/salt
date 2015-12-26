@@ -329,3 +329,21 @@ def vb_xpcom_to_attribute_dict(xpcom
         ]
 
     return dict(attribute_tuples)
+
+
+def vb_machine_exists(name):
+    try:
+        vbox = vb_get_manager()
+        vbox.findMachine(name)
+        return True
+    except Exception as e:
+        if isinstance(e.message, str):
+            message = e.message
+        elif isinstance(e.msg, str):
+            message = e.msg
+        else:
+            message = ""
+        if 0 > message.find("Could not find a registered machine named"):
+            log.error(message)
+
+        return False
