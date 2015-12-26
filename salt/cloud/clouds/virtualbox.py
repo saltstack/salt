@@ -16,12 +16,12 @@ Dicts provided by salt:
 
 # Import python libs
 import logging
-
-# Import salt libs
 import re
 
-import config as config
-import utils.cloud
+# Import salt libs
+from salt.exceptions import SaltCloudSystemExit
+import salt.config as config
+import salt.utils.cloud as cloud
 
 log = logging.getLogger(__name__)
 
@@ -132,7 +132,7 @@ def create(vm_info):
         pass
 
     log.debug("Going to fire event: starting create")
-    utils.cloud.fire_event(
+    cloud.fire_event(
         'event',
         'starting create',
         'salt/cloud/{0}/creating'.format(vm_info['name']),
@@ -151,7 +151,7 @@ def create(vm_info):
         'clone_from': vm_info['clonefrom']
     }
 
-    utils.cloud.fire_event(
+    cloud.fire_event(
         'event',
         'requesting instance',
         'salt/cloud/{0}/requesting'.format(vm_info['name']),
@@ -167,7 +167,7 @@ def create(vm_info):
     deploy_kwargs = {
     }
 
-    utils.cloud.fire_event(
+    cloud.fire_event(
         'event',
         'deploying salt',
         'salt/cloud/{0}/deploying'.format(vm_info['name']),
@@ -182,9 +182,9 @@ def create(vm_info):
     # TODO wait for target machine to become available
     # TODO deploy!
     # Do we have to call this?
-    # utils.cloud.deploy_script(None, **deploy_kwargs)
+    # cloud.deploy_script(None, **deploy_kwargs)
 
-    utils.cloud.fire_event(
+    cloud.fire_event(
         'event',
         'created machine',
         'salt/cloud/{0}/created'.format(vm_info['name']),
