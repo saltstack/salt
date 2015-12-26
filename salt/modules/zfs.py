@@ -1059,9 +1059,6 @@ def snapshot(*snapshot, **kwargs):
         if '@' not in snap:
             ret[snap] = 'not a snapshot'
 
-    if len(ret) > 0:
-        return ret
-
     # if zpool properties specified, then
     # create "-o property=value" pairs
     if properties:
@@ -1072,36 +1069,30 @@ def snapshot(*snapshot, **kwargs):
             optlist.append('-o {0}={1}'.format(prop, properties[prop]))
         properties = ' '.join(optlist)
 
-    res = __salt__['cmd.run_all']('{zfs} snapshot {recursive}{properties}{snapshot}'.format(
-        zfs=zfs,
-        recursive='-r ' if recursive else '',
-        properties='{0} '.format(properties) if properties else '',
-        snapshot=' '.join(snapshot)
-    ))
+    for csnap in snapshot:
+        if '@' not in csnap:
+            continue
 
-    for snap in snapshot:
-        ret[snap] = 'snapshotted'
-    if res['retcode'] != 0:
-        for err in res['stderr'].splitlines():
-            if err.startswith('cannot create snapshot'):
-                snap = err[24:err.index(':')-1]
-                msg = err[err.index(':')+2:]
-                if snap != '':
-                    ret[snap] = msg
+        res = __salt__['cmd.run_all']('{zfs} snapshot {recursive}{properties}{snapshot}'.format(
+            zfs=zfs,
+            recursive='-r ' if recursive else '',
+            properties='{0} '.format(properties) if properties else '',
+            snapshot=csnap
+        ))
+
+        if res['retcode'] != 0:
+            for err in res['stderr'].splitlines():
+                if err.startswith('cannot create snapshot'):
+                    ret[csnap] = err[err.index(':')+2:]
+                elif err.startswith('cannot open'):
+                    ret[csnap] = err[err.index(':')+2:]
                 else:
-                    for snap in ret.keys():
-                        ret[snap] = msg
-            elif err.startswith('cannot open'):
-                for snap in ret.keys():
-                    if snap.startswith(err[13:err.index(':')-1]):
-                        ret[snap] = err[err.index(':')+2:]
-            else:
-                # fallback in case we hit a weird error
-                if err == 'usage:':
-                    break
-                ret = {}
-                ret['error'] = res['stderr']
-                return ret
+                    # fallback in case we hit a weird error
+                    if err == 'usage:':
+                        break
+                    ret[csnap] = res['stderr']
+        else:
+            ret[csnap] = 'snapshotted'
     return ret
 
 
