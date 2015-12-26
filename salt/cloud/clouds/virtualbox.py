@@ -206,12 +206,18 @@ def vb_get_manager():
     global _virtualboxManager
     if _virtualboxManager is None:
         _virtualboxManager = VirtualBoxManager(None, None)
+
+    return _virtualboxManager
+
+
+def vb_get_box():
+    vb_get_manager()
     vbox = _virtualboxManager.vbox
     return vbox
 
 
 def vb_create_machine(name=None):
-    vbox = vb_get_manager()
+    vbox = vb_get_box()
     log.info("Create virtualbox machine %s " % (name,))
     groups = None
     os_type_id = "Other"
@@ -237,7 +243,7 @@ def vb_clone_vm(
 
     @return dict of resulting VM
     """
-    vbox = vb_get_manager()
+    vbox = vb_get_box()
     log.info("Clone virtualbox machine %s from %s" % (name, clone_from))
 
     source_machine = vbox.findMachine(clone_from)
@@ -281,7 +287,7 @@ def vb_destroy_machine(name=None, timeout=10000):
 
     @param timeout int timeout in milliseconds
     """
-    vbox = vb_get_manager()
+    vbox = vb_get_box()
     log.info("Destroying machine %s" % name)
     machine = vbox.findMachine(name)
     files = machine.unregister(2)
@@ -333,7 +339,7 @@ def vb_xpcom_to_attribute_dict(xpcom
 
 def vb_machine_exists(name):
     try:
-        vbox = vb_get_manager()
+        vbox = vb_get_box()
         vbox.findMachine(name)
         return True
     except Exception as e:
