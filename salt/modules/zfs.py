@@ -78,7 +78,7 @@ def __virtual__():
     return (False, "The zfs module cannot be loaded: zfs not found")
 
 
-def exists(name):
+def exists(name, **kwargs):
     '''
     .. versionadded:: 2015.5.0
 
@@ -86,15 +86,21 @@ def exists(name):
 
     name : string
         name of dataset
+    type : string
+        also check if dataset is of a certain type, valid choices are:
+        filesystem, snapshot, volume, bookmark, or all.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.exists myzpool/mydataset
+        salt '*' zfs.exists myzpool/myvolume type=volume
     '''
     zfs = _check_zfs()
-    cmd = '{0} list {1}'.format(zfs, name)
+    ltype = kwargs.get('type', None)
+
+    cmd = '{0} list {1}{2}'.format(zfs, '-t {0} '.format(ltype) if ltype else '', name)
     res = __salt__['cmd.run_all'](cmd, ignore_retcode=True)
 
     return res['retcode'] == 0
