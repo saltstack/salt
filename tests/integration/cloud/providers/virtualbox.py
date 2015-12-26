@@ -41,6 +41,8 @@ BASE_BOX_NAME = "__temp_test_vm__"
 class VirtualboxProviderTest(integration.ShellCase):
     """
     Integration tests for the Virtualbox cloud provider using the Virtualbox driver
+    TODO tests that create with salt cloud and the delete with vb_* functions
+    TODO Keep implementing the new salt-cloud functions while replacing the vb_* calls
     """
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
@@ -108,8 +110,27 @@ class VirtualboxProviderTest(integration.ShellCase):
                     .format(PROFILE_NAME, PROVIDER_NAME, BASE_BOX_NAME)
             )
 
-    def test_whatever(self):
-        self.assertTrue(True)
+    @classmethod
+    def setUpClass(cls):
+        virtualbox.vb_create_machine(BASE_BOX_NAME)
+
+    @classmethod
+    def tearDownClass(cls):
+        virtualbox.vb_destroy_machine(BASE_BOX_NAME)
+
+    def test_cloud_create(self):
+        """
+        Simply create a machine and make sure it was created
+        """
+        try:
+
+            self.assertIn(
+                INSTANCE_NAME,
+                [i.strip() for i in self.run_cloud('-p {0} {1} --log-level=debug'.format(PROFILE_NAME, INSTANCE_NAME))]
+            )
+        except AssertionError:
+            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+            raise
 
     # def test_instance(self):
     #     """
@@ -119,7 +140,7 @@ class VirtualboxProviderTest(integration.ShellCase):
     #     try:
     #         self.assertIn(
     #             INSTANCE_NAME,
-    #             [i.strip() for i in self.run_cloud('-p virtualbox-test {0}'.format(INSTANCE_NAME))]
+    #             [i.strip() for i in self.run_cloud('-p {0} {1} --log-level=debug'.format(PROFILE_NAME, INSTANCE_NAME))]
     #         )
     #     except AssertionError:
     #         self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
@@ -138,14 +159,15 @@ class VirtualboxProviderTest(integration.ShellCase):
         """
         Clean up after tests
         """
-        query = self.run_cloud('--query')
-        ret = '        {0}:'.format(INSTANCE_NAME)
-
-        log.debug("query: %s" % query)
-
-        # if test instance is still present, delete it
+        # query = self.run_cloud('--query')
+        # ret = '        {0}:'.format(INSTANCE_NAME)
+        #
+        # log.info("query: %s" % query)
+        #
+        # # if test instance is still present, delete it
         # if ret in query:
-        #    self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+        #     # self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
+        virtualbox.vb_destroy_machine(INSTANCE_NAME)
 
 
 class BaseVirtualboxTests(unittest.TestCase):
