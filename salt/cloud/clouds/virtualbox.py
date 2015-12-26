@@ -227,9 +227,11 @@ def vb_create_machine(name=None):
 
 
 def vb_clone_vm(
-        name=None,
-        clone_from=None,
-        timeout=10000):
+    name=None,
+    clone_from=None,
+    timeout=10000,
+    **kwargs
+):
     """
     Tells virtualbox to create a VM
 
