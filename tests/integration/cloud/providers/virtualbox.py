@@ -14,7 +14,8 @@ from salttesting.helpers import ensure_in_syspath
 
 from integration.cloud.helpers import random_name
 from integration.cloud.helpers.virtualbox import VirtualboxTestCase
-from cloud.clouds import virtualbox
+from utils.virtualbox import vb_xpcom_to_attribute_dict, vb_clone_vm, vb_destroy_machine, vb_create_machine, vb_get_box, \
+    vb_machine_exists, HAS_LIBS, XPCOM_ATTRIBUTES
 
 ensure_in_syspath('../../../')
 
@@ -37,7 +38,7 @@ DRIVER_NAME = "virtualbox"
 BASE_BOX_NAME = "__temp_test_vm__"
 
 
-@skipIf(virtualbox.HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')
+@skipIf(HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')
 class VirtualboxProviderTest(integration.ShellCase):
     """
     Integration tests for the Virtualbox cloud provider using the Virtualbox driver
@@ -112,11 +113,11 @@ class VirtualboxProviderTest(integration.ShellCase):
 
     @classmethod
     def setUpClass(cls):
-        virtualbox.vb_create_machine(BASE_BOX_NAME)
+        vb_create_machine(BASE_BOX_NAME)
 
     @classmethod
     def tearDownClass(cls):
-        virtualbox.vb_destroy_machine(BASE_BOX_NAME)
+        vb_destroy_machine(BASE_BOX_NAME)
 
     def test_cloud_create(self):
         """
@@ -173,13 +174,13 @@ class VirtualboxProviderTest(integration.ShellCase):
         # # if test instance is still present, delete it
         # if ret in query:
         #     # self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
-        if virtualbox.vb_machine_exists(INSTANCE_NAME):
-            virtualbox.vb_destroy_machine(INSTANCE_NAME)
+        if vb_machine_exists(INSTANCE_NAME):
+            vb_destroy_machine(INSTANCE_NAME)
 
 
 class BaseVirtualboxTests(unittest.TestCase):
     def test_get_manager(self):
-        self.assertIsNotNone(virtualbox.vb_get_box())
+        self.assertIsNotNone(vb_get_box())
 
 
 class CreationDestructionVirtualboxTests(VirtualboxTestCase):
@@ -188,34 +189,34 @@ class CreationDestructionVirtualboxTests(VirtualboxTestCase):
 
     def test_vm_creation_and_destruction(self):
         vm_name = BASE_BOX_NAME
-        virtualbox.vb_create_machine(vm_name)
+        vb_create_machine(vm_name)
         self.assertMachineExists(vm_name)
 
-        virtualbox.vb_destroy_machine(vm_name)
+        vb_destroy_machine(vm_name)
         self.assertMachineDoesNotExist(vm_name)
 
 
 class CloneVirtualboxTests(VirtualboxTestCase):
     def setUp(self):
-        self.vbox = virtualbox.vb_get_box()
+        self.vbox = vb_get_box()
 
         self.name = "SaltCloudVirtualboxTestVM"
-        virtualbox.vb_create_machine(self.name)
+        vb_create_machine(self.name)
         self.assertMachineExists(self.name)
 
     def tearDown(self):
-        virtualbox.vb_destroy_machine(self.name)
+        vb_destroy_machine(self.name)
         self.assertMachineDoesNotExist(self.name)
 
     def test_create_machine(self):
         vb_name = "NewTestMachine"
-        virtualbox.vb_clone_vm(
+        vb_clone_vm(
             name=vb_name,
             clone_from=self.name
         )
         self.assertMachineExists(vb_name)
 
-        virtualbox.vb_destroy_machine(vb_name)
+        vb_destroy_machine(vb_name)
         self.assertMachineDoesNotExist(vb_name)
 
 
@@ -237,7 +238,7 @@ class XpcomConversionTests(unittest.TestCase):
     def test_unknown_object(self):
         xpcom = XpcomConversionTests._mock_xpcom_object()
 
-        ret = virtualbox.vb_xpcom_to_attribute_dict(xpcom)
+        ret = vb_xpcom_to_attribute_dict(xpcom)
         self.assertDictEqual(ret, dict())
 
     def test_imachine_object_default(self):
@@ -245,8 +246,8 @@ class XpcomConversionTests(unittest.TestCase):
         interface = "IMachine"
         imachine = XpcomConversionTests._mock_xpcom_object(interface)
 
-        ret = virtualbox.vb_xpcom_to_attribute_dict(imachine)
-        expected_attributes = virtualbox.XPCOM_ATTRIBUTES[interface]
+        ret = vb_xpcom_to_attribute_dict(imachine)
+        expected_attributes = XPCOM_ATTRIBUTES[interface]
 
         self.assertIsNotNone(expected_attributes, "%s is unknown")
 
@@ -263,7 +264,7 @@ class XpcomConversionTests(unittest.TestCase):
 
         imachine = XpcomConversionTests._mock_xpcom_object(attributes=expected_dict)
 
-        ret = virtualbox.vb_xpcom_to_attribute_dict(imachine, attributes=expected_dict.keys())
+        ret = vb_xpcom_to_attribute_dict(imachine, attributes=expected_dict.keys())
         self.assertDictEqual(ret, expected_dict)
 
 
