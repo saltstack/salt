@@ -1208,9 +1208,10 @@ def get(*dataset, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' zfs.list
-        salt '*' zfs.list myzpool/mydataset [recursive=True|False]
-        salt '*' zfs.list myzpool/mydataset properties="sharenfs,mountpoint"
+        salt '*' zfs.get
+        salt '*' zfs.get myzpool/mydataset [recursive=True|False]
+        salt '*' zfs.get myzpool/mydataset properties="sharenfs,mountpoint" [recursive=True|False]
+        salt '*' zfs.get myzpool/mydataset myzpool/myotherdataset properties=available fields=value depth=1
     '''
     ret = OrderedDict()
     zfs = _check_zfs()
