@@ -876,18 +876,23 @@ def hold(tag, *snapshot, **kwargs):
         using the zfs destroy command return EBUSY.
 
     tag : string
-        name of snapshot
+        name of tag
     *snapshot : string
         name of snapshot(s)
     recursive : boolean
         specifies that a hold with the given tag is applied recursively to
         the snapshots of all descendent file systems.
 
+    .. note::
+
+        A comma-seperated list can be provided for the tag parameter to hold multiple tags.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot [recursive=True]
+        salt '*' zfs.hold mytag,myothertag myzpool/mydataset@mysnapshot
         salt '*' zfs.hold mytag myzpool/mydataset@mysnapshot myzpool/mydataset@myothersnapshot
     '''
     ret = {}
@@ -906,30 +911,31 @@ def hold(tag, *snapshot, **kwargs):
     if len(ret) > 0:
         return ret
 
-    res = __salt__['cmd.run_all']('{zfs} hold {recursive}{tag} {snapshot}'.format(
-        zfs=zfs,
-        recursive='-r ' if recursive else '',
-        tag=tag,
-        snapshot=' '.join(snapshot)
-    ))
+    for csnap in snapshot:
+        for ctag in tag.split(','):
+            res = __salt__['cmd.run_all']('{zfs} hold {recursive}{tag} {snapshot}'.format(
+                zfs=zfs,
+                recursive='-r ' if recursive else '',
+                tag=ctag,
+                snapshot=csnap
+            ))
 
-    for snap in snapshot:
-        ret[snap] = 'held (tag={0})'.format(tag)
-    if res['retcode'] != 0:
-        for err in res['stderr'].splitlines():
-            if err.startswith('cannot hold snapshot'):
-                ret[err[22:err.index(':')-1]] = err[err.index(':')+2:]
-            elif err.startswith('cannot open'):
-                for snap in ret.keys():
-                    if snap.startswith(err[13:err.index(':')-1]):
-                        ret[snap] = err[err.index(':')+2:]
+            if csnap not in ret:
+                ret[csnap] = {}
+
+            if res['retcode'] != 0:
+                for err in res['stderr'].splitlines():
+                    if err.startswith('cannot hold snapshot'):
+                        ret[csnap][ctag] = err[err.index(':')+2:]
+                    elif err.startswith('cannot open'):
+                        ret[csnap][ctag] = err[err.index(':')+2:]
+                    else:
+                        # fallback in case we hit a weird error
+                        if err == 'usage:':
+                            break
+                        ret[csnap][ctag] = res['stderr']
             else:
-                # fallback in case we hit a weird error
-                if err == 'usage:':
-                    break
-                ret = {}
-                ret['error'] = res['stderr']
-                return ret
+                ret[csnap][ctag] = 'held'
 
     return ret
 
