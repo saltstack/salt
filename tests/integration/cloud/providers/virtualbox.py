@@ -122,15 +122,21 @@ class VirtualboxProviderTest(integration.ShellCase):
         """
         Simply create a machine and make sure it was created
         """
-        try:
 
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p {0} {1} --log-level=debug'.format(PROFILE_NAME, INSTANCE_NAME))]
-            )
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
-            raise
+        self.assertIn(
+            INSTANCE_NAME,
+            [i.strip() for i in self.run_cloud('-p {0} {1} --log-level=debug'.format(PROFILE_NAME, INSTANCE_NAME))]
+        )
+
+    def test_cloud_list(self):
+        """
+        List all machines in virtualbox
+        """
+
+        self.assertIn(
+            BASE_BOX_NAME,
+            [i.strip() for i in self.run_cloud('--list-images=virtualbox')]
+        )
 
     # def test_instance(self):
     #     """

@@ -196,6 +196,34 @@ def create(vm_info):
     return vm_result
 
 
+def avail_images(call=None):
+    '''
+    Return a list of all the images in the virtualbox hypervisor
+
+    TODO: Does virtualbox support templates?
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-cloud --list-images my-vmware-config
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_images function must be called with '
+            '-f or --function, or with the --list-images option.'
+        )
+
+    machines = {}
+
+    for machine in vb_list_machines():
+        name = machine.get("name")
+        if name:
+            machines[name] = machine
+
+    return machines
+
+
 # -----------------------------
 # Virtualbox methods
 # -----------------------------
@@ -214,6 +242,15 @@ def vb_get_box():
     vb_get_manager()
     vbox = _virtualboxManager.vbox
     return vbox
+
+
+def vb_list_machines():
+    manager = vb_get_manager()
+    machines = manager.getArray(vb_get_box(), "machines")
+    return [
+        vb_xpcom_to_attribute_dict(machine, "IMachine")
+        for machine in machines
+        ]
 
 
 def vb_create_machine(name=None):
