@@ -190,6 +190,54 @@ class CloneVirtualboxTests(VirtualboxTestCase):
         self.assertMachineDoesNotExist(vb_name)
 
 
+class XpcomConversionTests(unittest.TestCase):
+    @classmethod
+    def _mock_xpcom_object(self, interface_name=None, attributes=None):
+        class XPCOM(object):
+
+            def __str__(self):
+                return "<XPCOM component '<unknown>' (implementing %s)>" % interface_name
+
+        o = XPCOM()
+
+        if attributes and isinstance(attributes, dict):
+            for key, value in attributes.iteritems():
+                setattr(o, key, value)
+        return o
+
+    def test_unknown_object(self):
+        xpcom = XpcomConversionTests._mock_xpcom_object()
+
+        ret = virtualbox.vb_xpcom_to_attribute_dict(xpcom)
+        self.assertDictEqual(ret, dict())
+
+    def test_imachine_object_default(self):
+
+        interface = "IMachine"
+        imachine = XpcomConversionTests._mock_xpcom_object(interface)
+
+        ret = virtualbox.vb_xpcom_to_attribute_dict(imachine)
+        expected_attributes = virtualbox.XPCOM_ATTRIBUTES[interface]
+
+        self.assertIsNotNone(expected_attributes, "%s is unknown")
+
+        for key in ret.keys():
+            self.assertIn(key, expected_attributes)
+
+    def test_override_attributes(self):
+
+        expected_dict = {
+            "herp": "derp",
+            "lol": "rofl",
+            "something": 12345
+        }
+
+        imachine = XpcomConversionTests._mock_xpcom_object(attributes=expected_dict)
+
+        ret = virtualbox.vb_xpcom_to_attribute_dict(imachine, attributes=expected_dict.keys())
+        self.assertDictEqual(ret, expected_dict)
+
+
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error
 
