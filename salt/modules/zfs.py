@@ -954,12 +954,16 @@ def release(tag, *snapshot, **kwargs):
         snapshot by using the zfs destroy command return EBUSY.
 
     tag : string
-        name of snapshot
+        name of tag
     *snapshot : string
         name of snapshot(s)
     recursive : boolean
         recursively releases a hold with the given tag on the snapshots of
         all descendent file systems.
+
+    .. note::
+
+        A comma-seperated list can be provided for the tag parameter to release multiple tags.
 
     CLI Example:
 
@@ -984,30 +988,31 @@ def release(tag, *snapshot, **kwargs):
     if len(ret) > 0:
         return ret
 
-    res = __salt__['cmd.run_all']('{zfs} release {recursive}{tag} {snapshot}'.format(
-        zfs=zfs,
-        recursive='-r ' if recursive else '',
-        tag=tag,
-        snapshot=' '.join(snapshot)
-    ))
+    for csnap in snapshot:
+        for ctag in tag.split(','):
+            res = __salt__['cmd.run_all']('{zfs} release {recursive}{tag} {snapshot}'.format(
+                zfs=zfs,
+                recursive='-r ' if recursive else '',
+                tag=ctag,
+                snapshot=csnap
+            ))
 
-    for snap in snapshot:
-        ret[snap] = 'released (tag={0})'.format(tag)
-    if res['retcode'] != 0:
-        for err in res['stderr'].splitlines():
-            if err.startswith('cannot release hold from snapshot'):
-                ret[err[35:err.index(':')-1]] = err[err.index(':')+2:]
-            elif err.startswith('cannot open'):
-                for snap in ret.keys():
-                    if snap.startswith(err[13:err.index(':')-1]):
-                        ret[snap] = err[err.index(':')+2:]
+            if csnap not in ret:
+                ret[csnap] = {}
+
+            if res['retcode'] != 0:
+                for err in res['stderr'].splitlines():
+                    if err.startswith('cannot release hold from snapshot'):
+                        ret[csnap][ctag] = err[err.index(':')+2:]
+                    elif err.startswith('cannot open'):
+                        ret[csnap][ctag] = err[err.index(':')+2:]
+                    else:
+                        # fallback in case we hit a weird error
+                        if err == 'usage:':
+                            break
+                        ret[csnap][ctag] = res['stderr']
             else:
-                # fallback in case we hit a weird error
-                if err == 'usage:':
-                    break
-                ret = {}
-                ret['error'] = res['stderr']
-                return ret
+                ret[csnap][ctag] = 'released'
 
     return ret
 
