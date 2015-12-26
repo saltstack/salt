@@ -173,7 +173,7 @@ class VirtualboxProviderTest(integration.ShellCase):
 
 class BaseVirtualboxTests(unittest.TestCase):
     def test_get_manager(self):
-        self.assertIsNotNone(virtualbox.vb_get_manager())
+        self.assertIsNotNone(virtualbox.vb_get_box())
 
 
 class CreationDestructionVirtualboxTests(VirtualboxTestCase):
@@ -191,7 +191,7 @@ class CreationDestructionVirtualboxTests(VirtualboxTestCase):
 
 class CloneVirtualboxTests(VirtualboxTestCase):
     def setUp(self):
-        self.vbox = virtualbox.vb_get_manager()
+        self.vbox = virtualbox.vb_get_box()
 
         self.name = "SaltCloudVirtualboxTestVM"
         virtualbox.vb_create_machine(self.name)
