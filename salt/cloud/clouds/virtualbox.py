@@ -113,8 +113,8 @@ def create(vm_info):
             {
                 name: <str>
                 profile: <dict>
-                provider: <provider>
-                clone_from: <vm_name>
+                driver: <provider>:<profile>
+                clonefrom: <vm_name>
             }
     @return dict of resulting vm. !!!Passwords can and should be included!!!
     """
@@ -123,19 +123,15 @@ def create(vm_info):
         # Check for required profile parameters before sending any API calls.
         # TODO should this be a call to config.is_provider_configured ?
         if vm_info['profile'] and config.is_profile_configured(
-                __opts__,
+            __opts__,
                 __active_provider_name__ or 'virtualbox',
-                vm_info['profile']
+            vm_info['profile']
         ) is False:
             return False
     except AttributeError:
         pass
 
-    # For now we can only clone
-    if 'clone_from' not in vm_info:
-        log.error('"clone_from" not in profile configuration!')
-        return False
-
+    log.debug("Going to fire event: starting create")
     utils.cloud.fire_event(
         'event',
         'starting create',
@@ -143,7 +139,7 @@ def create(vm_info):
         {
             'name': vm_info['name'],
             'profile': vm_info['profile'],
-            'provider': vm_info['provider'],
+            'driver': vm_info['driver'],
         },
         transport=__opts__['transport']
     )
@@ -152,7 +148,7 @@ def create(vm_info):
     # to create the virtual machine.
     request_kwargs = {
         'name': vm_info['name'],
-        'clone_from': vm_info['clone_from']
+        'clone_from': vm_info['clonefrom']
     }
 
     utils.cloud.fire_event(
@@ -186,7 +182,7 @@ def create(vm_info):
     # TODO wait for target machine to become available
     # TODO deploy!
     # Do we have to call this?
-    utils.cloud.deploy_script(None, **deploy_kwargs)
+    # utils.cloud.deploy_script(None, **deploy_kwargs)
 
     utils.cloud.fire_event(
         'event',
