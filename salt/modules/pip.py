@@ -194,7 +194,7 @@ def _get_env_activate(bin_env):
 
 def _find_req(link):
 
-    logger.info('_find_req -- link = {}'.format(str(link)))
+    logger.info('_find_req -- link = %s', str(link))
 
     with salt.utils.fopen(link) as fh_link:
         child_links = rex_pip_chain_read.findall(fh_link.read())
@@ -203,6 +203,7 @@ def _find_req(link):
     child_links = [os.path.join(base_path, d) for d in child_links]
 
     return child_links
+
 
 def _resolve_requirements_chain(requirements):
     '''
@@ -300,7 +301,7 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                     target_base = os.path.dirname(target_path)
 
                     if not os.path.exists(target_base):
-                        os.makedirs(target_base, mode=0755)
+                        os.makedirs(target_base, mode=0o755)
                         __salt__['file.chown'](target_base, user, None)
 
                     if not os.path.exists(target_path):
