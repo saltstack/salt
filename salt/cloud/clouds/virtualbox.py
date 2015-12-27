@@ -21,7 +21,7 @@ import logging
 from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 import salt.utils.cloud as cloud
-from utils.virtualbox import vb_list_machines, vb_clone_vm, HAS_LIBS
+from utils.virtualbox import vb_list_machines, vb_clone_vm, HAS_LIBS, vb_machine_exists, vb_destroy_machine
 
 log = logging.getLogger(__name__)
 
@@ -194,3 +194,77 @@ def avail_images(call=None):
             machines[name] = machine
 
     return machines
+
+
+def list_nodes(kwargs=None, call=None):
+    """
+    This function returns a list of nodes available on this cloud provider, using the following fields:
+
+    id (str)
+    image (str)
+    size (str)
+    state (str)
+    private_ips (list)
+    public_ips (list)
+
+    No other fields should be returned in this function, and all of these fields should be returned, even if empty.
+    The private_ips and public_ips fields should always be of a list type, even if empty,
+    and the other fields should always be of a str type.
+    This function is normally called with the -Q option:
+
+    .. code-block:: bash
+        salt-cloud -Q
+
+
+    @param kwargs:
+    @type kwargs:
+    @param call:
+    @type call:
+    @return:
+    @rtype:
+    """
+    # TODO implement a proper version of this
+    return avail_images(call=call)
+
+
+def destroy(name, call=None):
+    """
+    This function irreversibly destroys a virtual machine on the cloud provider.
+    Before doing so, it should fire an event on the Salt event bus.
+
+    The tag for this event is `salt/cloud/<vm name>/destroying`.
+    Once the virtual machine has been destroyed, another event is fired.
+    The tag for that event is `salt/cloud/<vm name>/destroyed`.
+
+    Dependencies:
+        list_nodes
+
+    @param name:
+    @type name: str
+    @param call:
+    @type call:
+    @return: True if all went well, otherwise an error message
+    @rtype: bool|str
+    """
+    print "==========================================="
+    log.info("Attempting to delete instance %s" % name)
+    if not vb_machine_exists(name):
+        return "%s doesn't exist and can't be deleted" % name
+
+    cloud.fire_event(
+        'event',
+        'destroying instance',
+        'salt/cloud/{0}/destroying'.format(name),
+        {'name': name},
+        transport=__opts__['transport']
+    )
+
+    vb_destroy_machine(name)
+
+    cloud.fire_event(
+        'event',
+        'destroyed instance',
+        'salt/cloud/{0}/destroyed'.format(name),
+        {'name': name},
+        transport=__opts__['transport']
+    )
