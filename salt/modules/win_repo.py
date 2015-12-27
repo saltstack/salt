@@ -5,7 +5,7 @@ Module to manage Windows software repo on a Standalone Minion
 ``file_client: local`` must be set in the minion config file.
 
 For documentation on Salt's Windows Repo feature, see :ref:`here
-<windows-package-manager`
+<windows-package-manager>`.
 '''
 
 # Import python libs
@@ -89,7 +89,7 @@ def genrepo():
 def update_git_repos(clean=False):
     '''
     Checkout git repos containing :ref:`Windows Software Package Definitions
-    <windows-package-manager>`
+    <windows-package-manager>`.
 
     .. important::
         This function requires `Git for Windows`_ to be installed in order to
