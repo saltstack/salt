@@ -93,7 +93,6 @@ def create(vm_info):
     log.debug("Creating virtualbox with %s" % vm_info)
     try:
         # Check for required profile parameters before sending any API calls.
-        # TODO should this be a call to config.is_provider_configured ?
         if vm_info['profile'] and config.is_profile_configured(
             __opts__,
                 __active_provider_name__ or 'virtualbox',
@@ -130,7 +129,6 @@ def create(vm_info):
         request_kwargs,
         transport=__opts__['transport']
     )
-    # TODO request a new VM!
     vm_result = vb_clone_vm(**request_kwargs)
 
     # TODO Prepare deployment of salt on the vm
