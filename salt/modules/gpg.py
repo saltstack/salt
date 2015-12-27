@@ -97,7 +97,10 @@ def _check_gpg():
     Looks to see if gpg binary is present on the system.
     '''
     # Get the path to the gpg binary.
-    return salt.utils.which('gpg')
+    if salt.utils.which('gpg'):
+        return __virtualname__
+    return (False, 'The gpg execution module cannot be loaded: '
+            'gpg binary is not in the path.')
 
 
 def __virtual__():
