@@ -139,28 +139,18 @@ class VirtualboxProviderTest(integration.ShellCase):
             [i.strip() for i in self.run_cloud('--list-images=virtualbox')]
         )
 
-    # def test_instance(self):
-    #     """
-    #     Test creating an instance on virtualbox with the virtualbox driver
-    #     """
-    #     # check if instance with salt installed returned
-    #     try:
-    #         self.assertIn(
-    #             INSTANCE_NAME,
-    #             [i.strip() for i in self.run_cloud('-p {0} {1} --log-level=debug'.format(PROFILE_NAME, INSTANCE_NAME))]
-    #         )
-    #     except AssertionError:
-    #         self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
-    #         raise
-    #
-    #     # delete the instance
-    #     try:
-    #         self.assertIn(
-    #             INSTANCE_NAME + ':',
-    #             [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))]
-    #         )
-    #     except AssertionError:
-    #         raise
+    def test_cloud_destroy(self):
+        """
+        Test creating an instance on virtualbox with the virtualbox driver
+        """
+        # check if instance with salt installed returned
+        self.test_cloud_create()
+
+        # destroy the instance
+        self.assertIn(
+            INSTANCE_NAME + ':',
+            [i.strip() for i in self.run_cloud('-d {0} --assume-yes --log-level=debug'.format(INSTANCE_NAME))]
+        )
 
     def tearDown(self):
         """
