@@ -1,0 +1,4 @@
+cryptography==1.1.2
+pyOpenSSL==0.15.1
+pygit2==0.23.2
+
