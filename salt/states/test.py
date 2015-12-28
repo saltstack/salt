@@ -304,10 +304,11 @@ def mod_watch(name, sfun=None, **kwargs):
               - test: this_state_will_NOT_return_changes
     '''
     has_changes = []
-    for req in __low__['__reqs__']['watch']:
-        tag = _gen_tag(req)
-        if __running__[tag]['changes']:
-            has_changes.append('{state}: {__id__}'.format(**req))
+    if '__reqs__' in __low__:
+        for req in __low__['__reqs__']['watch']:
+            tag = _gen_tag(req)
+            if __running__[tag]['changes']:
+                has_changes.append('{state}: {__id__}'.format(**req))
 
     ret = {
         'name': name,
