@@ -877,7 +877,7 @@ def _windows_platform_data():
             motherboard['product'] = motherboardinfo.Product
             motherboard['serial'] = motherboardinfo.SerialNumber
         except IndexError:
-            log.debug('Motherboard info not available on this sytem')
+            log.debug('Motherboard info not available on this system')
 
         # the name of the OS comes with a bunch of other data about the install
         # location. For example:
@@ -918,6 +918,33 @@ def _windows_platform_data():
                 grains['virtual_subtype'] = 'HVM domU'
         elif 'OpenStack' in systeminfo.Model:
             grains['virtual'] = 'OpenStack'
+
+    return grains
+
+
+def _osx_platform_data():
+    '''
+    Additional data for Mac OS X systems
+    Returns: A dictionary containing values for the following:
+        - model_name
+        - boot_rom_version
+        - smc_version
+        - serial_number
+    '''
+    cmd = 'system_profiler SPHardwareDataType'
+    hardware = __salt__['cmd.run'](cmd)
+
+    grains = {}
+    for line in hardware.splitlines():
+        field_name, _, field_val = line.partition(': ')
+        if field_name.strip() == "Model Name":
+            grains['model_name'] = field_val
+        if field_name.strip() == "Boot ROM Version":
+            grains['boot_rom_version'] = field_val
+        if field_name.strip() == "SMC Version (system)":
+            grains['smc_version'] = field_val
+        if field_name.strip() == "Serial Number (system)":
+            grains['serial_number'] = field_val
 
     return grains
 
@@ -1343,13 +1370,15 @@ def os_data():
         grains['os'] = 'ESXi'
     elif grains['kernel'] == 'Darwin':
         osrelease = __salt__['cmd.run']('sw_vers -productVersion')
-        grains['os_build_version'] = __salt__['cmd.run']('sw_vers -buildVersion')
-        grains['os'] = 'MacOS'
-        grains['os_family'] = 'MacOS'
+        osname = __salt__['cmd.run']('sw_vers -productName')
+        osbuild = __salt__['cmd.run']('sw_vers -buildVersion')
+        grains['os'] = 'Mac'
+        grains['osfullname'] = "{0} {1}".format(osname, osrelease)
         grains['osrelease'] = osrelease
-        grains['osmajorrelease'] = osrelease.rsplit('.', 1)[0]
+        grains['osbuild'] = osbuild
         grains.update(_bsd_cpudata(grains))
         grains.update(_osx_gpudata())
+        grains.update(_osx_platform_data())
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
@@ -1412,18 +1441,12 @@ def os_data():
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['osfullname'],
             ver=grains['osrelease'].partition('.')[0])
-    elif grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+    elif grains.get('os') in ('FreeBSD', 'OpenBSD', 'NetBSD', 'Mac'):
         grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
 
         grains['osfinger'] = '{os}-{ver}'.format(
             os=grains['os'],
             ver=grains['osrelease'])
-    elif grains.get('os') in 'MacOS':
-        grains['osmajorrelease'] = grains['osrelease'].split('.', 1)[0]
-
-        grains['osfinger'] = '{os}-{ver}'.format(
-            os=grains['os'],
-            ver=grains['osrelease'].rsplit('.', 1)[0])
 
     if grains.get('osrelease', ''):
         osrelease_info = grains['osrelease'].split('.')
