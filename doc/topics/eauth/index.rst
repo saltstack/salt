@@ -40,6 +40,8 @@ service to authenticate.
 
 .. note:: The PAM module does not allow authenticating as ``root``.
 
+.. note:: state.sls and state.highstate will return "Failed to authenticate!" if the request timeout is reached.  Use -t flag to increase the timeout
+
 To allow access to :ref:`wheel modules <all-salt.wheel>` or :ref:`runner
 modules <all-salt.runners>` the following ``@`` syntax must be used:
 
