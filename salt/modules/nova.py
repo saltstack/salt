@@ -53,6 +53,9 @@ __func_alias__ = {
     'list_': 'list'
 }
 
+# Define the module's virtual name
+__virtualname__ = 'nova'
+
 
 def __virtual__():
     '''
@@ -60,9 +63,9 @@ def __virtual__():
     is installed on this minion.
     '''
     if suon.check_nova():
-        return 'nova'
-    else:
-        return False
+        return __virtualname__
+    return (False, 'The nova execution module failed to load: '
+            'only available if nova is installed.')
 
 
 __opts__ = {}

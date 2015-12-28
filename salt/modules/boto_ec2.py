@@ -1205,7 +1205,7 @@ def create_network_interface(name, subnet_id=None, subnet_name=None,
 
         salt myminion boto_ec2.create_network_interface my_eni subnet-12345 description=my_eni groups=['my_group']
     '''
-    if not exactly_one((subnet_id, subnet_name)):
+    if not salt.utils.exactly_one((subnet_id, subnet_name)):
         raise SaltInvocationError('One (but not both) of subnet_id or '
                                   'subnet_name must be provided.')
 
