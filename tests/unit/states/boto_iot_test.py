@@ -46,13 +46,13 @@ conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'pr
 error_message = 'An error occurred (101) when calling the {0} operation: Test-defined error'
 not_found_error = ClientError({
     'Error': {
-        'Code':'ResourceNotFoundException', 
+        'Code': 'ResourceNotFoundException',
         'Message': "Test-defined error"
     }
 }, 'msg')
 topic_rule_not_found_error = ClientError({
     'Error': {
-        'Code':'UnauthorizedException', 
+        'Code': 'UnauthorizedException',
         'Message': "Test-defined error"
     }
 }, 'msg')
@@ -71,7 +71,7 @@ topic_rule_ret = dict(ruleName='testrule',
                   sql="SELECT * FROM 'iot/test'",
                   description='topic rule description',
                   createdAt='1970-01-01',
-                  actions=[{'iot':{'functionArn':'arn:aws:::function'}}],
+                  actions=[{'iot': {'functionArn': 'arn:aws:::function'}}],
                   ruleDisabled=True)
 principal = 'arn:aws:iot:us-east-1:1234:cert/21fc104aaaf6043f5756c1b57bda84ea8395904c43f28517799b19e4c42514'
 log = logging.getLogger(__name__)
