@@ -95,7 +95,7 @@ button#prev-button{float:left;margin:15px 0 0}
 @media(max-width:768px) {
     #sidebar-wrapper{border:1px solid #424242}
 }
-@media(max-height:750px) {
+@media(max-height:450px) {
     .sidebar-banner{display: none !important}
 }
 #header-nav{float:right;text-align:right}
@@ -356,7 +356,9 @@ span.eqno{float:right}
 div.document,div.documentwrapper,div.bodywrapper{margin:0!important;width:100%}
 div.sphinxsidebar,div.related,div.footer,#top-link{display:none}
 }
-
+span.label.label-status{font-size:90%;cursor:help}
+span.badges{font-size:90%;float:right;margin-top:-70px;cursor:help}
+span.label.label-important{background-color: #b94a48}
 /*main*/
 
 h1:hover > .headerlink,h2:hover > .headerlink,h3:hover > .headerlink,h4:hover > .headerlink,h5:hover > .headerlink,h6:hover > .headerlink,dt:hover > .headerlink{visibility:visible}
