@@ -31,6 +31,7 @@ import distutils.version  # pylint: disable=import-error,no-name-in-module
 import logging
 import hashlib
 import os
+import re
 import tempfile
 try:
     import csv
@@ -41,6 +42,7 @@ except ImportError:
 # Import salt libs
 import salt.utils
 import salt.utils.itertools
+from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -61,6 +63,32 @@ _EXTENSION_FLAGS = (
     _EXTENSION_INSTALLED,
     _EXTENSION_TO_UPGRADE,
     _EXTENSION_TO_MOVE,
+)
+_PRIVILEGES_MAP = {
+    'a': 'INSERT',
+    'C': 'CREATE',
+    'D': 'TRUNCATE',
+    'c': 'CONNECT',
+    't': 'TRIGGER',
+    'r': 'SELECT',
+    'U': 'USAGE',
+    'T': 'TEMPORARY',
+    'w': 'UPDATE',
+    'X': 'EXECUTE',
+    'x': 'REFERENCES',
+    'd': 'DELETE',
+    '*': 'GRANT',
+}
+_PRIVILEGES_OBJECTS = frozenset(
+    (
+    'schema',
+    'tablespace',
+    'language',
+    'sequence',
+    'table',
+    'group',
+    'database',
+    )
 )
 
 
@@ -2202,5 +2230,613 @@ def language_remove(name,
                                 runas=runas,
                                 maintenance_db=maintenance_db,
                                 password=password)
+
+    return ret['retcode'] == 0
+
+
+def _make_privileges_list_query(name, object_type, prepend):
+    '''
+    Generate the SQL required for specific object type
+    '''
+    if object_type == 'table':
+        query = (' '.join([
+            'SELECT relacl AS name',
+            'FROM pg_catalog.pg_class c',
+            'JOIN pg_catalog.pg_namespace n',
+            'ON n.oid = c.relnamespace',
+            "WHERE nspname = '{0}'",
+            "AND relname = '{1}'",
+            "AND relkind = 'r'",
+            'ORDER BY relname',
+        ])).format(prepend, name)
+    elif object_type == 'sequence':
+        query = (' '.join([
+            'SELECT relacl AS name',
+            'FROM pg_catalog.pg_class c',
+            'JOIN pg_catalog.pg_namespace n',
+            'ON n.oid = c.relnamespace',
+            "WHERE nspname = '{0}'",
+            "AND relname = '{1}'",
+            "AND relkind = 'S'",
+            'ORDER BY relname',
+        ])).format(prepend, name)
+    elif object_type == 'schema':
+        query = (' '.join([
+            'SELECT nspacl AS name',
+            'FROM pg_catalog.pg_namespace',
+            "WHERE nspname = '{0}'",
+            'ORDER BY nspname',
+        ])).format(name)
+    # elif object_type == 'function':
+    #     query = (' '.join([
+    #         'SELECT proacl AS name',
+    #         'FROM pg_catalog.pg_proc p',
+    #         'JOIN pg_catalog.pg_namespace n',
+    #         'ON n.oid = p.pronamespace',
+    #         "WHERE nspname = '{0}'",
+    #         "AND proname = '{1}'",
+    #         'ORDER BY proname, proargtypes',
+    #     ])).format(prepend, name)
+    elif object_type == 'tablespace':
+        query = (' '.join([
+            'SELECT spcacl AS name',
+            'FROM pg_catalog.pg_tablespace',
+            "WHERE spcname = '{0}'",
+            'ORDER BY spcname',
+        ])).format(name)
+    elif object_type == 'language':
+        query = (' '.join([
+            'SELECT lanacl AS name',
+            'FROM pg_catalog.pg_language',
+            "WHERE lanname = '{0}'",
+            'ORDER BY lanname',
+        ])).format(name)
+    elif object_type == 'database':
+        query = (' '.join([
+            'SELECT datacl AS name',
+            'FROM pg_catalog.pg_database',
+            "WHERE datname = '{0}'",
+            'ORDER BY datname',
+        ])).format(name)
+    elif object_type == 'group':
+        query = (' '.join([
+            'SELECT rolname, admin_option',
+            'FROM pg_catalog.pg_auth_members m',
+            'JOIN pg_catalog.pg_roles r',
+            'ON m.member=r.oid',
+            'WHERE m.roleid IN',
+            '(SELECT oid',
+            'FROM pg_catalog.pg_roles',
+            "WHERE rolname='{0}')",
+            'ORDER BY rolname',
+        ])).format(name)
+
+    return query
+
+
+def _get_object_owner(name,
+        object_type,
+        prepend='public',
+        maintenance_db=None,
+        user=None,
+        host=None,
+        port=None,
+        password=None,
+        runas=None):
+    '''
+    Return the owner of a postgres object
+    '''
+    if object_type == 'table':
+        query = (' '.join([
+            'SELECT tableowner AS name',
+            'FROM pg_tables',
+            "WHERE schemaname = '{0}'",
+            "AND tablename = '{1}'"
+        ])).format(prepend, name)
+    elif object_type == 'sequence':
+        query = (' '.join([
+            'SELECT rolname AS name',
+            'FROM pg_catalog.pg_class c',
+            'JOIN pg_roles r',
+            'ON c.relowner = r.oid',
+            'JOIN pg_catalog.pg_namespace n',
+            'ON n.oid = c.relnamespace',
+            "WHERE relkind='S'",
+            "AND nspname='{0}'",
+            "AND relname = '{1}'",
+        ])).format(prepend, name)
+    elif object_type == 'schema':
+        query = (' '.join([
+            'SELECT rolname AS name',
+            'FROM pg_namespace n',
+            'JOIN pg_roles r',
+            'ON n.nspowner = r.oid',
+            "WHERE nspname = '{0}'",
+        ])).format(name)
+    elif object_type == 'tablespace':
+        query = (' '.join([
+            'SELECT rolname AS name',
+            'FROM pg_tablespace t',
+            'JOIN pg_roles r',
+            'ON t.spcowner = r.oid',
+            "WHERE spcname = '{0}'",
+        ])).format(name)
+    elif object_type == 'language':
+        query = (' '.join([
+            'SELECT rolname AS name',
+            'FROM pg_language l',
+            'JOIN pg_roles r',
+            'ON l.lanowner = r.oid',
+            "WHERE lanname = '{0}'",
+        ])).format(name)
+    elif object_type == 'database':
+        query = (' '.join([
+            'SELECT rolname AS name',
+            'FROM pg_database d',
+            'JOIN pg_roles r',
+            'ON d.datdba = r.oid',
+            "WHERE datname = '{0}'",
+        ])).format(name)
+
+    rows = psql_query(
+        query,
+        runas=runas,
+        host=host,
+        user=user,
+        port=port,
+        maintenance_db=maintenance_db,
+        password=password)
+    try:
+        ret = rows[0]['name']
+    except IndexError:
+        ret = None
+
+    return ret
+
+
+def _validate_privileges(object_type, privs, privileges):
+    '''
+    Validate the supplied privileges
+    '''
+    _allowed_privs = _PRIVILEGES_MAP.values()
+    _allowed_privs.append('ALL')
+
+    if object_type not in _PRIVILEGES_OBJECTS:
+        raise SaltInvocationError(
+            'Invalid object_type: {0} provided'.format(object_type))
+
+    if not set(privs).issubset(set(_allowed_privs)):
+        raise SaltInvocationError(
+            'Invalid privileges: {0} provided'.format(privileges))
+
+
+def privileges_list(
+        name,
+        object_type,
+        prepend='public',
+        maintenance_db=None,
+        user=None,
+        host=None,
+        port=None,
+        password=None,
+        runas=None):
+    '''
+    .. versionadded:: Boron
+
+    Return a list of privileges for the specified object.
+
+    CLI Example:
+        .. code-block:: bash
+            salt '*' postgres.privileges_list table_name table maintenance_db=db_name
+
+    name
+       Name of the object for which the permissions should be returned
+
+    object_type
+       The object type, which can be one of the following:
+
+       - table
+       - sequence
+       - schema
+       - tablespace
+       - language
+       - database
+       - group
+
+    maintenance_db
+        The database to connect to
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+    object_type = object_type.lower()
+    query = _make_privileges_list_query(name, object_type, prepend)
+
+    if object_type not in _PRIVILEGES_OBJECTS:
+        raise SaltInvocationError(
+            'Invalid object_type: {0} provided'.format(object_type))
+
+    rows = psql_query(
+        query,
+        runas=runas,
+        host=host,
+        user=user,
+        port=port,
+        maintenance_db=maintenance_db,
+        password=password)
+
+    ret = {}
+
+    for row in rows:
+        if object_type != 'group':
+            result = row['name']
+            result = result.strip('{}')
+            parts = result.split(',')
+            for part in parts:
+                perms_part, _ = part.split('/')
+                rolename, perms = perms_part.split('=')
+                if rolename == '':
+                    rolename = 'public'
+                ret[rolename] = [_PRIVILEGES_MAP[perm] for perm in perms]
+        else:
+            ret[row['rolname']] = row['admin_option']
+
+    return ret
+
+
+def has_privileges(name,
+        object_name,
+        object_type,
+        privileges,
+        prepend='public',
+        maintenance_db=None,
+        user=None,
+        host=None,
+        port=None,
+        password=None,
+        runas=None):
+    '''
+    .. versionadded:: Boron
+
+    Check if a role has the specified privileges on an object
+
+    CLI Example:
+        .. code-block:: bash
+            salt '*' postgres.has_privileges user_name table_name table \
+            SELECT,INSERT maintenance_db=db_name
+
+    name
+       Name of the role whose privilages should be checked on object_type
+
+    object_name
+       Name of the object on which the check is to be performed
+
+    object_type
+       The object type, which can be one of the following:
+
+       - table
+       - sequence
+       - schema
+       - tablespace
+       - language
+       - database
+       - group
+
+    privileges
+       Comma separated list of privilages to check, from the list below:
+
+       - INSERT
+       - CREATE
+       - TRUNCATE
+       - CONNECT
+       - TRIGGER
+       - SELECT
+       - USAGE
+       - TEMPORARY
+       - UPDATE
+       - EXECUTE
+       - REFERENCES
+       - DELETE
+       - ALL
+
+    maintenance_db
+        The database to connect to
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+    object_type = object_type.lower()
+    _privs = re.split(r'\s?,\s?', privileges.upper())
+
+    _validate_privileges(object_type, _privs, privileges)
+
+    if object_type != 'group':
+        owner = _get_object_owner(object_name, object_type, prepend=prepend,
+            maintenance_db=maintenance_db, user=user, host=host, port=port,
+            password=password, runas=runas)
+        if owner is not None and name == owner:
+            return True
+
+    _privileges = privileges_list(object_name, object_type, prepend=prepend,
+        maintenance_db=maintenance_db, user=user, host=host, port=port,
+        password=password, runas=runas)
+
+    if name in _privileges:
+        if object_type != 'group':
+            if object_type == 'table':
+                _perms = 'arwdDxt'
+            elif object_type == 'tablespace':
+                _perms = 'C'
+            elif object_type == 'language':
+                _perms = 'U'
+            elif object_type == 'sequence':
+                _perms = 'rwU'
+            elif object_type == 'schema':
+                _perms = 'UC'
+            elif object_type == 'database':
+                _perms = 'CTc'
+
+            perms = [_PRIVILEGES_MAP[perm] for perm in _perms]
+            if 'ALL' in _privs:
+                return perms.sort() == _privileges[name].sort()
+            else:
+                return set(_privs).issubset(set(_privileges[name]))
+        else:
+            return True
+
+    return False
+
+
+def privileges_grant(name,
+        object_name,
+        object_type,
+        privileges,
+        grant_option=None,
+        prepend='public',
+        maintenance_db=None,
+        user=None,
+        host=None,
+        port=None,
+        password=None,
+        runas=None):
+    '''
+    .. versionadded:: Boron
+
+    Grant privileges on a postgres object
+
+    CLI Example:
+        .. code-block:: bash
+            salt '*' postgres.privileges_grant user_name table_name table \
+            SELECT,UPDATE maintenance_db=db_name
+
+    name
+       Name of the role to which privilages should be granted
+
+    object_name
+       Name of the object on which the grant is to be performed
+
+    object_type
+       The object type, which can be one of the following:
+
+       - table
+       - sequence
+       - schema
+       - tablespace
+       - language
+       - database
+       - group
+
+    privileges
+       Comma separated list of privilages to grant, from the list below:
+
+       - INSERT
+       - CREATE
+       - TRUNCATE
+       - CONNECT
+       - TRIGGER
+       - SELECT
+       - USAGE
+       - TEMPORARY
+       - UPDATE
+       - EXECUTE
+       - REFERENCES
+       - DELETE
+       - ALL
+
+    grant_option
+        If grant_option is set to True, the recipient of the privilege can
+        in turn grant it to others
+
+    maintenance_db
+        The database to connect to
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+    object_type = object_type.lower()
+    _privs = re.split(r'\s?,\s?', privileges.upper())
+
+    _validate_privileges(object_type, _privs, privileges)
+
+    if has_privileges(name, object_name, object_type, privileges,
+        prepend=prepend, maintenance_db=maintenance_db, user=user,
+            host=host, port=port, password=password, runas=runas):
+        log.info('The object: %s of type: %s already has privileges: %s set',
+            object_name, object_type, privileges)
+        return False
+
+    _grants = ','.join(_privs)
+
+    if object_type in ['table', 'sequence']:
+        on_part = '{0}.{1}'.format(prepend, object_name)
+    else:
+        on_part = object_name
+
+    if grant_option:
+        if object_type == 'group':
+            query = 'GRANT {0} TO {1} WITH ADMIN OPTION'.format(
+                object_name, name)
+        else:
+            query = 'GRANT {0} ON {1} {2} TO {3} WITH GRANT OPTION'.format(
+                _grants, object_type.upper(), on_part, name)
+    else:
+        if object_type == 'group':
+            query = 'GRANT {0} TO {1}'.format(object_name, name)
+        else:
+            query = 'GRANT {0} ON {1} {2} TO {3}'.format(
+                _grants, object_type.upper(), on_part, name)
+
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user,
+                                host=host,
+                                port=port,
+                                maintenance_db=maintenance_db,
+                                password=password,
+                                runas=runas)
+
+    return ret['retcode'] == 0
+
+
+def privileges_revoke(name,
+        object_name,
+        object_type,
+        privileges,
+        prepend='public',
+        maintenance_db=None,
+        user=None,
+        host=None,
+        port=None,
+        password=None,
+        runas=None):
+    '''
+    .. versionadded:: Boron
+
+    Revoke privileges on a postgres object
+
+    CLI Example:
+        .. code-block:: bash
+            salt '*' postgres.privileges_revoke user_name table_name table \
+            SELECT,UPDATE maintenance_db=db_name
+
+    name
+       Name of the role whose privilages should be revoked
+
+    object_name
+       Name of the object on which the revoke is to be performed
+
+    object_type
+       The object type, which can be one of the following:
+
+       - table
+       - sequence
+       - schema
+       - tablespace
+       - language
+       - database
+       - group
+
+    privileges
+       Comma separated list of privilages to revoke, from the list below:
+
+       - INSERT
+       - CREATE
+       - TRUNCATE
+       - CONNECT
+       - TRIGGER
+       - SELECT
+       - USAGE
+       - TEMPORARY
+       - UPDATE
+       - EXECUTE
+       - REFERENCES
+       - DELETE
+       - ALL
+
+    maintenance_db
+        The database to connect to
+
+    user
+        database username if different from config or default
+
+    password
+        user password if any password for a specified user
+
+    host
+        Database host if different from config or default
+
+    port
+        Database port if different from config or default
+
+    runas
+        System user all operations should be performed on behalf of
+    '''
+    object_type = object_type.lower()
+    _privs = re.split(r'\s?,\s?', privileges.upper())
+
+    _validate_privileges(object_type, _privs, privileges)
+
+    if not has_privileges(name, object_name, object_type, privileges,
+        prepend=prepend, maintenance_db=maintenance_db, user=user,
+            host=host, port=port, password=password, runas=runas):
+        log.info('The object: %s of type: %s does not'
+            ' have privileges: %s set', object_name, object_type, privileges)
+        return False
+
+    _grants = ','.join(_privs)
+
+    if object_type in ['table', 'sequence']:
+        on_part = '{0}.{1}'.format(prepend, object_name)
+    else:
+        on_part = object_name
+
+    if object_type == 'group':
+        query = 'REVOKE {0} FROM {1}'.format(object_name, name)
+    else:
+        query = 'REVOKE {0} ON {1} {2} FROM {3}'.format(
+            _grants, object_type.upper(), on_part, name)
+
+    ret = _psql_prepare_and_run(['-c', query],
+                                user=user,
+                                host=host,
+                                port=port,
+                                maintenance_db=maintenance_db,
+                                password=password,
+                                runas=runas)
 
     return ret['retcode'] == 0
