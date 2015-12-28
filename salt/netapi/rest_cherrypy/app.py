@@ -1795,11 +1795,12 @@ class Events(object):
         .. code-block:: javascript
 
             var source = new EventSource('/events');
-            source.onopen = function() { console.debug('opening') };
-            source.onerror = function(e) { console.debug('error!', e) };
-            source.onmessage = function(e) {
-                console.debug('Tag: ', e.data.tag)
-                console.debug('Data: ', e.data.data)
+            source.onopen = function() { console.info('Listening ...') };
+            source.onerror = function(err) { console.error(err) };
+            source.onmessage = function(message) {
+              var saltEvent = JSON.parse(message.data);
+              console.info(saltEvent.tag)
+              console.debug(saltEvent.data)
             };
 
         Or using CORS:
