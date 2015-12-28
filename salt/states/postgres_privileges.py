@@ -39,7 +39,7 @@ def __virtual__():
     '''
     Only load if the postgres module is present
     '''
-    return 'postgres.privilege_create' in __salt__
+    return 'postgres.privileges_grant' in __salt__
 
 
 def present(name,
