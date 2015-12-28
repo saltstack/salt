@@ -22,13 +22,6 @@ from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
 
-# Import Third Party Libs
-NO_PYVMOMI = False
-try:
-    from pyVmomi import vim
-except ImportError:
-    NO_PYVMOMI = True
-
 # Globals
 HOST = '1.2.3.4'
 USER = 'root'
