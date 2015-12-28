@@ -62,6 +62,105 @@ class PipModuleTest(integration.ModuleCase):
                 ret
             )
 
+
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_requirements_as_list_of_chains___sans_no_chown__cwd_set__absolute_file_path(self):
+        self.run_function('virtualenv.create', [self.venv_dir])
+
+        # Create a requirements file that depends on another one.
+
+        req1_filename = os.path.join(self.venv_dir, 'requirements1.txt')
+        req1b_filename = os.path.join(self.venv_dir, 'requirements1b.txt')
+        req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
+        req2b_filename = os.path.join(self.venv_dir, 'requirements2b.txt')
+
+        with salt.utils.fopen(req1_filename, 'wb') as f:
+            f.write('-r requirements1b.txt\n')
+        with salt.utils.fopen(req1b_filename, 'wb') as f:
+            f.write('flake8\n')
+        with salt.utils.fopen(req2_filename, 'wb') as f:
+            f.write('-r requirements2b.txt\n')
+        with salt.utils.fopen(req2b_filename, 'wb') as f:
+            f.write('pep8\n')
+
+        this_user = pwd.getpwuid(os.getuid())[0]
+        requirements_list = [req1_filename, req2_filename]
+
+        ret = self.run_function(
+            'pip.install', requirements=requirements_list, user=this_user,
+            bin_env=self.venv_dir, cwd=self.venv_dir
+        )
+        try:
+            self.assertEqual(ret['retcode'], 0)
+            success = re.search(
+                r'^.*Successfully installed\s(.*)',
+                ret['stdout'],
+                re.M
+            )
+
+            if success:
+                success_for = re.findall(
+                    r'(flake8|pep8)-[\d\.]',
+                    success.groups()[0]
+                )
+
+            found = set(['flake8', 'pep8']) == set(success_for)
+            self.assertTrue(found)
+        except (AssertionError, TypeError):
+            import pprint
+            pprint.pprint(ret)
+            raise
+
+
+    @skipIf(os.geteuid() != 0, 'you must be root to run this test')
+    def test_requirements_as_list_of_chains___sans_no_chown__cwd_not_set__absolute_file_path(self):
+        self.run_function('virtualenv.create', [self.venv_dir])
+
+        # Create a requirements file that depends on another one.
+
+        req1_filename = os.path.join(self.venv_dir, 'requirements1.txt')
+        req1b_filename = os.path.join(self.venv_dir, 'requirements1b.txt')
+        req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
+        req2b_filename = os.path.join(self.venv_dir, 'requirements2b.txt')
+
+        with salt.utils.fopen(req1_filename, 'wb') as f:
+            f.write('-r requirements1b.txt\n')
+        with salt.utils.fopen(req1b_filename, 'wb') as f:
+            f.write('flake8\n')
+        with salt.utils.fopen(req2_filename, 'wb') as f:
+            f.write('-r requirements2b.txt\n')
+        with salt.utils.fopen(req2b_filename, 'wb') as f:
+            f.write('pep8\n')
+
+        this_user = pwd.getpwuid(os.getuid())[0]
+        requirements_list = [req1_filename, req2_filename]
+
+        ret = self.run_function(
+            'pip.install', requirements=requirements_list, user=this_user,
+            bin_env=self.venv_dir
+        )
+        try:
+            self.assertEqual(ret['retcode'], 0)
+            success = re.search(
+                r'^.*Successfully installed\s(.*)',
+                ret['stdout'],
+                re.M
+            )
+
+            if success:
+                success_for = re.findall(
+                    r'(flake8|pep8)-[\d\.]',
+                    success.groups()[0]
+                )
+
+            found = set(['flake8', 'pep8']) == set(success_for)
+            self.assertTrue(found)
+
+        except (AssertionError, TypeError):
+            import pprint
+            pprint.pprint(ret)
+            raise
+
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_requirements_as_list__sans_no_chown___absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
