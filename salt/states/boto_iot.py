@@ -594,4 +594,3 @@ def topic_rule_absent(name, ruleName,
     ret['changes']['new'] = {'rule': None}
     ret['comment'] = 'Rule {0} deleted.'.format(ruleName)
     return ret
-
