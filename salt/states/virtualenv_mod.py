@@ -9,7 +9,6 @@ from __future__ import absolute_import
 # Import python libs
 import logging
 import os
-import re
 
 # Import salt libs
 import salt.version
