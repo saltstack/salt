@@ -15,8 +15,8 @@ from __future__ import absolute_import
 import os
 import json
 import copy
-import shutil
 import time
+import shutil
 import logging
 import tarfile
 import tempfile
@@ -26,8 +26,10 @@ import salt.config
 import salt.utils
 import salt.utils.jid
 import salt.utils.url
+from salt.utils.validate.states import high_schema as _high_schema
 import salt.state
 import salt.payload
+import salt.loader
 from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
@@ -49,6 +51,7 @@ __outputter__ = {
     'request': 'highstate',
     'check_request': 'highstate',
     'run_request': 'highstate',
+    'validate': 'nested',
 }
 
 __func_alias__ = {
@@ -1081,6 +1084,23 @@ def show_top(queue=False, **kwargs):
         return errors
     matches = st_.top_matches(top_)
     return matches
+
+
+def validate(mods, saltenv='base', test=None, queue=False, env=None, **kwargs):
+    '''
+    Validate state data against the state API
+
+    .. versionadded:: 2015.8.4
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' state.validate core,edit.vim dev
+    '''
+    __states__ = salt.loader.states(__opts__, __salt__, __utils__)
+    high_ = show_sls(mods, saltenv, test, queue, env, **kwargs)
+    return _high_schema(high_, __states__)
 
 
 def single(fun, name, test=None, queue=False, **kwargs):
