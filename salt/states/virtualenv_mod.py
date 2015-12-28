@@ -14,6 +14,7 @@ import os
 import salt.version
 import salt.utils
 
+from salt.ext import six
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -216,6 +217,21 @@ def managed(name,
     # Populate the venv via a requirements file
     if requirements or pip_pkgs:
         before = set(__salt__['pip.freeze'](bin_env=name, user=user, use_vt=use_vt))
+
+        if requirements:
+
+            if isinstance(requirements, six.string_types):
+                req_canary = requirements.split(',')[0]
+            elif isinstance(requirements, list):
+                req_canary = requirements[0]
+            else:
+                raise TypeError(
+                    'pip requirements must be either a string or a list'
+                )
+
+            if req_canary != os.path.abspath(req_canary):
+                cwd = os.path.dirname(os.path.abspath(req_canary))
+
         _ret = __salt__['pip.install'](
             pkgs=pip_pkgs,
             requirements=requirements,
