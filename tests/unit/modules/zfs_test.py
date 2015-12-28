@@ -303,7 +303,7 @@ class ZfsTestCase(TestCase):
         '''
         Tests zfs rollback failure
         '''
-        res = {'myzpool/mydataset': "cannot rollback to 'myzpool/mydataset@yesterday': more recent snapshots or bookmarks exist\nuse '-r' to force deletion of the following snapshots and bookmarks:\nmyzpool/mydataset@today" }
+        res = {'myzpool/mydataset': "cannot rollback to 'myzpool/mydataset@yesterday': more recent snapshots or bookmarks exist\nuse '-r' to force deletion of the following snapshots and bookmarks:\nmyzpool/mydataset@today"}
         ret = {
             'pid': 57471,
             'retcode': 1,
