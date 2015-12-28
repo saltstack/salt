@@ -43,19 +43,19 @@ class PipModuleTest(integration.ModuleCase):
 
     def pip_successful_install(self, target, expect=('flake8', 'pep8',)):
 
-            expect = set(expect)
+        expect = set(expect)
 
-            success = re.search(
-                r'^.*Successfully installed\s([^\n]+)(?:Clean.*)?',
-                target,
-                re.M | re.S)
+        success = re.search(
+            r'^.*Successfully installed\s([^\n]+)(?:Clean.*)?',
+            target,
+            re.M | re.S)
 
-            success_for = re.findall(
-                r'(flake8|pep8)-[\d\.]',
-                success.groups()[0]
-            ) if success else []
+        success_for = re.findall(
+            r'(flake8|pep8)-[\d\.]',
+            success.groups()[0]
+        ) if success else []
 
-            return expect.issubset(set(success_for))
+        return expect.issubset(set(success_for))
 
     def test_issue_2087_missing_pip(self):
         # Let's create the testing virtualenv
