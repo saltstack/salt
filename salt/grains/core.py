@@ -929,7 +929,7 @@ def _osx_platform_data():
         - model_name
         - boot_rom_version
         - smc_version
-        - serial_number
+        - system_serialnumber
     '''
     cmd = 'system_profiler SPHardwareDataType'
     hardware = __salt__['cmd.run'](cmd)
@@ -944,7 +944,7 @@ def _osx_platform_data():
         if field_name.strip() == "SMC Version (system)":
             grains['smc_version'] = field_val
         if field_name.strip() == "Serial Number (system)":
-            grains['serial_number'] = field_val
+            grains['system_serialnumber'] = field_val
 
     return grains
 
@@ -1373,6 +1373,7 @@ def os_data():
         osname = __salt__['cmd.run']('sw_vers -productName')
         osbuild = __salt__['cmd.run']('sw_vers -buildVersion')
         grains['os'] = 'Mac'
+        grains['os_family'] = 'Darwin'
         grains['osfullname'] = "{0} {1}".format(osname, osrelease)
         grains['osrelease'] = osrelease
         grains['osbuild'] = osbuild
