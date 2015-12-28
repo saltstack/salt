@@ -62,7 +62,6 @@ class PipModuleTest(integration.ModuleCase):
                 ret
             )
 
-
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_requirements_as_list_of_chains___sans_no_chown__cwd_set__absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
@@ -95,7 +94,7 @@ class PipModuleTest(integration.ModuleCase):
             success = re.search(
                 r'^.*Successfully installed\s(.*)',
                 ret['stdout'],
-                re.M
+                re.M | re.S
             )
 
             if success:
@@ -104,13 +103,12 @@ class PipModuleTest(integration.ModuleCase):
                     success.groups()[0]
                 )
 
-            found = set(['flake8', 'pep8']) == set(success_for)
+            found = set(['flake8', 'pep8']) in set(success_for)
             self.assertTrue(found)
         except (AssertionError, TypeError):
             import pprint
             pprint.pprint(ret)
             raise
-
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_requirements_as_list_of_chains___sans_no_chown__cwd_not_set__absolute_file_path(self):
@@ -144,7 +142,7 @@ class PipModuleTest(integration.ModuleCase):
             success = re.search(
                 r'^.*Successfully installed\s(.*)',
                 ret['stdout'],
-                re.M
+                re.M | re.S
             )
 
             if success:
@@ -187,7 +185,7 @@ class PipModuleTest(integration.ModuleCase):
             success = re.search(
                 r'^.*Successfully installed\s(.*)',
                 ret['stdout'],
-                re.M
+                re.M | re.S
             )
 
             if success:
@@ -235,7 +233,7 @@ class PipModuleTest(integration.ModuleCase):
             success = re.search(
                 r'^.*Successfully installed\s(.*)',
                 ret['stdout'],
-                re.M
+                re.M | re.S
             )
 
             if success:
@@ -251,7 +249,6 @@ class PipModuleTest(integration.ModuleCase):
             import pprint
             pprint.pprint(ret)
             raise
-
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_chained_requirements__sans_no_chown___absolute_file_path(self):
@@ -279,7 +276,6 @@ class PipModuleTest(integration.ModuleCase):
             import pprint
             pprint.pprint(ret)
             raise
-
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
     def test_chained_requirements__sans_no_chown___non_absolute_file_path(self):
