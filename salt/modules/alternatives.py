@@ -84,6 +84,8 @@ def check_exists(name, path):
     '''
     Check if the given path is an alternative for a name.
 
+    .. versionadded:: 2015.8.4
+
     CLI Example:
 
     .. code-block:: bash
