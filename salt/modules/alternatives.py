@@ -80,6 +80,25 @@ def show_current(name):
     return False
 
 
+def check_exists(name, path):
+    '''
+    Check if the given path is an alternative for a name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' alternatives.check_exists name path
+    '''
+    cmd = [_get_cmd(), '--list', name]
+    out = __salt__['cmd.run_all'](cmd, python_shell=False)
+
+    if out['retcode'] > 0 and out['stderr'] != '':
+        return False
+
+    return path in out['stdout'].splitlines()
+
+
 def check_installed(name, path):
     '''
     Check if the current highest-priority match for a given alternatives link

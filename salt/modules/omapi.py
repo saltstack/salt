@@ -33,7 +33,8 @@ def __virtual__():
     '''
     if omapi_support:
         return 'omapi'
-    return False
+    return (False, 'The omapi execution module cannot be loaded: '
+            'the pypureomapi python library is not available.')
 
 
 def _conn():

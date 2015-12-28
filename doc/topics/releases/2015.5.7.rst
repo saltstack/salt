@@ -2,6 +2,14 @@
 Salt 2015.5.7 Release Notes
 ===========================
 
+.. note::
+
+    A significant orchestrate issue `#29110`_ was discovered during the release
+    process of 2015.5.7, so it has not been officially released.  Please use
+    `2015.5.8
+    <https://docs.saltstack.com/en/latest/topics/releases/2015.5.8.html>`_
+    instead.
+
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
 *Generated at: 2015-11-13T17:11:14Z*
@@ -202,6 +210,7 @@ Changes:
 
 - **PR** `#27568`_: (*jacobhammons*) regenerated man pages
 
+.. _`#29110`: https://github.com/saltstack/salt/issues/29110
 .. _`#25521`: https://github.com/saltstack/salt/pull/25521
 .. _`#25928`: https://github.com/saltstack/salt/pull/25928
 .. _`#27201`: https://github.com/saltstack/salt/pull/27201

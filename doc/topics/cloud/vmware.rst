@@ -238,6 +238,9 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or
 
         size
             Enter the size of disk in GB
+        thin_provision
+            Specifies whether the disk should be thin provisioned or not. Default is ``thin_provision: False``.
+            .. versionadded:: Boron
         controller
             Specify the SCSI controller label to which this disk should be attached.
             This should be specified only when creating both the specified SCSI

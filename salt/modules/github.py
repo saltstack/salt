@@ -44,8 +44,8 @@ def __virtual__():
     '''
     if HAS_LIBS:
         return __virtualname__
-
-    return False
+    return (False, 'The github execution module cannot be loaded: '
+            'python github library is not installed.')
 
 
 def _get_secret_key(profile):

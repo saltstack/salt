@@ -29,7 +29,8 @@ except ImportError:
 def __virtual__():
     if HAS_IMPORTS:
         return True
-    return False
+    return (False, 'The infoblox execution module cannot be loaded: '
+            'python requests and/or json libraries are not available.')
 
 
 def _conn_info_check(infoblox_server=None,

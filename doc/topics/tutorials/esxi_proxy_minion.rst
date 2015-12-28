@@ -66,7 +66,7 @@ ESXi Password
 The ESXi Proxy Minion uses VMware's API to perform tasks on the host as if it was
 a regular Salt Minion. In order to access the API that is already running on the
 ESXi host, the ESXi host must have a username and password that is used to log
-into the host. THe username is usually ``root``. Before Salt can access the ESXi
+into the host. The username is usually ``root``. Before Salt can access the ESXi
 host via VMware's API, a default password *must* be set on the host.
 
 pyVmomi

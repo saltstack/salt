@@ -134,7 +134,7 @@ class MySQLExtPillar(SqlBaseExtPillar):
             salt.utils.warn_until(
                 'Boron',
                 'The legacy mysql_query configuration parameter is deprecated.'
-                'See the docs for the new styel of configuration.'
+                'See the docs for the new style of configuration.'
                 'This functionality will be removed in Salt Boron.'
             )
             args.insert(0, kwargs.pop('mysql_query'))

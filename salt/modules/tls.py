@@ -671,8 +671,17 @@ def create_ca(ca_name,
     if os.path.exists(ca_keyp):
         with salt.utils.fopen(ca_keyp) as fic2:
             # try to determine the key bits
-            key = OpenSSL.crypto.load_privatekey(
-                OpenSSL.crypto.FILETYPE_PEM, fic2.read())
+            try:
+                key = OpenSSL.crypto.load_privatekey(
+                    OpenSSL.crypto.FILETYPE_PEM, fic2.read())
+            except OpenSSL.crypto.Error as err:
+                log.warn('Error loading existing private key'
+                    ' %s, generating a new key: %s', ca_keyp, str(err))
+                bck = "{0}.unloadable.{1}".format(ca_keyp,
+                    datetime.utcnow().strftime("%Y%m%d%H%M%S"))
+                log.info('Saving unloadable CA ssl key in {0}'.format(bck))
+                os.rename(ca_keyp, bck)
+
     if not key:
         key = OpenSSL.crypto.PKey()
         key.generate_key(OpenSSL.crypto.TYPE_RSA, bits)
@@ -1567,14 +1576,13 @@ def cert_info(cert_path, digest='sha256'):
 
     if 'subjectAltName' in ret.get('extensions', {}):
         valid_names = set()
-        for name in ret['extensions']['subjectAltName'] \
-                ._subjectAltNameString().split(", "):
+        for name in str(ret['extensions']['subjectAltName']).split(", "):
             if not name.startswith('DNS:'):
                 log.error('Cert {0} has an entry ({1}) which does not start '
                           'with DNS:'.format(cert_path, name))
             else:
                 valid_names.add(name[4:])
-        ret['subject_alt_names'] = valid_names
+        ret['subject_alt_names'] = ' '.join(valid_names)
 
     if hasattr(cert, 'get_signature_algorithm'):
         ret['signature_algorithm'] = cert.get_signature_algorithm()

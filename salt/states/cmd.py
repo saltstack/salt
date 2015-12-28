@@ -56,6 +56,11 @@ This means that if a ``cmd`` state is watched by another state then the
 state that's watching will always be executed due to the `changed` state in
 the ``cmd`` state.
 
+.. _stateful-argument:
+
+Using the "Stateful" Argument
+-----------------------------
+
 Many state functions in this module now also accept a ``stateful`` argument.
 If ``stateful`` is specified to be true then it is assumed that the command
 or script will determine its own state and communicate it back by following
@@ -483,7 +488,7 @@ def wait(name,
 
     stateful
         The command being executed is expected to return data about executing
-        a state
+        a state. For more information, see the :ref:`stateful-argument` section.
 
     creates
         Only run if the file specified by ``creates`` does not exist.
@@ -612,7 +617,7 @@ def wait_script(name,
 
     stateful
         The command being executed is expected to return data about executing
-        a state
+        a state. For more information, see the :ref:`stateful-argument` section.
 
     use_vt
         Use VT utils (saltstack) to stream the command output more
@@ -721,7 +726,7 @@ def run(name,
 
     stateful
         The command being executed is expected to return data about executing
-        a state
+        a state. For more information, see the :ref:`stateful-argument` section.
 
     umask
         The umask (in octal) to use when running the command.
@@ -966,7 +971,7 @@ def script(name,
 
     stateful
         The command being executed is expected to return data about executing
-        a state
+        a state. For more information, see the :ref:`stateful-argument` section.
 
     timeout
         If the command has not terminated after timeout seconds, send the

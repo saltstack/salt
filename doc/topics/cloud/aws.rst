@@ -500,6 +500,10 @@ its size to 100G by using the following configuration.
           Ebs.VolumeSize: 100
           Ebs.VolumeType: gp2
           Ebs.SnapshotId: dummy0
+        - DeviceName: /dev/sdb
+          # required for devices > 2TB
+          Ebs.VolumeType: gp2
+          Ebs.VolumeSize: 3001
 
 Existing EBS volumes may also be attached (not created) to your instances or
 you can create new EBS volumes based on EBS snapshots. To simply attach an

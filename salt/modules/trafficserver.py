@@ -22,7 +22,10 @@ log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return __virtualname__ if utils.which('traffic_line') else False
+    if utils.which('traffic_line'):
+        return __virtualname__
+    return (False, 'trafficserver execution module not loaded: '
+            'traffic_line command not found.')
 
 
 _TRAFFICLINE = utils.which('traffic_line')

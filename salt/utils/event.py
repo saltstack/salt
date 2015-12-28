@@ -209,7 +209,7 @@ class SaltEvent(object):
         else:
             self.opts['sock_dir'] = sock_dir
 
-        if salt.utils.is_windows() and not hasattr(self.opts, 'ipc_mode'):
+        if salt.utils.is_windows() and 'ipc_mode' not in opts:
             self.opts['ipc_mode'] = 'tcp'
         self.puburi, self.pulluri = self.__load_uri(sock_dir, node)
         self.pending_tags = []

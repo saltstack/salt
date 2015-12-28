@@ -58,6 +58,7 @@ from time import time, sleep
 
 # Import salt libs
 import salt.utils.dictupdate as dictupdate
+from salt.utils import exactly_one
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -164,7 +165,8 @@ def key_absent(name, region=None, key=None, keyid=None, profile=None):
 
 def eni_present(
         name,
-        subnet_id,
+        subnet_id=None,
+        subnet_name=None,
         private_ip_address=None,
         description=None,
         groups=None,
@@ -184,7 +186,11 @@ def eni_present(
         Name tag associated with the ENI.
 
     subnet_id
-        The VPC subnet the ENI will exist within.
+        The VPC subnet ID the ENI will exist within.
+
+    subnet_name
+        The VPC subnet name the ENI will exist within.
+
 
     private_ip_address
         The private ip address to use for this ENI. If this is not specified
@@ -226,8 +232,9 @@ def eni_present(
         A dict with region, key and keyid, or a pillar key (string)
         that contains a dict with region, key and keyid.
     '''
-    if not subnet_id:
-        raise SaltInvocationError('subnet_id is a required argument.')
+    if not exactly_one((subnet_id, subnet_name)):
+        raise SaltInvocationError('One (but not both) of subnet_id or '
+                                  'subnet_name must be provided.')
     if not groups:
         raise SaltInvocationError('groups is a required argument.')
     if not isinstance(groups, list):
@@ -254,7 +261,7 @@ def eni_present(
             ret['result'] = None
             return ret
         result_create = __salt__['boto_ec2.create_network_interface'](
-            name, subnet_id, private_ip_address=private_ip_address,
+            name, subnet_id=subnet_id, subnet_name=subnet_name, private_ip_address=private_ip_address,
             description=description, groups=groups, region=region, key=key,
             keyid=keyid, profile=profile
         )

@@ -23,7 +23,7 @@ To install using the SaltStack repository:
 
    .. code-block:: bash
 
-       https://repo.saltstack.com/apt/debian/8/amd64/latest/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
+       wget -O - https://repo.saltstack.com/apt/debian/8/amd64/latest/SALTSTACK-GPG-KEY.pub | sudo apt-key add -
 
 #. Add the following line to ``/etc/apt/sources.list``:
 

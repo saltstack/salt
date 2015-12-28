@@ -60,7 +60,8 @@ def __virtual__():
             log.error('nspawn: Unable to determine systemd version')
         else:
             return __virtualname__
-    return False
+    return (False, 'The nspawn execution module failed to load: '
+            'only work on systems that have been booted with systemd.')
 
 
 def _sd_version():

@@ -111,7 +111,8 @@ from salt.exceptions import (
     SaltReqTimeoutError,
     SaltClientError,
     SaltSystemExit,
-    SaltDaemonNotRunning
+    SaltDaemonNotRunning,
+    SaltException,
 )
 
 
@@ -345,7 +346,11 @@ class MinionBase(object):
     @staticmethod
     def process_schedule(minion, loop_interval):
         try:
-            minion.schedule.eval()
+            if hasattr(minion, 'schedule'):
+                minion.schedule.eval()
+            else:
+                log.error('Minion scheduler not initialized. Scheduled jobs will not be run.')
+                return
             # Check if scheduler requires lower loop interval than
             # the loop_interval setting
             if minion.schedule.loop_interval < loop_interval:
@@ -633,12 +638,33 @@ class MultiMinion(MinionBase):
             log.error(
                 'Attempting to start a multimaster system with one master')
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+        # Check that for tcp ipc_mode that we have either default ports or
+        # lists of ports
+        if self.opts.get('ipc_mode') == 'tcp' and (
+                    (not isinstance(self.opts['tcp_pub_port'], list) and
+                    self.opts['tcp_pub_port'] != 4510) or
+                    (not isinstance(self.opts['tcp_pull_port'], list) and
+                    self.opts['tcp_pull_port'] != 4511)
+                ):
+            raise SaltException('For multi-master, tcp_(pub/pull)_port '
+                                'settings must be lists of ports, or the '
+                                'default 4510 and 4511')
+        masternumber = 0
         for master in set(self.opts['master']):
             s_opts = copy.deepcopy(self.opts)
             s_opts['master'] = master
             s_opts['multimaster'] = True
             s_opts['auth_timeout'] = self.MINION_CONNECT_TIMEOUT
+            if self.opts.get('ipc_mode') == 'tcp':
+                # If one is a list, we can assume both are, because of check above
+                if isinstance(self.opts['tcp_pub_port'], list):
+                    s_opts['tcp_pub_port'] = self.opts['tcp_pub_port'][masternumber]
+                    s_opts['tcp_pull_port'] = self.opts['tcp_pull_port'][masternumber]
+                else:
+                    s_opts['tcp_pub_port'] = self.opts['tcp_pub_port'] + (masternumber * 2)
+                    s_opts['tcp_pull_port'] = self.opts['tcp_pull_port'] + (masternumber * 2)
             self.io_loop.spawn_callback(self._connect_minion, s_opts)
+            masternumber += 1
 
     @tornado.gen.coroutine
     def _connect_minion(self, opts):
@@ -770,12 +796,16 @@ class Minion(MinionBase):
         self._connect_master_future.add_done_callback(on_connect_master_future_done)
         if timeout:
             self.io_loop.call_later(timeout, self.io_loop.stop)
-        self.io_loop.start()
+        try:
+            self.io_loop.start()
+        except KeyboardInterrupt:
+            self.destroy()
         # I made the following 3 line oddity to preserve traceback.
         # Please read PR #23978 before changing, hopefully avoiding regressions.
         # Good luck, we're all counting on you.  Thanks.
         future_exception = self._connect_master_future.exc_info()
         if future_exception:
+            # This needs to be re-raised to preserve restart_on_error behavior.
             raise six.reraise(*future_exception)
         if timeout and self._sync_connect_master_success is False:
             raise SaltDaemonNotRunning('Failed to connect to the salt-master')
@@ -980,6 +1010,8 @@ class Minion(MinionBase):
         try:
             result = channel.send(load, timeout=timeout)
             return True
+        except salt.exceptions.SaltReqTimeoutError:
+            log.info('fire_master failed: master could not be contacted. Request timed out.')
         except Exception:
             log.info('fire_master failed: {0}'.format(traceback.format_exc()))
             return False
@@ -1747,9 +1779,9 @@ class Minion(MinionBase):
 
         if start:
             self.sync_connect_master()
-
-        self._fire_master_minion_start()
-        log.info('Minion is ready to receive requests!')
+        if hasattr(self, 'connected') and self.connected:
+            self._fire_master_minion_start()
+            log.info('Minion is ready to receive requests!')
 
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
@@ -1789,41 +1821,52 @@ class Minion(MinionBase):
         ping_interval = self.opts.get('ping_interval', 0) * 60
         if ping_interval > 0:
             def ping_master():
-                if not self._fire_master('ping', 'minion_ping'):
-                    if not self.opts.get('auth_safemode', True):
-                        log.error('** Master Ping failed. Attempting to restart minion**')
-                        delay = self.opts.get('random_reauth_delay', 5)
-                        log.info('delaying random_reauth_delay {0}s'.format(delay))
-                        # regular sys.exit raises an exception -- which isn't sufficient in a thread
-                        os._exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+                try:
+                    if not self._fire_master('ping', 'minion_ping'):
+                        if not self.opts.get('auth_safemode', True):
+                            log.error('** Master Ping failed. Attempting to restart minion**')
+                            delay = self.opts.get('random_reauth_delay', 5)
+                            log.info('delaying random_reauth_delay {0}s'.format(delay))
+                            # regular sys.exit raises an exception -- which isn't sufficient in a thread
+                            os._exit(salt.defaults.exitcodes.SALT_KEEPALIVE)
+                except Exception:
+                    log.warning('Attempt to ping master failed.', exc_on_loglevel=logging.DEBUG)
             self.periodic_callbacks['ping'] = tornado.ioloop.PeriodicCallback(ping_master, ping_interval * 1000, io_loop=self.io_loop)
 
         self.periodic_callbacks['cleanup'] = tornado.ioloop.PeriodicCallback(self._fallback_cleanups, loop_interval * 1000, io_loop=self.io_loop)
 
         def handle_beacons():
             # Process Beacons
+            beacons = None
             try:
                 beacons = self.process_beacons(self.functions)
             except Exception:
                 log.critical('The beacon errored: ', exc_info=True)
             if beacons:
                 self._fire_master(events=beacons)
-        self.periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
+                self.periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(handle_beacons, loop_interval * 1000, io_loop=self.io_loop)
 
         # TODO: actually listen to the return and change period
         def handle_schedule():
             self.process_schedule(self, loop_interval)
-        self.periodic_callbacks['schedule'] = tornado.ioloop.PeriodicCallback(handle_schedule, 1000, io_loop=self.io_loop)
+        if hasattr(self, 'schedule'):
+            self.periodic_callbacks['schedule'] = tornado.ioloop.PeriodicCallback(handle_schedule, 1000, io_loop=self.io_loop)
 
         # start all the other callbacks
         for periodic_cb in six.itervalues(self.periodic_callbacks):
             periodic_cb.start()
 
         # add handler to subscriber
-        self.pub_channel.on_recv(self._handle_payload)
+        if hasattr(self, 'pub_channel'):
+            self.pub_channel.on_recv(self._handle_payload)
+        else:
+            log.error('No connection to master found. Scheduled jobs will not run.')
 
         if start:
-            self.io_loop.start()
+            try:
+                self.io_loop.start()
+            except (KeyboardInterrupt, RuntimeError):  # A RuntimeError can be re-raised by Tornado on shutdown
+                self.destroy()
 
     def _handle_payload(self, payload):
         if payload is not None and self._target_load(payload['load']):

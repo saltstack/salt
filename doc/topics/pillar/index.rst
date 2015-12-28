@@ -58,6 +58,22 @@ pillar available to it. Assuming the ``pillar_roots`` value of ``/srv/pillar``
 taken from above, the ``packages`` pillar would be located at
 ``/srv/pillar/packages.sls``.
 
+Any number of matchers can be added to the base environment. For example, here
+is an expanded version of the Pillar top file stated above:
+
+/srv/pillar/top.sls:
+
+.. code-block:: yaml
+
+    base:
+      '*':
+        - packages
+      'web*':
+        - vim
+
+In this expanded top file, minions that match ``web*`` will have access to the
+``/srv/pillar/pacakges.sls`` file, as well as the ``/srv/pillar/vim.sls`` file.
+
 Another example shows how to use other standard top matching types
 to deliver specific salt pillar data to minions with different properties.
 
