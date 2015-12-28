@@ -686,4 +686,3 @@ def list_topic_rules(topic=None, ruleDisabled=None,
         return {'rules': rules}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
-
