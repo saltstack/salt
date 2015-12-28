@@ -41,6 +41,22 @@ class PipModuleTest(integration.ModuleCase):
             os.makedirs(self.pip_temp)
         os.environ['PIP_SOURCE_DIR'] = os.environ['PIP_BUILD_DIR'] = ''
 
+    def pip_successful_install(self, target, expect=('flake8', 'pep8',)):
+
+            expect = set(expect)
+
+            success = re.search(
+                r'^.*Successfully installed\s([^\n]+)(?:Clean.*)?',
+                target,
+                re.M | re.S)
+
+            success_for = re.findall(
+                r'(flake8|pep8)-[\d\.]',
+                success.groups()[0]
+            ) if success else []
+
+            return expect.issubset(set(success_for))
+
     def test_issue_2087_missing_pip(self):
         # Let's create the testing virtualenv
         self.run_function('virtualenv.create', [self.venv_dir])
@@ -63,7 +79,7 @@ class PipModuleTest(integration.ModuleCase):
             )
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_requirements_as_list_of_chains___sans_no_chown__cwd_set__absolute_file_path(self):
+    def test_requirements_as_list_of_chains__sans_no_chown__cwd_set__absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         # Create a requirements file that depends on another one.
@@ -91,19 +107,9 @@ class PipModuleTest(integration.ModuleCase):
         )
         try:
             self.assertEqual(ret['retcode'], 0)
-            success = re.search(
-                r'^.*Successfully installed\s(.*)',
-                ret['stdout'],
-                re.M | re.S
-            )
 
-            if success:
-                success_for = re.findall(
-                    r'(flake8|pep8)-[\d\.]',
-                    success.groups()[0]
-                )
+            found = self.pip_successful_install(ret['stdout'])
 
-            found = set(['flake8', 'pep8']) in set(success_for)
             self.assertTrue(found)
         except (AssertionError, TypeError):
             import pprint
@@ -111,7 +117,7 @@ class PipModuleTest(integration.ModuleCase):
             raise
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_requirements_as_list_of_chains___sans_no_chown__cwd_not_set__absolute_file_path(self):
+    def test_requirements_as_list_of_chains__sans_no_chown__cwd_not_set__absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         # Create a requirements file that depends on another one.
@@ -139,19 +145,9 @@ class PipModuleTest(integration.ModuleCase):
         )
         try:
             self.assertEqual(ret['retcode'], 0)
-            success = re.search(
-                r'^.*Successfully installed\s(.*)',
-                ret['stdout'],
-                re.M | re.S
-            )
 
-            if success:
-                success_for = re.findall(
-                    r'(flake8|pep8)-[\d\.]',
-                    success.groups()[0]
-                )
+            found = self.pip_successful_install(ret['stdout'])
 
-            found = set(['flake8', 'pep8']) == set(success_for)
             self.assertTrue(found)
 
         except (AssertionError, TypeError):
@@ -160,10 +156,8 @@ class PipModuleTest(integration.ModuleCase):
             raise
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_requirements_as_list__sans_no_chown___absolute_file_path(self):
+    def test_requirements_as_list__sans_no_chown__absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
-
-        # Create a requirements file that depends on another one.
 
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
@@ -180,21 +174,11 @@ class PipModuleTest(integration.ModuleCase):
             'pip.install', requirements=requirements_list, user=this_user,
             bin_env=self.venv_dir
         )
+
+        found = self.pip_successful_install(ret['stdout'])
+
         try:
             self.assertEqual(ret['retcode'], 0)
-            success = re.search(
-                r'^.*Successfully installed\s(.*)',
-                ret['stdout'],
-                re.M | re.S
-            )
-
-            if success:
-                success_for = re.findall(
-                    r'(flake8|pep8)-[\d\.]',
-                    success.groups()[0]
-                )
-
-            found = set(['flake8', 'pep8']) == set(success_for)
             self.assertTrue(found)
 
         except (AssertionError, TypeError):
@@ -203,7 +187,7 @@ class PipModuleTest(integration.ModuleCase):
             raise
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_requirements_as_list__sans_no_chown___non_absolute_file_path(self):
+    def test_requirements_as_list__sans_no_chown__non_absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         # Create a requirements file that depends on another one.
@@ -214,7 +198,6 @@ class PipModuleTest(integration.ModuleCase):
 
         req1_filepath = os.path.join(req_cwd, req1_filename)
         req2_filepath = os.path.join(req_cwd, req2_filename)
-
 
         with salt.utils.fopen(req1_filepath, 'wb') as f:
             f.write('flake8\n')
@@ -230,19 +213,8 @@ class PipModuleTest(integration.ModuleCase):
         )
         try:
             self.assertEqual(ret['retcode'], 0)
-            success = re.search(
-                r'^.*Successfully installed\s(.*)',
-                ret['stdout'],
-                re.M | re.S
-            )
 
-            if success:
-                success_for = re.findall(
-                    r'(flake8|pep8)-[\d\.]',
-                    success.groups()[0]
-                )
-
-            found = set(['flake8', 'pep8']) == set(success_for)
+            found = self.pip_successful_install(ret['stdout'])
             self.assertTrue(found)
 
         except (AssertionError, TypeError):
@@ -251,7 +223,7 @@ class PipModuleTest(integration.ModuleCase):
             raise
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_chained_requirements__sans_no_chown___absolute_file_path(self):
+    def test_chained_requirements__sans_no_chown__absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         # Create a requirements file that depends on another one.
@@ -278,7 +250,7 @@ class PipModuleTest(integration.ModuleCase):
             raise
 
     @skipIf(os.geteuid() != 0, 'you must be root to run this test')
-    def test_chained_requirements__sans_no_chown___non_absolute_file_path(self):
+    def test_chained_requirements__sans_no_chown__non_absolute_file_path(self):
         self.run_function('virtualenv.create', [self.venv_dir])
 
         # Create a requirements file that depends on another one.
