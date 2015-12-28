@@ -1371,7 +1371,7 @@ def os_data():
     # architecture.
     if grains.get('os_family') == 'Debian':
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
-    elif grains.get('os') == 'Fedora':
+    elif grains.get('os_family') == 'RedHat':
         osarch = __salt__['cmd.run']('rpm --eval %{_host_cpu}').strip()
     elif grains.get('os_family') == 'NILinuxRT':
         archinfo = {}
