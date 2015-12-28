@@ -25,9 +25,9 @@ __virtualname__ = 'group'
 
 def __virtual__():
     '''
-    Set the user module if the kernel is Linux
+    Set the user module if the kernel is FreeBSD or Dragonfly
     '''
-    return __virtualname__ if __grains__['kernel'] == 'FreeBSD' else False
+    return __virtualname__ if __grains__['kernel'] in ('FreeBSD', 'DragonFly') else False
 
 
 def add(name, gid=None, **kwargs):
