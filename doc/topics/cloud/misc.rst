@@ -97,6 +97,8 @@ SSH Port
 By default ssh port is set to port 22. If you want to use a custom port in
 provider, profile, or map blocks use ssh_port option.
 
+.. versionadded:: 2015.5.0
+
 .. code-block:: yaml
 
     ssh_port: 2222
