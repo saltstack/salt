@@ -84,10 +84,9 @@ class SaltCloud(parsers.SaltCloudParser):
 
         if self.options.update_bootstrap:
             ret = salt.utils.cloud.update_bootstrap(self.config)
-            display_output = salt.output.get_printout(
-                self.options.output, self.config
-            )
-            print(display_output(ret))
+            salt.output.display_output(ret,
+                                       self.options.output,
+                                       opts=self.config)
             self.exit(salt.defaults.exitcodes.EX_OK)
 
         log.info('salt-cloud starting')
@@ -400,11 +399,9 @@ class SaltCloud(parsers.SaltCloudParser):
         else:
             self.error('Nothing was done. Using the proper arguments?')
 
-        display_output = salt.output.get_printout(
-            self.options.output, self.config
-        )
-        # display output using salt's outputter system
-        print(display_output(ret))
+        salt.output.display_output(ret,
+                                   self.options.output,
+                                   opts=self.config)
         self.exit(salt.defaults.exitcodes.EX_OK)
 
     def print_confirm(self, msg):
