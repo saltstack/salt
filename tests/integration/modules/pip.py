@@ -42,8 +42,12 @@ class PipModuleTest(integration.ModuleCase):
         os.environ['PIP_SOURCE_DIR'] = os.environ['PIP_BUILD_DIR'] = ''
 
     def pip_successful_install(self, target, expect=('flake8', 'pep8',)):
+        '''
+        isolate regex for extracting `successful install` message from pip
+        '''
 
         expect = set(expect)
+        expect_str = '|'.join(expect)
 
         success = re.search(
             r'^.*Successfully installed\s([^\n]+)(?:Clean.*)?',
@@ -51,7 +55,7 @@ class PipModuleTest(integration.ModuleCase):
             re.M | re.S)
 
         success_for = re.findall(
-            r'(flake8|pep8)-[\d\.]',
+            r'({0})(?:-(?:[\d\.-]))?'.format(expect_str),
             success.groups()[0]
         ) if success else []
 
