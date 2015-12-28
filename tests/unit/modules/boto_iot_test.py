@@ -15,12 +15,9 @@ ensure_in_syspath('../../')
 import salt.config
 import salt.loader
 from salt.modules import boto_iot
-from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
-from tempfile import NamedTemporaryFile
 import logging
-import os
 
 # Import Mock libraries
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
@@ -47,16 +44,16 @@ conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'pr
 error_message = 'An error occurred (101) when calling the {0} operation: Test-defined error'
 not_found_error = ClientError({
     'Error': {
-        'Code':'ResourceNotFoundException',
+        'Code':'ResourceNotFoundException', 
         'Message': "Test-defined error"
     }
-},'msg')
+}, 'msg')
 topic_rule_not_found_error = ClientError({
     'Error': {
-        'Code':'UnauthorizedException',
+        'Code':'UnauthorizedException', 
         'Message': "Test-defined error"
     }
-},'msg')
+}, 'msg')
 error_content = {
   'Error': {
     'Code': 101,
@@ -72,7 +69,7 @@ topic_rule_ret = dict(ruleName='testrule',
                   sql="SELECT * FROM 'iot/test'",
                   description='topic rule description',
                   createdAt='1970-01-01',
-                  actions=[{'lambda':{'functionArn':'arn:aws:::function'}}],
+                  actions=[{'lambda':{'functionArn':'arn:aws:::function'}}], 
                   ruleDisabled=True)
 
 log = logging.getLogger(__name__)
@@ -175,7 +172,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.create_policy(policyName=policy_ret['policyName'],
                                         policyDocument=policy_ret['policyDocument'],
                                         **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('create_policy')) 
+        self.assertEqual(result.get('error', {}).get('message'), error_message.format('create_policy'))
 
     def test_that_when_deleting_a_policy_succeeds_the_delete_policy_method_returns_true(self):
         '''
@@ -227,7 +224,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         Tests checking iot policy existence when the iot policy version already exists
         '''
         self.conn.get_policy.return_value = {'policy': policy_ret}
-        result = boto_iot.policy_version_exists(policyName=policy_ret['policyName'], 
+        result = boto_iot.policy_version_exists(policyName=policy_ret['policyName'],
                                                 policyVersionId=1,
                                                 **conn_parameters)
 
@@ -238,7 +235,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         Tests checking iot policy_version existence when the iot policy_version does not exist
         '''
         self.conn.get_policy_version.side_effect = not_found_error
-        result = boto_iot.policy_version_exists(policyName=policy_ret['policyName'], 
+        result = boto_iot.policy_version_exists(policyName=policy_ret['policyName'],
                                                 policyVersionId=1,
                                                 **conn_parameters)
 
@@ -249,7 +246,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         Tests checking iot policy_version existence when boto returns an error
         '''
         self.conn.get_policy_version.side_effect = ClientError(error_content, 'get_policy_version')
-        result = boto_iot.policy_version_exists(policyName=policy_ret['policyName'], 
+        result = boto_iot.policy_version_exists(policyName=policy_ret['policyName'],
                                                 policyVersionId=1,
                                                 **conn_parameters)
 
@@ -274,7 +271,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.create_policy_version(policyName=policy_ret['policyName'],
                                         policyDocument=policy_ret['policyDocument'],
                                         **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('create_policy_version')) 
+        self.assertEqual(result.get('error', {}).get('message'), error_message.format('create_policy_version'))
 
     def test_that_when_deleting_a_policy_version_succeeds_the_delete_policy_version_method_returns_true(self):
         '''
@@ -302,7 +299,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         '''
         self.conn.get_policy_version.return_value = {'policy': policy_ret}
 
-        result = boto_iot.describe_policy_version(policyName=policy_ret['policyName'], 
+        result = boto_iot.describe_policy_version(policyName=policy_ret['policyName'],
                                         policyVersionId=1,
                                         **conn_parameters)
 
@@ -313,7 +310,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         Tests describing parameters if policy_version does not exist
         '''
         self.conn.get_policy_version.side_effect = not_found_error
-        result = boto_iot.describe_policy_version(policyName=policy_ret['policyName'], 
+        result = boto_iot.describe_policy_version(policyName=policy_ret['policyName'],
                                         policyVersionId=1,
                                         **conn_parameters)
 
@@ -324,7 +321,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         Tests describing parameters failure
         '''
         self.conn.get_policy_version.side_effect = ClientError(error_content, 'get_policy_version')
-        result = boto_iot.describe_policy_version(policyName=policy_ret['policyName'], 
+        result = boto_iot.describe_policy_version(policyName=policy_ret['policyName'],
                                         policyVersionId=1,
                                         **conn_parameters)
         self.assertTrue('error' in result)
@@ -401,7 +398,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.set_default_policy_version(policyName='testpolicy',
                                                policyVersionId=1,
                                                **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), 
+        self.assertEqual(result.get('error', {}).get('message'),
                          error_message.format('set_default_policy_version'))
 
     def test_that_when_list_principal_policies_succeeds_the_list_principal_policies_method_returns_true(self):
@@ -414,7 +411,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
 
         self.assertTrue(result['policies'])
 
-    def test_that_when_set_default_policy_version_fails_the_set_default_policy_version_method_returns_error(self):
+    def test_that_when_list_principal_policies_fails_the_list_principal_policies_method_returns_error(self):
         '''
         tests False policy version error.
         '''
@@ -422,7 +419,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
                                 ClientError(error_content, 'list_principal_policies')
         result = boto_iot.list_principal_policies(principal='us-east-1:GUID-GUID-GUID',
                                                **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), 
+        self.assertEqual(result.get('error', {}).get('message'),
                          error_message.format('list_principal_policies'))
 
     def test_that_when_attach_principal_policy_succeeds_the_attach_principal_policy_method_returns_true(self):
@@ -444,7 +441,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.attach_principal_policy(policyName='testpolicy',
                                                principal='us-east-1:GUID-GUID-GUID',
                                                **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), 
+        self.assertEqual(result.get('error', {}).get('message'),
                          error_message.format('attach_principal_policy'))
 
     def test_that_when_detach_principal_policy_succeeds_the_detach_principal_policy_method_returns_true(self):
@@ -466,7 +463,7 @@ class BotoIoTPolicyTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         result = boto_iot.detach_principal_policy(policyName='testpolicy',
                                                principal='us-east-1:GUID-GUID-GUID',
                                                **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), 
+        self.assertEqual(result.get('error', {}).get('message'),
                          error_message.format('detach_principal_policy'))
 
 
@@ -485,7 +482,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         Tests checking iot topic_rule existence when the iot topic_rule already exists
         '''
         self.conn.get_topic_rule.return_value = {'rule': topic_rule_ret}
-        result = boto_iot.topic_rule_exists(ruleName=topic_rule_ret['ruleName'], 
+        result = boto_iot.topic_rule_exists(ruleName=topic_rule_ret['ruleName'],
                                             **conn_parameters)
 
         self.assertTrue(result['exists'])
@@ -506,7 +503,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         self.conn.get_topic_rule.side_effect = ClientError(error_content, 'get_topic_rule')
         result = boto_iot.topic_rule_exists(ruleName='myrule', **conn_parameters)
 
-        self.assertEqual(result.get('error', {}).get('message'), 
+        self.assertEqual(result.get('error', {}).get('message'),
                                       error_message.format('get_topic_rule'))
 
     def test_that_when_creating_a_topic_rule_succeeds_the_create_topic_rule_method_returns_true(self):
@@ -532,7 +529,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
                                         description=topic_rule_ret['description'],
                                         actions=topic_rule_ret['actions'],
                                         **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('create_topic_rule')) 
+        self.assertEqual(result.get('error', {}).get('message'), error_message.format('create_topic_rule'))
 
     def test_that_when_replacing_a_topic_rule_succeeds_the_replace_topic_rule_method_returns_true(self):
         '''
@@ -557,7 +554,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
                                         description=topic_rule_ret['description'],
                                         actions=topic_rule_ret['actions'],
                                         **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('replace_topic_rule')) 
+        self.assertEqual(result.get('error', {}).get('message'), error_message.format('replace_topic_rule'))
 
     def test_that_when_deleting_a_topic_rule_succeeds_the_delete_topic_rule_method_returns_true(self):
         '''
@@ -583,7 +580,7 @@ class BotoIoTTopicRuleTestCase(BotoIoTTestCaseBase, BotoIoTTestCaseMixin):
         '''
         self.conn.get_topic_rule.return_value = {'rule': topic_rule_ret}
 
-        result = boto_iot.describe_topic_rule(ruleName=topic_rule_ret['ruleName'], 
+        result = boto_iot.describe_topic_rule(ruleName=topic_rule_ret['ruleName'],
                                               **conn_parameters)
 
         self.assertTrue(result['rule'])

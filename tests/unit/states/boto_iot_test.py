@@ -46,16 +46,16 @@ conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'pr
 error_message = 'An error occurred (101) when calling the {0} operation: Test-defined error'
 not_found_error = ClientError({
     'Error': {
-        'Code':'ResourceNotFoundException',
+        'Code':'ResourceNotFoundException', 
         'Message': "Test-defined error"
     }
-},'msg')
+}, 'msg')
 topic_rule_not_found_error = ClientError({
     'Error': {
-        'Code':'UnauthorizedException',
+        'Code':'UnauthorizedException', 
         'Message': "Test-defined error"
     }
-},'msg')
+}, 'msg')
 error_content = {
   'Error': {
     'Code': 101,
@@ -315,4 +315,3 @@ class BotoIoTTopicRuleTestCase(BotoIoTStateTestCaseBase, BotoIoTTestCaseMixin):
         result = salt_states['boto_iot.topic_rule_absent']('test', topic_rule_ret['ruleName'])
         self.assertFalse(result['result'])
         self.assertTrue('An error occurred' in result['comment'])
-
