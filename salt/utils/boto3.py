@@ -308,4 +308,3 @@ def get_role_arn(name, region=None, key=None, keyid=None, profile=None):
         region=region, key=key, keyid=keyid, profile=profile
     )
     return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
-
