@@ -259,7 +259,10 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
 
                 __salt__['file.chown'](treq, user, None)
 
-                current_directory = os.path.abspath(os.curdir)
+                current_directory = None
+
+                if not current_directory:
+                    current_directory = os.path.abspath(os.curdir)
 
                 logger.info('_process_requirements from directory,' +
                             '%s -- requirement: %s', cwd, requirement
@@ -277,13 +280,11 @@ def _process_requirements(requirements, cmd, cwd, saltenv, user):
                                  c, cwd, r, requirement
                                  )
 
-                if cwd:
-                    os.chdir(cwd)
+                os.chdir(cwd)
 
                 reqs = _resolve_requirements_chain(requirement)
 
-                if cwd:
-                    os.chdir(current_directory)
+                os.chdir(current_directory)
 
                 logger.info('request files: {0}'.format(str(reqs)))
 
@@ -840,7 +841,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                                        python_shell=False,
                                        **cmd_kwargs)
     finally:
-        for tempdir in cleanup_requirements:
+        for tempdir in [cr for cr in cleanup_requirements if cr is not None]:
             if os.path.isdir(tempdir):
                 shutil.rmtree(tempdir)
 
@@ -978,10 +979,11 @@ def uninstall(pkgs=None,
         return __salt__['cmd.run_all'](cmd, **cmd_kwargs)
     finally:
         for requirement in cleanup_requirements:
-            try:
-                os.remove(requirement)
-            except OSError:
-                pass
+            if requirement:
+                try:
+                    os.remove(requirement)
+                except OSError:
+                    pass
 
 
 def freeze(bin_env=None,
