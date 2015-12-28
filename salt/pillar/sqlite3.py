@@ -67,6 +67,7 @@ import logging
 import sqlite3
 
 # Import Salt libs
+import salt.utils
 from salt.pillar.sql_base import SqlBaseExtPillar
 
 # Set up logging
