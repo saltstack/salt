@@ -406,6 +406,8 @@ class Compiler(object):
                                 else:
                                     reqs[name] = {'state': state}
                                     for req in arg[argfirst]:
+                                        if isinstance(req, six.string_types):
+                                            req = {'id': req}
                                         if not isinstance(req, dict):
                                             err = ('Requisite declaration {0}'
                                             ' in SLS {1} is not formed as a'
@@ -1072,6 +1074,8 @@ class State(object):
                                 else:
                                     reqs[name] = {'state': state}
                                     for req in arg[argfirst]:
+                                        if isinstance(req, six.string_types):
+                                            req = {'id': req}
                                         if not isinstance(req, dict):
                                             err = ('Requisite declaration {0}'
                                             ' in SLS {1} is not formed as a'
@@ -1774,6 +1778,8 @@ class State(object):
         for r_state in reqs:
             if r_state in low and low[r_state] is not None:
                 for req in low[r_state]:
+                    if isinstance(req, six.string_types):
+                        req = {'id': req}
                     req = trim_req(req)
                     found = False
                     for chunk in chunks:
@@ -1789,7 +1795,7 @@ class State(object):
                             continue
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
-                            if chunk['state'] == req_key:
+                            if req_key == 'id' or chunk['state'] == req_key:
                                 found = True
                                 reqs[r_state].append(chunk)
                     if not found:
@@ -1906,6 +1912,8 @@ class State(object):
                 if requisite not in low:
                     continue
                 for req in low[requisite]:
+                    if isinstance(req, six.string_types):
+                        req = {'id': req}
                     req = trim_req(req)
                     found = False
                     req_key = next(iter(req))
@@ -1923,7 +1931,7 @@ class State(object):
                             continue
                         if (fnmatch.fnmatch(chunk['name'], req_val) or
                             fnmatch.fnmatch(chunk['__id__'], req_val)):
-                            if chunk['state'] == req_key:
+                            if req_key == 'id' or chunk['state'] == req_key:
                                 if requisite == 'prereq':
                                     chunk['__prereq__'] = True
                                 elif requisite == 'prerequired':
