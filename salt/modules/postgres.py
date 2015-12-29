@@ -90,6 +90,14 @@ _PRIVILEGES_OBJECTS = frozenset(
     'database',
     )
 )
+_PRIVILEGE_TYPE_MAP = {
+    'table': 'arwdDxt',
+    'tablespace': 'C',
+    'language': 'U',
+    'sequence': 'rwU',
+    'schema': 'UC',
+    'database': 'CTc',
+}
 
 
 def __virtual__():
@@ -2398,16 +2406,18 @@ def _validate_privileges(object_type, privs, privileges):
     '''
     Validate the supplied privileges
     '''
-    _allowed_privs = _PRIVILEGES_MAP.values()
-    _allowed_privs.append('ALL')
+    _perms = [_PRIVILEGES_MAP[perm]
+            for perm in _PRIVILEGE_TYPE_MAP[object_type]]
+    _perms.append('ALL')
 
     if object_type not in _PRIVILEGES_OBJECTS:
         raise SaltInvocationError(
             'Invalid object_type: {0} provided'.format(object_type))
 
-    if not set(privs).issubset(set(_allowed_privs)):
+    if not set(privs).issubset(set(_perms)):
         raise SaltInvocationError(
-            'Invalid privileges: {0} provided'.format(privileges))
+            'Invalid privilege(s): {0} provided for object {1}'.format(
+            privileges, object_type))
 
 
 def privileges_list(
@@ -2489,7 +2499,19 @@ def privileges_list(
                 rolename, perms = perms_part.split('=')
                 if rolename == '':
                     rolename = 'public'
-                ret[rolename] = [_PRIVILEGES_MAP[perm] for perm in perms]
+                _tmp = {}
+                previous = None
+                for perm in perms:
+                    if previous is None:
+                        _tmp[_PRIVILEGES_MAP[perm]] = False
+                        previous = _PRIVILEGES_MAP[perm]
+                    else:
+                        if perm == '*':
+                            _tmp[previous] = True
+                        else:
+                            _tmp[_PRIVILEGES_MAP[perm]] = False
+                            previous = _PRIVILEGES_MAP[perm]
+                ret[rolename] = _tmp
         else:
             ret[row['rolname']] = row['admin_option']
 
@@ -2500,6 +2522,7 @@ def has_privileges(name,
         object_name,
         object_type,
         privileges,
+        grant_option=None,
         prepend='public',
         maintenance_db=None,
         user=None,
@@ -2551,6 +2574,9 @@ def has_privileges(name,
        - DELETE
        - ALL
 
+    grant_option
+        If grant_option is set to True, the grant option check is performed
+
     maintenance_db
         The database to connect to
 
@@ -2586,27 +2612,23 @@ def has_privileges(name,
         password=password, runas=runas)
 
     if name in _privileges:
-        if object_type != 'group':
-            if object_type == 'table':
-                _perms = 'arwdDxt'
-            elif object_type == 'tablespace':
-                _perms = 'C'
-            elif object_type == 'language':
-                _perms = 'U'
-            elif object_type == 'sequence':
-                _perms = 'rwU'
-            elif object_type == 'schema':
-                _perms = 'UC'
-            elif object_type == 'database':
-                _perms = 'CTc'
-
-            perms = [_PRIVILEGES_MAP[perm] for perm in _perms]
-            if 'ALL' in _privs:
-                return perms.sort() == _privileges[name].sort()
+        _perms = _PRIVILEGE_TYPE_MAP[object_type]
+        if grant_option:
+            if object_type != 'group':
+                perms = dict((_PRIVILEGES_MAP[perm], True) for perm in _perms)
+                return perms ==  _privileges[name]
             else:
-                return set(_privs).issubset(set(_privileges[name]))
+                return _privileges[name]
         else:
-            return True
+            if object_type != 'group':
+                perms = [_PRIVILEGES_MAP[perm] for perm in _perms]
+
+                if 'ALL' in _privs:
+                    return perms.sort() == _privileges[name].keys().sort()
+                else:
+                    return set(_privs).issubset(set(_privileges[name].keys()))
+            else:
+                return True
 
     return False
 
