@@ -528,7 +528,7 @@ behavior is to have time-frame within all minions try to reconnect.
 .. conf_minion:: return_retry_timer
 
 ``return_retry_timer``
--------------------
+----------------------
 
 Default: ``5``
 
@@ -542,7 +542,7 @@ The default timeout for a minion return attempt.
 .. conf_minion:: return_retry_timer_max
 
 ``return_retry_timer_max``
--------------------
+--------------------------
 
 Default: ``10``
 

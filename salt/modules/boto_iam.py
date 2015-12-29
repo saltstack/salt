@@ -522,8 +522,8 @@ def remove_user_from_group(group_name, user_name, region=None, key=None, keyid=N
         msg = 'Username : {0} does not exist.'
         log.error(msg.format(user_name, group_name))
         return False
-    if not user_exists_in_group(user_name, group_name, region=None, key=None, keyid=None,
-                                profile=None):
+    if not user_exists_in_group(user_name, group_name, region=region, key=key,
+                                keyid=keyid, profile=profile):
         return True
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:

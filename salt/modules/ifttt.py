@@ -77,11 +77,6 @@ def trigger_event(event=None, **kwargs):
     :param event:   The name of the event to trigger.
 
     :return:        A dictionary with status, text, and error if result was failure.
-
-    CLI Example:
-
-    .. code-block:: yaml
-        TBA
     '''
 
     res = {'result': False, 'message': 'Something went wrong'}

@@ -244,22 +244,19 @@ def gen_locale(locale, **kwargs):
     on_ubuntu = __grains__.get('os') == 'Ubuntu'
     on_gentoo = __grains__.get('os_family') == 'Gentoo'
     on_suse = __grains__.get('os_family') == 'Suse'
+
     locale_info = salt.utils.locales.split_locale(locale)
+
+    # if the charmap has not been supplied, normalize by appening it
+    if not locale_info['charmap']:
+        locale_info['charmap'] = locale_info['codeset']
+        locale = salt.utils.locales.join_locale(locale_info)
 
     if on_debian or on_gentoo:  # file-based search
         search = '/usr/share/i18n/SUPPORTED'
-
-        def search_locale():
-            return __salt__['file.search'](search,
-                                           '^{0}$'.format(locale),
-                                           flags=re.MULTILINE)
-
-        valid = search_locale()
-        if not valid and not locale_info['charmap']:
-            # charmap was not supplied, so try copying the codeset
-            locale_info['charmap'] = locale_info['codeset']
-            locale = salt.utils.locales.join_locale(locale_info)
-            valid = search_locale()
+        valid = __salt__['file.search'](search,
+                                        '^{0}$'.format(locale),
+                                        flags=re.MULTILINE)
     else:  # directory-based search
         if on_suse:
             search = '/usr/share/locale'
@@ -282,7 +279,7 @@ def gen_locale(locale, **kwargs):
         __salt__['file.replace'](
             '/etc/locale.gen',
             r'^\s*#\s*{0}\s*$'.format(locale),
-            '{0}\\n'.format(locale),
+            '{0}\n'.format(locale),
             append_if_not_found=True
         )
     elif on_ubuntu:
@@ -306,7 +303,9 @@ def gen_locale(locale, **kwargs):
                '-i', "{0}_{1}".format(locale_info['language'],
                                       locale_info['territory']),
                '-f', locale_info['codeset'],
-               locale]
+               '{0}_{1}.{2}'.format(locale_info['language'],
+                                    locale_info['territory'],
+                                    locale_info['codeset'])]
         cmd.append(kwargs.get('verbose', False) and '--verbose' or '--quiet')
     else:
         raise CommandExecutionError(
