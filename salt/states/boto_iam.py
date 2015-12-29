@@ -101,6 +101,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - name: mycert
 
 .. code-block:: yaml
+
     create keys for user:
       boto_iam.keys_present:
         - name: myusername
@@ -134,7 +135,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'boto_cfn'
+__virtualname__ = 'boto_iam'
 
 
 def __virtual__():
@@ -634,7 +635,7 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, p
     if not _ret['result']:
         ret['result'] = _ret['result']
         return ret
-    if users:
+    if users is not None:
         log.debug('Users are : {0}.'.format(users))
         existing_users = __salt__['boto_iam.get_group_members'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
         ret = _case_group(ret, users, name, existing_users, region, key, keyid, profile)
