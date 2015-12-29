@@ -2406,18 +2406,35 @@ def _validate_privileges(object_type, privs, privileges):
     '''
     Validate the supplied privileges
     '''
-    _perms = [_PRIVILEGES_MAP[perm]
-            for perm in _PRIVILEGE_TYPE_MAP[object_type]]
-    _perms.append('ALL')
+    if object_type != 'group':
+        _perms = [_PRIVILEGES_MAP[perm]
+                for perm in _PRIVILEGE_TYPE_MAP[object_type]]
+        _perms.append('ALL')
 
-    if object_type not in _PRIVILEGES_OBJECTS:
-        raise SaltInvocationError(
-            'Invalid object_type: {0} provided'.format(object_type))
+        if object_type not in _PRIVILEGES_OBJECTS:
+            raise SaltInvocationError(
+                'Invalid object_type: {0} provided'.format(object_type))
 
-    if not set(privs).issubset(set(_perms)):
-        raise SaltInvocationError(
-            'Invalid privilege(s): {0} provided for object {1}'.format(
-            privileges, object_type))
+        if not set(privs).issubset(set(_perms)):
+            raise SaltInvocationError(
+                'Invalid privilege(s): {0} provided for object {1}'.format(
+                privileges, object_type))
+    else:
+        if privileges:
+            raise SaltInvocationError(
+                'The privileges option should not '
+                'be set for object_type group')
+
+
+def _mod_priv_opts(object_type, privileges):
+    '''
+    Format options
+    '''
+    object_type = object_type.lower()
+    privileges = '' if privileges is None else privileges
+    _privs = re.split(r'\s?,\s?', privileges.upper())
+
+    return object_type, privileges, _privs
 
 
 def privileges_list(
@@ -2513,7 +2530,12 @@ def privileges_list(
                             previous = _PRIVILEGES_MAP[perm]
                 ret[rolename] = _tmp
         else:
-            ret[row['rolname']] = row['admin_option']
+            if row['admin_option'] == 't':
+                admin_option = True
+            else:
+                admin_option = False
+
+            ret[row['rolname']] = admin_option
 
     return ret
 
@@ -2521,7 +2543,7 @@ def privileges_list(
 def has_privileges(name,
         object_name,
         object_type,
-        privileges,
+        privileges=None,
         grant_option=None,
         prepend='public',
         maintenance_db=None,
@@ -2595,8 +2617,7 @@ def has_privileges(name,
     runas
         System user all operations should be performed on behalf of
     '''
-    object_type = object_type.lower()
-    _privs = re.split(r'\s?,\s?', privileges.upper())
+    object_type, privileges, _privs = _mod_priv_opts(object_type, privileges)
 
     _validate_privileges(object_type, _privs, privileges)
 
@@ -2612,23 +2633,22 @@ def has_privileges(name,
         password=password, runas=runas)
 
     if name in _privileges:
-        _perms = _PRIVILEGE_TYPE_MAP[object_type]
-        if grant_option:
-            if object_type != 'group':
+        if object_type == 'group':
+            if grant_option:
+                return _privileges[name]
+            else:
+                return True
+        else:
+            _perms = _PRIVILEGE_TYPE_MAP[object_type]
+            if grant_option:
                 perms = dict((_PRIVILEGES_MAP[perm], True) for perm in _perms)
                 return perms ==  _privileges[name]
             else:
-                return _privileges[name]
-        else:
-            if object_type != 'group':
                 perms = [_PRIVILEGES_MAP[perm] for perm in _perms]
-
                 if 'ALL' in _privs:
                     return perms.sort() == _privileges[name].keys().sort()
                 else:
                     return set(_privs).issubset(set(_privileges[name].keys()))
-            else:
-                return True
 
     return False
 
@@ -2636,7 +2656,7 @@ def has_privileges(name,
 def privileges_grant(name,
         object_name,
         object_type,
-        privileges,
+        privileges=None,
         grant_option=None,
         prepend='public',
         maintenance_db=None,
@@ -2711,8 +2731,7 @@ def privileges_grant(name,
     runas
         System user all operations should be performed on behalf of
     '''
-    object_type = object_type.lower()
-    _privs = re.split(r'\s?,\s?', privileges.upper())
+    object_type, privileges, _privs = _mod_priv_opts(object_type, privileges)
 
     _validate_privileges(object_type, _privs, privileges)
 
@@ -2758,7 +2777,7 @@ def privileges_grant(name,
 def privileges_revoke(name,
         object_name,
         object_type,
-        privileges,
+        privileges=None,
         prepend='public',
         maintenance_db=None,
         user=None,
@@ -2828,8 +2847,7 @@ def privileges_revoke(name,
     runas
         System user all operations should be performed on behalf of
     '''
-    object_type = object_type.lower()
-    _privs = re.split(r'\s?,\s?', privileges.upper())
+    object_type, privileges, _privs = _mod_priv_opts(object_type, privileges)
 
     _validate_privileges(object_type, _privs, privileges)
 
