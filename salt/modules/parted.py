@@ -49,13 +49,17 @@ def __virtual__():
     These are usually provided by the ``parted`` and ``util-linux`` packages.
     '''
     if salt.utils.is_windows():
-        return False
+        return (False, 'The parted execution module failed to load '
+                'Windows systems are not supported.')
     if not salt.utils.which('parted'):
-        return False
+        return (False, 'The parted execution module failed to load '
+                'parted binary is not in the path.')
     if not salt.utils.which('lsblk'):
-        return False
+        return (False, 'The parted execution module failed to load '
+                'lsblk binary is not in the path.')
     if not salt.utils.which('partprobe'):
-        return False
+        return (False, 'The parted execution module failed to load '
+                'partprobe binary is not in the path.')
     return __virtualname__
 
 
