@@ -560,10 +560,10 @@ class MasterMinion(object):
             rend=True,
             matcher=True,
             whitelist=None):
-        self.opts = salt.config.minion_config(opts['conf_file'])
+        self.opts = salt.config.master_config(opts['conf_file'])
         self.opts.update(opts)
         self.whitelist = whitelist
-        self.opts['grains'] = salt.loader.grains(opts)
+        self.opts['grains'] = {}
         self.opts['pillar'] = {}
         self.mk_returners = returners
         self.mk_states = states
