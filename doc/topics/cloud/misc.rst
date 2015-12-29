@@ -14,12 +14,12 @@ to pass arguments to the deploy script:
 .. code-block:: yaml
 
     ec2-amazon:
-        provider: my-ec2-config
-        image: ami-1624987f
-        size: t1.micro
-        ssh_username: ec2-user
-        script: bootstrap-salt
-        script_args: -c /tmp/
+      provider: my-ec2-config
+      image: ami-1624987f
+      size: t1.micro
+      ssh_username: ec2-user
+      script: bootstrap-salt
+      script_args: -c /tmp/
 
 This has also been tested to work with pipes, if needed:
 
@@ -64,7 +64,7 @@ The available options for this setting are:
     all
 
 
-Setting up New Salt Masters
+Setting Up New Salt Masters
 ===========================
 It has become increasingly common for users to set up multi-hierarchal
 infrastructures using Salt Cloud. This sometimes involves setting up an
@@ -87,8 +87,36 @@ profile or map:
 .. code-block:: yaml
 
     master:
-        user: root
-        interface: 0.0.0.0
+      user: root
+      interface: 0.0.0.0
+
+
+Setting Up a Salt Syndic with Salt Cloud
+========================================
+
+In addition to `setting up new Salt Masters`_, :ref:`syndic`s can also be
+provisioned using Salt Cloud. In order to set up a Salt Syndic via Salt Cloud,
+a master needs to be installed on the new machine and a master configuration
+file needs to be set up using ``make_master`` setting. This setting can be
+defined either in a profile config file or in a map file:
+
+.. code-block:: yaml
+
+    make_master: True
+
+To install the Salt Syndic, the only other specification that needs to be
+configured is the ``master_syndic`` key. This modification needs to be placed
+in the ``master`` setting, which can be configured either in the profile,
+provider, or the ``/etc/salt/cloud`` config file:
+
+.. code-block:: yaml
+
+    master:
+      master_syndic: 123.456.789  # may be either an IP address or a hostname
+
+Many other Salt Syndic configuration settings and specifications can be passed
+through to the new syndic machine via the ``master`` configuration setting.
+See the :ref:`syndic` documentation for more information.
 
 
 SSH Port
