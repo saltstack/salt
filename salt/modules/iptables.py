@@ -421,34 +421,6 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
                 after_jump.append('--{0} {1}'.format(after_jump_argument, value))
             del kwargs[after_jump_argument]
 
-    if 'log' in kwargs:
-        after_jump.append('--log {0} '.format(kwargs['log']))
-        del kwargs['log']
-
-    if 'log-level' in kwargs:
-        after_jump.append('--log-level {0} '.format(kwargs['log-level']))
-        del kwargs['log-level']
-
-    if 'log-prefix' in kwargs:
-        after_jump.append('--log-prefix {0} '.format(kwargs['log-prefix']))
-        del kwargs['log-prefix']
-
-    if 'log-tcp-sequence' in kwargs:
-        after_jump.append('--log-tcp-sequence {0} '.format(kwargs['log-tcp-sequence']))
-        del kwargs['log-tcp-sequence']
-
-    if 'log-tcp-options' in kwargs:
-        after_jump.append('--log-tcp-options {0} '.format(kwargs['log-tcp-options']))
-        del kwargs['log-tcp-options']
-
-    if 'log-ip-options' in kwargs:
-        after_jump.append('--log-ip-options {0} '.format(kwargs['log-ip-options']))
-        del kwargs['log-ip-options']
-
-    if 'log-uid' in kwargs:
-        after_jump.append('--log-uid {0} '.format(kwargs['log-uid']))
-        del kwargs['log-uid']
-
     for item in kwargs:
         rule.append(maybe_add_negation(item))
         if len(item) == 1:
