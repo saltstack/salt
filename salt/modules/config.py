@@ -11,6 +11,7 @@ import os
 import logging
 
 # Import salt libs
+import salt.config
 import salt.utils
 try:
     # Gated for salt-ssh (salt.utils.cloud imports msgpack)
@@ -357,10 +358,12 @@ def get(key, default='', delimiter=':', merge=None):
                         'to \'recurse\'.'.format(merge))
             merge = 'recurse'
 
+        merge_lists = salt.config.master_config('/etc/salt/master').get('pillar_merge_lists')
+        
         data = copy.copy(__pillar__.get('master', {}))
-        data = salt.utils.dictupdate.merge(data, __pillar__, strategy=merge)
-        data = salt.utils.dictupdate.merge(data, __grains__, strategy=merge)
-        data = salt.utils.dictupdate.merge(data, __opts__, strategy=merge)
+        data = salt.utils.dictupdate.merge(data, __pillar__, strategy=merge, merge_lists=merge_lists)
+        data = salt.utils.dictupdate.merge(data, __grains__, strategy=merge, merge_lists=merge_lists)
+        data = salt.utils.dictupdate.merge(data, __opts__, strategy=merge, merge_lists=merge_lists)
         ret = salt.utils.traverse_dict_and_list(data,
                                                 key,
                                                 '_|-',
