@@ -170,20 +170,22 @@ def present(name,
 
     if not __salt__['postgres.has_privileges'](
             name, object_name, object_type, **kwargs):
+        _privs = object_name if object_type == 'group' else privileges
+
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = ('The privilege(s): {0} are'
-                ' set to granted to {1}').format(privileges, name)
+                ' set to be granted to {1}').format(_privs, name)
             return ret
 
         if __salt__['postgres.privileges_grant'](
                 name, object_name, object_type, **kwargs):
             ret['comment'] = ('The privilege(s): {0} have '
-                'been granted to {1}').format(privileges, name)
+                'been granted to {1}').format(_privs, name)
             ret['changes'][name] = 'Present'
         else:
             ret['comment'] = ('Failed to grant privilege(s):'
-                ' {0} to {1}').format(privileges, name)
+                ' {0} to {1}').format(_privs, name)
             ret['result'] = False
 
     return ret
@@ -194,7 +196,7 @@ def absent(name,
             object_type,
             privileges=None,
             prepend=None,
-            maintenance_db,
+            maintenance_db=None,
             user=None,
             db_password=None,
             db_host=None,
@@ -284,20 +286,22 @@ def absent(name,
 
     if __salt__['postgres.has_privileges'](
             name, object_name, object_type, **kwargs):
+        _privs = object_name if object_type == 'group' else privileges
+
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = ('The privilege(s): {0} are'
-                ' set to revoked from {1}').format(privileges, name)
+                ' set to be revoked from {1}').format(_privs, name)
             return ret
 
         if __salt__['postgres.privileges_revoke'](
                 name, object_name, object_type, **kwargs):
             ret['comment'] = ('The privilege(s): {0} have '
-                'been revoked from {1}').format(privileges, name)
+                'been revoked from {1}').format(_privs, name)
             ret['changes'][name] = 'Absent'
         else:
-            ret['comment'] = ('Failed to revove privilege(s):'
-                ' {0} from {1}').format(privileges, name)
+            ret['comment'] = ('Failed to revoke privilege(s):'
+                ' {0} from {1}').format(_privs, name)
             ret['result'] = False
 
     return ret
