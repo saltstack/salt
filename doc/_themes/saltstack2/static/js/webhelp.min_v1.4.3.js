@@ -158,6 +158,8 @@ $( document ).ready(function() {
     $(document).on('click', '.bootbox', function (event) {
         box.modal('hide');
     });
+
+    getMetaStatus();
 }); // $.document.ready
 
 //refresh on window resize
@@ -188,4 +190,19 @@ function resizeend() {
 
 function last(list) {
     return list[list.length - 1];
+}
+
+var reviewTag = '<p><strong>Status:&nbsp;&nbsp;</strong><span class="label label-warning label-status" data-container="body" data-delay=\'{ "show": 100, "hide": 100 }\' data-toggle="tooltip" data-placement="right" title="This topic is being reviewed for technical accuracy">Technical Review</span></p>';
+var draftTag = '<p><strong>Status:&nbsp;&nbsp;</strong><span class="label label-important label-status" data-container="body" data-delay=\'{ "show": 100, "hide": 100 }\' data-toggle="tooltip" data-placement="right" title="This topic is a work in progress and might describe functionality that is not yet implemented. Use with caution.">Draft Content</span></p>';
+
+function getMetaStatus() {
+   var metas = document.getElementsByTagName('meta');
+
+   for (i=0; i<metas.length; i++) {
+      if (metas[i].getAttribute("name") == "status") {
+         var statusType = metas[i].getAttribute("content");
+         (statusType == "review") ? tag = reviewTag : tag = draftTag;
+         $( "h1" ).first().after(tag);
+      }
+   }
 }
