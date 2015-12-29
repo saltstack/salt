@@ -807,7 +807,8 @@ def reset_syslog_config(host,
         port. Default port is ``443``.
 
     syslog_config
-        List of parameters to reset, or 'all' to reset everything.
+        List of parameters to reset, provided as a comma-delimited string, or 'all' to
+        reset all syslog configuration parameters. Required.
 
     esxi_hosts
         If ``host`` is a vCenter host, then use esxi_hosts to execute this function
@@ -831,6 +832,10 @@ def reset_syslog_config(host,
         salt '*' vsphere.reset_syslog_config my.vcenter.location root bad-password \
             syslog_config='logdir,loghost' esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
+    if not syslog_config:
+        raise CommandExecutionError('The \'reset_syslog_config\' function requires a '
+                                    '\'syslog_config\' setting.')
+
     valid_resets = ['logdir', 'loghost', 'default-rotate',
                     'default-size', 'default-timeout', 'logdir-unique']
     cmd = 'system syslog config set --reset='
@@ -3268,8 +3273,8 @@ def _get_service_manager(host_reference):
 def _get_vsan_eligible_disks(service_instance, host, host_names):
     '''
     Helper function that returns a dictionary of host_name keys with either a list of eligible
-    disks that can be added to VSAN or either and 'Error' message or a message saying no
-    eligible disks were found. Possible keys/values look like so:
+    disks that can be added to VSAN or either an 'Error' message or a message saying no
+    eligible disks were found. Possible keys/values look like:
 
     return = {'host_1': {'Error': 'VSAN System Config Manager is unset ...'},
               'host_2': {'Eligible': 'The host xxx does not have any VSAN eligible disks.'},
@@ -3327,6 +3332,9 @@ def _reset_syslog_config_params(host, username, password, cmd, resets, valid_res
     '''
     ret_dict = {}
     all_success = True
+
+    if not isinstance(resets, list):
+        resets = [resets]
 
     for reset_param in resets:
         if reset_param in valid_resets:
