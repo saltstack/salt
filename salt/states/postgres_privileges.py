@@ -119,7 +119,7 @@ def present(name,
        - DELETE
        - ALL
 
-       NOTE: privileges should not be set when granting group membership
+       :note: privileges should not be set when granting group membership
 
     grant_option
         If grant_option is set to True, the recipient of the privilege can
