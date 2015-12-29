@@ -173,6 +173,8 @@ def get_jids():
     serv = _get_serv(ret=None)
     ret = {}
     for s in serv.mget(serv.smembers('jids')):
+        if s is None:
+            continue
         load = json.loads(s)
         jid = load['jid']
         ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
