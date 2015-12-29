@@ -2437,6 +2437,25 @@ def _mod_priv_opts(object_type, privileges):
     return object_type, privileges, _privs
 
 
+def _process_priv_part(perms):
+    '''
+    Process part
+    '''
+    _tmp = {}
+    previous = None
+    for perm in perms:
+        if previous is None:
+            _tmp[_PRIVILEGES_MAP[perm]] = False
+            previous = _PRIVILEGES_MAP[perm]
+        else:
+            if perm == '*':
+                _tmp[previous] = True
+            else:
+                _tmp[_PRIVILEGES_MAP[perm]] = False
+                previous = _PRIVILEGES_MAP[perm]
+    return _tmp
+
+
 def privileges_list(
         name,
         object_type,
@@ -2469,6 +2488,10 @@ def privileges_list(
        - language
        - database
        - group
+
+    prepend
+        Table and Sequence object types live under a schema so this should be
+        provided if the object is not under the default `public` schema
 
     maintenance_db
         The database to connect to
@@ -2516,18 +2539,7 @@ def privileges_list(
                 rolename, perms = perms_part.split('=')
                 if rolename == '':
                     rolename = 'public'
-                _tmp = {}
-                previous = None
-                for perm in perms:
-                    if previous is None:
-                        _tmp[_PRIVILEGES_MAP[perm]] = False
-                        previous = _PRIVILEGES_MAP[perm]
-                    else:
-                        if perm == '*':
-                            _tmp[previous] = True
-                        else:
-                            _tmp[_PRIVILEGES_MAP[perm]] = False
-                            previous = _PRIVILEGES_MAP[perm]
+                _tmp = _process_priv_part(perms)
                 ret[rolename] = _tmp
         else:
             if row['admin_option'] == 't':
@@ -2599,6 +2611,10 @@ def has_privileges(name,
     grant_option
         If grant_option is set to True, the grant option check is performed
 
+    prepend
+        Table and Sequence object types live under a schema so this should be
+        provided if the object is not under the default `public` schema
+
     maintenance_db
         The database to connect to
 
@@ -2635,20 +2651,23 @@ def has_privileges(name,
     if name in _privileges:
         if object_type == 'group':
             if grant_option:
-                return _privileges[name]
+                retval = _privileges[name]
             else:
-                return True
+                retval = True
+            return retval
         else:
             _perms = _PRIVILEGE_TYPE_MAP[object_type]
             if grant_option:
                 perms = dict((_PRIVILEGES_MAP[perm], True) for perm in _perms)
-                return perms ==  _privileges[name]
+                retval = perms == _privileges[name]
             else:
                 perms = [_PRIVILEGES_MAP[perm] for perm in _perms]
                 if 'ALL' in _privs:
-                    return perms.sort() == _privileges[name].keys().sort()
+                    retval = perms.sort() == _privileges[name].keys().sort()
                 else:
-                    return set(_privs).issubset(set(_privileges[name].keys()))
+                    retval = set(_privs).issubset(
+                        set(_privileges[name].keys()))
+            return retval
 
     return False
 
@@ -2712,6 +2731,10 @@ def privileges_grant(name,
     grant_option
         If grant_option is set to True, the recipient of the privilege can
         in turn grant it to others
+
+    prepend
+        Table and Sequence object types live under a schema so this should be
+        provided if the object is not under the default `public` schema
 
     maintenance_db
         The database to connect to
