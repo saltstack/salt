@@ -100,14 +100,13 @@ def chocolatey_version():
     '''
     if 'chocolatey._version' in __context__:
         return __context__['chocolatey._version']
-    
+
     cmd = [_find_chocolatey(__context__, __salt__)]
     cmd.append('-v')
     out = __salt__['cmd.run'](cmd, python_shell=False)
     __context__['chocolatey._version'] = out
-    
+
     return __context__['chocolatey._version']
-    
 
 
 def bootstrap(force=False):
@@ -343,7 +342,7 @@ def install(name,
 
     force
         Reinstall the current version of an existing package.
-    
+
     pre_versions
         Include pre-release packages. Defaults to False.
 
