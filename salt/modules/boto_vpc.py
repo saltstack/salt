@@ -717,7 +717,7 @@ def _find_subnets(subnet_name=None, vpc_id=None, cidr=None, tags=None, conn=None
     '''
 
     if not any(subnet_name, tags, cidr):
-        raise SaltInvocationError('At least on of the following must be '
+        raise SaltInvocationError('At least one of the following must be '
                                   'specified: subnet_name, cidr or tags.')
 
     filter_parameters = {'filters': {}}
@@ -1793,10 +1793,10 @@ def route_exists(destination_cidr_block, route_table_name=None, route_table_id=N
     '''
 
     if not any((route_table_name, route_table_id)):
-        raise SaltInvocationError('At least on of the following must be specified: route table name or route table id.')
+        raise SaltInvocationError('At least one of the following must be specified: route table name or route table id.')
 
     if not any((gateway_id, instance_id, interface_id)):
-        raise SaltInvocationError('At least on of the following must be specified: gateway id, instance id'
+        raise SaltInvocationError('At least one of the following must be specified: gateway id, instance id'
                                   ' or interface id.')
 
     try:
