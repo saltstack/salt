@@ -4,7 +4,7 @@
 Full list of builtin serializers
 ================================
 
-.. currentmodule:: salt.output
+.. currentmodule:: salt.serializers
 
 .. autosummary::
     :toctree:

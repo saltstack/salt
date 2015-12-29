@@ -6,6 +6,7 @@ Management of PostgreSQL tablespace
 A module used to create and manage PostgreSQL tablespaces.
 
 .. code-block:: yaml
+
     ssd-tablespace:
       postgres_tablespace.present:
         - name: indexes

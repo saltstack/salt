@@ -101,6 +101,7 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         - name: mycert
 
 .. code-block:: yaml
+
     create keys for user:
       boto_iam.keys_present:
         - name: myusername
@@ -134,7 +135,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-__virtualname__ = 'boto_cfn'
+__virtualname__ = 'boto_iam'
 
 
 def __virtual__():
@@ -153,7 +154,7 @@ def __virtual__():
 def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=True, region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded:: 2015.8
+    .. versionadded:: 2015.8.0
 
     Ensure the IAM user is absent. User cannot be deleted if it has keys.
 
@@ -246,7 +247,7 @@ def user_absent(name, delete_keys=True, delete_mfa_devices=True, delete_profile=
 def keys_present(name, number, save_dir, region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded:: 2015.8
+    .. versionadded:: 2015.8.0
 
     Ensure the IAM access keys are present.
 
@@ -334,7 +335,7 @@ def keys_present(name, number, save_dir, region=None, key=None, keyid=None, prof
 def keys_absent(access_keys, user_name, region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded:: 2015.8
+    .. versionadded:: 2015.8.0
 
     Ensure the IAM user access_key_id is absent.
 
@@ -399,7 +400,7 @@ def user_present(name, policies=None, policies_from_pillars=None, password=None,
                  keyid=None, profile=None):
     '''
 
-    .. versionadded:: 2015.8
+    .. versionadded:: 2015.8.0
 
     Ensure the IAM user is present
 
@@ -562,7 +563,7 @@ def _case_password(ret, name, password, region=None, key=None, keyid=None, profi
 def group_present(name, policies=None, policies_from_pillars=None, users=None, path='/', region=None, key=None, keyid=None, profile=None):
     '''
 
-    .. versionadded:: 2015.8
+    .. versionadded:: 2015.8.0
 
     Ensure the IAM group is present
 
@@ -634,7 +635,7 @@ def group_present(name, policies=None, policies_from_pillars=None, users=None, p
     if not _ret['result']:
         ret['result'] = _ret['result']
         return ret
-    if users:
+    if users is not None:
         log.debug('Users are : {0}.'.format(users))
         existing_users = __salt__['boto_iam.get_group_members'](group_name=name, region=region, key=key, keyid=keyid, profile=profile)
         ret = _case_group(ret, users, name, existing_users, region, key, keyid, profile)
@@ -757,7 +758,7 @@ def account_policy(allow_users_to_change_password=None, hard_expiry=None, max_pa
     '''
     Change account policy.
 
-    .. versionadded:: 2015.8
+    .. versionadded:: 2015.8.0
 
     allow_users_to_change_password (bool)
         Allows all IAM users in your account to
@@ -846,7 +847,7 @@ def server_cert_absent(name, region=None, key=None, keyid=None, profile=None):
     '''
     Deletes a server certificate.
 
-    .. versionadded:: 2015.8
+    .. versionadded:: 2015.8.0
 
     name (string)
         The name for the server certificate. Do not include the path in this value.
@@ -887,7 +888,7 @@ def server_cert_present(name, public_key, private_key, cert_chain=None, path=Non
     '''
     Crete server certificate.
 
-    .. versionadded:: 2015.8
+    .. versionadded:: 2015.8.0
 
     name (string)
         The name for the server certificate. Do not include the path in this value.

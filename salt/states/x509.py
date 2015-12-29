@@ -125,6 +125,7 @@ handle properly formatting the text before writing the output.
 /srv/salt/cert.sls
 
 .. code-block:: yaml
+
     /usr/local/share/ca-certificates:
       file.directory: []
 

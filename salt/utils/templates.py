@@ -25,9 +25,7 @@ import salt.utils.locales
 from salt.exceptions import (
     SaltRenderError, CommandExecutionError, SaltInvocationError
 )
-from salt.utils.jinja import ensure_sequence_filter, show_full_context
-from salt.utils.jinja import SaltCacheLoader as JinjaSaltCacheLoader
-from salt.utils.jinja import SerializerExtension as JinjaSerializerExtension
+import salt.utils.jinja
 from salt.utils.odict import OrderedDict
 from salt import __path__ as saltpath
 from salt.ext.six import string_types
@@ -314,7 +312,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             loader = jinja2.FileSystemLoader(
                 context, os.path.dirname(tmplpath))
     else:
-        loader = JinjaSaltCacheLoader(opts, saltenv, pillar_rend=context.get('_pillar_rend', False))
+        loader = salt.utils.jinja.SaltCacheLoader(opts, saltenv, pillar_rend=context.get('_pillar_rend', False))
 
     env_args = {'extensions': [], 'loader': loader}
 
@@ -324,7 +322,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         env_args['extensions'].append('jinja2.ext.do')
     if hasattr(jinja2.ext, 'loopcontrols'):
         env_args['extensions'].append('jinja2.ext.loopcontrols')
-    env_args['extensions'].append(JinjaSerializerExtension)
+    env_args['extensions'].append(salt.utils.jinja.SerializerExtension)
 
     # Pass through trim_blocks and lstrip_blocks Jinja parameters
     # trim_blocks removes newlines around Jinja blocks
@@ -344,13 +342,13 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                                        **env_args)
 
     jinja_env.filters['strftime'] = salt.utils.date_format
-    jinja_env.filters['sequence'] = ensure_sequence_filter
+    jinja_env.filters['sequence'] = salt.utils.jinja.ensure_sequence_filter
     jinja_env.filters['yaml_dquote'] = salt.utils.yamlencoding.yaml_dquote
     jinja_env.filters['yaml_squote'] = salt.utils.yamlencoding.yaml_squote
     jinja_env.filters['yaml_encode'] = salt.utils.yamlencoding.yaml_encode
 
     jinja_env.globals['odict'] = OrderedDict
-    jinja_env.globals['show_full_context'] = show_full_context
+    jinja_env.globals['show_full_context'] = salt.utils.jinja.show_full_context
 
     jinja_env.tests['list'] = salt.utils.is_list
 
