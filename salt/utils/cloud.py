@@ -2780,7 +2780,7 @@ def missing_node_cache(prov_dir, node_list, provider, opts):
     '''
     cached_nodes = []
     for node in os.listdir(prov_dir):
-        cached_nodes.append(node.replace('.p', ''))
+        cached_nodes.append(os.path.splitext(node)[0])
 
     log.debug(sorted(cached_nodes))
     log.debug(sorted(node_list))
