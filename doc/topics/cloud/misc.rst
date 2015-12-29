@@ -96,8 +96,8 @@ Setting Up a Salt Syndic with Salt Cloud
 
 In addition to `setting up new Salt Masters`_, :ref:`syndic`s can also be
 provisioned using Salt Cloud. In order to set up a Salt Syndic via Salt Cloud,
-a master needs to be installed on the new machine and a master configuration
-file needs to be set up using ``make_master`` setting. This setting can be
+a Salt Master needs to be installed on the new machine and a master configuration
+file needs to be set up using the ``make_master`` setting. This setting can be
 defined either in a profile config file or in a map file:
 
 .. code-block:: yaml
@@ -105,9 +105,10 @@ defined either in a profile config file or in a map file:
     make_master: True
 
 To install the Salt Syndic, the only other specification that needs to be
-configured is the ``master_syndic`` key. This modification needs to be placed
+configured is the ``master_syndic`` key to specify the location of the master
+that the syndic will be reporting to. This modification needs to be placed
 in the ``master`` setting, which can be configured either in the profile,
-provider, or the ``/etc/salt/cloud`` config file:
+provider, or ``/etc/salt/cloud`` config file:
 
 .. code-block:: yaml
 
