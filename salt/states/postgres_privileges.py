@@ -13,7 +13,6 @@ Privileges can be set on the following database object types:
 * tablespace
 * table
 * sequence
-* function
 * language
 * group
 
@@ -28,9 +27,6 @@ Privileges can be set on the following database object types:
     remove-user-privs:
       postgres_privileges.absent:
         - maintenance_db: testdb
-
-.. versionadded:: Boron
-
 '''
 from __future__ import absolute_import
 
