@@ -1,5 +1,47 @@
 # -*- coding: utf-8 -*-
+'''
+Module to provide Citrix Netscaler compatibility to Salt (compatible with netscaler 9.2+)
 
+.. versionadded:: 2015.2.0
+
+:depends:
+
+- nsnitro Python module
+
+.. note::
+    You can install nsnitro using:
+
+    .. code-block:: bash
+
+        pip install nsnitro
+
+:configuration: This module accepts connection configuration details either as
+    parameters, or as configuration settings in /etc/salt/minion on the relevant
+    minions
+
+    .. code-block:: yaml
+
+        netscaler.host: 1.2.3.4
+        netscaler.user: user
+        netscaler.pass: password
+
+    This data can also be passed into pillar. Options passed into opts will
+    overwrite options passed into pillar.
+
+:CLI Examples:
+    Calls relying on configuration passed using /etc/salt/minion, grains, or pillars:
+    .. code-block:: bash
+
+        salt-call netscaler.server_exists server_name
+
+    Calls passing configuration as opts
+    .. code-block:: bash
+
+        salt-call netscaler.server_exists server_name netscaler_host=1.2.3.4 netscaler_user=username netscaler_pass=password
+        salt-call netscaler.server_exists server_name netscaler_host=1.2.3.5 netscaler_user=username2 netscaler_pass=password2
+        salt-call netscaler.server_enable server_name2 netscaler_host=1.2.3.5
+
+'''
 from __future__ import absolute_import
 import logging
 import salt.utils

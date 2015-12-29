@@ -384,7 +384,7 @@ def install(name=None,
     return salt.utils.compare_dicts(old, new)
 
 
-def upgrade(refresh=False):
+def upgrade(refresh=False, **kwargs):
     '''
     Run a full system upgrade, a pacman -Syu
 
