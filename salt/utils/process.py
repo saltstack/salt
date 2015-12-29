@@ -2,6 +2,7 @@
 
 # Import python libs
 from __future__ import absolute_import, with_statement
+import copy
 import os
 import sys
 import time
@@ -449,12 +450,85 @@ class ProcessManager(object):
 
 class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
     def __init__(self, *args, **kwargs):
+        if (salt.utils.is_windows() and
+                not hasattr(self, '_is_child') and
+                self.__setstate__.__code__ is
+                MultiprocessingProcess.__setstate__.__code__):
+            # On Windows, if a derived class hasn't defined __setstate__, that
+            # means the 'MultiprocessingProcess' version will be used. For this
+            # version, save a copy of the args and kwargs to use with its
+            # __setstate__ and __getstate__.
+            # We do this so that __init__ will be invoked on Windows in the
+            # child process so that a register_after_fork() equivalent will
+            # work on Windows. Note that this will only work if the derived
+            # class uses the exact same args and kwargs as this class. Hence
+            # this will also work for 'SignalHandlingMultiprocessingProcess'.
+            # However, many derived classes take params that they don't pass
+            # down (eg opts). Those classes need to override __setstate__ and
+            # __getstate__ themselves.
+            self._args_for_getstate = copy.copy(args)
+            self._kwargs_for_getstate = copy.copy(kwargs)
+
         self.log_queue = kwargs.pop('log_queue', None)
         if self.log_queue is None:
             self.log_queue = salt.log.setup.get_multiprocessing_logging_queue()
-        multiprocessing.util.register_after_fork(self, MultiprocessingProcess.__setup_process_logging)
-        multiprocessing.util.Finalize(self, salt.log.setup.shutdown_multiprocessing_logging, exitpriority=16)
+        else:
+            # Set the logging queue so that it can be retrieved later with
+            # salt.log.setup.get_multiprocessing_logging_queue().
+            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
+
+        # Call __init__ from 'multiprocessing.Process' only after removing
+        # 'log_queue' from kwargs.
         super(MultiprocessingProcess, self).__init__(*args, **kwargs)
+
+        if salt.utils.is_windows():
+            # On Windows, the multiprocessing.Process object is reinitialized
+            # in the child process via the constructor. Due to this, methods
+            # such as ident() and is_alive() won't work properly. So we use
+            # our own creation '_is_child' for this purpose.
+            if hasattr(self, '_is_child'):
+                # On Windows, no need to call register_after_fork().
+                # register_after_fork() would only work on Windows if called
+                # from the child process anyway. Since we know this is the
+                # child process, call __setup_process_logging() directly.
+                self.__setup_process_logging()
+                multiprocessing.util.Finalize(
+                    self,
+                    salt.log.setup.shutdown_multiprocessing_logging,
+                    exitpriority=16
+                )
+        else:
+            multiprocessing.util.register_after_fork(
+                self,
+                MultiprocessingProcess.__setup_process_logging
+            )
+            multiprocessing.util.Finalize(
+                self,
+                salt.log.setup.shutdown_multiprocessing_logging,
+                exitpriority=16
+            )
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self._is_child = True
+        args = state['args']
+        kwargs = state['kwargs']
+        # This will invoke __init__ of the most derived class.
+        self.__init__(*args, **kwargs)
+
+    def __getstate__(self):
+        args = self._args_for_getstate
+        kwargs = self._kwargs_for_getstate
+        if 'log_queue' not in kwargs:
+            kwargs['log_queue'] = self.log_queue
+        # Remove the version of these in the parent process since
+        # they are no longer needed.
+        del self._args_for_getstate
+        del self._kwargs_for_getstate
+        return {'args': args,
+                'kwargs': kwargs}
 
     def __setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
@@ -462,8 +536,19 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
 
 class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
     def __init__(self, *args, **kwargs):
-        multiprocessing.util.register_after_fork(self, SignalHandlingMultiprocessingProcess.__setup_signals)
         super(SignalHandlingMultiprocessingProcess, self).__init__(*args, **kwargs)
+        if salt.utils.is_windows():
+            if hasattr(self, '_is_child'):
+                # On Windows, no need to call register_after_fork().
+                # register_after_fork() would only work on Windows if called
+                # from the child process anyway. Since we know this is the
+                # child process, call __setup_signals() directly.
+                self.__setup_signals()
+        else:
+            multiprocessing.util.register_after_fork(
+                self,
+                SignalHandlingMultiprocessingProcess.__setup_signals
+            )
 
     def __setup_signals(self):
         signal.signal(signal.SIGINT, self._handle_signals)

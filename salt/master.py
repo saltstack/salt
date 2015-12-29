@@ -142,18 +142,29 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
     A generalized maintenance process which performances maintenance
     routines.
     '''
-    def __init__(self, opts, **kwargs):
+    def __init__(self, opts, log_queue=None):
         '''
         Create a maintenance instance
 
         :param dict opts: The salt options
         '''
-        super(Maintenance, self).__init__(**kwargs)
+        super(Maintenance, self).__init__(log_queue=log_queue)
         self.opts = opts
         # How often do we perform the maintenance tasks
         self.loop_interval = int(self.opts['loop_interval'])
         # Track key rotation intervals
         self.rotate = int(time.time())
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self._is_child = True
+        self.__init__(state['opts'], log_queue=state['log_queue'])
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'log_queue': self.log_queue}
 
     def _post_fork_init(self):
         '''
@@ -304,7 +315,9 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
                         'lost': list(lost)}
                 self.event.fire_event(data, tagify('change', 'presence'))
             data = {'present': list(present)}
-            self.event.fire_event(data, tagify('present', 'presence'))
+            # On the first run it may need more time for the EventPublisher
+            # to come up and be ready. Set the timeout to account for this.
+            self.event.fire_event(data, tagify('present', 'presence'), timeout=3)
             old_present.clear()
             old_present.update(present)
 
@@ -475,8 +488,8 @@ class Master(SMaster):
 
             log.info('Creating master process manager')
             self.process_manager = salt.utils.process.ProcessManager()
-            log.info('Creating master maintenance process')
             pub_channels = []
+            log.info('Creating master publisher process')
             for transport, opts in iter_transport_opts(self.opts):
                 chan = salt.transport.server.PubServerChannel.factory(opts)
                 chan.pre_fork(self.process_manager)
@@ -487,8 +500,8 @@ class Master(SMaster):
             salt.engines.start_engines(self.opts, self.process_manager)
 
             # must be after channels
+            log.info('Creating master maintenance process')
             self.process_manager.add_process(Maintenance, args=(self.opts,))
-            log.info('Creating master publisher process')
 
             if 'reactor' in self.opts:
                 log.info('Creating master reactor process')
@@ -553,14 +566,25 @@ class Halite(SignalHandlingMultiprocessingProcess):
     '''
     Manage the Halite server
     '''
-    def __init__(self, hopts, **kwargs):
+    def __init__(self, hopts, log_queue=None):
         '''
         Create a halite instance
 
         :param dict hopts: The halite options
         '''
-        super(Halite, self).__init__(**kwargs)
+        super(Halite, self).__init__(log_queue=log_queue)
         self.hopts = hopts
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self._is_child = True
+        self.__init__(state['hopts'], log_queue=state['log_queue'])
+
+    def __getstate__(self):
+        return {'hopts': self.hopts,
+                'log_queue': self.log_queue}
 
     def run(self):
         '''
@@ -614,6 +638,10 @@ class ReqServer(object):
         '''
         Binds the reply server
         '''
+        if self.log_queue is not None:
+            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
+        salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+
         dfn = os.path.join(self.opts['cachedir'], '.dfn')
         if os.path.isfile(dfn):
             try:
@@ -663,6 +691,7 @@ class ReqServer(object):
                 self.process_manager.send_signal_to_processes(signal.SIGTERM)
             # kill any remaining processes
             self.process_manager.kill_children()
+            salt.log.setup.shutdown_multiprocessing_logging()
 
     def run(self):
         '''
@@ -726,6 +755,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
+        self._is_child = True
         SignalHandlingMultiprocessingProcess.__init__(self, log_queue=state['log_queue'])
         self.opts = state['opts']
         self.req_channels = state['req_channels']

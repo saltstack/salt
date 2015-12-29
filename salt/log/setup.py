@@ -766,6 +766,12 @@ def get_multiprocessing_logging_queue():
     return __MP_LOGGING_QUEUE
 
 
+def set_multiprocessing_logging_queue(queue):
+    global __MP_LOGGING_QUEUE
+    if __MP_LOGGING_QUEUE is not queue:
+        __MP_LOGGING_QUEUE = queue
+
+
 def setup_multiprocessing_logging_listener(opts, queue=None):
     global __MP_LOGGING_QUEUE_PROCESS
     global __MP_LOGGING_LISTENER_CONFIGURED
@@ -917,6 +923,7 @@ def __process_multiprocessing_logging_queue(opts, queue):
         # On Windows, creating a new process doesn't fork (copy the parent
         # process image). Due to this, we need to setup extended logging
         # inside this process.
+        setup_temp_logger()
         setup_extended_logging(opts)
     while True:
         try:
