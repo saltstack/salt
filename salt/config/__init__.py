@@ -512,6 +512,9 @@ VALID_OPTS = {
     # encountering duplicate values
     'pillar_source_merging_strategy': str,
 
+    # Recursively merge lists by aggregating them instead of replacing them.
+    'pillar_merge_lists': bool,
+
     # How to merge multiple top files from multiple salt environments
     # (saltenvs); can be 'merge' or 'same'
     'top_file_merging_strategy': str,
@@ -1067,6 +1070,7 @@ DEFAULT_MASTER_OPTS = {
     'pillar_opts': False,
     'pillar_safe_render_error': True,
     'pillar_source_merging_strategy': 'smart',
+    'pillar_merge_lists': True,
     'ping_on_rotate': False,
     'peer': {},
     'preserve_minion_cache': False,
