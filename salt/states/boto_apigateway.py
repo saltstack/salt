@@ -713,7 +713,7 @@ class _Swagger(object):
         stage = __salt__['boto_apigateway.describe_api_stage'](self.restApiId, stage_name,
                                                                **self._common_aws_args).get('stage')
         if not stage:
-            stage = __salt__['boto_apigateway.create_api_stage'](apiId=self.restApiId,
+            stage = __salt__['boto_apigateway.create_api_stage'](restApiId=self.restApiId,
                                                                  stageName=stage_name,
                                                                  deploymentId=self._deploymentId,
                                                                  description=stage_desc_json,
