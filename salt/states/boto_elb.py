@@ -482,7 +482,8 @@ def _elb_present(
             msg = 'Subnets {0} do not map to a valid vpc id.'.format(subnets)
             raise SaltInvocationError(msg)
         security_groups = __salt__['boto_secgroup.convert_to_group_ids'](
-            security_groups, vpc_id, region, key, keyid, profile
+            security_groups, vpc_id, region=region, key=key, keyid=keyid,
+            profile=profile
         )
         if not security_groups:
             msg = 'Security groups {0} do not map to valid security group ids.'
