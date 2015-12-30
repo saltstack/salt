@@ -42,35 +42,36 @@ access_key = 'GKTADJGHEIQSXMKKRBJ08H'
 secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
 conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
 error_message = 'An error occurred (101) when calling the {0} operation: Test-defined error'
-not_found_error = ClientError({
-    'Error': {
-        'Code': 'ResourceNotFoundException',
+if HAS_BOTO:
+    not_found_error = ClientError({
+        'Error': {
+            'Code': 'ResourceNotFoundException',
+            'Message': "Test-defined error"
+        }
+    }, 'msg')
+    topic_rule_not_found_error = ClientError({
+        'Error': {
+            'Code': 'UnauthorizedException',
+            'Message': "Test-defined error"
+        }
+    }, 'msg')
+    error_content = {
+      'Error': {
+        'Code': 101,
         'Message': "Test-defined error"
+      }
     }
-}, 'msg')
-topic_rule_not_found_error = ClientError({
-    'Error': {
-        'Code': 'UnauthorizedException',
-        'Message': "Test-defined error"
-    }
-}, 'msg')
-error_content = {
-  'Error': {
-    'Code': 101,
-    'Message': "Test-defined error"
-  }
-}
-policy_ret = dict(policyName='testpolicy',
-                  policyDocument='{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"], "Resource": ["*"], "Effect": "Allow"}]}',
-                  policyArn='arn:aws:iot:us-east-1:123456:policy/my_policy',
-                  policyVersionId=1,
-                  defaultVersionId=1)
-topic_rule_ret = dict(ruleName='testrule',
-                  sql="SELECT * FROM 'iot/test'",
-                  description='topic rule description',
-                  createdAt='1970-01-01',
-                  actions=[{'lambda': {'functionArn': 'arn:aws:::function'}}],
-                  ruleDisabled=True)
+    policy_ret = dict(policyName='testpolicy',
+                      policyDocument='{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"], "Resource": ["*"], "Effect": "Allow"}]}',
+                      policyArn='arn:aws:iot:us-east-1:123456:policy/my_policy',
+                      policyVersionId=1,
+                      defaultVersionId=1)
+    topic_rule_ret = dict(ruleName='testrule',
+                      sql="SELECT * FROM 'iot/test'",
+                      description='topic rule description',
+                      createdAt='1970-01-01',
+                      actions=[{'lambda': {'functionArn': 'arn:aws:::function'}}],
+                      ruleDisabled=True)
 
 log = logging.getLogger(__name__)
 
