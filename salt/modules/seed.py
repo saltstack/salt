@@ -145,7 +145,7 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
                  'configuring as {0}'.format(id_))
         minion_config = salt.config.minion_config(cfg_files['config'])
         pki_dir = minion_config['pki_dir']
-        if not os.path.isdir():
+        if not os.path.isdir(os.path.join(mpt, pki_dir)):
             __salt__['file.makedirs'](
                 os.path.join(mpt, pki_dir)
             )
