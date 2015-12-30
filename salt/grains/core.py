@@ -1684,7 +1684,7 @@ def saltversioninfo():
     # Provides:
     #   saltversioninfo
     from salt.version import __version_info__
-    return {'saltversioninfo': __version_info__}
+    return {'saltversioninfo': list(__version_info__)}
 
 
 def _hw_data(osdata):
