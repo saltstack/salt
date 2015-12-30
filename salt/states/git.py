@@ -544,6 +544,7 @@ def latest(name,
                 remote_rev_type = 'sha1'
             else:
                 remote_rev = None
+                remote_rev_type = None
 
         # For the comment field of the state return dict, the remote location
         # (and short-sha1, if rev is not a sha1) is referenced several times,
@@ -553,7 +554,7 @@ def latest(name,
                 remote_loc = 'remote HEAD (' + remote_rev[:7] + ')'
             else:
                 remote_loc = remote_rev[:7]
-        else:
+        elif remote_rev is not None:
             remote_loc = '{0} ({1})'.format(
                 desired_upstream if remote_rev_type == 'branch' else rev,
                 remote_rev[:7]

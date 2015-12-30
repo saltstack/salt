@@ -1,7 +1,7 @@
-.. _events:
-
 .. index:: ! Event, event bus, event system
     see: Reactor; Event
+
+.. _events:
 
 =================
 Salt Event System

@@ -2782,7 +2782,7 @@ for pre-2015.8.0 minions. 2015.8.0 and later minions use
 .. conf_master:: winrepo_dir_ng
 
 ``winrepo_dir_ng``
----------------
+------------------
 
 .. versionadded:: 2015.8.0
     A new :ref:`ng <windows-package-manager>` repo was added.
@@ -2853,7 +2853,7 @@ event that an error is introduced in the latest revision of the repo.
 .. conf_master:: winrepo_remotes_ng
 
 ``winrepo_remotes_ng``
--------------------
+----------------------
 
 .. versionadded:: 2015.8.0
     A new :ref:`ng <windows-package-manager>` repo was added.

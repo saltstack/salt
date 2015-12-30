@@ -2918,7 +2918,8 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
                                    OptionParser,
                                    ConfigDirMixIn,
                                    LogLevelMixIn,
-                                   MergeConfigMixIn)):
+                                   MergeConfigMixIn,
+                                   SaltfileMixIn)):
     '''
     The cli parser object used to fire up the salt spm system.
     '''

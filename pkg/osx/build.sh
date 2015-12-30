@@ -1,10 +1,64 @@
 #!/bin/bash
+############################################################################
+#
+# Title: Build Salt Script for OSX
+# Authors: CR Oldham, Shane Lee
+# Date: December 2015
+#
+# Description: This script downloads and installs all dependencies and build
+#              tools required to create a .pkg file for installation on OSX.
+#              Salt and all dependencies will be installed to /opt/salt. A
+#              .pkg file will then be created based on the contents of
+#              /opt/salt
+#
+# Requirements:
+#     - XCode Command Line Tools (xcode-select --install)
+#
+# Usage:
+#     This script can be passed 3 parameters
+#         $1 : <package dir> : the staging area for the package
+#                              defaults to /tmp/salt-pkg
+#         $2 : <version> : the version of salt to build 
+#                          (a git tag, not a branch)
+#                          (defaults to git-repo state)
+#
+#     Example:
+#         The following will build Salt v2015.8.3 and stage all files
+#         in /tmp/pkg:
+#
+#         ./build.sh /tmp/pkg v2015.8.3
+#
+############################################################################
 
-# Usage
-# ./build.sh <package dir> <version to build> <git tag>
+echo -n -e "\033]0;Build: Variables\007"
 
-SRCDIR=`pwd`
+############################################################################
+# Check passed parameters, set defaults
+############################################################################
+if [ "$1" == "" ]; then
+    PKGDIR=/tmp/pkg
+else
+    PKGDIR=$1
+fi
 
+if [ "$2" == "" ]; then
+    VERSION=`git describe`
+else
+    VERSION=$2
+fi
+
+
+############################################################################
+# Additional Parameters Required for the script to function properly
+############################################################################
+
+SRCDIR=`git rev-parse --show-toplevel`
+PKGRESOURCES=$SRCDIR/pkg/osx
+
+
+############################################################################
+# Make sure this is the Salt Repository
+############################################################################
 if [[ ! -e "$SRCDIR/.git" ]] && [[ ! -e "$SRCDIR/scripts/salt" ]]; then
     echo "This directory doesn't appear to be a git repository."
     echo "The OS X build process needs some files from a Git checkout of Salt."
@@ -12,116 +66,23 @@ if [[ ! -e "$SRCDIR/.git" ]] && [[ ! -e "$SRCDIR/scripts/salt" ]]; then
     exit -1
 fi
 
-PKGDIR=$1
 
-rm -rf build
-mkdir -p build
-BUILDDIR=`pwd`/build
-
-PKGRESOURCES=$SRCDIR/pkg/osx
-
-mkdir -p /opt/salt/python
-
-cd $BUILDDIR
-
-echo "-------- Retrieving libsodium"
-wget https://download.libsodium.org/libsodium/releases/libsodium-1.0.2.tar.gz
-wget https://download.libsodium.org/libsodium/releases/libsodium-1.0.2.tar.gz.sig
-
-echo "-------- Verifying PGP signature"
-gpg --keyserver pgp.mit.edu --recv-key 2B6F76DA
-gpg --verify libsodium-1.0.2.tar.gz.sig
-
-echo "-------- Building libsodium"
-tar -xvf libsodium-1.0.2.tar.gz
-cd libsodium-1.0.2
-./configure --prefix=/opt/salt/python
-make
-make check
-make install
-
-cd $BUILDDIR
-
-echo "-------- Retrieving zeromq"
-wget http://download.zeromq.org/zeromq-4.0.5.tar.gz
-wget http://download.zeromq.org/SHA1SUMS
-
-echo "-------- Building zeromq"
-tar -zxvf zeromq-4.0.5.tar.gz
-cd zeromq-4.0.5
-./configure --prefix=/opt/salt/python
-make
-make check
-make install
-
-cd $BUILDDIR
-
-echo "-------- Retrieving SWIG 3.0.4"
-# SWIG
-wget http://downloads.sourceforge.net/project/swig/swig/swig-3.0.4/swig-3.0.4.tar.gz
-
-echo "-------- Building SWIG 3.0.4"
-tar -zxvf swig-3.0.4.tar.gz
-cd swig-3.0.4
-./configure --prefix=/opt/salt/python
-make
-make install
-
-export PATH=/opt/salt/python/bin:$PATH
-
-echo "-------- Installing Salt dependencies with pip"
-pip install -r $PKGRESOURCES/requirements.txt
-
-# if $3 exists it will be a git reference, install with pip install git+
-# otherwise install with pip install salt==
-echo "-------- Installing Salt into the virtualenv"
-if [ "$3" == "" ]; then
-    pip install salt==$2
-else
-e   pip install $3
-fi
-
-cd /opt/salt/python/bin
-mkdir -p /opt/salt/bin
-for f in /opt/salt/python/bin/salt-* do
-    ln -s $f /opt/salt/bin
-done
-
-cp $PKGRESOURCES/scripts/start-*.sh /opt/salt/bin
-
-mkdir -p $PKGDIR/opt
-cp -r /opt/salt $PKGDIR/opt
-mkdir -p $PKGDIR/Library/LaunchDaemons $PKGDIR/etc
-
-cp $PKGRESOURCES/scripts/com.saltstack.salt.minion.plist $PKGDIR/Library/LaunchDaemons
-cp $PKGRESOURCES/scripts/com.saltstack.salt.master.plist $PKGDIR/Library/LaunchDaemons
-cp $PKGRESOURCES/scripts/com.saltstack.salt.syndic.plist $PKGDIR/Library/LaunchDaemons
-cp $PKGRESOURCES/scripts/com.saltstack.salt.api.plist $PKGDIR/Library/LaunchDaemons
-
-cp $SRCDIR/conf/minion $PKGDIR/etc/salt/minion.dist
-cp $SRCDIR/conf/master $PKGDIR/etc/salt/master.dist
-
-cd $PKGRESOURCES
-cp distribution.xml.dist distribution.xml
-SEDSTR="s/@VERSION@/$2/"
-echo $SEDSTR
-sed -i '' $SEDSTR distribution.xml
-
-pkgbuild --root $PKGDIR --identifier=com.saltstack.salt --version=$2 --ownership=recommended salt-src-$2.pkg
-productbuild --resources=$PKGDIR --distribution=distribution.xml --package-path=salt-src-$2.pkg --version=$2 salt-$2.pkg
+############################################################################
+# Create the Build Environment
+############################################################################
+echo -n -e "\033]0;Build: Build Environment\007"
+source $PKGRESOURCES/build_env.sh
 
 
-# copy the wrapper script to /opt/salt/bin
-# ln -s all the different wrapper names to that script
-# Copy the launchd plists to $1/Library/LaunchDaemons
-# Copy the sample config files to $1/etc
-
-# pkgbuild and productbuild will use $2 to name files.
-
-#pkgbuild
-
-#productbuild
-
-# Q.E.D.
+############################################################################
+# Install Salt
+############################################################################
+echo -n -e "\033]0;Build: Install Salt\007"
+sudo /opt/salt/bin/python $SRCDIR/setup.py install
 
 
+############################################################################
+# Build Package
+############################################################################
+echo -n -e "\033]0;Build: Package Salt\007"
+source $PKGRESOURCES/build_pkg.sh $PKGDIR $VERSION
