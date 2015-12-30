@@ -9,16 +9,16 @@ Languages can be set as either absent or present
 .. versionadded:: Boron
 
 .. code-block:: yaml
+
     plpgsql:
       postgres_language.present:
         - maintenance_db: testdb
 
 .. code-block:: yaml
+
     plpgsql:
       postgres_language.absent:
         - maintenance_db: testdb
-
-.. versionadded:: Boron
 
 '''
 from __future__ import absolute_import

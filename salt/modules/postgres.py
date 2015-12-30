@@ -2044,8 +2044,10 @@ def language_list(
     Return a list of languages in a database.
 
     CLI Example:
-        .. code-block:: bash
-            salt '*' postgres.language_list dbname
+
+    .. code-block:: bash
+
+        salt '*' postgres.language_list dbname
 
     maintenance_db
         The database to check
@@ -2098,8 +2100,10 @@ def language_exists(
     Checks if language exists in a database.
 
     CLI Example:
-        .. code-block:: bash
-            salt '*' postgres.language_exists plpgsql dbname
+
+    .. code-block:: bash
+
+        salt '*' postgres.language_exists plpgsql dbname
 
     name
        Language to check for
@@ -2145,8 +2149,10 @@ def language_create(name,
     Installs a language into a database
 
     CLI Example:
-        .. code-block:: bash
-            salt '*' postgres.language_create plpgsql dbname
+
+    .. code-block:: bash
+
+        salt '*' postgres.language_create plpgsql dbname
 
     name
        Language to install
@@ -2200,8 +2206,10 @@ def language_remove(name,
     Removes a language from a database
 
     CLI Example:
-        .. code-block:: bash
-            salt '*' postgres.language_remove plpgsql dbname
+
+    .. code-block:: bash
+
+        salt '*' postgres.language_remove plpgsql dbname
 
     name
        Language to remove
@@ -2472,8 +2480,10 @@ def privileges_list(
     Return a list of privileges for the specified object.
 
     CLI Example:
-        .. code-block:: bash
-            salt '*' postgres.privileges_list table_name table maintenance_db=db_name
+
+    .. code-block:: bash
+
+        salt '*' postgres.privileges_list table_name table maintenance_db=db_name
 
     name
        Name of the object for which the permissions should be returned
@@ -2570,9 +2580,11 @@ def has_privileges(name,
     Check if a role has the specified privileges on an object
 
     CLI Example:
-        .. code-block:: bash
-            salt '*' postgres.has_privileges user_name table_name table \
-            SELECT,INSERT maintenance_db=db_name
+
+    .. code-block:: bash
+
+        salt '*' postgres.has_privileges user_name table_name table \\
+        SELECT,INSERT maintenance_db=db_name
 
     name
        Name of the role whose privilages should be checked on object_type
@@ -2690,9 +2702,11 @@ def privileges_grant(name,
     Grant privileges on a postgres object
 
     CLI Example:
-        .. code-block:: bash
-            salt '*' postgres.privileges_grant user_name table_name table \
-            SELECT,UPDATE maintenance_db=db_name
+
+    .. code-block:: bash
+
+        salt '*' postgres.privileges_grant user_name table_name table \\
+        SELECT,UPDATE maintenance_db=db_name
 
     name
        Name of the role to which privilages should be granted
@@ -2814,9 +2828,11 @@ def privileges_revoke(name,
     Revoke privileges on a postgres object
 
     CLI Example:
-        .. code-block:: bash
-            salt '*' postgres.privileges_revoke user_name table_name table \
-            SELECT,UPDATE maintenance_db=db_name
+
+    .. code-block:: bash
+
+        salt '*' postgres.privileges_revoke user_name table_name table \\
+        SELECT,UPDATE maintenance_db=db_name
 
     name
        Name of the role whose privilages should be revoked
