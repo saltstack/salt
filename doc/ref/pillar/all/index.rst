@@ -34,6 +34,7 @@ Full list of builtin pillar modules
     redismod
     s3
     sql_base
+    sqlcipher
     sqlite3
     stack
     svn_pillar

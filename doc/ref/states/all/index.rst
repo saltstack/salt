@@ -132,6 +132,8 @@ Full list of builtin state modules
     postgres_database
     postgres_extension
     postgres_group
+    postgres_language
+    postgres_privileges
     postgres_schema
     postgres_tablespace
     postgres_user
