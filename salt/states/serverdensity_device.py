@@ -79,7 +79,7 @@ def _get_salt_params():
     return params
 
 
-def monitored(name, group=None, salt_name=True, salt_params=True, **params):
+def monitored(name, group=None, salt_name=True, salt_params=True, agent_version=1,  **params):
     '''
     Device is monitored with Server Density.
 
@@ -93,6 +93,10 @@ def monitored(name, group=None, salt_name=True, salt_params=True, **params):
     group
         Group name under with device will appear in Server Density dashboard.
         Default - `None`.
+
+    agent_version
+        The agent version you want to use. Valid values are 1 or 2.
+        Default - 1.
 
     salt_params
         If ``True`` (default), needed config parameters will be sourced from
@@ -140,6 +144,10 @@ def monitored(name, group=None, salt_name=True, salt_params=True, **params):
     if group:
         params['group'] = group
 
+    if agent_version != 2:
+        # Anything different from 2 will fallback into the v1.
+        agent_version = 1
+
     # override salt_params with given params
     if salt_params:
         for key, value in six.iteritems(params):
@@ -172,7 +180,7 @@ def monitored(name, group=None, salt_name=True, salt_params=True, **params):
         ret['changes'] = {}
         return ret
 
-    installed_agent = __salt__['serverdensity_device.install_agent'](agent_key)
+    installed_agent = __salt__['serverdensity_device.install_agent'](agent_key, agent_version)
 
     ret['result'] = True
     ret['comment'] = 'Successfully installed agent and created device in Server Density db.'
