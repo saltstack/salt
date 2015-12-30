@@ -359,7 +359,7 @@ def get(key, default='', delimiter=':', merge=None):
             merge = 'recurse'
 
         merge_lists = salt.config.master_config('/etc/salt/master').get('pillar_merge_lists')
-        
+
         data = copy.copy(__pillar__.get('master', {}))
         data = salt.utils.dictupdate.merge(data, __pillar__, strategy=merge, merge_lists=merge_lists)
         data = salt.utils.dictupdate.merge(data, __grains__, strategy=merge, merge_lists=merge_lists)
