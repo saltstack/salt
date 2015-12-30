@@ -479,6 +479,24 @@ def set_job(user,
     return 'new'
 
 
+def rm_special(user, special, cmd):
+    lst = list_tab(user)
+    ret = 'absent'
+    rm_ = None
+    for ind in range(len(lst['special'])):
+        if lst['special'][ind]['cmd'] == cmd and \
+                lst['special'][ind]['spec'] == special:
+            lst['special'].pop(ind)
+            rm_ = ind
+    if rm_ is not None:
+        ret = 'removed'
+        comdat = _write_cron_lines(user, _render_tab(lst))
+        if comdat['retcode']:
+            # Failed to commit
+            return comdat['stderr']
+    return ret
+
+
 def rm_job(user,
            cmd,
            minute=None,
