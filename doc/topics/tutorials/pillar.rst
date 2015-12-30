@@ -68,7 +68,8 @@ The default location for the pillar is in /srv/pillar.
 
     The pillar location can be configured via the `pillar_roots` option inside
     the master configuration file. It must not be in a subdirectory of the state
-    tree.
+    tree or file_roots. If the pillar is under file_roots, any pillar targeting
+    can be bypassed by minions.
 
 To start setting up the pillar, the /srv/pillar directory needs to be present:
 
