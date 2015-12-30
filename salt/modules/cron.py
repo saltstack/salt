@@ -480,6 +480,15 @@ def set_job(user,
 
 
 def rm_special(user, special, cmd):
+    '''
+    Remove a special cron job for a specified user.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cron.rm_job root @hourly /usr/bin/foo
+    '''
     lst = list_tab(user)
     ret = 'absent'
     rm_ = None
