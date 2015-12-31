@@ -21,7 +21,7 @@ import logging
 # Import Mock libraries
 from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
-# pylint: disable=import-error,no-name-in-module
+# pylint: disable=import-error,no-name-in-module,unused-import
 from unit.modules.boto_iot_test import BotoIoTTestCaseMixin
 
 # Import 3rd-party libs
@@ -33,7 +33,7 @@ try:
 except ImportError:
     HAS_BOTO = False
 
-# pylint: enable=import-error,no-name-in-module
+# pylint: enable=import-error,no-name-in-module,unused-import
 
 # the boto_iot module relies on the connect_to_region() method
 # which was added in boto 2.8.0
