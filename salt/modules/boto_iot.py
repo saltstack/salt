@@ -64,6 +64,7 @@ log = logging.getLogger(__name__)
 # pylint: disable=import-error
 try:
     #pylint: disable=unused-import
+    import boto
     import boto3
     #pylint: enable=unused-import
     from botocore.exceptions import ClientError
