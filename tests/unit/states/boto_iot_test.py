@@ -99,6 +99,7 @@ if _has_required_boto():
                       ruleDisabled=True)
     principal = 'arn:aws:iot:us-east-1:1234:cert/21fc104aaaf6043f5756c1b57bda84ea8395904c43f28517799b19e4c42514'
 
+
 class BotoIoTStateTestCaseBase(TestCase):
     conn = None
 
