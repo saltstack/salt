@@ -336,7 +336,7 @@ class SaltNova(OpenStackComputeShell):
         )
         response = nt_ks.servers.create(**kwargs)
         self.uuid = response.id
-        self.password = response.adminPass
+        self.password = getattr(response, 'adminPass', None)
 
         start = time.time()
         trycount = 0
