@@ -26,6 +26,7 @@ from unit.modules.boto_iot_test import BotoIoTTestCaseMixin
 
 # Import 3rd-party libs
 try:
+    import boto
     import boto3
     from botocore.exceptions import ClientError
     HAS_BOTO = True
@@ -39,41 +40,6 @@ except ImportError:
 # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
 required_boto3_version = '1.2.1'
 
-region = 'us-east-1'
-access_key = 'GKTADJGHEIQSXMKKRBJ08H'
-secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
-conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
-error_message = 'An error occurred (101) when calling the {0} operation: Test-defined error'
-not_found_error = ClientError({
-    'Error': {
-        'Code': 'ResourceNotFoundException',
-        'Message': "Test-defined error"
-    }
-}, 'msg')
-topic_rule_not_found_error = ClientError({
-    'Error': {
-        'Code': 'UnauthorizedException',
-        'Message': "Test-defined error"
-    }
-}, 'msg')
-error_content = {
-  'Error': {
-    'Code': 101,
-    'Message': "Test-defined error"
-  }
-}
-policy_ret = dict(policyName='testpolicy',
-                  policyDocument='{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"], "Resource": ["*"], "Effect": "Allow"}]}',
-                  policyArn='arn:aws:iot:us-east-1:123456:policy/my_policy',
-                  policyVersionId=1,
-                  defaultVersionId=1)
-topic_rule_ret = dict(ruleName='testrule',
-                  sql="SELECT * FROM 'iot/test'",
-                  description='topic rule description',
-                  createdAt='1970-01-01',
-                  actions=[{'iot': {'functionArn': 'arn:aws:::function'}}],
-                  ruleDisabled=True)
-principal = 'arn:aws:iot:us-east-1:1234:cert/21fc104aaaf6043f5756c1b57bda84ea8395904c43f28517799b19e4c42514'
 log = logging.getLogger(__name__)
 
 opts = salt.config.DEFAULT_MINION_OPTS
@@ -96,6 +62,42 @@ def _has_required_boto():
     else:
         return True
 
+if _has_required_boto():
+    region = 'us-east-1'
+    access_key = 'GKTADJGHEIQSXMKKRBJ08H'
+    secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
+    conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
+    error_message = 'An error occurred (101) when calling the {0} operation: Test-defined error'
+    not_found_error = ClientError({
+        'Error': {
+            'Code': 'ResourceNotFoundException',
+            'Message': "Test-defined error"
+        }
+    }, 'msg')
+    topic_rule_not_found_error = ClientError({
+        'Error': {
+            'Code': 'UnauthorizedException',
+            'Message': "Test-defined error"
+        }
+    }, 'msg')
+    error_content = {
+      'Error': {
+        'Code': 101,
+        'Message': "Test-defined error"
+      }
+    }
+    policy_ret = dict(policyName='testpolicy',
+                      policyDocument='{"Version": "2012-10-17", "Statement": [{"Action": ["iot:Publish"], "Resource": ["*"], "Effect": "Allow"}]}',
+                      policyArn='arn:aws:iot:us-east-1:123456:policy/my_policy',
+                      policyVersionId=1,
+                      defaultVersionId=1)
+    topic_rule_ret = dict(ruleName='testrule',
+                      sql="SELECT * FROM 'iot/test'",
+                      description='topic rule description',
+                      createdAt='1970-01-01',
+                      actions=[{'iot': {'functionArn': 'arn:aws:::function'}}],
+                      ruleDisabled=True)
+    principal = 'arn:aws:iot:us-east-1:1234:cert/21fc104aaaf6043f5756c1b57bda84ea8395904c43f28517799b19e4c42514'
 
 class BotoIoTStateTestCaseBase(TestCase):
     conn = None

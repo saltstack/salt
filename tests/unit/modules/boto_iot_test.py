@@ -24,6 +24,7 @@ from salttesting.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # pylint: disable=import-error,no-name-in-module
 try:
+    import boto
     import boto3
     from botocore.exceptions import ClientError
     HAS_BOTO = True
