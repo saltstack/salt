@@ -37,12 +37,35 @@ except ImportError:
 # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
 required_boto3_version = '1.2.1'
 
-region = 'us-east-1'
-access_key = 'GKTADJGHEIQSXMKKRBJ08H'
-secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
-conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
-error_message = 'An error occurred (101) when calling the {0} operation: Test-defined error'
-if HAS_BOTO:
+log = logging.getLogger(__name__)
+
+opts = salt.config.DEFAULT_MINION_OPTS
+context = {}
+utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
+
+boto_iot.__utils__ = utils
+boto_iot.__init__(opts)
+boto_iot.__salt__ = {}
+
+
+def _has_required_boto():
+    '''
+    Returns True/False boolean depending on if Boto is installed and correct
+    version.
+    '''
+    if not HAS_BOTO:
+        return False
+    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
+        return False
+    else:
+        return True
+
+if _has_required_boto():
+    region = 'us-east-1'
+    access_key = 'GKTADJGHEIQSXMKKRBJ08H'
+    secret_key = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
+    conn_parameters = {'region': region, 'key': access_key, 'keyid': secret_key, 'profile': {}}
+    error_message = 'An error occurred (101) when calling the {0} operation: Test-defined error'
     not_found_error = ClientError({
         'Error': {
             'Code': 'ResourceNotFoundException',
@@ -72,29 +95,6 @@ if HAS_BOTO:
                       createdAt='1970-01-01',
                       actions=[{'lambda': {'functionArn': 'arn:aws:::function'}}],
                       ruleDisabled=True)
-
-log = logging.getLogger(__name__)
-
-opts = salt.config.DEFAULT_MINION_OPTS
-context = {}
-utils = salt.loader.utils(opts, whitelist=['boto3'], context=context)
-
-boto_iot.__utils__ = utils
-boto_iot.__init__(opts)
-boto_iot.__salt__ = {}
-
-
-def _has_required_boto():
-    '''
-    Returns True/False boolean depending on if Boto is installed and correct
-    version.
-    '''
-    if not HAS_BOTO:
-        return False
-    elif LooseVersion(boto3.__version__) < LooseVersion(required_boto3_version):
-        return False
-    else:
-        return True
 
 
 class BotoIoTTestCaseBase(TestCase):
