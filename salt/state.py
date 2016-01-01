@@ -253,6 +253,19 @@ def ishashable(obj):
     return True
 
 
+def mock_ret(cdata):
+    '''
+    Returns a mocked return dict with inforwation about therun without
+    executing
+    '''
+    # As this is expanded it should be sent into the execution module
+    # layer or it should be turned into a standalone loader system
+    return = {'name': cdata['name'],
+              'comment': 'Not called, mocked',
+              'changes': {},
+              'result': True}
+
+
 class StateError(Exception):
     '''
     Custom exception class.
@@ -601,7 +614,7 @@ class State(object):
     '''
     Class used to execute salt states
     '''
-    def __init__(self, opts, pillar=None, jid=None, proxy=None):
+    def __init__(self, opts, pillar=None, jid=None, proxy=None, mock=False):
         if 'grains' not in opts:
             opts['grains'] = salt.loader.grains(opts)
         self.opts = opts
@@ -616,6 +629,8 @@ class State(object):
         self.__run_num = 0
         self.jid = jid
         self.instance_id = str(id(self))
+        self.inject_globals = {}
+        self.mock = mock
 
     def _gather_pillar(self):
         '''
@@ -1598,8 +1613,11 @@ class State(object):
 
             if 'result' not in ret or ret['result'] is False:
                 self.states.inject_globals = inject_globals
-                ret = self.states[cdata['full']](*cdata['args'],
-                                                 **cdata['kwargs'])
+                if self.mock:
+                    ret = mock_ret(cdata)
+                else:
+                    ret = self.states[cdata['full']](*cdata['args'],
+                                                     **cdata['kwargs'])
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
@@ -3171,11 +3189,11 @@ class HighState(BaseHighState):
     # a stack of active HighState objects during a state.highstate run
     stack = []
 
-    def __init__(self, opts, pillar=None, jid=None, proxy=None):
+    def __init__(self, opts, pillar=None, jid=None, proxy=None, mock=False):
         self.opts = opts
         self.client = salt.fileclient.get_file_client(self.opts)
         BaseHighState.__init__(self, opts)
-        self.state = State(self.opts, pillar, jid, proxy=proxy)
+        self.state = State(self.opts, pillar, jid, proxy=proxy, mock=mock)
         self.matcher = salt.minion.Matcher(self.opts)
 
         # tracks all pydsl state declarations globally across sls files

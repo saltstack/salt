@@ -540,9 +540,16 @@ def highstate(test=None,
         opts['pillarenv'] = kwargs['pillarenv']
 
     try:
-        st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'), proxy=__proxy__)
+        st_ = salt.state.HighState(opts,
+                                   pillar,
+                                   kwargs.get('__pub_jid'),
+                                   proxy=__proxy__,
+                                   mock=kwargs.get('mock', False))
     except NameError:
-        st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
+        st_ = salt.state.HighState(opts,
+                                   pillar,
+                                   kwargs.get('__pub_jid'),
+                                   mock=kwargs.get('mock', False))
 
     st_.push_active()
     try:
