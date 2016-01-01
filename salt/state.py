@@ -264,8 +264,8 @@ def ishashable(obj):
 
 def mock_ret(cdata):
     '''
-    Returns a mocked return dict with inforwation about therun without
-    executing
+    Returns a mocked return dict with information about the run, without
+    executing the state function
     '''
     # As this is expanded it should be sent into the execution module
     # layer or it should be turned into a standalone loader system
