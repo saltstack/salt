@@ -72,6 +72,16 @@ def beacon(config):
         ret_dict = {}
         ret_dict[service] = {'running': __salt__['service.status'](service)}
 
+        # If no options is given to the service, we fall back to the defaults
+        # assign a False value to oncleanshutdown and onchangeonly. Those
+        # key:values are then added to the service dictionary.
+        if config[service] is None:
+            defaults = {
+                    'oncleanshutdown':False,
+                    'onchangeonly':False
+                    }
+            config[service] = defaults
+
         # We only want to report the nature of the shutdown
         # if the current running status is False
         # as well as if the config for the beacon asks for it
