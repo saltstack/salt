@@ -48,12 +48,14 @@ class RabbitmqUserTestCase(TestCase):
                'comment': ''}
 
         mock = MagicMock(side_effect=[True, False, True, True,
-                                      True, True, True])
+                                      True, True, True, True, True])
+        mock_cp = MagicMock(side_effect=[False, True])
         mock_dct = MagicMock(return_value={name: set(tag)})
         mock_pr = MagicMock(return_value=existing_perms)
         mock_add = MagicMock(return_value={'Added': name})
         with patch.dict(rabbitmq_user.__salt__,
                         {'rabbitmq.user_exists': mock,
+                         'rabbitmq.check_password': mock_cp,
                          'rabbitmq.list_users': mock_dct,
                          'rabbitmq.list_user_permissions': mock_pr,
                          'rabbitmq.set_user_tags': mock_add}):
@@ -69,7 +71,13 @@ class RabbitmqUserTestCase(TestCase):
 
                 comment = 'Configuration for \'foo\' will change.'
                 changes = {'password': {'new': 'Set password.', 'old': ''}}
-                ret.update({'comment': comment, 'changes': changes})
+                ret.update({'comment': comment, 'changes': changes, 'result': None})
+                self.assertDictEqual(rabbitmq_user.present(name,
+                                                           password=passwd,
+                                                           force=False), ret)
+                comment = 'Configuration for \'foo\' will change.'
+                changes = {'password': {'new': 'Set password.', 'old': ''}}
+                ret.update({'comment': comment, 'changes': changes, 'result': None})
                 self.assertDictEqual(rabbitmq_user.present(name,
                                                            password=passwd,
                                                            force=True), ret)
