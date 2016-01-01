@@ -953,6 +953,7 @@ _OS_NAME_MAP = {
     'synology': 'Synology',
     'nilrt': 'NILinuxRT',
     'manjaro': 'Manjaro',
+    'antergos': 'Antergos',
     'sles': 'SUSE',
 }
 
@@ -994,6 +995,7 @@ _OS_FAMILY_MAP = {
     'OpenSolaris': 'Solaris',
     'Arch ARM': 'Arch',
     'Manjaro': 'Arch',
+    'Antergos': 'Arch',
     'ALT': 'RedHat',
     'Trisquel': 'Debian',
     'GCEL': 'Debian',
