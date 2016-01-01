@@ -88,9 +88,9 @@ def beacon(config):
         if 'uncleanshutdown' in config[service] and not ret_dict[service]['running']:
             filename = config[service]['uncleanshutdown']
             if os.path.exists(filename):
-                ret_dict[service]['shutdown'] = 'unclean'
+                ret_dict[service]['uncleanshutdown'] = True
             else:
-                ret_dict[service]['shutdown'] = 'clean'
+                ret_dict[service]['uncleanshutdown'] = False
 
         if 'onchangeonly' in config[service] and config[service]['onchangeonly'] is True:
             if service not in last_status:
