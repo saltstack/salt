@@ -44,20 +44,28 @@ def beacon(config):
     The config also supports two other parameters for each service:
 
     `onchangeonly`: when `onchangeonly` is True the beacon will fire
-    events only when the service status changes.  Otherwise, it will fire an event
-    at each beacon interval.  The default is False.
+    events only when the service status changes.  Otherwise, it will fire an
+    event at each beacon interval.  The default is False.
 
-    `uncleanshutdown`: If `uncleanshutdown` is present it should point to the location
-    of a pid file for the service.  Most services will not clean up this pid file
-    if they are shutdown uncleanly (e.g. via `kill -9`) or if they are terminated
-    through a crash such as a segmentation fault.  If the file is present, then
-    the beacon will add `uncleanshutdown: True` to the event.  If not present,
-    the field will be False.  The field is only added when the service is NOT running.
-    Omitting the configuration variable altogether will turn this feature off.
+    `uncleanshutdown`: If `uncleanshutdown` is present it should point to the
+    location of a pid file for the service.  Most services will not clean up
+    this pid file if they are shutdown uncleanly (e.g. via `kill -9`) or if they
+    are terminated through a crash such as a segmentation fault.  If the file is
+    present, then the beacon will add `uncleanshutdown: True` to the event.  If
+    not present, the field will be False.  The field is only added when the
+    service is NOT running. Omitting the configuration variable altogether will
+    turn this feature off.
 
-    Here is an example that will fire an event whenever the state of nginx changes
-    and report an uncleanshutdown.  This example is for Arch, which places nginx's
-    pid file in `/run`.
+    Please note that some init systems can remove the pid file if the service
+    registers as crashed. One such example is nginx on CentOS 7, where the
+    service unit removes the pid file when the service shuts down (IE: the pid
+    file is observed as removed when kill -9 is sent to the nginx master
+    process). The 'uncleanshutdown' option might not be of much use there,
+    unless the unit file is modified.
+
+    Here is an example that will fire an event whenever the state of nginx
+    changes and report an uncleanshutdown.  This example is for Arch, which
+    places nginx's pid file in `/run`.
 
     .. code-block:: yaml
 
