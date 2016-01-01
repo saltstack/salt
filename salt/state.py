@@ -260,10 +260,14 @@ def mock_ret(cdata):
     '''
     # As this is expanded it should be sent into the execution module
     # layer or it should be turned into a standalone loader system
-    return = {'name': cdata['name'],
-              'comment': 'Not called, mocked',
-              'changes': {},
-              'result': True}
+    if cdata['args']:
+        name = cdata['args'][0]
+    else:
+        name = cdata['kwargs']['name']
+    return {'name': name,
+            'comment': 'Not called, mocked',
+            'changes': {},
+            'result': True}
 
 
 class StateError(Exception):
