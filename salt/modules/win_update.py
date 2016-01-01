@@ -29,8 +29,8 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import salt libs
-from salt.utils.locales import sdecode
 import salt.utils
+import salt.utils.locales
 
 log = logging.getLogger(__name__)
 
