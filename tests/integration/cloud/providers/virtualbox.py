@@ -236,7 +236,7 @@ class XpcomConversionTests(unittest.TestCase):
         interface = "IMachine"
         imachine = XpcomConversionTests._mock_xpcom_object(interface)
 
-        ret = vb_xpcom_to_attribute_dict(imachine)
+        ret = vb_xpcom_to_attribute_dict(imachine, interface_name=interface)
         expected_attributes = XPCOM_ATTRIBUTES[interface]
 
         self.assertIsNotNone(expected_attributes, "%s is unknown")
@@ -252,10 +252,41 @@ class XpcomConversionTests(unittest.TestCase):
             "something": 12345
         }
 
-        imachine = XpcomConversionTests._mock_xpcom_object(attributes=expected_dict)
+        xpc = XpcomConversionTests._mock_xpcom_object(attributes=expected_dict)
 
-        ret = vb_xpcom_to_attribute_dict(imachine, attributes=expected_dict.keys())
+        ret = vb_xpcom_to_attribute_dict(xpc, attributes=expected_dict.keys())
         self.assertDictEqual(ret, expected_dict)
+
+    def test_extra_attributes(self):
+
+        interface = "IMachine"
+        expected_extras = {
+            "extra": "extra",
+        }
+        expected_machine = dict([(attribute, attribute) for attribute in XPCOM_ATTRIBUTES[interface]])
+        expected_machine.update(expected_extras)
+
+        imachine = XpcomConversionTests._mock_xpcom_object(interface, attributes=expected_machine)
+
+        ret = vb_xpcom_to_attribute_dict(
+            imachine,
+            interface_name=interface,
+            extra_attributes=expected_extras.keys()
+        )
+        self.assertDictEqual(ret, expected_machine)
+
+        ret_keys = ret.keys()
+        for key in expected_extras.keys():
+            self.assertIn(key, ret_keys)
+
+    def test_extra_nonexistant_attributes(self):
+        expected_extra_dict = {
+            "nonexistant": ""
+        }
+        xpcom = XpcomConversionTests._mock_xpcom_object()
+
+        ret = vb_xpcom_to_attribute_dict(xpcom, extra_attributes=expected_extra_dict.keys())
+        self.assertDictEqual(ret, expected_extra_dict)
 
 
 if __name__ == '__main__':
