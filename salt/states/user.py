@@ -117,7 +117,7 @@ def _changes(name,
     if _group_changes(lusr['groups'], wanted_groups, remove_groups):
         change['groups'] = wanted_groups
     if home:
-        if lusr['home'] != home and createhome:
+        if lusr['home'] != home:
             change['home'] = home
     if createhome:
         newhome = home if home else lusr['home']
