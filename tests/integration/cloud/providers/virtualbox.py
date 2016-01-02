@@ -136,7 +136,7 @@ class VirtualboxProviderTest(integration.ShellCase):
 
         self.assertIn(
             BASE_BOX_NAME,
-            [i.strip() for i in self.run_cloud('--list-images=virtualbox')]
+            [i.strip() for i in self.run_cloud('-f list_nodes virtualbox-config')]
         )
 
     def test_cloud_destroy(self):
