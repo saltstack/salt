@@ -134,7 +134,7 @@ class VirtualboxProviderTest(integration.ShellCase):
         List all machines in virtualbox
         """
         ret = self.run_cloud('-f list_nodes virtualbox-config')
-        #print "\n".join(ret)
+        print "\n".join(ret)
         self.assertIn(
             BASE_BOX_NAME+":",
             [i.strip() for i in ret]

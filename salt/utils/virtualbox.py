@@ -35,7 +35,9 @@ XPCOM_ATTRIBUTES = {
         "accessible",
         "description",
         "groups",
+        "memorySize",
         "OSTypeId",
+        "state",
     ]
 }
 
