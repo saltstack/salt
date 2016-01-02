@@ -77,3 +77,4 @@ tests/unit/templates/roots
 
 # Ignore the log directory created by tests
 /logs
+tests/integration/cloud/providers/logs
