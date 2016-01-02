@@ -166,34 +166,6 @@ def create(vm_info):
     return vm_result
 
 
-def avail_images(call=None):
-    '''
-    Return a list of all the images in the virtualbox hypervisor
-
-    TODO: Does virtualbox support templates?
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-cloud --list-images my-vmware-config
-    '''
-    if call == 'action':
-        raise SaltCloudSystemExit(
-            'The avail_images function must be called with '
-            '-f or --function, or with the --list-images option.'
-        )
-
-    machines = {}
-
-    for machine in vb_list_machines():
-        name = machine.get("name")
-        if name:
-            machines[name] = machine
-
-    return machines
-
-
 def list_nodes(kwargs=None, call=None):
     """
     This function returns a list of nodes available on this cloud provider, using the following fields:
@@ -221,8 +193,20 @@ def list_nodes(kwargs=None, call=None):
     @return:
     @rtype:
     """
-    # TODO implement a proper version of this
-    return avail_images(call=call)
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes function must be called '
+            'with -f or --function.'
+        )
+
+    machines = {}
+
+    for machine in vb_list_machines():
+        name = machine.get("name")
+        if name:
+            machines[name] = machine
+
+    return machines
 
 
 def destroy(name, call=None):
