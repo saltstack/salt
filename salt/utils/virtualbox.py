@@ -56,11 +56,11 @@ def vb_get_box():
     return vbox
 
 
-def vb_list_machines():
+def vb_list_machines(**kwargs):
     manager = vb_get_manager()
     machines = manager.getArray(vb_get_box(), "machines")
     return [
-        vb_xpcom_to_attribute_dict(machine, "IMachine")
+        vb_xpcom_to_attribute_dict(machine, "IMachine", **kwargs)
         for machine in machines
         ]
 
@@ -149,10 +149,11 @@ def vb_xpcom_to_attribute_dict(xpcom
                                , interface_name=None
                                , attributes=None
                                , excluded_attributes=None
+                               , extra_attributes=None
                                ):
     """
     Attempts to build a dict from an XPCOM object.
-    Attributes that don't exist in the object aren't included.
+    Attributes that don't exist in the object return an empty string.
 
     @param xpcom:
     @type xpcom:
@@ -161,10 +162,13 @@ def vb_xpcom_to_attribute_dict(xpcom
     @type interface_name: str
     @param attributes: Overrides the attributes used from XPCOM_ATTRIBUTES
     @type attributes: list
-    @param excluded_attributes: Which should be excluded in the returned dict
+    @param excluded_attributes: Which should be excluded in the returned dict.
+                                !!These take precedence over extra_attributes!!
     @type excluded_attributes: list
+    @param extra_attributes: Which should be retrieved in addition those already being retrieved
+    @type extra_attributes: list
     @return:
-    @rtype:
+    @rtype: dict
     """
     # Check the interface
     if interface_name:
@@ -174,13 +178,15 @@ def vb_xpcom_to_attribute_dict(xpcom
             log.warn("Interface %s is unknown and cannot be converted to dict" % interface_name)
             return dict()
 
-    interface_attributes = attributes or XPCOM_ATTRIBUTES.get(interface_name, [])
-    excluded_attributes = excluded_attributes or []
+    interface_attributes = set(attributes or XPCOM_ATTRIBUTES.get(interface_name, []))
+    if extra_attributes:
+        interface_attributes = interface_attributes.union(extra_attributes)
+    if excluded_attributes:
+        interface_attributes = interface_attributes.difference(excluded_attributes)
 
     attribute_tuples = [
-        (attribute, getattr(xpcom, attribute))
+        (attribute, getattr(xpcom, attribute, ""))
         for attribute in interface_attributes
-        if hasattr(xpcom, attribute) and attribute not in excluded_attributes
         ]
 
     return dict(attribute_tuples)
