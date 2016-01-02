@@ -155,18 +155,22 @@ def vb_xpcom_to_attribute_dict(xpcom
     Attempts to build a dict from an XPCOM object.
     Attributes that don't exist in the object return an empty string.
 
+    attribute_list = list of str or tuple(str,<a class>)
+
+    e.g attributes=[("bad_attribute", list)] --> { "bad_attribute": [] }
+
     @param xpcom:
     @type xpcom:
     @param interface_name: Which interface we will be converting from.
                            Without this it's best to specify the list of attributes you want
     @type interface_name: str
     @param attributes: Overrides the attributes used from XPCOM_ATTRIBUTES
-    @type attributes: list
+    @type attributes: attribute_list
     @param excluded_attributes: Which should be excluded in the returned dict.
                                 !!These take precedence over extra_attributes!!
-    @type excluded_attributes: list
+    @type excluded_attributes: attribute_list
     @param extra_attributes: Which should be retrieved in addition those already being retrieved
-    @type extra_attributes: list
+    @type extra_attributes: attribute_list
     @return:
     @rtype: dict
     """
@@ -184,10 +188,15 @@ def vb_xpcom_to_attribute_dict(xpcom
     if excluded_attributes:
         interface_attributes = interface_attributes.difference(excluded_attributes)
 
-    attribute_tuples = [
-        (attribute, getattr(xpcom, attribute, ""))
-        for attribute in interface_attributes
-        ]
+    attribute_tuples = []
+    for attribute in interface_attributes:
+        if isinstance(attribute, tuple):
+            attribute_name = attribute[0]
+            attribute_class = attribute[1]
+            value = (attribute_name, getattr(xpcom, attribute_name, attribute_class()))
+        else:
+            value = (attribute, getattr(xpcom, attribute, ""))
+        attribute_tuples.append(value)
 
     return dict(attribute_tuples)
 

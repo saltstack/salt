@@ -288,6 +288,16 @@ class XpcomConversionTests(unittest.TestCase):
         ret = vb_xpcom_to_attribute_dict(xpcom, extra_attributes=expected_extra_dict.keys())
         self.assertDictEqual(ret, expected_extra_dict)
 
+    def test_extra_nonexistant_attribute_with_default(self):
+        expected_extras = [("nonexistant", list)]
+        expected_extra_dict = {
+            "nonexistant": []
+        }
+        xpcom = XpcomConversionTests._mock_xpcom_object()
+
+        ret = vb_xpcom_to_attribute_dict(xpcom, extra_attributes=expected_extras)
+        self.assertDictEqual(ret, expected_extra_dict)
+
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error
