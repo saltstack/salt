@@ -260,3 +260,5 @@ def destroy(name, call=None):
         {'name': name},
         transport=__opts__['transport']
     )
+
+# TODO implement actions e.g start, stop, restart, etc.
