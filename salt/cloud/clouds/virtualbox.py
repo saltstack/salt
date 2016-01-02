@@ -201,10 +201,20 @@ def list_nodes(kwargs=None, call=None):
 
     machines = {}
 
-    for machine in vb_list_machines():
+    # TODO ask for the correct attributes e.g state and private_ips
+    for machine in vb_list_machines(attributes=[
+        ("id", str),
+        ("name", str),
+        ("image", str),
+        ("size", str),
+        ("state", str),
+        ("private_ips", list),
+        ("public_ips", list),
+    ]):
         name = machine.get("name")
         if name:
             machines[name] = machine
+            del machine["name"]
 
     return machines
 
