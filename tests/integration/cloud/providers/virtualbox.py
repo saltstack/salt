@@ -15,7 +15,7 @@ from salttesting.helpers import ensure_in_syspath
 from integration.cloud.helpers import random_name
 from integration.cloud.helpers.virtualbox import VirtualboxTestCase
 from utils.virtualbox import vb_xpcom_to_attribute_dict, vb_clone_vm, vb_destroy_machine, vb_create_machine, vb_get_box, \
-    vb_machine_exists, HAS_LIBS, XPCOM_ATTRIBUTES
+    vb_machine_exists, HAS_LIBS, XPCOM_ATTRIBUTES, vb_start_vm, vb_stop_vm, machine_get_machinestate
 
 ensure_in_syspath('../../../')
 
@@ -36,6 +36,7 @@ PROVIDER_NAME = "virtualbox"
 PROFILE_NAME = PROVIDER_NAME + "-test"
 DRIVER_NAME = "virtualbox"
 BASE_BOX_NAME = "__temp_test_vm__"
+BOOTABLE_BASE_BOX_NAME = "SaltMiniBuntuTest"
 
 
 @skipIf(HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')
@@ -136,7 +137,7 @@ class VirtualboxProviderTest(integration.ShellCase):
         ret = self.run_cloud('-f list_nodes virtualbox-config')
         print "\n".join(ret)
         self.assertIn(
-            BASE_BOX_NAME+":",
+            BASE_BOX_NAME + ":",
             [i.strip() for i in ret]
         )
 
@@ -167,6 +168,20 @@ class VirtualboxProviderTest(integration.ShellCase):
         #     # self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
         if vb_machine_exists(INSTANCE_NAME):
             vb_destroy_machine(INSTANCE_NAME)
+
+
+@skipIf(vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
+        "Bootable VM '%s' not found. Cannot run tests." % BOOTABLE_BASE_BOX_NAME
+        )
+class VirtualboxProviderHeavyTests(integration.ShellCase):
+    def test_start_action(self):
+        pass
+
+    def test_stop_action(self):
+        pass
+
+    def test_restart_action(self):
+        pass
 
 
 class BaseVirtualboxTests(unittest.TestCase):
@@ -209,6 +224,18 @@ class CloneVirtualboxTests(VirtualboxTestCase):
 
         vb_destroy_machine(vb_name)
         self.assertMachineDoesNotExist(vb_name)
+
+
+@skipIf(vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
+        "Bootable VM '%s' not found. Cannot run tests." % BOOTABLE_BASE_BOX_NAME
+        )
+class BootVirtualboxTests(VirtualboxTestCase):
+    def test_start_stop(self):
+        machine = vb_start_vm(BOOTABLE_BASE_BOX_NAME)
+        self.assertEqual(machine_get_machinestate(machine)[0], "Running")
+
+        machine = vb_stop_vm(BOOTABLE_BASE_BOX_NAME)
+        self.assertEqual(machine_get_machinestate(machine)[0], "PoweredOff")
 
 
 class XpcomConversionTests(unittest.TestCase):

@@ -41,6 +41,62 @@ XPCOM_ATTRIBUTES = {
     ]
 }
 
+"""
+Dict of states {
+    <number>: ( <name>, <description> )
+}
+"""
+MACHINE_STATES = dict(enumerate([
+    ("Null", "Null value (never used by the API)"),
+    ("PoweredOff", "The machine is not running and has no saved execution state; "
+                   "it has either never been started or been shut down successfully."),
+    ("Saved", "The machine is not currently running, but the execution state of the machine has been "
+              "saved to an external file when it was running, from where it can be resumed."),
+    ("Teleported", "The machine was teleported to a different host (or process) and then powered off. "
+                   "Take care when powering it on again may corrupt resources it shares with the teleportation "
+                   "target (e.g. disk and network)."),
+    ("Aborted", "The process running the machine has terminated abnormally. This may indicate a "
+                "crash of the VM process in host execution context, or the VM process has been terminated "
+                "externally."),
+    ("Running", "The machine is currently being executed."),
+    ("Paused", "Execution of the machine has been paused."),
+    ("Stuck", "Execution of the machine has reached the \"Guru Meditation\" condition. This indicates a "
+              "severe error in the hypervisor itself."),
+    ("Teleporting", "The machine is about to be teleported to a different host or process. It is possible "
+                    "to pause a machine in this state, but it will go to the TeleportingPausedVM state and it "
+                    "will not be possible to resume it again unless the teleportation fails."),
+    ("LiveSnapshotting", "A live snapshot is being taken. The machine is running normally, but some "
+                         "of the runtime configuration options are inaccessible. "
+                         "Also, if paused while in this state it will transition to OnlineSnapshotting "
+                         "and it will not be resume the execution until the snapshot operation has completed."),
+    ("Starting", "Machine is being started after powering it on from a zero execution state."),
+    ("Stopping", "Machine is being normally stopped powering it off, or after the guest OS has initiated "
+                 "a shutdown sequence."),
+    ("Saving", "Machine is saving its execution state to a file."),
+    ("Restoring", "Execution state of the machine is being restored from a file after powering it on from "
+                  "the saved execution state."),
+    ("TeleportingPausedVM", "The machine is being teleported to another host or process, but it is not "
+                            "running. This is the paused variant of the Teleporting state."),
+    ("TeleportingIn", "Teleporting the machine state in from another host or process."),
+    ("FaultTolerantSyncing", "The machine is being synced with a fault tolerant VM running else-where."),
+    ("DeletingSnapshotOnline", "Like DeletingSnapshot , but the merging of media is ongoing in the "
+                               "background while the machine is running."),
+    ("DeletingSnapshotPaused", "Like DeletingSnapshotOnline , but the machine was paused when "
+                               "the merging of differencing media was started."),
+    ("OnlineSnapshotting", "Like LiveSnapshotting , but the machine was paused when the merging "
+                           "of differencing media was started."),
+    ("RestoringSnapshot", "A machine snapshot is being restored; this typically does not take long."),
+    ("DeletingSnapshot", "A machine snapshot is being deleted; this can take a long time since this may "
+                         "require merging differencing media. This value indicates that the machine is not running "
+                         "while the snapshot is being deleted."),
+    ("SettingUp", "Lengthy setup operation is in progress."),
+    ("Snapshotting", "Taking an (offline) snapshot."),
+    ("FirstOnline", "Pseudo-state: first online state (for use in relational expressions)."),
+    ("LastOnline", "Pseudo-state: last online state (for use in relational expressions)."),
+    ("FirstTransient", "Pseudo-state: first transient state (for use in relational expressions)."),
+    ("LastTransient", "Pseudo-state: last transient state (for use in relational expressions)."),
+]))
+
 
 def vb_get_manager():
     # This code initializes VirtualBox manager with default style
@@ -123,14 +179,41 @@ def vb_clone_vm(
     return vb_xpcom_to_attribute_dict(new_machine, "IMachine")
 
 
-def vb_start_vm(**kwargs):
+def vb_start_vm(name=None, timeout=10000, **kwargs):
     """
     Tells Virtualbox to start up a VM.
     Blocking function!
 
     @return dict of started VM, contains IP addresses and what not
     """
-    pass
+    # TODO handle errors
+    vbox = vb_get_box()
+    log.info("Starting machine %s" % name)
+    machine = vbox.findMachine(name)
+
+    session = _virtualboxManager.getSessionObject(vbox)
+    progress = machine.launchVMProcess(session, "", "")
+
+    progress.waitForCompletion(timeout)
+    log.info("Started machine %s" % name)
+
+    _virtualboxManager.closeMachineSession(session)
+
+    return vb_xpcom_to_attribute_dict(machine, "IMachine")
+
+
+def vb_stop_vm(name=None, timeout=10000, **kwargs):
+    # TODO handle errors
+    vbox = vb_get_box()
+    machine = vbox.findMachine(name)
+    log.info("Stopping machine %s" % name)
+    session = _virtualboxManager.openMachineSession(machine)
+    console = session.console
+    progress = console.powerDown()
+    progress.waitForCompletion(timeout)
+    _virtualboxManager.closeMachineSession(session)
+    log.info("Stopped machine %s" % name)
+    return vb_xpcom_to_attribute_dict(machine, "IMachine")
 
 
 def vb_destroy_machine(name=None, timeout=10000):
@@ -201,6 +284,22 @@ def vb_xpcom_to_attribute_dict(xpcom
         attribute_tuples.append(value)
 
     return dict(attribute_tuples)
+
+
+def vb_machinestate_to_str(machinestate):
+    """
+
+    @param machinestate: from the machine state enum from XPCOM
+    @type machinestate: int
+    @return:
+    @rtype:
+    """
+
+    return MACHINE_STATES.get(machinestate, ("Unknown", "This state is unknown to us. Might be new?"))
+
+
+def machine_get_machinestate(machinedict):
+    return vb_machinestate_to_str(machinedict.get("state"))
 
 
 def vb_machine_exists(name):
