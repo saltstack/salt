@@ -1,6 +1,6 @@
 import unittest
 
-from cloud.clouds import virtualbox
+from salt.utils import virtualbox
 
 
 class VirtualboxTestCase(unittest.TestCase):
