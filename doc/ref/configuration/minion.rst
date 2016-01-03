@@ -125,13 +125,26 @@ to the next master in the list if it finds the existing one is dead.
 
 Default: ``False``
 
-If :conf_minion:`master` is a list of addresses, shuffle them before trying to
+If :conf_minion:`master` is a list of addresses and :conf_minion`master_type` is ``failover``, shuffle them before trying to
 connect to distribute the minions over all available masters. This uses
 Python's :func:`random.shuffle <python2:random.shuffle>` method.
 
 .. code-block:: yaml
 
     master_shuffle: True
+
+``random_master``
+------------------
+
+Default: ``False``
+
+If :conf_minion:`master` is a list of addresses, shuffle them before trying to
+connect to distribute the minions over all available masters. This uses
+Python's :func:`random.randint <python2:random.randint>` method.
+
+.. code-block:: yaml
+
+    random_master: True
 
 .. conf_minion:: retry_dns
 
