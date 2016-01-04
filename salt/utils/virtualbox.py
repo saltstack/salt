@@ -318,3 +318,19 @@ def vb_machine_exists(name):
             log.error(message)
 
         return False
+
+
+def vb_get_machine(name, **kwargs):
+    """
+    Attempts to fetch a machine from Virtualbox and convert it to a dict
+
+    @param name: The unique name of the machine
+    @type name:
+    @param kwargs: To be passed to vb_xpcom_to_attribute_dict
+    @type kwargs:
+    @return:
+    @rtype: dict
+    """
+    vbox = vb_get_box()
+    machine = vbox.findMachine(name)
+    return vb_xpcom_to_attribute_dict(machine, "IMachine", **kwargs)

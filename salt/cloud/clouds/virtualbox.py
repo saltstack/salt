@@ -22,7 +22,7 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 import salt.utils.cloud as cloud
 from utils.virtualbox import vb_list_machines, vb_clone_vm, HAS_LIBS, vb_machine_exists, vb_destroy_machine, \
-    vb_machinestate_to_str
+    vb_machinestate_to_str, vb_get_machine
 
 log = logging.getLogger(__name__)
 
@@ -312,4 +312,26 @@ def destroy(name, call=None):
         transport=__opts__['transport']
     )
 
+
 # TODO implement actions e.g start, stop, restart, etc.
+
+# TODO implement functions
+
+def show_image(kwargs, call=None):
+    """
+    Show the details of an image
+    """
+    if call != 'function':
+        raise SaltCloudSystemExit(
+            'The show_image action must be called with -f or --function.'
+        )
+
+    name = kwargs['image']
+    log.info("Showing image %s" % name)
+    machine = vb_get_machine(name)
+
+    ret = {
+        machine["name"]: machine
+    }
+    del machine["name"]
+    return ret
