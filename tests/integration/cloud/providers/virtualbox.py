@@ -141,6 +141,17 @@ class VirtualboxProviderTest(integration.ShellCase):
             [i.strip() for i in ret]
         )
 
+    def test_cloud_list_full(self):
+        """
+        List all machines with full information
+        """
+        ret = self.run_cloud('-f list_nodes_full virtualbox-config')
+        print "\n".join(ret)
+        self.assertIn(
+            BASE_BOX_NAME + ":",
+            [i.strip() for i in ret]
+        )
+
     def test_cloud_destroy(self):
         """
         Test creating an instance on virtualbox with the virtualbox driver
