@@ -167,6 +167,52 @@ def create(vm_info):
     return vm_result
 
 
+def list_nodes_full(kwargs=None, call=None):
+    """
+    All information available about all nodes should be returned in this function.
+    The fields in the list_nodes() function should also be returned,
+    even if they would not normally be provided by the cloud provider.
+
+    This is because some functions both within Salt and 3rd party will break if an expected field is not present.
+    This function is normally called with the -F option:
+
+    .. code-block:: bash
+        salt-cloud -F
+
+
+    @param kwargs:
+    @type kwargs:
+    @param call:
+    @type call:
+    @return:
+    @rtype:
+    """
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The list_nodes_full function must be called '
+            'with -f or --function.'
+        )
+
+    machines = {}
+
+    # TODO ask for the correct attributes e.g state and private_ips
+    for machine in vb_list_machines():
+        name = machine.get("name")
+        if name:
+            machines[name] = machine
+            machine.update({
+                "id": machine.get("id", ""),
+                "image": machine.get("image", ""),
+                "size": "%s MB" % machine.get("memorySize", 0),
+                "state": vb_machinestate_to_str(machine.get("state", -1))[0],
+                "private_ips": [],
+                "public_ips": [],
+            })
+            del machine["name"]
+
+    return machines
+
+
 def list_nodes(kwargs=None, call=None):
     """
     This function returns a list of nodes available on this cloud provider, using the following fields:
@@ -200,22 +246,28 @@ def list_nodes(kwargs=None, call=None):
             'with -f or --function.'
         )
 
-    machines = {}
-
-    # TODO ask for the correct attributes e.g state and private_ips
-    for machine in vb_list_machines():
-        name = machine.get("name")
-        if name:
-            machines[name] = {
-                "id": machine.get("id", ""),
-                "image": machine.get("image", ""),
-                "size": "%s MB" % machine.get("memorySize", 0),
-                "state": vb_machinestate_to_str(machine.get("state", -1))[0],
-                "private_ips": [],
-                "public_ips": [],
-            }
-
-    return machines
+    attributes = [
+        "id",
+        "image",
+        "size",
+        "state",
+        "private_ips",
+        "public_ips",
+    ]
+    machines_full_info = list_nodes_full()
+    print machines_full_info
+    print type(machines_full_info)
+    possible_ret = dict([
+                            (key, dict([
+                                           (attribute, value[attribute])
+                                           for attribute in attributes
+                                           ])
+                             )
+                            for key, value in machines_full_info.iteritems()
+                            ])
+    print possible_ret
+    print type(possible_ret)
+    return possible_ret
 
 
 def destroy(name, call=None):
