@@ -255,19 +255,14 @@ def list_nodes(kwargs=None, call=None):
         "public_ips",
     ]
     machines_full_info = list_nodes_full()
-    print machines_full_info
-    print type(machines_full_info)
-    possible_ret = dict([
-                            (key, dict([
-                                           (attribute, value[attribute])
-                                           for attribute in attributes
-                                           ])
-                             )
-                            for key, value in machines_full_info.iteritems()
-                            ])
-    print possible_ret
-    print type(possible_ret)
-    return possible_ret
+    return dict([
+                    (key, dict([
+                                   (attribute, value[attribute])
+                                   for attribute in attributes
+                                   ])
+                     )
+                    for key, value in machines_full_info.iteritems()
+                    ])
 
 
 def destroy(name, call=None):
