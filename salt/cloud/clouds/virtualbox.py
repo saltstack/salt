@@ -21,7 +21,8 @@ import logging
 from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 import salt.utils.cloud as cloud
-from utils.virtualbox import vb_list_machines, vb_clone_vm, HAS_LIBS, vb_machine_exists, vb_destroy_machine
+from utils.virtualbox import vb_list_machines, vb_clone_vm, HAS_LIBS, vb_machine_exists, vb_destroy_machine, \
+    vb_machinestate_to_str
 
 log = logging.getLogger(__name__)
 
@@ -209,7 +210,7 @@ def list_nodes(kwargs=None, call=None):
                 "id": machine.get("id", ""),
                 "image": machine.get("image", ""),
                 "size": "%s MB" % machine.get("memorySize", 0),
-                "state": machine.get("state", ""),
+                "state": vb_machinestate_to_str(machine.get("state", -1))[0],
                 "private_ips": [],
                 "public_ips": [],
             }
