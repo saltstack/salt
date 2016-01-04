@@ -265,6 +265,16 @@ def list_nodes(kwargs=None, call=None):
                     ])
 
 
+def list_nodes_select(call=None):
+    """
+    Return a list of the VMs that are on the provider, with select fields
+    """
+    log.info(__opts__)
+    return cloud.list_nodes_select(
+        list_nodes_full('function'), __opts__['query.selection'], call,
+    )
+
+
 def destroy(name, call=None):
     """
     This function irreversibly destroys a virtual machine on the cloud provider.
