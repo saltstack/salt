@@ -844,7 +844,7 @@ def add_source(name, source_location, username=None, password=None):
 
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
-    cmd = [choc_path, 'sources', '-Name', name, "-Source", source_location]
+    cmd = [choc_path, 'sources Add', '-Name', name, "-Source", source_location]
     if username:
         cmd.extend(['-u', username])
     if password:
