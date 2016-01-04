@@ -666,9 +666,20 @@ class _Swagger(object):
         '''
         Helper function to find whether there are deployments left with stages associated
         '''
+        no_more_deployments = True
         deployments = __salt__['boto_apigateway.describe_api_deployments'](self.restApiId,
                                                                            **self._common_aws_args).get('deployments')
-        return not bool(deployments)
+        if deployments:
+            for deployment in deployments:
+                deploymentId = deployment.get('id')
+                stages = __salt__['boto_apigateway.describe_api_stages'](self.restApiId,
+                                                                         deploymentId,
+                                                                         **self._common_aws_args).get('stages')
+                if stages:
+                    no_more_deployments = False
+                    break
+
+        return no_more_deployments
 
     def _get_current_deployment_id(self, stage_name):
         '''
