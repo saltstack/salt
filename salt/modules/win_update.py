@@ -30,6 +30,7 @@ except ImportError:
 
 # Import salt libs
 import salt.utils
+import salt.utils.locales
 
 log = logging.getLogger(__name__)
 
@@ -302,7 +303,7 @@ class PyWinUpdater(object):
             if update.InstallationBehavior.CanRequestUserInput:
                 log.debug('Skipped update {0}'.format(str(update)))
                 continue
-            updates.append(salt.utils.sdecode(update))
+            updates.append(salt.utils.locales.sdecode(update))
             log.debug('added update {0}'.format(str(update)))
         return updates
 
