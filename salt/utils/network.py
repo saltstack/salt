@@ -537,7 +537,7 @@ def _interfaces_ifconfig(out):
         pip6 = re.compile('.*?(?:inet6 )([0-9a-fA-F:]+)')
         pmask6 = re.compile(r'.*?(?:inet6 [0-9a-fA-F:]+/(\d+)).*')
     else:
-        pip = re.compile(r'.*?(?:inet addr:|inet )(.*?)\s')
+        pip = re.compile(r'.*?(?:inet addr:|inet [^\d]*)(.*?)\s')
         pip6 = re.compile('.*?(?:inet6 addr: (.*?)/|inet6 )([0-9a-fA-F:]+)')
         pmask6 = re.compile(r'.*?(?:inet6 addr: [0-9a-fA-F:]+/(\d+)|prefixlen (\d+))(?: Scope:([a-zA-Z]+)| scopeid (0x[0-9a-fA-F]))?')
     pmask = re.compile(r'.*?(?:Mask:|netmask )(?:((?:0x)?[0-9a-fA-F]{8})|([\d\.]+))')
