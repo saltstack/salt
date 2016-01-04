@@ -338,7 +338,7 @@ class PyWinUpdater(object):
         """Reduce full updates information to the most important information."""
         updates_verbose = self.GetSearchResultsVerbose()
         if fields is not None:
-            updates = [{k: v for k, v in update.items() if k in fields}
+            updates = [dict((k, v) for k, v in update.items() if k in fields)
                        for update in updates_verbose]
             return updates
         # Return list of titles.
