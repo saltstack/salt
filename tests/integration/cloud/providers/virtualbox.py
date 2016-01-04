@@ -14,15 +14,16 @@ from salttesting.helpers import ensure_in_syspath
 
 from integration.cloud.helpers import random_name
 from integration.cloud.helpers.virtualbox import VirtualboxTestCase
-from utils.virtualbox import vb_xpcom_to_attribute_dict, vb_clone_vm, vb_destroy_machine, vb_create_machine, vb_get_box, \
-    vb_machine_exists, HAS_LIBS, XPCOM_ATTRIBUTES, vb_start_vm, vb_stop_vm, machine_get_machinestate
 
 ensure_in_syspath('../../../')
 
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config, vm_profiles_config
+from utils.virtualbox import vb_xpcom_to_attribute_dict, vb_clone_vm, vb_destroy_machine, vb_create_machine, vb_get_box, \
+    vb_machine_exists, HAS_LIBS, XPCOM_ATTRIBUTES, vb_start_vm, vb_stop_vm, machine_get_machinestate
 
+# Setup logging
 log = logging.getLogger()
 log_handler = logging.StreamHandler()
 log_handler.setLevel(logging.INFO)
@@ -74,8 +75,7 @@ class VirtualboxProviderTest(integration.ShellCase):
         if profile_str + ':' not in providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                    .format(PROVIDER_NAME)
+                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'.format(PROVIDER_NAME)
             )
 
         # check if personal access token, ssh_key_file, and ssh_key_names are present
@@ -99,8 +99,8 @@ class VirtualboxProviderTest(integration.ShellCase):
         if not profile:
             self.skipTest(
                 'Profile {0} was not found. Check {1}.conf files '
-                'in tests/integration/files/conf/cloud.profiles.d/ to run these tests.'
-                    .format(PROFILE_NAME, PROVIDER_NAME)
+                'in tests/integration/files/conf/cloud.profiles.d/ to run these tests.'.format(PROFILE_NAME,
+                                                                                               PROVIDER_NAME)
             )
         base_box_name = profile.get("clonefrom")
 
@@ -108,8 +108,7 @@ class VirtualboxProviderTest(integration.ShellCase):
             self.skipTest(
                 'Profile {0} does not have a base box to clone from. Check {1}.conf files '
                 'in tests/integration/files/conf/cloud.profiles.d/ to run these tests.'
-                'And add a "clone_from: {2}" to the profile'
-                    .format(PROFILE_NAME, PROVIDER_NAME, BASE_BOX_NAME)
+                'And add a "clone_from: {2}" to the profile'.format(PROFILE_NAME, PROVIDER_NAME, BASE_BOX_NAME)
             )
 
     @classmethod
@@ -276,7 +275,7 @@ class BootVirtualboxTests(VirtualboxTestCase):
 
 class XpcomConversionTests(unittest.TestCase):
     @classmethod
-    def _mock_xpcom_object(self, interface_name=None, attributes=None):
+    def _mock_xpcom_object(cls, interface_name=None, attributes=None):
         class XPCOM(object):
 
             def __str__(self):
