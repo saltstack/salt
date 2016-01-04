@@ -107,14 +107,27 @@ def present(name,
         Name of the user to run the command
     '''
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
+
     try:
         user = __salt__['rabbitmq.user_exists'](name, runas=runas)
     except CommandExecutionError as err:
         ret['comment'] = 'Error: {0}'.format(err)
         return ret
 
-    if user and not any((force, perms, tags)):
-        log.debug('RabbitMQ user \'{0}\' exists and force is not set.'.format(name))
+    passwd_reqs_update = False
+    if user and password is not None:
+        try:
+            if not __salt__['rabbitmq.check_password'](name,
+                password, runas=runas):
+                passwd_reqs_update = True
+                log.debug('RabbitMQ user %s password update required', name)
+        except CommandExecutionError as err:
+            ret['comment'] = 'Error: {0}'.format(err)
+            return ret
+
+    if user and not any((force, perms, tags, passwd_reqs_update)):
+        log.debug(('RabbitMQ user \'%s\' exists, password is upto'
+                   ' date and force is not set.'), name)
         ret['comment'] = 'User \'{0}\' is already present.'.format(name)
         ret['result'] = True
         return ret
@@ -128,7 +141,8 @@ def present(name,
             ret['comment'] = 'User \'{0}\' is set to be created.'.format(name)
             return ret
 
-        log.debug('RabbitMQ user \'{0}\' doesn\'t exist - Creating.'.format(name))
+        log.debug(
+            'RabbitMQ user \'{0}\' doesn\'t exist - Creating.'.format(name))
         try:
             __salt__['rabbitmq.add_user'](name, password, runas=runas)
         except CommandExecutionError as err:
@@ -136,7 +150,7 @@ def present(name,
             return ret
     else:
         log.debug('RabbitMQ user \'{0}\' exists'.format(name))
-        if force:
+        if force or passwd_reqs_update:
             if password is not None:
                 if not __opts__['test']:
                     try:
