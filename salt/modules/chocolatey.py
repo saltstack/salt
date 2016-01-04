@@ -844,7 +844,7 @@ def add_source(name, source_location, username=None, password=None):
 
     '''
     choc_path = _find_chocolatey(__context__, __salt__)
-    cmd = [choc_path, 'sources Add', '-Name', name, "-Source", source_location]
+    cmd = [choc_path, 'sources', 'Add', '-Name', name, "-Source", source_location]
     if username:
         cmd.extend(['-u', username])
     if password:
@@ -857,6 +857,7 @@ def add_source(name, source_location, username=None, password=None):
         raise CommandExecutionError(err)
 
     return result['stdout']
+
 
 def _change_source_state(name, state):
     '''
@@ -888,6 +889,8 @@ def enable_source(name):
     name
         Name of the source repository to enable.
 
+    CLI Example:
+
     .. code-block:: bash
 
         salt '*' chocolatey.enable_source <name>
@@ -902,11 +905,11 @@ def disable_source(name):
 
     name
         Name of the source repository to disable.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' chocolatey.disable_source <name>
-
     '''
     return _change_source_state(name, "disable")
