@@ -135,7 +135,8 @@ class VirtualboxProviderTest(integration.ShellCase):
         List all machines in virtualbox
         """
         ret = self.run_cloud('-f list_nodes virtualbox-config')
-        print "\n".join(ret)
+        # print "\n".join(ret)
+        # TODO improve tests - read the output more thoroughly
         self.assertIn(
             BASE_BOX_NAME + ":",
             [i.strip() for i in ret]
@@ -146,7 +147,20 @@ class VirtualboxProviderTest(integration.ShellCase):
         List all machines with full information
         """
         ret = self.run_cloud('-f list_nodes_full virtualbox-config')
-        print "\n".join(ret)
+        # print "\n".join(ret)
+        # TODO improve tests - read the output more thoroughly
+        self.assertIn(
+            BASE_BOX_NAME + ":",
+            [i.strip() for i in ret]
+        )
+
+    def test_cloud_list_select(self):
+        """
+        List selected attributes of all machines
+        """
+        ret = self.run_cloud('-f list_nodes_select virtualbox-config')
+        # print "\n".join(ret)
+        # TODO improve tests - read the output more thoroughly
         self.assertIn(
             BASE_BOX_NAME + ":",
             [i.strip() for i in ret]
@@ -169,7 +183,7 @@ class VirtualboxProviderTest(integration.ShellCase):
         ret = self.run_cloud(
             '-f show_image virtualbox-config image={0}'.format(BASE_BOX_NAME),
             timeout=30)[0]
-        print "\n".join(ret)
+        # print "\n".join(ret)
         self.assertIn(
             BASE_BOX_NAME + ':',
             [i.strip() for i in ret
