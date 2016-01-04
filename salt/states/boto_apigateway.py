@@ -409,6 +409,12 @@ class _Swagger(object):
                             '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end'
                             '#end'
                             '},'
+                            '"path-params" : {'
+                            '#set ($map = $input.params().path)'
+                            '#foreach( $param in $map.entrySet() )'
+                            '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end'
+                            '#end'
+                            '},'
                             '"body-params" : $input.json(\'$\')'
                             '}'}
     REQUEST_OPTION_TEMPLATE = {'application/json': '{"statusCode": 200}'}
@@ -422,7 +428,7 @@ class _Swagger(object):
         '''
         This is a helper class for the Swagger Parameter Object
         '''
-        LOCATIONS = ('body', 'query', 'header')
+        LOCATIONS = ('body', 'query', 'header', 'path')
 
         def __init__(self, paramdict):
             self._paramdict = paramdict
@@ -448,6 +454,8 @@ class _Swagger(object):
                     return 'method.request.header.{0}'.format(_name)
                 elif self.location == 'query':
                     return 'method.request.querystring.{0}'.format(_name)
+                elif self.location == 'path':
+                    return 'method.request.path.{0}'.format(_name)
                 return None
             raise ValueError('Parameter must have a name: {0}'.format(_dict_to_json_pretty(self._paramdict)))
 
