@@ -1223,27 +1223,13 @@ def _create_eni_if_necessary(interface, vm_):
                              provider=get_provider(),
                              opts=__opts__,
                              sigver='4')
-    found = False
 
-    for subnet_query_result in subnet_query:
-        if 'item' in subnet_query_result:
-            if isinstance(subnet_query_result['item'], dict):
-                for key, value in subnet_query_result['item'].iteritems():
-                    if key == "subnetId" and value == interface['SubnetId']:
-                        found = True
-                        break
-            else:
-                for subnet in subnet_query_result['item']:
-                    if 'subnetId' in subnet and subnet['subnetId'] == interface['SubnetId']:
-                        found = True
-                        break
-
-    if not found:
+    subnet_id = _get_subnet_id_for_interface(subnet_query, interface)
+    if not subnet_id:
         raise SaltCloudConfigError(
-            'No such subnet <{0}>'.format(interface['SubnetId'])
+            'No such subnet <{0}>'.format(interface.get('SubnetId'))
         )
-
-    params = {'SubnetId': interface['SubnetId']}
+    params = {'SubnetId': subnet_id}
 
     for k in 'Description', 'PrivateIpAddress', 'SecondaryPrivateIpAddressCount':
         if k in interface:
@@ -1307,6 +1293,31 @@ def _create_eni_if_necessary(interface, vm_):
 
     return {'DeviceIndex': interface['DeviceIndex'],
             'NetworkInterfaceId': eni_id}
+
+
+def _get_subnet_id_for_interface(subnet_query, interface):
+    for subnet_query_result in subnet_query:
+        if 'item' in subnet_query_result:
+            if isinstance(subnet_query_result['item'], dict):
+                subnet_id = _get_subnet_from_subnet_query(subnet_query_result['item'],
+                                                          interface)
+                if subnet_id is not None:
+                    return subnet_id
+
+            else:
+                for subnet in subnet_query_result['item']:
+                    subnet_id = _get_subnet_from_subnet_query(subnet, interface)
+                    if subnet_id is not None:
+                        return subnet_id
+
+
+def _get_subnet_from_subnet_query(subnet_query, interface):
+    if 'subnetId' in subnet_query:
+        if interface.get('SubnetId'):
+            if subnet_query['subnetId'] == interface['SubnetId']:
+                return subnet_query['subnetId']
+        else:
+            return subnet_query['subnetId']
 
 
 def _list_interface_private_addrs(eni_desc):
