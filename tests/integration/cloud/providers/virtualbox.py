@@ -165,6 +165,17 @@ class VirtualboxProviderTest(integration.ShellCase):
             [i.strip() for i in self.run_cloud('-d {0} --assume-yes --log-level=debug'.format(INSTANCE_NAME))]
         )
 
+    def test_function_show_instance(self):
+        ret = self.run_cloud(
+            '-f show_image virtualbox-config image={0}'.format(BASE_BOX_NAME),
+            timeout=30)[0]
+        print "\n".join(ret)
+        self.assertIn(
+            BASE_BOX_NAME + ':',
+            [i.strip() for i in ret
+             ]
+        )
+
     def tearDown(self):
         """
         Clean up after tests
