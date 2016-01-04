@@ -104,9 +104,7 @@ def _uptodate(ret, target, comments=None):
         # Shouldn't be making any changes if the repo was up to date, but
         # report on them so we are alerted to potential problems with our
         # logic.
-        if isinstance(comments, list):
-            comments = '\n'.join(comments)
-        ret['comment'] += '\n\nChanges made: ' + str(comments)
+        ret['comment'] += '\n\nChanges made: ' + comments
     return ret
 
 
@@ -1196,7 +1194,7 @@ def latest(name,
             ret['comment'] = _format_comments(comments)
             ret['changes']['revision'] = {'old': local_rev, 'new': new_rev}
         else:
-            return _uptodate(ret, target, comments)
+            return _uptodate(ret, target, _format_comments(comments))
     else:
         if os.path.isdir(target):
             if force_clone:
