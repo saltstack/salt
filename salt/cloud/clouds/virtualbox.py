@@ -254,22 +254,15 @@ def list_nodes(kwargs=None, call=None):
         "private_ips",
         "public_ips",
     ]
-    machines_full_info = list_nodes_full()
-    return dict([
-                    (key, dict([
-                                   (attribute, value[attribute])
-                                   for attribute in attributes
-                                   ])
-                     )
-                    for key, value in machines_full_info.iteritems()
-                    ])
+    return cloud.list_nodes_select(
+        list_nodes_full('function'), attributes, call,
+    )
 
 
 def list_nodes_select(call=None):
     """
     Return a list of the VMs that are on the provider, with select fields
     """
-    log.info(__opts__)
     return cloud.list_nodes_select(
         list_nodes_full('function'), __opts__['query.selection'], call,
     )
