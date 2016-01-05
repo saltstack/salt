@@ -63,16 +63,15 @@ with the role. This is the default behavior of the AWS console.
     # Using a credentials profile from pillars
     myrole:
         boto_iam_role.present:
-            - region: us-east-1
             - profile: myiamprofile
 
     # Passing in a credentials profile
     myrole:
         boto_iam_role.present:
-            - region: us-east-1
             - profile:
                 key: GKTADJGHEIQSXMKKRBJ08H
                 keyid: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+                region: us-east-1
 
 If ``delete_policies: False`` is specified, existing policies that are not in
 the given list of policies will not be deleted. This allows manual modifications
