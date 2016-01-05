@@ -1,0 +1,15 @@
+===========================
+Salt 2015.8.4 Release Notes
+===========================
+
+Core Changes
+============
+
+- Added ``state.validate`` feature.  This checks SLS data against the salt
+  state API and reports errors if the argument types do not match the types
+  expected by the API (`#30037
+  <https://github.com/saltstack/salt/pull/30037>`_).
+
+  .. code-block:: shell
+
+        # salt <minion> state.validate my_state
