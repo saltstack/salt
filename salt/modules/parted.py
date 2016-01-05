@@ -674,7 +674,7 @@ def toggle(device, partition, flag):
     '''
     partition.toggle device partition flag
 
-    Toggle the state of <flag> on <partition>. Valid flags are the same as 
+    Toggle the state of <flag> on <partition>. Valid flags are the same as
         the set command.
 
     CLI Example:
