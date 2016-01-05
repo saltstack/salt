@@ -1035,28 +1035,18 @@ def _push_status(data, item):
     '''
     Process a status update from a docker push, updating the data structure
     '''
-    status = item['status']
+    status = item['status'].lower()
     if 'id' in item:
-        if 'already pushed' in status:
+        if 'already pushed' in status or 'already exists' in status:
             # Layer already exists
             already_pushed = data.setdefault('Layers', {}).setdefault(
                 'Already_Pushed', [])
             already_pushed.append(item['id'])
-        elif 'successfully pushed' in status:
+        elif 'successfully pushed' in status or status == 'pushed':
             # Pushed a new layer
             pushed = data.setdefault('Layers', {}).setdefault(
                 'Pushed', [])
             pushed.append(item['id'])
-    else:
-        try:
-            image_id = re.match(
-                r'Pushing tags? for rev \[([0-9a-f]+)',
-                status
-            ).group(1)
-        except AttributeError:
-            return
-        else:
-            data['Id'] = image_id
 
 
 def _error_detail(data, item):
@@ -3898,12 +3888,20 @@ def push(image,
          api_response=False,
          client_timeout=CLIENT_TIMEOUT):
     '''
+    .. versionchanged:: 2015.8.4
+        The ``Id`` and ``Image`` keys are no longer present in the return data.
+        This is due to changes in the Docker Remote API.
+
     Pushes an image to a Docker registry. See the documentation at top of this
     page to configure authenticated access.
 
     image
-        Image to be pushed, in ``repo:tag`` notation. If just the repository
-        name is passed, a tag name of ``latest`` will be assumed.
+        Image to be pushed, in ``repo:tag`` notation.
+
+        .. versionchanged:: 2015.8.4
+            If just the repository name is passed, then all tagged images for
+            the specified repo will be pushed. In prior releases, a tag of
+            ``latest`` was assumed if the tag was omitted.
 
     insecure_registry : False
         If ``True``, the Docker client will permit the use of insecure
@@ -3922,8 +3920,6 @@ def push(image,
 
     A dictionary will be returned, containing the following keys:
 
-    - ``Id`` - ID of the image that was pushed
-    - ``Image`` - Name of the image that was pushed
     - ``Layers`` - A dictionary containing one or more of the following keys:
         - ``Already_Pushed`` - Layers that that were already present on the
           Minion
@@ -3938,7 +3934,14 @@ def push(image,
         salt myminion dockerng.push myuser/mycontainer
         salt myminion dockerng.push myuser/mycontainer:mytag
     '''
-    repo_name, repo_tag = _get_repo_tag(image)
+    if ':' in image:
+        repo_name, repo_tag = _get_repo_tag(image)
+    else:
+        repo_name = image
+        repo_tag = None
+        log.info('Attempting to push all tagged images matching {0}'
+                 .format(repo_name))
+
     kwargs = {'tag': repo_tag,
               'stream': True,
               'client_auth': True,
@@ -3971,17 +3974,6 @@ def push(image,
         elif item_type == 'errorDetail':
             _error_detail(errors, item)
 
-    if 'Id' not in ret:
-        # API returned information, but there was no confirmation of a
-        # successful push.
-        msg = 'Push failed for {0}'.format(image)
-        if errors:
-            msg += '. Error(s) follow:\n\n{0}'.format(
-                '\n\n'.join(errors)
-            )
-        raise CommandExecutionError(msg)
-
-    ret['Image'] = '{0}:{1}'.format(repo_name, repo_tag)
     return ret
 
 
