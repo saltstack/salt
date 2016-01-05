@@ -1086,7 +1086,8 @@ def managed(name,
             defaults=None,
             env=None,
             backup='',
-            show_diff=True,
+            show_diff=None,
+            show_changes=True,
             create=True,
             contents=None,
             contents_pillar=None,
@@ -1252,7 +1253,11 @@ def managed(name,
         Overrides the default backup mode for this specific file.
 
     show_diff
-        If set to False, the diff will not be shown.
+        DEPRECATED: Please use show_changes.
+
+    show_changes
+        Output a unified diff of the old file and the new file. If ``False``
+        return a boolean if any changes were made.
 
     create
         Default is True, if create is set to False then the file will only be
@@ -1469,15 +1474,23 @@ def managed(name,
     else:
         ret['pchanges'] = {}
 
+    if show_diff is not None:
+        show_changes = show_diff
+        msg = (
+            'The \'show_diff\' argument to the file.managed state has been '
+            'deprecated, please use \'show_changes\' instead.'
+        )
+        salt.utils.warn_until('Boron', msg)
+
     try:
         if __opts__['test']:
             if ret['pchanges']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
-                if show_diff and 'diff' in ret['pchanges']:
+                if show_changes and 'diff' in ret['pchanges']:
                     ret['changes']['diff'] = ret['pchanges']['diff']
-                if not show_diff:
-                    ret['changes']['diff'] = '<show_diff=False>'
+                if not show_changes:
+                    ret['changes']['diff'] = '<show_changes=False>'
             else:
                 ret['result'] = True
                 ret['comment'] = 'The file {0} is in the correct state'.format(name)
