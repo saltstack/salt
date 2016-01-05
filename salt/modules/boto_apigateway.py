@@ -775,7 +775,7 @@ def describe_api_stage(restApiId, stageName, region=None, key=None, keyid=None, 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         stage = conn.get_stage(restApiId=restApiId, stageName=stageName)
-        return {'stage': stage}
+        return {'stage': _convert_datetime_str(stage)}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
