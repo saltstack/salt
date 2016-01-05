@@ -139,6 +139,74 @@ def __virtual__():
     return __virtualname__
 
 
+def esxcli_cmd(host, username, password, cmd_str, protocol=None, port=None, esxi_hosts=None):
+    '''
+    Run an ESXCLI command directly on the host or list of hosts.
+
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    cmd_str
+        The ESXCLI command to run. Note: This should not include the ``-s``, ``-u``,
+        ``-p``, ``-h``, ``--protocol``, or ``--portnumber`` arguments that are
+         frequently passed when using a bare ESXCLI command from the command line.
+         Those arguments are handled by this function via the other args and kwargs.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    esxi_hosts
+        If ``host`` is a vCenter host, then use esxi_hosts to execute this function
+        on a list of one or more ESXi machines.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for ESXi host connection information
+        salt '*' vsphere.esxcli_cmd my.esxi.host root bad-password \
+            'system coredump network get'
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.esxcli_cmd my.vcenter.location root bad-password \
+            'system coredump network get' esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
+    '''
+    ret = {}
+    if esxi_hosts:
+        if not isinstance(esxi_hosts, list):
+            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+
+        for esxi_host in esxi_hosts:
+            response = salt.utils.vmware.esxcli(host, username, password, cmd_str,
+                                                protocol=protocol, port=port,
+                                                esxi_host=esxi_host)
+            if response['retcode'] != 0:
+                ret.update({esxi_host: {'Error': response.get('stdout')}})
+            else:
+                ret.update({esxi_host: response})
+    else:
+        # Handles a single host or a vCenter connection when no esxi_hosts are provided.
+        response = salt.utils.vmware.esxcli(host, username, password, cmd_str,
+                                            protocol=protocol, port=port)
+        if response['retcode'] != 0:
+            ret.update({host: {'Error': response.get('stdout')}})
+        else:
+            ret.update({host: response})
+
+    return ret
+
+
 def get_coredump_network_config(host, username, password, protocol=None, port=None, esxi_hosts=None):
     '''
     Retrieve information on ESXi or vCenter network dump collection and
