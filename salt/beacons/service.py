@@ -11,7 +11,7 @@ import logging
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-last_status = {}
+LAST_STATUS = {}
 
 
 def validate(config):
@@ -85,8 +85,8 @@ def beacon(config):
         # key:values are then added to the service dictionary.
         if config[service] is None:
             defaults = {
-                    'oncleanshutdown':False,
-                    'onchangeonly':False
+                    'oncleanshutdown': False,
+                    'onchangeonly': False
                     }
             config[service] = defaults
 
@@ -95,16 +95,13 @@ def beacon(config):
         # as well as if the config for the beacon asks for it
         if 'uncleanshutdown' in config[service] and not ret_dict[service]['running']:
             filename = config[service]['uncleanshutdown']
-            if os.path.exists(filename):
-                ret_dict[service]['uncleanshutdown'] = True
-            else:
-                ret_dict[service]['uncleanshutdown'] = False
-
+            ret_dict[service]['uncleanshutdown'] = True if os.path.exists(filename) else False
+            
         if 'onchangeonly' in config[service] and config[service]['onchangeonly'] is True:
-            if service not in last_status:
-                last_status[service] = ''
+            if service not in LAST_STATUS:
+                LAST_STATUS[service] = ''
             if last_status[service] != ret_dict[service]:
-                last_status[service] = ret_dict[service]
+                LAST_STATUS[service] = ret_dict[service]
                 ret.append(ret_dict)
         else:
             ret.append(ret_dict)
