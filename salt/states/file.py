@@ -4243,6 +4243,14 @@ def serialize(name,
         return _error(
             ret, 'Neither \'dataset\' nor \'dataset_pillar\' was defined')
 
+    if salt.utils.is_windows():
+        if group is not None:
+            log.warning(
+                'The group argument for {0} has been ignored as this '
+                'is a Windows system.'.format(name)
+            )
+        group = user
+
     if merge_if_exists:
         if os.path.isfile(name):
             if formatter == 'yaml':
