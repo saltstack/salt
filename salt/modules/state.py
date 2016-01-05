@@ -549,12 +549,12 @@ def highstate(test=None,
                                    pillar,
                                    kwargs.get('__pub_jid'),
                                    proxy=__proxy__,
-                                   mock=kwargs.get('mock', False))
+                                   mocked=kwargs.get('mock', False))
     except NameError:
         st_ = salt.state.HighState(opts,
                                    pillar,
                                    kwargs.get('__pub_jid'),
-                                   mock=kwargs.get('mock', False))
+                                   mocked=kwargs.get('mock', False))
 
     st_.push_active()
     try:
@@ -717,12 +717,12 @@ def sls(mods,
                                    pillar,
                                    kwargs.get('__pub_jid'),
                                    proxy=__proxy__,
-                                   mock=kwargs.get('mock', False))
+                                   mocked=kwargs.get('mock', False))
     except NameError:
         st_ = salt.state.HighState(opts,
                                    pillar,
                                    kwargs.get('__pub_jid'),
-                                   mock=kwargs.get('mock', False))
+                                   mocked=kwargs.get('mock', False))
 
     umask = os.umask(0o77)
     if kwargs.get('cache'):
