@@ -67,7 +67,6 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         boto_secgroup.present:
             - name: mysecgroup
             - description: My security group
-            - region: us-east-1
             - profile: myprofile
 
     # Passing in a profile
@@ -75,10 +74,10 @@ passed in as a dict, or as a string to pull from pillars or minion config:
         boto_secgroup.present:
             - name: mysecgroup
             - description: My security group
-            - region: us-east-1
             - profile:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
+                region: us-east-1
 '''
 from __future__ import absolute_import
 
@@ -149,7 +148,7 @@ def present(
 
     profile
         A dict with region, key and keyid, or a pillar key (string)
-        that contains a dict with region, key and keyid.
+        that contains a dict with region, key, and keyid.
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
     _ret = _security_group_present(name, description, vpc_id, vpc_name, region, key,
