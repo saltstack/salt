@@ -1079,7 +1079,7 @@ def query(action=None,
         text=True,
         status=True,
         headers=True,
-        verify=verify_ssl,
+        verify_ssl=verify_ssl,
         opts=__opts__,
     )
     log.debug(
