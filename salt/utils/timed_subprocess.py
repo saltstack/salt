@@ -14,7 +14,7 @@ class TimedProc(object):
     '''
     def __init__(self, args, **kwargs):
 
-        self.wait = kwargs.pop('wait', True)
+        self.wait = not kwargs.pop('bg', False)
         self.stdin = kwargs.pop('stdin', None)
         self.with_communicate = kwargs.pop('with_communicate', self.wait)
         self.timeout = kwargs.pop('timeout', None)

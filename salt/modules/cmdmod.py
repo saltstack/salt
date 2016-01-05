@@ -237,7 +237,7 @@ def _run(cmd,
          pillar_override=None,
          use_vt=False,
          password=None,
-         wait=True,
+         bg=False,
          **kwargs):
     '''
     Do the DRY thing and only call subprocess.Popen() once
@@ -421,7 +421,7 @@ def _run(cmd,
               'stderr': stderr,
               'with_communicate': with_communicate,
               'timeout': timeout,
-              'wait': wait,
+              'bg': bg,
               }
 
     if umask is not None:
@@ -666,7 +666,7 @@ def run(cmd,
         ignore_retcode=False,
         saltenv='base',
         use_vt=False,
-        wait=True,
+        bg=False,
         **kwargs):
     r'''
     Execute the passed command and return the output as a string
@@ -696,6 +696,8 @@ def run(cmd,
 
     :param bool python_shell: If False, let python handle the positional
     arguments. Set to True to use shell features, such as pipes or redirection
+
+    :param bool bg: If True, run command in background and do not await or deliver it's results
 
     :param list env: A list of environment variables to be set prior to
     execution.
@@ -835,7 +837,7 @@ def run(cmd,
                pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
                password=kwargs.get('password', None),
-               wait=wait)
+               bg=bg)
 
     log_callback = _check_cb(log_callback)
 
@@ -894,7 +896,7 @@ def shell(cmd,
         ignore_retcode=False,
         saltenv='base',
         use_vt=False,
-        wait=False,
+        bg=False,
         **kwargs):
     '''
     Execute the passed command and return the output as a string.
@@ -920,6 +922,8 @@ def shell(cmd,
 
     :param int shell: Shell to execute under. Defaults to the system default
     shell.
+
+    :param bool bg: If True, run command in background and do not await or deliver it's results
 
     :param list env: A list of environment variables to be set prior to
     execution.
@@ -1055,7 +1059,7 @@ def shell(cmd,
                saltenv=saltenv,
                use_vt=use_vt,
                python_shell=python_shell,
-               wait=wait,
+               bg=bg,
                **kwargs)
 
 
@@ -1849,7 +1853,7 @@ def script(source,
            __env__=None,
            saltenv='base',
            use_vt=False,
-           wait=True,
+           bg=False,
            **kwargs):
     '''
     Download a script from a remote location and execute the script locally.
@@ -1888,6 +1892,8 @@ def script(source,
 
     :param bool python_shell: If False, let python handle the positional
     arguments. Set to True to use shell features, such as pipes or redirection
+
+    :param bool bg: If True, run script in background and do not await or deliver it's results
 
     :param list env: A list of environment variables to be set prior to
     execution.
@@ -2036,7 +2042,7 @@ def script(source,
                pillar_override=kwargs.get('pillar'),
                use_vt=use_vt,
                password=kwargs.get('password', None),
-               wait=wait)
+               bg=bg)
     _cleanup_tempfile(path)
     return ret
 
@@ -2326,7 +2332,7 @@ def run_chroot(root,
                ignore_retcode=False,
                saltenv='base',
                use_vt=False,
-               wait=True,
+               bg=False,
                **kwargs):
     '''
     .. versionadded:: 2014.7.0
@@ -2476,7 +2482,7 @@ def run_chroot(root,
                    pillarenv=kwargs.get('pillarenv'),
                    pillar=kwargs.get('pillar'),
                    use_vt=use_vt,
-                   wait=wait)
+                   bg=bg)
 
     # Kill processes running in the chroot
     for i in range(6):
@@ -2730,34 +2736,130 @@ def run_bg(cmd,
         env=None,
         clean_env=False,
         template=None,
-        rstrip=True,
         umask=None,
         output_loglevel='debug',
         log_callback=None,
         timeout=None,
         reset_system_locale=True,
         saltenv='base',
-        wait=True,
         **kwargs):
     '''
-    Dodadoc
-    :param cmd:
-    :param cwd:
-    :param runas:
-    :param shell:
-    :param env:
-    :param clean_env:
-    :param template:
-    :param rstrip:
-    :param umask:
-    :param log_callback:
-    :param quiet:
-    :param timeout:
-    :param reset_system_locale:
-    :param ignore_retcode:
-    :param saltenv:
-    :param kwargs:
-    :return:
+    .. versionadded: Boron
+
+    Execute the passed command in the background and return it's PID
+
+    Note that ``env`` represents the environment variables for the command, and
+    should be formatted as a dict, or a YAML string which resolves to a dict.
+
+    :param str cmd: The command to run. ex: 'ls -lart /home'
+
+    :param str cwd: The current working directory to execute the command in,
+    defaults to `/root` (`C:\` in windows)
+
+    :param str runas: User to run script as. If running on a Windows minion you
+    must also pass a password
+
+    :param str shell: Shell to execute under. Defaults to the system default
+    shell.
+
+    :param bool python_shell: If False, let python handle the positional
+    arguments. Set to True to use shell features, such as pipes or redirection
+
+    :param list env: A list of environment variables to be set prior to
+    execution.
+
+        Example:
+
+        .. code-block:: yaml
+
+            salt://scripts/foo.sh:
+              cmd.script:
+                - env:
+                  - BATCH: 'yes'
+
+        .. warning::
+
+            The above illustrates a common PyYAML pitfall, that **yes**,
+            **no**, **on**, **off**, **true**, and **false** are all loaded as
+            boolean ``True`` and ``False`` values, and must be enclosed in
+            quotes to be used as strings. More info on this (and other) PyYAML
+            idiosyncrasies can be found :doc:`here
+            </topics/troubleshooting/yaml_idiosyncrasies>`.
+
+        Variables as values are not evaluated. So $PATH in the following
+        example is a literal '$PATH':
+
+        .. code-block:: yaml
+
+            salt://scripts/bar.sh:
+              cmd.script:
+                - env: "PATH=/some/path:$PATH"
+
+        One can still use the existing $PATH by using a bit of Jinja:
+
+        .. code-block:: yaml
+
+            {% set current_path = salt['environ.get']('PATH', '/bin:/usr/bin') %}
+
+            mycommand:
+              cmd.run:
+                - name: ls -l /
+                - env:
+                  - PATH: {{ [current_path, '/my/special/bin']|join(':') }}
+
+    :param bool clean_env: Attempt to clean out all other shell environment
+    variables and set only those provided in the 'env' argument to this
+    function.
+
+    :param str template: If this setting is applied then the named templating
+    engine will be used to render the downloaded file. Currently jinja, mako,
+    and wempy are supported
+
+    :param str umask: The umask (in octal) to use when running the command.
+
+    :param int timeout: A timeout in seconds for the executed process to return.
+
+    .. warning::
+
+        This function does not process commands through a shell
+        unless the python_shell flag is set to True. This means that any
+        shell-specific functionality such as 'echo' or the use of pipes,
+        redirection or &&, should either be migrated to cmd.shell or
+        have the python_shell=True flag set here.
+
+        The use of python_shell=True means that the shell will accept _any_ input
+        including potentially malicious commands such as 'good_command;rm -rf /'.
+        Be absolutely certain that you have sanitized your input prior to using
+        python_shell=True
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run_bg "ls -l | awk '/foo/{print \\$2}'"
+
+    The template arg can be set to 'jinja' or another supported template
+    engine to render the command arguments before execution.
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run_bg template=jinja "ls -l /tmp/{{grains.id}} | awk '/foo/{print \\$2}'"
+
+    Specify an alternate shell with the shell parameter:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run "Get-ChildItem C:\\ " shell='powershell'
+
+    If an equal sign (``=``) appears in an argument to a Salt command it is
+    interpreted as a keyword argument in the format ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
+    .. code-block:: bash
+
+        salt '*' cmd.run cmd='sed -e s/=/:/g'
     '''
 
     python_shell = _python_shell_default(python_shell,
@@ -2768,8 +2870,9 @@ def run_bg(cmd,
                stdout=None,
                output_loglevel=None,
                use_vt=None,
-               wait=False,
+               bg=True,
                with_communicate=False,
+               rstrip=False,
 
                runas=runas,
                shell=shell,
@@ -2778,9 +2881,7 @@ def run_bg(cmd,
                env=env,
                clean_env=clean_env,
                template=template,
-               rstrip=rstrip,
                umask=umask,
-               # output_loglevel=output_loglevel,
                log_callback=log_callback,
                timeout=timeout,
                reset_system_locale=reset_system_locale,
@@ -2788,7 +2889,7 @@ def run_bg(cmd,
                saltenv=saltenv,
                pillarenv=kwargs.get('pillarenv'),
                pillar_override=kwargs.get('pillar'),
-               password=kwargs.get('password', None),
+               # password=kwargs.get('password', None),
                )
 
     return {
