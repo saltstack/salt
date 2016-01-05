@@ -68,6 +68,8 @@ def usage(args=None):
         cmd = 'df -P'
     elif __grains__['kernel'] == 'OpenBSD':
         cmd = 'df -kP'
+    elif __grains__['kernel'] == 'AIX':
+        cmd = 'df -kP'
     else:
         cmd = 'df'
     if flags:
@@ -88,9 +90,11 @@ def usage(args=None):
             continue
         else:
             oldline = None
-        while not comps[1].isdigit():
+        while len(comps) >= 2 and not comps[1].isdigit():
             comps[0] = '{0} {1}'.format(comps[0], comps[1])
             comps.pop(1)
+        if len(comps) < 2:
+            continue
         try:
             if __grains__['kernel'] == 'Darwin':
                 ret[comps[8]] = {
