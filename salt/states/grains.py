@@ -96,7 +96,9 @@ def list_present(name, value, delimiter=DEFAULT_TARGET_DELIM):
     '''
     .. versionadded:: 2014.1.0
 
-    Ensure the value is present in the list type grain.
+    Ensure the value is present in the list-type grain. Note: If the grain that is
+    provided in ``name`` is not present on the system, this new grain will be created
+    with the corresponding provided value.
 
     name
         The grain name.
@@ -338,7 +340,8 @@ def append(name, value, convert=False,
     '''
     .. versionadded:: 2014.7.0
 
-    Append a value to a list in the grains config file
+    Append a value to a list in the grains config file. The grain that is being
+    appended to (name) must exist before the new value can be added.
 
     name
         The grain name
