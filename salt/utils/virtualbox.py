@@ -38,6 +38,20 @@ XPCOM_ATTRIBUTES = {
         "memorySize",
         "OSTypeId",
         "state",
+    ],
+    "INetworkAdapter": [
+        "adapterType",
+        "slot",
+        "enabled",
+        "MACAddress",
+        "bridgedInterface",
+        "hostOnlyInterface",
+        "internalNetwork",
+        "NATNetwork",
+        "genericDriver",
+        "cableConnected",
+        "lineSpeed",
+        "lineSpeed",
     ]
 }
 
@@ -112,6 +126,88 @@ def vb_get_box():
     vb_get_manager()
     vbox = _virtualboxManager.vbox
     return vbox
+
+
+def vb_get_max_network_slots():
+    """
+    Max number of slots any machine can have
+    @return:
+    @rtype: number
+    """
+    sysprops = vb_get_box().systemProperties
+    totals = [
+        sysprops.getMaxNetworkAdapters(adapter_type)
+        for adapter_type in [
+            1  # PIIX3 A PIIX3 (PCI IDE ISA Xcelerator) chipset.
+            , 2  # ICH9 A ICH9 (I/O Controller Hub) chipset
+        ]
+        ]
+    return sum(totals)
+
+
+def vb_get_network_adapters(machine_name=None, machine=None):
+    """
+    A valid machine_name or a machine is needed to make this work!
+
+    @param machine_name:
+    @type machine_name:
+    @param machine:
+    @type IMachine:
+    @return: INetorkAdapter's converted to dicts
+    @rtype: [dict]
+    """
+
+    if machine_name:
+        machine = vb_get_box().findMachine(machine_name)
+    network_adapters = []
+
+    for i in range(vb_get_max_network_slots()):
+        try:
+            inetwork_adapter = machine.getNetworkAdapter(i)
+            network_adapter = vb_xpcom_to_attribute_dict(
+                inetwork_adapter, "INetworkAdapter"
+            )
+            network_adapter["properties"] = inetwork_adapter.getProperties("")
+            network_adapters.append(network_adapter)
+        except:
+            pass
+
+    return network_adapters
+
+
+def vb_get_network_addresses(machine_name=None, machine=None):
+    """
+    TODO distinguish between private and public addresses
+
+    A valid machine_name or a machine is needed to make this work!
+
+    !!!
+    Guest prerequisite: GuestAddition
+    !!!
+
+    Thanks to Shrikant Havale for the StackOverflow answer http://stackoverflow.com/a/29335390
+
+    @param machine_name:
+    @type machine_name:
+    @param machine:
+    @type IMachine:
+    @return: All the IPv4 addresses we could get
+    @rtype: str[]
+    """
+    if machine_name:
+        machine = vb_get_box().findMachine(machine_name)
+
+    total_slots = vb_get_max_network_slots()
+    ip_addresses = []
+    for i in range(total_slots):
+        try:
+            address = machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/%s/V4/IP" % i)
+            if address:
+                ip_addresses.append(address)
+        except:
+            pass
+
+    return ip_addresses
 
 
 def vb_list_machines(**kwargs):
