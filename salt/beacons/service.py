@@ -96,11 +96,10 @@ def beacon(config):
         if 'uncleanshutdown' in config[service] and not ret_dict[service]['running']:
             filename = config[service]['uncleanshutdown']
             ret_dict[service]['uncleanshutdown'] = True if os.path.exists(filename) else False
-            
         if 'onchangeonly' in config[service] and config[service]['onchangeonly'] is True:
             if service not in LAST_STATUS:
                 LAST_STATUS[service] = ''
-            if last_status[service] != ret_dict[service]:
+            if LAST_STATUS[service] != ret_dict[service]:
                 LAST_STATUS[service] = ret_dict[service]
                 ret.append(ret_dict)
         else:
