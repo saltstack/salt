@@ -2743,7 +2743,7 @@ def run_bg(cmd,
         reset_system_locale=True,
         saltenv='base',
         **kwargs):
-    '''
+    r'''
     .. versionadded: Boron
 
     Execute the passed command in the background and return it's PID
