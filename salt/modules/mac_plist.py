@@ -28,6 +28,7 @@ from __future__ import absolute_import
 import os
 
 # Import salt libs
+import salt.utils
 import logging
 
 log = logging.getLogger(__name__)  # Start logging
@@ -55,11 +56,11 @@ def __virtual__():
     '''
     Only load if the platform is correct and we can use PyObjC libs
     '''
-    if __grains__.get('kernel') != 'Darwin':
-        return False
+    if not salt.utils.is_darwin():
+        return False, 'Not Darwin'
 
     if not HAS_LIBS:
-        return False
+        return False, 'Failed to load libraries'
 
     return __virtualname__
 

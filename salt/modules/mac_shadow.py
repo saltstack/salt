@@ -33,12 +33,17 @@ try:
 except ImportError:
     HAS_PASSLIB = False
 
+__virtualname__ = 'shadow'
+
 
 def __virtual__():
-    if HAS_PASSLIB and salt.utils.is_darwin():
-        return True
-    else:
-        return False
+    if not salt.utils.is_darwin():
+        return False, 'Not Darwin'
+
+    if not HAS_PASSLIB:
+        return False, 'passlib not available'
+
+    return __virtualname__
 
 
 def _pl_salted_sha512_pbkdf2_from_string(strvalue,
