@@ -828,7 +828,12 @@ class _Swagger(object):
 
         if self._deploymentId:
             # just do a reassociate of stage_name to an already existing deployment
-            self._set_current_deployment(stage_name, stage_desc_json)
+            res = self._set_current_deployment(stage_name, stage_desc_json)
+            if not res.get('set'):
+                ret['abort'] = True
+                ret['common'] = res.get('error')
+            else:
+                ret = _log_changes(ret, 'publish_api (reassociate deployment)', res.get('response'))
         else:
             # no deployment existed for the given swagger_file for this Swagger object
             res = __salt__['boto_apigateway.create_api_deployment'](self.restApiId,
@@ -839,6 +844,8 @@ class _Swagger(object):
             if not res.get('created'):
                 ret['abort'] = True
                 ret['common'] = res.get('error')
+            else:
+                ret = _log_changes(ret, 'publish_api (new deployment)', res.get('deployment'))
         return ret
 
     def _cleanup_api(self):
