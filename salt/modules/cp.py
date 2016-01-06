@@ -658,6 +658,10 @@ def hash_file(path, saltenv='base', env=None):
         # Backwards compatibility
         saltenv = env
 
+    path, senv = salt.utils.url.split_env(path)
+    if senv:
+        saltenv = senv
+
     _mk_client()
     return __context__['cp.fileclient'].hash_file(path, saltenv)
 
