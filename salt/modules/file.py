@@ -1459,9 +1459,9 @@ def line(path, content, match=None, mode=None, location=None,
         salt '*' file.line /etc/nsswitch.conf "networks:\tfiles dns", after="hosts:.*?", mode='ensure'
     '''
     path = os.path.realpath(os.path.expanduser(path))
-    if not os.path.exists(path):
+    if not os.path.isfile(path):
         if not quiet:
-            raise CommandExecutionError('File "{0}" does not exists.'.format(path))
+            raise CommandExecutionError('File "{0}" does not exists or is not a file.'.format(path))
         return False  # No changes had happened
 
     mode = mode and mode.lower() or mode
