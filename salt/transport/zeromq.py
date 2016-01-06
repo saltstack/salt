@@ -42,7 +42,11 @@ import tornado.gen
 import tornado.concurrent
 
 # Import third party libs
-from Crypto.Cipher import PKCS1_OAEP
+try:
+    # Attempt to load SaltStack-built pycrypto 2.6
+    from Crypto_salt.Cipher import PKCS1_OAEP
+except ImportError:
+    from Crypto.Cipher import PKCS1_OAEP
 
 log = logging.getLogger(__name__)
 
