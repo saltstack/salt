@@ -130,38 +130,6 @@ class PillarTestCase(TestCase):
         pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
         self.assertEqual(pillar.compile_pillar()['ssh'], 'foo')
 
-    @patch('salt.pillar.salt.fileclient.get_file_client', autospec=True)
-    @patch('salt.pillar.salt.minion.Matcher')  # autospec=True disabled due to py3 mock bug
-    def test_pillar_multiple_matches(self, Matcher, get_file_client):
-        # Uses the ``recurse_list`` strategy.
-        opts = {
-            'renderer': 'yaml',
-            'state_top': '',
-            'pillar_roots': [],
-            'extension_modules': '',
-            'environment': 'base',
-            'file_roots': [],
-            'pillar_source_merging_strategy': 'recurse_list',
-        }
-        grains = {
-            'os': 'Ubuntu',
-            'os_family': 'Debian',
-            'oscodename': 'raring',
-            'osfullname': 'Ubuntu',
-            'osrelease': '13.04',
-            'kernel': 'Linux'
-        }
-        self._setup_test_topfile_mocks(Matcher, get_file_client, 1, 2)
-        pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
-        # Pillars should be merged, but only once per pillar file.
-        self.assertDictEqual(pillar.compile_pillar()['generic'], {
-            'key1': ['value1', 'value2', 'value3'],
-            'key2': {
-                'sub_key1': [],
-                'sub_key2': [],
-            }
-        })
-
     def _setup_test_topfile_mocks(self, Matcher, get_file_client,
             nodegroup_order, glob_order):
         # Write a simple topfile and two pillar state files
@@ -231,33 +199,6 @@ generic:
             }[sls]
 
         client.get_state.side_effect = get_state
-
-    @patch('salt.pillar.salt.fileclient.get_file_client', autospec=True)
-    @patch('salt.pillar.salt.minion.Matcher')  # autospec=True disabled due to py3 mock bug
-    def test_pillar_include(self, Matcher, get_file_client):
-        # Uses the ``recurse_list`` strategy.
-        opts = {
-            'renderer': 'yaml',
-            'state_top': '',
-            'pillar_roots': [],
-            'extension_modules': '',
-            'environment': 'base',
-            'file_roots': [],
-            'pillar_source_merging_strategy': 'recurse_list',
-        }
-        grains = {
-            'os': 'Ubuntu',
-            'os_family': 'Debian',
-            'oscodename': 'raring',
-            'osfullname': 'Ubuntu',
-            'osrelease': '13.04',
-            'kernel': 'Linux'
-        }
-        self._setup_test_include_mocks(Matcher, get_file_client)
-        pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base').compile_pillar()
-        # Both pillar modules should only be loaded once.
-        self.assertEqual(pillar['p1'], ['value1_3', 'value1_1', 'value1_2'])
-        self.assertEqual(pillar['p2'], ['value2_1', 'value2_2'])
 
     def _setup_test_include_mocks(self, Matcher, get_file_client):
         self.top_file = top_file = tempfile.NamedTemporaryFile()
