@@ -19,8 +19,13 @@ from salt.utils.cache import CacheCli
 
 # Import Third Party Libs
 import tornado.gen
-from Crypto.Cipher import PKCS1_OAEP
-from Crypto.PublicKey import RSA
+try:
+    # Attempt to load SaltStack-built pycrypto 2.6
+    from Crypto_salt.Cipher import PKCS1_OAEP
+    from Crypto_salt.PublicKey import RSA
+except ImportError:
+    from Crypto.Cipher import PKCS1_OAEP
+    from Crypto.PublicKey import RSA
 
 
 log = logging.getLogger(__name__)
