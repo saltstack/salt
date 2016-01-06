@@ -124,7 +124,7 @@ def _log_error_and_abort(ret, obj):
     ret['result'] = False
     ret['abort'] = True
     if 'error' in obj:
-        ret['comment'] = obj.get('error')
+        ret['comment'] = '{0}'.format(obj.get('error'))
     return ret
 
 def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_integration_role,
