@@ -29,6 +29,11 @@ If :conf_master:`gitfs_provider` is not configured, then Salt will prefer
 pygit2_ if a suitable version is available, followed by GitPython_ and
 Dulwich_.
 
+.. note::
+    It is recommended to always run the most recent version of any the below
+    dependencies. Certain features of gitfs may not be available without
+    the most recent version of the chosen library.
+
 .. _pygit2: https://github.com/libgit2/pygit2
 .. _Dulwich: https://www.samba.org/~jelmer/dulwich/
 .. _GitPython: https://github.com/gitpython-developers/GitPython
