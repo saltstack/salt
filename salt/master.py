@@ -19,7 +19,11 @@ import traceback
 
 # Import third party libs
 import zmq
-from Crypto.PublicKey import RSA
+try:
+    # Attempt to load SaltStack-built pycrypto 2.6
+    from Crypto_salt.PublicKey import RSA
+except ImportError:
+    from Crypto.PublicKey import RSA
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 import salt.ext.six as six
 from salt.ext.six.moves import range
