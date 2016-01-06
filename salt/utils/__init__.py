@@ -54,8 +54,14 @@ except ImportError:
 
 # Import 3rd-party libs
 try:
-    import Crypto.Random
-    HAS_CRYPTO = True
+    try:
+        # Attempt to load SaltStack-built pycrypto 2.6
+        import Crypto_salt.Random
+        HAS_CRYPTO_SALT = True
+    except ImportError:
+        HAS_CRYPTO_SALT = False
+        import Crypto.Random
+        HAS_CRYPTO = True
 except ImportError:
     HAS_CRYPTO = False
 
@@ -399,7 +405,7 @@ def get_specific_user():
 
 def reinit_crypto():
     '''
-    When a fork arrises, pycrypto needs to reinit
+    When a fork arises, pycrypto needs to reinit
     From its doc::
 
         Caveat: For the random number generator to work correctly,
@@ -407,7 +413,9 @@ def reinit_crypto():
         child processes after using os.fork()
 
     '''
-    if HAS_CRYPTO:
+    if HAS_CRYPTO_SALT:
+        Crypto_salt.Random.atfork()
+    elif HAS_CRYPTO:
         Crypto.Random.atfork()
 
 
