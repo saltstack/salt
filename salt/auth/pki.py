@@ -22,7 +22,11 @@ import logging
 # Import third party libs
 # pylint: disable=import-error
 try:
-    import Crypto.Util
+    try:
+        # Attempt to load SaltStack-built pycrypto 2.6
+        from Crypto_salt.Util import asn1
+    except ImportError:
+        from Crypto.Util import asn1
     import OpenSSL
     HAS_DEPS = True
 except ImportError:
@@ -79,7 +83,7 @@ def auth(pem, **kwargs):
     cert_asn1 = c.dump_certificate(c.FILETYPE_ASN1, cert)
 
     # Decode the certificate
-    der = Crypto.Util.asn1.DerSequence()
+    der = asn1.DerSequence()
     der.decode(cert_asn1)
 
     # The certificate has three parts:
@@ -93,7 +97,7 @@ def auth(pem, **kwargs):
 
     # The signature is a BIT STRING (Type 3)
     # Decode that as well
-    der_sig_in = Crypto.Util.asn1.DerObject()
+    der_sig_in = asn1.DerObject()
     der_sig_in.decode(der_sig)
 
     # Get the payload
