@@ -423,7 +423,7 @@ def install(name=None,
     return ret
 
 
-def upgrade(refresh=False, root=None):
+def upgrade(refresh=False, root=None, **kwargs):
     '''
     Run a full system upgrade, a pacman -Syu
 

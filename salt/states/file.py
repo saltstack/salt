@@ -4298,6 +4298,14 @@ def serialize(name,
         return _error(
             ret, 'Neither \'dataset\' nor \'dataset_pillar\' was defined')
 
+    if salt.utils.is_windows():
+        if group is not None:
+            log.warning(
+                'The group argument for {0} has been ignored as this '
+                'is a Windows system.'.format(name)
+            )
+        group = user
+
     serializer_name = '{0}.serialize'.format(formatter)
     if serializer_name in __serializers__:
         serializer = __serializers__[serializer_name]

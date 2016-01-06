@@ -26,7 +26,11 @@
 # set to True, the order will be randomized instead. This can be helpful in distributing
 # the load of many minions executing salt-call requests, for example, from a cron job.
 # If only one master is listed, this setting is ignored and a warning will be logged.
+# NOTE: If master_type is set to failover, use master_shuffle instead.
 #random_master: False
+
+# Use if master_type is set to failover.
+#master_shuffle: False
 
 # Minions can connect to multiple masters simultaneously (all masters
 # are "hot"), or can be configured to failover if a master becomes
