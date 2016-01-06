@@ -615,7 +615,7 @@
 #pillar_source_merging_strategy: smart
 
 # Recursively merge lists by aggregating them instead of replacing them.
-#pillar_merge_lists: True
+#pillar_merge_lists: False
 
 
 #####          Syndic settings       #####

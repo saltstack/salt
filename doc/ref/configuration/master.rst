@@ -2333,7 +2333,7 @@ Recursively merge lists by aggregating them instead of replacing them.
 
 .. code-block:: yaml
 
-    pillar_merge_lists: True
+    pillar_merge_lists: False
 
 .. conf_master:: pillar_source_merging_strategy
 
