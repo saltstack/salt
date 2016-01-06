@@ -1209,6 +1209,10 @@ class RemoteClient(Client):
             # Backwards compatibility
             saltenv = env
 
+        path, senv = salt.utils.url.split_env(path)
+        if senv:
+            saltenv = senv
+
         try:
             path = self._check_proto(path)
         except MinionError:
