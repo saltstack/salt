@@ -283,7 +283,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
 
     except (ValueError, IOError) as e:
         ret['result'] = False
-        ret['comment'] = e.message
+        ret['comment'] = '{0}'.format(e.args)
 
     return ret
 
@@ -347,7 +347,7 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
 
     except (ValueError, IOError) as e:
         ret['result'] = False
-        ret['comment'] = e.message
+        ret['comment'] = '{0}'.format(e.args)
 
     return ret
 
