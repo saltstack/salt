@@ -1081,6 +1081,13 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
                   'output. One of full, terse, mixed, changes or filter. '
                   'Default: full.')
         )
+        group.add_option(
+            '--state-verbose', '--state_verbose',
+            default=True,
+            help=('Override the configured state_verbose value for minion '
+                  'output. Set to True or False'
+                  'Default: True')
+        )
 
         for option in self.output_options_group.option_list:
             def process(opt):
@@ -1111,6 +1118,12 @@ class OutputOptionsMixIn(six.with_metaclass(MixInMeta, object)):
                             exc
                         )
                     )
+
+    def process_state_verbose(self):
+        if self.options.state_verbose == "True" or self.options.state_verbose == "true":
+            self.options.state_verbose = True
+        elif self.options.state_verbose == "False" or self.options.state_verbose == "false":
+            self.options.state_verbose = False
 
     def _mixin_after_parsed(self):
         group_options_selected = [
