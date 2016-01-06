@@ -708,6 +708,7 @@ class Single(object):
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                     'sock_dir': '/',
+                    'grains_cache': True,
                     'log_file': 'salt-call.log'
                 })
         self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
