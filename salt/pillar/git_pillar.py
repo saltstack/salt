@@ -263,7 +263,7 @@ def ext_pillar(minion_id, repo, pillar_dirs):
         )
         merge_lists = __opts__.get(
             'pillar_merge_lists',
-            'True'
+            'False'
         )
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
             log.debug(
