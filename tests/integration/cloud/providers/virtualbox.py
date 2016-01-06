@@ -4,6 +4,7 @@
 # Import Python Libs
 from __future__ import absolute_import
 
+import json
 import os
 import unittest
 import logging
@@ -34,10 +35,21 @@ info = log.info
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = random_name()
 PROVIDER_NAME = "virtualbox"
+CONFIG_NAME = PROVIDER_NAME + "-config"
 PROFILE_NAME = PROVIDER_NAME + "-test"
 DRIVER_NAME = "virtualbox"
 BASE_BOX_NAME = "__temp_test_vm__"
 BOOTABLE_BASE_BOX_NAME = "SaltMiniBuntuTest"
+
+# As described in the documentation of list_nodes (this may change with time)
+MINIMAL_MACHINE_ATTRIBUTES = [
+    "id",
+    "image",
+    "size",
+    "state",
+    "private_ips",
+    "public_ips",
+]
 
 
 @skipIf(HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')
@@ -50,16 +62,70 @@ class VirtualboxProviderTest(integration.ShellCase):
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         """
-        Execute salt-cloud
+        Execute salt-cloud with json output and try to interpret it
+
+        @return:
+        @rtype: dict
         """
         config_path = os.path.join(
             integration.FILES,
             'conf'
         )
-        arg_str = '-c {0} {1}'.format(config_path, arg_str)
+        arg_str = '--out=json -c {0} {1}'.format(config_path, arg_str)
         # arg_str = "%s --log-level=error" % arg_str
         log.debug("running salt-cloud with %s" % arg_str)
-        return self.run_script('salt-cloud', arg_str, catch_stderr, timeout)
+        output = self.run_script('salt-cloud', arg_str, catch_stderr, timeout)
+
+        # Sometimes tuples are returned???
+        if isinstance(output, tuple) and len(output) == 2:
+            output = output[0]
+
+        # Attempt to clean json output before fix of https://github.com/saltstack/salt/issues/27629
+        valid_initial_chars = ['{', '[', '"']
+        i = 0
+        for line in output[:]:
+            if len(line) > 0 and (line[0] not in valid_initial_chars):
+                output.pop(i)
+                i += 1
+            else:
+                break
+
+        return json.loads("".join(output))
+
+    def run_cloud_function(self, function, kw_function_args=None, **kwargs):
+        """
+        A helper to call `salt-cloud -f function provider`
+
+        @param function:
+        @type function:
+        @param kw_function_args: Keyword arguments for the argument string in the commandline
+        @type dict:
+        @param kwargs: For the `run_cloud` function
+        @type kwargs:
+        @return:
+        @rtype: dict
+        """
+        args = []
+        # Args converted in the form of key1='value1' ... keyN='valueN'
+        if kw_function_args:
+            args = [
+                "%s='%s'" % (key, value)
+                for key, value in kw_function_args.iteritems()
+                ]
+
+        output = self.run_cloud("-f %s %s %s" % (function, CONFIG_NAME, " ".join(args)), **kwargs)
+        return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})
+
+    def run_cloud_destroy(self, machine_name):
+        """
+        Calls salt-cloud to destroy a machine and returns the destroyed machine object (should be None)
+        @param machine_name:
+        @type str:
+        @return:
+        @rtype: dict
+        """
+        output = self.run_cloud('-d {0} --assume-yes --log-level=debug'.format(machine_name))
+        return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})
 
     def setUp(self):
         """
@@ -72,7 +138,7 @@ class VirtualboxProviderTest(integration.ShellCase):
         providers = self.run_cloud('--list-providers')
         log.debug("providers: %s" % providers)
 
-        if profile_str + ':' not in providers:
+        if profile_str not in providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'.format(PROVIDER_NAME)
@@ -123,47 +189,51 @@ class VirtualboxProviderTest(integration.ShellCase):
         """
         Simply create a machine and make sure it was created
         """
-
-        self.assertIn(
-            INSTANCE_NAME,
-            [i.strip() for i in self.run_cloud('-p {0} {1} --log-level=debug'.format(PROFILE_NAME, INSTANCE_NAME))]
-        )
+        machines = self.run_cloud('-p {0} {1} --log-level=debug'.format(PROFILE_NAME, INSTANCE_NAME))
+        self.assertIn(INSTANCE_NAME, machines.keys())
 
     def test_cloud_list(self):
         """
-        List all machines in virtualbox
+        List all machines in virtualbox and make sure the requested attributes are included
         """
-        ret = self.run_cloud('-f list_nodes virtualbox-config')
-        # print "\n".join(ret)
-        # TODO improve tests - read the output more thoroughly
-        self.assertIn(
-            BASE_BOX_NAME + ":",
-            [i.strip() for i in ret]
-        )
+        machines = self.run_cloud_function('list_nodes')
+
+        expected_attributes = MINIMAL_MACHINE_ATTRIBUTES
+        names = machines.keys()
+        self.assertGreaterEqual(len(names), 1, "No machines found")
+        for name, machine in machines.iteritems():
+            self.assertItemsEqual(expected_attributes, machine.keys())
+
+        self.assertIn(BASE_BOX_NAME, names)
 
     def test_cloud_list_full(self):
         """
-        List all machines with full information
+        List all machines and make sure full information in included
         """
-        ret = self.run_cloud('-f list_nodes_full virtualbox-config')
-        # print "\n".join(ret)
-        # TODO improve tests - read the output more thoroughly
-        self.assertIn(
-            BASE_BOX_NAME + ":",
-            [i.strip() for i in ret]
-        )
+        machines = self.run_cloud_function('list_nodes_full')
+        expected_minimal_attribute_count = len(MINIMAL_MACHINE_ATTRIBUTES)
+
+        names = machines.keys()
+        self.assertGreaterEqual(len(names), 1, "No machines found")
+        for name, machine in machines.iteritems():
+            self.assertGreaterEqual(len(machine.keys()), expected_minimal_attribute_count)
+
+        self.assertIn(BASE_BOX_NAME, names)
 
     def test_cloud_list_select(self):
         """
         List selected attributes of all machines
         """
-        ret = self.run_cloud('-f list_nodes_select virtualbox-config')
-        # print "\n".join(ret)
-        # TODO improve tests - read the output more thoroughly
-        self.assertIn(
-            BASE_BOX_NAME + ":",
-            [i.strip() for i in ret]
-        )
+        machines = self.run_cloud_function('list_nodes_select')
+        # TODO find out how to get query.selection from the  "cloud" config
+        expected_attributes = ["id"]
+
+        names = machines.keys()
+        self.assertGreaterEqual(len(names), 1, "No machines found")
+        for name, machine in machines.iteritems():
+            self.assertItemsEqual(expected_attributes, machine.keys())
+
+        self.assertIn(BASE_BOX_NAME, names)
 
     def test_cloud_destroy(self):
         """
@@ -171,36 +241,25 @@ class VirtualboxProviderTest(integration.ShellCase):
         """
         # check if instance with salt installed returned
         self.test_cloud_create()
+        ret = self.run_cloud_destroy(INSTANCE_NAME)
 
         # destroy the instance
-        self.assertIn(
-            INSTANCE_NAME + ':',
-            [i.strip() for i in self.run_cloud('-d {0} --assume-yes --log-level=debug'.format(INSTANCE_NAME))]
-        )
+        self.assertIn(INSTANCE_NAME, ret.keys())
 
     def test_function_show_instance(self):
-        ret = self.run_cloud(
-            '-f show_image virtualbox-config image={0}'.format(BASE_BOX_NAME),
-            timeout=30)[0]
-        # print "\n".join(ret)
-        self.assertIn(
-            BASE_BOX_NAME + ':',
-            [i.strip() for i in ret
-             ]
-        )
+        kw_function_args = {
+            "image": BASE_BOX_NAME
+        }
+        machines = self.run_cloud_function('show_image', kw_function_args, timeout=30)
+        expected_minimal_attribute_count = len(MINIMAL_MACHINE_ATTRIBUTES)
+        self.assertIn(BASE_BOX_NAME, machines)
+        machine = machines[BASE_BOX_NAME]
+        self.assertGreaterEqual(len(machine.keys()), expected_minimal_attribute_count)
 
     def tearDown(self):
         """
         Clean up after tests
         """
-        # query = self.run_cloud('--query')
-        # ret = '        {0}:'.format(INSTANCE_NAME)
-        #
-        # log.info("query: %s" % query)
-        #
-        # # if test instance is still present, delete it
-        # if ret in query:
-        #     # self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
         if vb_machine_exists(INSTANCE_NAME):
             vb_destroy_machine(INSTANCE_NAME)
 
