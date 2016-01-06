@@ -39,10 +39,6 @@ from salt.ext.six import string_types
 from salt.template import compile_template
 
 # Import third party libs
-try:
-    import Crypto.Random
-except ImportError:
-    pass  # pycrypto < 2.1
 import yaml
 import salt.ext.six as six
 from salt.ext.six.moves import input  # pylint: disable=import-error,redefined-builtin
