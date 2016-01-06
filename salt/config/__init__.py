@@ -1070,7 +1070,7 @@ DEFAULT_MASTER_OPTS = {
     'pillar_opts': False,
     'pillar_safe_render_error': True,
     'pillar_source_merging_strategy': 'smart',
-    'pillar_merge_lists': True,
+    'pillar_merge_lists': False,
     'ping_on_rotate': False,
     'peer': {},
     'preserve_minion_cache': False,

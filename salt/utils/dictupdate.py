@@ -17,7 +17,7 @@ from salt.serializers.yamlex import merge_recursive as _yamlex_merge_recursive
 log = logging.getLogger(__name__)
 
 
-def update(dest, upd, recursive_update=True, merge_lists=True):
+def update(dest, upd, recursive_update=True, merge_lists=False):
     '''
     Recursive version of the default dict.update
 
@@ -76,7 +76,7 @@ def merge_list(obj_a, obj_b):
     return ret
 
 
-def merge_recurse(obj_a, obj_b, merge_lists=True):
+def merge_recurse(obj_a, obj_b, merge_lists=False):
     copied = copy.deepcopy(obj_a)
     return update(copied, obj_b, merge_lists=merge_lists)
 
@@ -85,14 +85,14 @@ def merge_aggregate(obj_a, obj_b):
     return _yamlex_merge_recursive(obj_a, obj_b, level=1)
 
 
-def merge_overwrite(obj_a, obj_b, merge_lists=True):
+def merge_overwrite(obj_a, obj_b, merge_lists=False):
     for obj in obj_b:
         if obj in obj_a:
             obj_a[obj] = obj_b[obj]
     return merge_recurse(obj_a, obj_b, merge_lists=merge_lists)
 
 
-def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=True):
+def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
     if strategy == 'smart':
         if renderer == 'yamlex' or renderer.startswith('yamlex_'):
             strategy = 'aggregate'
