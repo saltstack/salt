@@ -12,7 +12,11 @@ import random
 
 # Import 3rd-party libs
 try:
-    import Crypto.Random  # pylint: disable=E0611
+    try:
+        # Attempt to load SaltStack-built pycrypto 2.6
+        from Crypto_salt import Random  # pylint: disable=E0611
+    except ImportError:
+        from Crypto import Random  # pylint: disable=E0611
     HAS_RANDOM = True
 except ImportError:
     HAS_RANDOM = False
@@ -36,7 +40,7 @@ def secure_password(length=20):
     pw = ''
     while len(pw) < length:
         if HAS_RANDOM:
-            pw += re.sub(r'\W', '', Crypto.Random.get_random_bytes(1))
+            pw += re.sub(r'\W', '', Random.get_random_bytes(1))
         else:
             pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
     return pw
