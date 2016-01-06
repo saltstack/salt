@@ -19,12 +19,20 @@ from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-bui
 
 # Import third party libs
 try:
-    from Crypto.Cipher import AES, PKCS1_OAEP
-    from Crypto.Hash import SHA
-    from Crypto.PublicKey import RSA
-    from Crypto.Signature import PKCS1_v1_5
-    # let this be imported, if possible
-    import Crypto.Random  # pylint: disable=W0611
+    try:
+        # Attempt to load SaltStack-built pycrypto 2.6
+        from Crypto_salt.Cipher import AES, PKCS1_OAEP
+        from Crypto_salt.Hash import SHA
+        from Crypto_salt.PublicKey import RSA
+        from Crypto_salt.Signature import PKCS1_v1_5
+        import Crypto_salt.Random  # pylint: disable=W0611
+    except ImportError:
+        from Crypto.Cipher import AES, PKCS1_OAEP
+        from Crypto.Hash import SHA
+        from Crypto.PublicKey import RSA
+        from Crypto.Signature import PKCS1_v1_5
+        # let this be imported, if possible
+        import Crypto.Random  # pylint: disable=W0611
 except ImportError:
     # No need for crypt in local mode
     pass
