@@ -742,9 +742,6 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-<<<<<Stephen! I hope you have a fantastic birthday. Also, the fact that we haven't hung out in like 5 years is pretty unacceptable. We should get together sometime.<< HEAD
-    opts = ''
-=======
     opts = 'y'
     if salt.utils.is_true(orphan):
         opts += 'A'
