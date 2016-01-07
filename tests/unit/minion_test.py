@@ -6,6 +6,7 @@
 # Import python libs
 from __future__ import absolute_import
 import os
+import resource
 
 # Import Salt Testing libs
 from salttesting import TestCase, skipIf
@@ -53,18 +54,18 @@ class MinionTestCase(TestCase):
         self.assertTrue(result)
 
     @skipIf(os.geteuid() != 0, 'You must be root to run this test')
-    def test_minion_max_open_files(self):
+    @patch('resource.getrlimit', return_value=(10000, 10000))
+    def test_minion_max_open_files(self, resource_mock):
         '''
         Tests surrounding the modification of the maximum number of files
         that a minion can open if the minion is configured to limit them.
         '''
-        opts = {'max_open_files': 2048}
+        opts = {'max_open_files': 2048,
+                'extension_modules': ''}
         minion = salt.minion.Minion(opts)
         with patch('resource.setrlimit') as set_limit_mock:
             minion._set_max_open_files()
-            set_limit_mock.assert_called_with(resource.RLIMIT_NOFILE, 2048)
-
-
+            set_limit_mock.assert_called_with(resource.RLIMIT_NOFILE, (2048, 10000))
 
 
 if __name__ == '__main__':
