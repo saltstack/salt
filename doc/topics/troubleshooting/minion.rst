@@ -149,3 +149,13 @@ salt-minion service.
     Modifying the minion timeout value is not required when running commands
     from a Salt Master. It is only required when running commands locally on
     the minion.
+
+Salt Minion Performance is Slow When Using cmd.run or Other Subprocesses
+========================================================================
+
+The salt-minion and salt-call will attempt to clean up all file handles
+allocated by any subprocess that is generated, including those spawned
+by functions in the `cmd` remote-execution module, includding `cmd.run`.
+
+To limit the maximum number of open file-handles and work around this issue,
+uncomment the `max_open_files` line in the minion configuration.

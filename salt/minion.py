@@ -907,6 +907,49 @@ class Minion(MinionBase):
             log.debug(msg.format(self.opts.get('return_retry_timer')))
             return self.opts.get('return_retry_timer')
 
+    def _set_max_open_files(self):
+        '''
+        The minion will experience substantial slowdowns is a ulimit is set
+        too high and a subprocess is launched with close_fds=True. Therefore,
+        this function exists to lower the ulimit to a manageable value if
+        the minion is configured to do so.
+
+        Note that this is the opposite of what the corresponding function
+        does on the master. In the case of the master, we attempt to raise
+        the limit. Here, we attempt to lower it.
+
+        The value in the config used to control this behavior on the minion
+        is `max_open_files`. The default is `-1`, which indicates that no
+        adjustment should be made.
+
+        See https://github.com/saltstack/salt/issues/26255 for a more substantial
+        discussion of this issue.
+        '''
+        if not HAS_RESOURCE or self.opts['max_open_files'] == -1:
+            return
+        # Determine current limit for max open files, soft and hard
+        mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
+        log.info(
+                'Current values for max_open_files soft/hard setting: '
+                '{0}/{1}'.format(
+                    mof_s, mof_h
+                    )
+                )
+        # Here we check for a condition where an unknowing user might attempt
+        # to raise the limit higher than the user is allowed to.
+        if self.opts['max_open_files'] > mof_h:
+            log.info(
+                    'The value for \'max_open_files\' setting, {0}, is higher '
+                    'than what the user running the salt-minion is allowed to '
+                    'raise it to, {1}. Defaulting to {1}'.format(self.opts['max_open_files'], mof_h)
+                    )
+            self.opts['max_open_files'] = mof_h
+
+        if mof_s > self.opts['max_open_files']:
+            # Lower the limit, if necessary
+            log.info('Lowering max open files limit to {0}'.format(self.opts['max_open_files']))
+            resource.setrlimit(resource.RLIMIT_NOFILE, (self.opts['max_open_files'], mof_h))
+
     def _prep_mod_opts(self):
         '''
         Returns a copy of the opts with key bits stripped out
@@ -1627,6 +1670,7 @@ class Minion(MinionBase):
                 ),
                 exc_info=err
             )
+        self._set_max_open_files()
 
     def _mine_send(self, tag, data):
         '''

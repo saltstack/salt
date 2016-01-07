@@ -294,6 +294,16 @@
 # minion event bus. The value is expressed in bytes.
 #max_event_size: 1048576
 
+# On systems with high ulimits set for the maximum number of open files,
+# Salt may take a long time to launch any subprocesses, especially with
+# cmd.run, due to the amount of time it takes to evaluate and close the
+# associated file handles. To limit the maximum number of open files and
+# ensure the performance of python subprocesses launched by Salt, uncomment
+# the below line. Changing the value will correspond directly to the maximum
+# number of open files that salt processes are allowed to open. If this value
+# is not set, no change will be made to resource limits on the Salt minion.
+# max_open_files: 2048
+
 # To detect failed master(s) and fire events on connect/disconnect, set
 # master_alive_interval to the number of seconds to poll the masters for
 # connection events.
