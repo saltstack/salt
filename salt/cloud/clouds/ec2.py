@@ -2509,9 +2509,17 @@ def create(vm_=None, call=None):
     )
     if ssm_document:
         log.debug('Associating with ssm document: {0}'.format(ssm_document))
-        ssm_create_association(
-            vm_['name'], { 'ssm_document': ssm_document }, instance_id=vm_['instance_id'], call='action'
+        assoc = ssm_create_association(
+            vm_['name'],
+            { 'ssm_document': ssm_document },
+            instance_id=vm_['instance_id'],
+            call='action'
         )
+        if assoc.get('error', None):
+            log.error('Failed to associate instance {0} with ssm document {1}'.format(
+                vm_['instance_id'], ssm_document
+            ))
+            return {}
 
     for key, value in six.iteritems(salt.utils.cloud.bootstrap(vm_, __opts__)):
         ret.setdefault(key, value)
@@ -4604,6 +4612,7 @@ def ssm_create_association(name=None, kwargs=None, instance_id=None, call=None):
               'Name': kwargs['ssm_document'] }
 
     result = aws.query(params,
+                       return_root=True,
                        location=get_location(),
                        provider=get_provider(),
                        product='ssm',
