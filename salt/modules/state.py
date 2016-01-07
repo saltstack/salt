@@ -484,6 +484,11 @@ def highstate(test=None,
         "roots" of salt directories (with their own minion config, pillars,
         file_roots) to run highstate out of.
 
+    mock:
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
+
     CLI Example:
 
     .. code-block:: bash
@@ -540,9 +545,16 @@ def highstate(test=None,
         opts['pillarenv'] = kwargs['pillarenv']
 
     try:
-        st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'), proxy=__proxy__)
+        st_ = salt.state.HighState(opts,
+                                   pillar,
+                                   kwargs.get('__pub_jid'),
+                                   proxy=__proxy__,
+                                   mocked=kwargs.get('mock', False))
     except NameError:
-        st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
+        st_ = salt.state.HighState(opts,
+                                   pillar,
+                                   kwargs.get('__pub_jid'),
+                                   mocked=kwargs.get('mock', False))
 
     st_.push_active()
     try:
@@ -616,6 +628,11 @@ def sls(mods,
         with the running minion opts. This functionality is intended for using
         "roots" of salt directories (with their own minion config, pillars,
         file_roots) to run highstate out of.
+
+    mock:
+        The mock option allows for the state run to execute without actually
+        calling any states. This then returns a mocked return which will show
+        the requisite ordering as well as fully validate the state run.
 
     CLI Example:
 
@@ -696,9 +713,16 @@ def sls(mods,
             )
 
     try:
-        st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'), proxy=__proxy__)
+        st_ = salt.state.HighState(opts,
+                                   pillar,
+                                   kwargs.get('__pub_jid'),
+                                   proxy=__proxy__,
+                                   mocked=kwargs.get('mock', False))
     except NameError:
-        st_ = salt.state.HighState(opts, pillar, kwargs.get('__pub_jid'))
+        st_ = salt.state.HighState(opts,
+                                   pillar,
+                                   kwargs.get('__pub_jid'),
+                                   mocked=kwargs.get('mock', False))
 
     umask = os.umask(0o77)
     if kwargs.get('cache'):
