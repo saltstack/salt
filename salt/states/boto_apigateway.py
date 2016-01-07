@@ -618,15 +618,24 @@ class _Swagger(object):
 
         return version
 
-    @property
-    def models(self):
+    def _models(self):
         '''
         returns an iterator for the models specified in the swagger file
         '''
         models = self._cfg.get('definitions')
         if not models:
             raise ValueError('Definitions Object has no values, You need to define them in your swagger file')
-        return models.iteritems()
+
+        return models
+
+    def models(self):
+        md = self._build_all_dependencies()
+        while True:
+            m = self._get_model_without_dependencies(md)
+            if not m:
+                break
+            yield (m, self._models().get(m))
+
 
     @property
     def paths(self):
@@ -895,12 +904,9 @@ class _Swagger(object):
                 delres = __salt__['boto_apigateway.delete_api_model'](self.restApiId,
                                                                       model.get('name'),
                                                                       **self._common_aws_args)
-                log.info(model)
-                log.info(delres)
                 if not delres.get('deleted'):
                     return delres
 
-        log.info("cleanup api 2")
         return {'deleted': True}
 
     def deploy_api(self, ret):
@@ -966,6 +972,71 @@ class _Swagger(object):
 
         return ret
 
+    def _aws_model_ref_from_swagger_ref(self, r):
+        model_name = r.split('/')[-1]        
+        return 'https://apigateway.amazonaws.com/restapis/{0}/models/{1}'.format(self.restApiId, model_name)
+
+    def _update_schema_to_aws_notation(self, schema):
+        result = {}
+        for k, v in schema.items():
+            if k == '$ref':
+                v = self._aws_model_ref_from_swagger_ref(v)
+            if isinstance(v, dict):
+                v = self._update_schema_to_aws_notation(v)
+            result[k] = v
+        return result
+
+    def _build_dependent_model_list(self, obj_schema, models):
+        dep_models_list = []
+
+        if obj_schema:
+            obj_schema['type'] = obj_schema.get('type', 'object')
+        if obj_schema['type'] == 'array':
+            dep_models_list.extend(self._build_dependent_model_list(obj_schema.get('items', {}), models))
+        else:
+            ref = obj_schema.get('$ref') 
+            if ref:
+                ref_obj_model = ref.split("/")[-1]
+                ref_obj_schema = models.get(ref_obj_model) 
+                dep_models_list.extend(self._build_dependent_model_list(ref_obj_schema, models))
+                dep_models_list.extend([ref_obj_model])
+            else:
+                # need to walk each property object
+                properties = obj_schema.get('properties')
+                if properties:
+                    for prop_obj, prop_obj_schema in properties.iteritems():
+                        dep_models_list.extend(self._build_dependent_model_list(prop_obj_schema, models))
+        return list(set(dep_models_list)) 
+
+    def _build_all_dependencies(self):
+        ret_dict = {}
+        for model, schema in self._models().iteritems():
+            l = self._build_dependent_model_list(schema, self._models())
+            ret_dict[model] = l
+        return ret_dict   
+
+    def _get_model_without_dependencies(self, md):
+        next_model = None
+        if not md:
+            return next_model 
+
+        for model, dependencies in md.iteritems():
+            if dependencies == []:
+                next_model = model 
+                break
+
+        if next_model is None: 
+            raise ValueError("incomplete model definitions, models in dependency list not defined: {0}".format(md))
+ 
+        # remove the model from other depednencies before returning
+        md.pop(next_model)
+        for model, dependencies in md.iteritems():
+            if next_model in dependencies:
+                dependencies.remove(next_model)
+
+        return next_model
+
+
     def deploy_models(self, ret):
         '''
         Method to deploy swagger file's definition objects and associated schema to AWS Apigateway as Models
@@ -974,12 +1045,12 @@ class _Swagger(object):
             a dictionary for returning status to Saltstack
         '''
 
-        for model, schema  in self.models:
+        for model, schema  in self.models():
             # add in a few attributes into the model schema that AWS expects
-            _schema = schema.copy()
+            #_schema = schema.copy()
+            _schema = self._update_schema_to_aws_notation(schema)
             _schema.update({'$schema': _Swagger.JSON_SCHEMA_DRAFT_4,
-                            'title': '{0} Schema'.format(model),
-                            'type': 'object'})
+                            'title': '{0} Schema'.format(model)})
 
             # check to see if model already exists, aws has 2 default models [Empty, Error]
             # which may need upate with data from swagger file
