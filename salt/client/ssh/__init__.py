@@ -703,8 +703,7 @@ class Single(object):
                 'identities_only': identities_only}
         # Pre apply changeable defaults
         self.minion_opts = {
-                    'grains_cache': self.opts.get('grains_cache', True),
-                    'grains_cache_expiration': self.opts.get('grains_cache_expiration', 300),
+                    'grains_cache': True,
                 }
         self.minion_opts.update(opts.get('ssh_minion_opts', {}))
         if minion_opts is not None:
