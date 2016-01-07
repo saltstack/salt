@@ -2511,7 +2511,9 @@ def create(vm_=None, call=None):
         log.debug('Associating with ssm document: {0}'.format(ssm_document))
         assoc = ssm_create_association(
             vm_['name'],
-            { 'ssm_document': ssm_document },
+            {
+                'ssm_document': ssm_document 
+            },
             instance_id=vm_['instance_id'],
             call='action'
         )
