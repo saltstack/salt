@@ -428,7 +428,6 @@ def query(params=None, setname=None, requesturl=None, location=None,
         )
     )
 
-
     # Fallback to ec2's id & key if none is found, for this component
     if not prov_dict.get('id', None):
         prov_dict['id'] = providers.get(provider, {}).get('ec2', {}).get('id', {})
