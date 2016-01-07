@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function, generators
 import os
 import copy
 import glob
+import inspect
 import time
 import signal
 import logging
@@ -1460,8 +1461,14 @@ class Cloud(object):
                             ret[alias][driver] = {}
 
                         if kwargs:
+                            argnames = inspect.getargspec(self.clouds[fun]).args
+                            [argnames.pop(0) for _ in inspect.getargspec(self.clouds[fun]).defaults]
+                            kws = {}
+                            for kwarg in argnames:
+                                kws[kwarg] = kwargs.get(kwarg, None)
+                            kws['call'] = 'action'
                             ret[alias][driver][vm_name] = self.clouds[fun](
-                                vm_name, kwargs, call='action'
+                                vm_name, **kws
                             )
                         else:
                             ret[alias][driver][vm_name] = self.clouds[fun](
