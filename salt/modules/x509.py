@@ -256,7 +256,7 @@ def _dec2hex(decval):
     '''
     Converts decimal values to nicely formatted hex strings
     '''
-    return _pretty_hex('{:X}'.format(decval))
+    return _pretty_hex('{0:X}'.format(decval))
 
 
 def _text_or_file(input_):
