@@ -1017,6 +1017,7 @@ class _Swagger(object):
         boto_apigateway.api_present function
         '''
         lambda_name = '{0}{1}_{2}'.format(self.rest_api_name.strip(), resourcePath, httpMethod)
+        lambda_name = re.sub(r'{|}', '', lambda_name)
         return re.sub(r'\s+|/', '_', lambda_name).lower()
 
     def _lambda_uri(self, ret, lambda_name, lambda_region):
