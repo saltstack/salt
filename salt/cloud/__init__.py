@@ -1462,7 +1462,8 @@ class Cloud(object):
 
                         if kwargs:
                             argnames = inspect.getargspec(self.clouds[fun]).args
-                            [argnames.pop(0) for _ in inspect.getargspec(self.clouds[fun]).defaults]
+                            for _ in inspect.getargspec(self.clouds[fun]).defaults:
+                                argnames.pop(0)
                             kws = {}
                             for kwarg in argnames:
                                 kws[kwarg] = kwargs.get(kwarg, None)
