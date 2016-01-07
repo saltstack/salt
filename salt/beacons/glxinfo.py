@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Beacon to emit when a screen is available to a linux machine
+Beacon to emit when a display is available to a linux machine
 
 .. versionadded:: Boron
 '''
@@ -36,19 +36,23 @@ def validate(config):
     if not isinstance(config, dict):
         log.info('Configuration for glxinfo beacon must be a dict.')
         return False
+    if 'user' not in config:
+        log.info('Configuration for glxinfo beacon must include a user as glxinfo is not available to root.')
+        return False
     return True
 
 
 def beacon(config):
     '''
-    Emit the status of a connected monitor to the minion
+    Emit the status of a connected display to the minion
 
-    Mainly this is used to detect when the monitor fails to connect for whatever reason.
+    Mainly this is used to detect when the display fails to connect for whatever reason.
 
     .. code-block:: yaml
 
         beacons:
           glxinfo:
+            user: frank
             screen_event: True
 
     '''
@@ -59,7 +63,7 @@ def beacon(config):
     if not validate(config):
         return ret
 
-    retcode = __salt__['cmd.retcode']('DISPLAY=:0 glxinfo', python_shell=True)
+    retcode = __salt__['cmd.retcode']('DISPLAY=:0 glxinfo', runas=config['user'], python_shell=True)
 
     if 'screen_event' in config and config['screen_event']:
         last_value = last_state.get('screen_available', False)

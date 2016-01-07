@@ -55,17 +55,29 @@ class GLXInfoBeaconTestCase(TestCase):
         self.assertEqual(ret, [])
         log_mock.info.assert_called_once_with('Configuration for glxinfo beacon must be a dict.')
 
-    def test_screen_state(self):
+    def test_no_user(self):
         config = {'screen_event': True}
+
+        log_mock = Mock()
+        glxinfo.log = log_mock
+
+        ret = glxinfo.beacon(config)
+
+        self.assertEqual(ret, [])
+        log_mock.info.assert_called_once_with('Configuration for glxinfo beacon must include a user as '
+                                              'glxinfo is not available to root.')
+
+    def test_screen_state(self):
+        config = {'screen_event': True, 'user': 'frank'}
 
         mock = Mock(return_value=0)
         with patch.dict(glxinfo.__salt__, {'cmd.retcode': mock}):
             ret = glxinfo.beacon(config)
             self.assertEqual(ret, [{'tag': 'screen_event', 'screen_available': True}])
-            mock.assert_called_once_with('DISPLAY=:0 glxinfo', python_shell=True)
+            mock.assert_called_once_with('DISPLAY=:0 glxinfo', runas='frank', python_shell=True)
 
     def test_screen_state_missing(self):
-        config = {'screen_event': True}
+        config = {'screen_event': True, 'user': 'frank'}
 
         mock = Mock(return_value=255)
         with patch.dict(glxinfo.__salt__, {'cmd.retcode': mock}):
@@ -73,7 +85,7 @@ class GLXInfoBeaconTestCase(TestCase):
             self.assertEqual(ret, [{'tag': 'screen_event', 'screen_available': False}])
 
     def test_screen_state_no_repeat(self):
-        config = {'screen_event': True}
+        config = {'screen_event': True, 'user': 'frank'}
 
         mock = Mock(return_value=255)
         with patch.dict(glxinfo.__salt__, {'cmd.retcode': mock}):
@@ -84,7 +96,7 @@ class GLXInfoBeaconTestCase(TestCase):
             self.assertEqual(ret, [])
 
     def test_screen_state_change(self):
-        config = {'screen_event': True}
+        config = {'screen_event': True, 'user': 'frank'}
 
         mock = Mock(side_effect=[255, 0])
         with patch.dict(glxinfo.__salt__, {'cmd.retcode': mock}):
