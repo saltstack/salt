@@ -157,7 +157,7 @@ def _valueToNSObject(value, nstype):
         'int': lambda v: NSNumber.numberWithInt_(v),
         'float': lambda v: NSNumber.numberWithFloat_(v),
         'bool': lambda v: True if v == 'true' else False,
-        'data': lambda v: NSData.initWithBytes_length_(v, len(v))
+        'data': lambda v: NSData.alloc().initWithBytes_length_(v, len(v))
     }[nstype](value)
 
 def _objectsForKeyDict(dict, keys, collector):
