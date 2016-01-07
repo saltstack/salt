@@ -629,12 +629,15 @@ class _Swagger(object):
         return models
 
     def models(self):
-        md = self._build_all_dependencies()
+        '''
+        generator to return the tuple of model and its schema to create on aws.
+        '''
+        model_dict = self._build_all_dependencies()
         while True:
-            m = self._get_model_without_dependencies(md)
-            if not m:
+            model = self._get_model_without_dependencies(model_dict)
+            if not model:
                 break
-            yield (m, self._models().get(m))
+            yield (model, self._models().get(model))
 
 
     @property
@@ -973,10 +976,16 @@ class _Swagger(object):
         return ret
 
     def _aws_model_ref_from_swagger_ref(self, r):
-        model_name = r.split('/')[-1]        
+        '''
+        Helper function to reference models created on aws apigw
+        '''
+        model_name = r.split('/')[-1]
         return 'https://apigateway.amazonaws.com/restapis/{0}/models/{1}'.format(self.restApiId, model_name)
 
     def _update_schema_to_aws_notation(self, schema):
+        '''
+        Helper function to map model schema to aws notation
+        '''
         result = {}
         for k, v in schema.items():
             if k == '$ref':
@@ -986,56 +995,65 @@ class _Swagger(object):
             result[k] = v
         return result
 
-    def _build_dependent_model_list(self, obj_schema, models):
+    def _build_dependent_model_list(self, obj_schema):
+        '''
+        Helper function to build the list of models the given object schema is referencing.
+        '''
         dep_models_list = []
 
         if obj_schema:
             obj_schema['type'] = obj_schema.get('type', 'object')
         if obj_schema['type'] == 'array':
-            dep_models_list.extend(self._build_dependent_model_list(obj_schema.get('items', {}), models))
+            dep_models_list.extend(self._build_dependent_model_list(obj_schema.get('items', {})))
         else:
-            ref = obj_schema.get('$ref') 
+            ref = obj_schema.get('$ref')
             if ref:
                 ref_obj_model = ref.split("/")[-1]
-                ref_obj_schema = models.get(ref_obj_model) 
-                dep_models_list.extend(self._build_dependent_model_list(ref_obj_schema, models))
+                ref_obj_schema = self._models().get(ref_obj_model)
+                dep_models_list.extend(self._build_dependent_model_list(ref_obj_schema))
                 dep_models_list.extend([ref_obj_model])
             else:
                 # need to walk each property object
                 properties = obj_schema.get('properties')
                 if properties:
                     for prop_obj, prop_obj_schema in properties.iteritems():
-                        dep_models_list.extend(self._build_dependent_model_list(prop_obj_schema, models))
-        return list(set(dep_models_list)) 
+                        dep_models_list.extend(self._build_dependent_model_list(prop_obj_schema))
+        return list(set(dep_models_list))
 
     def _build_all_dependencies(self):
-        ret_dict = {}
+        '''
+        Helper function to build a map of model to their list of model reference dependencies
+        '''
+        ret = {}
         for model, schema in self._models().iteritems():
-            l = self._build_dependent_model_list(schema, self._models())
-            ret_dict[model] = l
-        return ret_dict   
+            dep_list = self._build_dependent_model_list(schema)
+            ret[model] = dep_list
+        return ret
 
-    def _get_model_without_dependencies(self, md):
+    def _get_model_without_dependencies(self, models_dict):
+        '''
+        Helper function to find the next model that should be created
+        '''
         next_model = None
-        if not md:
-            return next_model 
+        if not models_dict:
+            return next_model
 
-        for model, dependencies in md.iteritems():
+        for model, dependencies in models_dict.iteritems():
             if dependencies == []:
-                next_model = model 
+                next_model = model
                 break
 
-        if next_model is None: 
-            raise ValueError("incomplete model definitions, models in dependency list not defined: {0}".format(md))
- 
+        if next_model is None:
+            raise ValueError('incomplete model definitions, models in dependency '
+                             'list not defined: {0}'.format(models_dict))
+
         # remove the model from other depednencies before returning
-        md.pop(next_model)
-        for model, dependencies in md.iteritems():
-            if next_model in dependencies:
-                dependencies.remove(next_model)
+        models_dict.pop(next_model)
+        for model, dep_list in models_dict.iteritems():
+            if next_model in dep_list:
+                dep_list.remove(next_model)
 
         return next_model
-
 
     def deploy_models(self, ret):
         '''
