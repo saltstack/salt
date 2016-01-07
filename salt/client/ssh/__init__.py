@@ -701,15 +701,19 @@ class Single(object):
                 'tty': tty,
                 'mods': self.mods,
                 'identities_only': identities_only}
-        self.minion_opts = opts.get('ssh_minion_opts', {})
+        # Pre apply changeable defaults
+        self.minion_opts = {
+                    'grains_cache': self.opts.get('grains_cache', True),
+                    'grains_cache_expiration': self.opts.get('grains_cache_expiration', 300),
+                }
+        self.minion_opts.update(opts.get('ssh_minion_opts', {}))
         if minion_opts is not None:
             self.minion_opts.update(minion_opts)
+        # Post apply system needed defaults
         self.minion_opts.update({
                     'root_dir': os.path.join(self.thin_dir, 'running_data'),
                     'id': self.id,
                     'sock_dir': '/',
-                    'grains_cache': self.opts.get('grains_cache', True),
-                    'grains_cache_expiration': self.opts.get('grains_cache_expiration', 300),
                     'log_file': 'salt-call.log'
                 })
         self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
