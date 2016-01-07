@@ -4669,6 +4669,4 @@ def ssm_describe_association(name=None, kwargs=None, instance_id=None, call=None
                        opts=__opts__,
                        sigver='4')
     log.info(result)
-    for item in result:
-        log.info(item)
     return result
