@@ -2502,7 +2502,7 @@ def create(vm_=None, call=None):
             call='action'
         )
         ret['Attached Volumes'] = created
-    
+
     # Associate instance with a ssm document, if present
     ssm_document = config.get_cloud_config_value(
         'ssm_document', vm_, __opts__, None, search_global=False
@@ -2511,9 +2511,7 @@ def create(vm_=None, call=None):
         log.debug('Associating with ssm document: {0}'.format(ssm_document))
         assoc = ssm_create_association(
             vm_['name'],
-            {
-                'ssm_document': ssm_document 
-            },
+            {'ssm_document': ssm_document},
             instance_id=vm_['instance_id'],
             call='action'
         )
@@ -4611,7 +4609,7 @@ def ssm_create_association(name=None, kwargs=None, instance_id=None, call=None):
 
     params = {'Action': 'CreateAssociation',
               'InstanceId': instance_id,
-              'Name': kwargs['ssm_document'] }
+              'Name': kwargs['ssm_document']}
 
     result = aws.query(params,
                        return_root=True,
@@ -4661,7 +4659,7 @@ def ssm_describe_association(name=None, kwargs=None, instance_id=None, call=None
 
     params = {'Action': 'DescribeAssociation',
               'InstanceId': instance_id,
-              'Name': kwargs['ssm_document'] }
+              'Name': kwargs['ssm_document']}
 
     result = aws.query(params,
                        return_root=True,
