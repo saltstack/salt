@@ -5,10 +5,13 @@ Support for Tomcat
 This module uses the manager webapp to manage Apache tomcat webapps.
 If the manager webapp is not configured some of the functions won't work.
 
-.. note::
-
-    The config format was changed in 2014.7.0, but backwards compatibility for
-    the old-style config will be in the 2014.7.1 release.
+:configuration:
+    - Java bin path should be in default path
+    - If ipv6 is enabled make sure you permit manager access to ipv6 interface
+      "0:0:0:0:0:0:0:1"
+    - If you are using tomcat.tar.gz it has to be installed or symlinked under
+      ``/opt``, preferrably using name tomcat
+    - "tomcat.signal start/stop" works but it does not use the startup scripts
 
 The following grains/pillar should be set:
 

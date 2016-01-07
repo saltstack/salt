@@ -768,15 +768,17 @@ def top(topfn,
         saltenv=None,
         **kwargs):
     '''
-    Execute a specific top file instead of the default
+    Execute a specific top file instead of the default. This is useful to apply
+    configurations from a different environment (for example, dev or prod), without
+    modifying the default top file.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' state.top reverse_top.sls
-        salt '*' state.top reverse_top.sls exclude=sls_to_exclude
-        salt '*' state.top reverse_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
+        salt '*' state.top prod_top.sls exclude=sls_to_exclude
+        salt '*' state.top dev_top.sls exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
     '''
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:

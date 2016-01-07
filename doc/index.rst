@@ -74,6 +74,17 @@ projects to quickly set up a Salt demo environment:
 - https://github.com/UtahDave/salt-vagrant-demo
 - https://github.com/UtahDave/salt-vagrant-lxc
 
+Example Formulas
+================
+
+A Github repo that contains a number of community-maintained formulas is
+available at https://github.com/saltstack-formulas. Contributions are welcome!
+
+A Github repo that contains formulas to install a number of Windows
+applications is available at https://github.com/saltstack/salt-winrepo-ng. Note
+that Salt makes this repo :ref:`available <windows-package-manager>` to your
+Windows minions, and contributions are welcome!
+
 Salt in depth
 =============
 
