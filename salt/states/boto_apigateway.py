@@ -72,60 +72,6 @@ def __virtual__():
     '''
     return 'boto_apigateway' if 'boto_apigateway.describe_apis' in __salt__ else False
 
-# Heuristic on whether or not the property name loosely matches given set of 'interesting' factors
-# If you are interested in IDs for example, 'id', 'blah_id', 'blahId' would all match
-def _name_matches(name, matches):
-    for m in matches:
-        if name.endswith(m):
-            return True
-        if name.lower().endswith('_'+m.lower()):
-            return True
-        if name.lower() == m.lower():
-            return True
-    return False
-
-def _object_reducer(o, names=('id', 'name', 'path', 'httpMethod',
-                              'statusCode', 'Created', 'Deleted',
-                              'Updated', 'Flushed', 'Associated', 'Disassociated')):
-    result = {}
-    if isinstance(o, dict):
-        for k, v in o.iteritems():
-            if isinstance(v, dict):
-                reduced = _object_reducer(v, names)
-                if reduced or _name_matches(k, names):
-                    result[k] = reduced
-            elif isinstance(v, list):
-                newlist = []
-                for val in v:
-                    reduced = _object_reducer(val, names)
-                    if reduced or _name_matches(k, names):
-                        newlist.append(reduced)
-                if newlist:
-                    result[k] = newlist
-            else:
-                if _name_matches(k, names):
-                    result[k] = v
-    return result
-
-
-def _log_changes(ret, changekey, changevalue):
-    '''
-    For logging create/update/delete operations to AWS ApiGateway
-    '''
-    cl = ret['changes'].get('new', [])
-    cl.append({changekey: _object_reducer(changevalue)})
-    ret['changes']['new'] = cl
-    return ret
-
-def _log_error_and_abort(ret, obj):
-    '''
-    helper function to update errors in the return structure
-    '''
-    ret['result'] = False
-    ret['abort'] = True
-    if 'error' in obj:
-        ret['comment'] = '{0}'.format(obj.get('error'))
-    return ret
 
 def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_integration_role,
             lambda_region=None, region=None, key=None, keyid=None, profile=None):
@@ -337,6 +283,16 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
 
         swagger = _Swagger(api_name, None, common_args)
 
+        if __opts__['test']:
+            if nuke_api:
+                ret['comment'] = ('[stage: {0}] will be deleted, if there are no other '
+                                  'active stages, the [api: {1} will also be '
+                                  'deleted.'.format(stage_name, api_name))
+            else:
+                ret['comment'] = ('[stage: {0}] will be deleted.'.format(stage_name))
+            ret['result'] = None
+            return ret
+
         ret = swagger.delete_stage(ret, stage_name)
 
         if ret.get('abort'):
@@ -368,6 +324,61 @@ def _dict_to_json_pretty(d, sort_keys=True):
     helper function to generate pretty printed json output
     '''
     return json.dumps(d, indent=4, separators=(',', ': '), sort_keys=sort_keys)
+
+# Heuristic on whether or not the property name loosely matches given set of 'interesting' factors
+# If you are interested in IDs for example, 'id', 'blah_id', 'blahId' would all match
+def _name_matches(name, matches):
+    for m in matches:
+        if name.endswith(m):
+            return True
+        if name.lower().endswith('_'+m.lower()):
+            return True
+        if name.lower() == m.lower():
+            return True
+    return False
+
+def _object_reducer(o, names=('id', 'name', 'path', 'httpMethod',
+                              'statusCode', 'Created', 'Deleted',
+                              'Updated', 'Flushed', 'Associated', 'Disassociated')):
+    result = {}
+    if isinstance(o, dict):
+        for k, v in o.iteritems():
+            if isinstance(v, dict):
+                reduced = _object_reducer(v, names)
+                if reduced or _name_matches(k, names):
+                    result[k] = reduced
+            elif isinstance(v, list):
+                newlist = []
+                for val in v:
+                    reduced = _object_reducer(val, names)
+                    if reduced or _name_matches(k, names):
+                        newlist.append(reduced)
+                if newlist:
+                    result[k] = newlist
+            else:
+                if _name_matches(k, names):
+                    result[k] = v
+    return result
+
+
+def _log_changes(ret, changekey, changevalue):
+    '''
+    For logging create/update/delete operations to AWS ApiGateway
+    '''
+    cl = ret['changes'].get('new', [])
+    cl.append({changekey: _object_reducer(changevalue)})
+    ret['changes']['new'] = cl
+    return ret
+
+def _log_error_and_abort(ret, obj):
+    '''
+    helper function to update errors in the return structure
+    '''
+    ret['result'] = False
+    ret['abort'] = True
+    if 'error' in obj:
+        ret['comment'] = '{0}'.format(obj.get('error'))
+    return ret
 
 class _Swagger(object):
     '''
