@@ -128,6 +128,12 @@ def destroy(instances):
 def action(*args, **kwargs):
     '''
     Execute a single action on the given map/provider/instance
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt-run cloud.actions start my-salt-vm
     '''
     client = _get_client()
     info = client.action(args[0],
