@@ -90,6 +90,10 @@ def _readPlist(filepath):
 
     plistData = NSData.dataWithContentsOfFile_(filepath)
 
+    if not plistData:
+        log.error('Failed to read {0}'.format(filepath))
+        return None
+
     dataObject, plistFormat, error = \
         NSPropertyListSerialization.propertyListFromData_mutabilityOption_format_errorDescription_(
             plistData, NSPropertyListMutableContainers, None, None)

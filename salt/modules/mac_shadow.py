@@ -18,13 +18,16 @@ from __future__ import absolute_import
 
 # Import python libs
 import os
+import time
 import base64
 import string
 import binascii
-from plistlib import readPlistFromString, writePlistToString
 
 # Import salt libs
 import salt.utils
+import logging
+
+log = logging.getLogger(__name__)  # Start logging
 
 # Import 3rd-party libs
 try:
@@ -96,6 +99,14 @@ def _extract_authdata(item):
     }
 
 
+def flush_ds_cache():
+    cmd = 'dscacheutil -flushcache'
+    ret = __salt__['cmd.run'](cmd)
+    if ret:
+        log.error('Warning: dscacheutil -flushcache returned {0}'.format(ret))
+    time.sleep(5)
+
+
 def authorities(name):
     '''
     Read the list of authentication authorities for the given user.
@@ -121,7 +132,7 @@ def user_shadowhash(name):
     In future releases the AuthenticationAuthority property should be checked
     for the hash list
 
-    :param astr name: The username associated with the local directory user.
+    :param str name: The username associated with the local directory user.
     '''
 
     # We have to strip the output string, convert hex back to binary data, read
@@ -139,9 +150,10 @@ def user_shadowhash(name):
     # plist = readPlistFromString(plist_bin)
 
     pbkdf = plist.objectForKey_('SALTED-SHA512-PBKDF2')
-    cram_md5 = plist.objectForKey_('CRAM-MD5')
-    nt = plist.objectForKey_('NT')
-    recoverable = plist.objectForKey_('RECOVERABLE')
+    # Need to figure out why these are applicable
+    # cram_md5 = plist.objectForKey_('CRAM-MD5')
+    # nt = plist.objectForKey_('NT')
+    # recoverable = plist.objectForKey_('RECOVERABLE')
 
     return {
         'SALTED-SHA512-PBKDF2': {
@@ -149,9 +161,9 @@ def user_shadowhash(name):
             'salt': pbkdf.objectForKey_('salt').base64EncodedStringWithOptions_(0),
             'iterations': pbkdf.objectForKey_('iterations')
         },
-        'CRAM-MD5': cram_md5.base64EncodedStringWithOptions_(0),
-        'NT': nt.base64EncodedStringWithOptions_(0),
-        'RECOVERABLE': recoverable.base64EncodedStringWithOptions_(0)
+    #    'CRAM-MD5': cram_md5.base64EncodedStringWithOptions_(0),
+    #    'NT': nt.base64EncodedStringWithOptions_(0),
+    #    'RECOVERABLE': recoverable.base64EncodedStringWithOptions_(0)
     }
 
 
@@ -221,7 +233,7 @@ def set_password_hash(name, hashtype, hash, salt=None, iterations=None):
         The name of the local user, which is assumed to be in the local directory service.
 
     hashtype
-        A valid hash type, one of: PBKDF2, CRAM-MD5, NT, RECOVERABLE
+        A valid hash type, one of: SHA512-PBKDF2, CRAM-MD5, NT, RECOVERABLE
 
     hash
         The computed hash
@@ -243,17 +255,16 @@ def set_password(name, password, salt=None, iterations=None):
     For the moment this sets only the PBKDF2-SHA512 salted hash.
     To be a good citizen we should set every hash in the authority list.
 
-    name
-        The name of the local user, which is assumed to be in the local directory service.
+    :param str name: The name of the local user, which is assumed to be in the
+    local directory service.
 
-    password
-        The plaintext password to set (warning: insecure, used for testing)
+    :param str password: The plaintext password to set (warning: insecure, used
+    for testing)
 
-    salt
-        The salt to use, defaults to automatically generated.
+    :param str salt: The salt to use, defaults is automatically generated.
 
-    iterations
-        The number of iterations to use, defaults to an automatically generated random number.
+    :param int iterations: The number of iterations to use, defaults to an
+    automatically generated random number between 25000 to 64000.
 
     CLI Example:
 
@@ -262,6 +273,9 @@ def set_password(name, password, salt=None, iterations=None):
         salt '*' mac_shadow.set_password macuser macpassword
     '''
     # dscacheutil flush
+    flush_ds_cache()
+
+    # Create the password hash
     hash = gen_password(password, salt, iterations)
     current = user_shadowhash(name)
 
@@ -274,6 +288,7 @@ def set_password(name, password, salt=None, iterations=None):
                                 'ShadowHashData',
                                 'data',
                                 shadowhash_bin)
+    flush_ds_cache()
 
     return True
 
