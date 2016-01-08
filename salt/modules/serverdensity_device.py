@@ -264,7 +264,7 @@ def install_agent(agent_key, agent_version=1):
     __salt__['cmd.run'](cmd='chmod +x {0}'.format(install_filename), cwd=work_dir)
 
     return __salt__['cmd.run'](
-        cmd='./{filename} -a {account_url} -k {agent_key}'.format(
+        cmd='{filename} -a {account_url} -k {agent_key}'.format(
             filename=install_filename, account_url=account_url, agent_key=agent_key),
         cwd=work_dir
     )
