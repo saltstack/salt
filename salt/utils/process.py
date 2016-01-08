@@ -418,6 +418,7 @@ class ProcessManager(object):
                     p_map['Process'].terminate()
         else:
             for pid, p_map in six.iteritems(self._process_map.copy()):
+                log.trace('Terminating pid {0}: {1}'.format(pid, p_map['Process']))
                 if args:
                     # escalate the signal to the process
                     os.kill(pid, args[0])
@@ -430,21 +431,30 @@ class ProcessManager(object):
 
         end_time = time.time() + self.wait_for_kill  # when to die
 
+        log.trace('Waiting to kill process manager children')
         while self._process_map and time.time() < end_time:
             for pid, p_map in six.iteritems(self._process_map.copy()):
+                log.trace('Joining pid {0}: {1}'.format(pid, p_map['Process']))
                 p_map['Process'].join(0)
 
-                # This is a race condition if a signal was passed to all children
-                try:
-                    del self._process_map[pid]
-                except KeyError:
-                    pass
-        # if anyone is done after
-        for pid in self._process_map:
+                if not p_map['Process'].is_alive():
+                    # The process is no longer alive, remove it from the process map dictionary
+                    try:
+                        del self._process_map[pid]
+                    except KeyError:
+                        # This is a race condition if a signal was passed to all children
+                        pass
+
+        # if any managed processes still remain to be handled, let's kill them
+        for pid, p_map in six.iteritems(self._process_map):
+            if not p_map['Process'].is_alive():
+                # If the process is no longer alive, carry on
+                continue
+            log.trace('Killing pid {0}: {1}'.format(pid, p_map['Process']))
             try:
                 os.kill(signal.SIGKILL, pid)
-            # in case the process has since decided to die, os.kill returns OSError
             except OSError:
+                # in case the process has since decided to die, os.kill returns OSError
                 pass
 
 
