@@ -21,6 +21,7 @@ import multiprocessing.util
 import salt.defaults.exitcodes
 import salt.utils
 import salt.log.setup
+import salt.defaults.exitcodes
 from salt.log.mixins import NewStyleClassMixIn
 
 # Import 3rd-party libs
@@ -581,7 +582,7 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
             msg += 'SIGTERM'
         msg += '. Exiting'
         log.debug(msg)
-        exit(0)
+        exit(salt.defaults.exitcodes.EX_OK)
 
     def start(self):
         with default_signals(signal.SIGINT, signal.SIGTERM):
