@@ -304,6 +304,7 @@ def check_password(name, password, runas=None):
     res = __salt__['cmd.run'](
         ['rabbitmqctl', 'eval', cmd],
         runas=runas,
+        output_loglevel='quiet',
         python_shell=False)
     msg = 'password-check'
 
