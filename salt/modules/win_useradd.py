@@ -720,15 +720,6 @@ def chgroups(name, groups, append=True):
     return len(ugrps - agrps) == 0
 
 
-def hide_from_login(name):
-    cmd = 'defaults write Library/Preferences/com.apple.loginwindow ' \
-          'HiddenUsersList -array-add {0}'.format(name)
-
-
-def show_in_login(name):
-    pass
-
-
 def info(name):
     '''
     Return user information
