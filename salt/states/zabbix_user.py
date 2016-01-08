@@ -24,6 +24,17 @@ def present(alias, passwd, usrgrps, **kwargs):
         passwd: user's password
         usrgrps: user groups to add the user to
 
+        optional kwargs:
+                _connection_user: zabbix user (can also be set in opts or pillar,
+                                                see execution module's docstring)
+                _connection_password: zabbix password (can also be set in opts or pillar,
+                                                        see execution module's docstring)
+                _connection_url: url of zabbix frontend (can also be set in opts or pillar,
+                                                            see execution module's docstring)
+
+                firstname: string with firstname of the user, use 'firstname' instead of 'name' parameter to not mess
+                            with value supplied from Salt sls file.
+
     '''
     ret = {'name': alias, 'changes': {}, 'result': False, 'comment': ''}
 
