@@ -704,7 +704,12 @@ class Schedule(object):
                     mret = ret.copy()
                     mret['jid'] = 'req'
                     channel = salt.transport.Channel.factory(self.opts, usage='salt_schedule')
-                    load = {'cmd': '_return', 'id': self.opts['id']}
+                    load = {
+                        'cmd': '_return',
+                        'id': self.opts['id'],
+                        'retcode': self.functions.pack['__context__']['retcode']
+                    }
+
                     for key, value in six.iteritems(mret):
                         load[key] = value
                     channel.send(load)
