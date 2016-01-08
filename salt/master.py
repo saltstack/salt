@@ -773,6 +773,11 @@ class MWorker(SignalHandlingMultiprocessingProcess):
                 'log_queue': self.log_queue,
                 'secrets': SMaster.secrets}
 
+    def _handle_signals(self, signum, sigframe):
+        for channel in getattr(self, 'req_channels', ()):
+            channel.close()
+        super(MWorker, self)._handle_signals(signum, sigframe)
+
     def __bind(self):
         '''
         Bind to the local port

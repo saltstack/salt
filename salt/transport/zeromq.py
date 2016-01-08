@@ -488,7 +488,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             self._monitor = None
         if hasattr(self, 'clients'):
             self.clients.close()
-        self.stream.close()
+        if hasattr(self, 'stream'):
+            self.stream.close()
 
     def pre_fork(self, process_manager):
         '''
