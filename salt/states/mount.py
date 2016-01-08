@@ -319,6 +319,19 @@ def mounted(name,
                     if fstype in ['cifs'] and opt.split('=')[0] == 'user':
                         opt = "username={0}".format(opt.split('=')[1])
 
+                    # convert uid/gid to numeric value from user/group name
+                    name_id_opts = {'uid': 'user.info',
+                                    'gid': 'group.info'}
+                    if opt.split('=')[0] in name_id_opts:
+                        _givenid = opt.split('=')[1]
+                        _param = opt.split('=')[0]
+                        _id = _givenid
+                        if not re.match('[0-9]+$', _givenid):
+                            _info = __salt__[name_id_opts[_param]](_givenid)
+                            if _info and _param in _info:
+                                _id = _info[_param]
+                        opt = _param + '=' + str(_id)
+
                     if opt not in active[real_name]['opts'] \
                     and opt not in active[real_name].get('superopts', []) \
                     and opt not in mount_invisible_options \
@@ -578,7 +591,7 @@ def swap(name, persist=True, config='/etc/fstab'):
 
 
 def unmounted(name,
-              device,
+              device=None,
               config='/etc/fstab',
               persist=False,
               user=None):
@@ -590,10 +603,11 @@ def unmounted(name,
     name
         The path to the location where the device is to be unmounted from
 
-    .. versionadded:: 2015.5.0
-
     device
-        The device to be unmounted.
+        The device to be unmounted.  This is optional because the device could
+        be mounted in multiple places.
+
+        .. versionadded:: 2015.5.0
 
     config
         Set an alternative location for the fstab, Default is ``/etc/fstab``

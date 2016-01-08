@@ -49,11 +49,13 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 import time
 
 # Import salt libs
 import salt.utils.compat
 import salt.utils.odict as odict
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +66,12 @@ try:
     import boto.route53
     from boto.route53.exception import DNSServerError
     #pylint: enable=unused-import
+    # create_zone params were changed in boto 2.35+
+    required_boto_version = '2.35.0'
+    if _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
+        msg = 'boto_route53 requires at least boto {0}.'.format(required_boto_version)
+        log.error(msg)
+        raise ImportError()
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     HAS_BOTO = True
 except ImportError:
@@ -75,7 +83,7 @@ def __virtual__():
     Only load if boto libraries exist.
     '''
     if not HAS_BOTO:
-        return False
+        return (False, 'The boto_route53 module could not be loaded: boto libraries not found')
     return True
 
 
@@ -138,6 +146,30 @@ def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
 
     .. versionadded:: 2015.8.0
 
+    zone
+        DNZ zone to create
+
+    private
+        True/False if the zone will be a private zone
+
+    vpc_id
+        VPC ID to associate the zone to (required if private is True)
+
+    vpc_region
+        VPC Region (required if private is True)
+
+    region
+        region endpoint to connect to
+
+    key
+        AWS key
+
+    keyid
+        AWS keyid
+
+    profile
+        AWS pillar profile
+
     CLI Example::
 
         salt myminion boto_route53.create_zone example.org
@@ -145,15 +177,20 @@ def create_zone(zone, private=False, vpc_id=None, vpc_region=None, region=None,
     if region is None:
         region = 'universal'
 
+    if private:
+        if not vpc_id or not vpc_region:
+            msg = 'vpc_id and vpc_region must be specified for a private zone'
+            raise SaltInvocationError(msg)
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
-    _zone = conn.get_zone(zone, private_zone=private, vpc_id=vpc_id,
-                          vpc_region=vpc_region)
+    _zone = conn.get_zone(zone)
 
     if _zone:
         return False
 
-    conn.create_zone(zone)
+    conn.create_zone(zone, private_zone=private, vpc_id=vpc_id,
+                     vpc_region=vpc_region)
     return True
 
 

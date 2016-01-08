@@ -76,7 +76,7 @@ def __virtual__():
     '''
     # win_file takes care of windows
     if salt.utils.is_windows():
-        return False
+        return (False, 'The file execution module cannot be loaded: only available on non-Windows systems - use win_file instead.')
     return True
 
 
@@ -1460,7 +1460,7 @@ def line(path, content, match=None, mode=None, location=None,
 
     .. code-block:: bash
 
-        salt '*' file.line /etc/nsswitch.conf "networks:\tfiles dns", after="hosts:.*?", mode='ensure'
+        salt '*' file.line /etc/nsswitch.conf "networks:\tfiles dns" after="hosts:.*?" mode='ensure'
     '''
     path = os.path.realpath(os.path.expanduser(path))
     if not os.path.exists(path):
@@ -1609,7 +1609,7 @@ def line(path, content, match=None, mode=None, location=None,
 
     changed = body_before != hashlib.sha256(salt.utils.to_bytes(body)).hexdigest()
 
-    if backup and changed:
+    if backup and changed and __opts__['test'] is False:
         try:
             temp_file = _mkstemp_copy(path=path, preserve_inode=True)
             shutil.move(temp_file, '{0}.{1}'.format(path, time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime())))
@@ -1620,14 +1620,15 @@ def line(path, content, match=None, mode=None, location=None,
 
     if changed:
         if show_changes:
-            changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'r').readlines(), body.splitlines()))
-        fh_ = None
-        try:
-            fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
-            fh_.write(body)
-        finally:
-            if fh_:
-                fh_.close()
+            changes_diff = ''.join(difflib.unified_diff(salt.utils.fopen(path, 'r').read().splitlines(), body.splitlines()))
+        if __opts__['test'] is False:
+            fh_ = None
+            try:
+                fh_ = salt.utils.atomicfile.atomic_open(path, 'w')
+                fh_.write(body)
+            finally:
+                if fh_:
+                    fh_.close()
 
     return show_changes and changes_diff or changed
 
@@ -1801,58 +1802,61 @@ def replace(path,
                                         append_if_not_found) \
                                      else repl
 
-    # mmap throws a ValueError if the file is empty, but if it is empty we
-    # should be able to skip the search anyway. NOTE: Is there a use case for
-    # searching an empty file with an empty pattern?
-    if filesize is not 0:
+    try:
         # First check the whole file, determine whether to make the replacement
         # Searching first avoids modifying the time stamp if there are no changes
         r_data = None
-        try:
-            # Use a read-only handle to open the file
-            with salt.utils.fopen(path,
-                                  mode='rb',
-                                  buffering=bufsize) as r_file:
+        # Use a read-only handle to open the file
+        with salt.utils.fopen(path,
+                              mode='rb',
+                              buffering=bufsize) as r_file:
+            try:
+                # mmap throws a ValueError if the file is empty.
                 r_data = mmap.mmap(r_file.fileno(),
                                    0,
                                    access=mmap.ACCESS_READ)
-                if search_only:
-                    # Just search; bail as early as a match is found
-                    if re.search(cpattern, r_data):
-                        return True  # `with` block handles file closure
-                else:
-                    result, nrepl = re.subn(cpattern, repl, r_data, count)
+            except (ValueError, mmap.error):
+                # size of file in /proc is 0, but contains data
+                r_data = "".join(r_file)
+            if search_only:
+                # Just search; bail as early as a match is found
+                if re.search(cpattern, r_data):
+                    return True  # `with` block handles file closure
+            else:
+                result, nrepl = re.subn(cpattern, repl, r_data, count)
 
-                    # found anything? (even if no change)
-                    if nrepl > 0:
+                # found anything? (even if no change)
+                if nrepl > 0:
+                    found = True
+                    # Identity check the potential change
+                    has_changes = True if pattern != repl else has_changes
+
+                if prepend_if_not_found or append_if_not_found:
+                    # Search for content, to avoid pre/appending the
+                    # content if it was pre/appended in a previous run.
+                    if re.search('^{0}$'.format(re.escape(content)),
+                                 r_data,
+                                 flags=flags_num):
+                        # Content was found, so set found.
                         found = True
-                        # Identity check the potential change
-                        has_changes = True if pattern != repl else has_changes
 
-                    if prepend_if_not_found or append_if_not_found:
-                        # Search for content, to avoid pre/appending the
-                        # content if it was pre/appended in a previous run.
-                        if re.search('^{0}$'.format(re.escape(content)),
-                                     r_data,
-                                     flags=flags_num):
-                            # Content was found, so set found.
-                            found = True
+                # Keep track of show_changes here, in case the file isn't
+                # modified
+                if show_changes or append_if_not_found or \
+                   prepend_if_not_found:
+                    orig_file = r_data.read(filesize).splitlines(True) \
+                        if hasattr(r_data, 'read') \
+                        else r_data.splitlines(True)
+                    new_file = result.splitlines(True)
 
-                    # Keep track of show_changes here, in case the file isn't
-                    # modified
-                    if show_changes or append_if_not_found or \
-                       prepend_if_not_found:
-                        orig_file = r_data.read(filesize).splitlines(True)
-                        new_file = result.splitlines(True)
-
-        except (OSError, IOError) as exc:
-            raise CommandExecutionError(
-                "Unable to open file '{0}'. "
-                "Exception: {1}".format(path, exc)
-                )
-        finally:
-            if r_data and isinstance(r_data, mmap.mmap):
-                r_data.close()
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            "Unable to open file '{0}'. "
+            "Exception: {1}".format(path, exc)
+            )
+    finally:
+        if r_data and isinstance(r_data, mmap.mmap):
+            r_data.close()
 
     if has_changes and not dry_run:
         # Write the replacement text in this block.
@@ -3238,11 +3242,13 @@ def source_list(source, source_hash, saltenv):
             if isinstance(single, dict):
                 # check the proto, if it is http or ftp then download the file
                 # to check, if it is salt then check the master list
+                # if it is a local file, check if the file exists
                 if len(single) != 1:
                     continue
                 single_src = next(iter(single))
                 single_hash = single[single_src] if single[single_src] else source_hash
-                proto = _urlparse(single_src).scheme
+                urlparsed_single_src = _urlparse(single_src)
+                proto = urlparsed_single_src.scheme
                 if proto == 'salt':
                     path, senv = salt.utils.url.parse(single_src)
                     if not senv:
@@ -3257,11 +3263,24 @@ def source_list(source, source_hash, saltenv):
                     if fn_:
                         ret = (single_src, single_hash)
                         break
+                elif proto == 'file' and os.path.exists(urlparsed_single_src.path):
+                    ret = (single_src, single_hash)
+                    break
+                elif single_src.startswith('/') and os.path.exists(single_src):
+                    ret = (single_src, single_hash)
+                    break
             elif isinstance(single, six.string_types):
                 path, senv = salt.utils.url.parse(single)
                 if not senv:
                     senv = saltenv
                 if (path, senv) in mfiles or (path, senv) in mdirs:
+                    ret = (single, source_hash)
+                    break
+                urlparsed_source = _urlparse(single)
+                if urlparsed_source.scheme == 'file' and os.path.exists(urlparsed_source.path):
+                    ret = (single, source_hash)
+                    break
+                if single.startswith('/') and os.path.exists(single):
                     ret = (single, source_hash)
                     break
         if ret is None:
@@ -3334,15 +3353,8 @@ def get_managed(
             source_sum = __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
                 return '', {}, 'Source file {0} not found'.format(source)
-        # if its a local file
-        elif urlparsed_source.scheme == 'file':
-            file_sum = get_hash(urlparsed_source.path, form='sha256')
-            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
-        elif source.startswith('/'):
-            file_sum = get_hash(source, form='sha256')
-            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
         elif source_hash:
-            protos = ('salt', 'http', 'https', 'ftp', 'swift', 's3')
+            protos = ('salt', 'http', 'https', 'ftp', 'swift', 's3', 'file')
             if _urlparse(source_hash).scheme in protos:
                 # The source_hash is a file on a server
                 hash_fn = __salt__['cp.cache_file'](source_hash, saltenv)
@@ -3351,20 +3363,27 @@ def get_managed(
                         source_hash)
                 source_sum = extract_hash(hash_fn, '', name)
                 if source_sum is None:
-                    return '', {}, ('Source hash file {0} contains an invalid '
-                        'hash format, it must be in the format <hash type>=<hash>.'
-                        ).format(source_hash)
+                    return '', {}, ('Source hash {0} format is invalid. It '
+                        'must be in the format, <hash type>=<hash>, or it '
+                        'must be a supported protocol: {1}'
+                        ).format(source_hash, ', '.join(protos))
 
             else:
                 # The source_hash is a hash string
                 comps = source_hash.split('=')
                 if len(comps) < 2:
-                    return '', {}, ('Source hash file {0} contains an '
-                                    'invalid hash format, it must be in '
-                                    'the format <hash type>=<hash>'
-                                    ).format(source_hash)
+                    return '', {}, ('Source hash {0} format is invalid. It '
+                        'must be in the format, <hash type>=<hash>, or it '
+                        'must be a supported protocol: {1}'
+                        ).format(source_hash, ', '.join(protos))
                 source_sum['hsum'] = comps[1].strip()
                 source_sum['hash_type'] = comps[0].strip()
+        elif urlparsed_source.scheme == 'file':
+            file_sum = get_hash(urlparsed_source.path, form='sha256')
+            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
+        elif source.startswith('/'):
+            file_sum = get_hash(source, form='sha256')
+            source_sum = {'hsum': file_sum, 'hash_type': 'sha256'}
         else:
             return '', {}, ('Unable to determine upstream hash of'
                             ' source file {0}').format(source)
@@ -3826,9 +3845,13 @@ def check_file_meta(
                 else:
                     changes['diff'] = 'Replace binary file with text file'
 
-    if user is not None and user != lstats['user']:
+    if (user is not None
+            and user != lstats['user']
+            and user != lstats['uid']):
         changes['user'] = user
-    if group is not None and group != lstats['group']:
+    if (group is not None
+            and group != lstats['group']
+            and group != lstats['gid']):
         changes['group'] = group
     # Normalize the file mode
     smode = __salt__['config.manage_mode'](lstats['mode'])
@@ -4862,7 +4885,7 @@ def delete_backup(path, backup_id):
 
     .. code-block:: bash
 
-        salt '*' file.restore_backup /foo/bar/baz.txt 0
+        salt '*' file.delete_backup /var/cache/salt/minion/file_backup/home/foo/bar/baz.txt 0
     '''
     path = os.path.expanduser(path)
 

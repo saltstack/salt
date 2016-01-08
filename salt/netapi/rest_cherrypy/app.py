@@ -1279,11 +1279,12 @@ class Keys(LowDataAdapter):
         return {'return': next(result, {}).get('data', {}).get('return', {})}
 
     @cherrypy.config(**{'tools.hypermedia_out.on': False, 'tools.sessions.on': False})
-    def POST(self, mid, keysize=None, force=None, **kwargs):
+    def POST(self, **kwargs):
         r'''
         Easily generate keys for a minion and auto-accept the new key
 
-        .. versionadded:: 2014.7.0
+        Accepts all the same parameters as the :py:func:`key.gen_accept
+        <salt.wheel.key.gen_accept>`.
 
         Example partial kickstart script to bootstrap a new minion:
 
@@ -1339,21 +1340,15 @@ class Keys(LowDataAdapter):
 
             jerry.pub0000644000000000000000000000070300000000000010730 0ustar  00000000000000
         '''
-        lowstate = [{
+        lowstate = cherrypy.request.lowstate
+        lowstate[0].update({
             'client': 'wheel',
             'fun': 'key.gen_accept',
-            'id_': mid,
-        }]
+        })
 
-        if keysize:
-            lowstate[0]['keysize'] = keysize
+        if 'mid' in lowstate[0]:
+            lowstate[0]['id_'] = lowstate[0].pop('mid')
 
-        if force:
-            lowstate[0]['force'] = force
-
-        lowstate[0].update(kwargs)
-
-        cherrypy.request.lowstate = lowstate
         result = self.exec_lowstate()
         ret = next(result, {}).get('data', {}).get('return', {})
 
@@ -1372,7 +1367,7 @@ class Keys(LowDataAdapter):
         tarball.close()
 
         headers = cherrypy.response.headers
-        headers['Content-Disposition'] = 'attachment; filename="saltkeys-{0}.tar"'.format(mid)
+        headers['Content-Disposition'] = 'attachment; filename="saltkeys-{0}.tar"'.format(lowstate[0]['id_'])
         headers['Content-Type'] = 'application/x-tar'
         headers['Content-Length'] = fileobj.len
         headers['Cache-Control'] = 'no-cache'
@@ -1800,11 +1795,12 @@ class Events(object):
         .. code-block:: javascript
 
             var source = new EventSource('/events');
-            source.onopen = function() { console.debug('opening') };
-            source.onerror = function(e) { console.debug('error!', e) };
-            source.onmessage = function(e) {
-                console.debug('Tag: ', e.data.tag)
-                console.debug('Data: ', e.data.data)
+            source.onopen = function() { console.info('Listening ...') };
+            source.onerror = function(err) { console.error(err) };
+            source.onmessage = function(message) {
+              var saltEvent = JSON.parse(message.data);
+              console.info(saltEvent.tag)
+              console.debug(saltEvent.data)
             };
 
         Or using CORS:

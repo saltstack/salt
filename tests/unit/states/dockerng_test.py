@@ -453,6 +453,124 @@ class DockerngTestCase(TestCase):
             labels=['LABEL1', 'LABEL2'],
             client_timeout=60)
 
+    def test_network_present(self):
+        '''
+        Test dockerng.network_present
+        '''
+        dockerng_create_network = Mock(return_value='created')
+        dockerng_connect_container_to_network = Mock(return_value='connected')
+        __salt__ = {'dockerng.create_network': dockerng_create_network,
+                    'dockerng.connect_container_to_network': dockerng_connect_container_to_network,
+                    'dockerng.networks': Mock(return_value=[]),
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.network_present(
+                'network_foo',
+                containers=['container'],
+                )
+        dockerng_create_network.assert_called_with('network_foo', driver=None)
+        dockerng_connect_container_to_network.assert_called_with('container',
+                                                                 'network_foo')
+        self.assertEqual(ret, {'name': 'network_foo',
+                               'comment': '',
+                               'changes': {'connected': 'connected',
+                                           'created': 'created'},
+                               'result': True})
+
+    def test_network_absent(self):
+        '''
+        Test dockerng.network_absent
+        '''
+        dockerng_remove_network = Mock(return_value='removed')
+        dockerng_disconnect_container_from_network = Mock(return_value='disconnected')
+        __salt__ = {'dockerng.remove_network': dockerng_remove_network,
+                    'dockerng.disconnect_container_from_network': dockerng_disconnect_container_from_network,
+                    'dockerng.networks': Mock(return_value=[{'Containers': {'container': {}}}]),
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.network_absent(
+                'network_foo',
+                )
+        dockerng_disconnect_container_from_network.assert_called_with('container',
+                                                                      'network_foo')
+        dockerng_remove_network.assert_called_with('network_foo')
+        self.assertEqual(ret, {'name': 'network_foo',
+                               'comment': '',
+                               'changes': {'disconnected': 'disconnected',
+                                           'removed': 'removed'},
+                               'result': True})
+
+    def test_volume_present(self):
+        '''
+        Test dockerng.volume_present
+        '''
+        dockerng_create_volume = Mock(return_value='created')
+        __salt__ = {'dockerng.create_volume': dockerng_create_volume,
+                    'dockerng.volumes': Mock(return_value={'Volumes': []}),
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.volume_present(
+                'volume_foo',
+                )
+        dockerng_create_volume.assert_called_with('volume_foo',
+                                                  driver=None,
+                                                  driver_opts=None)
+        self.assertEqual(ret, {'name': 'volume_foo',
+                               'comment': '',
+                               'changes': {'created': 'created'},
+                               'result': True})
+
+    def test_volume_present_with_another_driver(self):
+        '''
+        Test dockerng.volume_present
+        '''
+        dockerng_create_volume = Mock(return_value='created')
+        dockerng_remove_volume = Mock(return_value='removed')
+        __salt__ = {'dockerng.create_volume': dockerng_create_volume,
+                    'dockerng.remove_volume': dockerng_remove_volume,
+                    'dockerng.volumes': Mock(return_value={
+                        'Volumes': [{'Name': 'volume_foo',
+                                     'Driver': 'foo'}]}),
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.volume_present(
+                'volume_foo',
+                driver='bar'
+                )
+        dockerng_remove_volume.assert_called_with('volume_foo')
+        dockerng_create_volume.assert_called_with('volume_foo',
+                                                  driver='bar',
+                                                  driver_opts=None)
+        self.assertEqual(ret, {'name': 'volume_foo',
+                               'comment': '',
+                               'changes': {'created': 'created',
+                                           'removed': 'removed'},
+                               'result': True})
+
+    def test_volume_absent(self):
+        '''
+        Test dockerng.volume_absent
+        '''
+        dockerng_remove_volume = Mock(return_value='removed')
+        __salt__ = {'dockerng.remove_volume': dockerng_remove_volume,
+                    'dockerng.volumes': Mock(return_value={
+                        'Volumes': [{'Name': 'volume_foo'}]}),
+                    }
+        with patch.dict(dockerng_state.__dict__,
+                        {'__salt__': __salt__}):
+            ret = dockerng_state.volume_absent(
+                'volume_foo',
+                )
+        dockerng_remove_volume.assert_called_with('volume_foo')
+        self.assertEqual(ret, {'name': 'volume_foo',
+                               'comment': '',
+                               'changes': {'removed': 'removed'},
+                               'result': True})
+
 
 if __name__ == '__main__':
     from integration import run_tests

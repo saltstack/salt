@@ -52,7 +52,7 @@ class AlternativesTestCase(TestCase):
         mock = MagicMock(side_effect=[True, False, False])
         mock_bool = MagicMock(return_value=True)
         with patch.dict(alternatives.__salt__,
-                        {'alternatives.check_installed': mock,
+                        {'alternatives.check_exists': mock,
                          'alternatives.install': mock_bool}):
             comt = ('Alternatives for {0} is already set to {1}'
                     ).format(name, path)
@@ -96,7 +96,7 @@ class AlternativesTestCase(TestCase):
         mock_bool = MagicMock(return_value=True)
         mock_bol = MagicMock(side_effect=[False, True, True, False])
         with patch.dict(alternatives.__salt__,
-                        {'alternatives.check_installed': mock,
+                        {'alternatives.check_exists': mock,
                          'alternatives.show_current': mock_bol,
                          'alternatives.remove': mock_bool}):
             comt = ('Alternative for {0} will be removed'.format(name))

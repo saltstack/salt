@@ -37,7 +37,7 @@ See the `salt-bootstrap`_ documentation for other one liners. When using `Vagran
 to test out salt, the `Vagrant salt provisioner`_ will provision the VM for you.
 
 Telling Salt to Run Masterless
-===================================
+==============================
 
 To instruct the minion to not look for a master, the :conf_minion:`file_client`
 configuration option needs to be set in the minion configuration file.
@@ -52,6 +52,11 @@ minion is configured to not gather this data from the master.
 
 Now the salt minion will not look for a master and will assume that the local
 system has all of the file and pillar resources.
+
+Configuration which resided in the
+:doc:`master configuration </ref/configuration/master>` (e.g. ``/etc/salt/master``)
+should be moved to the :doc:`minion configuration </ref/configuration/minion>`
+since the minion does not read the master configuration.
 
 .. note::
 

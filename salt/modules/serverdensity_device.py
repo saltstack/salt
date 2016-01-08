@@ -35,7 +35,7 @@ def __virtual__():
     :return: The virtual name of the module.
     '''
     if not ENABLED:
-        return False
+        return (False, 'The requests python module cannot be imported')
     return "serverdensity_device"
 
 

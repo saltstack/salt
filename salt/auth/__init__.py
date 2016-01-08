@@ -283,6 +283,7 @@ class Authorize(object):
                 form,
                 sub_auth[name] if name in sub_auth else sub_auth['*'],
                 load.get('fun', None),
+                load.get('arg', None),
                 load.get('tgt', None),
                 load.get('tgt_type', 'glob'))
         if not good:

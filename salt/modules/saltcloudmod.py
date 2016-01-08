@@ -26,7 +26,7 @@ def __virtual__():
     '''
     if HAS_CLOUD:
         return __virtualname__
-    return False
+    return (False, 'The saltcloudmod execution module failed to load: requires the saltcloud library.')
 
 
 def create(name, profile):

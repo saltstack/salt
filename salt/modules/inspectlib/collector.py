@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # Import Python Libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 import os
 import sys
 from subprocess import Popen, PIPE, STDOUT
@@ -435,7 +435,7 @@ def main(dbfile, pidfile, mode):
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:
-        print >> sys.stderr, "This module is not intended to use directly!"
+        print("This module is not intended to use directly!", file=sys.stderr)
         sys.exit(1)
 
     pidfile, dbfile, mode = sys.argv[1:]

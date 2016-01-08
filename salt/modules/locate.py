@@ -18,7 +18,7 @@ def __virtual__():
     Only work on POSIX-like systems
     '''
     if salt.utils.is_windows():
-        return False
+        return (False, 'The locate execution module cannot be loaded: only available on non-Windows systems.')
     return True
 
 

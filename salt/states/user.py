@@ -244,7 +244,7 @@ def present(name,
 
     home
         The custom login directory of user. Uses default value of underlying
-        system if not set. Notice that this directory does not have to exists.
+        system if not set. Notice that this directory does not have to exist.
         This also the location of the home directory to create if createhome is
         set to True.
 
@@ -258,6 +258,7 @@ def present(name,
         Linux, FreeBSD, NetBSD, OpenBSD, and Solaris. If the ``empty_password``
         argument is set to ``True`` then ``password`` is ignored.
         For Windows this is the plain text password.
+        For Linux, the hash can be generated with ``openssl passwd -1``.
 
     .. versionchanged:: 0.16.0
        BSD support added.
@@ -376,7 +377,7 @@ def present(name,
     # the comma is used to separate field in GECOS, thus resulting into
     # salt adding the end of fullname each time this function is called
     for gecos_field in ['fullname', 'roomnumber', 'workphone', 'homephone']:
-        if isinstance(locals()[gecos_field], type('')) and ',' in locals()[gecos_field]:
+        if isinstance(gecos_field, six.string_types) and ',' in gecos_field:
             ret['comment'] = "Unsupported char ',' in {0}".format(gecos_field)
             ret['result'] = False
             return ret
@@ -465,10 +466,16 @@ def present(name,
                 continue
             # run chhome once to avoid any possible bad side-effect
             if key == 'home' and 'homeDoesNotExist' not in changes:
-                __salt__['user.chhome'](name, val, False)
+                if __grains__['kernel'] == 'Darwin':
+                    __salt__['user.chhome'](name, val)
+                else:
+                    __salt__['user.chhome'](name, val, False)
                 continue
             if key == 'homeDoesNotExist':
-                __salt__['user.chhome'](name, val, True)
+                if __grains__['kernel'] == 'Darwin':
+                    __salt__['user.chhome'](name, val)
+                else:
+                    __salt__['user.chhome'](name, val, True)
                 if not os.path.isdir(val):
                     __salt__['file.mkdir'](val, pre['uid'], pre['gid'], 0o755)
                 continue

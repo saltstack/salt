@@ -571,8 +571,6 @@ class Client(object):
 
         if url_data.scheme == 's3':
             try:
-                import salt.utils.s3
-
                 def s3_opt(key, default=None):
                     '''Get value of s3.<key> from Minion config or from Pillar'''
                     if 's3.' + key in self.opts:
@@ -607,10 +605,20 @@ class Client(object):
 
         if url_data.scheme == 'swift':
             try:
-                swift_conn = SaltSwift(self.opts.get('keystone.user', None),
-                                       self.opts.get('keystone.tenant', None),
-                                       self.opts.get('keystone.auth_url', None),
-                                       self.opts.get('keystone.password', None))
+                def swift_opt(key, default):
+                    '''Get value of <key> from Minion config or from Pillar'''
+                    if key in self.opts:
+                        return self.opts[key]
+                    try:
+                        return self.opts['pillar'][key]
+                    except (KeyError, TypeError):
+                        return default
+
+                swift_conn = SaltSwift(swift_opt('keystone.user', None),
+                                       swift_opt('keystone.tenant', None),
+                                       swift_opt('keystone.auth_url', None),
+                                       swift_opt('keystone.password', None))
+
                 swift_conn.get_object(url_data.netloc,
                                       url_data.path[1:],
                                       dest)
@@ -621,7 +629,10 @@ class Client(object):
         get_kwargs = {}
         if url_data.username is not None \
                 and url_data.scheme in ('http', 'https'):
-            _, netloc = url_data.netloc.split('@', 1)
+            netloc = url_data.netloc
+            at_sign_pos = netloc.rfind('@')
+            if at_sign_pos != -1:
+                netloc = netloc[at_sign_pos + 1:]
             fixed_url = urlunparse(
                 (url_data.scheme, netloc, url_data.path,
                  url_data.params, url_data.query, url_data.fragment))

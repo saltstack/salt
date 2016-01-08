@@ -63,7 +63,7 @@ VIRT_DEFAULT_HYPER = 'kvm'
 
 def __virtual__():
     if not HAS_LIBVIRT:
-        return False
+        return (False, 'Unable to locate or import python libvirt library.')
     return 'virt'
 
 
@@ -1992,3 +1992,92 @@ def list_vms():
     '''
     salt.utils.warn_until('Nitrogen', 'Use "virt.list_domains" instead.')
     return list_domains()
+
+
+def _capabilities():
+    '''
+    Return connection capabilities
+    It's a huge klutz to parse right,
+    so hide func for now and pass on the XML instead
+    '''
+    conn = __get_conn()
+    caps = conn.getCapabilities()
+    caps = minidom.parseString(caps)
+
+    return caps
+
+
+def cpu_baseline(full=False, migratable=False, out='libvirt'):
+    '''
+    Return the optimal 'custom' CPU baseline config for VM's on this minion
+
+    .. versionadded:: Boron
+
+    :param full: Return all CPU features rather than the ones on top of the closest CPU model
+    :param migratable: Exclude CPU features that are unmigratable (libvirt 2.13+)
+    :param out: 'libvirt' (default) for usable libvirt XML definition, 'salt' for nice dict
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.cpu_baseline
+
+    '''
+    conn = __get_conn()
+    caps = _capabilities()
+
+    cpu = caps.getElementsByTagName('host')[0].getElementsByTagName('cpu')[0]
+
+    log.debug('Host CPU model definition: {0}'.format(cpu.toxml()))
+
+    flags = 0
+    if migratable:
+        # This one is only in 1.2.14+
+        if getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_MIGRATABLE', False):
+            flags += libvirt.VIR_CONNECT_BASELINE_CPU_MIGRATABLE
+        else:
+            raise ValueError
+
+    if full and getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', False):
+        # This one is only in 1.1.3+
+        flags += libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
+
+    cpu = conn.baselineCPU([cpu.toxml()], flags)
+    cpu = minidom.parseString(cpu).getElementsByTagName('cpu')
+    cpu = cpu[0]
+
+    if full and not getattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', False):
+        # Try do it by ourselves
+        # Find the models in cpu_map.xml and iterate over them for as long as entries have submodels
+        with salt.utils.fopen('/usr/share/libvirt/cpu_map.xml', 'r') as cpu_map:
+            cpu_map = minidom.parse(cpu_map)
+
+        cpu_model = cpu.getElementsByTagName('model')[0].childNodes[0].nodeValue
+        while cpu_model:
+            cpu_specs = [el for el in cpu_map.getElementsByTagName('model') if el.getAttribute('name') == cpu_model and el.hasChildNodes()]
+
+            if not len(cpu_specs):
+                raise ValueError('Model {0} not found in CPU map'.format(cpu_model))
+            elif len(cpu_specs) > 1:
+                raise ValueError('Multiple models {0} found in CPU map'.format(cpu_model))
+
+            cpu_specs = cpu_specs[0]
+
+            cpu_model = cpu_specs.getElementsByTagName('model')
+            if not len(cpu_model):
+                cpu_model = None
+            else:
+                cpu_model = cpu_model[0].getAttribute('name')
+
+            for feature in cpu_specs.getElementsByTagName('feature'):
+                cpu.appendChild(feature)
+
+    if out == 'libvirt':
+        return cpu.toxml()
+    elif out == 'salt':
+        return {
+            'model': cpu.getElementsByTagName('model')[0].childNodes[0].nodeValue,
+            'vendor': cpu.getElementsByTagName('vendor')[0].childNodes[0].nodeValue,
+            'features': [feature.getAttribute('name') for feature in cpu.getElementsByTagName('feature')]
+        }

@@ -16,6 +16,8 @@
 
 '''
 Philips HUE lamps module for proxy.
+
+.. versionadded:: 2015.8.3
 '''
 
 from __future__ import absolute_import
@@ -40,7 +42,13 @@ def __virtual__():
         return False
 
     def _mkf(cmd_name, doc):
+        '''
+        Nested function to help move proxy functions into sys.modules
+        '''
         def _cmd(*args, **kw):
+            '''
+            Call commands in proxy
+            '''
             proxyfn = 'philips_hue.'+cmd_name
             return __proxy__[proxyfn](*args, **kw)
         return _cmd

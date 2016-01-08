@@ -86,9 +86,6 @@ these states. Here is some example SLS:
 '''
 from __future__ import absolute_import
 
-# Import python libs
-import sys
-
 # Import salt libs
 import salt.utils
 
@@ -249,6 +246,13 @@ def managed(name, **kwargs):
                              'and the "ppa" argument.'
             return ret
         kwargs['repo'] = kwargs['name']
+
+    if 'key_url' in kwargs and ('keyid' in kwargs or 'keyserver' in kwargs):
+        ret['result'] = False
+        ret['comment'] = 'You may not use both "keyid"/"keyserver" and ' \
+                         '"key_url" argument.'
+        return ret
+
     if 'ppa' in kwargs and __grains__['os'] in ('Ubuntu', 'Mint'):
         # overload the name/repo value for PPAs cleanly
         # this allows us to have one code-path for PPAs
@@ -259,6 +263,7 @@ def managed(name, **kwargs):
 
     if 'humanname' in kwargs:
         kwargs['name'] = kwargs['humanname']
+        kwargs.pop('humanname')
 
     if kwargs.pop('enabled', None):
         kwargs['disabled'] = False
@@ -364,12 +369,7 @@ def managed(name, **kwargs):
         ret['result'] = False
         ret['comment'] = \
             'Failed to confirm config of repo {0!r}: {1}'.format(name, exc)
-    # Clear cache of available packages, if present, since changes to the
-    # repositories may change the packages that are available.
-    if ret['changes']:
-        sys.modules[
-            __salt__['test.ping'].__module__
-        ].__context__.pop('pkg._avail', None)
+
     return ret
 
 
@@ -489,12 +489,5 @@ def absent(name, **kwargs):
     else:
         ret['result'] = False
         ret['comment'] = 'Failed to remove repo {0}'.format(name)
-
-    # Clear cache of available packages, if present, since changes to the
-    # repositories may change the packages that are available.
-    if ret['changes']:
-        sys.modules[
-            __salt__['test.ping'].__module__
-        ].__context__.pop('pkg._avail', None)
 
     return ret

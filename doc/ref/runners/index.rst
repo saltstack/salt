@@ -65,7 +65,7 @@ A custom runner may send its own progress event by using the
 .. code-block:: python
 
     if display_progress:
-        __jid_event__.fire_event({'message': 'A progress message', 'progress')
+        __jid_event__.fire_event({'message': 'A progress message'}, 'progress')
 
 The above would produce output on the console reading: ``A progress message``
 as well as an event on the event similar to:

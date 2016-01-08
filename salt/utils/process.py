@@ -24,6 +24,7 @@ from salt.log.mixins import NewStyleClassMixIn
 # Import 3rd-party libs
 import salt.ext.six as six
 from salt.ext.six.moves import queue, range  # pylint: disable=import-error,redefined-builtin
+from tornado import gen
 
 log = logging.getLogger(__name__)
 
@@ -344,10 +345,12 @@ class ProcessManager(object):
         for pid in self._process_map:
             os.kill(pid, signal)
 
-    def run(self):
+    @gen.coroutine
+    def run(self, async=False):
         '''
         Load and start all available api modules
         '''
+        log.debug('Process Manager starting!')
         salt.utils.appendproctitle(self.name)
 
         # make sure to kill the subprocesses if the parent is killed
@@ -359,18 +362,21 @@ class ProcessManager(object):
             signal.signal(signal.SIGINT, self.kill_children)
 
         while True:
+            log.debug('Process manager iteration')
             try:
                 # in case someone died while we were waiting...
                 self.check_children()
 
-                if not salt.utils.is_windows():
+                if not salt.utils.is_windows() and not async:
                     pid, exit_status = os.wait()
                     if pid not in self._process_map:
                         log.debug('Process of pid {0} died, not a known'
                                   ' process, will not restart'.format(pid))
                         continue
                     self.restart_process(pid)
-                else:
+                elif async is True:
+                    yield gen.sleep(10)
+                elif async is False:
                     # os.wait() is not supported on Windows.
                     time.sleep(10)
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait

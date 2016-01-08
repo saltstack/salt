@@ -232,6 +232,9 @@ class EtcdUtilTestCase(TestCase):
             self.assertEqual(client.watch('/some-key'),
                              {'value': None, 'changed': False, 'mIndex': 0, 'key': '/some-key', 'dir': False})
 
+            mock.side_effect = iter([etcd_util.EtcdUtilWatchTimeout, ValueError])
+            self.assertEqual(client.watch('/some-key'), {})
+
             mock.side_effect = None
             mock.return_value = MagicMock(value='stack', key='/some-key', modifiedIndex=1, dir=True)
             self.assertDictEqual(client.watch('/some-dir', recurse=True, timeout=5, index=10),

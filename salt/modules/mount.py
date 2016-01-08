@@ -31,7 +31,7 @@ def __virtual__():
     '''
     # Disable on Windows, a specific file module exists:
     if salt.utils.is_windows():
-        return False
+        return (False, 'The mount module cannot be loaded: not a POSIX-like system.')
     return True
 
 
@@ -80,11 +80,11 @@ def _active_mountinfo(ret):
                              'major': device[0],
                              'minor': device[1],
                              'root': comps[3],
-                             'opts': comps[5].split(','),
+                             'opts': _resolve_user_group_names(comps[5].split(',')),
                              'fstype': comps[_sep + 1],
                              'device': device_name,
                              'alt_device': _list.get(comps[4], None),
-                             'superopts': comps[_sep + 3].split(','),
+                             'superopts': _resolve_user_group_names(comps[_sep + 3].split(',')),
                              'device_uuid': device_uuid,
                              'device_label': device_label}
     return ret
@@ -106,7 +106,7 @@ def _active_mounts(ret):
             ret[comps[1]] = {'device': comps[0],
                              'alt_device': _list.get(comps[1], None),
                              'fstype': comps[2],
-                             'opts': comps[3].split(',')}
+                             'opts': _resolve_user_group_names(comps[3].split(','))}
     return ret
 
 
@@ -118,7 +118,7 @@ def _active_mounts_freebsd(ret):
         comps = re.sub(r"\s+", " ", line).split()
         ret[comps[1]] = {'device': comps[0],
                          'fstype': comps[2],
-                         'opts': comps[3].split(',')}
+                         'opts': _resolve_user_group_names(comps[3].split(','))}
     return ret
 
 
@@ -130,7 +130,7 @@ def _active_mounts_solaris(ret):
         comps = re.sub(r"\s+", " ", line).split()
         ret[comps[2]] = {'device': comps[0],
                          'fstype': comps[4],
-                         'opts': comps[5].split('/')}
+                         'opts': _resolve_user_group_names(comps[5].split('/'))}
     return ret
 
 
@@ -143,12 +143,17 @@ def _active_mounts_openbsd(ret):
         nod = __salt__['cmd.run_stdout']('ls -l {0}'.format(comps[0]))
         nod = ' '.join(nod.split()).split(" ")
         parens = re.findall(r'\((.*?)\)', line, re.DOTALL)
-        ret[comps[3]] = {'device': comps[0],
+        if len(parens) > 1:
+            ret[comps[3]] = {'device': comps[0],
                          'fstype': comps[5],
-                         'opts': parens[1].split(", "),
+                         'opts': _resolve_user_group_names(parens[1].split(", ")),
                          'major': str(nod[4].strip(",")),
                          'minor': str(nod[5]),
                          'device_uuid': parens[0]}
+        else:
+            ret[comps[2]] = {'device': comps[0],
+                            'fstype': comps[4],
+                            'opts': _resolve_user_group_names(parens[1].split(", "))}
     return ret
 
 
@@ -161,8 +166,27 @@ def _active_mounts_darwin(ret):
         parens = re.findall(r'\((.*?)\)', line, re.DOTALL)[0].split(", ")
         ret[comps[2]] = {'device': comps[0],
                          'fstype': parens[0],
-                         'opts': parens[1:]}
+                         'opts': _resolve_user_group_names(parens[1:])}
     return ret
+
+
+def _resolve_user_group_names(opts):
+    '''
+    Resolve user and group names in related opts
+    '''
+    name_id_opts = {'uid': 'user.info',
+                    'gid': 'group.info'}
+    for ind, opt in enumerate(opts):
+        if opt.split('=')[0] in name_id_opts:
+            _givenid = opt.split('=')[1]
+            _param = opt.split('=')[0]
+            _id = _givenid
+            if not re.match('[0-9]+$', _givenid):
+                _info = __salt__[name_id_opts[_param]](_givenid)
+                if _info and _param in _info:
+                    _id = _info[_param]
+            opts[ind] = _param + '=' + str(_id)
+    return opts
 
 
 def active(extended=False):
@@ -289,6 +313,9 @@ def fstab(config='/etc/fstab'):
                     _fstab_entry.compatibility_keys)
 
                 entry['opts'] = entry['opts'].split(',')
+                while entry['name'] in ret:
+                    entry['name'] += '_'
+
                 ret[entry.pop('name')] = entry
             except _fstab_entry.ParseError:
                 pass

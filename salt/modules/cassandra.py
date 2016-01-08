@@ -33,11 +33,11 @@ def __virtual__():
     Only load if pycassa is available and the system is configured
     '''
     if not HAS_PYCASSA:
-        return False
+        return (False, 'The cassandra execution module cannot be loaded: pycassa not installed.')
 
     if HAS_PYCASSA and salt.utils.which('nodetool'):
         return 'cassandra'
-    return False
+    return (False, 'The cassandra execution module cannot be loaded: nodetool not found.')
 
 
 def _nodetool(cmd):

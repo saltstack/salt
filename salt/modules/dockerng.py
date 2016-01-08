@@ -167,6 +167,18 @@ Functions
     - :py:func:`dockerng.rmi <salt.modules.dockerng.rmi>`
     - :py:func:`dockerng.save <salt.modules.dockerng.save>`
     - :py:func:`dockerng.tag <salt.modules.dockerng.tag>`
+- Network Management
+    - :py:func:`dockerng.networks <salt.modules.dockerng.networks>`
+    - :py:func:`dockerng.create_network <salt.modules.dockerng.create_network>`
+    - :py:func:`dockerng.remove_network <salt.modules.dockerng.remove_network>`
+    - :py:func:`dockerng.inspect_network
+      <salt.modules.dockerng.inspect_network>`
+    - :py:func:`dockerng.connect_container_to_network
+      <salt.modules.dockerng.connect_container_to_network>`
+    - :py:func:`dockerng.disconnect_container_from_network
+      <salt.modules.dockerng.disconnect_container_from_network>`
+
+
 
 .. _docker-execution-driver:
 
@@ -545,6 +557,30 @@ class _api_version(object):
                     'This function requires a Docker API version of at least '
                     '{0}. API version in use is {1}.'
                     .format(self.api_version, current_api_version)
+                )
+            return func(*args, **salt.utils.clean_kwargs(**kwargs))
+        return _mimic_signature(func, wrapper)
+
+
+class _client_version(object):
+    '''
+    Enforce a specific Docker client version
+    '''
+    def __init__(self, version):
+        self.version = distutils.version.StrictVersion(version)
+
+    def __call__(self, func):
+        def wrapper(*args, **kwargs):
+            '''
+            Get the current client version and check it against the one passed
+            '''
+            _get_client()
+            current_version = '.'.join(map(str, _get_docker_py_versioninfo()))
+            if distutils.version.StrictVersion(current_version) < self.version:
+                raise CommandExecutionError(
+                    'This function requires a Docker Client version of at least '
+                    '{0}. Version in use is {1}.'
+                    .format(self.version, current_version)
                 )
             return func(*args, **salt.utils.clean_kwargs(**kwargs))
         return _mimic_signature(func, wrapper)
@@ -1387,10 +1423,14 @@ def _validate_input(kwargs,
                 raise SaltInvocationError(err)
 
             if not os.path.isabs(host_path):
-                raise SaltInvocationError(
-                    'Host path {0} in bind {1} is not absolute'
-                    .format(host_path, bind)
-                )
+                if os.path.sep in host_path:
+                    raise SaltInvocationError(
+                        'Host path {0} in bind {1} is not absolute'
+                        .format(container_path, bind)
+                    )
+                log.warn('Host path {0} in bind {1} is not absolute,'
+                         ' assuming it is a docker volume.'.format(host_path,
+                                                                   bind))
             if not os.path.isabs(container_path):
                 raise SaltInvocationError(
                     'Container path {0} in bind {1} is not absolute'
@@ -1557,11 +1597,16 @@ def _validate_input(kwargs,
                 # Ensure that the user didn't just pass 'container:', because
                 # that would be invalid.
                 return
-            raise SaltInvocationError()
+            else:
+                # just a name assume it is a network
+                log.info(
+                    'Assuming network_mode \'{0}\' is a network.'.format(
+                      kwargs['network_mode'])
+                )
         except SaltInvocationError:
             raise SaltInvocationError(
-                'network_mode must be one of \'bridge\', \'host\', or '
-                '\'container:<id or name>\''
+                'network_mode must be one of \'bridge\', \'host\', '
+                '\'container:<id or name>\' or a name of a network.'
             )
 
     def _valid_restart_policy():  # pylint: disable=unused-variable
@@ -3390,7 +3435,10 @@ def build(path=None,
     errors = []
     # Iterate through API response and collect information
     for item in stream_data:
-        item_type = next(iter(item))
+        try:
+            item_type = next(iter(item))
+        except StopIteration:
+            continue
         if item_type == 'status':
             _pull_status(ret, item)
         if item_type == 'stream':
@@ -3609,7 +3657,10 @@ def import_(source,
     errors = []
     # Iterate through API response and collect information
     for item in response:
-        item_type = next(iter(item))
+        try:
+            item_type = next(iter(item))
+        except StopIteration:
+            continue
         if item_type == 'status':
             _import_status(ret, item, repo_name, repo_tag)
         elif item_type == 'errorDetail':
@@ -3819,7 +3870,10 @@ def pull(image,
     errors = []
     # Iterate through API response and collect information
     for item in response:
-        item_type = next(iter(item))
+        try:
+            item_type = next(iter(item))
+        except StopIteration:
+            continue
         if item_type == 'status':
             _pull_status(ret, item)
         elif item_type == 'errorDetail':
@@ -3908,7 +3962,10 @@ def push(image,
     errors = []
     # Iterate through API response and collect information
     for item in response:
-        item_type = next(iter(item))
+        try:
+            item_type = next(iter(item))
+        except StopIteration:
+            continue
         if item_type == 'status':
             _push_status(ret, item)
         elif item_type == 'errorDetail':
@@ -4232,6 +4289,255 @@ def tag_(name, image, force=False):
                                repo_name,
                                tag=repo_tag,
                                force=force)
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+# Network Management
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def networks(names=None, ids=None):
+    '''
+    List existing networks
+
+    names
+        Filter by name
+
+    ids
+        Filter by id
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.networks names="['network-web']"
+        salt myminion dockerng.networks ids="['1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc']"
+    '''
+    response = _client_wrapper('networks',
+                               names=names,
+                               ids=ids,
+                               )
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def create_network(name, driver=None):
+    '''
+    Create a new network
+
+    network_id
+        ID of network
+
+    driver
+        Driver of the network
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.create_network web_network driver=bridge
+    '''
+    response = _client_wrapper('create_network', name, driver=driver)
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def remove_network(network_id):
+    '''
+    Remove a network
+
+    network_id
+        ID of network
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.remove_network 1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc
+    '''
+    response = _client_wrapper('remove_network', network_id)
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def inspect_network(network_id):
+    '''
+    Inspect Network
+
+    network_id
+        ID of network
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.inspect_network 1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc
+    '''
+    response = _client_wrapper('inspect_network', network_id)
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def connect_container_to_network(container, network_id):
+    '''
+    Connect container to network.
+
+    container
+        Container name or ID
+
+    network_id
+        ID of network
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.connect_container_from_network web-1 1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc
+    '''
+    response = _client_wrapper('connect_container_to_network',
+                               container,
+                               network_id)
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def disconnect_container_from_network(container, network_id):
+    '''
+    Disconnect container from network.
+
+    container
+        Container name or ID
+
+    network_id
+        ID of network
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.disconnect_container_from_network web-1 1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc
+    '''
+    response = _client_wrapper('disconnect_container_from_network',
+                               container,
+                               network_id)
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+# Volume Management
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def volumes(filters=None):
+    '''
+    List existing volumes
+
+    .. versionadded:: 2015.8.4
+
+    filters
+      There is one available filter: dangling=true
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.volumes filters="{'dangling': True}"
+    '''
+    response = _client_wrapper('volumes', filters=filters)
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def create_volume(name, driver=None, driver_opts=None):
+    '''
+    Create a new volume
+
+    .. versionadded:: 2015.8.4
+
+    name
+        name of volume
+
+    driver
+        Driver of the volume
+
+    driver_opts
+        Options for the driver volume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.create_volume my_volume driver=local
+    '''
+    response = _client_wrapper('create_volume', name, driver=driver,
+                               driver_opts=driver_opts)
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def remove_volume(name):
+    '''
+    Remove a volume
+
+    .. versionadded:: 2015.8.4
+
+    name
+        Name of volume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.remove_volume my_volume
+    '''
+    response = _client_wrapper('remove_volume', name)
+    _clear_context()
+    # Only non-error return case is a True return, so just return the response
+    return response
+
+
+@_api_version(1.21)
+@_client_version('1.5.0')
+def inspect_volume(name):
+    '''
+    Inspect Volume
+
+    .. versionadded:: 2015.8.4
+
+    name
+      Name of volume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion dockerng.inspect_volume my_volume
+    '''
+    response = _client_wrapper('inspect_volume', name)
     _clear_context()
     # Only non-error return case is a True return, so just return the response
     return response

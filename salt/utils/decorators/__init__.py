@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 '''
-Helpful decorators module writing
+Helpful decorators for module writing
 '''
 
 # Import python libs
 from __future__ import absolute_import
 import inspect
 import logging
+import time
 from functools import wraps
 from collections import defaultdict
 
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandNotFoundError
+from salt.log import LOG_LEVELS
 
 # Import 3rd-party libs
 import salt.ext.six as six
@@ -61,14 +63,21 @@ class Depends(object):
         and determine which module and function name it is to store in the
         class wide depandancy_dict
         '''
-        frame = inspect.stack()[1][0]
-        # due to missing *.py files under esky we cannot use inspect.getmodule
-        # module name is something like salt.loaded.int.modules.test
-        kind = frame.f_globals['__name__'].rsplit('.', 2)[1]
-        for dep in self.dependencies:
-            self.dependency_dict[kind][dep].add(
-                (frame, function, self.fallback_function)
-            )
+        try:
+            # This inspect call may fail under certain conditions in the loader. Possibly related to
+            # a Python bug here:
+            # http://bugs.python.org/issue17735
+            frame = inspect.stack()[1][0]
+            # due to missing *.py files under esky we cannot use inspect.getmodule
+            # module name is something like salt.loaded.int.modules.test
+            kind = frame.f_globals['__name__'].rsplit('.', 2)[1]
+            for dep in self.dependencies:
+                self.dependency_dict[kind][dep].add(
+                    (frame, function, self.fallback_function)
+                )
+        except Exception as exc:
+            log.error('Exception encountered when attempting to inspect frame in '
+                      'dependency decorator: {0}'.format(exc))
         return function
 
     @classmethod
@@ -138,6 +147,30 @@ class depends(Depends):  # pylint: disable=C0103
     '''
     Wrapper of Depends for capitalization
     '''
+
+
+def timing(function):
+    '''
+    Decorator wrapper to log execution time, for profiling purposes
+    '''
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        start_time = time.time()
+        ret = function(*args, **salt.utils.clean_kwargs(**kwargs))
+        end_time = time.time()
+        if function.__module__.startswith('salt.loaded.int.'):
+            mod_name = function.__module__[16:]
+        else:
+            mod_name = function.__module__
+        log.profile(
+            'Function {0}.{1} took {2:.20f} seconds to execute'.format(
+                mod_name,
+                function.__name__,
+                end_time - start_time
+            )
+        )
+        return ret
+    return wrapped
 
 
 def which(exe):

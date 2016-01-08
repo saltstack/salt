@@ -57,6 +57,10 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 - elb_port: 8210
                   instance_port: 8210
                   elb_protocol: TCP
+            - backends:
+                - instance_port: 80
+                  policies:
+                      - enable-proxy-protocol
             - health_check:
                 target: 'HTTP:80/'
             - attributes:
@@ -84,6 +88,10 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 - policy_name: cookie-policy
                   policy_type: LBCookieStickinessPolicyType
                   policy: {}  # no policy means this is a session cookie
+                - policy_name: enable-proxy-protocol
+                  policy_type: ProxyProtocolPolicyType
+                  policy:
+                    ProxyProtocol: true
 
     # Using a profile from pillars
     Ensure myelb ELB exists:
@@ -256,6 +264,7 @@ def present(
         alarms_from_pillar="boto_elb_alarms",
         policies=None,
         policies_from_pillar="boto_elb_policies",
+        backends=None,
         region=None,
         key=None,
         keyid=None,
@@ -406,8 +415,8 @@ def present(
         ret['result'] = _ret['result']
         if ret['result'] is False:
             return ret
-    _ret = _policies_present(name, policies, policies_from_pillar, listeners, region, key,
-                             keyid, profile)
+    _ret = _policies_present(name, policies, policies_from_pillar, listeners,
+                             backends, region, key, keyid, profile)
     ret['changes'] = dictupdate.update(ret['changes'], _ret['changes'])
     ret['comment'] = ' '.join([ret['comment'], _ret['comment']])
     if not _ret['result']:
@@ -1023,6 +1032,7 @@ def _policies_present(
         policies,
         policies_from_pillar,
         listeners,
+        backends,
         region,
         key,
         keyid,
@@ -1032,6 +1042,8 @@ def _policies_present(
         policies = []
     pillar_policies = __salt__['config.option'](policies_from_pillar, [])
     policies = policies + pillar_policies
+    if backends is None:
+        backends = []
 
     # check for policy name uniqueness and correct type
     policy_names = set()
@@ -1057,6 +1069,14 @@ def _policies_present(
             if p not in policy_names:
                 raise SaltInvocationError('Listener {0} on ELB {1} refers to '
                         'undefined policy {2}.'.format(l['elb_port'], name, p))
+
+    # check that backends refer to valid policy names
+    for b in backends:
+        for p in b.get('policies', []):
+            if p not in policy_names:
+                raise SaltInvocationError('Backend {0} on ELB {1} refers to '
+                        'undefined policy '
+                        '{2}.'.format(b['instance_port'], name, p))
 
     ret = {'result': True, 'comment': '', 'changes': {}}
 
@@ -1107,6 +1127,16 @@ def _policies_present(
             if re.match(r'^ELBSecurityPolicy-\d{4}-\d{2}$', p):
                 default_aws_policies.add(p)
 
+    expected_policies_by_backend = {}
+    for b in backends:
+        expected_policies_by_backend[b['instance_port']] = set(
+                [cnames_by_name[p] for p in b.get('policies', [])])
+
+    actual_policies_by_backend = {}
+    for b in lb['backends']:
+        backend_policies = set(b.get('policies', []))
+        actual_policies_by_backend[b['instance_port']] = backend_policies
+
     to_delete = []
     to_create = []
 
@@ -1126,6 +1156,14 @@ def _policies_present(
         if policies != expected_policies_by_listener.get(port, set()):
             listeners_to_update.add(port)
 
+    backends_to_update = set()
+    for port, policies in expected_policies_by_backend.iteritems():
+        if policies != actual_policies_by_backend.get(port, set()):
+            backends_to_update.add(port)
+    for port, policies in actual_policies_by_backend.iteritems():
+        if policies != expected_policies_by_backend.get(port, set()):
+            backends_to_update.add(port)
+
     if __opts__['test']:
         msg = []
         if to_create or to_delete:
@@ -1134,12 +1172,16 @@ def _policies_present(
                 msg.append('Policy {0} added.'.format(policy))
             for policy in to_delete:
                 msg.append('Policy {0} deleted.'.format(policy))
-            for listener in listeners_to_update:
-                msg.append('Listener {0} policies updated.'.format(listener))
+            ret['result'] = None
         else:
             msg.append('Policies already set on ELB {0}.'.format(name))
+        for listener in listeners_to_update:
+            msg.append('Listener {0} policies updated.'.format(listener))
+            ret['result'] = None
+        for backend in backends_to_update:
+            msg.append('Backend {0} policies updated.'.format(backend))
+            ret['result'] = None
         ret['comment'] = ' '.join(msg)
-        ret['result'] = None
         return ret
 
     if to_create:
@@ -1180,6 +1222,29 @@ def _policies_present(
                     }
             comment = "Policy {0} was created on ELB {1} listener {2}".format(
                     expected_policies_by_listener[port], name, port)
+            ret['comment'] = ' '.join([ret['comment'], comment])
+            ret['result'] = True
+        else:
+            ret['result'] = False
+            return ret
+
+    for port in backends_to_update:
+        policy_set = __salt__['boto_elb.set_backend_policy'](
+                name=name,
+                port=port,
+                policies=list(expected_policies_by_backend.get(port, [])),
+                region=region,
+                key=key,
+                keyid=keyid,
+                profile=profile)
+        if policy_set:
+            policy_key = 'backend_{0}_policy'.format(port)
+            ret['changes'][policy_key] = {
+                    'old': list(actual_policies_by_backend.get(port, [])),
+                    'new': list(expected_policies_by_backend.get(port, [])),
+                    }
+            comment = "Policy {0} was created on ELB {1} backend {2}".format(
+                    expected_policies_by_backend[port], name, port)
             ret['comment'] = ' '.join([ret['comment'], comment])
             ret['result'] = True
         else:

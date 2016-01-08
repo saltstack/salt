@@ -34,7 +34,7 @@ def __virtual__():
     '''
     if __grains__.get('os_family', False) in ('Kali', 'Debian'):
         return __virtualname__
-    return False
+    return (False, 'The debbuild module could not be loaded: unsupported OS family')
 
 
 def _get_build_env(env):

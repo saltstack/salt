@@ -40,7 +40,6 @@ def present(name):
         else:
             ret['result'] = None
             ret['comment'] = comment_bridge_created
-            ret['changes'] = changes_bridge_created
 
         return ret
 
@@ -90,7 +89,6 @@ def absent(name):
         else:
             ret['result'] = None
             ret['comment'] = comment_bridge_deleted
-            ret['changes'] = changes_bridge_deleted
 
         return ret
 

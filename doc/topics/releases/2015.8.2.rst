@@ -1,6 +1,15 @@
 ===========================
-Salt 2015.8.1 Release Notes
+Salt 2015.8.2 Release Notes
 ===========================
+
+.. note::
+
+    A significant orchestrate issue `#29110`_ was discovered during the release
+    process of 2015.8.2, so it has not been officially released.  Please use
+    `2015.8.3
+    <https://docs.saltstack.com/en/latest/topics/releases/2015.8.3.html>`_
+    instead.
+
 
 Extended changelog courtesy of Todd Stansell (https://github.com/tjstansell/salt-changelogs):
 
@@ -556,6 +565,7 @@ Changes:
 
 - **PR** `#27585`_: (*ryan-lane*) Fix undefined variable in cron state module
 
+.. _`#29110`: https://github.com/saltstack/salt/issues/29110
 .. _`#22115`: https://github.com/saltstack/salt/pull/22115
 .. _`#25315`: https://github.com/saltstack/salt/pull/25315
 .. _`#25521`: https://github.com/saltstack/salt/pull/25521

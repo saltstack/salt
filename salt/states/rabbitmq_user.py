@@ -16,9 +16,9 @@ Example:
           - user
         - perms:
           - '/':
-          - '.*'
-          - '.*'
-          - '.*'
+            - '.*'
+            - '.*'
+            - '.*'
         - runas: rabbitmq
 '''
 

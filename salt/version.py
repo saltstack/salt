@@ -583,7 +583,7 @@ def dependency_information(include_salt_cloud=False):
             if isinstance(version, (tuple, list)):
                 version = '.'.join(map(str, version))
             yield name, version
-        except ImportError:
+        except Exception:
             yield name, None
 
 

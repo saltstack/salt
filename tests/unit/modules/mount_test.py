@@ -41,11 +41,19 @@ class MountTestCase(TestCase):
         List the active mounts.
         '''
         with patch.dict(mount.__grains__, {'os': 'FreeBSD'}):
-            mock = MagicMock(return_value='A B C D,E,F')
-            with patch.dict(mount.__salt__, {'cmd.run_stdout': mock}):
+            # uid=user1 tests the improbable case where a OS returns a name
+            # instead of a numeric id, for #25293
+            mock = MagicMock(return_value='A B C D,E,F,uid=user1,gid=grp1')
+            mock_user = MagicMock(return_value={'uid': '100'})
+            mock_group = MagicMock(return_value={'gid': '100'})
+            with patch.dict(mount.__salt__, {'cmd.run_stdout': mock,
+                                             'user.info': mock_user,
+                                             'group.info': mock_group}):
                 self.assertEqual(mount.active(), {'B':
                                                   {'device': 'A',
-                                                   'opts': ['D', 'E', 'F'],
+                                                   'opts': ['D', 'E', 'F',
+                                                            'uid=100',
+                                                            'gid=100'],
                                                    'fstype': 'C'}})
 
         with patch.dict(mount.__grains__, {'os': 'Solaris'}):

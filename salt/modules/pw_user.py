@@ -52,11 +52,11 @@ __virtualname__ = 'user'
 
 def __virtual__():
     '''
-    Set the user module if the kernel is FreeBSD
+    Set the user module if the kernel is FreeBSD or DragonFly
     '''
-    if HAS_PWD and __grains__['kernel'] == 'FreeBSD':
+    if HAS_PWD and __grains__['kernel'] in ('FreeBSD', 'DragonFly'):
         return __virtualname__
-    return False
+    return (False, 'The pw_user execution module cannot be loaded: the pwd python module is not available or the system is not FreeBSD.')
 
 
 def _get_gecos(name):

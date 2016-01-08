@@ -10,11 +10,11 @@ and possibly remote minion.
 In other words, Salt will connect to a minion, then from that minion:
 
 - Provision and configure a container for networking access
-- Use those modules to deploy salt and re-attach to master. 
+- Use those modules to deploy salt and re-attach to master.
 
-    - :mod:`lxc runner <salt.runners.lxc>` 
+    - :mod:`lxc runner <salt.runners.lxc>`
     - :mod:`lxc module <salt.modules.lxc>`
-    - :mod:`seed <salt.modules.config>` 
+    - :mod:`seed <salt.modules.config>`
 
 Limitations
 -----------
@@ -102,6 +102,12 @@ Here are the options to configure your containers:
         List of DNS servers to use. This is optional.
     minion
         minion configuration (see :doc:`Minion Configuration in Salt Cloud </topics/cloud/config>`)
+    bootstrap_delay
+        specify the time to wait (in seconds) between container creation
+        and salt bootstrap execution. It is useful to ensure that all essential services
+        have started before the bootstrap script is executed. By default there's no
+        wait time between container creation and bootstrap unless you are on systemd
+        where we wait that the system is no more in starting state.
     bootstrap_shell
         shell for bootstraping script (default: /bin/sh)
     script
@@ -143,7 +149,7 @@ Using inline profiles (eg to override the network bridge):
         master: 10.5.0.1
         master_port: 4506
 
-Template instead of a clone:
+Using a lxc template instead of a clone:
 
 .. code-block:: yaml
 
@@ -151,9 +157,11 @@ Template instead of a clone:
       provider: devhost10-lxc
       lxc_profile:
         template: ubuntu
+        # options:
+        #   release: trusty
       network_profile:
         etho:
-          link: lxcbr0    
+          link: lxcbr0
       minion:
         master: 10.5.0.1
         master_port: 4506
@@ -192,52 +200,3 @@ Driver Support
 - Image listing (LXC templates)
 - Running container information (IP addresses, etc.)
 
-Systemd Check
--------------
-
-.. versionadded:: 2015.8.2
-
-Some container templates might not have systemd installed resulting in errors during
-container creation time. To prevent this please set the ``uses_systemd`` option to ``False``.
-Option `uses_systemd` defaults to `True`.
-
-.. code-block:: yaml
-
-    ubuntu-lxc:
-      provider: dev-lxc
-      lxc_profile:
-        template: download
-        options:
-          release: trusty
-          arch: amd64
-      image: ubuntu
-      script_args: -P
-      uses_systemd: False
-      network_profile: ubuntu
-      minion:
-        master: localhost
-
-Bootstrap Delay
----------------
-
-.. versionchanged:: 2015.8.2
-
-The ``bootstrap_delay`` config option lets you specify the time to wait (in seconds) between container creation
-and salt bootstrap execution. It is useful to ensure that all essential services have started before the
-bootstrap script is executed. By default there's no wait time between container creation and bootstrap.
-
-.. code-block:: yaml
-
-    ubuntu-lxc:
-      provider: dev-lxc
-      lxc_profile:
-        template: download
-        options:
-          release: trusty
-          arch: amd64
-      image: ubuntu
-      script_args: -P
-      bootstrap_delay: 62
-      network_profile: ubuntu
-      minion:
-        master: localhost

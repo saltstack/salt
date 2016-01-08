@@ -46,7 +46,7 @@ def __virtual__():
     '''
     if HAS_INFLUXDB:
         return __virtualname__
-    return False
+    return (False, 'The influx execution module cannot be loaded: influxdb library not available.')
 
 
 def _client(user=None, password=None, host=None, port=None):
@@ -221,7 +221,7 @@ def user_list(database=None, user=None, password=None, host=None, port=None):
     client = _client(user=user, password=password, host=host, port=port)
     if database:
         client.switch_database(database)
-        return client.get_database_users()
+        return client.get_list_users()
     return client.get_list_cluster_admins()
 
 
@@ -424,6 +424,137 @@ def user_remove(name, database=None, user=None, password=None, host=None,
         client.switch_database(database)
         return client.delete_database_user(name)
     return client.delete_cluster_admin(name)
+
+
+def retention_policy_get(database,
+                         name,
+                         user=None,
+                         password=None,
+                         host=None,
+                         port=None):
+    '''
+    Get an existing retention policy.
+
+    database
+        The database to operate on.
+
+    name
+        Name of the policy to modify.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.retention_policy_get metrics default
+    '''
+    client = _client(user=user, password=password, host=host, port=port)
+
+    for policy in client.get_list_retention_policies(database):
+        if policy['name'] == name:
+            return policy
+
+    return None
+
+
+def retention_policy_exists(database,
+                            name,
+                            user=None,
+                            password=None,
+                            host=None,
+                            port=None):
+    '''
+    Check if a retention policy exists.
+
+    database
+        The database to operate on.
+
+    name
+        Name of the policy to modify.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.retention_policy_exists metrics default
+    '''
+    policy = retention_policy_get(name, database, user, password, host, port)
+    return policy is not None
+
+
+def retention_policy_add(database,
+                         name,
+                         duration,
+                         replication,
+                         default=False,
+                         user=None,
+                         password=None,
+                         host=None,
+                         port=None):
+    '''
+    Add a retention policy.
+
+    database
+        The database to operate on.
+
+    name
+        Name of the policy to modify.
+
+    duration
+        How long InfluxDB keeps the data.
+
+    replication
+        How many copies of the data are stored in the cluster.
+
+    default
+        Whether this policy should be the default or not. Default is False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.retention_policy_add metrics default 1d 1
+    '''
+    client = _client(user=user, password=password, host=host, port=port)
+    client.create_retention_policy(name, duration, replication, database, default)
+    return True
+
+
+def retention_policy_alter(database,
+                           name,
+                           duration,
+                           replication,
+                           default=False,
+                           user=None,
+                           password=None,
+                           host=None,
+                           port=None):
+    '''
+    Modify an existing retention policy.
+
+    database
+        The database to operate on.
+
+    name
+        Name of the policy to modify.
+
+    duration
+        How long InfluxDB keeps the data.
+
+    replication
+        How many copies of the data are stored in the cluster.
+
+    default
+        Whether this policy should be the default or not. Default is False.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' influxdb.retention_policy_modify metrics default 1d 1
+    '''
+    client = _client(user=user, password=password, host=host, port=port)
+    client.alter_retention_policy(name, database, duration, replication, default)
+    return True
 
 
 def query(database, query, time_precision='s', chunked=False, user=None,

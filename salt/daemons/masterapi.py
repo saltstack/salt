@@ -465,6 +465,7 @@ class RemoteFuncs(object):
         good = self.ckminions.auth_check(
                 perms,
                 load['fun'],
+                load['arg'],
                 load['tgt'],
                 load.get('tgt_type', 'glob'),
                 publish_validate=True)
@@ -1409,6 +1410,7 @@ class LocalFuncs(object):
                         if token['name'] in self.opts['external_auth'][token['eauth']]
                         else self.opts['external_auth'][token['eauth']]['*'],
                     load['fun'],
+                    load['arg'],
                     load['tgt'],
                     load.get('tgt_type', 'glob'))
             if not good:
@@ -1450,6 +1452,7 @@ class LocalFuncs(object):
                         if name in self.opts['external_auth'][extra['eauth']]
                         else self.opts['external_auth'][extra['eauth']]['*'],
                     load['fun'],
+                    load['arg'],
                     load['tgt'],
                     load.get('tgt_type', 'glob'))
             if not good:
@@ -1506,6 +1509,7 @@ class LocalFuncs(object):
                     good = self.ckminions.auth_check(
                             acl[load['user']],
                             load['fun'],
+                            load['arg'],
                             load['tgt'],
                             load.get('tgt_type', 'glob'))
                     if not good:

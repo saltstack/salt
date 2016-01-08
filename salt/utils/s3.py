@@ -29,7 +29,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
           requesturl=None, return_url=False, bucket=None, service_url=None,
           path='', return_bin=False, action=None, local_file=None,
           verify_ssl=True, full_headers=False, kms_keyid=None,
-          location=None):
+          location=None, role_arn=None):
     '''
     Perform a query against an S3-like API. This function requires that a
     secret key and the id for that key are passed in. For instance:
@@ -111,6 +111,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
             data=data,
             uri='/{0}'.format(path),
             prov_dict={'id': keyid, 'key': key},
+            role_arn=role_arn,
             location=location,
             product='s3',
             requesturl=requesturl,
@@ -175,7 +176,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
     # This can be used to save a binary object to disk
     if local_file and method == 'GET':
         log.debug('Saving to local file: {0}'.format(local_file))
-        with salt.utils.fopen(local_file, 'w') as out:
+        with salt.utils.fopen(local_file, 'wb') as out:
             out.write(response)
         return 'Saved to local file: {0}'.format(local_file)
 

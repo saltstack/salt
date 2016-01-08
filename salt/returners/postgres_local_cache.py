@@ -111,7 +111,7 @@ OUT_P = 'out.p'
 
 def __virtual__():
     if not HAS_POSTGRES:
-        log.info("Could not import psycopg2, postges_local_cache disabled.")
+        log.info("Could not import psycopg2, postgres_local_cache disabled.")
         return False
     return 'postgres_local_cache'
 

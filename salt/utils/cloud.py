@@ -493,6 +493,9 @@ def bootstrap(vm_, opts):
         deploy_kwargs['use_winrm'] = salt.config.get_cloud_config_value(
             'use_winrm', vm_, opts, default=False
         )
+        deploy_kwargs['winrm_port'] = salt.config.get_cloud_config_value(
+            'winrm_port', vm_, opts, default=5986
+        )
 
     # Store what was used to the deploy the VM
     event_kwargs = copy.deepcopy(deploy_kwargs)
@@ -841,6 +844,7 @@ def wait_for_winrm(host, port, username, password, timeout=900):
                     host, port, trycount
                 )
             )
+            time.sleep(1)
 
 
 def validate_windows_cred(host,
@@ -965,6 +969,7 @@ def deploy_windows(host,
                    opts=None,
                    master_sign_pub_file=None,
                    use_winrm=False,
+                   winrm_port=5986,
                    **kwargs):
     '''
     Copy the install files to a remote Windows box, and execute them
@@ -989,7 +994,7 @@ def deploy_windows(host,
     winrm_session = None
 
     if HAS_WINRM and use_winrm:
-        winrm_session = wait_for_winrm(host=host, port=5986,
+        winrm_session = wait_for_winrm(host=host, port=winrm_port,
                                            username=username, password=password,
                                            timeout=port_timeout * 60)
         if winrm_session is not None:
@@ -1255,7 +1260,7 @@ def deploy_script(host,
                     )
             if sudo:
                 comps = tmp_dir.lstrip('/').rstrip('/').split('/')
-                if comps and comps[0] != 'tmp':
+                if len(comps) > 1 or comps[0] != 'tmp':
                     ret = root_cmd(
                         'chown {0} \'{1}\''.format(username, tmp_dir),
                         tty, sudo, **ssh_kwargs

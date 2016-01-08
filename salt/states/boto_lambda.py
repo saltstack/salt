@@ -466,7 +466,7 @@ def alias_present(name, FunctionName, Name, FunctionVersion, Description='',
                                         keyid=keyid, profile=profile)
         if not _r.get('updated'):
             ret['result'] = False
-            ret['comment'] = 'Failed to update mapping: {0}.'.format(_r['error']['message'])
+            ret['comment'] = 'Failed to update alias: {0}.'.format(_r['error']['message'])
             ret['changes'] = {}
     return ret
 
@@ -638,7 +638,6 @@ def event_source_mapping_present(name, EventSourceArn, FunctionName, StartingPos
                                  EventSourceArn=EventSourceArn,
                                  FunctionName=FunctionName,
                                  region=region, key=key, keyid=keyid, profile=profile)['event_source_mapping']
-    log.warn(_describe)
 
     need_update = False
     for val, var in {

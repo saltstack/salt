@@ -16,7 +16,7 @@ from textwrap import dedent
 import jinja2
 
 # Import salt libs
-from salt.serializers import json, yamlex, yaml, msgpack
+from salt.serializers import json, yamlex, yaml, msgpack, python, configparser
 from salt.serializers import SerializationError
 from salt.utils.odict import OrderedDict
 
@@ -319,6 +319,22 @@ class TestSerializers(TestCase):
         ])
         serialized = msgpack.serialize(data)
         deserialized = msgpack.deserialize(serialized)
+        assert deserialized == data, deserialized
+
+    @skipIf(not python.available, SKIP_MESSAGE % 'python')
+    def test_serialize_python(self):
+        data = {'foo': 'bar'}
+        serialized = python.serialize(data)
+        assert serialized == '{\'foo\': \'bar\'}', serialized
+
+    @skipIf(not configparser.available, SKIP_MESSAGE % 'configparser')
+    def test_configparser(self):
+        data = {'foo': {'bar': 'baz'}}
+        # configparser appends empty lines
+        serialized = configparser.serialize(data).strip()
+        assert serialized == "[foo]\nbar = baz", serialized
+
+        deserialized = configparser.deserialize(serialized)
         assert deserialized == data, deserialized
 
 if __name__ == '__main__':

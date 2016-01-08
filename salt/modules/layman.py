@@ -14,7 +14,7 @@ def __virtual__():
     '''
     if __grains__['os'] == 'Gentoo' and salt.utils.which('layman'):
         return 'layman'
-    return False
+    return (False, 'layman execution module cannot be loaded: only available on Gentoo with layman installed.')
 
 
 def _get_makeconf():

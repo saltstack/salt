@@ -7,16 +7,25 @@ Connection library for VMWare
 This is a base library used by a number of VMWare services such as VMWare
 ESX, ESXi, and vCenter servers.
 
-:depends: pyVmomi Python Module
+Dependencies
+~~~~~~~~~~~~
+
+- pyVmomi Python Module
+- ESXCLI: This dependency is only needed to use the ``esxcli`` function. No other
+  functions in this module rely on ESXCLI.
+
 '''
 
 # Import Python Libs
 from __future__ import absolute_import
 import atexit
 import logging
+import time
 
 # Import Salt Libs
 from salt.exceptions import SaltSystemExit
+import salt.modules.cmdmod
+import salt.utils
 
 
 # Import Third Party Libs
@@ -39,6 +48,58 @@ def __virtual__():
         return True
     else:
         return False, 'Missing dependency: The salt.utils.vmware module requires pyVmomi.'
+
+
+def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None):
+    '''
+    Shell out and call the specified esxcli commmand, parse the result
+    and return something sane.
+
+    :param host: ESXi or vCenter host to connect to
+    :param user: User to connect as, usually root
+    :param pwd: Password to connect with
+    :param port: TCP port
+    :param cmd: esxcli command and arguments
+    :param esxi_host: If `host` is a vCenter host, then esxi_host is the
+                      ESXi machine on which to execute this command
+    :return: Dictionary
+    '''
+
+    esx_cmd = salt.utils.which('esxcli')
+    if not esx_cmd:
+        log.error('Missing dependency: The salt.utils.vmware.esxcli function requires ESXCLI.')
+        return False
+
+    # Set default port and protocol if none are provided.
+    if port is None:
+        port = 443
+    if protocol is None:
+        protocol = 'https'
+
+    if not esxi_host:
+        # Then we are connecting directly to an ESXi server,
+        # 'host' points at that server, and esxi_host is a reference to the
+        # ESXi instance we are manipulating
+        esx_cmd += ' -s {0} -u {1} -p \'{2}\' ' \
+                   '--protocol={3} --portnumber={4} {5}'.format(host,
+                                                                user,
+                                                                pwd,
+                                                                protocol,
+                                                                port,
+                                                                cmd)
+    else:
+        esx_cmd += ' -s {0} -h {1} -u {2} -p \'{3}\' ' \
+                   '--protocol={4} --portnumber={5} {6}'.format(host,
+                                                                esxi_host,
+                                                                user,
+                                                                pwd,
+                                                                protocol,
+                                                                port,
+                                                                cmd)
+
+    ret = salt.modules.cmdmod.run_all(esx_cmd, output_loglevel='quiet')
+
+    return ret
 
 
 def get_service_instance(host, username, password, protocol=None, port=None):
@@ -377,3 +438,43 @@ def list_vapps(service_instance):
         The Service Instance Object from which to obtain vApps.
     '''
     return list_objects(service_instance, vim.VirtualApp)
+
+
+def wait_for_task(task, instance_name, task_type, sleep_seconds=1, log_level='debug'):
+    '''
+    Waits for a task to be completed.
+
+    task
+        The task to wait for.
+
+    instance_name
+        The name of the ESXi host, vCenter Server, or Virtual Machine that the task is being run on.
+
+    task_type
+        The type of task being performed. Useful information for debugging purposes.
+
+    sleep_seconds
+        The number of seconds to wait before querying the task again. Defaults to ``1`` second.
+
+    log_level
+        The level at which to log task information. Default is ``debug``, but ``info`` is also supported.
+    '''
+    time_counter = 0
+    start_time = time.time()
+    while task.info.state == 'running' or task.info.state == 'queued':
+        if time_counter % sleep_seconds == 0:
+            msg = '[ {0} ] Waiting for {1} task to finish [{2} s]'.format(instance_name, task_type, time_counter)
+            if log_level == 'info':
+                log.info(msg)
+            else:
+                log.debug(msg)
+        time.sleep(1.0 - ((time.time() - start_time) % 1.0))
+        time_counter += 1
+    if task.info.state == 'success':
+        msg = '[ {0} ] Successfully completed {1} task in {2} seconds'.format(instance_name, task_type, time_counter)
+        if log_level == 'info':
+            log.info(msg)
+        else:
+            log.debug(msg)
+    else:
+        raise Exception(task.info.error)

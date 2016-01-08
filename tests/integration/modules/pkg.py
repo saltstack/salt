@@ -165,6 +165,8 @@ class PkgModuleTest(integration.ModuleCase,
         elif os_family == 'Debian':
             ret = self.run_function(func)
             self.assertNotEqual(ret, {})
+            if not isinstance(ret, dict):
+                self.skipTest('Upstream repo did not return coherent results. Skipping test.')
             for source, state in ret.items():
                 self.assertIn(state, (True, False, None))
         else:

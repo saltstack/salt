@@ -31,7 +31,7 @@ def __virtual__():
     '''
     if salt.utils.which('qemu-nbd'):
         return 'qemu_nbd'
-    return False
+    return (False, 'The qemu_nbd execution module cannot be loaded: the qemu-nbd binary is not in the path.')
 
 
 def connect(image):

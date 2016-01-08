@@ -33,6 +33,14 @@ test_list_schema_csv = (
     'pg_toast,postgres,""'
 )
 
+test_list_language_csv = (
+    'Name\n'
+    'internal\n'
+    'c\n'
+    'sql\n'
+    'plpgsql\n'
+)
+
 
 if NO_MOCK is False:
     SALT_STUB = {
@@ -860,6 +868,125 @@ class PostgresTestCase(TestCase):
                                      db_user='test_user',
                                      db_password='test_password'
                                      )
+        self.assertFalse(ret)
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0,
+                              'stdout': test_list_language_csv}))
+    def test_language_list(self):
+        '''
+        Test language listing
+        '''
+        ret = postgres.language_list(
+            'testdb',
+            user='testuser',
+            host='testhost',
+            port='testport',
+            password='foo'
+        )
+        self.assertDictEqual(ret,
+            {'c': 'c',
+            'internal': 'internal',
+            'plpgsql': 'plpgsql',
+            'sql': 'sql'})
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0}))
+    @patch('salt.modules.postgres.psql_query',
+           Mock(return_value=[
+               {'Name': 'internal'},
+               {'Name': 'c'},
+               {'Name': 'sql'},
+               {'Name': 'plpgsql'}]))
+    @patch('salt.modules.postgres.language_exists', Mock(return_value=True))
+    def test_language_exists(self):
+        '''
+        Test language existance check
+        '''
+        ret = postgres.language_exists(
+            'sql',
+            'testdb'
+        )
+        self.assertTrue(ret)
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0}))
+    @patch('salt.modules.postgres.language_exists', Mock(return_value=False))
+    def test_language_create(self):
+        '''
+        Test language creation - does not exist in db
+        '''
+        postgres.language_create(
+            'plpythonu',
+            'testdb',
+            runas='user',
+            host='testhost',
+            port='testport',
+            user='testuser',
+            password='testpassword'
+        )
+        postgres._run_psql.assert_called_once_with(
+            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+             '--no-password', '--username', 'testuser', '--host',
+             'testhost', '--port', 'testport', '--dbname', 'testdb',
+             '-c', 'CREATE LANGUAGE plpythonu'],
+            host='testhost', port='testport',
+            password='testpassword', user='testuser', runas='user')
+
+    @patch('salt.modules.postgres.language_exists', Mock(return_value=True))
+    def test_language_create_exists(self):
+        '''
+        Test language creation - already exists in db
+        '''
+        ret = postgres.language_create(
+            'plpythonu',
+            'testdb',
+            runas='user',
+            host='testhost',
+            port='testport',
+            user='testuser',
+            password='testpassword'
+        )
+        self.assertFalse(ret)
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0}))
+    @patch('salt.modules.postgres.language_exists', Mock(return_value=True))
+    def test_language_remove(self):
+        '''
+        Test language removal - exists in db
+        '''
+        postgres.language_remove(
+            'plpgsql',
+            'testdb',
+            runas='user',
+            host='testhost',
+            port='testport',
+            user='testuser',
+            password='testpassword'
+        )
+        postgres._run_psql.assert_called_once_with(
+            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+             '--no-password', '--username', 'testuser', '--host',
+             'testhost', '--port', 'testport', '--dbname', 'testdb',
+             '-c', 'DROP LANGUAGE plpgsql'],
+            host='testhost', port='testport',
+            password='testpassword', user='testuser', runas='user')
+
+    @patch('salt.modules.postgres.language_exists', Mock(return_value=False))
+    def test_language_remove_non_exist(self):
+        '''
+        Test language removal - does not exist in db
+        '''
+        ret = postgres.language_remove(
+            'plpgsql',
+            'testdb',
+            runas='user',
+            host='testhost',
+            port='testport',
+            user='testuser',
+            password='testpassword'
+        )
         self.assertFalse(ret)
 
 if __name__ == '__main__':

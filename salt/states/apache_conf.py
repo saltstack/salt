@@ -30,7 +30,7 @@ def __virtual__():
     return 'apache_conf' if 'apache.a2enconf' in __salt__ and salt.utils.which('a2enconf') else False
 
 
-def enable(name):
+def enabled(name):
     '''
     Ensure an Apache conf is enabled.
 
@@ -39,7 +39,7 @@ def enable(name):
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_enabled = __salt__['apache.check_conf_enabled']('{0}.load'.format(name))
+    is_enabled = __salt__['apache.check_conf_enabled'](name)
     if not is_enabled:
         if __opts__['test']:
             msg = 'Apache conf {0} is set to be enabled.'.format(name)
@@ -64,7 +64,7 @@ def enable(name):
     return ret
 
 
-def disable(name):
+def disabled(name):
     '''
     Ensure an Apache conf is disabled.
 
@@ -73,7 +73,7 @@ def disable(name):
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    is_enabled = __salt__['apache.check_conf_enabled']('{0}.load'.format(name))
+    is_enabled = __salt__['apache.check_conf_enabled'](name)
     if is_enabled:
         if __opts__['test']:
             msg = 'Apache conf {0} is set to be disabled.'.format(name)

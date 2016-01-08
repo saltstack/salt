@@ -91,6 +91,17 @@ profile or map:
         interface: 0.0.0.0
 
 
+SSH Port
+========
+
+By default ssh port is set to port 22. If you want to use a custom port in
+provider, profile, or map blocks use ssh_port option.
+
+.. code-block:: yaml
+
+    ssh_port: 2222
+
+
 Delete SSH Keys
 ===============
 When Salt Cloud deploys an instance, the SSH pub key for the instance is added
@@ -150,6 +161,7 @@ can tweak.
 
 .. admonition:: Note
 
+    All settings should be provided in lowercase
     All values should be provided in seconds
 
 
@@ -176,7 +188,7 @@ ssh_connect_timeout
 ~~~~~~~~~~~~~~~~~~~
 
 The amount of time Salt Cloud should wait for a successful SSH connection to
-the VM. 
+the VM.
 Default: varies by cloud provider  (between 5 and 15 minutes)
 
 
@@ -184,7 +196,7 @@ wait_for_passwd_timeout
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 The amount of time until an ssh connection can be established via password or
-ssh key. 
+ssh key.
 Default: varies by cloud provider (mostly 15 seconds)
 
 
@@ -200,7 +212,7 @@ wait_for_fun_timeout
 
 Some cloud drivers check for an available IP or a successful SSH connection
 using a function, namely, SoftLayer, and SoftLayer-HW. So, the amount of time
-Salt Cloud should retry such functions before failing. 
+Salt Cloud should retry such functions before failing.
 Default: 15 minutes.
 
 

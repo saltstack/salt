@@ -334,8 +334,8 @@ of ``salt-run``:
 
 .. code-block:: bash
 
-    salt-call win_repo.update_git_repos
-    salt-call win_repo.genrepo
+    salt-call winrepo.update_git_repos
+    salt-call winrepo.genrepo
     salt-call pkg.refresh_db
 
 After executing the previous commands the repository on the standalone system

@@ -28,14 +28,10 @@ def __virtual__():
     '''
     Set the user module if the kernel is SunOS
     '''
-    if __grains__['kernel'] == 'SunOS':
-        if not HAS_PWD:
-            log.warning(
-                'pwd module not found, user management will not be possible'
-            )
-        else:
-            return __virtualname__
-    return False
+    if __grains__['kernel'] == 'SunOS' and HAS_PWD:
+        return __virtualname__
+    return (False, 'The solaris_user execution module failed to load: '
+            'only available on Solaris systems with pwd module installed.')
 
 
 def _get_gecos(name):

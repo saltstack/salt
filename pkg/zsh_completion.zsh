@@ -8,6 +8,11 @@
 # zstyle ':completion::complete:salt(|-cp|-call):minions:'            use-cache true
 # zstyle ':completion::complete:salt(|-call):modules:'                use-cache true
 # zstyle ':completion::complete:salt(|-cp|-call|-run|-key):salt_dir:' use-cache true
+#
+# cache validation can be controled with the style cache-ttl.
+# it expects two arguments: number (days|hours|weeks|months)
+# to invalidate the minion cache after four days:
+# zstyle ':completion::complete:salt(|-cp|-call):minions:'            cache-ttl 4 days
 
 
 local state line curcontext="$curcontext" salt_dir
@@ -15,7 +20,7 @@ local state line curcontext="$curcontext" salt_dir
 _modules(){
     local _funcs expl curcontext=${curcontext%:*}:modules
 
-    if ! zstyle -T ":completion:$curcontext:" cache-policy; then
+    if ! zstyle -m ":completion:$curcontext:" cache-policy '*'; then
         zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
     fi
 
@@ -30,7 +35,7 @@ _modules(){
 _runners(){
     local _runs expl curcontext=${curcontext%:*}:runners
 
-    if ! zstyle -T ":completion:$curcontext:" cache-policy; then
+    if ! zstyle -m ":completion:$curcontext:" cache-policy '*'; then
         zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
     fi
 
@@ -56,7 +61,7 @@ _minions(){
     # while un, acc, den, etc will work, you will possibly ignore user customized tags.
     zparseopts -D -E 't+:=requested_type' 'T+:=include_all'
 
-    if ! zstyle -T ":completion:$curcontext:" cache-policy; then
+    if ! zstyle -m ":completion:$curcontext:" cache-policy '*'; then
         zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
     fi
 
@@ -87,8 +92,22 @@ _minions(){
 
 (( $+functions[_salt_caching_policy] )) ||
 _salt_caching_policy() {
-    local -a oldp
-    oldp=( "$1"(Nm+7) )
+    local oldp ttl d t
+    zstyle -a ":completion:$curcontext:" cache-ttl ttl
+
+    if (( $#ttl >= 2 )); then
+      [[ $ttl[1] == <-> ]] && integer t=$ttl[1]
+
+      case $ttl[2] in
+        seconds#)d=s;;
+        months#) d=M;;
+        weeks#)  d=w;;
+        hours#)  d=h;;
+        *)       d=d;;
+      esac
+    fi
+
+    oldp=( "$1"(Nm${d:-d}+${t:-1}) )
     (( $#oldp ))
 }
 
@@ -247,7 +266,7 @@ _salt_comp(){
 
 () {
     local curcontext=${curcontext%:*}:salt_dir
-    if ! zstyle -T ":completion:$curcontext:" cache-policy; then
+    if ! zstyle -m ":completion:$curcontext:" cache-policy '*'; then
         zstyle ":completion:$curcontext:" cache-policy _salt_caching_policy
     fi
 

@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Module for running fmadm and fmdump on Solaris
+
+:maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
+:maturity:      new
+:platform:      solaris,illumos
+
 .. versionadded:: Boron
 '''
 from __future__ import absolute_import
@@ -166,6 +171,76 @@ def _fmadm_action_fmri(action, fmri):
         result['Error'] = res['stderr']
     else:
         result = True
+
+    return result
+
+
+def _parse_fmadm_faulty(output):
+    '''
+    Parse fmadm faulty output
+    '''
+    def _merge_data(summary, fault):
+        result = {}
+        uuid = summary['event-id']
+        del summary['event-id']
+
+        result[uuid] = OrderedDict()
+        result[uuid]['summary'] = summary
+        result[uuid]['fault'] = fault
+        return result
+
+    result = {}
+    summary = []
+    summary_data = {}
+    fault_data = {}
+    data_key = None
+
+    for line in output.split("\n"):
+        # we hit a divider
+        if line.startswith('-'):
+            if summary and summary_data and fault_data:
+                # we have data, store it and reset
+                result.update(_merge_data(summary_data, fault_data))
+
+                summary = []
+                summary_data = {}
+                fault_data = {}
+                continue
+            else:
+                # we don't have all data, colelct more
+                continue
+
+        # if we do not have the header, store it
+        if not summary:
+            summary.append(line)
+            continue
+
+        # if we have the header but no data, store the data and parse it
+        if summary and not summary_data:
+            summary.append(line)
+            summary_data = _parse_fmdump("\n".join(summary))[0]
+            continue
+
+        # if we have a header and data, assume the other lines are details
+        if summary and summary_data:
+            # if line starts with a whitespace and we already have a key, append
+            if line.startswith(' ') and data_key:
+                fault_data[data_key] = "{0}\n{1}".format(
+                    fault_data[data_key],
+                    line.strip()
+                )
+            # we have a key : value line, parse it
+            elif ':' in line:
+                line = line.split(':')
+                data_key = line[0].strip()
+                fault_data[data_key] = ":".join(line[1:]).strip()
+                # note: for some reason Chassis_id is lobbed ofter Platform, fix that here
+                if data_key == 'Platform':
+                    fault_data['Chassis_id'] = fault_data[data_key][fault_data[data_key].index('Chassis_id'):].split(':')[-1].strip()
+                    fault_data[data_key] = fault_data[data_key][0:fault_data[data_key].index('Chassis_id')].strip()
+
+    # we have data, store it and reset
+    result.update(_merge_data(summary_data, fault_data))
 
     return result
 
@@ -427,21 +502,30 @@ def faulty():
 
         salt '*' fmadm.faulty
     '''
-    ret = {}
     fmadm = _check_fmadm()
     cmd = '{cmd} faulty'.format(
         cmd=fmadm,
     )
     res = __salt__['cmd.run_all'](cmd)
-    retcode = res['retcode']
     result = {}
-    if retcode != 0:
-        #NOTE: manpage vague, non 0 output = we have faults
-        #FIXME: capture correct output and try to parse
-        result = True
-    else:
+    if res['stdout'] == '':
         result = False
+    else:
+        result = _parse_fmadm_faulty(res['stdout'])
 
     return result
+
+
+def healthy():
+    '''
+    Return wether fmadm is reporting faults
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' fmadm.healthy
+    '''
+    return False if faulty() else True
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4

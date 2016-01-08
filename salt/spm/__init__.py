@@ -254,8 +254,12 @@ class SPMClient(object):
                 if member.isdir():
                     digest = ''
                 else:
+                    self._verbose('Installing file {0} to {1}'.format(member.name, out_path), log.trace)
                     file_hash = hashlib.sha1()
-                    digest = self._pkgfiles_fun('hash_file', out_path, file_hash, self.files_conn)
+                    digest = self._pkgfiles_fun('hash_file',
+                                                os.path.join(out_path, member.name),
+                                                file_hash,
+                                                self.files_conn)
                 self._pkgdb_fun('register_file',
                                 name,
                                 member,
@@ -440,7 +444,7 @@ class SPMClient(object):
 
         package = args[1]
 
-        log.debug('Installing package {0}'.format(package))
+        self._verbose('Installing package {0}'.format(package), log.debug)
         repo_metadata = self._get_repo_metadata()
         for repo in repo_metadata:
             repo_info = repo_metadata[repo]
@@ -497,23 +501,31 @@ class SPMClient(object):
             file_hash = hashlib.sha1()
             digest = self._pkgfiles_fun('hash_file', filerow[0], file_hash, self.files_conn)
             if filerow[1] == digest:
-                log.trace('Removing file {0}'.format(filerow[0]))
+                self._verbose('Removing file {0}'.format(filerow[0]), log.trace)
                 self._pkgfiles_fun('remove_file', filerow[0], self.files_conn)
             else:
-                log.trace('Not removing file {0}'.format(filerow[0]))
+                self._verbose('Not removing file {0}'.format(filerow[0]), log.trace)
             self._pkgdb_fun('unregister_file', filerow[0], package, self.db_conn)
 
         # Clean up directories
         for dir_ in sorted(dirs, reverse=True):
             self._pkgdb_fun('unregister_file', dir_, package, self.db_conn)
             try:
-                log.trace('Removing directory {0}'.format(dir_))
+                self._verbose('Removing directory {0}'.format(dir_), log.trace)
                 os.rmdir(dir_)
             except OSError:
                 # Leave directories in place that still have files in them
-                log.trace('Cannot remove directory {0}, probably not empty'.format(dir_))
+                self._verbose('Cannot remove directory {0}, probably not empty'.format(dir_), log.trace)
 
         self._pkgdb_fun('unregister_pkg', package, self.db_conn)
+
+    def _verbose(self, msg, level=log.debug):
+        '''
+        Display verbose information
+        '''
+        if self.opts.get('verbose', False) is True:
+            self.ui.status(msg)
+        level(msg)
 
     def _local_info(self, args):
         '''
@@ -617,7 +629,11 @@ class SPMClient(object):
             raise SPMPackageError('package {0} not installed'.format(package))
         else:
             for file_ in files:
-                self.ui.status(file_[0])
+                if self.opts['verbose']:
+                    status_msg = ','.join(file_)
+                else:
+                    status_msg = file_[0]
+                self.ui.status(status_msg)
 
     def _build(self, args):
         '''

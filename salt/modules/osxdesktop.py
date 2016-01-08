@@ -17,7 +17,7 @@ def __virtual__():
     '''
     if salt.utils.is_darwin():
         return __virtualname__
-    return False
+    return (False, 'Cannot load osxdesktop module: This is not a OSX host.')
 
 
 def get_output_volume():

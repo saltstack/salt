@@ -37,8 +37,7 @@ def __virtual__():
     '''
     # Disable on Windows, a specific file module exists:
     if salt.utils.is_windows():
-        return False
-
+        return (False, 'The network execution module cannot be loaded on Windows: use win_network instead.')
     return True
 
 
@@ -528,7 +527,11 @@ def netstat():
 
 def active_tcp():
     '''
-    Return a dict containing information on all of the running TCP connections
+    Return a dict containing information on all of the running TCP connections (currently linux and solaris only)
+
+    .. versionchanged:: 2015.8.4
+
+        Added support for SunOS
 
     CLI Example:
 
@@ -536,7 +539,25 @@ def active_tcp():
 
         salt '*' network.active_tcp
     '''
-    return salt.utils.network.active_tcp()
+    if __grains__['kernel'] == 'Linux':
+        return salt.utils.network.active_tcp()
+    elif __grains__['kernel'] == 'SunOS':
+        # lets use netstat to mimic linux as close as possible
+        ret = {}
+        for connection in _netstat_sunos():
+            if not connection['proto'].startswith('tcp'):
+                continue
+            if connection['state'] != 'ESTABLISHED':
+                continue
+            ret[len(ret)+1] = {
+                'local_addr': '.'.join(connection['local-address'].split('.')[:-1]),
+                'local_port': '.'.join(connection['local-address'].split('.')[-1:]),
+                'remote_addr': '.'.join(connection['remote-address'].split('.')[:-1]),
+                'remote_port': '.'.join(connection['remote-address'].split('.')[-1:])
+            }
+        return ret
+    else:
+        return {}
 
 
 def traceroute(host):
@@ -655,6 +676,7 @@ def traceroute(host):
     return ret
 
 
+@decorators.which('dig')
 def dig(host):
     '''
     Performs a DNS lookup with dig
@@ -894,7 +916,7 @@ def ip_addrs6(interface=None, include_loopback=False, cidr=None):
     addrs = salt.utils.network.ip_addrs6(interface=interface,
                                         include_loopback=include_loopback)
     if cidr:
-        return [i for i in addrs if salt.utils.network.ip_in_subnet(cidr, [i])]
+        return [i for i in addrs if salt.utils.network.in_subnet(cidr, [i])]
     else:
         return addrs
 
@@ -946,19 +968,23 @@ def mod_hostname(hostname):
         uname_cmd = '/usr/bin/uname' if salt.utils.is_smartos() else salt.utils.which('uname')
         check_hostname_cmd = salt.utils.which('check-hostname')
 
-    if hostname_cmd.endswith('hostnamectl'):
-        __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
-        return True
-
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
-    if not salt.utils.is_sunos():
+    if hostname_cmd.endswith('hostnamectl'):
+        out = __salt__['cmd.run']('{0} status'.format(hostname_cmd))
+        for line in out.splitlines():
+            line = line.split(':')
+            if 'Static hostname' in line[0]:
+                o_hostname = line[1].strip()
+    elif not salt.utils.is_sunos():
         o_hostname = __salt__['cmd.run']('{0} -f'.format(hostname_cmd))
     else:
         # output: Hostname core OK: fully qualified as core.acheron.be
         o_hostname = __salt__['cmd.run'](check_hostname_cmd).split(' ')[-1]
 
-    if not salt.utils.is_sunos():
+    if hostname_cmd.endswith('hostnamectl'):
+        __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
+    elif not salt.utils.is_sunos():
         __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
     else:
         __salt__['cmd.run']('{0} -S {1}'.format(uname_cmd, hostname.split('.')[0]))
@@ -1179,13 +1205,13 @@ def _get_bufsize_linux(iface):
 
 def get_bufsize(iface):
     '''
-    Return network buffer sizes as a dict
+    Return network buffer sizes as a dict (currently linux only)
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' network.getbufsize
+        salt '*' network.get_bufsize
     '''
     if __grains__['kernel'] == 'Linux':
         if os.path.exists('/sbin/ethtool'):
@@ -1231,7 +1257,7 @@ def mod_bufsize(iface, *args, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' network.getBuffers
+        salt '*' network.mod_bufsize tx=<val> rx=<val> rx-mini=<val> rx-jumbo=<val>
     '''
     if __grains__['kernel'] == 'Linux':
         if os.path.exists('/sbin/ethtool'):
@@ -1309,6 +1335,8 @@ def default_route(family=None):
     for route in _routes:
         if family:
             if route['destination'] in default_route[family]:
+                if __grains__['kernel'] == 'SunOS' and route['addr_family'] != family:
+                    continue
                 ret.append(route)
         else:
             if route['destination'] in default_route['inet'] or \

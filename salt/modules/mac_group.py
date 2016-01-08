@@ -24,7 +24,7 @@ def __virtual__():
     global _dscl, _flush_dscl_cache
     if (__grains__.get('kernel') != 'Darwin' or
             __grains__['osrelease_info'] < (10, 7)):
-        return False
+        return (False, 'The mac_group execution module cannot be loaded: only available on Darwin-based systems >= 10.7')
     _dscl = salt.utils.namespaced_function(_dscl, globals())
     _flush_dscl_cache = salt.utils.namespaced_function(
         _flush_dscl_cache, globals()

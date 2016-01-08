@@ -5,6 +5,7 @@ Nova class
 
 # Import Python libs
 from __future__ import absolute_import, with_statement
+from distutils.version import LooseVersion
 import time
 import inspect
 import logging
@@ -14,11 +15,8 @@ import salt.ext.six as six
 HAS_NOVA = False
 # pylint: disable=import-error
 try:
-    try:
-        from novaclient.v2 import client
-    except ImportError:
-        from novaclient.v1_1 import client
-    from novaclient import client as nclient
+    import novaclient
+    from novaclient import client
     from novaclient.shell import OpenStackComputeShell
     import novaclient.utils
     import novaclient.auth_plugin
@@ -27,7 +25,8 @@ try:
     import novaclient.base
     HAS_NOVA = True
 except ImportError:
-    pass
+    class OpenStackComputeShell(object):
+        '''mock class for errors'''
 # pylint: enable=import-error
 
 # Import salt libs
@@ -37,15 +36,92 @@ from salt.exceptions import SaltCloudSystemExit
 # Get logging started
 log = logging.getLogger(__name__)
 
+# Version added to novaclient.client.Client function
+NOVACLIENT_MINVER = '2.6.1'
+
+# dict for block_device_mapping_v2
+CLIENT_BDM2_KEYS = {
+    'id': 'uuid',
+    'source': 'source_type',
+    'dest': 'destination_type',
+    'bus': 'disk_bus',
+    'device': 'device_name',
+    'size': 'volume_size',
+    'format': 'guest_format',
+    'bootindex': 'boot_index',
+    'type': 'device_type',
+    'shutdown': 'delete_on_termination',
+}
+
 
 def check_nova():
-    return HAS_NOVA
+    if HAS_NOVA:
+        novaclient_ver = LooseVersion(novaclient.__version__)
+        min_ver = LooseVersion(NOVACLIENT_MINVER)
+        if novaclient_ver >= min_ver:
+            return HAS_NOVA
+        log.debug('Newer novaclient version required.  Minimum: {0}'.format(NOVACLIENT_MINVER))
+    return False
 
 
 # kwargs has to be an object instead of a dictionary for the __post_parse_arg__
 class KwargsStruct(object):
     def __init__(self, **entries):
         self.__dict__.update(entries)
+
+
+def _parse_block_device_mapping_v2(block_device=None, boot_volume=None, snapshot=None, ephemeral=None, swap=None):
+    bdm = []
+    if block_device is None:
+        block_device = []
+    if ephemeral is None:
+        ephemeral = []
+
+    if boot_volume is not None:
+        bdm_dict = {'uuid': boot_volume, 'source_type': 'volume',
+                    'destination_type': 'volume', 'boot_index': 0,
+                    'delete_on_termination': False}
+        bdm.append(bdm_dict)
+
+    if snapshot is not None:
+        bdm_dict = {'uuid': snapshot, 'source_type': 'snapshot',
+                    'destination_type': 'volume', 'boot_index': 0,
+                    'delete_on_termination': False}
+        bdm.append(bdm_dict)
+
+    for device_spec in block_device:
+        bdm_dict = {}
+
+        for key, value in six.iteritems(device_spec):
+            bdm_dict[CLIENT_BDM2_KEYS[key]] = value
+
+        # Convert the delete_on_termination to a boolean or set it to true by
+        # default for local block devices when not specified.
+        if 'delete_on_termination' in bdm_dict:
+            action = bdm_dict['delete_on_termination']
+            bdm_dict['delete_on_termination'] = (action == 'remove')
+        elif bdm_dict.get('destination_type') == 'local':
+            bdm_dict['delete_on_termination'] = True
+
+        bdm.append(bdm_dict)
+
+    for ephemeral_spec in ephemeral:
+        bdm_dict = {'source_type': 'blank', 'destination_type': 'local',
+                    'boot_index': -1, 'delete_on_termination': True}
+        if 'size' in ephemeral_spec:
+            bdm_dict['volume_size'] = ephemeral_spec['size']
+        if 'format' in ephemeral_spec:
+            bdm_dict['guest_format'] = ephemeral_spec['format']
+
+        bdm.append(bdm_dict)
+
+    if swap is not None:
+        bdm_dict = {'source_type': 'blank', 'destination_type': 'local',
+                    'boot_index': -1, 'delete_on_termination': True,
+                    'guest_format': 'swap', 'volume_size': swap}
+        bdm.append(bdm_dict)
+
+    return bdm
 
 
 class NovaServer(object):
@@ -55,7 +131,7 @@ class NovaServer(object):
         '''
         self.name = name
         self.id = server['id']
-        self.image = server['image']['id']
+        self.image = server.get('image', {}).get('id', 'Boot From Volume')
         self.size = server['flavor']['id']
         self.state = server['state']
         self._uuid = None
@@ -132,13 +208,10 @@ class SaltNova(OpenStackComputeShell):
         '''
         Set up nova credentials
         '''
-        if not HAS_NOVA:
-            return None
-
         self.kwargs = kwargs.copy()
 
         if not novaclient.base.Manager._hooks_map:
-            self.extensions = nclient.discover_extensions('1.1')
+            self.extensions = getattr(self, '_discover_extensions', client.discover_extensions)('1.1')
             for extension in self.extensions:
                 extension.run_hooks('__pre_parse_args__')
             self.kwargs['extensions'] = self.extensions
@@ -172,20 +245,19 @@ class SaltNova(OpenStackComputeShell):
 
         self.kwargs = sanatize_novaclient(self.kwargs)
 
-        if not hasattr(client.Client, '__exit__'):
-            raise SaltCloudSystemExit("Newer version of novaclient required for __exit__.")
+        # Requires novaclient version >= 2.6.1
+        self.kwargs['version'] = str(kwargs.get('version', 2))
 
-        with client.Client(**self.kwargs) as conn:
-            try:
-                conn.client.authenticate()
-            except novaclient.exceptions.AmbiguousEndpoints:
-                raise SaltCloudSystemExit(
-                    "Nova provider requires a 'region_name' to be specified"
-                )
+        conn = client.Client(**self.kwargs)
+        try:
+            conn.client.authenticate()
+        except novaclient.exceptions.AmbiguousEndpoints:
+            raise SaltCloudSystemExit(
+                "Nova provider requires a 'region_name' to be specified"
+            )
 
-            self.kwargs['auth_token'] = conn.client.auth_token
-            self.catalog = \
-                conn.client.service_catalog.catalog['access']['serviceCatalog']
+        self.kwargs['auth_token'] = conn.client.auth_token
+        self.catalog = conn.client.service_catalog.catalog['access']['serviceCatalog']
 
         if region_name is not None:
             servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
@@ -250,12 +322,19 @@ class SaltNova(OpenStackComputeShell):
         Boot a cloud server.
         '''
         nt_ks = self.compute_conn
-        for key in ('name', 'flavor', 'image'):
-            if key in kwargs:
-                del kwargs[key]
-        response = nt_ks.servers.create(
-            name=name, flavor=flavor_id, image=image_id, **kwargs
+        kwargs['name'] = name
+        kwargs['flavor'] = flavor_id
+        kwargs['image'] = image_id or None
+        ephemeral = kwargs.pop('ephemeral', [])
+        block_device = kwargs.pop('block_device', [])
+        boot_volume = kwargs.pop('boot_volume', None)
+        snapshot = kwargs.pop('snapshot', None)
+        swap = kwargs.pop('swap', None)
+        kwargs['block_device_mapping_v2'] = _parse_block_device_mapping_v2(
+            block_device=block_device, boot_volume=boot_volume, snapshot=snapshot,
+            ephemeral=ephemeral, swap=swap
         )
+        response = nt_ks.servers.create(**kwargs)
         self.uuid = response.id
         self.password = response.adminPass
 
@@ -690,8 +769,8 @@ class SaltNova(OpenStackComputeShell):
                     'accessIPv6': item.accessIPv6,
                     'flavor': {'id': item.flavor['id'],
                                'links': item.flavor['links']},
-                    'image': {'id': item.image['id'],
-                              'links': item.image['links']},
+                    'image': {'id': item.image['id'] if item.image else 'Boot From Volume',
+                              'links': item.image['links'] if item.image else ''},
                     }
             except TypeError:
                 pass
@@ -716,8 +795,8 @@ class SaltNova(OpenStackComputeShell):
                                'links': item.flavor['links']},
                     'hostId': item.hostId,
                     'id': item.id,
-                    'image': {'id': item.image['id'],
-                              'links': item.image['links']},
+                    'image': {'id': item.image['id'] if item.image else 'Boot From Volume',
+                              'links': item.image['links'] if item.image else ''},
                     'key_name': item.key_name,
                     'links': item.links,
                     'metadata': item.metadata,

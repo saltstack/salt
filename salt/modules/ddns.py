@@ -48,7 +48,7 @@ def __virtual__():
     '''
     if dns_support:
         return 'ddns'
-    return False
+    return (False, 'The ddns execution module cannot be loaded: dnspython not installed.')
 
 
 def _config(name, key=None, **kwargs):

@@ -64,12 +64,14 @@ def find_file(path, saltenv='base', env=None, **kwargs):
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd['path'] = full
             fnd['rel'] = path
+            fnd['stat'] = list(os.stat(full))
         return fnd
     for root in __opts__['file_roots'][saltenv]:
         full = os.path.join(root, path)
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd['path'] = full
             fnd['rel'] = path
+            fnd['stat'] = list(os.stat(full))
             return fnd
     return fnd
 
