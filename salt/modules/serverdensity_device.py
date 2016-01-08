@@ -258,7 +258,7 @@ def install_agent(agent_key, agent_version=1):
         url = 'https://archive.serverdensity.com/agent-install.sh'
 
     __salt__['cmd.run'](
-        cmd='curl {0} -o {1}'.format(url, install_filename),
+        cmd='curl -L {0} -o {1}'.format(url, install_filename),
         cwd=work_dir
     )
     __salt__['cmd.run'](cmd='chmod +x {0}'.format(install_filename), cwd=work_dir)
