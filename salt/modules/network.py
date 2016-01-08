@@ -896,7 +896,7 @@ def ip_addrs(interface=None, include_loopback=False, cidr=None, type=None):
         return [i for i in addrs if salt.utils.network.in_subnet(cidr, [i])]
     else:
         if type == 'public':
-            return [i for i in addrs if is_public(i)]
+            return [i for i in addrs if not is_private(i)]
         elif type == 'private':
             return [i for i in addrs if is_private(i)]
         else:
@@ -1147,20 +1147,6 @@ def is_private(ip_addr):
         salt '*' network.is_private 10.0.0.3
     '''
     return ipaddress.ip_address(ip_addr).is_private
-
-def is_public(ip_addr):
-    '''
-    Check if the given IP address is a public (non-private) address
-
-        IPv6 support
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' network.is_public 8.8.8.8
-    '''
-    return not ipaddress.ip_address(ip_addr).is_private
 
 def is_loopback(ip_addr):
     '''
