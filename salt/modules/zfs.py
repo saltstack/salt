@@ -235,7 +235,7 @@ def destroy(name, **kwargs):
     if res['retcode'] != 0:
         if "operation does not apply to pools" in res['stderr']:
             ret[name] = '{0}, use zpool.destroy to destroy the pool'.format(res['stderr'].splitlines()[0])
-        if "filesystem has children" in res['stderr']:
+        if "has children" in res['stderr']:
             ret[name] = '{0}, you can add the "recursive=True" parameter'.format(res['stderr'].splitlines()[0])
         else:
             ret[name] = res['stderr'] if 'stderr' in res else res['stdout']
