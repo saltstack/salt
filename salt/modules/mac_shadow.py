@@ -100,20 +100,28 @@ def info(name):
 
 def get_account_created(name):
     unix_timestamp = _get_account_policy_data_value(name, 'creationTime')
-    unix_timestamp = float(unix_timestamp)
-    return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    if isinstance(unix_timestamp, float)
+        unix_timestamp = float(unix_timestamp)
+        return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    else:
+        return 'Value not set'
 
 
 def get_last_change(name):
     unix_timestamp = _get_account_policy_data_value(name, 'passwordLastSetTime')
-    unix_timestamp = float(unix_timestamp)
-    return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-
+    if isinstance(unix_timestamp, float)
+        unix_timestamp = float(unix_timestamp)
+        return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    else:
+        return 'Value not set'
 
 def get_login_failed_last(name):
     unix_timestamp = _get_account_policy_data_value(name, 'failedLoginTimestamp')
-    unix_timestamp = float(unix_timestamp)
-    return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    if isinstance(unix_timestamp, float)
+        unix_timestamp = float(unix_timestamp)
+        return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    else:
+        return 'Value not set'
 
 
 def set_maxdays(name, days):
