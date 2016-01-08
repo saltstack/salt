@@ -139,8 +139,8 @@ def get_service_instance(host, username, password, protocol=None, port=None):
     except Exception as exc:
         default_msg = 'Could not connect to host \'{0}\'. ' \
                       'Please check the debug log for more information.'.format(host)
-        if isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg:
-            try:
+        try:
+            if (isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or '[SSL: CERTIFICATE_VERIFY_FAILED]' in str(exc):
                 import ssl
                 default_context = ssl._create_default_https_context
                 ssl._create_default_https_context = ssl._create_unverified_context
@@ -152,14 +152,28 @@ def get_service_instance(host, username, password, protocol=None, port=None):
                     port=port
                 )
                 ssl._create_default_https_context = default_context
-            except Exception as exc:
+            else:
                 err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
                 log.debug(exc)
                 raise SaltSystemExit(err_msg)
-        else:
-            err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
-            log.debug(exc)
-            raise SaltSystemExit(err_msg)
+
+        except Exception as exc:
+            if 'certificate verify failed' in str(exc):
+                import ssl
+                context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+                context.verify_mode = ssl.CERT_NONE
+                service_instance = SmartConnect(
+                    host=host,
+                    user=username,
+                    pwd=password,
+                    protocol=protocol,
+                    port=port,
+                    sslContext=context
+                )
+            else:
+                err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
+                log.debug(exc)
+                raise SaltSystemExit(err_msg)
 
     atexit.register(Disconnect, service_instance)
 
