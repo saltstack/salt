@@ -152,7 +152,7 @@ intersphinx_mapping = {
 # -- General Configuration -----------------------------------------------------
 
 project = 'Salt'
-copyright = '2015 SaltStack, Inc.'
+copyright = '2016 SaltStack, Inc.'
 
 version = salt.version.__version__
 latest_release = '2015.8.3'  # latest release
