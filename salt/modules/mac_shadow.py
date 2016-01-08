@@ -11,6 +11,7 @@ of a configuration profile.
 # https://developer.apple.com/library/mac/documentation/Networking/Conceptual/Open_Directory/openDirectoryConcepts/openDirectoryConcepts.html#//apple_ref/doc/uid/TP40000917-CH3-CIFCAIBB
 
 from __future__ import absolute_import
+from datetime import datetime
 
 # Import salt libs
 import salt.utils
@@ -82,10 +83,10 @@ def info(name):
     ret['name'] = _get_dscl_data_value(name, 'name')
     ret['passwd'] = _get_dscl_data_value(name, 'passwd')
 
-    ret['account_created'] = _get_account_policy_data_value(name, 'creationTime')
+    ret['account_created'] = get_account_created(name)
     ret['login_failed_count'] = _get_account_policy_data_value(name, 'failedLoginCount')
     ret['login_failed_last'] = _get_account_policy_data_value(name, 'failedLoginTimestamp')
-    ret['lstchg'] = _get_account_policy_data_value(name, 'passwordLastSetTime')
+    ret['lstchg'] = get_last_change(name)
 
     ret['max'] = get_maxdays(name)
     ret['expire'] = get_expire(name)
@@ -95,6 +96,16 @@ def info(name):
     ret['inact'] = 'Unavailable'
 
     return ret
+
+
+def get_account_created(name):
+    unix_timestamp = _get_account_policy_data_value(name, 'creationTime')
+    return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+
+def get_last_change(name):
+    unix_timestamp = _get_account_policy_data_value(name, 'passwordLastSetTime')
+    return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
 def set_maxdays(name, days):
