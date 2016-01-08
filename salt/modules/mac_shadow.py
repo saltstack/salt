@@ -36,6 +36,12 @@ try:
 except ImportError:
     HAS_PASSLIB = False
 
+try:
+    import biplist
+    HAS_BIPLIST = True
+except ImportError:
+    HAS_BIPLIST = FALSE
+
 __virtualname__ = 'shadow'
 
 
@@ -45,6 +51,9 @@ def __virtual__():
 
     if not HAS_PASSLIB:
         return False, 'passlib not available'
+
+    if not HAS_BIPLIST:
+        return False, 'biplist not available'
 
     return __virtualname__
 
