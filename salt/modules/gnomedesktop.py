@@ -38,7 +38,8 @@ def __virtual__():
     '''
     if HAS_PWD and HAS_GLIB:
         return __virtualname__
-    return False
+    return (False, 'The gnome_desktop execution module cannot be loaded: '
+          'The Gio and GLib modules are not available')
 
 
 class _GSettings(object):

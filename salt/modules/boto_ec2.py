@@ -52,8 +52,8 @@ import time
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
+import salt.utils
 import salt.utils.compat
-import salt.utils.exactly_one
 import salt.ext.six as six
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
@@ -81,9 +81,9 @@ def __virtual__():
     # which was added in boto 2.8.0
     # https://github.com/boto/boto/commit/33ac26b416fbb48a60602542b4ce15dcc7029f12
     if not HAS_BOTO:
-        return False
+        return (False, "The boto_ec2 module cannot be loaded: boto library not found")
     elif _LooseVersion(boto.__version__) < _LooseVersion(required_boto_version):
-        return False
+        return (False, "The boto_ec2 module cannot be loaded: boto library version incorrect ")
     return True
 
 
@@ -635,7 +635,8 @@ def exists(instance_id=None, name=None, tags=None, region=None, key=None,
         salt myminion boto_ec2.exists myinstance
     '''
     instances = find_instances(instance_id=instance_id, name=name, tags=tags,
-                               in_states=in_states)
+                               region=region, key=key, keyid=keyid,
+                               profile=profile, in_states=in_states)
     if instances:
         log.info('Instance exists.')
         return True
@@ -652,8 +653,9 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         instance_initiated_shutdown_behavior=None, placement_group=None,
         client_token=None, security_group_ids=None, security_group_names=None,
         additional_info=None, tenancy=None, instance_profile_arn=None,
-        instance_profile_name=None, ebs_optimized=None, network_interfaces=None,
-        region=None, key=None, keyid=None, profile=None):
+        instance_profile_name=None, ebs_optimized=None,
+        network_interface_id=None, network_interface_name=None,
+        region=None, key=None, keyid=None, profile=None, network_interfaces=None):
     #TODO: support multi-instance reservations
     '''
     Create and start an EC2 instance.
@@ -747,6 +749,10 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
         (boto.ec2.networkinterface.NetworkInterfaceCollection) – A
         NetworkInterfaceCollection data structure containing the ENI
         specifications for the instance.
+    network_interface_id
+        (string) - ID of the network interface to attach to the instance
+    network_interface_name
+        (string) - Name of the network interface to attach to the instance
 
     '''
     if all((subnet_id, subnet_name)):
@@ -775,20 +781,47 @@ def run(image_id, name=None, tags=None, key_name=None, security_groups=None,
                 return False
             security_group_ids += [r]
 
+    if all((network_interface_id, network_interface_name)):
+        raise SaltInvocationError('Only one of network_interface_id or '
+                                  'network_interface_name may be provided.')
+    if network_interface_name:
+        network_interface_id = get_network_interface_id(network_interface_name,
+                                                        region=region, key=key,
+                                                        keyid=keyid,
+                                                        profile=profile)
+        if not network_interface_id:
+            log.warning(
+                "Given network_interface_name '{0}' cannot be mapped to an "
+                "network_interface_id".format(network_interface_name)
+            )
+
+    if network_interface_id:
+        interface = boto.ec2.networkinterface.NetworkInterfaceSpecification(
+            network_interface_id=network_interface_id,
+            device_index=0
+        )
+    else:
+        interface = boto.ec2.networkinterface.NetworkInterfaceSpecification(
+            subnet_id=subnet_id,
+            groups=security_group_ids,
+            device_index=0
+        )
+    interfaces = boto.ec2.networkinterface.NetworkInterfaceCollection(interface)
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     reservation = conn.run_instances(image_id, key_name=key_name, security_groups=security_groups,
                                      user_data=user_data, instance_type=instance_type,
                                      placement=placement, kernel_id=kernel_id, ramdisk_id=ramdisk_id,
-                                     monitoring_enabled=monitoring_enabled, subnet_id=subnet_id,
+                                     monitoring_enabled=monitoring_enabled,
                                      private_ip_address=private_ip_address, block_device_map=block_device_map,
                                      disable_api_termination=disable_api_termination,
                                      instance_initiated_shutdown_behavior=instance_initiated_shutdown_behavior,
                                      placement_group=placement_group, client_token=client_token,
-                                     security_group_ids=security_group_ids, additional_info=additional_info,
+                                     additional_info=additional_info,
                                      tenancy=tenancy, instance_profile_arn=instance_profile_arn,
                                      instance_profile_name=instance_profile_name, ebs_optimized=ebs_optimized,
-                                     network_interfaces=network_interfaces)
+                                     network_interfaces=interfaces)
     if not reservation:
         log.warning('Instance could not be reserved')
         return False
@@ -1172,7 +1205,7 @@ def create_network_interface(name, subnet_id=None, subnet_name=None,
 
         salt myminion boto_ec2.create_network_interface my_eni subnet-12345 description=my_eni groups=['my_group']
     '''
-    if not exactly_one((subnet_id, subnet_name)):
+    if not salt.utils.exactly_one((subnet_id, subnet_name)):
         raise SaltInvocationError('One (but not both) of subnet_id or '
                                   'subnet_name must be provided.')
 
@@ -1257,9 +1290,9 @@ def delete_network_interface(
     return r
 
 
-def attach_network_interface(
-        name=None, network_interface_id=None, instance_id=None,
-        device_index=None, region=None, key=None, keyid=None, profile=None):
+def attach_network_interface(device_index, name=None, network_interface_id=None,
+                             instance_name=None, instance_id=None,
+                             region=None, key=None, keyid=None, profile=None):
     '''
     Attach an Elastic Network Interface.
 
@@ -1269,16 +1302,20 @@ def attach_network_interface(
 
     .. code-block:: bash
 
-        salt myminion boto_ec2.create_network_interface my_eni subnet-12345 description=my_eni groups=['my_group']
+        salt myminion boto_ec2.attach_network_interface my_eni instance_name=salt-master device_index=0
     '''
-    if not (name or network_interface_id):
+    if not salt.utils.exactly_one((name, network_interface_id)):
         raise SaltInvocationError(
-            'Either name or network_interface_id must be provided.'
+            "Exactly one (but not both) of 'name' or 'network_interface_id' "
+            "must be provided."
         )
-    if not (instance_id and device_index):
+
+    if not salt.utils.exactly_one((instance_name, instance_id)):
         raise SaltInvocationError(
-            'instance_id and device_index are required parameters.'
+            "Exactly one (but not both) of 'instance_name' or 'instance_id' "
+            "must be provided."
         )
+
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     r = {}
     result = _get_network_interface(conn, name, network_interface_id)
@@ -1291,6 +1328,15 @@ def attach_network_interface(
     except KeyError:
         r['error'] = {'message': 'ID not found for this network interface.'}
         return r
+
+    if instance_name:
+        try:
+            instance_id = get_id(name=instance_name, region=region, key=key,
+                                 keyid=keyid, profile=profile)
+        except boto.exception.BotoServerError as e:
+            log.error(e)
+            return False
+
     try:
         r['result'] = conn.attach_network_interface(
             network_interface_id, instance_id, device_index

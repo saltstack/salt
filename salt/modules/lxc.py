@@ -81,7 +81,7 @@ def __virtual__():
     #     return 'lxc'
     # return False
     #
-    return False
+    return (False, 'The lxc execution module cannot be loaded: the lxc-start binary is not in the path.')
 
 
 def get_root_path(path):
@@ -291,6 +291,8 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         autostart the container at boot time
     password
         administrative password for the container
+    bootstrap_delay
+        delay before launching bootstrap script at Container init
 
 
     .. warning::
@@ -521,6 +523,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
     lxc_init_interface['bootstrap_url'] = script
     lxc_init_interface['bootstrap_args'] = script_args
     lxc_init_interface['bootstrap_shell'] = _cloud_get('bootstrap_shell', 'sh')
+    lxc_init_interface['bootstrap_delay'] = _cloud_get('bootstrap_delay', None)
     lxc_init_interface['autostart'] = autostart
     lxc_init_interface['users'] = users
     lxc_init_interface['password'] = password
@@ -1146,7 +1149,6 @@ def init(name,
          bootstrap_args=None,
          bootstrap_shell=None,
          bootstrap_url=None,
-         uses_systemd=True,
          **kwargs):
     '''
     Initialize a new container.
@@ -1300,9 +1302,6 @@ def init(name,
     unconditional_install
         Run the script even if the container seems seeded
 
-    uses_systemd
-        Set to true if the lxc template has systemd installed
-
     CLI Example:
 
     .. code-block:: bash
@@ -1396,7 +1395,8 @@ def init(name,
     # If using a volume group then set up to make snapshot cow clones
     if vgname and not clone_from:
         try:
-            clone_from = _get_base(vgname=vgname, profile=profile, **kwargs)
+            kwargs['vgname'] = vgname
+            clone_from = _get_base(profile=profile, **kwargs)
         except (SaltInvocationError, CommandExecutionError) as exc:
             ret['comment'] = exc.strerror
             if changes:
@@ -1623,8 +1623,7 @@ def init(name,
                     bootstrap_delay=bootstrap_delay,
                     bootstrap_url=bootstrap_url,
                     bootstrap_shell=bootstrap_shell,
-                    bootstrap_args=bootstrap_args,
-                    uses_systemd=uses_systemd)
+                    bootstrap_args=bootstrap_args)
             except (SaltInvocationError, CommandExecutionError) as exc:
                 ret['comment'] = 'Bootstrap failed: ' + exc.strerror
                 ret['result'] = False
@@ -2100,7 +2099,7 @@ def clone(name,
         cmd += ' -B {0}'.format(backing)
         if backing not in ('dir', 'overlayfs'):
             if size:
-                cmd += ' --fssize {0}'.format(size)
+                cmd += ' -L {0}'.format(size)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
     # please do not merge extra conflicting stuff
     # inside those two line (ret =, return)
@@ -3325,7 +3324,7 @@ def test_bare_started_state(name, path=None):
     return ret
 
 
-def wait_started(name, path=None, timeout=300, uses_systemd=True):
+def wait_started(name, path=None, timeout=300):
     '''
     Check that the system has fully inited
 
@@ -3353,7 +3352,7 @@ def wait_started(name, path=None, timeout=300, uses_systemd=True):
         raise CommandExecutionError(
             'Container {0} is not running'.format(name))
     ret = False
-    if uses_systemd and running_systemd(name, path=path):
+    if running_systemd(name, path=path):
         test_started = test_sd_started_state
         logger = log.error
     else:
@@ -3409,8 +3408,7 @@ def bootstrap(name,
               path=None,
               bootstrap_delay=None,
               bootstrap_args=None,
-              bootstrap_shell=None,
-              uses_systemd=True):
+              bootstrap_shell=None):
     '''
     Install and configure salt in a container.
 
@@ -3471,9 +3469,11 @@ def bootstrap(name,
                 [approve_key=(True|False)] [install=(True|False)]
 
     '''
-    wait_started(name, path=path, uses_systemd=uses_systemd)
+    wait_started(name, path=path)
     if bootstrap_delay is not None:
         try:
+            log.info('LXC {0}: bootstrap_delay: {1}'.format(
+                name, bootstrap_delay))
             time.sleep(bootstrap_delay)
         except TypeError:
             # Bad input, but assume since a value was passed that

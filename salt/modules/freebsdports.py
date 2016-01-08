@@ -35,7 +35,13 @@ __virtualname__ = 'ports'
 
 
 def __virtual__():
-    return __virtualname__ if __grains__.get('os', '') == 'FreeBSD' else False
+    '''
+    Only runs on FreeBSD systems
+    '''
+    if __grains__['os'] == 'FreeBSD':
+        return __virtualname__
+    return (False, 'The freebsdports execution module cannot be loaded: '
+            'only available on FreeBSD systems.')
 
 
 def _portsnap():

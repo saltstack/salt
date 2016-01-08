@@ -31,6 +31,7 @@ import logging
 import pprint
 import re
 import time
+import datetime
 
 # Import Salt Libs
 import salt.config as config
@@ -48,6 +49,9 @@ import salt.utils.cloud
 
 # Get logging started
 log = logging.getLogger(__name__)
+
+# The epoch of the last time a query was made
+LASTCALL = int(time.mktime(datetime.datetime.now().timetuple()))
 
 # Human-readable status fields (documentation: https://www.linode.com/api/linode/linode.list)
 LINODE_STATUS = {
@@ -435,6 +439,9 @@ def create(vm_):
     log.debug('Creating disks for {0}'.format(name))
     root_disk_id = create_disk_from_distro(vm_, node_id)['DiskID']
     swap_disk_id = create_swap_disk(vm_, node_id)['DiskID']
+    data_disk_id = None
+    if get_data_disk(vm_):
+        data_disk_id = create_data_disk(vm_, node_id, get_data_disk_size(vm_, get_swap_size(vm_), node_id))['DiskID']
 
     # Add private IP address if requested
     private_ip_assignment = get_private_ip(vm_)
@@ -455,6 +462,7 @@ def create(vm_):
                                       'linode_id': node_id,
                                       'root_disk_id': root_disk_id,
                                       'swap_disk_id': swap_disk_id,
+                                      'data_disk_id': data_disk_id,
                                       'helper_network': private_ip_assignment})['ConfigID']
     # Boot the Linode
     boot(kwargs={'linode_id': node_id,
@@ -524,6 +532,11 @@ def create_config(kwargs=None, call=None):
     swap_disk_id
         The Swap Disk ID to be used for this config.
 
+    data_disk_id
+        The Data Disk ID to be used for this config.
+
+    .. versionadded:: Boron
+
     kernel_id
         The ID of the kernel to use for this configuration profile.
     '''
@@ -539,6 +552,7 @@ def create_config(kwargs=None, call=None):
     linode_id = kwargs.get('linode_id', None)
     root_disk_id = kwargs.get('root_disk_id', None)
     swap_disk_id = kwargs.get('swap_disk_id', None)
+    data_disk_id = kwargs.get('data_disk_id', None)
     kernel_id = kwargs.get('kernel_id', None)
 
     if kernel_id is None:
@@ -553,11 +567,15 @@ def create_config(kwargs=None, call=None):
                 '\'root_disk_id\', and \'swap_disk_id\'.'
             )
 
+    disklist = '{0},{1}'.format(root_disk_id, swap_disk_id)
+    if data_disk_id is not None:
+        disklist = '{0},{1},{2}'.format(root_disk_id, swap_disk_id, data_disk_id)
+
     config_args = {'LinodeID': linode_id,
                    'KernelID': kernel_id,
                    'Label': name,
-                   'DiskList': '{0},{1}'.format(root_disk_id, swap_disk_id)
-                   }
+                   'DiskList': disklist
+                  }
 
     result = _query('linode', 'config.create', args=config_args)
 
@@ -627,10 +645,38 @@ def create_swap_disk(vm_, linode_id, swap_size=None):
                    'Label': vm_['name'],
                    'Type': 'swap',
                    'Size': swap_size
-                   })
+                  })
 
     result = _query('linode', 'disk.create', args=kwargs)
 
+    return _clean_data(result)
+
+
+def create_data_disk(vm_=None, linode_id=None, data_size=None):
+    '''
+    Create a data disk for the linode (type is hardcoded to ext4 at the moment)
+
+    .. versionadded:: Boron
+
+    vm_
+        The VM profile to create the data disk for.
+
+    linode_id
+        The ID of the Linode to create the data disk for.
+
+    data_size
+        The size of the disk, in MB.
+
+    '''
+    kwargs = {}
+
+    kwargs.update({'LinodeID': linode_id,
+                   'Label': vm_['name']+"_data",
+                   'Type': 'ext4',
+                   'Size': data_size
+                  })
+
+    result = _query('linode', 'disk.create', args=kwargs)
     return _clean_data(result)
 
 
@@ -759,6 +805,19 @@ def get_disk_size(vm_, swap, linode_id):
     return config.get_cloud_config_value(
         'disk_size', vm_, __opts__, default=disk_size - swap
     )
+
+
+def get_data_disk_size(vm_, swap, linode_id):
+    '''
+    Return the size of of the data disk in MB
+
+    .. versionadded:: Boron
+    '''
+    disk_size = get_linode(kwargs={'linode_id': linode_id})['TOTALHD']
+    root_disk_size = config.get_cloud_config_value(
+        'disk_size', vm_, __opts__, default=disk_size - swap
+    )
+    return disk_size - root_disk_size - swap
 
 
 def get_distribution_id(vm_):
@@ -953,6 +1012,17 @@ def get_private_ip(vm_):
 
     return config.get_cloud_config_value(
         'assign_private_ip', vm_, __opts__, default=False
+    )
+
+
+def get_data_disk(vm_):
+    '''
+    Return True if a data disk is requested
+
+    .. versionadded:: Boron
+    '''
+    return config.get_cloud_config_value(
+        'allocate_data_disk', vm_, __opts__, default=False
     )
 
 
@@ -1361,8 +1431,12 @@ def _query(action=None,
     '''
     Make a web call to the Linode API.
     '''
+    global LASTCALL
     vm_ = get_configured_provider()
 
+    ratelimit_sleep = config.get_cloud_config_value(
+        'ratelimit_sleep', vm_, __opts__, search_global=False, default=0,
+    )
     apikey = config.get_cloud_config_value(
         'apikey', vm_, __opts__, search_global=False
     )
@@ -1386,6 +1460,10 @@ def _query(action=None,
     if method == 'DELETE':
         decode = False
 
+    now = int(time.mktime(datetime.datetime.now().timetuple()))
+    if LASTCALL >= now:
+        time.sleep(ratelimit_sleep)
+
     result = salt.utils.http.query(
         url,
         method,
@@ -1399,6 +1477,7 @@ def _query(action=None,
         hide_fields=['api_key', 'rootPass'],
         opts=__opts__,
     )
+    LASTCALL = int(time.mktime(datetime.datetime.now().timetuple()))
     log.debug(
         'Linode Response Status Code: {0}'.format(
             result['status']

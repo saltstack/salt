@@ -20,7 +20,7 @@ See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
 
        python -c "import pyVmomi" ; echo $?
 
-To use this module, set up the vCenter URL, username and password in the
+To use this module, set up the vCenter or ESX/ESXi URL, username and password in the
 cloud configuration at
 ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/vmware.conf``:
 
@@ -48,11 +48,27 @@ cloud configuration at
       protocol: 'http'
       port: 80
 
+    esx01:
+      driver: vmware
+      user: 'admin'
+      password: 'verybadpass'
+      url: 'esx01.domain.com'
+
 .. note::
 
     Optionally, ``protocol`` and ``port`` can be specified if the vCenter
     server is not using the defaults. Default is ``protocol: https`` and
     ``port: 443``.
+
+.. note::
+    .. versionchanged:: 2015.8.0
+
+    The ``provider`` parameter in cloud provider configuration was renamed to ``driver``.
+    This change was made to avoid confusion with the ``provider`` parameter that is
+    used in cloud profile configuration. Cloud provider configuration now uses ``driver``
+    to refer to the salt-cloud driver that provides the underlying functionality to
+    connect to a cloud provider, while cloud profile configuration continues to use
+    ``provider`` to refer to the cloud provider configuration that you define.
 
 To test the connection for ``my-vmware-config`` specified in the cloud
 configuration, run :py:func:`test_vcenter_connection`
@@ -214,7 +230,7 @@ def _edit_existing_hard_disk_helper(disk, size_kb):
     return disk_spec
 
 
-def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
+def _add_new_hard_disk_helper(disk_label, size_gb, unit_number, controller_key=1000, thin_provision=False):
     random_key = randint(-2099, -2000)
 
     size_kb = int(size_gb * 1024.0 * 1024.0)
@@ -229,8 +245,9 @@ def _add_new_hard_disk_helper(disk_label, size_gb, unit_number):
     disk_spec.device.deviceInfo.label = disk_label
     disk_spec.device.deviceInfo.summary = "{0} GB".format(size_gb)
     disk_spec.device.backing = vim.vm.device.VirtualDisk.FlatVer2BackingInfo()
+    disk_spec.device.backing.thinProvisioned = thin_provision
     disk_spec.device.backing.diskMode = 'persistent'
-    disk_spec.device.controllerKey = 1000
+    disk_spec.device.controllerKey = controller_key
     disk_spec.device.unitNumber = unit_number
     disk_spec.device.capacityInKB = size_kb
 
@@ -349,16 +366,16 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     return network_spec
 
 
-def _edit_existing_scsi_adapter(scsi_adapter, bus_sharing):
-    scsi_adapter.sharedBus = bus_sharing
+def _edit_existing_scsi_controller(scsi_controller, bus_sharing):
+    scsi_controller.sharedBus = bus_sharing
     scsi_spec = vim.vm.device.VirtualDeviceSpec()
     scsi_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.edit
-    scsi_spec.device = scsi_adapter
+    scsi_spec.device = scsi_controller
 
     return scsi_spec
 
 
-def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
+def _add_new_scsi_controller_helper(scsi_controller_label, properties, bus_number):
     random_key = randint(-1050, -1000)
     adapter_type = properties['type'].strip().lower() if 'type' in properties else None
     bus_sharing = properties['bus_sharing'].strip().lower() if 'bus_sharing' in properties else None
@@ -377,9 +394,9 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     else:
         # If type not specified or does not match, show error and return
         if not adapter_type:
-            err_msg = "The type of '{0}' has not been specified".format(scsi_adapter_label)
+            err_msg = "The type of '{0}' has not been specified".format(scsi_controller_label)
         else:
-            err_msg = "Cannot create '{0}'. Invalid/unsupported type '{1}'".format(scsi_adapter_label, adapter_type)
+            err_msg = "Cannot create '{0}'. Invalid/unsupported type '{1}'".format(scsi_controller_label, adapter_type)
         raise SaltCloudSystemExit(err_msg)
 
     scsi_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
@@ -387,7 +404,7 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     scsi_spec.device.key = random_key
     scsi_spec.device.busNumber = bus_number
     scsi_spec.device.deviceInfo = vim.Description()
-    scsi_spec.device.deviceInfo.label = scsi_adapter_label
+    scsi_spec.device.deviceInfo.label = scsi_controller_label
     scsi_spec.device.deviceInfo.summary = summary
 
     if bus_sharing == "virtual":
@@ -405,13 +422,13 @@ def _add_new_scsi_adapter_helper(scsi_adapter_label, properties, bus_number):
     return scsi_spec
 
 
-def _add_new_ide_adapter_helper(ide_adapter_label, properties, bus_number):
+def _add_new_ide_controller_helper(ide_controller_label, properties, bus_number):
     '''
     Helper function for adding new IDE controllers
 
     .. versionadded:: Boron
     '''
-    random_key = randint(-5050, -5000)
+    random_key = randint(-200, -250)
 
     ide_spec = vim.vm.device.VirtualDeviceSpec()
     ide_spec.device = vim.vm.device.VirtualIDEController()
@@ -421,8 +438,8 @@ def _add_new_ide_adapter_helper(ide_adapter_label, properties, bus_number):
     ide_spec.device.key = random_key
     ide_spec.device.busNumber = bus_number
     ide_spec.device.deviceInfo = vim.Description()
-    ide_spec.device.deviceInfo.label = ide_adapter_label
-    ide_spec.device.deviceInfo.summary = "IDE"
+    ide_spec.device.deviceInfo.label = ide_controller_label
+    ide_spec.device.deviceInfo.summary = ide_controller_label
 
     return ide_spec
 
@@ -519,8 +536,8 @@ def _manage_devices(devices, vm=None):
     bus_number = 0
     device_specs = []
     existing_disks_label = []
-    existing_scsi_adapters_label = []
-    existing_ide_adapters_label = []
+    existing_scsi_controllers_label = []
+    existing_ide_controllers_label = []
     existing_network_adapters_label = []
     existing_cd_drives_label = []
     ide_controllers = {}
@@ -560,20 +577,20 @@ def _manage_devices(devices, vm=None):
                         nics_map.append(adapter_mapping)
 
             elif hasattr(device, 'scsiCtlrUnitNumber'):
-                # this is a scsi adapter
+                # this is a SCSI controller
                 if 'scsi' in list(devices.keys()):
-                    # there is atleast one scsi adapter specified to be created/configured
+                    # there is atleast one SCSI controller specified to be created/configured
                     bus_number += 1
-                    existing_scsi_adapters_label.append(device.deviceInfo.label)
+                    existing_scsi_controllers_label.append(device.deviceInfo.label)
                     if device.deviceInfo.label in list(devices['scsi'].keys()):
-                        # Modify the existing SCSI adapter
-                        scsi_adapter_properties = devices['scsi'][device.deviceInfo.label]
-                        bus_sharing = scsi_adapter_properties['bus_sharing'].strip().lower() if 'bus_sharing' in scsi_adapter_properties else None
+                        # Modify the existing SCSI controller
+                        scsi_controller_properties = devices['scsi'][device.deviceInfo.label]
+                        bus_sharing = scsi_controller_properties['bus_sharing'].strip().lower() if 'bus_sharing' in scsi_controller_properties else None
                         if bus_sharing and bus_sharing in ['virtual', 'physical', 'no']:
                             bus_sharing = '{0}Sharing'.format(bus_sharing)
                             if bus_sharing != device.sharedBus:
-                                # Only edit the SCSI adapter if bus_sharing is different
-                                scsi_spec = _edit_existing_scsi_adapter(device, bus_sharing)
+                                # Only edit the SCSI controller if bus_sharing is different
+                                scsi_spec = _edit_existing_scsi_controller(device, bus_sharing)
                                 device_specs.append(scsi_spec)
 
             elif isinstance(device, vim.vm.device.VirtualCdrom):
@@ -589,13 +606,13 @@ def _manage_devices(devices, vm=None):
                         device_specs.append(cd_drive_spec)
 
             elif isinstance(device, vim.vm.device.VirtualIDEController):
-                # this is a controller to add new cd drives to
+                # this is an IDE controller to add new cd drives to
                 ide_controllers[device.key] = len(device.device)
 
     if 'network' in list(devices.keys()):
         network_adapters_to_create = list(set(devices['network'].keys()) - set(existing_network_adapters_label))
         network_adapters_to_create.sort()
-        log.debug("Networks adapters to create: {0}".format(network_adapters_to_create))
+        log.debug("Networks adapters to create: {0}".format(network_adapters_to_create)) if network_adapters_to_create else None  # pylint: disable=W0106
         for network_adapter_label in network_adapters_to_create:
             network_name = devices['network'][network_adapter_label]['name']
             adapter_type = devices['network'][network_adapter_label]['adapter_type'] if 'adapter_type' in devices['network'][network_adapter_label] else ''
@@ -607,67 +624,72 @@ def _manage_devices(devices, vm=None):
             nics_map.append(adapter_mapping)
 
     if 'scsi' in list(devices.keys()):
-        scsi_adapters_to_create = list(set(devices['scsi'].keys()) - set(existing_scsi_adapters_label))
-        scsi_adapters_to_create.sort()
-        log.debug("SCSI devices to create: {0}".format(scsi_adapters_to_create))
-        for scsi_adapter_label in scsi_adapters_to_create:
-            # create the scsi adapter
-            scsi_adapter_properties = devices['scsi'][scsi_adapter_label]
-            scsi_spec = _add_new_scsi_adapter_helper(scsi_adapter_label, scsi_adapter_properties, bus_number)
+        scsi_controllers_to_create = list(set(devices['scsi'].keys()) - set(existing_scsi_controllers_label))
+        scsi_controllers_to_create.sort()
+        log.debug("SCSI controllers to create: {0}".format(scsi_controllers_to_create)) if scsi_controllers_to_create else None  # pylint: disable=W0106
+        for scsi_controller_label in scsi_controllers_to_create:
+            # create the SCSI controller
+            scsi_controller_properties = devices['scsi'][scsi_controller_label]
+            scsi_spec = _add_new_scsi_controller_helper(scsi_controller_label, scsi_controller_properties, bus_number)
             device_specs.append(scsi_spec)
+            bus_number += 1
+
+    if 'ide' in list(devices.keys()):
+        ide_controllers_to_create = list(set(devices['ide'].keys()) - set(existing_ide_controllers_label))
+        ide_controllers_to_create.sort()
+        log.debug('IDE controllers to create: {0}'.format(ide_controllers_to_create)) if ide_controllers_to_create else None  # pylint: disable=W0106
+        for ide_controller_label in ide_controllers_to_create:
+            # create the IDE controller
+            ide_spec = _add_new_ide_controller_helper(ide_controller_label, None, bus_number)
+            device_specs.append(ide_spec)
             bus_number += 1
 
     if 'disk' in list(devices.keys()):
         disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
         disks_to_create.sort()
-        log.debug("Hard disks to create: {0}".format(disks_to_create))
+        log.debug("Hard disks to create: {0}".format(disks_to_create)) if disks_to_create else None  # pylint: disable=W0106
         for disk_label in disks_to_create:
             # create the disk
             size_gb = float(devices['disk'][disk_label]['size'])
-            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number)
-            # When creating both the controller and the disk at the same time we need the randomly
-            # assigned (temporary) key of the newly created controller
+            thin_provision = bool(devices['disk'][disk_label]['thin_provision']) if 'thin_provision' in devices['disk'][disk_label] else False
+            disk_spec = _add_new_hard_disk_helper(disk_label, size_gb, unit_number, thin_provision=thin_provision)
+
+            # when creating both SCSI controller and Hard disk at the same time we need the randomly
+            # assigned (temporary) key of the newly created SCSI controller
             if 'controller' in devices['disk'][disk_label]:
                 for spec in device_specs:
                     if spec.device.deviceInfo.label == devices['disk'][disk_label]['controller']:
                         disk_spec.device.controllerKey = spec.device.key
+                        break
 
             device_specs.append(disk_spec)
             unit_number += 1
 
-    if 'ide' in list(devices.keys()):
-        ide_adapters_to_create = list(set(devices['ide'].keys()) - set(existing_ide_adapters_label))
-        ide_adapters_to_create.sort()
-        log.debug('IDE devices to create: {0}'.format(ide_adapters_to_create))
-        for ide_adapter_label in ide_adapters_to_create:
-            # create the ide adapter
-            ide_spec = _add_new_ide_adapter_helper(ide_adapter_label, None, bus_number)
-            device_specs.append(ide_spec)
-            bus_number += 1
-
     if 'cd' in list(devices.keys()):
         cd_drives_to_create = list(set(devices['cd'].keys()) - set(existing_cd_drives_label))
         cd_drives_to_create.sort()
-        log.debug("CD/DVD drives to create: {0}".format(cd_drives_to_create))
+        log.debug("CD/DVD drives to create: {0}".format(cd_drives_to_create)) if cd_drives_to_create else None  # pylint: disable=W0106
         for cd_drive_label in cd_drives_to_create:
             # create the CD/DVD drive
             device_type = devices['cd'][cd_drive_label]['device_type'] if 'device_type' in devices['cd'][cd_drive_label] else ''
             mode = devices['cd'][cd_drive_label]['mode'] if 'mode' in devices['cd'][cd_drive_label] else ''
             iso_path = devices['cd'][cd_drive_label]['iso_path'] if 'iso_path' in devices['cd'][cd_drive_label] else ''
-            # When creating both the controller and the disk at the same time we need the randomly
-            # assigned (temporary) key of the newly created controller
+            controller_key = None
+
+            # When creating both IDE controller and CD/DVD drive at the same time we need the randomly
+            # assigned (temporary) key of the newly created IDE controller
             if 'controller' in devices['cd'][cd_drive_label]:
                 for spec in device_specs:
                     if spec.device.deviceInfo.label == devices['cd'][cd_drive_label]['controller']:
                         controller_key = spec.device.key
                         ide_controllers[controller_key] = 0
+                        break
+            else:
+                for ide_controller_key, num_devices in six.iteritems(ide_controllers):
+                    if num_devices < 2:
+                        controller_key = ide_controller_key
+                        break
 
-            for ide_controller_key, num_devices in six.iteritems(ide_controllers):
-                if num_devices < 2:
-                    controller_key = ide_controller_key
-                    break
-                else:
-                    controller_key = None
             if not controller_key:
                 log.error("No more available controllers for '{0}'. All IDE controllers are currently in use".format(cd_drive_label))
             else:
@@ -726,28 +748,6 @@ def _wait_for_ip(vm_ref, max_wait):
         time_counter += 1
     log.warning("[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} seconds".format(vm_ref.name, max_wait_ip))
     return False
-
-
-def _wait_for_task(task, vm_name, task_type, sleep_seconds=1, log_level='debug'):
-    time_counter = 0
-    starttime = time.time()
-    while task.info.state == 'running' or task.info.state == 'queued':
-        if time_counter % sleep_seconds == 0:
-            message = "[ {0} ] Waiting for {1} task to finish [{2} s]".format(vm_name, task_type, time_counter)
-            if log_level == 'info':
-                log.info(message)
-            else:
-                log.debug(message)
-        time.sleep(1.0 - ((time.time() - starttime) % 1.0))
-        time_counter += 1
-    if task.info.state == 'success':
-        message = "[ {0} ] Successfully completed {1} task in {2} seconds".format(vm_name, task_type, time_counter)
-        if log_level == 'info':
-            log.info(message)
-        else:
-            log.debug(message)
-    else:
-        raise Exception(task.info.error)
 
 
 def _wait_for_host(host_ref, task_type, sleep_seconds=5, log_level='debug'):
@@ -1057,7 +1057,11 @@ def _upg_tools_helper(vm, reboot=False):
             else:
                 status = 'Only Linux and Windows guests are currently supported'
                 return status
-            _wait_for_task(task, vm.name, "tools upgrade", 5, "info")
+            salt.utils.vmware.wait_for_task(task,
+                                            vm.name,
+                                            'tools upgrade',
+                                            sleep_seconds=5,
+                                            log_level='info')
         except Exception as exc:
             log.error(
                 'Error while upgrading VMware tools on VM {0}: {1}'.format(
@@ -1732,7 +1736,7 @@ def start(name, call=None):
             try:
                 log.info('Starting VM {0}'.format(name))
                 task = vm["object"].PowerOn()
-                _wait_for_task(task, name, "power on")
+                salt.utils.vmware.wait_for_task(task, name, 'power on')
             except Exception as exc:
                 log.error(
                     'Error while powering on VM {0}: {1}'.format(
@@ -1779,7 +1783,7 @@ def stop(name, call=None):
             try:
                 log.info('Stopping VM {0}'.format(name))
                 task = vm["object"].PowerOff()
-                _wait_for_task(task, name, "power off")
+                salt.utils.vmware.wait_for_task(task, name, 'power off')
             except Exception as exc:
                 log.error(
                     'Error while powering off VM {0}: {1}'.format(
@@ -1830,7 +1834,7 @@ def suspend(name, call=None):
             try:
                 log.info('Suspending VM {0}'.format(name))
                 task = vm["object"].Suspend()
-                _wait_for_task(task, name, "suspend")
+                salt.utils.vmware.wait_for_task(task, name, 'suspend')
             except Exception as exc:
                 log.error(
                     'Error while suspending VM {0}: {1}'.format(
@@ -1877,7 +1881,7 @@ def reset(name, call=None):
             try:
                 log.info('Resetting VM {0}'.format(name))
                 task = vm["object"].Reset()
-                _wait_for_task(task, name, "reset")
+                salt.utils.vmware.wait_for_task(task, name, 'reset')
             except Exception as exc:
                 log.error(
                     'Error while resetting VM {0}: {1}'.format(
@@ -1979,7 +1983,7 @@ def destroy(name, call=None):
                 try:
                     log.info('Powering Off VM {0}'.format(name))
                     task = vm["object"].PowerOff()
-                    _wait_for_task(task, name, "power off")
+                    salt.utils.vmware.wait_for_task(task, name, 'power off')
                 except Exception as exc:
                     log.error(
                         'Error while powering off VM {0}: {1}'.format(
@@ -1993,7 +1997,7 @@ def destroy(name, call=None):
             try:
                 log.info('Destroying VM {0}'.format(name))
                 task = vm["object"].Destroy_Task()
-                _wait_for_task(task, name, "destroy")
+                salt.utils.vmware.wait_for_task(task, name, 'destroy')
             except Exception as exc:
                 log.error(
                     'Error while destroying VM {0}: {1}'.format(
@@ -2341,16 +2345,16 @@ def create(vm_):
 
                 # apply storage DRS recommendations
                 task = si.content.storageResourceManager.ApplyStorageDrsRecommendation_Task(recommended_datastores.recommendations[0].key)
-                _wait_for_task(task, vm_name, "apply storage DRS recommendations", 5, 'info')
+                salt.utils.vmware.wait_for_task(task, vm_name, 'apply storage DRS recommendations', 5, 'info')
             else:
                 # clone the VM/template
                 task = object_ref.Clone(folder_ref, vm_name, clone_spec)
-                _wait_for_task(task, vm_name, "clone", 5, 'info')
+                salt.utils.vmware.wait_for_task(task, vm_name, 'clone', 5, 'info')
         else:
             log.info('Creating {0}'.format(vm_['name']))
 
             task = folder_ref.CreateVM_Task(config_spec, resourcepool_ref)
-            _wait_for_task(task, vm_name, "create", 5, 'info')
+            salt.utils.vmware.wait_for_task(task, vm_name, "create", 5, 'info')
     except Exception as exc:
         err_msg = 'Error creating {0}: {1}'.format(vm_['name'], exc)
         log.error(
@@ -2365,7 +2369,7 @@ def create(vm_):
     # Find how to power on in CreateVM_Task (if possible), for now this will do
     if not clone_type and power:
         task = new_vm_ref.PowerOn()
-        _wait_for_task(task, vm_name, 'power', 5, 'info')
+        salt.utils.vmware.wait_for_task(task, vm_name, 'power', 5, 'info')
 
     # If it a template or if it does not need to be powered on then do not wait for the IP
     if not template and power:
@@ -2924,7 +2928,7 @@ def enter_maintenance_mode(kwargs=None, call=None):
 
     try:
         task = host_ref.EnterMaintenanceMode(timeout=0, evacuatePoweredOffVms=True)
-        _wait_for_task(task, host_name, "enter maintenance mode", 1)
+        salt.utils.vmware.wait_for_task(task, host_name, 'enter maintenance mode')
     except Exception as exc:
         log.error(
             'Error while moving host system {0} in maintenance mode: {1}'.format(
@@ -2969,7 +2973,7 @@ def exit_maintenance_mode(kwargs=None, call=None):
 
     try:
         task = host_ref.ExitMaintenanceMode(timeout=0)
-        _wait_for_task(task, host_name, "exit maintenance mode", 1)
+        salt.utils.vmware.wait_for_task(task, host_name, 'exit maintenance mode')
     except Exception as exc:
         log.error(
             'Error while moving host system {0} out of maintenance mode: {1}'.format(
@@ -3096,6 +3100,9 @@ def create_snapshot(name, kwargs=None, call=None):
             '-a or --action.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     snapshot_name = kwargs.get('snapshot_name') if kwargs and 'snapshot_name' in kwargs else None
 
     if not snapshot_name:
@@ -3122,7 +3129,7 @@ def create_snapshot(name, kwargs=None, call=None):
 
     try:
         task = vm_ref.CreateSnapshot(snapshot_name, desc, memdump, quiesce)
-        _wait_for_task(task, name, "create snapshot", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, name, 'create snapshot', 5, 'info')
     except Exception as exc:
         log.error(
             'Error while creating snapshot of {0}: {1}'.format(
@@ -3167,6 +3174,9 @@ def revert_to_snapshot(name, kwargs=None, call=None):
             '-a or --action.'
         )
 
+    if kwargs is None:
+        kwargs = {}
+
     suppress_power_on = _str_to_bool(kwargs.get('power_off', False))
 
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
@@ -3177,7 +3187,7 @@ def revert_to_snapshot(name, kwargs=None, call=None):
 
     try:
         task = vm_ref.RevertToCurrentSnapshot(suppressPowerOn=suppress_power_on)
-        _wait_for_task(task, name, "revert to snapshot", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, name, 'revert to snapshot', 5, 'info')
 
     except Exception as exc:
         log.error(
@@ -3221,7 +3231,7 @@ def remove_all_snapshots(name, kwargs=None, call=None):
 
     try:
         task = vm_ref.RemoveAllSnapshots()
-        _wait_for_task(task, name, "remove snapshots", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, name, 'remove snapshots', 5, 'info')
     except Exception as exc:
         log.error(
             'Error while removing snapshots on VM {0}: {1}'.format(
@@ -3367,7 +3377,7 @@ def add_host(kwargs=None, call=None):
         if datacenter_name:
             task = datacenter_ref.hostFolder.AddStandaloneHost(spec=spec, addConnected=True)
             ret = 'added host system to datacenter {0}'.format(datacenter_name)
-        _wait_for_task(task, host_name, "add host system", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, host_name, 'add host system', 5, 'info')
     except Exception as exc:
         if isinstance(exc, vim.fault.SSLVerifyFault):
             log.error('Authenticity of the host\'s SSL certificate is not verified')
@@ -3421,7 +3431,7 @@ def remove_host(kwargs=None, call=None):
         else:
             # This is a host system that is part of a Cluster
             task = host_ref.Destroy_Task()
-        _wait_for_task(task, host_name, "remove host", 1, 'info')
+        salt.utils.vmware.wait_for_task(task, host_name, 'remove host', log_level='info')
     except Exception as exc:
         log.error(
             'Error while removing host {0}: {1}'.format(
@@ -3470,7 +3480,7 @@ def connect_host(kwargs=None, call=None):
 
     try:
         task = host_ref.ReconnectHost_Task()
-        _wait_for_task(task, host_name, "connect host", 5, 'info')
+        salt.utils.vmware.wait_for_task(task, host_name, 'connect host', 5, 'info')
     except Exception as exc:
         log.error(
             'Error while connecting host {0}: {1}'.format(
@@ -3519,7 +3529,7 @@ def disconnect_host(kwargs=None, call=None):
 
     try:
         task = host_ref.DisconnectHost_Task()
-        _wait_for_task(task, host_name, "disconnect host", 1, 'info')
+        salt.utils.vmware.wait_for_task(task, host_name, 'disconnect host', log_level='info')
     except Exception as exc:
         log.error(
             'Error while disconnecting host {0}: {1}'.format(

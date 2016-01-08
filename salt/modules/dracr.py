@@ -36,7 +36,7 @@ def __virtual__():
     if salt.utils.which('racadm'):
         return True
 
-    return False
+    return (False, 'The drac execution module cannot be loaded: racadm binary not in path.')
 
 
 def __parse_drac(output):
@@ -245,6 +245,12 @@ def network_info(host=None,
 
     inv = inventory(host=host, admin_username=admin_username,
                     admin_password=admin_password)
+    if inv is None:
+        cmd = {}
+        cmd['retcode'] = -1
+        cmd['stdout'] = 'Problem getting switch inventory'
+        return cmd
+
     if module not in inv.get('switch'):
         cmd = {}
         cmd['retcode'] = -1
@@ -453,7 +459,11 @@ def change_password(username, password, uid=None, host=None,
     be necessary if one is not sure which user slot contains the one you want.
     Many late-model Dell chassis have 'root' as UID 1, so if you can depend
     on that then setting the password is much quicker.
+    Raises an error if the supplied password is greater than 20 chars.
     '''
+    if len(password) > 20:
+        raise CommandExecutionError('Supplied password should be 20 characters or less')
+
     if uid is None:
         user = list_users(host=host, admin_username=admin_username,
                           admin_password=admin_password, module=module)
@@ -1078,9 +1088,9 @@ def get_chassis_name(host=None, admin_username=None, admin_password=None):
             admin_username=root admin_password=secret
 
     '''
-    return system_info(host=host, admin_username=admin_username,
-                       admin_password=
-                       admin_password)['Chassis Information']['Chassis Name']
+    return bare_rac_cmd('getchassisname', host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
 
 
 def inventory(host=None, admin_username=None, admin_password=None):
@@ -1316,6 +1326,19 @@ def _update_firmware(cmd,
         admin_password = __pillar__['proxy']['admin_password']
 
     ret = __execute_ret(cmd,
+                        host=host,
+                        admin_username=admin_username,
+                        admin_password=admin_password)
+
+    if ret['retcode'] == 0:
+        return ret['stdout']
+    else:
+        return ret
+
+
+def bare_rac_cmd(cmd, host=None,
+                admin_username=None, admin_password=None):
+    ret = __execute_ret('{0}'.format(cmd),
                         host=host,
                         admin_username=admin_username,
                         admin_password=admin_password)

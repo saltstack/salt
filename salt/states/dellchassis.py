@@ -4,7 +4,7 @@ Manage chassis via Salt Proxies.
 
 .. versionadded:: 2015.8.2
 
-Below is an example state that sets parameters just to show the basics.
+Below is an example state that sets basic parameters:
 
 .. code-block:: yaml
 
@@ -24,15 +24,17 @@ Below is an example state that sets parameters just to show the basics.
           - server-3: powercycle
 
 However, it is possible to place the entire set of chassis configuration
-data in pillar. Here's an example pillar
-structure:
+data in pillar. Here's an example pillar structure:
 
 .. code-block:: yaml
 
     proxy:
       host: 10.27.20.18
       admin_username: root
-      admin_password: saltstack
+      fallback_admin_username: root
+      passwords:
+        - super-secret
+        - old-secret
       proxytype: fx2
 
       chassis:
@@ -48,30 +50,30 @@ structure:
           - 'server-2': blade2
 
         blades:
-           blade1:
-             idrac_password: saltstack1
-             ipmi_over_lan: True
-             ip: 172.17.17.1
-             subnet: 255.255.0.0
-             netmask: 172.17.255.255
+          blade1:
+            idrac_password: saltstack1
+            ipmi_over_lan: True
+            ip: 172.17.17.1
+            gateway: 255.255.0.0
+            netmask: 172.17.255.255
           blade2:
-             idrac_password: saltstack1
-             ipmi_over_lan: True
-             ip: 172.17.17.2
-             subnet: 255.255.0.0
-             netmask: 172.17.255.255
+            idrac_password: saltstack1
+            ipmi_over_lan: True
+            ip: 172.17.17.2
+            gateway: 255.255.0.0
+            netmask: 172.17.255.255
           blade3:
-             idrac_password: saltstack1
-             ipmi_over_lan: True
-             ip: 172.17.17.2
-             subnet: 255.255.0.0
-             netmask: 172.17.255.255
+            idrac_password: saltstack1
+            ipmi_over_lan: True
+            ip: 172.17.17.2
+            gateway: 255.255.0.0
+            netmask: 172.17.255.255
           blade4:
-             idrac_password: saltstack1
-             ipmi_over_lan: True
-             ip: 172.17.17.2
-             subnet: 255.255.0.0
-             netmask: 172.17.255.255
+            idrac_password: saltstack1
+            ipmi_over_lan: True
+            ip: 172.17.17.2
+            gateway: 255.255.0.0
+            netmask: 172.17.255.255
 
         switches:
           switch-1:
@@ -87,33 +89,8 @@ structure:
             snmp: nonpublic
             password: saltstack1
 
-And to go with it, here's an example state that pulls the data from pillar.
-This example assumes that the pillar data would be structured like
-
-Pillar:
-
-.. code-block:: yaml
-
-    proxy:
-      host: 192.168.1.1
-      admin_username: root
-      admin_password: sekrit
-      fallback_admin_username: root
-      fallback_admin_password: old_sekrit
-      proxytype: fx2
-
-      chassis:
-        name: fx2-1
-        username: root
-        datacenter: UT1
-        location: UT1
-        management_mode: 2
-        idrac_launch: 0
-        slot_names:
-          1: blade1
-          2: blade2
-
-State:
+And to go with it, here's an example state that pulls the data from the
+pillar stated above:
 
 .. code-block:: yaml
 
@@ -124,36 +101,39 @@ State:
         - location: {{ details['location'] }}
         - mode: {{ details['management_mode'] }}
         - idrac_launch: {{ details['idrac_launch'] }}
-        - slot_names
-          {% for k, v in details['chassis']['slot_names'].iteritems() %}
-          - {{ k }}: {{ v }}
-          {% endfor %}
-
-
-    {% for k, v in details['chassis']['switches'].iteritems() %}
-    standup-switches-{{ k }}:
-      dellchassis.dell_switch:
-        - name: {{ k }}
-        - ip: {{ v['ip'] }}
-        - netmask: {{ v['netmask'] }}
-        - gateway: {{ v['gateway'] }}
-        - password: {{ v['password'] }}
-        - snmp: {{ v['snmp'] }}
-    {% endfor %}
-
-    dellchassis
-    {% for k, v in details['chassis']['slot_names'].iteritems() %}
-
+        - slot_names:
+          {% for k, v in details['slot_names'].iteritems() %}
           - {{ k }}: {{ v }}
           {% endfor %}
 
     blade_powercycle:
-      chassis.dell_chassis:
+      dellchassis.chassis:
         - blade_power_states:
           - server-1: powercycle
           - server-2: powercycle
           - server-3: powercycle
           - server-4: powercycle
+
+    # Set idrac_passwords for blades
+    {% for k, v in details['blades'].iteritems() %}
+    {{ k }}:
+      dellchassis.blade_idrac:
+        - idrac_password: {{ password }}
+    {% endfor %}
+
+.. note::
+
+    This state module relies on the dracr.py execution module, which runs racadm commands on
+    the chassis, blades, etc. The racadm command runs very slowly and, depending on your state,
+    the proxy minion return might timeout before the racadm commands have completed. If you
+    are repeatedly seeing minions timeout after state calls, please use the ``-t`` CLI argument
+    to increase the timeout variable.
+
+    For example:
+
+    .. code-block:: bash
+
+        salt '*' state.sls my-dell-chasis-state-name -t 60
 
 '''
 
@@ -171,7 +151,7 @@ def __virtual__():
     return 'chassis.cmd' in __salt__
 
 
-def blade_idrac(idrac_password=None, idrac_ipmi=None,
+def blade_idrac(name, idrac_password=None, idrac_ipmi=None,
                 idrac_ip=None, idrac_netmask=None, idrac_gateway=None,
                 idrac_dnsname=None,
                 drac_dhcp=None):
@@ -188,7 +168,8 @@ def blade_idrac(idrac_password=None, idrac_ipmi=None,
     :return: A standard Salt changes dictionary
     '''
 
-    ret = {'result': True,
+    ret = {'name': name,
+           'result': True,
            'changes': {},
            'comment': ''}
 
@@ -238,7 +219,11 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
         The location of the chassis.
 
     password
-        Password for the chassis
+        Password for the chassis. Note: If this password is set for the chassis,
+        the current implementation of this state will set this password both on
+        the chassis and the iDrac passwords on any configured blades. If the
+        password for the blades should be distinct, they should be set separately
+        with the blade_idrac function.
 
     mode
         The management mode of the chassis. Viable options are:
@@ -271,7 +256,7 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
 
         my-dell-chassis:
           dellchassis.chassis:
-            - name: my-dell-chassis
+            - chassis_name: my-dell-chassis
             - location: my-location
             - datacenter: london
             - mode: 2
@@ -284,7 +269,8 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
               - server-2: off
               - server-3: powercycle
     '''
-    ret = {'chassis_name': chassis_name,
+    ret = {'name': chassis_name,
+           'chassis_name': chassis_name,
            'result': True,
            'changes': {},
            'comment': ''}
@@ -392,7 +378,7 @@ def chassis(name, chassis_name=None, password=None, datacenter=None,
         return ret
 
     # Finally, set the necessary configurations on the chassis.
-    name = __salt__[chassis_cmd]('set_chassis_name', name)
+    name = __salt__[chassis_cmd]('set_chassis_name', chassis_name)
     if location:
         location = __salt__[chassis_cmd]('set_chassis_location', location)
     pw_result = True
@@ -479,7 +465,7 @@ def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
     .. code-block:: yaml
 
         my-dell-chassis:
-          dellchassis.dell_switch:
+          dellchassis.switch:
             - switch: switch-1
             - ip: 192.168.1.1
             - netmask: 255.255.255.0
@@ -495,43 +481,48 @@ def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
            'comment': ''}
 
     current_nic = __salt__['chassis.cmd']('network_info', module=name)
-    if current_nic.get('retcode', 0) != 0:
-        ret['result'] = False
-        ret['comment'] = current_nic['stdout']
-        return ret
+    try:
+        if current_nic.get('retcode', 0) != 0:
+            ret['result'] = False
+            ret['comment'] = current_nic['stdout']
+            return ret
 
-    if ip or netmask or gateway:
-        if not ip:
-            ip = current_nic['Network']['IP Address']
-        if not netmask:
-            ip = current_nic['Network']['Subnet Mask']
-        if not gateway:
-            ip = current_nic['Network']['Gateway']
+        if ip or netmask or gateway:
+            if not ip:
+                ip = current_nic['Network']['IP Address']
+            if not netmask:
+                ip = current_nic['Network']['Subnet Mask']
+            if not gateway:
+                ip = current_nic['Network']['Gateway']
 
-    if current_nic['Network']['DHCP Enabled'] == '0' and dhcp:
-        ret['changes'].update({'DHCP': {'Old': {'DHCP Enabled': current_nic['Network']['DHCP Enabled']},
-                                        'New': {'DHCP Enabled': dhcp}}})
+        if current_nic['Network']['DHCP Enabled'] == '0' and dhcp:
+            ret['changes'].update({'DHCP': {'Old': {'DHCP Enabled': current_nic['Network']['DHCP Enabled']},
+                                            'New': {'DHCP Enabled': dhcp}}})
 
-    if ((ip or netmask or gateway) and not dhcp and (ip != current_nic['Network']['IP Address'] or
-                                                             netmask != current_nic['Network']['Subnet Mask'] or
-                                                             gateway != current_nic['Network']['Gateway'])):
-        ret['changes'].update({'IP': {'Old': current_nic['Network'],
-                                      'New': {'IP Address': ip,
-                                              'Subnet Mask': netmask,
-                                              'Gateway': gateway}}})
+        if ((ip or netmask or gateway) and not dhcp and (ip != current_nic['Network']['IP Address'] or
+                                                                 netmask != current_nic['Network']['Subnet Mask'] or
+                                                                 gateway != current_nic['Network']['Gateway'])):
+            ret['changes'].update({'IP': {'Old': current_nic['Network'],
+                                          'New': {'IP Address': ip,
+                                                  'Subnet Mask': netmask,
+                                                  'Gateway': gateway}}})
 
-    if password:
-        if 'New' not in ret['changes']:
-            ret['changes']['New'] = {}
-        ret['changes']['New'].update({'Password': '*****'})
+        if password:
+            if 'New' not in ret['changes']:
+                ret['changes']['New'] = {}
+            ret['changes']['New'].update({'Password': '*****'})
 
-    if snmp:
-        if 'New' not in ret['changes']:
-            ret['changes']['New'] = {}
-        ret['changes']['New'].update({'SNMP': '*****'})
+        if snmp:
+            if 'New' not in ret['changes']:
+                ret['changes']['New'] = {}
+            ret['changes']['New'].update({'SNMP': '*****'})
 
-    if ret['changes'] == {}:
-        ret['comment'] = 'Switch ' + name + ' is already in desired state'
+        if ret['changes'] == {}:
+            ret['comment'] = 'Switch ' + name + ' is already in desired state'
+            return ret
+    except AttributeError:
+        ret['changes'] = {}
+        ret['comment'] = 'Something went wrong retrieving the switch details'
         return ret
 
     if __opts__['test']:
@@ -549,7 +540,7 @@ def switch(name, ip=None, netmask=None, gateway=None, dhcp=None,
         password_ret = __salt__['chassis.cmd']('deploy_password', 'root', password, module=name)
 
     if snmp:
-        snmp_ret = __salt__['chassis.cmd']('deploy_snmp', password, module=name)
+        snmp_ret = __salt__['chassis.cmd']('deploy_snmp', snmp, module=name)
 
     if any([password_ret, snmp_ret, net_ret, dhcp_ret]) is False:
         ret['result'] = False
