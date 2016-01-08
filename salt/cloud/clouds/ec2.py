@@ -2503,6 +2503,24 @@ def create(vm_=None, call=None):
         )
         ret['Attached Volumes'] = created
 
+    # Associate instance with a ssm document, if present
+    ssm_document = config.get_cloud_config_value(
+        'ssm_document', vm_, __opts__, None, search_global=False
+    )
+    if ssm_document:
+        log.debug('Associating with ssm document: {0}'.format(ssm_document))
+        assoc = ssm_create_association(
+            vm_['name'],
+            {'ssm_document': ssm_document},
+            instance_id=vm_['instance_id'],
+            call='action'
+        )
+        if assoc.get('error', None):
+            log.error('Failed to associate instance {0} with ssm document {1}'.format(
+                vm_['instance_id'], ssm_document
+            ))
+            return {}
+
     for key, value in six.iteritems(salt.utils.cloud.bootstrap(vm_, __opts__)):
         ret.setdefault(key, value)
 
@@ -2521,6 +2539,8 @@ def create(vm_=None, call=None):
     }
     if volumes:
         event_data['volumes'] = volumes
+    if ssm_document:
+        event_data['ssm_document'] = ssm_document
 
     salt.utils.cloud.fire_event(
         'event',
@@ -4549,3 +4569,104 @@ def show_pricing(kwargs=None, call=None):
     ret['per_year'] = ret['per_week'] * 52
 
     return {profile['profile']: ret}
+
+
+def ssm_create_association(name=None, kwargs=None, instance_id=None, call=None):
+    '''
+    Associates the specified SSM document with the specified instance
+
+    http://docs.aws.amazon.com/ssm/latest/APIReference/API_CreateAssociation.html
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -a ssm_create_association ec2-instance-name ssm_document=ssm-document-name
+    '''
+
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The ssm_create_association action must be called with '
+            '-a or --action.'
+        )
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'instance_id' in kwargs:
+        instance_id = kwargs['instance_id']
+
+    if name and not instance_id:
+        instance_id = _get_node(name)['instanceId']
+
+    if not name and not instance_id:
+        log.error('Either a name or an instance_id is required.')
+        return False
+
+    if 'ssm_document' not in kwargs:
+        log.error('A ssm_document is required.')
+        return False
+
+    params = {'Action': 'CreateAssociation',
+              'InstanceId': instance_id,
+              'Name': kwargs['ssm_document']}
+
+    result = aws.query(params,
+                       return_root=True,
+                       location=get_location(),
+                       provider=get_provider(),
+                       product='ssm',
+                       opts=__opts__,
+                       sigver='4')
+    log.info(result)
+    return result
+
+
+def ssm_describe_association(name=None, kwargs=None, instance_id=None, call=None):
+    '''
+    Describes the associations for the specified SSM document or instance.
+
+    http://docs.aws.amazon.com/ssm/latest/APIReference/API_DescribeAssociation.html
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt-cloud -a ssm_describe_association ec2-instance-name ssm_document=ssm-document-name
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The ssm_describe_association action must be called with '
+            '-a or --action.'
+        )
+
+    if not kwargs:
+        kwargs = {}
+
+    if 'instance_id' in kwargs:
+        instance_id = kwargs['instance_id']
+
+    if name and not instance_id:
+        instance_id = _get_node(name)['instanceId']
+
+    if not name and not instance_id:
+        log.error('Either a name or an instance_id is required.')
+        return False
+
+    if 'ssm_document' not in kwargs:
+        log.error('A ssm_document is required.')
+        return False
+
+    params = {'Action': 'DescribeAssociation',
+              'InstanceId': instance_id,
+              'Name': kwargs['ssm_document']}
+
+    result = aws.query(params,
+                       return_root=True,
+                       location=get_location(),
+                       provider=get_provider(),
+                       product='ssm',
+                       opts=__opts__,
+                       sigver='4')
+    log.info(result)
+    return result

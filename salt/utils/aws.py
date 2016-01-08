@@ -225,7 +225,7 @@ def sig4(method, endpoint, params, prov_dict,
         location = DEFAULT_LOCATION
 
     params_with_headers = params.copy()
-    if product != 's3':
+    if product not in ('s3', 'ssm'):
         params_with_headers['Version'] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(map(params_with_headers.get, keys))
@@ -427,6 +427,11 @@ def query(params=None, setname=None, requesturl=None, location=None,
             DEFAULT_AWS_API_VERSION
         )
     )
+
+    # Fallback to ec2's id & key if none is found, for this component
+    if not prov_dict.get('id', None):
+        prov_dict['id'] = providers.get(provider, {}).get('ec2', {}).get('id', {})
+        prov_dict['key'] = providers.get(provider, {}).get('ec2', {}).get('key', {})
 
     if sigver == '4':
         headers, requesturl = sig4(
