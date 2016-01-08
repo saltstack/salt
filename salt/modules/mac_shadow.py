@@ -60,8 +60,9 @@ def _get_account_policy(name):
         policy_list = ret.split(' ')
         policy_dict = {}
         for policy in policy_list:
-            key, value = policy.split('=')
-            policy_dict[key] = value
+            if '=' in policy:
+                key, value = policy.split('=')
+                policy_dict[key] = value
         return policy_dict
     else:
         return False
@@ -100,12 +101,21 @@ def set_maxdays(name, days):
     minutes = days * 24 * 60
     cmd = 'pwpolicy -u {0} -setpolicy ' \
           'maxMinutesUntilChangePassword={1}'.format(name, minutes)
+    __salt__['cmd.run'](cmd)
+
+    new = get_maxdays(name)
+
+    return new == days
 
 
 def get_maxdays(name):
     policies = _get_account_policy(name)
-    max_minutes = policies['maxMinutesUntilChangePassword']
-    return max_minutes / 24 / 60
+
+    if 'maxMinutesUntilChangePassword' in policies:
+        max_minutes = policies['maxMinutesUntilChangePassword']
+        return float(max_minutes) / 24 / 60
+    else:
+        return 'Value not set'
 
 
 def set_mindays(name, days):
@@ -145,7 +155,7 @@ def set_change(name, date):
 
 def get_change(name):
     policies = _get_account_policy(name)
-    if policies['expirationDateGMT']:
+    if 'expirationDateGMT' in policies:
         return policies['expirationDateGMT']
     else:
         return 'Value not set'
@@ -176,7 +186,7 @@ def set_expire(name, date):
 
 def get_expire(name):
     policies = _get_account_policy(name)
-    if policies['hardExpireDateGMT']:
+    if 'hardExpireDateGMT' in policies:
         return policies['hardExpireDateGMT']
     else:
         return 'Value not set'
