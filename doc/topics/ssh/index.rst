@@ -214,7 +214,7 @@ Debugging salt-ssh
 One common approach for debugging ``salt-ssh`` is to simply use the tarball that salt
 ships to the remote machine and call ``salt-call`` directly.
 
-To determine the location of ``salt-call``, simply run ``salt-ssh`` with the ``-ldebug``
+To determine the location of ``salt-call``, simply run ``salt-ssh`` with the ``-ltrace``
 flag and look for a line containing the string, ``SALT_ARGV``. This contains the ``salt-call``
 command that ``salt-ssh`` attempted to execute.
 
