@@ -67,7 +67,11 @@ def _get_salt_params():
     try:
         params['name'] = all_grains['id']
         params['hostname'] = all_grains['host']
-        params['os'] = all_grains['os']
+        if all_grains['kernel'] == 'Darwin':
+            sd_os = { 'code': 'mac', 'name': 'Mac' }
+        else:
+            sd_os = {'code': all_grains['kernel'].lower(), 'name': all_grains['kernel']}
+        params['os'] = json.dumps(sd_os)
         params['cpuCores'] = all_stats['cpuinfo']['cpu cores']
         params['installedRAM'] = str(int(all_stats['meminfo']['MemTotal']['value']) / 1024)
         params['swapSpace'] = str(int(all_stats['meminfo']['SwapTotal']['value']) / 1024)
@@ -130,7 +134,7 @@ def monitored(name, group=None, salt_name=True, salt_params=True, agent_version=
             - salt_name: False
             - group: web-servers
             - cpuCores: 2
-            - os: CentOS
+            - os: '{"code": "linux", "name": "Linux"}'
     '''
     ret = {'name': name, 'changes': {}, 'result': None, 'comment': ''}
     params_from_salt = _get_salt_params()
