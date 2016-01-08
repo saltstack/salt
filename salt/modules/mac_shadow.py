@@ -85,7 +85,7 @@ def info(name):
 
     ret['account_created'] = get_account_created(name)
     ret['login_failed_count'] = _get_account_policy_data_value(name, 'failedLoginCount')
-    ret['login_failed_last'] = _get_account_policy_data_value(name, 'failedLoginTimestamp')
+    ret['login_failed_last'] = get_login_failed_last(name)
     ret['lstchg'] = get_last_change(name)
 
     ret['max'] = get_maxdays(name)
@@ -100,11 +100,19 @@ def info(name):
 
 def get_account_created(name):
     unix_timestamp = _get_account_policy_data_value(name, 'creationTime')
+    unix_timestamp = float(unix_timestamp)
     return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
 def get_last_change(name):
     unix_timestamp = _get_account_policy_data_value(name, 'passwordLastSetTime')
+    unix_timestamp = float(unix_timestamp)
+    return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+
+
+def get_login_failed_last(name):
+    unix_timestamp = _get_account_policy_data_value(name, 'failedLoginTimestamp')
+    unix_timestamp = float(unix_timestamp)
     return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
