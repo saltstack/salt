@@ -4,7 +4,6 @@ from __future__ import absolute_import
 # Import python libs
 import fnmatch
 import glob
-import signal
 import logging
 
 import yaml
