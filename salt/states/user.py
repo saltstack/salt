@@ -143,6 +143,10 @@ def _changes(name,
         if expire and expire is not -1 and lshad['expire'] != expire:
             change['expire'] = expire
     # GECOS fields
+    if isinstance(fullname, str):
+        fullname.decode('utf-8')
+    if isinstance(lusr['fullname'], str):
+        lusr['fullname'] = lusr['fullname'].decode('utf-8')
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
     if win_homedrive and lusr['homedrive'] != win_homedrive:
