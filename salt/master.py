@@ -541,7 +541,9 @@ class Master(SMaster):
             if salt.utils.is_windows():
                 kwargs['log_queue'] = (
                         salt.log.setup.get_multiprocessing_logging_queue())
-            self.process_manager.add_process(self.run_reqserver, kwargs=kwargs)
+
+            with default_signals(signal.SIGINT, signal.SIGTERM):
+                self.process_manager.add_process(self.run_reqserver, kwargs=kwargs, name='ReqServer')
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -649,49 +651,44 @@ class ReqServer(object):
             except os.error:
                 pass
 
-        # Reset signals to default ones before adding processes to the process
-        # manager. We don't want the processes being started to inherit those
-        # signal handlers
-        with default_signals(signal.SIGINT, signal.SIGTERM):
-            self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
+        self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
-            req_channels = []
-            tcp_only = True
-            for transport, opts in iter_transport_opts(self.opts):
-                chan = salt.transport.server.ReqServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager)
-                req_channels.append(chan)
-                if transport != 'tcp':
-                    tcp_only = False
+        req_channels = []
+        tcp_only = True
+        for transport, opts in iter_transport_opts(self.opts):
+            chan = salt.transport.server.ReqServerChannel.factory(opts)
+            chan.pre_fork(self.process_manager)
+            req_channels.append(chan)
+            if transport != 'tcp':
+                tcp_only = False
 
-            kwargs = {}
-            if salt.utils.is_windows():
-                kwargs['log_queue'] = self.log_queue
-                # Use one worker thread if the only TCP transport is set up on Windows. See #27188.
-                if tcp_only:
-                    log.warning("TCP transport is currently supporting the only 1 worker on Windows.")
-                    self.opts['worker_threads'] = 1
+        kwargs = {}
+        if salt.utils.is_windows():
+            kwargs['log_queue'] = self.log_queue
+            # Use one worker thread if the only TCP transport is set up on Windows. See #27188.
+            if tcp_only:
+                log.warning("TCP transport is currently supporting the only 1 worker on Windows.")
+                self.opts['worker_threads'] = 1
 
-            for ind in range(int(self.opts['worker_threads'])):
-                self.process_manager.add_process(MWorker,
-                                                args=(self.opts,
-                                                    self.master_key,
-                                                    self.key,
-                                                    req_channels,
-                                                    ),
-                                                kwargs=kwargs
-                                                )
+        for ind in range(int(self.opts['worker_threads'])):
+            self.process_manager.add_process(MWorker,
+                                            args=(self.opts,
+                                                self.master_key,
+                                                self.key,
+                                                req_channels,
+                                                ),
+                                            kwargs=kwargs
+                                            )
+
         try:
             self.process_manager.run()
         except (KeyboardInterrupt, SystemExit) as exc:
             self.process_manager.stop_restarting()
             if isinstance(exc, KeyboardInterrupt):
-                self.process_manager.send_signal_to_processes(signal.SIGINT)
+                self.destroy(signal.SIGINT)
             else:
-                self.process_manager.send_signal_to_processes(signal.SIGTERM)
-            # kill any remaining processes
-            self.process_manager.kill_children()
-            salt.log.setup.shutdown_multiprocessing_logging()
+                self.destroy(signal.SIGTERM)
+            exit(0)
 
     def run(self):
         '''
@@ -699,7 +696,7 @@ class ReqServer(object):
         '''
         self.__bind()
 
-    def destroy(self):
+    def destroy(self, signum=signal.SIGTERM):
         if hasattr(self, 'clients') and self.clients.closed is False:
             if HAS_ZMQ:
                 self.clients.setsockopt(zmq.LINGER, 1)
@@ -713,8 +710,10 @@ class ReqServer(object):
         # Also stop the workers
         if hasattr(self, 'process_manager'):
             self.process_manager.stop_restarting()
-            self.process_manager.send_signal_to_processes(signal.SIGTERM)
+            self.process_manager.send_signal_to_processes(signum)
             self.process_manager.kill_children()
+        # Shutdown multiprocessing logging
+        salt.log.setup.shutdown_multiprocessing_logging()
 
     def __del__(self):
         self.destroy()
