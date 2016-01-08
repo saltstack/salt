@@ -6,6 +6,7 @@ import copy
 import os
 import sys
 import time
+import errno
 import types
 import signal
 import logging
@@ -343,8 +344,15 @@ class ProcessManager(object):
         self._restart_processes = False
 
     def send_signal_to_processes(self, signal):
-        for pid in self._process_map:
-            os.kill(pid, signal)
+        for pid in six.iterkeys(self._process_map.copy()):
+            try:
+                os.kill(pid, signal)
+            except OSError as exc:
+                if exc.errno != errno.ESRCH:
+                    # If it's not a "No such process" error, raise it
+                    raise
+                # Otherwise, it's a dead process, remove it from the process map
+                del self._process_map[pid]
 
     @gen.coroutine
     def run(self, async=False):
@@ -425,7 +433,7 @@ class ProcessManager(object):
                 try:
                     p_map['Process'].terminate()
                 except OSError as exc:
-                    if exc.errno != 3:
+                    if exc.errno != errno.ESRCH:
                         raise
                     del self._process_map[pid]
 
