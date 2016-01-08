@@ -100,20 +100,21 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
         spaces replaced with '_'  +
 
         resource_path as derived from the swagger file basePath and paths fields with
-        '/' replaced with '_' +
+        '/' and consecutive whitespaces replaced with '_', and path parameters' curly
+        braces replaced with '' +
 
         resource's method type
 
         for example, given the following:
-            api_name = 'Test  Api'
+            api_name = 'Test    Service'
             basePath = '/api'
-            path = '/a/b/c'
+            path = '/a/{b}/c'
             method = 'POST'
 
             the derived Lambda Function Name that will be used for look up and
             integration is:
 
-            'test_api_api_a_b_c_post'
+            'test_service_api_a_b_c_post'
 
     name
         The name of the state definition
