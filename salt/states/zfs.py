@@ -17,8 +17,6 @@ Management zfs datasets
 from __future__ import absolute_import
 
 # Import Python libs
-import os
-import stat
 import logging
 
 # Import Salt libs
@@ -125,7 +123,32 @@ def filesystem_absent(name, force=False, recursive=False):
     recursive : boolean
         also destroy all the child datasets (zfs destroy -r)
 
+    ..warning:
+
+        If a volume with ``name`` exists, this state will succeed without
+        destroying the volume specified by ``name``. This module is dataset type sensitive.
+
     '''
     return _absent(name, 'filesystem', force, recursive)
+
+
+def volume_absent(name, force=False, recursive=False):
+    '''
+    ensure volume is absent on the system
+
+    name : string
+        name of volume
+    force : boolean
+        try harder to destroy the dataset (zfs destroy -f)
+    recursive : boolean
+        also destroy all the child datasets (zfs destroy -r)
+
+    ..warning:
+
+        If a volume with ``name`` exists, this state will succeed without
+        destroying the volume specified by ``name``. This module is dataset type sensitive.
+
+    '''
+    return _absent(name, 'volume', force, recursive)
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
