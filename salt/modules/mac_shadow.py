@@ -55,7 +55,7 @@ def _get_account_policy_data_value(name, key):
 
 
 def _get_account_policy(name):
-    cmd = 'pwpolicy -u {0} -getpolicy'
+    cmd = 'pwpolicy -u {0} -getpolicy'.format(name)
     ret = __salt__['cmd.run'](cmd)
     if ret:
         policy_list = ret.split(' ')
@@ -132,7 +132,7 @@ def get_maxdays(name):
 
     if 'maxMinutesUntilChangePassword' in policies:
         max_minutes = policies['maxMinutesUntilChangePassword']
-        return float(max_minutes) / 24 / 60
+        return int(max_minutes) / 24 / 60
     else:
         return 'Value not set'
 
@@ -163,8 +163,8 @@ def set_change(name, date):
 
         salt '*' shadow.set_change username 1419980400
     '''
-    cmd = 'pwpolicy -u {0} -setpolicy usingExpirationDate=1 ' \
-          'expirationDateGMT={1}'.format(name, date)
+    cmd = 'pwpolicy -u {0} -setpolicy "usingExpirationDate=1 ' \
+          'expirationDateGMT={1}"'.format(name, date)
     __salt__['cmd.run'](cmd)
 
     new = get_change(name)
@@ -194,8 +194,8 @@ def set_expire(name, date):
 
         salt '*' shadow.set_expire username 1419980400
     '''
-    cmd = 'pwpolicy -u {0} -setpolicy usingHardExpirationDate=1 ' \
-          'hardExpireDateGMT={1}'.format(name, date)
+    cmd = 'pwpolicy -u {0} -setpolicy "usingHardExpirationDate=1 ' \
+          'hardExpireDateGMT={1}"'.format(name, date)
     __salt__['cmd.run'](cmd)
 
     new = get_expire(name)
