@@ -435,6 +435,7 @@ class ProcessManager(object):
                 except OSError as exc:
                     if exc.errno != errno.ESRCH:
                         raise
+                if not p_map['Process'].is_alive():
                     del self._process_map[pid]
 
         end_time = time.time() + self.wait_for_kill  # when to die
