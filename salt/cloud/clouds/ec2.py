@@ -3116,12 +3116,12 @@ def _get_node(name=None, instance_id=None, location=None):
                                   opts=__opts__,
                                   sigver='4')
             return _extract_instance_info(instances).values()[0]
-        except KeyError:
+        except IndexError:
             attempts -= 1
             log.debug(
                 'Failed to get the data for node \'{0}\'. Remaining '
                 'attempts: {1}'.format(
-                    name, attempts
+                    instance_id or name, attempts
                 )
             )
             # Just a little delay between attempts...
