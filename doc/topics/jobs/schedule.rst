@@ -130,6 +130,23 @@ This will schedule the command: state.sls httpd test=True every 3600 seconds
 dictionary with the date strings using the dateutil format. This requires
 python-dateutil to be installed on the minion.
 
+.. code-block:: yaml
+
+    schedule:
+      job1:
+        function: pkg.install
+        kwargs:
+          pkgs: [{'bar': '>1.2.3'}]
+          refresh: true
+        once: '2016-01-07T14:30:00'
+
+This will schedule the command pkg.install to be executed once at the specified
+time. The schedule entry ``job1`` will not be removed after the job completes,
+therefore use ``schedule.delete`` to manually remove it afterwards.
+
+The default date format is ISO 8601 but can be overridden by also specifying the
+``once_fmt`` option.
+
 .. versionadded:: 2014.7.0
 
 The scheduler also supports ensuring that there are no more than N copies of
