@@ -742,7 +742,7 @@ def install(name=None,
     if pkg_params is None or len(pkg_params) == 0:
         return {}
 
-    opts = ''
+    opts = 'y'
     if salt.utils.is_true(orphan):
         opts += 'A'
     if salt.utils.is_true(force):
@@ -753,8 +753,6 @@ def install(name=None,
         opts += 'U'
     if salt.utils.is_true(dryrun):
         opts += 'n'
-    if not salt.utils.is_true(dryrun):
-        opts += 'y'
     if salt.utils.is_true(quiet):
         opts += 'q'
     if salt.utils.is_true(reinstall_requires):

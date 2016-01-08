@@ -47,7 +47,7 @@ def __virtual__():
     '''
     if __grains__.get('os_family', False) == 'NILinuxRT':
         return __virtualname__
-    return False
+    return (False, "Module opkg only works on nilrt based systems")
 
 
 def latest_version(*names, **kwargs):

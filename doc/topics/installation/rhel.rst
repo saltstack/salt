@@ -58,7 +58,7 @@ To install using the SaltStack repository:
        baseurl=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest
        enabled=1
        gpgcheck=1
-       gpgkey=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/$releasever/SALTSTACK-GPG-KEY.pub
+       gpgkey=https://repo.saltstack.com/yum/redhat/$releasever/$basearch/latest/SALTSTACK-GPG-KEY.pub
 
    Version 5:
 

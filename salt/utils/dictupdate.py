@@ -85,14 +85,14 @@ def merge_aggregate(obj_a, obj_b):
     return _yamlex_merge_recursive(obj_a, obj_b, level=1)
 
 
-def merge_overwrite(obj_a, obj_b):
+def merge_overwrite(obj_a, obj_b, merge_lists=False):
     for obj in obj_b:
         if obj in obj_a:
             obj_a[obj] = obj_b[obj]
-    return merge_recurse(obj_a, obj_b)
+    return merge_recurse(obj_a, obj_b, merge_lists=merge_lists)
 
 
-def merge(obj_a, obj_b, strategy='smart', renderer='yaml'):
+def merge(obj_a, obj_b, strategy='smart', renderer='yaml', merge_lists=False):
     if strategy == 'smart':
         if renderer == 'yamlex' or renderer.startswith('yamlex_'):
             strategy = 'aggregate'
@@ -102,14 +102,12 @@ def merge(obj_a, obj_b, strategy='smart', renderer='yaml'):
     if strategy == 'list':
         merged = merge_list(obj_a, obj_b)
     elif strategy == 'recurse':
-        merged = merge_recurse(obj_a, obj_b)
-    elif strategy == 'recurse_list':
-        merged = merge_recurse(obj_a, obj_b, merge_lists=True)
+        merged = merge_recurse(obj_a, obj_b, merge_lists)
     elif strategy == 'aggregate':
         #: level = 1 merge at least root data
         merged = merge_aggregate(obj_a, obj_b)
     elif strategy == 'overwrite':
-        merged = merge_overwrite(obj_a, obj_b)
+        merged = merge_overwrite(obj_a, obj_b, merge_lists)
     else:
         log.warning('Unknown merging strategy \'{0}\', '
                     'fallback to recurse'.format(strategy))

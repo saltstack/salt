@@ -84,7 +84,8 @@ def __virtual__():
 
     if __grains__['os'] in supported and _check_pkgin():
         return __virtualname__
-    return False
+    return (False, 'The pkgin execution module cannot be loaded: only '
+            'available on {0} systems.'.format(', '.join(supported)))
 
 
 def _splitpkg(name):

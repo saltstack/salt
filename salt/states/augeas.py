@@ -107,7 +107,8 @@ def _check_filepath(changes):
     return filename
 
 
-def change(name, context=None, changes=None, lens=None, **kwargs):
+def change(name, context=None, changes=None, lens=None,
+        load_path=None, **kwargs):
     '''
     .. versionadded:: 2014.7.0
 
@@ -141,12 +142,20 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
 
     changes
         List of changes that are issued to Augeas. Available commands are
-        ``set``, ``setm``, ``mv``/``move``, ``ins``/``insert``, and ``rm``/``remove``.
+        ``set``, ``setm``, ``mv``/``move``, ``ins``/``insert``, and
+        ``rm``/``remove``.
 
     lens
-        The lens to use, needs to be suffixed with `.lns`, e.g.: `Nginx.lns`. See
-        the `list of stock lenses <http://augeas.net/stock_lenses.html>`_
+        The lens to use, needs to be suffixed with `.lns`, e.g.: `Nginx.lns`.
+        See the `list of stock lenses <http://augeas.net/stock_lenses.html>`_
         shipped with Augeas.
+
+    .. versionadded:: Boron
+
+    load_path
+        A list of directories that modules should be searched in. This is in
+        addition to the standard load path and the directories in
+        AUGEAS_LENS_LIB.
 
 
     Usage examples:
@@ -238,6 +247,13 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
         ret['comment'] = '\'changes\' must be specified as a list'
         return ret
 
+    if load_path is not None:
+        if not isinstance(load_path, list):
+            ret['comment'] = '\'load_path\' must be specified as a list'
+            return ret
+        else:
+            load_path = ':'.join(load_path)
+
     filename = None
     if context is None:
         try:
@@ -262,7 +278,9 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
             with salt.utils.fopen(filename, 'r') as file_:
                 old_file = file_.readlines()
 
-    result = __salt__['augeas.execute'](context=context, lens=lens, commands=changes)
+    result = __salt__['augeas.execute'](
+        context=context, lens=lens,
+        commands=changes, load_path=load_path)
     ret['result'] = result['retval']
 
     if ret['result'] is False:
@@ -271,7 +289,8 @@ def change(name, context=None, changes=None, lens=None, **kwargs):
 
     if old_file:
         with salt.utils.fopen(filename, 'r') as file_:
-            diff = ''.join(difflib.unified_diff(old_file, file_.readlines(), n=0))
+            diff = ''.join(
+                difflib.unified_diff(old_file, file_.readlines(), n=0))
 
         if diff:
             ret['comment'] = 'Changes have been saved'

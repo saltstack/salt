@@ -29,7 +29,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is Arch
     '''
-    if __grains__['os'] in ('Arch', 'Arch ARM'):
+    if __grains__['os'] in ('Arch', 'Arch ARM', 'Antergos'):
         return __virtualname__
     return (False, 'The pacman module could not be loaded: unsupported OS family.')
 
@@ -423,7 +423,7 @@ def install(name=None,
     return ret
 
 
-def upgrade(refresh=False, root=None):
+def upgrade(refresh=False, root=None, **kwargs):
     '''
     Run a full system upgrade, a pacman -Syu
 
