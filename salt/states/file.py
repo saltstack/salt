@@ -3074,7 +3074,8 @@ def append(name,
            sources=None,
            source_hashes=None,
            defaults=None,
-           context=None):
+           context=None,
+           ignore_whitespace=True):
     '''
     Ensure that some text appears at the end of a file.
 
@@ -3177,6 +3178,13 @@ def append(name,
     context
         Overrides default context variables passed to the template.
 
+    ignore_whitespace
+        .. versionadded:: 2015.8.4
+
+        Spaces and Tabs in text are ignored by default, when searching for the
+        appending content, one space or multiple tabs are the same for salt.
+        Set this option to ``False`` if you want to change this behavior.
+
     Multi-line example:
 
     .. code-block:: yaml
@@ -3276,9 +3284,14 @@ def append(name,
     try:
         for chunk in text:
 
-            if __salt__['file.search'](
+            if ignore_whitespace and __salt__['file.search'](
                     name,
                     salt.utils.build_whitespace_split_regex(chunk),
+                    multiline=True):
+                continue
+            elif __salt__['file.search'](
+                    name,
+                    chunk,
                     multiline=True):
                 continue
 
