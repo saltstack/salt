@@ -165,4 +165,18 @@ def snapshot_absent(name, force=False, recursive=False):
     '''
     return _absent(name, 'snapshot', force, recursive)
 
+
+def bookmark_absent(name, force=False, recursive=False):
+    '''
+    ensure bookmark is absent on the system
+
+    name : string
+        name of snapshot
+    force : boolean
+        try harder to destroy the dataset (zfs destroy -f)
+    recursive : boolean
+        also destroy all the child datasets (zfs destroy -r)
+    '''
+    return _absent(name, 'bookmark', force, recursive)
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
