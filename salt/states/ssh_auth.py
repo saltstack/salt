@@ -282,7 +282,13 @@ def present(
                 )
         return ret
 
+    # Get only the path to the file without env referrences to check if exists
     if source != '':
+        source_path = __salt__['cp.get_url'](source, None)
+
+    if source != '' and not source_path:
+        data = 'no key'
+    elif source != '' and source_path:
         key = __salt__['cp.get_file_str'](
                 source,
                 saltenv=__env__)
@@ -332,6 +338,10 @@ def present(
         ret['changes'][name] = 'New'
         ret['comment'] = ('The authorized host key {0} for user {1} was added'
                           .format(name, user))
+    elif data == 'no key':
+        ret['result'] = False
+        ret['comment'] = ('Failed to add the ssh key. Source file {0} is '
+                          'missing'.format(source))
     elif data == 'fail':
         ret['result'] = False
         err = sys.modules[
