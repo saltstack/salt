@@ -24,6 +24,18 @@ def present(host, groups, interfaces, **kwargs):
         groups: groupids of host groups to add the host to
         interfaces: interfaces to be created for the host
 
+        optional kwargs:
+                _connection_user: zabbix user (can also be set in opts or pillar, see module's docstring)
+                _connection_password: zabbix password (can also be set in opts or pillar, see module's docstring)
+                _connection_url: url of zabbix frontend (can also be set in opts or pillar, see module's docstring)
+
+                visible_name: string with visible name of the host, use 'visible_name' instead of 'name' parameter
+                              to not mess with value supplied from Salt sls file.
+
+                all standard host properties: keyword argument names differ depending on your zabbix version, see:
+
+                https://www.zabbix.com/documentation/2.4/manual/api/reference/host/object#host
+
     '''
     ret = {'name': host, 'changes': {}, 'result': False, 'comment': ''}
 

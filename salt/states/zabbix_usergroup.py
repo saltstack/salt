@@ -22,6 +22,18 @@ def present(name, **kwargs):
         passwd: user's password
         usrgrps: user groups to add the user to
 
+        optional kwargs:
+                _connection_user: zabbix user (can also be set in opts or pillar,
+                                               see execution module's docstring)
+                _connection_password: zabbix password (can also be set in opts or pillar,
+                                                      see execution module's docstring)
+                _connection_url: url of zabbix frontend (can also be set in opts or pillar,
+                                                         see execution module's docstring)
+
+                all standard user group properties: keyword argument names differ depending on your zabbix version, see:
+
+                https://www.zabbix.com/documentation/2.0/manual/appendix/api/usergroup/definitions#user_group
+
     '''
     ret = {'name': name, 'changes': {}, 'result': False, 'comment': ''}
 
