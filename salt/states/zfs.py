@@ -13,7 +13,6 @@ Management zfs datasets
 
     TODO: add example here
     TODO: add note here about 'properties' needing a manual resut or inherith
-    TODO: implement cloned from
 
 '''
 from __future__ import absolute_import
@@ -397,6 +396,53 @@ def volume_present(name, volume_size, sparse=False, create_parent=False, propert
                 ret['comment'] = 'failed to create volume {0}'.format(name)
                 if name in result:
                     ret['comment'] = result[name]
+    return ret
+
+
+def bookmark_present(name, snapshot):
+    '''
+    ensure bookmark exists
+
+    name : string
+        name of bookmark
+    snapshot : string
+        name of snapshot
+
+    '''
+    name = name.lower()
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    log.debug('zfs.bookmark_present::{0}::config::snapshot = {1}'.format(name, snapshot))
+
+    if '@' not in snapshot:
+        ret['result'] = False
+        ret['comment'] = '{0} is not a snapshot'.format(snapshot)
+
+    if '#' not in name:
+        if '/' not in name:
+            name = '{0}#{1}'.format(snapshot[:snapshot.index('@')], name)
+        else:
+            ret['result'] = False
+            ret['comment'] = '{0} is not a bookmark'.format(name)
+
+    if ret['result']:
+        if name in __salt__['zfs.list'](**{'type': 'bookmark'}):
+            ret['comment'] = 'bookmark already exists'
+        else:  # create bookmark
+            result = {snapshot: 'bookmarked'}
+            if not __opts__['test']:
+                result = __salt__['zfs.bookmark'](snapshot, name)
+
+            log.warning(result)
+            ret['result'] = snapshot in result and result[snapshot].startswith('bookmarked')
+            if ret['result']:
+                ret['changes'] = result
+                ret['comment'] = 'snapshot {0} was bookmarked as {1}'.format(snapshot, name)
+            else:
+                ret['comment'] = 'failed to create bookmark {0}'.format(name)
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
