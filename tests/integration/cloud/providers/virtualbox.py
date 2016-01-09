@@ -225,7 +225,18 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
     def test_start_action(self):
         pass
 
-    def test_stop_action(self):
+    def test_start_stop_action(self):
+        # TODO clean up after ourselves in case something goes wrong
+
+        res = self.run_cloud_action("start", BOOTABLE_BASE_BOX_NAME, timeout=10)
+        info(res)
+
+        machine = res.get(BOOTABLE_BASE_BOX_NAME)
+        self.assertIsNotNone(machine)
+        expected_state = "Running"
+        state = machine.get("state")
+        self.assertEqual(state, expected_state)
+
         res = self.run_cloud_action("stop", BOOTABLE_BASE_BOX_NAME, timeout=10)
         info(res)
 

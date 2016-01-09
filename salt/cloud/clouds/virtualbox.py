@@ -18,11 +18,12 @@ Dicts provided by salt:
 import logging
 
 # Import salt libs
+
 from salt.exceptions import SaltCloudSystemExit
 import salt.config as config
 import salt.utils.cloud as cloud
 from utils.virtualbox import vb_list_machines, vb_clone_vm, HAS_LIBS, vb_machine_exists, vb_destroy_machine, \
-    vb_get_machine, vb_stop_vm, treat_machine_dict
+    vb_get_machine, vb_stop_vm, treat_machine_dict, vb_start_vm
 
 log = logging.getLogger(__name__)
 
@@ -304,6 +305,26 @@ def destroy(name, call=None):
 
 
 # TODO implement actions e.g start, stop, restart, etc.
+
+def start(name, call=None):
+    """
+    Start a machine.
+    @param name: Machine to start
+    @type name: str
+    @param call: Must be "action"
+    @type call: str
+    """
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The instance action must be called with -a or --action.'
+        )
+
+    log.info("Starting machine: %s" % name)
+    vb_start_vm(name)
+    machine = vb_get_machine(name)
+    del machine["name"]
+    return treat_machine_dict(machine)
+
 
 def stop(name, call=None):
     """
