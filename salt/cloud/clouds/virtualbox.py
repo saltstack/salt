@@ -308,6 +308,10 @@ def destroy(name, call=None):
 def stop(name, call=None):
     """
     Stop a running machine.
+    @param name: Machine to stop
+    @type name: str
+    @param call: Must be "action"
+    @type call: str
     """
     if call != 'action':
         raise SaltCloudSystemExit(
