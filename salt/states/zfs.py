@@ -212,6 +212,10 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
     if not properties:
         properties = {}
 
+    log.debug('zfs.filesystem_present::{0}::config::create_parent = {1}'.format(name, create_parent))
+    log.debug('zfs.filesystem_present::{0}::config::cloned_from = {1}'.format(name, cloned_from))
+    log.debug('zfs.filesystem_present::{0}::config::properties = {1}'.format(name, properties))
+
     for prop in properties.keys():  # salt breaks the on/off/yes/no properties
         if isinstance(properties[prop], bool):
             properties[prop] = 'on' if properties[prop] else 'off'
@@ -221,16 +225,16 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
         ret['comment'] = 'invalid filesystem or volume name: {0}'.format(name)
 
     if cloned_from:
+        cloned_parent = cloned_from[:cloned_from.index('@')]
         if '@' not in cloned_from:
             ret['result'] = False
             ret['comment'] = '{0} is not a snapshot'.format(cloned_from)
         elif cloned_from not in __salt__['zfs.list'](cloned_from, **{'type': 'snapshot'}):
             ret['result'] = False
             ret['comment'] = 'snapshot {0} does not exist'.format(cloned_from)
-
-    log.debug('zfs.filesystem_present::{0}::config::create_parent = {1}'.format(name, create_parent))
-    log.debug('zfs.filesystem_present::{0}::config::cloned_from = {1}'.format(name, cloned_from))
-    log.debug('zfs.filesystem_present::{0}::config::properties = {1}'.format(name, properties))
+        elif cloned_parent not in __salt__['zfs.list'](cloned_parent, **{'type': 'filesystem'}):
+            ret['result'] = False
+            ret['comment'] = 'snapshot {0} is not from a filesystem'.format(cloned_from)
 
     if ret['result']:
         if name in __salt__['zfs.list'](name, **{'type': 'filesystem'}):  # update properties if needed
@@ -274,7 +278,123 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
                 ret['changes'][name] = properties if len(properties) > 0 else result[name]
                 ret['comment'] = 'filesystem {0} was created'.format(name)
             else:
-                ret['comment'] = 'failed to filesystem {0}'.format(name)
+                ret['comment'] = 'failed to create filesystem {0}'.format(name)
+                if name in result:
+                    ret['comment'] = result[name]
+    return ret
+
+
+def volume_present(name, volume_size, sparse=False, create_parent=False, properties=None, cloned_from=None):
+    '''
+    ensure volume exists and has properties set
+
+    name : string
+        name of volume
+    volume_size : string
+        size of volume
+    sparse : boolean
+        create sparse volume
+    create_parent : boolean
+        creates all the non-existing parent datasets.
+        any property specified on the command line using the -o option is ignored.
+    cloned_from : string
+        name of snapshot to clone
+    properties : dict
+        additional zfs properties (-o)
+
+    ..note::
+
+        if the ``cloned_from`` is only use if the volume does not exist yet,
+        when ``cloned_from`` is set after the volume existed it will be ignored.
+
+        the sprase and volume_size properties are ignored when ``cloned_from`` is specified.
+
+    '''
+    name = name.lower()
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    # check params
+    if not properties:
+        properties = {}
+
+    log.debug('zfs.volume_present::{0}::config::volume_size = {1}'.format(name, volume_size))
+    log.debug('zfs.volume_present::{0}::config::sparse = {1}'.format(name, sparse))
+    log.debug('zfs.volume_present::{0}::config::create_parent = {1}'.format(name, create_parent))
+    log.debug('zfs.volume_present::{0}::config::cloned_from = {1}'.format(name, cloned_from))
+    log.debug('zfs.volume_present::{0}::config::properties = {1}'.format(name, properties))
+
+    for prop in properties.keys():  # salt breaks the on/off/yes/no properties
+        if isinstance(properties[prop], bool):
+            properties[prop] = 'on' if properties[prop] else 'off'
+
+    if '@' in name or '#' in name:
+        ret['result'] = False
+        ret['comment'] = 'invalid filesystem or volume name: {0}'.format(name)
+
+    if cloned_from:
+        cloned_parent = cloned_from[:cloned_from.index('@')]
+        if '@' not in cloned_from:
+            ret['result'] = False
+            ret['comment'] = '{0} is not a snapshot'.format(cloned_from)
+        elif cloned_from not in __salt__['zfs.list'](cloned_from, **{'type': 'snapshot'}):
+            ret['result'] = False
+            ret['comment'] = 'snapshot {0} does not exist'.format(cloned_from)
+        elif cloned_parent not in __salt__['zfs.list'](cloned_parent, **{'type': 'volume'}):
+            ret['result'] = False
+            ret['comment'] = 'snapshot {0} is not from a volume'.format(cloned_from)
+
+    if ret['result']:
+        if name in __salt__['zfs.list'](name, **{'type': 'volume'}):  # update properties if needed
+            properties['volsize'] = volume_size  # add volume_size to properties
+            result = __salt__['zfs.get'](name, **{'properties': ','.join(properties.keys()), 'fields': 'value', 'depth': 1})
+
+            for prop in properties.keys():
+                if properties[prop] != result[name][prop]['value']:
+                    if name not in ret['changes']:
+                        ret['changes'][name] = {}
+                    ret['changes'][name][prop] = properties[prop]
+
+            if len(ret['changes']) > 0:
+                if not __opts__['test']:
+                    result = __salt__['zfs.set'](name, **ret['changes'][name])
+                    if name not in result:
+                        ret['result'] = False
+                    else:
+                        for prop in result[name].keys():
+                            if result[name][prop] != 'set':
+                                ret['result'] = False
+
+                if ret['result']:
+                    ret['comment'] = 'volume {0} was updated'.format(name)
+                else:
+                    ret['changes'] = {}
+                    ret['comment'] = 'volume {0} failed to be updated'.format(name)
+            else:
+                ret['comment'] = 'volume {0} is up to date'.format(name)
+        else:  # create volume
+            result = {name: 'created'}
+            if not __opts__['test']:
+                if not cloned_from:
+                    result = __salt__['zfs.create'](name, **{
+                        'volume_size': volume_size,
+                        'sparse': sparse,
+                        'create_parent': create_parent,
+                        'properties': properties
+                    })
+                else:
+                    result = __salt__['zfs.clone'](cloned_from, name, **{'create_parent': create_parent, 'properties': properties})
+
+            ret['result'] = name in result
+            if ret['result']:
+                ret['result'] = result[name] == 'created' or result[name].startswith('cloned')
+            if ret['result']:
+                ret['changes'][name] = properties if len(properties) > 0 else result[name]
+                ret['comment'] = 'volume {0} was created'.format(name)
+            else:
+                ret['comment'] = 'failed to create volume {0}'.format(name)
                 if name in result:
                     ret['comment'] = result[name]
     return ret
