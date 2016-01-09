@@ -4,7 +4,6 @@
 # Import Python Libs
 from __future__ import absolute_import
 
-import json
 import os
 import unittest
 import logging
@@ -14,34 +13,27 @@ import socket
 from salttesting import skipIf
 from salttesting.helpers import ensure_in_syspath
 
-from integration.cloud.helpers import random_name
-from integration.cloud.helpers.virtualbox import VirtualboxTestCase
+from integration.cloud.helpers.virtualbox import VirtualboxTestCase, VirtualboxCloudTestCase, CONFIG_NAME, \
+    PROVIDER_NAME, \
+    PROFILE_NAME, BASE_BOX_NAME, INSTANCE_NAME, BOOTABLE_BASE_BOX_NAME
 
 ensure_in_syspath('../../../')
 
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config, vm_profiles_config
-from utils.virtualbox import vb_xpcom_to_attribute_dict, vb_clone_vm, vb_destroy_machine, vb_create_machine, vb_get_box, \
-    vb_machine_exists, HAS_LIBS, XPCOM_ATTRIBUTES, vb_start_vm, vb_stop_vm, machine_get_machinestate, \
+from utils.virtualbox import vb_xpcom_to_attribute_dict, vb_clone_vm, vb_destroy_machine, vb_create_machine,\
+    vb_get_box, vb_machine_exists, HAS_LIBS, XPCOM_ATTRIBUTES, vb_start_vm, vb_stop_vm, machine_get_machinestate, \
     vb_get_network_addresses
 
 # Setup logging
 log = logging.getLogger()
-log_handler = logging.StreamHandler()
-log_handler.setLevel(logging.INFO)
-log.addHandler(log_handler)
-log.setLevel(logging.INFO)
+log = logging.getLogger(__name__)
+# log_handler = logging.StreamHandler()
+# log_handler.setLevel(logging.INFO)
+# log.addHandler(log_handler)
+# log.setLevel(logging.INFO)
 info = log.info
-
-# Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = random_name()
-PROVIDER_NAME = "virtualbox"
-CONFIG_NAME = PROVIDER_NAME + "-config"
-PROFILE_NAME = PROVIDER_NAME + "-test"
-DRIVER_NAME = "virtualbox"
-BASE_BOX_NAME = "__temp_test_vm__"
-BOOTABLE_BASE_BOX_NAME = "SaltMiniBuntuTest"
 
 # As described in the documentation of list_nodes (this may change with time)
 MINIMAL_MACHINE_ATTRIBUTES = [
@@ -55,68 +47,12 @@ MINIMAL_MACHINE_ATTRIBUTES = [
 
 
 @skipIf(HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')
-class VirtualboxProviderTest(integration.ShellCase):
+class VirtualboxProviderTest(VirtualboxCloudTestCase):
     """
     Integration tests for the Virtualbox cloud provider using the Virtualbox driver
     TODO tests that create with salt cloud and the delete with vb_* functions
     TODO Keep implementing the new salt-cloud functions while replacing the vb_* calls
     """
-
-    def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
-        """
-        Execute salt-cloud with json output and try to interpret it
-
-        @return:
-        @rtype: dict
-        """
-        config_path = os.path.join(
-            integration.FILES,
-            'conf'
-        )
-        arg_str = '--out=json -c {0} {1}'.format(config_path, arg_str)
-        # arg_str = "%s --log-level=error" % arg_str
-        log.debug("running salt-cloud with %s" % arg_str)
-        output = self.run_script('salt-cloud', arg_str, catch_stderr, timeout)
-
-        # Sometimes tuples are returned???
-        if isinstance(output, tuple) and len(output) == 2:
-            output = output[0]
-
-        # Attempt to clean json output before fix of https://github.com/saltstack/salt/issues/27629
-        valid_initial_chars = ['{', '[', '"']
-        i = 0
-        for line in output[:]:
-            if len(line) > 0 and (line[0] not in valid_initial_chars):
-                output.pop(i)
-                i += 1
-            else:
-                break
-
-        return json.loads("".join(output))
-
-    def run_cloud_function(self, function, kw_function_args=None, **kwargs):
-        """
-        A helper to call `salt-cloud -f function provider`
-
-        @param function:
-        @type function:
-        @param kw_function_args: Keyword arguments for the argument string in the commandline
-        @type dict:
-        @param kwargs: For the `run_cloud` function
-        @type kwargs:
-        @return:
-        @rtype: dict
-        """
-        args = []
-        # Args converted in the form of key1='value1' ... keyN='valueN'
-        if kw_function_args:
-            args = [
-                "%s='%s'" % (key, value)
-                for key, value in kw_function_args.iteritems()
-                ]
-
-        output = self.run_cloud("-f %s %s %s" % (function, CONFIG_NAME, " ".join(args)), **kwargs)
-        return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})
 
     def run_cloud_destroy(self, machine_name):
         """
@@ -269,7 +205,7 @@ class VirtualboxProviderTest(integration.ShellCase):
 @skipIf(vb_machine_exists(BOOTABLE_BASE_BOX_NAME) is False,
         "Bootable VM '%s' not found. Cannot run tests." % BOOTABLE_BASE_BOX_NAME
         )
-class VirtualboxProviderHeavyTests(integration.ShellCase):
+class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
     def assertIsIpAddress(self, ip_str):
         """
         Is it either a IPv4 or IPv6 address
@@ -290,7 +226,15 @@ class VirtualboxProviderHeavyTests(integration.ShellCase):
         pass
 
     def test_stop_action(self):
-        pass
+        res = self.run_cloud_action("stop", BOOTABLE_BASE_BOX_NAME, timeout=10)
+        info(res)
+
+        machine = res.get(BOOTABLE_BASE_BOX_NAME)
+        self.assertIsNotNone(machine)
+
+        expected_state = "PoweredOff"
+        state = machine.get("state")
+        self.assertEqual(state, expected_state)
 
     def test_restart_action(self):
         pass
