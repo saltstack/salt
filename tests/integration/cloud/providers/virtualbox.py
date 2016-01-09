@@ -8,6 +8,7 @@ import json
 import os
 import unittest
 import logging
+import socket
 
 # Import Salt Testing Libs
 from salttesting import skipIf
@@ -22,7 +23,8 @@ ensure_in_syspath('../../../')
 import integration
 from salt.config import cloud_providers_config, vm_profiles_config
 from utils.virtualbox import vb_xpcom_to_attribute_dict, vb_clone_vm, vb_destroy_machine, vb_create_machine, vb_get_box, \
-    vb_machine_exists, HAS_LIBS, XPCOM_ATTRIBUTES, vb_start_vm, vb_stop_vm, machine_get_machinestate
+    vb_machine_exists, HAS_LIBS, XPCOM_ATTRIBUTES, vb_start_vm, vb_stop_vm, machine_get_machinestate, \
+    vb_get_network_addresses
 
 # Setup logging
 log = logging.getLogger()
@@ -268,6 +270,22 @@ class VirtualboxProviderTest(integration.ShellCase):
         "Bootable VM '%s' not found. Cannot run tests." % BOOTABLE_BASE_BOX_NAME
         )
 class VirtualboxProviderHeavyTests(integration.ShellCase):
+    def assertIsIpAddress(self, ip_str):
+        """
+        Is it either a IPv4 or IPv6 address
+
+        @param ip_str:
+        @type ip_str: str
+        @raise AssertionError
+        """
+        try:
+            socket.inet_aton(ip_str)
+        except:
+            try:
+                socket.inet_pton(socket.AF_INET6, ip_str)
+            except:
+                self.fail("%s is not a valid IP address" % ip_str)
+
     def test_start_action(self):
         pass
 
@@ -276,6 +294,15 @@ class VirtualboxProviderHeavyTests(integration.ShellCase):
 
     def test_restart_action(self):
         pass
+
+    def test_network_addresses(self):
+        ip_addresses = vb_get_network_addresses(machine_name=BOOTABLE_BASE_BOX_NAME)
+
+        network_count = len(ip_addresses)
+        self.assertGreater(network_count, 0)
+
+        for ip_address in ip_addresses:
+            self.assertIsIpAddress(ip_address)
 
 
 class BaseVirtualboxTests(unittest.TestCase):
