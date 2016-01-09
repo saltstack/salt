@@ -382,6 +382,31 @@ def vb_xpcom_to_attribute_dict(xpcom
     return dict(attribute_tuples)
 
 
+def treat_machine_dict(machine):
+    """
+    Make machine presentable for outside world.
+
+    !!!Modifies the input machine!!!
+
+    @param machine:
+    @type machine: dict
+    @return: the modified input machine
+    @rtype: dict
+    """
+    machine.update({
+        "id": machine.get("id", ""),
+        "image": machine.get("image", ""),
+        "size": "%s MB" % machine.get("memorySize", 0),
+        "state": vb_machinestate_to_str(machine.get("state", -1))[0],
+        "private_ips": [],
+        "public_ips": [],
+    })
+
+    # Replaced keys
+    if "memorySize" in machine:
+        del machine["memorySize"]
+    return machine
+
 def vb_machinestate_to_str(machinestate):
     """
 
