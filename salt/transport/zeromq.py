@@ -490,6 +490,8 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
             self.clients.close()
         if hasattr(self, 'stream'):
             self.stream.close()
+        if hasattr(self, 'context') and self.context.closed is False:
+            self.context.term()
 
     def pre_fork(self, process_manager):
         '''
