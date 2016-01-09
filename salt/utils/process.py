@@ -293,17 +293,6 @@ class ProcessManager(object):
                     kwargs['log_queue'] = (
                             salt.log.setup.get_multiprocessing_logging_queue())
 
-        if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
-            process = tgt(*args, **kwargs)
-        else:
-            process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
-
-        if isinstance(process, SignalHandlingMultiprocessingProcess):
-            with default_signals(signal.SIGINT, signal.SIGTERM):
-                process.start()
-        else:
-            process.start()
-
         # create a nicer name for the debug log
         if name is None:
             if isinstance(tgt, types.FunctionType):
@@ -317,6 +306,17 @@ class ProcessManager(object):
                     '.{0}'.format(tgt.__class__) if str(tgt.__class__) != "<type 'type'>" else '',
                     tgt.__name__,
                 )
+
+        if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
+            process = tgt(*args, **kwargs)
+        else:
+            process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs, name=name)
+
+        if isinstance(process, SignalHandlingMultiprocessingProcess):
+            with default_signals(signal.SIGINT, signal.SIGTERM):
+                process.start()
+        else:
+            process.start()
         log.debug("Started '{0}' with pid {1}".format(name, process.pid))
         self._process_map[process.pid] = {'tgt': tgt,
                                           'args': args,
