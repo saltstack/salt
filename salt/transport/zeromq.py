@@ -354,7 +354,7 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
             self._stream.socket.close(0)
         elif hasattr(self, '_socket'):
             self._socket.close(0)
-        if hasattr(self, 'context'):
+        if hasattr(self, 'context') and self.context.closed is False:
             self.context.term()
 
     def __del__(self):
@@ -731,6 +731,8 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
             int_payload['topic_lst'] = load['tgt']
 
         pub_sock.send(self.serial.dumps(int_payload))
+        pub_sock.close()
+        context.term()
 
 
 # TODO: unit tests!
@@ -784,7 +786,8 @@ class AsyncReqMessageClient(object):
             # set this to None, more hacks for messed up pyzmq
             self.stream.socket = None
             self.socket.close()
-        self.context.term()
+        if self.context.closed is False:
+            self.context.term()
 
     def __del__(self):
         self.destroy()
