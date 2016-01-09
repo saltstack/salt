@@ -614,7 +614,7 @@ def iter_transport_opts(opts):
         yield opts['transport'], opts
 
 
-class ReqServer(object):
+class ReqServer(SignalHandlingMultiprocessingProcess):
     '''
     Starts up the master request server, minions send results to this
     interface.
@@ -630,11 +630,15 @@ class ReqServer(object):
         :rtype: ReqServer
         :returns: Request server
         '''
+        super(ReqServer, self).__init__(log_queue=log_queue)
         self.opts = opts
         self.master_key = mkey
         # Prepare the AES key
         self.key = key
-        self.log_queue = log_queue
+
+    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+        self.destroy(signum)
+        super(ReqServer, self)._handle_signals(signum, sigframe)
 
     def __bind(self):
         '''
@@ -679,16 +683,8 @@ class ReqServer(object):
                                                 ),
                                             kwargs=kwargs
                                             )
+        self.process_manager.run()
 
-        try:
-            self.process_manager.run()
-        except (KeyboardInterrupt, SystemExit) as exc:
-            self.process_manager.stop_restarting()
-            if isinstance(exc, KeyboardInterrupt):
-                self.destroy(signal.SIGINT)
-            else:
-                self.destroy(signal.SIGTERM)
-            exit(0)
 
     def run(self):
         '''
@@ -712,8 +708,6 @@ class ReqServer(object):
             self.process_manager.stop_restarting()
             self.process_manager.send_signal_to_processes(signum)
             self.process_manager.kill_children()
-        # Shutdown multiprocessing logging
-        salt.log.setup.shutdown_multiprocessing_logging()
 
     def __del__(self):
         self.destroy()
