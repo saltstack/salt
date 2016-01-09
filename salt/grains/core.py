@@ -1384,7 +1384,14 @@ def os_data():
         grains.update(_osx_platform_data())
     else:
         grains['os'] = grains['kernel']
-    if grains['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+    if grains['kernel'] == 'FreeBSD':
+        try:
+            grains['osrelease'] = __salt__['cmd.run']('freebsd-version -u').split('-')[0]
+        except salt.exceptions.CommandExecutionError:
+            # freebsd-version was introduced in 10.0.
+            # derive osrelease from kernelversion prior to that
+            grains['osrelease'] = grains['kernelrelease'].split('-')[0]
+    if grains['kernel'] in ('OpenBSD', 'NetBSD'):
         grains.update(_bsd_cpudata(grains))
         grains['osrelease'] = grains['kernelrelease'].split('-')[0]
         if grains['kernel'] == 'NetBSD':
