@@ -199,15 +199,7 @@ def list_nodes_full(kwargs=None, call=None):
     for machine in vb_list_machines():
         name = machine.get("name")
         if name:
-            machines[name] = machine
-            machine.update({
-                "id": machine.get("id", ""),
-                "image": machine.get("image", ""),
-                "size": "%s MB" % machine.get("memorySize", 0),
-                "state": vb_machinestate_to_str(machine.get("state", -1))[0],
-                "private_ips": [],
-                "public_ips": [],
-            })
+            machines[name] = treat_machine_dict(machine)
             del machine["name"]
 
     return machines
@@ -345,7 +337,7 @@ def show_image(kwargs, call=None):
     machine = vb_get_machine(name)
 
     ret = {
-        machine["name"]: machine
+        machine["name"]: treat_machine_dict(machine)
     }
     del machine["name"]
     return ret
