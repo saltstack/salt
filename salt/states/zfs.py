@@ -88,7 +88,8 @@ def _absent(name, dataset_type, force=False, recursive=False):
 
     # check if dataset exists
     if ret['result']:
-        if name in __salt__['zfs.list'](name, **{'type': dataset_type}):  # we need to destroy it
+        dataset = name if '#' not in name else None  # work around bookmark oddities
+        if name in __salt__['zfs.list'](dataset, **{'type': dataset_type}):  # we need to destroy it
             result = {name: 'destroyed'}
             if not __opts__['test']:
                 result = __salt__['zfs.destroy'](name, **{'force': force, 'recursive': recursive})
