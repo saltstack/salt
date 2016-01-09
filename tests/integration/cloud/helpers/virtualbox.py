@@ -113,7 +113,8 @@ class VirtualboxCloudTestCase(integration.ShellCase):
         @rtype: dict
         """
 
-        return self.run_cloud("-a %s %s" % (action, instance_name), **kwargs)
+        output = self.run_cloud("-a %s %s --assume-yes" % (action, instance_name), **kwargs)
+        return output.get(CONFIG_NAME, {}).get(PROVIDER_NAME, {})
 
 
 def list_machines():
