@@ -13,6 +13,7 @@ Management zfs datasets
 
     TODO: add example here
     TODO: add note here about 'properties' needing a manual resut or inherith
+    TODO: implement cloned from
 
 '''
 from __future__ import absolute_import
@@ -181,7 +182,7 @@ def bookmark_absent(name, force=False, recursive=False):
     return _absent(name, 'bookmark', force, recursive)
 
 
-def filesystem_present(name, create_parent=False, properties=None):
+def filesystem_present(name, create_parent=False, properties=None, cloned_from=None):
     '''
     ensure filesystem exists and has properties set
 
@@ -190,8 +191,15 @@ def filesystem_present(name, create_parent=False, properties=None):
     create_parent : boolean
         creates all the non-existing parent datasets.
         any property specified on the command line using the -o option is ignored.
+    cloned_from : string
+        name of snapshot to clone
     properties : dict
         additional zfs properties (-o)
+
+    ..note::
+
+        if the ``cloned_from`` is only use if the filesystem does not exist yet,
+        when ``cloned_from`` is set after the filesystem existed it will be ignored.
 
     '''
     name = name.lower()
@@ -212,7 +220,16 @@ def filesystem_present(name, create_parent=False, properties=None):
         ret['result'] = False
         ret['comment'] = 'invalid filesystem or volume name: {0}'.format(name)
 
+    if cloned_from:
+        if '@' not in cloned_from:
+            ret['result'] = False
+            ret['comment'] = '{0} is not a snapshot'.format(cloned_from)
+        elif cloned_from not in __salt__['zfs.list'](cloned_from, **{'type': 'snapshot'}):
+            ret['result'] = False
+            ret['comment'] = 'snapshot {0} does not exist'.format(cloned_from)
+
     log.debug('zfs.filesystem_present::{0}::config::create_parent = {1}'.format(name, create_parent))
+    log.debug('zfs.filesystem_present::{0}::config::cloned_from = {1}'.format(name, cloned_from))
     log.debug('zfs.filesystem_present::{0}::config::properties = {1}'.format(name, properties))
 
     if ret['result']:
@@ -245,11 +262,16 @@ def filesystem_present(name, create_parent=False, properties=None):
         else:  # create filesystem
             result = {name: 'created'}
             if not __opts__['test']:
-                result = __salt__['zfs.create'](name, **{'create_parent': create_parent, 'properties': properties})
+                if not cloned_from:
+                    result = __salt__['zfs.create'](name, **{'create_parent': create_parent, 'properties': properties})
+                else:
+                    result = __salt__['zfs.clone'](cloned_from, name, **{'create_parent': create_parent, 'properties': properties})
 
-            ret['result'] = name in result and result[name] == 'created'
+            ret['result'] = name in result
             if ret['result']:
-                ret['changes'][name] = properties if len(properties) > 0 else 'created'
+                ret['result'] = result[name] == 'created' or result[name].startswith('cloned')
+            if ret['result']:
+                ret['changes'][name] = properties if len(properties) > 0 else result[name]
                 ret['comment'] = 'filesystem {0} was created'.format(name)
             else:
                 ret['comment'] = 'failed to filesystem {0}'.format(name)
