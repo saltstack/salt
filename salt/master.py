@@ -675,13 +675,16 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
                 self.opts['worker_threads'] = 1
 
         for ind in range(int(self.opts['worker_threads'])):
+            name = 'MWorker-{0}'.format(ind)
             self.process_manager.add_process(MWorker,
                                             args=(self.opts,
                                                 self.master_key,
                                                 self.key,
                                                 req_channels,
+                                                name
                                                 ),
-                                            kwargs=kwargs
+                                            kwargs=kwargs,
+                                            name=name
                                             )
         self.process_manager.run()
 
@@ -723,6 +726,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
                  mkey,
                  key,
                  req_channels,
+                 name,
                  **kwargs):
         '''
         Create a salt master worker process
@@ -734,6 +738,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         :rtype: MWorker
         :return: Master worker
         '''
+        kwargs['name'] = name
         SignalHandlingMultiprocessingProcess.__init__(self, **kwargs)
         self.opts = opts
         self.req_channels = req_channels
@@ -844,7 +849,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         '''
         Start a Master Worker
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.appendproctitle(self.name)
         self.clear_funcs = ClearFuncs(
             self.opts,
             self.key,
