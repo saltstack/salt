@@ -12,6 +12,7 @@ Management zfs datasets
 .. code-block:: yaml
 
     TODO: add example here
+    TODO: add note here about 'properties' needing a manual resut or inherith
 
 '''
 from __future__ import absolute_import
@@ -178,5 +179,82 @@ def bookmark_absent(name, force=False, recursive=False):
         also destroy all the child datasets (zfs destroy -r)
     '''
     return _absent(name, 'bookmark', force, recursive)
+
+
+def filesystem_present(name, create_parent=False, properties=None):
+    '''
+    ensure filesystem exists and has properties set
+
+    name : string
+        name of filesystem
+    create_parent : boolean
+        creates all the non-existing parent datasets.
+        any property specified on the command line using the -o option is ignored.
+    properties : dict
+        additional zfs properties (-o)
+
+    '''
+    name = name.lower()
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    # check params
+    if not properties:
+        properties = {}
+
+    for prop in properties.keys():  # salt breaks the on/off/yes/no properties
+        if isinstance(properties[prop], bool):
+            properties[prop] = 'on' if properties[prop] else 'off'
+
+    if '@' in name or '#' in name:
+        ret['result'] = False
+        ret['comment'] = 'invalid filesystem or volume name: {0}'.format(name)
+
+    log.debug('zfs.filesystem_present::{0}::config::create_parent = {1}'.format(name, create_parent))
+    log.debug('zfs.filesystem_present::{0}::config::properties = {1}'.format(name, properties))
+
+    if ret['result']:
+        if name in __salt__['zfs.list'](name, **{'type': 'filesystem'}):  # update properties if needed
+            result = __salt__['zfs.get'](name, **{'properties': ','.join(properties.keys()), 'fields': 'value', 'depth': 1})
+
+            for prop in properties.keys():
+                if properties[prop] != result[name][prop]['value']:
+                    if name not in ret['changes']:
+                        ret['changes'][name] = {}
+                    ret['changes'][name][prop] = properties[prop]
+
+            if len(ret['changes']) > 0:
+                if not __opts__['test']:
+                    result = __salt__['zfs.set'](name, **ret['changes'][name])
+                    if name not in result:
+                        ret['result'] = False
+                    else:
+                        for prop in result[name].keys():
+                            if result[name][prop] != 'set':
+                                ret['result'] = False
+
+                if ret['result']:
+                    ret['comment'] = 'filesystem {0} was updated'.format(name)
+                else:
+                    ret['changes'] = {}
+                    ret['comment'] = 'filesystem {0} failed to be updated'.format(name)
+            else:
+                ret['comment'] = 'filesystem {0} is up to date'.format(name)
+        else:  # create filesystem
+            result = {name: 'created'}
+            if not __opts__['test']:
+                result = __salt__['zfs.create'](name, **{'create_parent': create_parent, 'properties': properties})
+
+            ret['result'] = name in result and result[name] == 'created'
+            if ret['result']:
+                ret['changes'][name] = properties if len(properties) > 0 else 'created'
+                ret['comment'] = 'filesystem {0} was created'.format(name)
+            else:
+                ret['comment'] = 'failed to filesystem {0}'.format(name)
+                if name in result:
+                    ret['comment'] = result[name]
+    return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
