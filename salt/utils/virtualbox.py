@@ -197,7 +197,7 @@ def vb_get_network_addresses(machine_name=None, machine=None):
     if machine_name:
         machine = vb_get_box().findMachine(machine_name)
 
-    total_slots = vb_get_max_network_slots()
+    total_slots = int(machine.getGuestPropertyValue("/VirtualBox/GuestInfo/Net/Count"))
     ip_addresses = []
     for i in range(total_slots):
         try:
