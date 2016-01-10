@@ -66,7 +66,8 @@ def install(pkg=None,
             runas=None,
             registry=None,
             env=None,
-            silent=True):
+            silent=True,
+            dry_run=False):
     '''
     Install an NPM package.
 
@@ -107,6 +108,11 @@ def install(pkg=None,
 
         .. versionadded::2015.9.0
 
+    dry_run
+        Wether or not to run NPM install with --dry-run flag.
+
+        .. versionadded::2015.8.4
+
     CLI Example:
 
     .. code-block:: bash
@@ -137,6 +143,9 @@ def install(pkg=None,
 
     if registry:
         cmd.append(' --registry="{0}"'.format(registry))
+
+    if dry_run:
+        cmd.append('--dry-run')
 
     if pkg:
         cmd.append(pkg)
