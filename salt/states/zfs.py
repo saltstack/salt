@@ -238,7 +238,9 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
 
     if ret['result']:
         if name in __salt__['zfs.list'](name, **{'type': 'filesystem'}):  # update properties if needed
-            result = __salt__['zfs.get'](name, **{'properties': ','.join(properties.keys()), 'fields': 'value', 'depth': 1})
+            result = {}
+            if len(properties) > 0:
+                result = __salt__['zfs.get'](name, **{'properties': ','.join(properties.keys()), 'fields': 'value', 'depth': 1})
 
             for prop in properties.keys():
                 if properties[prop] != result[name][prop]['value']:
@@ -437,13 +439,69 @@ def bookmark_present(name, snapshot):
             if not __opts__['test']:
                 result = __salt__['zfs.bookmark'](snapshot, name)
 
-            log.warning(result)
             ret['result'] = snapshot in result and result[snapshot].startswith('bookmarked')
             if ret['result']:
                 ret['changes'] = result
                 ret['comment'] = 'snapshot {0} was bookmarked as {1}'.format(snapshot, name)
             else:
                 ret['comment'] = 'failed to create bookmark {0}'.format(name)
+    return ret
+
+
+def snapshot_present(name, recursive=False, properties=None):
+    '''
+    ensure snapshot exists and has properties set
+
+    name : string
+        name of snapshot
+    recursive : boolean
+        recursively create snapshots of all descendent datasets
+    properties : dict
+        additional zfs properties (-o)
+
+    ..note:
+
+        properties are only set at creation time.
+
+    '''
+    name = name.lower()
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    # check params
+    if not properties:
+        properties = {}
+
+    log.debug('zfs.snapshot_present::{0}::config::recursive = {1}'.format(name, recursive))
+    log.debug('zfs.snapshot_present::{0}::config::properties = {1}'.format(name, properties))
+
+    for prop in properties.keys():  # salt breaks the on/off/yes/no properties
+        if isinstance(properties[prop], bool):
+            properties[prop] = 'on' if properties[prop] else 'off'
+
+    if '@' not in name:
+        ret['result'] = False
+        ret['comment'] = 'invalid snapshot name: {0}'.format(name)
+
+    if ret['result']:
+        if name in __salt__['zfs.list'](name, **{'type': 'snapshot'}):  # we are all good
+            ret['comment'] = 'snapshot already exists'
+        else:  # create snapshot
+            result = {name: 'snapshotted'}
+            if not __opts__['test']:
+                result = __salt__['zfs.snapshot'](name, **{'recursive': recursive, 'properties': properties})
+
+            ret['result'] = name in result and result[name] == 'snapshotted'
+            if ret['result']:
+                ret['changes'][name] = properties if len(properties) > 0 else result[name]
+                ret['comment'] = 'snapshot {0} was created'.format(name)
+            else:
+                ret['comment'] = 'failed to create snapshot {0}'.format(name)
+                if name in result:
+                    ret['comment'] = result[name]
+
     return ret
 
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
