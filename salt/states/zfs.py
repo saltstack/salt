@@ -20,9 +20,6 @@ from __future__ import absolute_import
 # Import Python libs
 import logging
 
-# Import Salt libs
-from salt.utils.odict import OrderedDict
-
 log = logging.getLogger(__name__)
 
 # Define the state's virtual name
@@ -235,6 +232,64 @@ def hold_absent(name, snapshot, recursive=False):
                     ret['comment'] = 'failed to release {0}'.format(name)
                     if snapshot in result:
                         ret['comment'] = result[snapshot]
+
+    return ret
+
+
+def hold_present(name, snapshot, recursive=False):
+    '''
+    ensure hold is present on the system
+
+    name : string
+        name of holdt
+    snapshot : string
+        name of snapshot
+    recursive : boolean
+        recursively add hold with the given tag on the snapshots of all descendent file systems.
+    '''
+    name = name.lower()
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    log.debug('zfs.hold_present::{0}::config::snapshot = {1}'.format(name, snapshot))
+    log.debug('zfs.hold_present::{0}::config::recursive = {1}'.format(name, recursive))
+
+    # check name and type
+    if '@' not in snapshot:
+        ret['result'] = False
+        ret['comment'] = 'invalid snapshot name: {0}'.format(snapshot)
+
+    if '@' in name or '#' in name:
+        ret['result'] = False
+        ret['comment'] = 'invalid tag name: {0}'.format(name)
+
+    if ret['result']:
+        result = __salt__['zfs.holds'](snapshot)
+        if snapshot not in result:
+            ret['result'] = False
+            ret['comment'] = '{0} is probably not a snapshot'.format(snapshot)
+        else:
+            if snapshot in result[snapshot]:
+                ret['result'] = False
+                ret['comment'] = result[snapshot]
+            elif result[snapshot] == 'no holds' or name not in result[snapshot]:  # add hold
+                result = {snapshot: {name: 'held'}}
+                if not __opts__['test']:
+                    result = __salt__['zfs.hold'](name, snapshot, **{'recursive': recursive})
+
+                log.warning(result)
+                ret['result'] = snapshot in result and name in result[snapshot]
+                if ret['result']:
+                    ret['changes'] = result[snapshot]
+                    ret['comment'] = 'hold {0} added to {1}'.format(name, snapshot)
+                else:
+                    ret['comment'] = 'failed to add hold {0}'.format(name)
+                    if snapshot in result:
+                        ret['comment'] = result[snapshot]
+            else:  # hold present
+                ret['comment'] = 'hold already exists'
 
     return ret
 
