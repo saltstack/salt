@@ -537,11 +537,10 @@ class Master(SMaster):
                 log.debug('Sleeping for two seconds to let concache rest')
                 time.sleep(2)
 
-            log.info('Creating master request server process')
-            kwargs = {}
-            if salt.utils.is_windows():
-                kwargs['log_queue'] = (
-                        salt.log.setup.get_multiprocessing_logging_queue())
+        log.info('Creating master request server process')
+        kwargs = {}
+        if salt.utils.is_windows():
+            kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
 
         # No need to call this one under default_signals because that's invoked when
         # actually starting the ReqServer
