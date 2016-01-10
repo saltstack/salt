@@ -2178,6 +2178,7 @@ def mod_watch(name, **kwargs):
     sfun = kwargs.pop('sfun', None)
     mapfun = {'purged': purged,
               'latest': latest,
+              'removed': removed,
               'wait': installed,
               'installed': installed}
     if sfun in mapfun:
