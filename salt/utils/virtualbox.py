@@ -150,9 +150,9 @@ def vb_get_network_adapters(machine_name=None, machine=None):
     A valid machine_name or a machine is needed to make this work!
 
     @param machine_name:
-    @type machine_name:
+    @type machine_name: str
     @param machine:
-    @type IMachine:
+    @type machine: IMachine
     @return: INetorkAdapter's converted to dicts
     @rtype: [dict]
     """
@@ -188,9 +188,9 @@ def vb_get_network_addresses(machine_name=None, machine=None):
     Thanks to Shrikant Havale for the StackOverflow answer http://stackoverflow.com/a/29335390
 
     @param machine_name:
-    @type machine_name:
+    @type machine_name: str
     @param machine:
-    @type IMachine:
+    @type machine: IMachine
     @return: All the IPv4 addresses we could get
     @rtype: str[]
     """
@@ -242,8 +242,14 @@ def vb_clone_vm(
     **kwargs
 ):
     """
-    Tells virtualbox to create a VM
+    Tells virtualbox to create a VM by cloning from an existing one
 
+    @param name: Name for the new VM
+    @type name: str
+    @param clone_from:
+    @type clone_from: str
+    @param timeout: maximum time in milliseconds to wait or -1 to wait indefinitely
+    @type timeout: int
     @return dict of resulting VM
     """
     vbox = vb_get_box()
@@ -280,7 +286,11 @@ def vb_start_vm(name=None, timeout=10000, **kwargs):
     Tells Virtualbox to start up a VM.
     Blocking function!
 
-    @return dict of started VM, contains IP addresses and what not
+    @param name:
+    @type name: str
+    @param timeout: Maximum time in milliseconds to wait or -1 to wait indefinitely
+    @type timeout: int
+    @return untreated dict of started VM
     """
     # TODO handle errors
     vbox = vb_get_box()
@@ -299,6 +309,16 @@ def vb_start_vm(name=None, timeout=10000, **kwargs):
 
 
 def vb_stop_vm(name=None, timeout=10000, **kwargs):
+    """
+    Tells Virtualbox to stop a VM.
+    This is a blocking function!
+
+    @param name:
+    @type name: str
+    @param timeout: Maximum time in milliseconds to wait or -1 to wait indefinitely
+    @type timeout: int
+    @return untreated dict of stopped VM
+    """
     # TODO handle errors
     vbox = vb_get_box()
     machine = vbox.findMachine(name)
@@ -407,6 +427,7 @@ def treat_machine_dict(machine):
         del machine["memorySize"]
     return machine
 
+
 def vb_machinestate_to_str(machinestate):
     """
 
@@ -431,7 +452,7 @@ def vb_machine_exists(name):
     except Exception as e:
         if isinstance(e.message, str):
             message = e.message
-        elif isinstance(e.msg, str):
+        elif hasattr(e, "msg") and isinstance(e.msg, str):
             message = e.msg
         else:
             message = ""
