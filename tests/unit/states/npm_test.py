@@ -22,7 +22,7 @@ ensure_in_syspath('../../')
 from salt.states import npm
 
 npm.__salt__ = {}
-npm.__opts__ = {}
+npm.__opts__ = {'test': False}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
