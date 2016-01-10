@@ -458,12 +458,13 @@ class Master(SMaster):
     # run_reqserver cannot be defined within a class method in order for it
     # to be picklable.
     def run_reqserver(self, **kwargs):
-        reqserv = ReqServer(
-            self.opts,
-            self.key,
-            self.master_key,
-            **kwargs)
-        reqserv.run()
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            reqserv = ReqServer(
+                self.opts,
+                self.key,
+                self.master_key,
+                **kwargs)
+            reqserv.run()
 
     def start(self):
         '''
@@ -542,8 +543,9 @@ class Master(SMaster):
                 kwargs['log_queue'] = (
                         salt.log.setup.get_multiprocessing_logging_queue())
 
-            with default_signals(signal.SIGINT, signal.SIGTERM):
-                self.process_manager.add_process(self.run_reqserver, kwargs=kwargs, name='ReqServer')
+        # No need to call this one under default_signals because that's invoked when
+        # actually starting the ReqServer
+        self.process_manager.add_process(self.run_reqserver, kwargs=kwargs, name='ReqServer')
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
