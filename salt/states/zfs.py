@@ -182,6 +182,63 @@ def bookmark_absent(name, force=False, recursive=False):
     return _absent(name, 'bookmark', force, recursive)
 
 
+def hold_absent(name, snapshot, recursive=False):
+    '''
+    ensure hold is absent on the system
+
+    name : string
+        name of holdt
+    snapshot : string
+        name of snapshot
+    recursive : boolean
+        recursively releases a hold with the given tag on the snapshots of all descendent file systems.
+    '''
+    name = name.lower()
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    log.debug('zfs.hold_absent::{0}::config::snapshot = {1}'.format(name, snapshot))
+    log.debug('zfs.hold_absent::{0}::config::recursive = {1}'.format(name, recursive))
+
+    # check name and type
+    if '@' not in snapshot:
+        ret['result'] = False
+        ret['comment'] = 'invalid snapshot name: {0}'.format(snapshot)
+
+    if '@' in name or '#' in name:
+        ret['result'] = False
+        ret['comment'] = 'invalid tag name: {0}'.format(name)
+
+    if ret['result']:
+        result = __salt__['zfs.holds'](snapshot)
+        if snapshot not in result:
+            ret['result'] = False
+            ret['comment'] = '{0} is probably not a snapshot'.format(snapshot)
+        else:
+            if snapshot in result[snapshot]:
+                ret['result'] = False
+                ret['comment'] = result[snapshot]
+            elif result[snapshot] == 'no holds' or name not in result[snapshot]:
+                ret['comment'] = 'hold {0} not present'.format(name)
+            else:
+                result = {snapshot: {name: 'released'}}
+                if not __opts__['test']:
+                    result = __salt__['zfs.release'](name, snapshot, **{'recursive': recursive})
+
+                ret['result'] = snapshot in result and name in result[snapshot]
+                if ret['result']:
+                    ret['changes'] = result[snapshot]
+                    ret['comment'] = 'hold {0} released'.format(name)
+                else:
+                    ret['comment'] = 'failed to release {0}'.format(name)
+                    if snapshot in result:
+                        ret['comment'] = result[snapshot]
+
+    return ret
+
+
 def filesystem_present(name, create_parent=False, properties=None, cloned_from=None):
     '''
     ensure filesystem exists and has properties set
