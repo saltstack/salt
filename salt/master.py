@@ -689,7 +689,6 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
                                             )
         self.process_manager.run()
 
-
     def run(self):
         '''
         Start up the ReqServer
@@ -1314,8 +1313,8 @@ class AESFuncs(object):
             path_name = os.path.split(syndic_cache_path)[0]
             if not os.path.exists(path_name):
                 os.makedirs(path_name)
-            with salt.utils.fopen(syndic_cache_path, 'w') as f:
-                f.write('')
+            with salt.utils.fopen(syndic_cache_path, 'w') as wfh:
+                wfh.write('')
 
         # Format individual return loads
         for key, item in six.iteritems(load['return']):
@@ -1952,9 +1951,10 @@ class ClearFuncs(object):
                 # in the configuration file.
 
                 external_auth_in_db = False
-                for d in self.opts['external_auth'][extra['eauth']]:
-                    if d.startswith('^'):
+                for entry in self.opts['external_auth'][extra['eauth']]:
+                    if entry.startswith('^'):
                         external_auth_in_db = True
+                        break
 
                 # If neither a catchall, a named membership or a group
                 # membership is found, there is no need to continue. Simply
@@ -1999,7 +1999,10 @@ class ClearFuncs(object):
             if name in self.opts['external_auth'][extra['eauth']]:
                 auth_list = self.opts['external_auth'][extra['eauth']][name]
             if group_auth_match:
-                auth_list = self.ckminions.fill_auth_list_from_groups(self.opts['external_auth'][extra['eauth']], groups, auth_list)
+                auth_list = self.ckminions.fill_auth_list_from_groups(
+                        self.opts['external_auth'][extra['eauth']],
+                        groups,
+                        auth_list)
 
             good = self.ckminions.auth_check(
                 auth_list,
