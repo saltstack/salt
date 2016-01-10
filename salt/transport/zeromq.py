@@ -469,12 +469,16 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         self.workers.bind(self.w_uri)
 
         while True:
+            if self.clients.closed or self.workers.closed:
+                break
             try:
                 zmq.device(zmq.QUEUE, self.clients, self.workers)
             except zmq.ZMQError as exc:
                 if exc.errno == errno.EINTR:
                     continue
                 raise exc
+            except (KeyboardInterrupt, SystemExit):
+                break
 
     def close(self):
         '''
@@ -486,7 +490,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.
         if hasattr(self, '_monitor') and self._monitor is not None:
             self._monitor.stop()
             self._monitor = None
-        if hasattr(self, 'clients'):
+        if hasattr(self, 'clients') and self.clients.closed is False:
             self.clients.close()
         if hasattr(self, 'stream'):
             self.stream.close()
