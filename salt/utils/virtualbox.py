@@ -55,12 +55,8 @@ XPCOM_ATTRIBUTES = {
     ]
 }
 
-"""
-Dict of states {
-    <number>: ( <name>, <description> )
-}
-"""
-MACHINE_STATES = dict(enumerate([
+UNKNOWN_MACHINE_STATE = ("Unknown", "This state is unknown to us. Might be new?")
+MACHINE_STATE_LIST = [
     ("Null", "Null value (never used by the API)"),
     ("PoweredOff", "The machine is not running and has no saved execution state; "
                    "it has either never been started or been shut down successfully."),
@@ -109,7 +105,15 @@ MACHINE_STATES = dict(enumerate([
     ("LastOnline", "Pseudo-state: last online state (for use in relational expressions)."),
     ("FirstTransient", "Pseudo-state: first transient state (for use in relational expressions)."),
     ("LastTransient", "Pseudo-state: last transient state (for use in relational expressions)."),
-]))
+]
+MACHINE_STATES = dict(MACHINE_STATE_LIST)
+
+"""
+Dict of states {
+    <number>: ( <name>, <description> )
+}
+"""
+MACHINE_STATES_ENUM = dict(enumerate(MACHINE_STATE_LIST))
 
 
 def vb_get_manager():
@@ -417,7 +421,7 @@ def treat_machine_dict(machine):
         "id": machine.get("id", ""),
         "image": machine.get("image", ""),
         "size": "%s MB" % machine.get("memorySize", 0),
-        "state": vb_machinestate_to_str(machine.get("state", -1))[0],
+        "state": machine_get_machinestate_str(machine),
         "private_ips": [],
         "public_ips": [],
     })
@@ -430,17 +434,50 @@ def treat_machine_dict(machine):
 
 def vb_machinestate_to_str(machinestate):
     """
+    Put a name to the state
 
     @param machinestate: from the machine state enum from XPCOM
     @type machinestate: int
     @return:
-    @rtype:
+    @rtype: str
     """
 
-    return MACHINE_STATES.get(machinestate, ("Unknown", "This state is unknown to us. Might be new?"))
+    return vb_machinestate_to_tuple(machinestate)[0]
 
 
-def machine_get_machinestate(machinedict):
+def vb_machinestate_to_description(machinestate):
+    """
+    Describe the given state
+
+    @param machinestate: from the machine state enum from XPCOM
+    @type machinestate: int | str
+    @return:
+    @rtype: str
+    """
+    return vb_machinestate_to_tuple(machinestate)[1]
+
+
+def vb_machinestate_to_tuple(machinestate):
+    """
+
+    @param machinestate:
+    @type machinestate: int | str
+    @return:
+    @rtype: tuple(<name>, <description>)
+    """
+    if isinstance(machinestate, int):
+        return MACHINE_STATES_ENUM.get(machinestate, UNKNOWN_MACHINE_STATE)
+    elif isinstance(machinestate, str):
+        return MACHINE_STATES.get(machinestate, UNKNOWN_MACHINE_STATE)
+    else:
+        return UNKNOWN_MACHINE_STATE
+
+
+def machine_get_machinestate_tuple(machinedict):
+    return vb_machinestate_to_tuple(machinedict.get("state"))
+
+
+def machine_get_machinestate_str(machinedict):
     return vb_machinestate_to_str(machinedict.get("state"))
 
 
