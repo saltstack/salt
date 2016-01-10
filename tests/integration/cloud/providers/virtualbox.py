@@ -22,9 +22,9 @@ ensure_in_syspath('../../../')
 # Import Salt Libs
 import integration
 from salt.config import cloud_providers_config, vm_profiles_config
-from utils.virtualbox import vb_xpcom_to_attribute_dict, vb_clone_vm, vb_destroy_machine, vb_create_machine,\
-    vb_get_box, vb_machine_exists, HAS_LIBS, XPCOM_ATTRIBUTES, vb_start_vm, vb_stop_vm, machine_get_machinestate, \
-    vb_get_network_addresses
+from utils.virtualbox import vb_xpcom_to_attribute_dict, vb_clone_vm, vb_destroy_machine, vb_create_machine, \
+    vb_get_box, vb_machine_exists, HAS_LIBS, XPCOM_ATTRIBUTES, vb_start_vm, vb_stop_vm, \
+    vb_get_network_addresses, machine_get_machinestate_str
 
 # Setup logging
 log = logging.getLogger()
@@ -309,10 +309,10 @@ class CloneVirtualboxTests(VirtualboxTestCase):
 class BootVirtualboxTests(VirtualboxTestCase):
     def test_start_stop(self):
         machine = vb_start_vm(BOOTABLE_BASE_BOX_NAME)
-        self.assertEqual(machine_get_machinestate(machine)[0], "Running")
+        self.assertEqual(machine_get_machinestate_str(machine), "Running")
 
         machine = vb_stop_vm(BOOTABLE_BASE_BOX_NAME)
-        self.assertEqual(machine_get_machinestate(machine)[0], "PoweredOff")
+        self.assertEqual(machine_get_machinestate_str(machine), "PoweredOff")
 
 
 class XpcomConversionTests(unittest.TestCase):
