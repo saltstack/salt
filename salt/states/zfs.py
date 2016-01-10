@@ -504,4 +504,56 @@ def snapshot_present(name, recursive=False, properties=None):
 
     return ret
 
+
+def promoted(name):
+    '''
+    ensure a dataset is not a clone
+
+    name : string
+        name of fileset or volume
+
+    ..warning::
+
+        only one dataset can be the origin,
+        if you promote a clone the original will now point to the promoted dataset
+
+    '''
+    name = name.lower()
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    if '@' in name or '#' in name:
+        ret['result'] = False
+        ret['comment'] = 'invalid filesystem or volume name: {0}'.format(name)
+
+    if ret['result']:
+        if name in __salt__['zfs.list'](name):
+            origin = '-'
+            if not __opts__['test']:
+                origin = __salt__['zfs.get'](name, **{'properties': 'origin', 'fields': 'value'})[name]['origin']['value']
+
+            if origin == '-':
+                ret['comment'] = '{0} already promoted'.format(name)
+            else:
+                result = {name: 'promoted'}
+                if not __opts__['test']:
+                    result = __salt__['zfs.promote'](name)
+
+                ret['result'] = name in result and result[name] == 'promoted'
+                ret['changes'] = result if ret['result'] else {}
+                if ret['result']:
+                    ret['comment'] = '{0} was promoted'.format(name)
+                else:
+                    ret['comment'] = 'failed to promote {0}'.format(name)
+                    if name in result:
+                        ret['comment'] = result[name]
+
+        else:  # we don't have the dataset
+            ret['result'] = False
+            ret['comment'] = 'dataset {0} does not exist'.format(name)
+
+    return ret
+
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
