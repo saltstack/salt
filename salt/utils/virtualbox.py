@@ -10,6 +10,8 @@ being in PYTHONPATH, or installed system-wide
 import logging
 import re
 
+import time
+
 log = logging.getLogger(__name__)
 
 # Import virtualbox libs
@@ -177,6 +179,35 @@ def vb_get_network_adapters(machine_name=None, machine=None):
             pass
 
     return network_adapters
+
+
+def vb_wait_for_network_address(timeout, step=None, machine_name=None, machine=None):
+    """
+    Wait until a machine has a network address to return or quit after the timeout
+
+    @param timeout:
+    @type timeout: float
+    @param step:
+    @type step: float
+    @param machine_name:
+    @type machine_name: str
+    @param machine:
+    @type machine: IMachine
+    @return:
+    @rtype: list
+    """
+    max_time = time.time() + timeout
+    step = min(step or 1, timeout)
+
+    ips = vb_get_network_addresses(machine_name=machine_name, machine=machine)
+    while time.time() < max_time and len(ips) < 1:
+        ips = vb_get_network_addresses(machine_name=machine_name, machine=machine)
+        time.sleep(step)
+
+        # Don't allow cases of over-stepping the timeout
+        step = min(step, max_time - time.time())
+
+    return ips
 
 
 def vb_get_network_addresses(machine_name=None, machine=None):

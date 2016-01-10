@@ -24,7 +24,7 @@ import integration
 from salt.config import cloud_providers_config, vm_profiles_config
 from utils.virtualbox import vb_xpcom_to_attribute_dict, vb_clone_vm, vb_destroy_machine, vb_create_machine, \
     vb_get_box, vb_machine_exists, HAS_LIBS, XPCOM_ATTRIBUTES, vb_start_vm, vb_stop_vm, \
-    vb_get_network_addresses, machine_get_machinestate_str
+    vb_get_network_addresses, vb_wait_for_network_address, machine_get_machinestate_str
 
 # Setup logging
 log = logging.getLogger()
@@ -252,8 +252,15 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
         pass
 
     def test_network_addresses(self):
+        # Machine is off
         ip_addresses = vb_get_network_addresses(machine_name=BOOTABLE_BASE_BOX_NAME)
 
+        network_count = len(ip_addresses)
+        self.assertEqual(network_count, 0)
+
+        # Machine is up again
+        vb_start_vm(BOOTABLE_BASE_BOX_NAME)
+        ip_addresses = vb_wait_for_network_address(20, machine_name=BOOTABLE_BASE_BOX_NAME)
         network_count = len(ip_addresses)
         self.assertGreater(network_count, 0)
 
