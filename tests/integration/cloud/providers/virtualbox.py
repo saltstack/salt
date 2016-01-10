@@ -228,9 +228,6 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
         except:
             pass
 
-    def test_start_action(self):
-        pass
-
     def test_start_stop_action(self):
         res = self.run_cloud_action("start", BOOTABLE_BASE_BOX_NAME, timeout=10)
         info(res)
