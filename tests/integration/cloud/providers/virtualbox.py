@@ -222,12 +222,16 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
             except:
                 self.fail("%s is not a valid IP address" % ip_str)
 
+    def tearDown(self):
+        try:
+            vb_stop_vm(BOOTABLE_BASE_BOX_NAME)
+        except:
+            pass
+
     def test_start_action(self):
         pass
 
     def test_start_stop_action(self):
-        # TODO clean up after ourselves in case something goes wrong
-
         res = self.run_cloud_action("start", BOOTABLE_BASE_BOX_NAME, timeout=10)
         info(res)
 
