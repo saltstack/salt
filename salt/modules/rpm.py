@@ -399,7 +399,7 @@ def diff(package, path):
     return res
 
 
-def info(*packages):
+def info(*packages, **attr):
     '''
     Return a detailed package(s) summary information.
     If no packages specified, all packages will be returned.
@@ -415,6 +415,7 @@ def info(*packages):
     '''
 
     cmd = packages and "rpm -q {0}".format(' '.join(packages)) or "rpm -qa"
+    filter_attrs = attr.get('attr', None) and attr['attr'].split(",") or None
 
     # Locale needs to be en_US instead of C, because RPM otherwise will yank the timezone from the timestamps
     call = __salt__['cmd.run_all'](cmd + (" --queryformat 'Name: %{NAME}\n"
@@ -466,6 +467,8 @@ def info(*packages):
                 continue
             key, value = line
             key = key.replace(' ', '_').lower()
+            if key != 'name' and filter_attrs and key not in filter_attrs:
+                continue
             if key == 'description':
                 descr_marker = True
                 continue
@@ -476,9 +479,10 @@ def info(*packages):
                     pkg_data['{0}_iso'.format(key)] = datetime.datetime.fromtimestamp(int(value)).isoformat()
                 except ValueError:
                     log.warning('Could not convert "{0}" into Unix time'.format(value))
-            if key != 'description' and value:
+            if key not in ['description', 'name'] and value:
                 pkg_data[key] = value
-        pkg_data['description'] = os.linesep.join(descr)
+        if filter_attrs and 'description' in filter_attrs or not filter_attrs:
+            pkg_data['description'] = os.linesep.join(descr)
         if pkg_name:
             ret[pkg_name] = pkg_data
 
