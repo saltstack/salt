@@ -254,7 +254,7 @@ def assign_funcs(modname, service, module=None, pack=None):
         _utils__['boto.assign_partials'](__name__, 'ec2')
     '''
     if pack:
-        global __salt__
+        global __salt__  # pylint: disable=W0601
         __salt__ = pack
     mod = sys.modules[modname]
     setattr(mod, '_get_conn', get_connection_func(service, module=module))
