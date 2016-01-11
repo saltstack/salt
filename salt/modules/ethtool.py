@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
-"""
+'''
 Module for running ethtool command
 
-:codeauthor: Krzysztof Pawlowski <msciciel@msciciel.eu>
+.. versionadded:: Boron
+
+:codeauthor:    Krzysztof Pawlowski <msciciel@msciciel.eu>
 :maturity:      new
 :depends:       python-ethtool
 :platform:      linux
-"""
+'''
 
 from __future__ import absolute_import
 
@@ -70,9 +72,9 @@ for k, v in ethtool_ring_map.items():
 
 
 def __virtual__():
-    """
+    '''
     Only load this module if python-ethtool is installed
-    """
+    '''
     if HAS_ETHTOOL:
         return 'ethtool'
     else:
@@ -80,7 +82,7 @@ def __virtual__():
 
 
 def show_ring(devname):
-    """
+    '''
     Queries the specified network device for rx/tx ring parameter information
 
     CLI Example:
@@ -88,7 +90,7 @@ def show_ring(devname):
     .. code-block:: bash
 
         salt '*' ethtool.show_ring <devname>
-    """
+    '''
 
     try:
         ring = ethtool.get_ringparam(devname)
@@ -108,7 +110,7 @@ def show_ring(devname):
 
 
 def show_coalesce(devname):
-    """
+    '''
     Queries the specified network device for coalescing information
 
     CLI Example:
@@ -116,7 +118,7 @@ def show_coalesce(devname):
     .. code-block:: bash
 
         salt '*' ethtool.show_coalesce <devname>
-    """
+    '''
 
     try:
         coalesce = ethtool.get_coalesce(devname)
@@ -136,7 +138,7 @@ def show_coalesce(devname):
 
 
 def show_driver(devname):
-    """
+    '''
     Queries the specified network device for associated driver information
 
     CLI Example:
@@ -144,7 +146,7 @@ def show_driver(devname):
     .. code-block:: bash
 
         salt '*' ethtool.show_driver <devname>
-    """
+    '''
 
     try:
         module = ethtool.get_module(devname)
@@ -175,7 +177,7 @@ def show_driver(devname):
 
 
 def set_ring(devname, **kwargs):
-    """
+    '''
     Changes the rx/tx ring parameters of the specified network device
 
     CLI Example:
@@ -183,7 +185,7 @@ def set_ring(devname, **kwargs):
     .. code-block:: bash
 
         salt '*' ethtool.set_ring <devname> [ring=N] [rx_mini=N] [rx_jumbo=N] [tx=N]
-    """
+    '''
 
     try:
         ring = ethtool.get_ringparam(devname)
@@ -218,7 +220,7 @@ def set_ring(devname, **kwargs):
 
 
 def set_coalesce(devname, **kwargs):
-    """
+    '''
     Changes the coalescing settings of the specified network device
 
     CLI Example:
@@ -230,7 +232,7 @@ def set_coalesce(devname, **kwargs):
             [stats_block_usecs=N] [pkt_rate_low=N] [rx_usecs_low=N] [rx_frames_low=N] [tx_usecs_low=N] [tx_frames_low=N]
             [pkt_rate_high=N] [rx_usecs_high=N] [rx_frames_high=N] [tx_usecs_high=N] [tx_frames_high=N]
             [sample_interval=N]
-    """
+    '''
 
     try:
         coalesce = ethtool.get_coalesce(devname)
@@ -265,7 +267,7 @@ def set_coalesce(devname, **kwargs):
 
 
 def show_offload(devname):
-    """
+    '''
     Queries the specified network device for the state of protocol offload and other features
 
     CLI Example:
@@ -273,7 +275,7 @@ def show_offload(devname):
     .. code-block:: bash
 
         salt '*' ethtool.show_offload <devname>
-    """
+    '''
 
     try:
         sg = ethtool.get_sg(devname) and "on" or "off"
@@ -306,7 +308,7 @@ def show_offload(devname):
 
 
 def set_offload(devname, **kwargs):
-    """
+    '''
     Changes the offload parameters and other features of the specified network device
 
     CLI Example:
@@ -314,7 +316,7 @@ def set_offload(devname, **kwargs):
     .. code-block:: bash
 
         salt '*' ethtool.show_offload <devname>
-    """
+    '''
 
     for param, value in kwargs.items():
         if param == 'tcp_segmentation_offload':
