@@ -399,18 +399,6 @@ def diff(package, path):
     return res
 
 
-def _pkg_time_to_iso(pkg_time):
-    '''
-    Convert package time to ISO 8601.
-
-    :param pkg_time:
-    :return:
-    '''
-    ptime = time.strptime(pkg_time, '%a %d %b %Y %H:%M:%S %p %Z')
-    return datetime.datetime(ptime.tm_year, ptime.tm_mon, ptime.tm_mday,
-                             ptime.tm_hour, ptime.tm_min, ptime.tm_sec).isoformat() + "Z"
-
-
 def info(*packages):
     '''
     Return a detailed package(s) summary information.
@@ -435,7 +423,7 @@ def info(*packages):
                                                           "Vendor: %{VENDOR}\n"
                                                           "Release: %{RELEASE}\n"
                                                           "Build Date: %{BUILDTIME:date}\n"
-                                                          "Install Date: %|INSTALLTIME?{%{INSTALLTIME:date}}:{(not installed)}|\n"
+                                                          "Install Date: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\n"
                                                           "Build Host: %{BUILDHOST}\n"
                                                           "Group: %{GROUP}\n"
                                                           "Source RPM: %{SOURCERPM}\n"
@@ -447,7 +435,7 @@ def info(*packages):
                                                           "Summary: %{SUMMARY}\n"
                                                           "Description:\n%{DESCRIPTION}\n"
                                                           "-----\n'"),
-                                   output_loglevel='trace', env={'LC_ALL': 'en_US', 'TZ': 'UTC'}, clean_env=True)
+                                   output_loglevel='trace', env={'TZ': 'UTC'}, clean_env=True)
     if call['retcode'] != 0:
         comment = ''
         if 'stderr' in call:
@@ -484,7 +472,10 @@ def info(*packages):
             if key == 'name':
                 pkg_name = value
             if key in ['build_date', 'install_date']:
-                value = _pkg_time_to_iso(value)
+                try:
+                    pkg_data['{0}_iso'.format(key)] = datetime.datetime.fromtimestamp(int(value)).isoformat()
+                except ValueError:
+                    log.warning('Could not convert "{0}" into Unix time'.format(value))
             if key != 'description' and value:
                 pkg_data[key] = value
         pkg_data['description'] = os.linesep.join(descr)
