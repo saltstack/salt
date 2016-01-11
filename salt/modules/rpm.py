@@ -429,7 +429,7 @@ def info(*packages, **attr):
                                                           "Version: %{VERSION}\n"
                                                           "Vendor: %{VENDOR}\n"
                                                           "Release: %{RELEASE}\n"
-                                                          "Build Date: %{BUILDTIME:date}\n"
+                                                          "Build Date: %{BUILDTIME}\n"
                                                           "Install Date: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\n"
                                                           "Build Host: %{BUILDHOST}\n"
                                                           "Group: %{GROUP}\n"
