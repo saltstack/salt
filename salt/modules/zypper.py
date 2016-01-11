@@ -100,8 +100,11 @@ def info_installed(*names, **attr):
     '''
     Return the information of the named package(s), installed on the system.
 
-    :names names of the packages to get information about.
-    :attr attributes. If no 'attr' is specified, all available attributes returned.
+    :param names:
+        Names of the packages to get information about.
+
+    :param attr:
+        Comma-separated package attributes. If no 'attr' is specified, all available attributes returned.
         Valid attributes are:
             version, vendor, release, build_date, install_date, build_host, group, source_rpm,
             size, license, signature, packager, url, summary, description.
