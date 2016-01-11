@@ -3288,7 +3288,6 @@ def append(name,
                     name,
                     salt.utils.build_whitespace_split_regex(chunk),
                     multiline=True):
-                        print('IGNORING WHITESPACE')
                         continue
             elif __salt__['file.search'](
                     name,
