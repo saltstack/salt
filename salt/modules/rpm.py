@@ -405,10 +405,14 @@ def info(*packages, **attr):
     If no packages specified, all packages will be returned.
 
     :param packages:
-    :attr attributes. If no 'attr' is specified, all available attributes returned.
+
+    :param attr:
+        If no 'attr' is specified, all available attributes returned.
+
         Valid attributes are:
             version, vendor, release, build_date, install_date, build_host, group, source_rpm,
             arch, size, license, signature, packager, url, summary, description.
+
     :return:
 
     CLI example:
