@@ -2048,8 +2048,14 @@ def create(vm_):
     )
 
     if 'clonefrom' in vm_:
+        # If datacenter is specified, set the container reference to start search from it instead
+        container_ref = None
+        if datacenter:
+            datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
+            container_ref = datacenter_ref if datacenter_ref else None
+
         # Clone VM/template from specified VM/template
-        object_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_['clonefrom'])
+        object_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_['clonefrom'], container_ref)
         if object_ref:
             clone_type = "template" if object_ref.config.template else "vm"
         else:
@@ -2059,13 +2065,13 @@ def create(vm_):
 
         # Either a cluster, or a resource pool must be specified when cloning from template.
         if resourcepool:
-            resourcepool_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ResourcePool, resourcepool)
+            resourcepool_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ResourcePool, resourcepool, container_ref)
             if not resourcepool_ref:
                 log.error("Specified resource pool: '{0}' does not exist".format(resourcepool))
                 if clone_type == "template":
                     raise SaltCloudSystemExit('You must specify a resource pool that exists.')
         elif cluster:
-            cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ClusterComputeResource, cluster)
+            cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ClusterComputeResource, cluster, container_ref)
             if not cluster_ref:
                 log.error("Specified cluster: '{0}' does not exist".format(cluster))
                 if clone_type == "template":
@@ -2081,11 +2087,6 @@ def create(vm_):
 
         # Either a datacenter or a folder can be optionally specified
         # If not specified, the existing VM/template\'s parent folder is used.
-        container_ref = None
-        if datacenter:
-            datacenter_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datacenter, datacenter)
-            container_ref = datacenter_ref if datacenter_ref else None
-
         if folder:
             folder_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Folder, folder, container_ref)
             if not folder_ref:
@@ -2255,7 +2256,7 @@ def create(vm_):
             )
             return {'Error': err_msg}
 
-        new_vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_name)
+        new_vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_name, container_ref)
 
         # If it a template or if it does not need to be powered on then do not wait for the IP
         if not template and power:
