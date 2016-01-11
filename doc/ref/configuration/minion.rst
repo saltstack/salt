@@ -1233,6 +1233,31 @@ Default: ``{}``
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
+.. conf_minion:: zmq_monitor
+
+``zmq_monitor``
+---------------
+
+Default: ``False``
+
+To diagnose issues with minions disconnecting or missing returns, ZeroMQ
+supports the use of monitor sockets to log connection events. This
+feature requires ZeroMQ 4.0 or higher.
+
+To enable ZeroMQ monitor sockets, set 'zmq_monitor' to 'True' and log at a
+debug level or higher.
+
+A sample log event is as follows:
+
+.. code-block:: yaml
+
+    [DEBUG   ] ZeroMQ event: {'endpoint': 'tcp://127.0.0.1:4505', 'event': 512,
+    'value': 27, 'description': 'EVENT_DISCONNECTED'}
+
+All events logged will include the string ``ZeroMQ event``. A connection event
+should be logged as the minion starts up and initially connects to the
+master. If not, check for debug log level and that the necessary version of
+ZeroMQ is installed.
 
 .. conf_minion:: failhard
 

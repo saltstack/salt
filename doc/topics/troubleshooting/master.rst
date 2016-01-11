@@ -184,15 +184,13 @@ Depending on your OS (this is most common on Ubuntu due to apt-get) you may
 sometimes encounter times where your highstate, or other long running commands
 do not return output.
 
-.. note::
-    A number of timing issues were resolved in the 2014.1 release of Salt.
-    Upgrading to at least this version is strongly recommended if timeouts
-    persist.
-
 By default the timeout is set to 5 seconds. The timeout value can easily be
 increased by modifying the ``timeout`` line within your ``/etc/salt/master``
 configuration file.
 
+Having keys accepted for Salt minions that no longer exist or are not reachable
+also increases the possibility of timeouts, since the Salt master waits for
+those systems to return command results.
 
 Passing the -c Option to Salt Returns a Permissions Error
 =========================================================

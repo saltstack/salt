@@ -1456,6 +1456,15 @@ def line(path, content, match=None, mode=None, location=None,
     :param indent
         Keep indentation with the previous line.
 
+    If an equal sign (``=``) appears in an argument to a Salt command, it is
+    interpreted as a keyword argument in the format of ``key=val``. That
+    processing can be bypassed in order to pass an equal sign through to the
+    remote shell command by manually specifying the kwarg:
+
+    .. code-block:: bash
+
+        salt '*' file.line /path/to/file content="CREATEMAIL_SPOOL=no" match="CREATE_MAIL_SPOOL=yes" mode="replace"
+
     CLI Examples:
 
     .. code-block:: bash
@@ -1463,9 +1472,9 @@ def line(path, content, match=None, mode=None, location=None,
         salt '*' file.line /etc/nsswitch.conf "networks:\tfiles dns" after="hosts:.*?" mode='ensure'
     '''
     path = os.path.realpath(os.path.expanduser(path))
-    if not os.path.isfile(path):
+    if not os.path.exists(path):
         if not quiet:
-            raise CommandExecutionError('File "{0}" does not exists or is not a file.'.format(path))
+            raise CommandExecutionError('File "{0}" does not exists.'.format(path))
         return False  # No changes had happened
 
     mode = mode and mode.lower() or mode

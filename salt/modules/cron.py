@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 '''
 Work with cron
+
+.. note::
+    Salt does not escape cron metacharacters automatically. You should
+    backslash-escape percent characters and any other metacharacters that might
+    be interpreted incorrectly by the shell.
 '''
 from __future__ import absolute_import
 

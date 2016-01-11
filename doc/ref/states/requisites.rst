@@ -530,6 +530,12 @@ under certain conditions. The use of unless or onlyif options help make states
 even more stateful. The ``check_cmd`` option helps ensure that the result of a
 state is evaluated correctly.
 
+Reload
+------
+
+``reload_modules`` is a boolean option that forces salt to reload its modules
+after a state finishes. See :ref:`Reloading Modules <reloading-modules>`.
+
 Unless
 ------
 

@@ -2655,7 +2655,6 @@ Default: ``{}``
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
-
 Node Groups
 ===========
 
