@@ -435,6 +435,7 @@ def info(*packages, **attr):
                                                           "Group: %{GROUP}\n"
                                                           "Source RPM: %{SOURCERPM}\n"
                                                           "Size: %{LONGSIZE}\n"
+                                                          "Arch: %{ARCH}\n"
                                                           "%|LICENSE?{License: %{LICENSE}\n}|"
                                                           "Signature: %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:{%|SIGGPG?{%{SIGGPG:pgpsig}}:{%|SIGPGP?{%{SIGPGP:pgpsig}}:{(none)}|}|}|}|\n"
                                                           "%|PACKAGER?{Packager: %{PACKAGER}\n}|"
