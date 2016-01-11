@@ -405,6 +405,10 @@ def info(*packages, **attr):
     If no packages specified, all packages will be returned.
 
     :param packages:
+    :attr attributes. If no 'attr' is specified, all available attributes returned.
+        Valid attributes are:
+            version, vendor, release, build_date, install_date, build_host, group, source_rpm,
+            size, license, signature, packager, url, summary, description.
     :return:
 
     CLI example:
@@ -412,6 +416,8 @@ def info(*packages, **attr):
     .. code-block:: bash
 
         salt '*' lowpkg.info apache2 bash
+        salt '*' lowpkg.info apache2 bash attr=version
+        salt '*' lowpkg.info apache2 bash attr=version,build_date_iso,size
     '''
 
     cmd = packages and "rpm -q {0}".format(' '.join(packages)) or "rpm -qa"
