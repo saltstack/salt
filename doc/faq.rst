@@ -21,7 +21,7 @@ The salt-users mailing list as well as the salt IRC channel can both be helpful
 resources to confirm if others are seeing the issue and to assist with
 immediate debugging.
 
-To report a bug to the Salt project, please follow the instructions in 
+To report a bug to the Salt project, please follow the instructions in
 :doc:`reporting a bug </topics/development/reporting_bugs>`.
 
 
@@ -130,13 +130,6 @@ should be opened on our tracker_, with the following information:
 2. The contents of ``/etc/lsb-release``, if present on the Minion.
 
 .. _tracker: https://github.com/saltstack/salt/issues
-
-I'm using gitfs and my custom modules/states/etc are not syncing. Why?
-----------------------------------------------------------------------
-
-In versions of Salt 0.16.3 or older, there is a bug in :doc:`gitfs
-</topics/tutorials/gitfs>` which can affect the syncing of custom types.
-Upgrading to 0.16.4 or newer will fix this.
 
 Why aren't my custom modules/states/etc. available on my Minions?
 -----------------------------------------------------------------
