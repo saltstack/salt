@@ -408,7 +408,7 @@ def info(*packages, **attr):
     :attr attributes. If no 'attr' is specified, all available attributes returned.
         Valid attributes are:
             version, vendor, release, build_date, install_date, build_host, group, source_rpm,
-            size, license, signature, packager, url, summary, description.
+            arch, size, license, signature, packager, url, summary, description.
     :return:
 
     CLI example:
