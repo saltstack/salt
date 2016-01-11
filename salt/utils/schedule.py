@@ -707,7 +707,7 @@ class Schedule(object):
             # Although catch-all exception handlers are bad, the exception here
             # is to let the exception bubble up to the top of the thread context,
             # where the thread will die silently, which is worse.
-            if not 'return' in ret:
+            if 'return' not in ret:
                 ret['return'] = "Unhandled exception running {0}".format(ret['fun'])
             ret['success'] = False
             ret['retcode'] = 254
