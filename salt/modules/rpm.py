@@ -488,9 +488,12 @@ def info(*packages, **attr):
                 pkg_name = value
             if key in ['build_date', 'install_date']:
                 try:
-                    pkg_data['{0}_iso'.format(key)] = datetime.datetime.fromtimestamp(int(value)).isoformat()
+                    value = int(value)
+                    pkg_data['{0}_time_t'.format(key)] = value
+                    value = datetime.datetime.fromtimestamp(value).isoformat()
                 except ValueError:
                     log.warning('Could not convert "{0}" into Unix time'.format(value))
+                    continue
             if key not in ['description', 'name'] and value:
                 pkg_data[key] = value
         if filter_attrs and 'description' in filter_attrs or not filter_attrs:
