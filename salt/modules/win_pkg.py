@@ -697,7 +697,7 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     tries = 0
     difference = salt.utils.compare_dicts(old, new)
     while not all(name in difference for name in changed) and tries < 10:
-        time.sleep( 3 )
+        time.sleep(3)
         new = list_pkgs()
         difference = salt.utils.compare_dicts(old, new)
         tries += 1
