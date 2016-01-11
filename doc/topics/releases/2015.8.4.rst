@@ -5,11 +5,12 @@ Salt 2015.8.4 Release Notes
 Core Changes
 ============
 
-- Added option ``mock=True`` for ``state.sls`` and ``state.highstate``.  This
-  allows the salt state compiler to process sls data in a state run without
-  actually calling the state functions, thus providing feedback on the validity
-  of the arguments used for the functions beyond the preprocessing validation
-  provided by ``state.show_sls`` (:issue:`30118` and :issue:`30189`).
+- Added option ``mock=True`` for :mod:`state.sls <salt.modules.state.sls>` and
+  :mod:`state.highstate <salt.modules.state.highstate>`.  This allows the salt
+  state compiler to process sls data in a state run without actually calling
+  the state functions, thus providing feedback on the validity of the arguments
+  used for the functions beyond the preprocessing validation provided by
+  ``state.show_sls`` (:issue:`30118` and :issue:`30189`).
 
   .. code-block:: shell
 
