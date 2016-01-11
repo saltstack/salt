@@ -433,6 +433,7 @@ def info(*packages, **attr):
                                                           "Version: %{VERSION}\n"
                                                           "Vendor: %{VENDOR}\n"
                                                           "Release: %{RELEASE}\n"
+                                                          "%|EPOCH?{Epoch: %{EPOCH}\n}|"
                                                           "Build Date: %{BUILDTIME}\n"
                                                           "Install Date: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\n"
                                                           "Build Host: %{BUILDHOST}\n"
