@@ -9,7 +9,7 @@ from distutils.version import LooseVersion  # pylint: disable=import-error,no-na
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from salttesting.helpers import ensure_in_syspath
 
 ensure_in_syspath('../../')
@@ -70,9 +70,10 @@ dhcp_options_parameters.update(conn_parameters)
 
 opts = salt.config.DEFAULT_MINION_OPTS
 utils = salt.loader.utils(opts, whitelist=['boto'])
+mods = salt.loader.minion_mods(opts)
 
 boto_vpc.__utils__ = utils
-boto_vpc.__init__(opts)
+boto_vpc.__init__(opts, pack=mods)
 
 
 def _has_required_boto():
