@@ -3283,12 +3283,13 @@ def append(name,
 
     try:
         for chunk in text:
-
-            if ignore_whitespace and __salt__['file.search'](
+            if ignore_whitespace:
+                if __salt__['file.search'](
                     name,
                     salt.utils.build_whitespace_split_regex(chunk),
                     multiline=True):
-                continue
+                        print('IGNORING WHITESPACE')
+                        continue
             elif __salt__['file.search'](
                     name,
                     chunk,
