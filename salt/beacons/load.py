@@ -44,12 +44,15 @@ def validate(config):
                          'be a list of dictionaries.')
                 return False
             else:
-                if not any(j in ['1m', '5m', '15m'] for j in config_item.keys()):
+                if not all(j in ['1m', '5m', '15m'] for j in config_item.keys()):
                     log.info('Configuration for load beacon must '
-                             'contain 1m, 5m and 15m items.')
+                             'contain 1m, 5m or 15m items.')
                     return False
 
             for item in ['1m', '5m', '15m']:
+                if item not in config_item:
+                    continue
+
                 if not isinstance(config_item[item], list):
                     log.info('Configuration for load beacon: '
                              '1m, 5m and 15m items must be '
@@ -100,6 +103,7 @@ def beacon(config):
     '''
     log.trace('load beacon starting')
 
+    # Default config if not present
     if 'emitatstartup' not in config:
         config['emitatstartup'] = True
     if 'onchangeonly' not in config:
@@ -118,6 +122,7 @@ def beacon(config):
                 for k in ['1m', '5m', '15m']:
                     LAST_STATUS[k] = avg_dict[k]
                 if not config['emitatstartup']:
+                    log.debug('Dont emit because emitatstartup is False')
                     return ret
 
 
@@ -130,15 +135,18 @@ def beacon(config):
                     # Emit if current is more that threshold and old value less that threshold
                     # Emit if current is less that threshold and old value more that threshold
                     if float(avg_dict[k]) > float(config[k][1]) and float(LAST_STATUS[k]) < float(config[k][1]):
+                        log.debug('Emit because %f > %f and last was %f' % (float(avg_dict[k]), float(config[k][1]), float(LAST_STATUS[k])))
                         send_beacon = True
                         break
                     if float(avg_dict[k]) < float(config[k][0]) and float(LAST_STATUS[k]) > float(config[k][0]):
+                        log.debug('Emit because %f < %f and last was %f' % (float(avg_dict[k]), float(config[k][0]), float(LAST_STATUS[k])))
                         send_beacon = True
                         break
                 else:
                     # Emit no matter LAST_STATUS
                     if float(avg_dict[k]) < float(config[k][0]) or \
                     float(avg_dict[k]) > float(config[k][1]):
+                        log.debug('Emit because %f < %f or > %f' % ( float(avg_dict[k]), float(config[k][0]), float(config[k][1])))
                         send_beacon = True
                         break
 
