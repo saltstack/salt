@@ -32,7 +32,7 @@ def validate(config):
     '''
     Validate the beacon configuration
     '''
-    # Configuration for glxinfo beacon should be a dictionary with states array
+    # Configuration for glxinfo beacon should be a dictionary
     if not isinstance(config, dict):
         log.info('Configuration for glxinfo beacon must be a dict.')
         return False
