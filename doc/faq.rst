@@ -192,6 +192,40 @@ backup_mode can be configured on a per state basis, or in the minion config
 (note that if set in the minion config this would simply be the default
 method to use, you still need to specify that the file should be backed up!).
 
+Is it possible to deploy a file to a specific minion, without other minions having access to it?
+------------------------------------------------------------------------------------------------
+
+The Salt fileserver does not yet support access control, but it is still
+possible to do this. As of Salt 2015.5.0, the
+:mod:`file_tree <salt.pillar.file_tree>` external pillar is available, and
+allows the contents of a file to be loaded as Pillar data. This external pillar
+is capable of assigning Pillar values both to individual minions, and to
+:ref:`nodegroups <targeting-nodegroups>`. See the :mod:`documentation
+<salt.pillar.file_tree>` for details on how to set this up.
+
+Once the external pillar has been set up, the data can be pushed to a minion
+via a :py:func:`file.managed <salt.states.file.managed>` state, using the
+``contents_pillar`` argument:
+
+.. code-block:: yaml
+
+    /etc/my_super_secret_file:
+      file.managed:
+        - user: secret
+        - group: secret
+        - mode: 600
+        - contents_pillar: secret_files:my_super_secret_file
+
+In this example, the source file would be located in a directory called
+``secret_files`` underneath the file_tree path for the minion. The syntax for
+specifying the pillar variable is the same one used for :py:func:`pillar.get
+<salt.modules.pillar.get>`, with a colon representing a nested dictionary.
+
+.. warning::
+    Deploying binary contents using the :py:func:`file.managed
+    <salt.states.file.managed>` state is only supported in Salt 2015.8.4 and
+    newer.
+
 What is the best way to restart a Salt daemon using Salt?
 ---------------------------------------------------------
 
