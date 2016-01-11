@@ -6,7 +6,7 @@ from distutils.version import LooseVersion  # pylint: disable=import-error,no-na
 
 # Import Salt Testing libs
 from salttesting.unit import skipIf, TestCase
-from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch
+from salttesting.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from salttesting.helpers import ensure_in_syspath
 ensure_in_syspath('../../')
 
@@ -111,6 +111,7 @@ class BotoUtilsTestCaseBase(TestCase):
         salt.utils.boto.__context__ = {}
         salt.utils.boto.__opts__ = {}
         salt.utils.boto.__pillar__ = {}
+        salt.utils.boto.__salt__ = {'config.option': MagicMock(return_value='dummy_opt')}
 
 
 class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
