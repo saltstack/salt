@@ -407,7 +407,7 @@ def info(*packages, **attr):
     :param packages:
 
     :param attr:
-        If no 'attr' is specified, all available attributes returned.
+        Comma-separated package attributes. If no 'attr' is specified, all available attributes returned.
 
         Valid attributes are:
             version, vendor, release, build_date, install_date, build_host, group, source_rpm,
