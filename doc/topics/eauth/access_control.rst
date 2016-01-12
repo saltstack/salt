@@ -57,6 +57,5 @@ few functions that dave can execute on other minions. It also allows steve
 unrestricted access to salt commands.
 
 .. note::
-    Minions are matched using regular expressions when configuring
-    ``client_acl`` and ``external_auth``.
+    Functions are matched using regular expressions.
 

@@ -68,7 +68,7 @@ allow minions ending with foo.org access to the publisher.
         - pkg.*
 
 .. note::
-    Minions are matched using regular expressions when configuring ``peer``.
+    Functions are matched using regular expressions.
 
 Peer Runner Communication
 =========================
@@ -97,7 +97,7 @@ to the manage and jobs runner functions.
         - jobs.*
 
 .. note::
-    Minions are matched using regular expressions when configuring ``peer_run``.
+    Functions are matched using regular expressions.
 
 Using Peer Communication
 ========================
