@@ -296,3 +296,98 @@ def list(region=None, key=None, keyid=None, profile=None):
         return {'trails': trails.get('trailList',[])}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
+
+
+def update(Name,
+           S3BucketName, S3KeyPrefix=None,
+           SnsTopicName=None,
+           IncludeGlobalServiceEvents=None,
+           #IsMultiRegionTrail=None,
+           EnableLogFileValidation=None,
+           CloudWatchLogsLogGroupArn=None,
+           CloudWatchLogsRoleArn=None,
+           KmsKeyId=None,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Given a valid config, update a trail.
+
+    Returns {created: true} if the trail was created and returns
+    {created: False} if the trail was not created.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudtrail.update my_trail my_bucket
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        kwargs={}
+        for arg in ('S3KeyPrefix', 'SnsTopicName', 'IncludeGlobalServiceEvents',
+                    #'IsMultiRegionTrail',
+                    'EnableLogFileValidation', 'CloudWatchLogsLogGroupArn',
+                    'CloudWatchLogsRoleArn', 'KmsKeyId'):
+            if locals()[arg] is not None:
+               kwargs[arg] = locals()[arg]
+        trail = conn.update_trail(Name=Name,
+                                  S3BucketName=S3BucketName,
+                                  **kwargs)
+        if trail:
+            log.info('The updated trail name is {0}'.format(trail['Name']))
+
+            return {'updated': True, 'name': trail['Name']}
+        else:
+            log.warning('Trail was not created')
+            return {'updated': False}
+    except ClientError as e:
+        return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def start_logging(Name,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Start logging for a trail
+
+    Returns {started: true} if the trail was started and returns
+    {started: False} if the trail was not started.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudtrail.start_logging my_trail
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.start_logging(Name=Name)
+        return {'started': True }
+    except ClientError as e:
+        return {'started': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def stop_logging(Name,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Stop logging for a trail
+
+    Returns {stopped: true} if the trail was stopped and returns
+    {stopped: False} if the trail was not stopped.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudtrail.stop_logging my_trail
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.stop_logging(Name=Name)
+        return {'stopped': True }
+    except ClientError as e:
+        return {'stopped': False, 'error': salt.utils.boto3.get_error(e)}

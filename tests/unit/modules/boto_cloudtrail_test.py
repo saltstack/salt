@@ -273,6 +273,61 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         result = boto_cloudtrail.list(**conn_parameters)
         self.assertEqual(result.get('error', {}).get('message'), error_message.format('list_trails'))
 
+    def test_that_when_updating_a_trail_succeeds_the_update_trail_method_returns_true(self):
+        '''
+        tests True trail updated.
+        '''
+        self.conn.update_trail.return_value = trail_ret
+        result = boto_cloudtrail.update(Name=trail_ret['Name'],
+                                        S3BucketName=trail_ret['S3BucketName'],
+                                        **conn_parameters)
+
+        self.assertTrue(result['updated'])
+
+    def test_that_when_updating_a_trail_fails_the_update_trail_method_returns_error(self):
+        '''
+        tests False trail not updated.
+        '''
+        self.conn.update_trail.side_effect = ClientError(error_content, 'update_trail')
+        result = boto_cloudtrail.update(Name=trail_ret['Name'],
+                                        S3BucketName=trail_ret['S3BucketName'],
+                                        **conn_parameters)
+        self.assertEqual(result.get('error', {}).get('message'), error_message.format('update_trail'))
+
+    def test_that_when_starting_logging_succeeds_the_start_logging_method_returns_true(self):
+        '''
+        tests True logging started.
+        '''
+        result = boto_cloudtrail.start_logging(Name=trail_ret['Name'], **conn_parameters)
+
+        self.assertTrue(result['started'])
+
+    def test_that_when_start_logging_fails_the_start_logging_method_returns_false(self):
+        '''
+        tests False logging not started.
+        '''
+        self.conn.describe_trails.return_value = {'trailList': []}
+        self.conn.start_logging.side_effect = ClientError(error_content, 'start_logging')
+        result = boto_cloudtrail.start_logging(Name=trail_ret['Name'], **conn_parameters)
+        self.assertFalse(result['started'])
+
+    def test_that_when_stopping_logging_succeeds_the_stop_logging_method_returns_true(self):
+        '''
+        tests True logging stopped.
+        '''
+        result = boto_cloudtrail.stop_logging(Name=trail_ret['Name'], **conn_parameters)
+
+        self.assertTrue(result['stopped'])
+
+    def test_that_when_stop_logging_fails_the_stop_logging_method_returns_false(self):
+        '''
+        tests False logging not stopped.
+        '''
+        self.conn.describe_trails.return_value = {'trailList': []}
+        self.conn.stop_logging.side_effect = ClientError(error_content, 'stop_logging')
+        result = boto_cloudtrail.stop_logging(Name=trail_ret['Name'], **conn_parameters)
+        self.assertFalse(result['stopped'])
+
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error
