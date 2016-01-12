@@ -23,6 +23,7 @@ import salt.ext.six as six
 
 log = logging.getLogger(__name__)
 
+__proxyenabled__ = ['*']
 
 def _auth():
     '''
