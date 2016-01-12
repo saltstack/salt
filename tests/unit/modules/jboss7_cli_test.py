@@ -79,7 +79,7 @@ class JBoss7CliTestCase(TestCase):
         'instance_name': 'Instance1',
         'cli_user': 'jbossadm',
         'cli_password': 'jbossadm',
-        'status_url': 'http://sampleapp.company.com:8080/'
+        'status_url': 'http://sampleapp.example.com:8080/'
     }
 
     def setUp(self):
@@ -301,7 +301,7 @@ class JBoss7CliTestCase(TestCase):
                 "blocking-timeout-wait-millis" => undefined,
                 "check-valid-connection-sql" => undefined,
                 "connection-properties" => undefined,
-                "connection-url" => "jdbc:mysql:thin:@db.company.com",
+                "connection-url" => "jdbc:mysql:thin:@db.example.com",
                 "datasource-class" => undefined,
                 "driver-class" => undefined,
                 "driver-name" => "mysql",
