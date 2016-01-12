@@ -180,8 +180,8 @@ def get_login_failed_last(name):
     :rtype: str
     '''
     unix_timestamp = _get_account_policy_data_value(name, 'failedLoginTimestamp')
-    if isinstance(unix_timestamp, float)
-        unix_timestamp = float(unix_timestamp):
+    if isinstance(unix_timestamp, float):
+        unix_timestamp = float(unix_timestamp)
         return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
     else:
         return 'Value not set'
