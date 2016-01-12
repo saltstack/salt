@@ -2591,7 +2591,8 @@ class ProxyMinion(Minion):
 
         proxy_init_fn = self.proxy[fq_proxyname+'.init']
         proxy_init_fn(self.opts)
-        self.opts['grains'] = salt.loader.grains(self.opts)
+        self.opts['grains'] = salt.loader.grains(self.opts, force_refresh=True)
+        self.functions['saltutil.sync_grains'](saltenv='base')
 
         # Check config 'add_proxymodule_to_opts'  Remove this in Boron.
         if self.opts['add_proxymodule_to_opts']:
