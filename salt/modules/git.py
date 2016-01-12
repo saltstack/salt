@@ -1729,11 +1729,12 @@ def list_worktrees(cwd, stale=False, user=None, **kwargs):
                     worktree_info[worktree_name] = worktree_loc
                     break
         except (IOError, OSError) as exc:
-            if exc.errno == errno.EEXIST:
+            if exc.errno == errno.ENOENT:
                 log.warning(
                     gitdir_file + ' does not exist, data for worktree ' +
                     worktree_name + ' may be corrupted. Try pruning worktrees.'
                 )
+                continue
             elif exc.errno == errno.EACCES:
                 raise CommandExecutionError(
                     'Permission denied reading from ' + gitdir_file
