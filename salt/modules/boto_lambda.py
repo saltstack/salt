@@ -180,6 +180,10 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
     account_id = __salt__['boto_iam.get_account_id'](
         region=region, key=key, keyid=keyid, profile=profile
     )
+    if profile and 'region' in profile:
+        region = profile['region']
+    if region is None:
+        region = 'us-east-1'
     return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
 
 
