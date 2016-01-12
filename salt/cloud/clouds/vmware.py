@@ -254,12 +254,12 @@ def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_ty
         edited_network_adapter = network_adapter
 
     if switch_type == 'standard':
-        network_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Network, new_network_name, container_ref)
+        network_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Network, new_network_name, container_ref=container_ref)
         edited_network_adapter.backing = vim.vm.device.VirtualEthernetCard.NetworkBackingInfo()
         edited_network_adapter.backing.deviceName = new_network_name
         edited_network_adapter.backing.network = network_ref
     elif switch_type == 'distributed':
-        network_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.dvs.DistributedVirtualPortgroup, new_network_name, container_ref)
+        network_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.dvs.DistributedVirtualPortgroup, new_network_name, container_ref=container_ref)
         dvs_port_connection = vim.dvs.PortConnection(
             portgroupKey=network_ref.key,
             switchUuid=network_ref.config.distributedVirtualSwitch.uuid
@@ -316,12 +316,12 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
         network_spec.device.backing.network = salt.utils.vmware.get_mor_by_property(_get_si(),
                                                                                     vim.Network,
                                                                                     network_name,
-                                                                                    container_ref)
+                                                                                    container_ref=container_ref)
     elif switch_type == 'distributed':
         network_ref = salt.utils.vmware.get_mor_by_property(_get_si(),
                                                             vim.dvs.DistributedVirtualPortgroup,
                                                             network_name,
-                                                            container_ref)
+                                                            container_ref=container_ref)
         dvs_port_connection = vim.dvs.PortConnection(
             portgroupKey=network_ref.key,
             switchUuid=network_ref.config.distributedVirtualSwitch.uuid
@@ -2055,7 +2055,7 @@ def create(vm_):
             container_ref = datacenter_ref if datacenter_ref else None
 
         # Clone VM/template from specified VM/template
-        object_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_['clonefrom'], container_ref)
+        object_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_['clonefrom'], container_ref=container_ref)
         if object_ref:
             clone_type = "template" if object_ref.config.template else "vm"
         else:
@@ -2065,13 +2065,13 @@ def create(vm_):
 
         # Either a cluster, or a resource pool must be specified when cloning from template.
         if resourcepool:
-            resourcepool_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ResourcePool, resourcepool, container_ref)
+            resourcepool_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ResourcePool, resourcepool, container_ref=container_ref)
             if not resourcepool_ref:
                 log.error("Specified resource pool: '{0}' does not exist".format(resourcepool))
                 if clone_type == "template":
                     raise SaltCloudSystemExit('You must specify a resource pool that exists.')
         elif cluster:
-            cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ClusterComputeResource, cluster, container_ref)
+            cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ClusterComputeResource, cluster, container_ref=container_ref)
             if not cluster_ref:
                 log.error("Specified cluster: '{0}' does not exist".format(cluster))
                 if clone_type == "template":
@@ -2088,7 +2088,7 @@ def create(vm_):
         # Either a datacenter or a folder can be optionally specified
         # If not specified, the existing VM/template\'s parent folder is used.
         if folder:
-            folder_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Folder, folder, container_ref)
+            folder_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Folder, folder, container_ref=container_ref)
             if not folder_ref:
                 log.error("Specified folder: '{0}' does not exist".format(folder))
                 log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
@@ -2113,12 +2113,12 @@ def create(vm_):
         # Either a datastore/datastore cluster can be optionally specified.
         # If not specified, the current datastore is used.
         if datastore:
-            datastore_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datastore, datastore, container_ref)
+            datastore_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Datastore, datastore, container_ref=container_ref)
             if datastore_ref:
                 # specific datastore has been specified
                 reloc_spec.datastore = datastore_ref
             else:
-                datastore_cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.StoragePod, datastore, container_ref)
+                datastore_cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.StoragePod, datastore, container_ref=container_ref)
                 if not datastore_cluster_ref:
                     log.error("Specified datastore/datastore cluster: '{0}' does not exist".format(datastore))
                     log.debug("Using datastore used by the {0} {1}".format(clone_type, vm_['clonefrom']))
@@ -2127,7 +2127,7 @@ def create(vm_):
             log.debug("Using datastore used by the {0} {1}".format(clone_type, vm_['clonefrom']))
 
         if host:
-            host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host, container_ref)
+            host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host, container_ref=container_ref)
             if host_ref:
                 reloc_spec.host = host_ref
             else:
@@ -2170,7 +2170,7 @@ def create(vm_):
             config_spec.memoryMB = memory_mb
 
         if devices:
-            specs = _manage_devices(devices, object_ref, container_ref)
+            specs = _manage_devices(devices, object_ref, container_ref=container_ref)
             config_spec.deviceChange = specs['device_specs']
 
         if extra_config:
@@ -2256,7 +2256,7 @@ def create(vm_):
             )
             return {'Error': err_msg}
 
-        new_vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_name, container_ref)
+        new_vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, vm_name, container_ref=container_ref)
 
         # If it a template or if it does not need to be powered on then do not wait for the IP
         if not template and power:
