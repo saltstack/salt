@@ -12,21 +12,17 @@ import logging
 
 # Import third party libs
 import salt.ext.six as six
-HAS_NOVA = False
+HAS_SHADE = False
 # pylint: disable=import-error
 try:
+    import shade
     import novaclient
     from novaclient import client
-    from novaclient.shell import OpenStackComputeShell
-    import novaclient.utils
     import novaclient.auth_plugin
-    import novaclient.exceptions
-    import novaclient.extension
-    import novaclient.base
-    HAS_NOVA = True
+    from novaclient.shell import OpenStackComputeShell
+    HAS_SHADE = True
 except ImportError:
-    class OpenStackComputeShell(object):
-        '''mock class for errors'''
+    pass
 # pylint: enable=import-error
 
 # Import salt libs
@@ -35,9 +31,6 @@ from salt.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
-
-# Version added to novaclient.client.Client function
-NOVACLIENT_MINVER = '2.6.1'
 
 # dict for block_device_mapping_v2
 CLIENT_BDM2_KEYS = {
@@ -55,13 +48,7 @@ CLIENT_BDM2_KEYS = {
 
 
 def check_nova():
-    if HAS_NOVA:
-        novaclient_ver = LooseVersion(novaclient.__version__)
-        min_ver = LooseVersion(NOVACLIENT_MINVER)
-        if novaclient_ver >= min_ver:
-            return HAS_NOVA
-        log.debug('Newer novaclient version required.  Minimum: {0}'.format(NOVACLIENT_MINVER))
-    return False
+    return HAS_SHADE
 
 
 # kwargs has to be an object instead of a dictionary for the __post_parse_arg__
@@ -70,92 +57,38 @@ class KwargsStruct(object):
         self.__dict__.update(entries)
 
 
-def _parse_block_device_mapping_v2(block_device=None, boot_volume=None, snapshot=None, ephemeral=None, swap=None):
-    bdm = []
-    if block_device is None:
-        block_device = []
-    if ephemeral is None:
-        ephemeral = []
-
-    if boot_volume is not None:
-        bdm_dict = {'uuid': boot_volume, 'source_type': 'volume',
-                    'destination_type': 'volume', 'boot_index': 0,
-                    'delete_on_termination': False}
-        bdm.append(bdm_dict)
-
-    if snapshot is not None:
-        bdm_dict = {'uuid': snapshot, 'source_type': 'snapshot',
-                    'destination_type': 'volume', 'boot_index': 0,
-                    'delete_on_termination': False}
-        bdm.append(bdm_dict)
-
-    for device_spec in block_device:
-        bdm_dict = {}
-
-        for key, value in six.iteritems(device_spec):
-            bdm_dict[CLIENT_BDM2_KEYS[key]] = value
-
-        # Convert the delete_on_termination to a boolean or set it to true by
-        # default for local block devices when not specified.
-        if 'delete_on_termination' in bdm_dict:
-            action = bdm_dict['delete_on_termination']
-            bdm_dict['delete_on_termination'] = (action == 'remove')
-        elif bdm_dict.get('destination_type') == 'local':
-            bdm_dict['delete_on_termination'] = True
-
-        bdm.append(bdm_dict)
-
-    for ephemeral_spec in ephemeral:
-        bdm_dict = {'source_type': 'blank', 'destination_type': 'local',
-                    'boot_index': -1, 'delete_on_termination': True}
-        if 'size' in ephemeral_spec:
-            bdm_dict['volume_size'] = ephemeral_spec['size']
-        if 'format' in ephemeral_spec:
-            bdm_dict['guest_format'] = ephemeral_spec['format']
-
-        bdm.append(bdm_dict)
-
-    if swap is not None:
-        bdm_dict = {'source_type': 'blank', 'destination_type': 'local',
-                    'boot_index': -1, 'delete_on_termination': True,
-                    'guest_format': 'swap', 'volume_size': swap}
-        bdm.append(bdm_dict)
-
-    return bdm
-
-
 class NovaServer(object):
-    def __init__(self, name, server, password=None):
+    def __init__(self, server, password=None):
         '''
         Make output look like libcloud output for consistency
         '''
-        self.name = name
-        self.id = server['id']
-        self.image = server.get('image', {}).get('id', 'Boot From Volume')
-        self.size = server['flavor']['id']
-        self.state = server['state']
+        self.name = server.name
+        self.id = server.id
+        self.image = getattr(server, 'image', {}).get('id', 'Boot From Volume')
+        self.size = server.flavor['id']
+        self.state = server.status
         self._uuid = None
         self.extra = {
-            'metadata': server['metadata'],
-            'access_ip': server['accessIPv4']
+            'metadata': server.metadata,
+            'access_ip': server.accessIPv4,
         }
 
-        if 'addresses' in server:
-            if 'public' in server['addresses']:
+        if hasattr(server, 'addresses'):
+            if 'public' in server.addresses:
                 self.public_ips = [
-                    ip['addr'] for ip in server['addresses']['public']
+                    ip['addr'] for ip in server.addreses['public']
                 ]
             else:
                 self.public_ips = []
 
-            if 'private' in server['addresses']:
+            if 'private' in server.addresses:
                 self.private_ips = [
-                    ip['addr'] for ip in server['addresses']['private']
+                    ip['addr'] for ip in server.addresses['private']
                 ]
             else:
                 self.private_ips = []
 
-            self.addresses = server['addresses']
+            self.addresses = server.addresses
 
         if password:
             self.extra['password'] = password
@@ -173,130 +106,57 @@ def get_entry(dict_, key, value, raise_error=True):
     return {}
 
 
-def sanatize_novaclient(kwargs):
-    variables = (
-        'username', 'api_key', 'project_id', 'auth_url', 'insecure',
-        'timeout', 'proxy_tenant_id', 'proxy_token', 'region_name',
-        'endpoint_type', 'extensions', 'service_type', 'service_name',
-        'volume_service_name', 'timings', 'bypass_url', 'os_cache',
-        'no_cache', 'http_log_debug', 'auth_system', 'auth_plugin',
-        'auth_token', 'cacert', 'tenant_id'
-    )
-    ret = {}
-    for var in kwargs:
-        if var in variables:
-            ret[var] = kwargs[var]
-
-    return ret
-
-
 # Function alias to not shadow built-ins
-class SaltNova(OpenStackComputeShell):
+class SaltNova(object):
     '''
     Class for all novaclient functions
     '''
-    def __init__(
-        self,
-        username,
-        project_id,
-        auth_url,
-        region_name=None,
-        password=None,
-        os_auth_plugin=None,
-        **kwargs
-    ):
+    def __init__(self, **kwargs):
         '''
         Set up nova credentials
         '''
         self.kwargs = kwargs.copy()
 
         if not novaclient.base.Manager._hooks_map:
-            self.extensions = getattr(self, '_discover_extensions', client.discover_extensions)('1.1')
+            if hasattr(OpenStackComputeShell, '_discover_extensions'):
+                self.extensions = OpenStackComputeShell()._discover_extensions('2.0')
+            else:
+                self.extensions = client.discover_extensions('2.0')
             for extension in self.extensions:
                 extension.run_hooks('__pre_parse_args__')
             self.kwargs['extensions'] = self.extensions
 
-        self.kwargs['username'] = username
-        self.kwargs['project_id'] = project_id
-        self.kwargs['auth_url'] = auth_url
-        self.kwargs['region_name'] = region_name
-        self.kwargs['service_type'] = 'compute'
-
-        # used in novaclient extensions to see if they are rackspace or not, to know if it needs to load
-        # the hooks for that extension or not.  This is cleaned up by sanatize_novaclient
-        self.kwargs['os_auth_url'] = auth_url
-
-        if os_auth_plugin is not None:
+        if kwargs.get('os_auth_plugin') is not None:
             novaclient.auth_plugin.discover_auth_systems()
-            auth_plugin = novaclient.auth_plugin.load_plugin(os_auth_plugin)
+            auth_plugin = novaclient.auth_plugin.load_plugin(kwargs['os_auth_plugin'])
             self.kwargs['auth_plugin'] = auth_plugin
-            self.kwargs['auth_system'] = os_auth_plugin
+            self.kwargs['auth_system'] = kwargs['os_auth_plugin']
 
-        if not self.kwargs.get('api_key', None):
-            self.kwargs['api_key'] = password
-
-        # This has to be run before sanatize_novaclient before extra variables are cleaned out.
+        # needs an object, not a dictionary
         if hasattr(self, 'extensions'):
-            # needs an object, not a dictionary
             self.kwargstruct = KwargsStruct(**self.kwargs)
-            for extension in self.extensions:
+            for extension in self.kwargs['extensions']:
                 extension.run_hooks('__post_parse_args__', self.kwargstruct)
             self.kwargs = self.kwargstruct.__dict__
 
-        self.kwargs = sanatize_novaclient(self.kwargs)
+        if 'os_auth_plugin' in kwargs:
+            kwargs['auth_type'] = kwargs['os_auth_plugin']
+            del kwargs['os_auth_plugin']
 
-        # Requires novaclient version >= 2.6.1
-        self.kwargs['version'] = str(kwargs.get('version', 2))
-
-        conn = client.Client(**self.kwargs)
-        try:
-            conn.client.authenticate()
-        except novaclient.exceptions.AmbiguousEndpoints:
-            raise SaltCloudSystemExit(
-                "Nova provider requires a 'region_name' to be specified"
-            )
-
-        self.kwargs['auth_token'] = conn.client.auth_token
-        self.catalog = conn.client.service_catalog.catalog['access']['serviceCatalog']
-
-        if region_name is not None:
-            servers_endpoints = get_entry(self.catalog, 'type', 'compute')['endpoints']
-            self.kwargs['bypass_url'] = get_entry(
-                servers_endpoints,
-                'region',
-                region_name
-            )['publicURL']
-
-        self.compute_conn = client.Client(**self.kwargs)
-
-        volume_endpoints = get_entry(self.catalog, 'type', 'volume', raise_error=False).get('endpoints', {})
-        if volume_endpoints:
-            if region_name is not None:
-                self.kwargs['bypass_url'] = get_entry(
-                    volume_endpoints,
-                    'region',
-                    region_name
-                )['publicURL']
-
-            self.volume_conn = client.Client(**self.kwargs)
-            if hasattr(self, 'extensions'):
-                self.expand_extensions()
-        else:
-            self.volume_conn = None
+        conn = shade.openstack_cloud(**self.kwargs)
+        self.catalog = conn.service_catalog
+        self.expand_extensions()
 
     def expand_extensions(self):
-        for connection in (self.compute_conn, self.volume_conn):
-            if connection is None:
-                continue
-            for extension in self.extensions:
-                for attr in extension.module.__dict__:
-                    if not inspect.isclass(getattr(extension.module, attr)):
+        for extension in self.extensions:
+            for attr in extension.module.__dict__:
+                if not inspect.isclass(getattr(extension.module, attr)):
+                    continue
+                for key, value in six.iteritems(self.conn.nova_client.__dict__):
+                    if not isinstance(value, novaclient.base.Manager):
                         continue
-                    for key, value in six.iteritems(connection.__dict__):
-                        if not isinstance(value, novaclient.base.Manager):
-                            continue
-                        if value.__class__.__name__ == attr:
-                            setattr(connection, key, getattr(connection, extension.name))
+                    if value.__class__.__name__ == attr:
+                        setattr(self.conn.nova_client, key, getattr(self.conn.nova_client, extension.name))
 
     def get_catalog(self):
         '''
@@ -308,12 +168,10 @@ class SaltNova(OpenStackComputeShell):
         '''
         Make output look like libcloud output for consistency
         '''
-        server_info = self.server_show(uuid)
-        server = next(six.itervalues(server_info))
-        server_name = next(six.iterkeys(server_info))
+        server = self.conn.get_server_by_id(uuid)
         if not hasattr(self, 'password'):
             self.password = None
-        ret = NovaServer(server_name, server, self.password)
+        ret = NovaServer(server, self.password)
 
         return ret
 
@@ -321,10 +179,10 @@ class SaltNova(OpenStackComputeShell):
         '''
         Boot a cloud server.
         '''
-        nt_ks = self.compute_conn
         kwargs['name'] = name
         kwargs['flavor'] = flavor_id
         kwargs['image'] = image_id or None
+        kwargs['wait'] = True
         ephemeral = kwargs.pop('ephemeral', [])
         block_device = kwargs.pop('block_device', [])
         boot_volume = kwargs.pop('boot_volume', None)
@@ -334,59 +192,41 @@ class SaltNova(OpenStackComputeShell):
             block_device=block_device, boot_volume=boot_volume, snapshot=snapshot,
             ephemeral=ephemeral, swap=swap
         )
-        response = nt_ks.servers.create(**kwargs)
-        self.uuid = response.id
-        self.password = getattr(response, 'adminPass', None)
-
-        start = time.time()
-        trycount = 0
-        while True:
-            trycount += 1
-            try:
-                return self.server_show_libcloud(self.uuid)
-            except Exception as exc:
-                log.debug(
-                    'Server information not yet available: {0}'.format(exc)
-                )
-                time.sleep(1)
-                if time.time() - start > timeout:
-                    log.error('Timed out after {0} seconds '
-                              'while waiting for data'.format(timeout))
-                    return False
-
-                log.debug(
-                    'Retrying server_show() (try {0})'.format(trycount)
-                )
+        return self.conn.create_server(**kwargs)
 
     def show_instance(self, name):
         '''
         Find a server by its name (libcloud)
         '''
-        return self.server_by_name(name)
+        servers = self.conn.get_server(name)
+        if not servers:
+            return {'name': name, 'status': 'DELETED'}
+        return NovaServer(servers[0])
 
     def root_password(self, server_id, password):
         '''
         Change server(uuid's) root password
         '''
-        nt_ks = self.compute_conn
-        nt_ks.servers.change_password(server_id, password)
+        self.conn.change_password(server_id, password, wait=True)
 
     def server_by_name(self, name):
         '''
         Find a server by its name
         '''
-        return self.server_show_libcloud(
-            self.server_list().get(name, {}).get('id', '')
-        )
+        servers = self.conn.get_server(name)
+        if not servers:
+            return {'name': name, 'status': 'DELETED'}
+        return NovaServer(servers[0])
 
-    def _volume_get(self, volume_id):
+    def _get_volume(self, name):
+        if not self.conn.volume_exists(name):
+            return {'name': name, 'status': 'deleted'}
+        return self.conn.get_volume(name)
+
+    def _volume(self, volume):
         '''
         Organize information about a volume from the volume_id
         '''
-        if self.volume_conn is None:
-            raise SaltCloudSystemExit('No cinder endpoint available')
-        nt_ks = self.volume_conn
-        volume = nt_ks.volumes.get(volume_id)
         response = {'name': volume.display_name,
                     'size': volume.size,
                     'id': volume.id,
@@ -399,74 +239,50 @@ class SaltNova(OpenStackComputeShell):
     def volume_list(self, search_opts=None):
         '''
         List all block volumes
+
+        search_opts is depreacted.
+        shade can do a search_volumes instead
         '''
-        if self.volume_conn is None:
-            raise SaltCloudSystemExit('No cinder endpoint available')
-        nt_ks = self.volume_conn
-        volumes = nt_ks.volumes.list(search_opts=search_opts)
+        volumes = self.conn.list_volumes()
         response = {}
         for volume in volumes:
-            response[volume.display_name] = {
-                'name': volume.display_name,
-                'size': volume.size,
-                'id': volume.id,
-                'description': volume.display_description,
-                'attachments': volume.attachments,
-                'status': volume.status
-            }
+            response[volume.display_name] = self._volume(volume)
         return response
 
     def volume_show(self, name):
         '''
         Show one volume
         '''
-        if self.volume_conn is None:
-            raise SaltCloudSystemExit('No cinder endpoint available')
-        nt_ks = self.volume_conn
-        volumes = self.volume_list(
-            search_opts={'display_name': name},
-        )
-        volume = volumes[name]
-#        except Exception as esc:
-#            # volume doesn't exist
-#            log.error(esc.strerror)
-#            return {'name': name, 'status': 'deleted'}
-
-        return volume
+        volume = self._get_volume(name)
+        if volume['status'] == 'deleted':
+            return volume
+        return self._volume(volume)
 
     def volume_create(self, name, size=100, snapshot=None, voltype=None,
                       availability_zone=None):
         '''
         Create a block device
         '''
-        if self.volume_conn is None:
-            raise SaltCloudSystemExit('No cinder endpoint available')
-        nt_ks = self.volume_conn
-        response = nt_ks.volumes.create(
+        volume = self.conn.create_volume(
             size=size,
             display_name=name,
             volume_type=voltype,
             snapshot_id=snapshot,
-            availability_zone=availability_zone
+            availability_zone=availability_zone,
+            wait=True,
         )
 
-        return self._volume_get(response.id)
+        return self._volume(volume)
 
     def volume_delete(self, name):
         '''
         Delete a block device
         '''
-        if self.volume_conn is None:
-            raise SaltCloudSystemExit('No cinder endpoint available')
-        nt_ks = self.volume_conn
-        try:
-            volume = self.volume_show(name)
-        except KeyError as exc:
-            raise SaltCloudSystemExit('Unable to find {0} volume: {1}'.format(name, exc))
-        if volume['status'] == 'deleted':
-            return volume
-        response = nt_ks.volumes.delete(volume['id'])
-        return volume
+        if not self.conn.volume_exists(name):
+            return {'name': name, 'status': 'deleted'}
+        if not self.conn.delete_volume(name, wait=True)
+            raise SaltCloudSystemExit('Failed to delete {0} volume: {1}'.format(name, exc))
+        return {'name': name, 'status': 'deleted'}
 
     def volume_detach(self,
                       name,
@@ -474,113 +290,59 @@ class SaltNova(OpenStackComputeShell):
         '''
         Detach a block device
         '''
-        try:
-            volume = self.volume_show(name)
-        except KeyError as exc:
-            raise SaltCloudSystemExit('Unable to find {0} volume: {1}'.format(name, exc))
-        if not volume['attachments']:
+        if not self.conn.volume_exists(name):
             return True
-        response = self.compute_conn.volumes.delete_server_volume(
-            volume['attachments'][0]['server_id'],
-            volume['attachments'][0]['id']
-        )
-        trycount = 0
-        start = time.time()
-        while True:
-            trycount += 1
-            try:
-                response = self._volume_get(volume['id'])
-                if response['status'] == 'available':
-                    return response
-            except Exception as exc:
-                log.debug('Volume is detaching: {0}'.format(name))
-                time.sleep(1)
-                if time.time() - start > timeout:
-                    log.error('Timed out after {0} seconds '
-                              'while waiting for data'.format(timeout))
-                    return False
+        volume = self.conn.get_volume(name)
+        volume_id = volume.attachments[0]['volume_id']
+        server_id = volume.attachments[0]['server_id']
+        if not self.conn.detach_volume(server_id, volume_id, wait=True, timeout=timeout):
+            raise SaltCloudSystemExit('Failed to detach {0} volume: {1}'.format(name, exc))
+        return True
 
-                log.debug(
-                    'Retrying volume_show() (try {0})'.format(trycount)
-                )
-
-    def volume_attach(self,
-                      name,
-                      server_name,
-                      device='/dev/xvdb',
-                      timeout=300):
+    def volume_attach(self, name, server_name, device='/dev/xvdb', timeout=300):
         '''
         Attach a block device
         '''
-        try:
-            volume = self.volume_show(name)
-        except KeyError as exc:
+        if not self.conn.volume_exists(name):
             raise SaltCloudSystemExit('Unable to find {0} volume: {1}'.format(name, exc))
-        server = self.server_by_name(server_name)
-        response = self.compute_conn.volumes.create_server_volume(
-            server.id,
-            volume['id'],
-            device=device
-        )
-        trycount = 0
-        start = time.time()
-        while True:
-            trycount += 1
-            try:
-                response = self._volume_get(volume['id'])
-                if response['status'] == 'in-use':
-                    return response
-            except Exception as exc:
-                log.debug('Volume is attaching: {0}'.format(name))
-                time.sleep(1)
-                if time.time() - start > timeout:
-                    log.error('Timed out after {0} seconds '
-                              'while waiting for data'.format(timeout))
-                    return False
+        volume = self.conn.get_volume(name)
+        servers = self.conn.get_server(server_name)
 
-                log.debug(
-                    'Retrying volume_show() (try {0})'.format(trycount)
-                )
+        return self.conn.attach_volume(server.id, volume.id, device=device, wait=True, timeout=timeout)
 
     def suspend(self, instance_id):
         '''
         Suspend a server
         '''
-        nt_ks = self.compute_conn
-        response = nt_ks.servers.suspend(instance_id)
+        self.conn.nova_client.servers.suspend(instance_id)
         return True
 
     def resume(self, instance_id):
         '''
         Resume a server
         '''
-        nt_ks = self.compute_conn
-        response = nt_ks.servers.resume(instance_id)
+        self.conn.nova_client.servers.resume(instance_id)
         return True
 
     def lock(self, instance_id):
         '''
         Lock an instance
         '''
-        nt_ks = self.compute_conn
-        response = nt_ks.servers.lock(instance_id)
+        self.conn.nova_client.servers.lock(instance_id)
         return True
 
     def delete(self, instance_id):
         '''
         Delete a server
         '''
-        nt_ks = self.compute_conn
-        response = nt_ks.servers.delete(instance_id)
-        return True
+        return self.conn.delete_server(instance_id)
 
     def flavor_list(self):
         '''
         Return a list of available flavors (nova flavor-list)
         '''
-        nt_ks = self.compute_conn
         ret = {}
-        for flavor in nt_ks.flavors.list():
+        for flavor in self.conn.list_flavors():
             links = {}
             for link in flavor.links:
                 links[link['rel']] = link['href']
@@ -608,8 +370,7 @@ class SaltNova(OpenStackComputeShell):
         '''
         Create a flavor
         '''
-        nt_ks = self.compute_conn
-        nt_ks.flavors.create(
+        self.conn.nova_client.flavors.create(
             name=name, flavorid=flavor_id, ram=ram, disk=disk, vcpus=vcpus
         )
         return {'name': name,
@@ -622,7 +383,7 @@ class SaltNova(OpenStackComputeShell):
         '''
         Delete a flavor
         '''
-        nt_ks = self.compute_conn
+        nt_ks = self.conn.nova_client
         nt_ks.flavors.delete(flavor_id)
         return 'Flavor deleted: {0}'.format(flavor_id)
 
@@ -630,9 +391,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         List keypairs
         '''
-        nt_ks = self.compute_conn
         ret = {}
-        for keypair in nt_ks.keypairs.list():
+        for keypair in self.conn.list_keypairs():
             ret[keypair.name] = {
                 'name': keypair.name,
                 'fingerprint': keypair.fingerprint,
@@ -650,7 +410,7 @@ class SaltNova(OpenStackComputeShell):
             pubkey = ifile.read()
         if not pubkey:
             return False
-        nt_ks.keypairs.create(name, public_key=pubkey)
+        self.conn.create_keypair(name, pubkey)
         ret = {'name': name, 'pubkey': pubkey}
         return ret
 
@@ -658,16 +418,14 @@ class SaltNova(OpenStackComputeShell):
         '''
         Delete a keypair
         '''
-        nt_ks = self.compute_conn
-        nt_ks.keypairs.delete(name)
+        self.conn.delete_keypair(name)
         return 'Keypair deleted: {0}'.format(name)
 
     def image_show(self, image_id):
         '''
         Show image details and metadata
         '''
-        nt_ks = self.compute_conn
-        image = nt_ks.images.get(image_id)
+        image = self.conn.get_image(image_id)
         links = {}
         for link in image.links:
             links[link['rel']] = link['href']
@@ -692,9 +450,8 @@ class SaltNova(OpenStackComputeShell):
         '''
         List server images
         '''
-        nt_ks = self.compute_conn
         ret = {}
-        for image in nt_ks.images.list():
+        for image in self.conn.list_images():
             links = {}
             for link in image.links:
                 links[link['rel']] = link['href']
@@ -725,14 +482,10 @@ class SaltNova(OpenStackComputeShell):
         '''
         Set image metadata
         '''
-        nt_ks = self.compute_conn
-        if name:
-            for image in nt_ks.images.list():
-                if image.name == name:
-                    image_id = image.id  # pylint: disable=C0103
+        image_id = self.conn.get_image(image_id or name).id
         if not image_id:
             return {'Error': 'A valid image name or id was not specified'}
-        nt_ks.images.set_meta(image_id, kwargs)
+        self.conn.glance_client.images.set_meta(image_id, kwargs)
         return {image_id: kwargs}
 
     def image_meta_delete(self,
@@ -742,24 +495,19 @@ class SaltNova(OpenStackComputeShell):
         '''
         Delete image metadata
         '''
-        nt_ks = self.compute_conn
-        if name:
-            for image in nt_ks.images.list():
-                if image.name == name:
-                    image_id = image.id  # pylint: disable=C0103
+        image_id = self.conn.get_image(image_id or name).id # pylint: disable=C0103
         pairs = keys.split(',')
         if not image_id:
             return {'Error': 'A valid image name or id was not specified'}
-        nt_ks.images.delete_meta(image_id, pairs)
+        self.conn.glance_client.images.delete_meta(image_id, pairs)
         return {image_id: 'Deleted: {0}'.format(pairs)}
 
     def server_list(self):
         '''
         List servers
         '''
-        nt_ks = self.compute_conn
         ret = {}
-        for item in nt_ks.servers.list():
+        for item in self.conn.list_servers():
             try:
                 ret[item.name] = {
                     'id': item.id,
@@ -776,109 +524,98 @@ class SaltNova(OpenStackComputeShell):
                 pass
         return ret
 
+    def _detail_server(self, item):
+        ret[item.name] = {
+            'OS-EXT-SRV-ATTR': {},
+            'OS-EXT-STS': {},
+            'accessIPv4': item.accessIPv4,
+            'accessIPv6': item.accessIPv6,
+            'addresses': item.addresses,
+            'created': item.created,
+            'flavor': {'id': item.flavor['id'],
+                       'links': item.flavor['links']},
+            'hostId': item.hostId,
+            'id': item.id,
+            'image': {'id': item.image['id'] if item.image else 'Boot From Volume',
+                      'links': item.image['links'] if item.image else ''},
+            'key_name': item.key_name,
+            'links': item.links,
+            'metadata': item.metadata,
+            'name': item.name,
+            'state': item.status,
+            'tenant_id': item.tenant_id,
+            'updated': item.updated,
+            'user_id': item.user_id,
+        }
+
+        ret[item.name]['progress'] = getattr(item, 'progress', '0')
+
+        if hasattr(item.__dict__, 'OS-DCF:diskConfig'):
+            ret[item.name]['OS-DCF'] = {
+                'diskConfig': item.__dict__['OS-DCF:diskConfig']
+            }
+        if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:host'):
+            ret[item.name]['OS-EXT-SRV-ATTR']['host'] = \
+                item.__dict__['OS-EXT-SRV-ATTR:host']
+        if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:hypervisor_hostname'):
+            ret[item.name]['OS-EXT-SRV-ATTR']['hypervisor_hostname'] = \
+                item.__dict__['OS-EXT-SRV-ATTR:hypervisor_hostname']
+        if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:instance_name'):
+            ret[item.name]['OS-EXT-SRV-ATTR']['instance_name'] = \
+                item.__dict__['OS-EXT-SRV-ATTR:instance_name']
+        if hasattr(item.__dict__, 'OS-EXT-STS:power_state'):
+            ret[item.name]['OS-EXT-STS']['power_state'] = \
+                item.__dict__['OS-EXT-STS:power_state']
+        if hasattr(item.__dict__, 'OS-EXT-STS:task_state'):
+            ret[item.name]['OS-EXT-STS']['task_state'] = \
+                item.__dict__['OS-EXT-STS:task_state']
+        if hasattr(item.__dict__, 'OS-EXT-STS:vm_state'):
+            ret[item.name]['OS-EXT-STS']['vm_state'] = \
+                item.__dict__['OS-EXT-STS:vm_state']
+        if hasattr(item.__dict__, 'security_groups'):
+            ret[item.name]['security_groups'] = \
+                item.__dict__['security_groups']
+
     def server_list_detailed(self):
         '''
         Detailed list of servers
         '''
-        nt_ks = self.compute_conn
         ret = {}
-        for item in nt_ks.servers.list():
+        for item in self.conn.list_servers(detailed=true):
             try:
-                ret[item.name] = {
-                    'OS-EXT-SRV-ATTR': {},
-                    'OS-EXT-STS': {},
-                    'accessIPv4': item.accessIPv4,
-                    'accessIPv6': item.accessIPv6,
-                    'addresses': item.addresses,
-                    'created': item.created,
-                    'flavor': {'id': item.flavor['id'],
-                               'links': item.flavor['links']},
-                    'hostId': item.hostId,
-                    'id': item.id,
-                    'image': {'id': item.image['id'] if item.image else 'Boot From Volume',
-                              'links': item.image['links'] if item.image else ''},
-                    'key_name': item.key_name,
-                    'links': item.links,
-                    'metadata': item.metadata,
-                    'name': item.name,
-                    'state': item.status,
-                    'tenant_id': item.tenant_id,
-                    'updated': item.updated,
-                    'user_id': item.user_id,
-                }
+                self._detail_server(item)
             except TypeError:
                 continue
-
-            ret[item.name]['progress'] = getattr(item, 'progress', '0')
-
-            if hasattr(item.__dict__, 'OS-DCF:diskConfig'):
-                ret[item.name]['OS-DCF'] = {
-                    'diskConfig': item.__dict__['OS-DCF:diskConfig']
-                }
-            if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:host'):
-                ret[item.name]['OS-EXT-SRV-ATTR']['host'] = \
-                    item.__dict__['OS-EXT-SRV-ATTR:host']
-            if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:hypervisor_hostname'):
-                ret[item.name]['OS-EXT-SRV-ATTR']['hypervisor_hostname'] = \
-                    item.__dict__['OS-EXT-SRV-ATTR:hypervisor_hostname']
-            if hasattr(item.__dict__, 'OS-EXT-SRV-ATTR:instance_name'):
-                ret[item.name]['OS-EXT-SRV-ATTR']['instance_name'] = \
-                    item.__dict__['OS-EXT-SRV-ATTR:instance_name']
-            if hasattr(item.__dict__, 'OS-EXT-STS:power_state'):
-                ret[item.name]['OS-EXT-STS']['power_state'] = \
-                    item.__dict__['OS-EXT-STS:power_state']
-            if hasattr(item.__dict__, 'OS-EXT-STS:task_state'):
-                ret[item.name]['OS-EXT-STS']['task_state'] = \
-                    item.__dict__['OS-EXT-STS:task_state']
-            if hasattr(item.__dict__, 'OS-EXT-STS:vm_state'):
-                ret[item.name]['OS-EXT-STS']['vm_state'] = \
-                    item.__dict__['OS-EXT-STS:vm_state']
-            if hasattr(item.__dict__, 'security_groups'):
-                ret[item.name]['security_groups'] = \
-                    item.__dict__['security_groups']
         return ret
 
     def server_show(self, server_id):
         '''
         Show details of one server
         '''
-        ret = {}
-        try:
-            servers = self.server_list_detailed()
-        except AttributeError:
-            raise SaltCloudSystemExit('Corrupt server in server_list_detailed. Remove corrupt servers.')
-        for server_name, server in six.iteritems(servers):
-            if str(server['id']) == server_id:
-                ret[server_name] = server
-        return ret
+        server = self.conn.search_servers(server_id, detailed=True)
+        return {server.name: server}
 
     def secgroup_create(self, name, description):
         '''
         Create a security group
         '''
-        nt_ks = self.compute_conn
-        nt_ks.security_groups.create(name, description)
-        ret = {'name': name, 'description': description}
-        return ret
+        return self.conn.create_security_group(name, description)
 
     def secgroup_delete(self, name):
         '''
         Delete a security group
         '''
-        nt_ks = self.compute_conn
-        for item in nt_ks.security_groups.list():
-            if item.name == name:
-                nt_ks.security_groups.delete(item.id)
-                return {name: 'Deleted security group: {0}'.format(name)}
-        return 'Security group not found: {0}'.format(name)
+        secgroups = self.conn.search_security_groups(name)
+        if not secgroups:
+            return 'Security group not found: {0}'.format(name)
+        return self.delete_security_group(name)
 
     def secgroup_list(self):
         '''
         List security groups
         '''
-        nt_ks = self.compute_conn
         ret = {}
-        for item in nt_ks.security_groups.list():
+        for item in self.conn.list_security_groups():
             ret[item.name] = {
                 'name': item.name,
                 'description': item.description,
@@ -911,16 +648,13 @@ class SaltNova(OpenStackComputeShell):
         '''
         Show network information
         '''
-        nt_ks = self.compute_conn
-        net_list = nt_ks.networks.list()
-        return self._network_show(name, net_list)
+        return self.conn.get_network(name)
 
     def network_list(self):
         '''
         List extra private networks
         '''
-        nt_ks = self.compute_conn
-        return [network.__dict__ for network in nt_ks.networks.list()]
+        return self.conn.list_networks()
 
     def _sanatize_network_params(self, kwargs):
         '''
@@ -937,40 +671,81 @@ class SaltNova(OpenStackComputeShell):
                 del kwargs[variable]
         return kwargs
 
-    def network_create(self, name, **kwargs):
+    def network_create(self, name, cidr, shared=False, admin_state_up=True, external=False, **kwargs):
         '''
         Create extra private network
-        '''
-        nt_ks = self.compute_conn
-        kwargs['label'] = name
-        kwargs = self._sanatize_network_params(kwargs)
-        net = nt_ks.networks.create(**kwargs)
-        return net.__dict__
+        kwargs:
+            :param int ip_version:
+               The IP version, which is 4 or 6.
+            :param bool enable_dhcp:
+               Set to ``True`` if DHCP is enabled and ``False`` if disabled.
+               Default is ``False``.
+            :param string subnet_name:
+               The name of the subnet.
+            :param string tenant_id:
+               The ID of the tenant who owns the network. Only administrative users
+               can specify a tenant ID other than their own.
+            :param list allocation_pools:
+               A list of dictionaries of the start and end addresses for the
+               allocation pools. For example::
 
-    def _server_uuid_from_name(self, name):
+                 [
+                   {
+                     "start": "192.168.199.2",
+                     "end": "192.168.199.254"
+                   }
+                 ]
+
+            :param string gateway_ip:
+               The gateway IP address. When you specify both allocation_pools and
+               gateway_ip, you must ensure that the gateway IP does not overlap
+               with the specified allocation pools.
+            :param list dns_nameservers:
+               A list of DNS name servers for the subnet. For example::
+
+                 [ "8.8.8.7", "8.8.8.8" ]
+
+            :param list host_routes:
+               A list of host route dictionaries for the subnet. For example::
+
+                 [
+                   {
+                     "destination": "0.0.0.0/0",
+                     "nexthop": "123.456.78.9"
+                   },
+                   {
+                     "destination": "192.168.0.0/24",
+                     "nexthop": "192.168.0.1"
+                   }
+                 ]
+
+            :param string ipv6_ra_mode:
+               IPv6 Router Advertisement mode. Valid values are: 'dhcpv6-stateful',
+               'dhcpv6-stateless', or 'slaac'.
+            :param string ipv6_address_mode:
+               IPv6 address mode. Valid values are: 'dhcpv6-stateful',
+               'dhcpv6-stateless', or 'slaac'.
         '''
-        Get server uuid from name
-        '''
-        return self.server_list().get(name, {}).get('id', '')
+        network = self.conn.create_network(name, shared, admin_state_up, external)
+        subnet = self.conn.create_subnet(network.id, cidr, **kwargs)
+        return self.conn.get_network(network.id)
 
     def virtual_interface_list(self, name):
         '''
         Get virtual interfaces on slice
         '''
-        nt_ks = self.compute_conn
-        nets = nt_ks.virtual_interfaces.list(self._server_uuid_from_name(name))
+        nets = self.conn.nova_client.virtual_interfaces.list(self.conn.get_server(name).id)
         return [network.__dict__ for network in nets]
 
     def virtual_interface_create(self, name, net_name):
         '''
         Add an interfaces to a slice
         '''
-        nt_ks = self.compute_conn
-        serverid = self._server_uuid_from_name(name)
-        networkid = self.network_show(net_name).get('id', None)
+        serverid = self.conn.get_server(name).id
+        networkid = getattr(self.get_network(net_name), 'id', None)
         if networkid is None:
             return {net_name: False}
-        nets = nt_ks.virtual_interfaces.create(networkid, serverid)
+        nets = self.conn.nova_client.virtual_interfaces.create(networkid, serverid)
         return nets
 
     def floating_ip_pool_list(self):
@@ -979,10 +754,9 @@ class SaltNova(OpenStackComputeShell):
 
         .. versionadded:: Boron
         '''
-        nt_ks = self.compute_conn
         pools = nt_ks.floating_ip_pools.list()
         response = {}
-        for pool in pools:
+        for pool in self.conn.list_floating_ip_pools():
             response[pool.name] = {
                 'name': pool.name,
             }
@@ -994,10 +768,8 @@ class SaltNova(OpenStackComputeShell):
 
         .. versionadded:: Boron
         '''
-        nt_ks = self.compute_conn
-        floating_ips = nt_ks.floating_ips.list()
         response = {}
-        for floating_ip in floating_ips:
+        for floating_ip in self.conn.list_floating_ips():
             response[floating_ip.ip] = {
                 'ip': floating_ip.ip,
                 'fixed_ip': floating_ip.fixed_ip,
@@ -1013,12 +785,7 @@ class SaltNova(OpenStackComputeShell):
 
         .. versionadded:: Boron
         '''
-        nt_ks = self.compute_conn
-        floating_ips = nt_ks.floating_ips.list()
-        for floating_ip in floating_ips:
-            if floating_ip.ip == ip:
-                return floating_ip
-        return {}
+        return self.floating_ip_list().get(ip, {})
 
     def floating_ip_create(self, pool=None):
         '''
@@ -1026,8 +793,7 @@ class SaltNova(OpenStackComputeShell):
 
         .. versionadded:: Boron
         '''
-        nt_ks = self.compute_conn
-        floating_ip = nt_ks.floating_ips.create(pool)
+        floating_ip = self.conn.floating_ip_create(pool)
         response = {
             'ip': floating_ip.ip,
             'fixed_ip': floating_ip.fixed_ip,
@@ -1044,8 +810,7 @@ class SaltNova(OpenStackComputeShell):
         .. versionadded:: Boron
         '''
         ip = self.floating_ip_show(floating_ip)
-        nt_ks = self.compute_conn
-        return nt_ks.floating_ips.delete(ip)
+        return self.delete_floating_ip(ip['id'])
 
     def floating_ip_associate(self, server_name, floating_ip):
         '''
@@ -1053,9 +818,8 @@ class SaltNova(OpenStackComputeShell):
 
         .. versionadded:: Boron
         '''
-        nt_ks = self.compute_conn
-        server_ = self.server_by_name(server_name)
-        server = nt_ks.servers.get(server_.__dict__['id'])
+        serverid = self.conn.get_server(server_name).id
+        server = self.conn.nova_client.servers.get(serverid)
         server.add_floating_ip(floating_ip)
         return self.floating_ip_list()[floating_ip]
 
@@ -1065,8 +829,6 @@ class SaltNova(OpenStackComputeShell):
 
         .. versionadded:: Boron
         '''
-        nt_ks = self.compute_conn
-        server_ = self.server_by_name(server_name)
-        server = nt_ks.servers.get(server_.__dict__['id'])
+        server = self.conn.nova_client.servers.get(self.conn.get_server(server_name).id)
         server.remove_floating_ip(floating_ip)
         return self.floating_ip_list()[floating_ip]

@@ -710,25 +710,7 @@ def create(vm_):
         vm_['instance_id'] = data.id
 
     def __query_node_data(vm_, data):
-        try:
-            node = show_instance(vm_['name'], 'action')
-            log.debug(
-                'Loaded node data for {0}:\n{1}'.format(
-                    vm_['name'],
-                    pprint.pformat(node)
-                )
-            )
-        except Exception as err:
-            log.error(
-                'Failed to get nodes list: {0}'.format(
-                    err
-                ),
-                # Show the traceback if the debug logging level is enabled
-                exc_info_on_loglevel=logging.DEBUG
-            )
-            # Trigger a failure in the wait for IP function
-            return False
-
+        node = show_instance(vm_['name'], 'action')
         running = node['state'] == 'ACTIVE'
         if not running:
             # Still not running, trigger another iteration
