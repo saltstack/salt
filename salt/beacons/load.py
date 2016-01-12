@@ -83,7 +83,6 @@ def beacon(config):
      event when the minion is reload. Applicable only when `onchangeonly` is True.
      The default is True.
 
-
     .. code-block:: yaml
 
         beacons:
@@ -125,7 +124,6 @@ def beacon(config):
                     log.debug('Dont emit because emitatstartup is False')
                     return ret
 
-
         send_beacon = False
 
         # Check each entry for threshold
@@ -133,23 +131,22 @@ def beacon(config):
             if k in config:
                 if config['onchangeonly']:
                     # Emit if current is more that threshold and old value less that threshold
-                    # Emit if current is less that threshold and old value more that threshold
                     if float(avg_dict[k]) > float(config[k][1]) and float(LAST_STATUS[k]) < float(config[k][1]):
-                        log.debug('Emit because %f > %f and last was %f' % (float(avg_dict[k]), float(config[k][1]), float(LAST_STATUS[k])))
+                        log.debug('Emit because {} > {} and last was {}'.format(float(avg_dict[k]), float(config[k][1]), float(LAST_STATUS[k])))
                         send_beacon = True
                         break
+                    # Emit if current is less that threshold and old value more that threshold
                     if float(avg_dict[k]) < float(config[k][0]) and float(LAST_STATUS[k]) > float(config[k][0]):
-                        log.debug('Emit because %f < %f and last was %f' % (float(avg_dict[k]), float(config[k][0]), float(LAST_STATUS[k])))
+                        log.debug('Emit because {} < {} and last was {}'.format(float(avg_dict[k]), float(config[k][0]), float(LAST_STATUS[k])))
                         send_beacon = True
                         break
                 else:
                     # Emit no matter LAST_STATUS
                     if float(avg_dict[k]) < float(config[k][0]) or \
                     float(avg_dict[k]) > float(config[k][1]):
-                        log.debug('Emit because %f < %f or > %f' % ( float(avg_dict[k]), float(config[k][0]), float(config[k][1])))
+                        log.debug('Emit because {} < {} or > {}'.format(float(avg_dict[k]), float(config[k][0]), float(config[k][1])))
                         send_beacon = True
                         break
-
 
         if config['onchangeonly']:
             for k in ['1m', '5m', '15m']:
