@@ -30,6 +30,28 @@ def __virtual__():
     return __virtualname__
 
 
+def _run_parse_return_value(cmd):
+    '''
+    Execute the command, parse the return, return the value
+    For use by this module only
+
+    Args:
+        cmd: a dscl command to run
+
+    Returns:
+        the value found in the command
+
+    '''
+    ret = __salt__['cmd.run'](cmd)
+    if ': ' in ret:
+        value = ret.split(': ')[1]
+        return value
+    if ':\n' in ret:
+        value = ret.split(':\n')[1]
+        return value
+    return ret
+
+
 def _get_dscl_data_value(name, key):
     '''
     Return the value for a key in the user's plist file
@@ -43,14 +65,7 @@ def _get_dscl_data_value(name, key):
         the value contained within the key
     '''
     cmd = 'dscl . -read /Users/{0} {1}'.format(name, key)
-    ret = __salt__['cmd.run'](cmd)
-    if ': ' in ret:
-        value = ret.split(': ')[1]
-        return value
-    if ':\n' in ret:
-        value = ret.split(':\n')[1]
-        return value
-    return ret
+    return _run_parse_return_value(cmd)
 
 
 def _get_account_policy_data_value(name, key):
@@ -67,14 +82,7 @@ def _get_account_policy_data_value(name, key):
         the value contained within the key
     '''
     cmd = 'dscl . -readpl /Users/{0} accountPolicyData {1}'.format(name, key)
-    ret = __salt__['cmd.run'](cmd)
-    if ': ' in ret:
-        value = ret.split(': ')[1]
-        return value
-    if ':\n' in ret:
-        value = ret.split(':\n')[1]
-        return value
-    return ret
+    return _run_parse_return_value(cmd)
 
 
 def _get_account_policy(name):
@@ -144,6 +152,12 @@ def get_account_created(name):
 
     :return: the date/time the account was created (yyyy-mm-dd hh:mm:ss)
     :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.get_account_created admin
     '''
     unix_timestamp = _get_account_policy_data_value(name, 'creationTime')
     if isinstance(unix_timestamp, float):
@@ -161,6 +175,12 @@ def get_last_change(name):
 
     :return: the date/time the account was modified (yyyy-mm-dd hh:mm:ss)
     :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.get_last_change admin
     '''
     unix_timestamp = _get_account_policy_data_value(name, 'passwordLastSetTime')
     if isinstance(unix_timestamp, float):
@@ -179,6 +199,12 @@ def get_login_failed_last(name):
     :return: the date/time of the last failed login attempt on this account
     (yyyy-mm-dd hh:mm:ss)
     :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.get_login_failed_last admin
     '''
     unix_timestamp = _get_account_policy_data_value(name, 'failedLoginTimestamp')
     if isinstance(unix_timestamp, float):
@@ -198,6 +224,12 @@ def set_maxdays(name, days):
 
     :return: True if successful, False if not
     :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.set_maxdays admin 90
     '''
     minutes = days * 24 * 60
     cmd = 'pwpolicy -u {0} -setpolicy ' \
@@ -217,6 +249,12 @@ def get_maxdays(name):
 
     :return: the maximum age of the password in days
     :rtype: int
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.get_maxdays admin 90
     '''
     policies = _get_account_policy(name)
 
