@@ -11,8 +11,33 @@ Management zfs datasets
 
 .. code-block:: yaml
 
-    TODO: add example here
-    TODO: add note here about 'properties' needing a manual resut or inherith
+    test/shares/yuki:
+      zfs.filesystem_present:
+        - create_parent: true
+        - properties:
+            quota: 16G
+
+    test/iscsi/haruhi:
+      zfs.volume_present:
+        - create_parent: true
+        - volume_size: 16M
+        - sparse: true
+        - properties:
+            readonly: on
+
+    test/shares/yuki@frozen:
+      zfs.snapshot_present
+
+    moka_origin:
+      zfs.hold_present
+        - snapshot: test/shares/yuki@frozen
+
+    test/shares/moka:
+      zfs.filesystem_present:
+        - cloned_from: test/shares/yuki@frozen
+
+    test/shares/moka@tsukune:
+      zfs.snapshot_absent
 
 '''
 from __future__ import absolute_import
@@ -144,8 +169,8 @@ def volume_absent(name, force=False, recursive=False):
 
     ..warning:
 
-        If a volume with ``name`` exists, this state will succeed without
-        destroying the volume specified by ``name``. This module is dataset type sensitive.
+        If a filesystem with ``name`` exists, this state will succeed without
+        destroying the filesystem specified by ``name``. This module is dataset type sensitive.
 
     '''
     return _absent(name, 'volume', force, recursive)
@@ -310,8 +335,13 @@ def filesystem_present(name, create_parent=False, properties=None, cloned_from=N
 
     ..note::
 
-        if the ``cloned_from`` is only use if the filesystem does not exist yet,
-        when ``cloned_from`` is set after the filesystem existed it will be ignored.
+        ``cloned_from`` is only use if the filesystem does not exist yet,
+        when ``cloned_from`` is set after the filesystem exists it will be ignored.
+
+    ..note::
+
+        properties do not get cloned, if you specify the properties in the state file
+        they will be applied on a subsequent run.
 
     '''
     name = name.lower()
@@ -418,10 +448,18 @@ def volume_present(name, volume_size, sparse=False, create_parent=False, propert
 
     ..note::
 
-        if the ``cloned_from`` is only use if the volume does not exist yet,
-        when ``cloned_from`` is set after the volume existed it will be ignored.
+        ``cloned_from`` is only use if the volume does not exist yet,
+        when ``cloned_from`` is set after the volume exists it will be ignored.
 
-        the sprase and volume_size properties are ignored when ``cloned_from`` is specified.
+    ..note::
+
+        properties do not get cloned, if you specify the properties in the state file
+        they will be applied on a subsequent run.
+
+        volume_size is considered a property so it the volume's size will be corrected
+        when the properties get update if it differs from the original volume.
+
+        the sparse parameter is ignored when using cloned_from.
 
     '''
     name = name.lower()
