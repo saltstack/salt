@@ -2176,7 +2176,11 @@ def mod_watch(name, **kwargs):
     Install/reinstall a package based on a watch requisite
     '''
     sfun = kwargs.pop('sfun', None)
-    mapfun = {'latest': latest, 'wait': installed, 'installed': installed}
+    mapfun = {'purged': purged,
+              'latest': latest,
+              'removed': removed,
+              'wait': installed,
+              'installed': installed}
     if sfun in mapfun:
         return mapfun[sfun](name, **kwargs)
     return {'name': name,
