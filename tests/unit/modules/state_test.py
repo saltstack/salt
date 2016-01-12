@@ -133,7 +133,7 @@ class MockState(object):
         flag = False
         opts = {'state_top': ""}
 
-        def __init__(self, opts, pillar=None, mocked=None):
+        def __init__(self, opts, pillar=None, *args, **kwargs):
             self.state = MockState.State(opts,
                                          pillar=pillar)
 
