@@ -423,11 +423,13 @@ def check(set=None, entry=None, family='ipv4'):
     if isinstance(entry, list):
         entries = entry
     else:
-        if entry.find('-') != -1 and entry.count('-') == 1:
-            start, end = entry.split('-')
+        _entry = entry.split()[0]
+        _entry_extra = entry.split()[1:]
+        if _entry.find('-') != -1 and _entry.count('-') == 1:
+            start, end = _entry.split('-')
 
             if settype == 'hash:ip':
-                entries = [str(ipaddress.ip_address(ip)) for ip in range(
+                entries = [' '.join([str(ipaddress.ip_address(ip)), ' '.join(_entry_extra)]) for ip in range(
                     ipaddress.ip_address(start),
                     ipaddress.ip_address(end) + 1
                 )]
@@ -437,17 +439,22 @@ def check(set=None, entry=None, family='ipv4'):
                                                              ipaddress.ip_address(end))
                 entries = []
                 for network in networks:
-                    entries.append(network.with_prefixlen)
+                    _network = [str(ip) for ip in ipaddress.ip_network(network)]
+                    if len(_network) == 1:
+                        __network = ' '.join([str(_network[0]), ' '.join(_entry_extra)])
+                    else:
+                        __network = ' '.join([str(network), ' '.join(_entry_extra)])
+                    entries.append(__network)
             else:
                 entries = [entry]
 
-        elif entry.find('/') != -1 and entry.count('/') == 1:
+        elif _entry.find('/') != -1 and _entry.count('/') == 1:
             if settype == 'hash:ip':
-                entries = [str(ip) for ip in ipaddress.ip_network(entry)]
+                entries = [' '.join([str(ip), ' '.join(_entry_extra)]) for ip in ipaddress.ip_network(_entry)]
             elif settype == 'hash:net':
-                _entries = [str(ip) for ip in ipaddress.ip_network(entry)]
+                _entries = [str(ip) for ip in ipaddress.ip_network(_entry)]
                 if len(_entries) == 1:
-                    entries = [_entries[0]]
+                    entries = [' '.join([_entries[0], ' '.join(_entry_extra)])]
                 else:
                     entries = [entry]
             else:
