@@ -110,6 +110,14 @@ def _get_account_policy(name):
         return False
 
 
+def _convert_to_datetime(unix_timestamp):
+    try:
+        unix_timestamp = float(unix_timestamp)
+        return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    except ValueError:
+        return 'Value not set'
+
+
 def info(name):
     '''
     Return information for the specified user
@@ -160,11 +168,7 @@ def get_account_created(name):
         salt '*' shadow.get_account_created admin
     '''
     unix_timestamp = _get_account_policy_data_value(name, 'creationTime')
-    if isinstance(unix_timestamp, float):
-        unix_timestamp = float(unix_timestamp)
-        return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-    else:
-        return 'Value not set'
+    return _convert_to_datetime(unix_timestamp)
 
 
 def get_last_change(name):
@@ -183,11 +187,7 @@ def get_last_change(name):
         salt '*' shadow.get_last_change admin
     '''
     unix_timestamp = _get_account_policy_data_value(name, 'passwordLastSetTime')
-    if isinstance(unix_timestamp, float):
-        unix_timestamp = float(unix_timestamp)
-        return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-    else:
-        return 'Value not set'
+    return _convert_to_datetime(unix_timestamp)
 
 
 def get_login_failed_last(name):
@@ -207,11 +207,7 @@ def get_login_failed_last(name):
         salt '*' shadow.get_login_failed_last admin
     '''
     unix_timestamp = _get_account_policy_data_value(name, 'failedLoginTimestamp')
-    if isinstance(unix_timestamp, float):
-        unix_timestamp = float(unix_timestamp)
-        return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-    else:
-        return 'Value not set'
+    return _convert_to_datetime(unix_timestamp)
 
 
 def set_maxdays(name, days):
