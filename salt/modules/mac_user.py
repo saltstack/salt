@@ -10,8 +10,6 @@ try:
 except ImportError:
     pass
 import logging
-import random
-import string
 import time
 
 # Import 3rdp-party libs
