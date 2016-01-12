@@ -99,7 +99,7 @@ def _get_account_policy(name):
     cmd = 'pwpolicy -u {0} -getpolicy'.format(name)
     ret = __salt__['cmd.run'](cmd)
     if ret:
-        policy_list = ret.split(' ')
+        policy_list = ret.split('\n')[1].split(' ')
         policy_dict = {}
         for policy in policy_list:
             if '=' in policy:
@@ -395,8 +395,14 @@ def del_password(name):
 
         salt '*' shadow.del_password username
     '''
-    # Re-order authentication authority and remove ShadowHashData
-    cmd = "dscl . -create /Users/{0} '*'"
+    # This removes the password
+    cmd = "dscl . -passwd /Users/{0} ''".format(name)
+    success = __salt__['cmd.retcode'](cmd)
+    if success:
+        return False, 'Delete password failed'
+
+    # This is so it looks right in shadow.info
+    cmd = "dscl . -create /Users/{0} Password '*'".format(name)
     __salt__['cmd.retcode'](cmd)
 
     new = _get_dscl_data_value(name, 'passwd')
@@ -421,7 +427,7 @@ def set_password(name, password):
         salt '*' mac_shadow.set_password macuser macpassword
     '''
 
-    cmd = 'dscl . -passwd /User/{0} {1}'.format(name, password)
+    cmd = "dscl . -passwd /Users/{0} '{1}'".format(name, password)
     ret = __salt__['cmd.retcode'](cmd)
     if ret:
         return False
