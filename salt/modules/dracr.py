@@ -23,6 +23,8 @@ from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
+__proxyenabled__ = ['fx2']
+
 try:
     run_all = __salt__['cmd.run_all']
 except NameError:
@@ -1319,6 +1321,7 @@ def get_general(cfg_sec, cfg_var, host=None,
 
 def bare_rac_cmd(cmd, host=None,
                 admin_username=None, admin_password=None):
+
     ret = __execute_ret('{0}'.format(cmd),
                         host=host,
                         admin_username=admin_username,

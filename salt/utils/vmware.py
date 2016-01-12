@@ -196,7 +196,7 @@ def get_service_instance(host, username, password, protocol=None, port=None):
         default_msg = 'Could not connect to host \'{0}\'. ' \
                       'Please check the debug log for more information.'.format(host)
         try:
-            if (isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or '[SSL: CERTIFICATE_VERIFY_FAILED]' in str(exc):
+            if (isinstance(exc, vim.fault.HostConnectFault) and 'certificate verify failed' in exc.msg.lower()) or 'certificate verify failed' in str(exc).lower():
                 import ssl
                 default_context = ssl._create_default_https_context
                 ssl._create_default_https_context = ssl._create_unverified_context
@@ -235,6 +235,76 @@ def get_service_instance(host, username, password, protocol=None, port=None):
 
     return service_instance
 
+
+def _get_dvs(service_instance, dvs_name):
+    '''
+    Return a reference to a Distributed Virtual Switch object.
+
+    :param service_instance: PyVmomi service instance
+    :param dvs_name: Name of DVS to return
+    :return: A PyVmomi DVS object
+    '''
+    switches = list_dvs(service_instance)
+    if dvs_name in switches:
+        inventory = get_inventory(service_instance)
+        container = inventory.viewManager.CreateContainerView(inventory.rootFolder, [vim.DistributedVirtualSwitch], True)
+        for item in container.view:
+            if item.name == dvs_name:
+                return item
+
+    return None
+
+
+def _get_pnics(host_reference):
+    '''
+    Helper function that returns a list of PhysicalNics and their information.
+    '''
+    return host_reference.config.network.pnic
+
+
+def _get_vnics(host_reference):
+    '''
+    Helper function that returns a list of VirtualNics and their information.
+    '''
+    return host_reference.config.network.vnic
+
+
+def _get_vnic_manager(host_reference):
+    '''
+    Helper function that returns a list of Virtual NicManagers
+    and their information.
+    '''
+    return host_reference.configManager.virtualNicManager
+
+
+def _get_dvs_portgroup(dvs, portgroup_name):
+    '''
+    Return a portgroup object corresponding to the portgroup name on the dvs
+
+    :param dvs: DVS object
+    :param portgroup_name: Name of portgroup to return
+    :return: Portgroup object
+    '''
+    for portgroup in dvs.portgroup:
+        if portgroup.name == portgroup_name:
+            return portgroup
+
+    return None
+
+
+def _get_dvs_uplink_portgroup(dvs, portgroup_name):
+    '''
+    Return a portgroup object corresponding to the portgroup name on the dvs
+
+    :param dvs: DVS object
+    :param portgroup_name: Name of portgroup to return
+    :return: Portgroup object
+    '''
+    for portgroup in dvs.portgroup:
+        if portgroup.name == portgroup_name:
+            return portgroup
+
+    return None
 
 def get_inventory(service_instance):
     '''
