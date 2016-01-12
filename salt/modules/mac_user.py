@@ -14,11 +14,12 @@ import time
 
 # Import 3rdp-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils
+from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -281,13 +282,13 @@ def chfullname(name, fullname):
 
         salt '*' user.chfullname foo 'Foo Bar'
     '''
-    if isinstance(fullname, str):
-        fullname.decode('utf-8')
+    if isinstance(fullname, string_types):
+        fullname = sdecode(fullname)
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
-    if isinstance(pre_info['fullname'], str):
-        pre_info['fullname'] = pre_info['fullname'].decode('utf-8')
+    if isinstance(pre_info['fullname'], string_types):
+        pre_info['fullname'] = sdecode(pre_info['fullname'])
     if fullname == pre_info['fullname']:
         return True
     _dscl(
@@ -302,8 +303,8 @@ def chfullname(name, fullname):
     time.sleep(1)
 
     current = info(name).get('fullname')
-    if isinstance(current, str):
-        current.decode('utf-8')
+    if isinstance(current, string_types):
+        current = sdecode(current)
     return current == fullname
 
 
