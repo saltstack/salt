@@ -1184,7 +1184,8 @@ class _Swagger(object):
         method_integration_response_params = {}
         for header in method_response.headers:
             method_response_params['method.response.header.{0}'.format(header)] = False
-            method_integration_response_params['method.response.header.{0}'.format(header)] = "'*'"
+            header_data = method_response.headers.get(header)
+            method_integration_response_params['method.response.header.{0}'.format(header)] = "'{0}'".format(header_data.get('default')) if 'default' in header_data else "'*'"
 
         return {'params': method_response_params,
                 'models': method_response_models,
