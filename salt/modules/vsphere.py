@@ -180,7 +180,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'vsphere'
-__proxyenabled__ = 'esxi'
+__proxyenabled__ = ['esxi']
 
 def __virtual__():
     if not HAS_PYVMOMI:
