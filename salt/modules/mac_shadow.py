@@ -146,7 +146,7 @@ def get_account_created(name):
     :rtype: str
     '''
     unix_timestamp = _get_account_policy_data_value(name, 'creationTime')
-    if isinstance(unix_timestamp, float)
+    if isinstance(unix_timestamp, float):
         unix_timestamp = float(unix_timestamp)
         return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
     else:
@@ -163,7 +163,7 @@ def get_last_change(name):
     :rtype: str
     '''
     unix_timestamp = _get_account_policy_data_value(name, 'passwordLastSetTime')
-    if isinstance(unix_timestamp, float)
+    if isinstance(unix_timestamp, float):
         unix_timestamp = float(unix_timestamp)
         return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
     else:
@@ -181,7 +181,7 @@ def get_login_failed_last(name):
     '''
     unix_timestamp = _get_account_policy_data_value(name, 'failedLoginTimestamp')
     if isinstance(unix_timestamp, float)
-        unix_timestamp = float(unix_timestamp)
+        unix_timestamp = float(unix_timestamp):
         return datetime.fromtimestamp(unix_timestamp).strftime('%Y-%m-%d %H:%M:%S')
     else:
         return 'Value not set'
