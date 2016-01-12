@@ -46,7 +46,7 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
         jboss_module_downloaded:
           artifactory.downloaded:
            - artifact:
-               artifactory_url: http://artifactory.intranet.company.com/artifactory
+               artifactory_url: http://artifactory.intranet.example.com/artifactory
                repository: 'libs-release-local'
                artifact_id: 'module'
                group_id: 'com.company.module'
@@ -62,7 +62,7 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
         jboss_module_downloaded:
           artifactory.downloaded:
            - artifact:
-                artifactory_url: http://artifactory.intranet.company.com/artifactory
+                artifactory_url: http://artifactory.intranet.example.com/artifactory
                 repository: 'libs-release-local'
                 artifact_id: 'module'
                 group_id: 'com.company.module'
