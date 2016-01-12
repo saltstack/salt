@@ -23,6 +23,7 @@ __virtualname__ = 'shadow'
 
 
 def __virtual__():
+    # Is this os x?
     if not salt.utils.is_darwin():
         return False, 'Not Darwin'
 
@@ -30,6 +31,17 @@ def __virtual__():
 
 
 def _get_dscl_data_value(name, key):
+    '''
+    Return the value for a key in the user's plist file
+    For use by this module only
+
+    Args:
+        name: username
+        key: plist key
+
+    Returns:
+        the value contained within the key
+    '''
     cmd = 'dscl . -read /Users/{0} {1}'.format(name, key)
     ret = __salt__['cmd.run'](cmd)
     if ': ' in ret:
@@ -42,7 +54,18 @@ def _get_dscl_data_value(name, key):
 
 
 def _get_account_policy_data_value(name, key):
+    '''
+    Return the value for a key in the accountPolicy section of the user's plist
+    file
+    For use by this module only
 
+    Args:
+        name: username
+        key: accountPolicy key
+
+    Returns:
+        the value contained within the key
+    '''
     cmd = 'dscl . -readpl /Users/{0} accountPolicyData {1}'.format(name, key)
     ret = __salt__['cmd.run'](cmd)
     if ': ' in ret:
@@ -55,6 +78,16 @@ def _get_account_policy_data_value(name, key):
 
 
 def _get_account_policy(name):
+    '''
+    Get the entire accountPolicy
+    For use by this module only
+
+    Args:
+        name: username
+
+    Returns:
+        a dictionary containing all values for the accountPolicy
+    '''
     cmd = 'pwpolicy -u {0} -getpolicy'.format(name)
     ret = __salt__['cmd.run'](cmd)
     if ret:
@@ -73,11 +106,16 @@ def info(name):
     '''
     Return information for the specified user
 
+    :param str name: the username
+
+    :return: A dictionary containing the user's shadow information
+    :rtype: dict
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' mac_shadow.info admin
+        salt '*' shadow.info admin
     '''
     ret = {}
     ret['name'] = _get_dscl_data_value(name, 'name')
@@ -99,6 +137,14 @@ def info(name):
 
 
 def get_account_created(name):
+    '''
+    Get the date/time the account was created
+
+    :param str name: the username of the account
+
+    :return: the date/time the account was created (yyyy-mm-dd hh:mm:ss)
+    :rtype: str
+    '''
     unix_timestamp = _get_account_policy_data_value(name, 'creationTime')
     if isinstance(unix_timestamp, float)
         unix_timestamp = float(unix_timestamp)
@@ -108,6 +154,14 @@ def get_account_created(name):
 
 
 def get_last_change(name):
+    '''
+    Get the date/time the account was changed
+
+    :param str name: the username of the account
+
+    :return: the date/time the account was modified (yyyy-mm-dd hh:mm:ss)
+    :rtype: str
+    '''
     unix_timestamp = _get_account_policy_data_value(name, 'passwordLastSetTime')
     if isinstance(unix_timestamp, float)
         unix_timestamp = float(unix_timestamp)
@@ -116,6 +170,15 @@ def get_last_change(name):
         return 'Value not set'
 
 def get_login_failed_last(name):
+    '''
+    Get the date/time of the last failed login attempt
+
+    :param str name: the username of the account
+
+    :return: the date/time of the last failed login attempt on this account
+    (yyyy-mm-dd hh:mm:ss)
+    :rtype: str
+    '''
     unix_timestamp = _get_account_policy_data_value(name, 'failedLoginTimestamp')
     if isinstance(unix_timestamp, float)
         unix_timestamp = float(unix_timestamp)
@@ -125,6 +188,16 @@ def get_login_failed_last(name):
 
 
 def set_maxdays(name, days):
+    '''
+    Set the maximum age of the password in days
+
+    :param str name: the username of the account
+
+    :param int days: the maximum age of the account in days
+
+    :return: True if successful, False if not
+    :rtype: bool
+    '''
     minutes = days * 24 * 60
     cmd = 'pwpolicy -u {0} -setpolicy ' \
           'maxMinutesUntilChangePassword={1}'.format(name, minutes)
@@ -136,6 +209,14 @@ def set_maxdays(name, days):
 
 
 def get_maxdays(name):
+    '''
+    Get the maximum age of the password
+
+    :param str name: the username of the account
+
+    :return: the maximum age of the password in days
+    :rtype: int
+    '''
     policies = _get_account_policy(name)
 
     if 'maxMinutesUntilChangePassword' in policies:
@@ -146,30 +227,43 @@ def get_maxdays(name):
 
 
 def set_mindays(name, days):
+    '''
+    Set the minimum password age in days. Not available in OS X.
+    '''
     return False, 'not available on OS X'
 
 
 def set_inactdays(name, days):
+    '''
+    Set the number if inactive days before the account is locked. Not available
+    in OS X.
+    '''
     return False, 'not available on OS X'
 
 
 def set_warndays(name, days):
+    '''
+    Set the number of days before the password expires that the user will start
+    to see a warning. Not available in OS X.
+    '''
     return False, 'not available on OS X'
 
 
 def set_change(name, date):
     '''
-    Sets the time at which the password expires (in seconds since the UNIX
-    epoch). See ``man 8 usermod`` on NetBSD and OpenBSD or ``man 8 pw`` on
-    FreeBSD.
+    Sets the date on which the password expires. The user will be required to
+    change their password. Format is mm/dd/yy
 
-    A value of ``0`` sets the password to never expire.
+    :param str name: the name of the user account
+
+    :param date date: the date the password will expire. Must be in mm/dd/yy
+    format.
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' shadow.set_change username 1419980400
+        salt '*' shadow.set_change username 09/21/16
     '''
     cmd = 'pwpolicy -u {0} -setpolicy "usingExpirationDate=1 ' \
           'expirationDateGMT={1}"'.format(name, date)
@@ -181,6 +275,19 @@ def set_change(name, date):
 
 
 def get_change(name):
+    '''
+    Gets the date on which the password expires.
+
+    :param str name: the name of the user account
+
+    :return: The date the password will expire
+    :rtype: datetime
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.get_change username
+    '''
     policies = _get_account_policy(name)
     if 'expirationDateGMT' in policies:
         return policies['expirationDateGMT']
@@ -190,17 +297,22 @@ def get_change(name):
 
 def set_expire(name, date):
     '''
-    Sets the time at which the account expires (in seconds since the UNIX
-    epoch). See ``man 8 usermod`` on NetBSD and OpenBSD or ``man 8 pw`` on
-    FreeBSD.
+    Sets the date on which the account expires. The user will not be able to
+    login after this date. Date format is mm/dd/yy
 
-    A value of ``0`` sets the account to never expire.
+    :param str name: the name of the user account
+
+    :param datetime date: the date the account will expire. Format must be
+    mm/dd/yy
+
+    :return: True if successful, False if not
+    :rtype: bool
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' shadow.set_expire username 1419980400
+        salt '*' shadow.set_expire username 07/23/15
     '''
     cmd = 'pwpolicy -u {0} -setpolicy "usingHardExpirationDate=1 ' \
           'hardExpireDateGMT={1}"'.format(name, date)
@@ -212,6 +324,19 @@ def set_expire(name, date):
 
 
 def get_expire(name):
+    '''
+    Gets the date on which the account expires.
+
+    :param str name: the name of the user account
+
+    :return: the date the account expires
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' shadow.get_expire username
+    '''
     policies = _get_account_policy(name)
     if 'hardExpireDateGMT' in policies:
         return policies['hardExpireDateGMT']
@@ -221,7 +346,7 @@ def get_expire(name):
 
 def del_password(name):
     '''
-    Delete the account password
+    Deletes the account password
 
     :param str name: The user name of the account
 
