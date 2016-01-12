@@ -132,19 +132,19 @@ def beacon(config):
                 if config['onchangeonly']:
                     # Emit if current is more that threshold and old value less that threshold
                     if float(avg_dict[k]) > float(config[k][1]) and float(LAST_STATUS[k]) < float(config[k][1]):
-                        log.debug('Emit because {} > {} and last was {}'.format(float(avg_dict[k]), float(config[k][1]), float(LAST_STATUS[k])))
+                        log.debug('Emit because {0} > {1} and last was {2}'.format(float(avg_dict[k]), float(config[k][1]), float(LAST_STATUS[k])))
                         send_beacon = True
                         break
                     # Emit if current is less that threshold and old value more that threshold
                     if float(avg_dict[k]) < float(config[k][0]) and float(LAST_STATUS[k]) > float(config[k][0]):
-                        log.debug('Emit because {} < {} and last was {}'.format(float(avg_dict[k]), float(config[k][0]), float(LAST_STATUS[k])))
+                        log.debug('Emit because {0} < {1} and last was {2}'.format(float(avg_dict[k]), float(config[k][0]), float(LAST_STATUS[k])))
                         send_beacon = True
                         break
                 else:
                     # Emit no matter LAST_STATUS
                     if float(avg_dict[k]) < float(config[k][0]) or \
                     float(avg_dict[k]) > float(config[k][1]):
-                        log.debug('Emit because {} < {} or > {}'.format(float(avg_dict[k]), float(config[k][0]), float(config[k][1])))
+                        log.debug('Emit because {0} < {1} or > {2}'.format(float(avg_dict[k]), float(config[k][0]), float(config[k][1])))
                         send_beacon = True
                         break
 
