@@ -395,7 +395,11 @@ def mkfs(device, fs_type):
                           'hfs', 'hfs+', 'hfsx', 'NTFS', 'ufs']):
         raise CommandExecutionError('Invalid fs_type passed to partition.mkfs')
 
-    mkfs_cmd = 'mkfs.{0}'.format(fs_type)
+    if fs_type is 'linux-swap':
+        mkfs_cmd = 'mkswap'
+    else:
+        mkfs_cmd = 'mkfs.{0}'.format(fs_type)
+
     if not salt.utils.which(mkfs_cmd):
         return 'Error: {0} is unavailable.'
     cmd = '{0} {1}'.format(mkfs_cmd, device)
