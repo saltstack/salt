@@ -90,7 +90,8 @@ def __execute_cmd(command, host=None,
                                                          admin_username,
                                                          admin_password,
                                                          command,
-                                                         modswitch))
+                                                         modswitch),
+        output_loglevel='quiet')
 
     if cmd['retcode'] != 0:
         log.warning('racadm return an exit code \'{0}\'.'
@@ -123,7 +124,8 @@ def __execute_ret(command, host=None,
                                                          admin_username,
                                                          admin_password,
                                                          command,
-                                                         modswitch))
+                                                         modswitch),
+        output_loglevel='quiet')
 
     if cmd['retcode'] != 0:
         log.warning('racadm return an exit code \'{0}\'.'
