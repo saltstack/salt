@@ -615,7 +615,9 @@ def present(name,
             if not createhome:
                 # pwd incorrectly reports presence of home
                 ret['changes']['home'] = ''
-            if 'shadow.info' in __salt__ and not salt.utils.is_windows():
+            if 'shadow.info' in __salt__ \
+                and not salt.utils.is_windows()\
+                and not salt.utils.is_darwin():
                 if password and not empty_password:
                     __salt__['shadow.set_password'](name, password)
                     spost = __salt__['shadow.info'](name)
@@ -681,6 +683,13 @@ def present(name,
                     ret['changes']['expire'] = expire
             elif salt.utils.is_windows() and password and not empty_password:
                 if not __salt__['user.setpassword'](name, password):
+                    ret['comment'] = 'User {0} created but failed to set' \
+                                     ' password to' \
+                                     ' {1}'.format(name, 'XXX-REDACTED-XXX')
+                    ret['result'] = False
+                ret['changes']['passwd'] = 'XXX-REDACTED-XXX'
+            elif salt.utils.is_darwin() and password and not empty_password:
+                if not __salt__['shadow.set_password'](name, password):
                     ret['comment'] = 'User {0} created but failed to set' \
                                      ' password to' \
                                      ' {1}'.format(name, 'XXX-REDACTED-XXX')
