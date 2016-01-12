@@ -98,16 +98,19 @@ def _get_account_policy(name):
     '''
     cmd = 'pwpolicy -u {0} -getpolicy'.format(name)
     ret = __salt__['cmd.run'](cmd)
-    if ret:
-        policy_list = ret.split('\n')[1].split(' ')
-        policy_dict = {}
-        for policy in policy_list:
-            if '=' in policy:
-                key, value = policy.split('=')
-                policy_dict[key] = value
-        return policy_dict
+    if ret and 'Error:' not in ret:
+        try:
+            policy_list = ret.split('\n')[1].split(' ')
+            policy_dict = {}
+            for policy in policy_list:
+                if '=' in policy:
+                    key, value = policy.split('=')
+                    policy_dict[key] = value
+            return policy_dict
+        except IndexError:
+            return 'Value not found'
     else:
-        return False
+        return 'Value not found'
 
 
 def _convert_to_datetime(unix_timestamp):
