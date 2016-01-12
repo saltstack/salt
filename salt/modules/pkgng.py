@@ -56,7 +56,7 @@ def __virtual__():
     ``providers:pkg`` is set to 'pkgng'.
     '''
     if __grains__['kernel'] == 'DragonFly':
-        return __virtualname__    
+        return __virtualname__
     if __grains__['os'] == 'FreeBSD' and float(__grains__['osrelease']) >= 10:
         return __virtualname__
     if __grains__['os'] == 'FreeBSD' and \
