@@ -288,7 +288,7 @@ def ping():
     Check to see if the host is responding. Returns False if the host didn't
     respond, True otherwise.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 
