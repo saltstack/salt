@@ -435,8 +435,17 @@ def _refresh_buckets_cache_file(cache_file):
                         continue
                     except KeyError:
                         # no human readable error message provided
-                        log.warning("'{0}' response for bucket '{1}'".format(meta_response['Code'], bucket_name))
-                        continue
+                        if 'Code' in meta_response:
+                            log.warning(
+                                ("'{0}' response for "
+                                "bucket '{1}'").format(meta_response['Code'],
+                                                       bucket_name))
+                            continue
+                        else:
+                            log.warning(
+                                ('S3 Error! Do you have any files '
+                                 'in your S3 bucket?'))
+                            return {}
 
             metadata[saltenv] = bucket_files
 
