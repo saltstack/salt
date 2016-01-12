@@ -264,7 +264,7 @@ def _sysv_is_disabled(name):
     start-up link (starts with "S") to its script in /etc/init.d in
     the current runlevel.
     '''
-    return not bool(glob.glob('/etc/rc{0}.d/S*{1}'.format(_runlevel(), name)))
+    return not (bool(glob.glob('/etc/init.d/{0}'.format(name))) and bool(glob.glob('/etc/rc{0}.d/S*{1}'.format(_runlevel(), name))))
 
 
 def _sysv_is_enabled(name):
@@ -289,7 +289,7 @@ def get_enabled():
     units = _get_all_unit_files()
     services = _get_all_units()
     for name, state in six.iteritems(units):
-        if state == 'enabled':
+        if state.strip() == 'enabled':
             ret.append(name)
     for name, state in six.iteritems(services):
         if name in units:
