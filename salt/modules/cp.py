@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 
 __proxyenabled__ = ['*']
 
+
 def _auth():
     '''
     Return the auth object
