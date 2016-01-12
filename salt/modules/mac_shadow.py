@@ -169,6 +169,7 @@ def get_last_change(name):
     else:
         return 'Value not set'
 
+
 def get_login_failed_last(name):
     '''
     Get the date/time of the last failed login attempt
