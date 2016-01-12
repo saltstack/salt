@@ -192,9 +192,9 @@ States
 ------
 
 Associated states are thoroughly documented in
-:doc:`salt.states.vsphere </ref/states/all/salt.states.vsphere>`. Look there
-to find an example structure for Pillar as well as an example ``.sls`` file f
-or standing up an ESXi host from scratch.
+:doc:`salt.states.esxi </ref/states/all/salt.states.esxi>`. Look there
+to find an example structure for Pillar as well as an example ``.sls`` file
+for standing up an ESXi host from scratch.
 
 '''
 
