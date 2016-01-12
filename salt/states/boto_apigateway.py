@@ -74,7 +74,7 @@ def __virtual__():
 
 
 def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_integration_role,
-            lambda_region=None, region=None, key=None, keyid=None, profile=None):
+            lambda_region=None, stage_variables=None, region=None, key=None, keyid=None, profile=None):
     '''
     Ensure the spcified api_name with the corresponding swaggerfile is deployed to the
     given stage_name in AWS ApiGateway.
@@ -149,6 +149,11 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
         boto_apigateway functions, a final lookup will be attempted using the
         boto_apigateway region.
 
+    stage_variables
+        A dict with variables and their values, or a pillar key (string) that
+        contains a dict with variables and their values.
+        key and values in the dict must be strings.  {'string': 'string'}
+
     region
         Region to connect to.
 
@@ -177,6 +182,9 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
         # try to open the swagger file and basic validation
         swagger = _Swagger(api_name, swagger_file, common_args)
 
+        # retrieve stage variables
+        stage_vars = _get_stage_variables(stage_variables)
+
         # verify if api and stage already exists
         ret = swagger.verify_api(ret, stage_name)
         if ret.get('publish'):
@@ -189,7 +197,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
                                   'and [swagger_file: {2}].'.format(stage_name, api_name, swagger_file))
                 ret['result'] = None
                 return ret
-            return swagger.publish_api(ret, stage_name)
+            return swagger.publish_api(ret, stage_name, stage_vars)
 
         if ret.get('abort'):
             # already at desired state for the stage, swagger_file, and api_name
@@ -226,14 +234,38 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
         if ret.get('abort'):
             return ret
 
-        ret = swagger.publish_api(ret, stage_name)
+        ret = swagger.publish_api(ret, stage_name, stage_vars)
 
     except (ValueError, IOError) as e:
         ret['result'] = False
         ret['comment'] = '{0}'.format(e.args)
 
     return ret
+      
+def _get_stage_variables(stage_variables):
+    '''
+    Helper function to retrieve stage variables from pillars/options, if the
+    input is a string
+    '''
+    ret = dict()
+    if stage_variables is None:
+        return ret
 
+    if isinstance(stage_variables, string_types):
+        if stage_variables in __opts__:
+            ret = __opts__[value]
+        master_opts = __pillar__.get('master', {})
+        if stage_variables in master_opts:
+            ret = master_opts[value]
+        if stage_variables in __pillar__:
+            ret = __pillar__[value]
+    elif isinstance(stage_variables, dict):
+        ret = stage_variables
+
+    if not isinstance(ret, dict):
+        ret = dict()
+
+    return ret
 
 def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, keyid=None, profile=None):
     '''
@@ -764,7 +796,7 @@ class _Swagger(object):
                     return deployment.get('id')
         return ''
 
-    def _set_current_deployment(self, stage_name, stage_desc_json):
+    def _set_current_deployment(self, stage_name, stage_desc_json, stage_variables):
         '''
         Helper method to associate the stage_name to the given deploymentId and make this current
         '''
@@ -775,6 +807,7 @@ class _Swagger(object):
                                                                  stageName=stage_name,
                                                                  deploymentId=self._deploymentId,
                                                                  description=stage_desc_json,
+                                                                 variables=stage_variables,
                                                                  **self._common_aws_args)
             if not stage.get('stage'):
                 return {'set': False, 'error': stage.get('error')}
@@ -857,7 +890,7 @@ class _Swagger(object):
                     ret['publish'] = True
         return ret
 
-    def publish_api(self, ret, stage_name):
+    def publish_api(self, ret, stage_name, stage_variables):
         '''
         this method tie the given stage_name to a deployment matching the given swagger_file
         '''
@@ -867,7 +900,7 @@ class _Swagger(object):
 
         if self._deploymentId:
             # just do a reassociate of stage_name to an already existing deployment
-            res = self._set_current_deployment(stage_name, stage_desc_json)
+            res = self._set_current_deployment(stage_name, stage_desc_json, stage_variables)
             if not res.get('set'):
                 ret['abort'] = True
                 ret['common'] = res.get('error')
@@ -879,6 +912,7 @@ class _Swagger(object):
                                                                     stage_name,
                                                                     stageDescription=stage_desc_json,
                                                                     description=self.deployment_label_json,
+                                                                    variables=stage_variables,
                                                                     **self._common_aws_args)
             if not res.get('created'):
                 ret['abort'] = True
