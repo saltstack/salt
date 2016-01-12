@@ -1247,6 +1247,14 @@ def _mkstemp_copy(path,
             "Unable to create temp file. "
             "Exception: {0}".format(exc)
             )
+    # Copy permissions from path to temp file
+    try:
+        shutil.copymode(path, temp_file)
+    except (OSError, IOError) as exc:
+        raise CommandExecutionError(
+            "Unable to set permissions on temp file. "
+            "Exception: {0}".format(exc)
+            )
     # use `copy` to preserve the inode of the
     # original file, and thus preserve hardlinks
     # to the inode. otherwise, use `move` to
@@ -1264,6 +1272,7 @@ def _mkstemp_copy(path,
     else:
         try:
             shutil.move(path, temp_file)
+            shutil.copymode(path, temp_file)
         except (OSError, IOError) as exc:
             raise CommandExecutionError(
                 "Unable to move file '{0}' to the "
