@@ -48,6 +48,7 @@ config:
 
 # Import Python Libs
 from __future__ import absolute_import
+from six import string_types
 import logging
 import os
 import os.path
