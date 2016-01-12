@@ -644,7 +644,7 @@ def _virtual(osdata):
                 grains['virtual'] = output.lower()
             break
         elif command == 'prtdiag':
-            modul = output.lower().split("\n")[0]
+            model = output.lower().split("\n")[0]
             if 'vmware' in model:
                 grains['virtual'] = 'VMware'
             elif 'virtualbox' in model:
