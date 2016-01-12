@@ -3563,6 +3563,7 @@ def add_host_to_vsphere(host, username, password, vsphere_protocol=None,
         ret[host_name].update({'status': False})
         host_ref = _get_host_ref(service_instance, host, host_name)
 
+
 def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
                     dvs_name, portgroup_name, protocol=None, port=None,
                     host_names=None):
