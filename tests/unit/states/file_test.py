@@ -13,8 +13,8 @@ from salttesting.mock import (
     NO_MOCK_REASON,
     MagicMock,
     mock_open,
-    patch,
-    call)
+    patch)
+
 ensure_in_syspath('../../')
 
 # Import third party libs
