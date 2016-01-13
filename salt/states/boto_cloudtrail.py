@@ -79,7 +79,7 @@ def present(name, Name,
            CloudWatchLogsRoleArn=None,
            KmsKeyId=None,
            LoggingEnabled=True,
-           Tags={},
+           Tags=None,
            region=None, key=None, keyid=None, profile=None):
     '''
     Ensure trail exists.
@@ -97,24 +97,24 @@ def present(name, Name,
     S3KeyPrefix
         Specifies the Amazon S3 key prefix that comes after the name of the
         bucket you have designated for log file delivery.
-    
+
     SnsTopicName
         Specifies the name of the Amazon SNS topic defined for notification of
         log file delivery. The maximum length is 256 characters.
-    
+
     IncludeGlobalServiceEvents
         Specifies whether the trail is publishing events from global services
         such as IAM to the log files.
-    
+
     EnableLogFileValidation
         Specifies whether log file integrity validation is enabled. The default
         is false.
-    
+
     CloudWatchLogsLogGroupArn
         Specifies a log group name using an Amazon Resource Name (ARN), a unique
         identifier that represents the log group to which CloudTrail logs will
         be delivered. Not required unless you specify CloudWatchLogsRoleArn.
-    
+
     CloudWatchLogsRoleArn
         Specifies the role for the CloudWatch Logs endpoint to assume to write
         to a user's log group.
@@ -205,10 +205,10 @@ def present(name, Name,
 
     r = __salt__['boto_cloudtrail.status'](Name=Name,
                    region=region, key=key, keyid=keyid, profile=profile)
-    _describe['LoggingEnabled'] = r.get('trail',{}).get('IsLogging',False)
+    _describe['LoggingEnabled'] = r.get('trail', {}).get('IsLogging', False)
 
     need_update = False
-    for invar, outvar in {'S3BucketName': 'S3BucketName', 
+    for invar, outvar in {'S3BucketName': 'S3BucketName',
                 'S3KeyPrefix': 'S3KeyPrefix',
                 'SnsTopicName': 'SnsTopicName',
                 'IncludeGlobalServiceEvents': 'IncludeGlobalServiceEvents',
@@ -225,7 +225,7 @@ def present(name, Name,
 
     r = __salt__['boto_cloudtrail.list_tags'](Name=Name,
                    region=region, key=key, keyid=keyid, profile=profile)
-    _describe['Tags'] = r.get('tags',{})
+    _describe['Tags'] = r.get('tags', {})
     tagchange = salt.utils.compare_dicts(_describe['Tags'], Tags)
     if bool(tagchange):
         need_update = True
@@ -278,10 +278,10 @@ def present(name, Name,
             adds = {}
             removes = {}
             for k, diff in tagchange.iteritems():
-                if diff.get('new','') != '':
+                if diff.get('new', '') != '':
                     # there's an update for this key
                     adds[k] = Tags[k]
-                elif diff.get('old','') != '':
+                elif diff.get('old', '') != '':
                     removes[k] = _describe[k]
             if bool(adds):
                 r = __salt__['boto_cloudtrail.add_tags'](Name=Name,
