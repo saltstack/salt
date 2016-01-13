@@ -29,11 +29,10 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
           .. versionadded:: 2015.8.0
         - version: Version
             One of the following:
-
             - Version to download
             - ``latest`` - Download the latest release of this artifact
             - ``latest_snapshot`` - Download the latest snapshot for this artifact
-            
+
         - username: Artifactory username
           .. versionadded:: 2015.8.0
         - password: Artifactory password
@@ -106,7 +105,7 @@ def __fetch_from_artifactory(artifact, target_dir, target_file):
                                                                    repository=artifact['repository'],
                                                                    group_id=artifact['group_id'],
                                                                    artifact_id=artifact['artifact_id'],
-                                                                   packaging=artifact['packaging']  if 'packaging' in artifact else 'jar',
+                                                                   packaging=artifact['packaging'] if 'packaging' in artifact else 'jar',
                                                                    classifier=artifact['classifier'] if 'classifier' in artifact else None,
                                                                    target_dir=target_dir,
                                                                    target_file=target_file,
@@ -117,7 +116,7 @@ def __fetch_from_artifactory(artifact, target_dir, target_file):
                                                             repository=artifact['repository'],
                                                             group_id=artifact['group_id'],
                                                             artifact_id=artifact['artifact_id'],
-                                                            packaging=artifact['packaging']  if 'packaging' in artifact else 'jar',
+                                                            packaging=artifact['packaging'] if 'packaging' in artifact else 'jar',
                                                             classifier=artifact['classifier'] if 'classifier' in artifact else None,
                                                             version=artifact['version'],
                                                             target_dir=target_dir,
@@ -129,7 +128,7 @@ def __fetch_from_artifactory(artifact, target_dir, target_file):
                                                                    repository=artifact['repository'],
                                                                    group_id=artifact['group_id'],
                                                                    artifact_id=artifact['artifact_id'],
-                                                                   packaging=artifact['packaging']  if 'packaging' in artifact else 'jar',
+                                                                   packaging=artifact['packaging'] if 'packaging' in artifact else 'jar',
                                                                    classifier=artifact['classifier'] if 'classifier' in artifact else None,
                                                                    target_dir=target_dir,
                                                                    target_file=target_file,
@@ -140,7 +139,7 @@ def __fetch_from_artifactory(artifact, target_dir, target_file):
                                                            repository=artifact['repository'],
                                                            group_id=artifact['group_id'],
                                                            artifact_id=artifact['artifact_id'],
-                                                           packaging=artifact['packaging']  if 'packaging' in artifact else 'jar',
+                                                           packaging=artifact['packaging'] if 'packaging' in artifact else 'jar',
                                                            classifier=artifact['classifier'] if 'classifier' in artifact else None,
                                                            version=artifact['version'],
                                                            target_dir=target_dir,
