@@ -9,6 +9,7 @@ import errno
 import os
 import locale
 import logging
+import time
 from distutils.version import LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import third party libs
@@ -785,11 +786,13 @@ def install(name=None, refresh=False, pkgs=None, saltenv='base', **kwargs):
     new = list_pkgs()
     tries = 0
     difference = salt.utils.compare_dicts(old, new)
-    while not all(name in difference for name in changed) and tries <= 1000:
+    while not all(name in difference for name in changed) and tries < 10:
+        time.sleep(3)
         new = list_pkgs()
         difference = salt.utils.compare_dicts(old, new)
         tries += 1
-        if tries == 1000:
+        log.debug("Try {0}".format(tries))
+        if tries == 10:
             ret['_comment'] = 'Registry not updated.'
 
     # Compare the software list before and after
