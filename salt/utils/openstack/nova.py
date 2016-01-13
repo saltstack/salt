@@ -5,10 +5,9 @@ Nova class
 
 # Import Python libs
 from __future__ import absolute_import, with_statement
-from distutils.version import LooseVersion
-import time
 import inspect
 import logging
+import copy
 
 # Import third party libs
 import salt.ext.six as six
@@ -106,6 +105,8 @@ def _parse_block_device_mapping_v2(block_device=None, boot_volume=None, snapshot
                     'boot_index': -1, 'delete_on_termination': True,
                     'guest_format': 'swap', 'volume_size': swap}
         bdm.append(bdm_dict)
+
+    return bdm
 
 
 class NovaServer(object):
@@ -344,7 +345,7 @@ class SaltNova(object):
         if not self.conn.volume_exists(name):
             return {'name': name, 'status': 'deleted'}
         if not self.conn.delete_volume(name, wait=True):
-            raise SaltCloudSystemExit('Failed to delete {0} volume: {1}'.format(name, exc))
+            raise SaltCloudSystemExit('Failed to delete {0} volume.'.format(name))
         return {'name': name, 'status': 'deleted'}
 
     def volume_detach(self,
@@ -359,7 +360,7 @@ class SaltNova(object):
         volume_id = volume.attachments[0]['volume_id']
         server_id = volume.attachments[0]['server_id']
         if not self.conn.detach_volume(server_id, volume_id, wait=True, timeout=timeout):
-            raise SaltCloudSystemExit('Failed to detach {0} volume: {1}'.format(name, exc))
+            raise SaltCloudSystemExit('Failed to detach {0} volume'.format(name))
         return True
 
     def volume_attach(self, name, server_name, device='/dev/xvdb', timeout=300):
@@ -367,9 +368,9 @@ class SaltNova(object):
         Attach a block device
         '''
         if not self.conn.volume_exists(name):
-            raise SaltCloudSystemExit('Unable to find {0} volume: {1}'.format(name, exc))
+            raise SaltCloudSystemExit('Unable to find {0} volume.'.format(name))
         volume = self.conn.get_volume(name)
-        servers = self.conn.get_server(server_name)
+        server = self.conn.get_server(server_name)
 
         return self.conn.attach_volume(server.id, volume.id, device=device, wait=True, timeout=timeout)
 
@@ -549,7 +550,7 @@ class SaltNova(object):
         '''
         Delete image metadata
         '''
-        image_id = self.conn.get_image(image_id or name).id # pylint: disable=C0103
+        image_id = self.conn.get_image(image_id or name).id  # pylint: disable=C0103
         pairs = keys.split(',')
         if not image_id:
             return {'Error': 'A valid image name or id was not specified'}
@@ -571,12 +572,13 @@ class SaltNova(object):
                     'accessIPv6': item.accessIPv6,
                     'flavor': {'id': item.flavor['id']},
                     'image': {'id': item.image['id'] if item.image else 'Boot From Volume'},
-	        }
+                    }
             except TypeError:
                 pass
         return ret
 
     def _detail_server(self, item):
+        ret = {}
         ret[item.name] = {
             'OS-EXT-SRV-ATTR': {},
             'OS-EXT-STS': {},
@@ -633,7 +635,7 @@ class SaltNova(object):
         Detailed list of servers
         '''
         ret = {}
-        for item in self.conn.list_servers(detailed=true):
+        for item in self.conn.list_servers(detailed=True):
             try:
                 self._detail_server(item)
             except TypeError:
@@ -806,7 +808,6 @@ class SaltNova(object):
 
         .. versionadded:: Boron
         '''
-        pools = nt_ks.floating_ip_pools.list()
         response = {}
         for pool in self.conn.list_floating_ip_pools():
             response[pool.name] = {
