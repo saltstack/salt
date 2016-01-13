@@ -433,6 +433,7 @@ def add_tags(Name,
     except ClientError as e:
         return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
 
+
 def remove_tags(Name,
            region=None, key=None, keyid=None, profile=None, **kwargs):
     '''
