@@ -274,6 +274,18 @@ def bootstrap(name,
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
+    if __opts__['test']:
+        try:
+            call = __salt__['npm.install'](dir=name, runas=user, pkg=None, dry_run=True)
+        except (CommandNotFoundError, CommandExecutionError) as err:
+            ret['result'] = False
+            ret['comment'] = 'Error Bootstrapping {0!r}: {1}'.format(name, err)
+            return ret
+        ret['result'] = None
+        ret['changes'] = {'old': [], 'new': call}
+        ret['comment'] = '{0} is set to be bootstrapped'.format(name)
+        return ret
+
     try:
         call = __salt__['npm.install'](dir=name, runas=user, pkg=None)
     except (CommandNotFoundError, CommandExecutionError) as err:
@@ -289,6 +301,7 @@ def bootstrap(name,
     # npm.install will return a string if it can't parse a JSON result
     if isinstance(call, str):
         ret['result'] = False
+        ret['changes'] = call
         ret['comment'] = 'Could not bootstrap directory'
     else:
         ret['result'] = True
