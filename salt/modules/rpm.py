@@ -490,7 +490,7 @@ def info(*packages, **attr):
                 try:
                     value = int(value)
                     pkg_data['{0}_time_t'.format(key)] = value
-                    value = datetime.datetime.fromtimestamp(value).isoformat()
+                    value = datetime.datetime.fromtimestamp(value).isoformat() + "Z"
                 except ValueError:
                     log.warning('Could not convert "{0}" into Unix time'.format(value))
                     continue
