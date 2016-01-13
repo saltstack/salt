@@ -1148,6 +1148,7 @@ def is_private(ip_addr):
     '''
     return ipaddress.ip_address(ip_addr).is_private
 
+
 def is_loopback(ip_addr):
     '''
     Check if the given IP address is a loopback address
