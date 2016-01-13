@@ -328,6 +328,8 @@ def get_image(conn, vm_):
 
     try:
         image = conn.image_show(vm_image)
+        if not image and salt.utils.cloud.valid_uuid(vm_image):
+            return vm_image
         return image['id']
     except novaclient.exceptions.NotFound as exc:
         raise SaltCloudNotFound(
@@ -1039,7 +1041,7 @@ def list_nodes(call=None, **kwargs):
             'id': server_tmp['id'],
             'image': server_tmp['image']['id'],
             'size': server_tmp['flavor']['id'],
-            'state': server_tmp['state'],
+            'state': server_tmp['status'],
             'private_ips': private,
             'public_ips': public,
         }

@@ -32,20 +32,6 @@ from salt.exceptions import SaltCloudSystemExit
 # Get logging started
 log = logging.getLogger(__name__)
 
-# dict for block_device_mapping_v2
-CLIENT_BDM2_KEYS = {
-    'id': 'uuid',
-    'source': 'source_type',
-    'dest': 'destination_type',
-    'bus': 'disk_bus',
-    'device': 'device_name',
-    'size': 'volume_size',
-    'format': 'guest_format',
-    'bootindex': 'boot_index',
-    'type': 'device_type',
-    'shutdown': 'delete_on_termination',
-}
-
 
 def check_nova():
     return HAS_SHADE
@@ -55,6 +41,58 @@ def check_nova():
 class KwargsStruct(object):
     def __init__(self, **entries):
         self.__dict__.update(entries)
+
+
+def _parse_block_device_mapping_v2(block_device=None, boot_volume=None, snapshot=None, ephemeral=None, swap=None):
+    bdm = []
+    if block_device is None:
+        block_device = []
+    if ephemeral is None:
+        ephemeral = []
+
+    if boot_volume is not None:
+        bdm_dict = {'uuid': boot_volume, 'source_type': 'volume',
+                    'destination_type': 'volume', 'boot_index': 0,
+                    'delete_on_termination': False}
+        bdm.append(bdm_dict)
+
+    if snapshot is not None:
+        bdm_dict = {'uuid': snapshot, 'source_type': 'snapshot',
+                    'destination_type': 'volume', 'boot_index': 0,
+                    'delete_on_termination': False}
+        bdm.append(bdm_dict)
+
+    for device_spec in block_device:
+        bdm_dict = {}
+
+        for key, value in six.iteritems(device_spec):
+            bdm_dict[CLIENT_BDM2_KEYS[key]] = value
+
+        # Convert the delete_on_termination to a boolean or set it to true by
+        # default for local block devices when not specified.
+        if 'delete_on_termination' in bdm_dict:
+            action = bdm_dict['delete_on_termination']
+            bdm_dict['delete_on_termination'] = (action == 'remove')
+        elif bdm_dict.get('destination_type') == 'local':
+            bdm_dict['delete_on_termination'] = True
+
+        bdm.append(bdm_dict)
+
+    for ephemeral_spec in ephemeral:
+        bdm_dict = {'source_type': 'blank', 'destination_type': 'local',
+                    'boot_index': -1, 'delete_on_termination': True}
+        if 'size' in ephemeral_spec:
+            bdm_dict['volume_size'] = ephemeral_spec['size']
+        if 'format' in ephemeral_spec:
+            bdm_dict['guest_format'] = ephemeral_spec['format']
+
+        bdm.append(bdm_dict)
+
+    if swap is not None:
+        bdm_dict = {'source_type': 'blank', 'destination_type': 'local',
+                    'boot_index': -1, 'delete_on_termination': True,
+                    'guest_format': 'swap', 'volume_size': swap}
+        bdm.append(bdm_dict)
 
 
 class NovaServer(object):
@@ -113,6 +151,8 @@ class SaltNova(object):
         Set up nova credentials
         '''
         self.kwargs = kwargs.copy()
+        import pprint
+        log.debug('KWARGS: %s', pprint.pformat(self.kwargs))
 
         if not novaclient.base.Manager._hooks_map:
             if hasattr(OpenStackComputeShell, '_discover_extensions'):
@@ -122,12 +162,6 @@ class SaltNova(object):
             for extension in self.extensions:
                 extension.run_hooks('__pre_parse_args__')
             self.kwargs['extensions'] = self.extensions
-
-        if kwargs.get('os_auth_plugin') is not None:
-            novaclient.auth_plugin.discover_auth_systems()
-            auth_plugin = novaclient.auth_plugin.load_plugin(kwargs['os_auth_plugin'])
-            self.kwargs['auth_plugin'] = auth_plugin
-            self.kwargs['auth_system'] = kwargs['os_auth_plugin']
 
         # needs an object, not a dictionary
         if hasattr(self, 'extensions'):
@@ -140,8 +174,8 @@ class SaltNova(object):
             kwargs['auth_type'] = kwargs['os_auth_plugin']
             del kwargs['os_auth_plugin']
 
-        conn = shade.openstack_cloud(**self.kwargs)
-        self.catalog = conn.service_catalog
+        self.conn = shade.openstack_cloud(**self.kwargs)
+        self.catalog = self.conn.service_catalog
         self.expand_extensions()
 
     def expand_extensions(self):
@@ -172,6 +206,18 @@ class SaltNova(object):
 
         return ret
 
+    def _sanatize_boot_args(kwargs):
+        allowed_boot_args = [
+            'name', 'image', 'flavor', 'auto_ip', 'ips', 'ip_pool', 'root_volume', 'terminate_volume', 'wait',
+            'timeout', 'reuse_ips', 'network', 'boot_from_volume', 'volume_size', 'boot_volume', 'volumes',
+            'meta', 'files', 'userdata', 'reservation_id', 'return_raw', 'min_count', 'max_count', 'security_groups',
+            'key_name', 'availability_zone', 'block_device_mapping', 'block_device_mapping_v2', 'nics',
+            'scheduler_hints', 'config_drive', 'admin_pass', 'disk_config',
+        ]
+        for variable in six.iterkeys(kwargs):  # iterate over a copy, we might delete some
+            if variable not in allowed_boot_args:
+                del kwargs[variable]
+
     def boot(self, name, flavor_id=0, image_id=0, timeout=300, **kwargs):
         '''
         Boot a cloud server.
@@ -189,6 +235,7 @@ class SaltNova(object):
             block_device=block_device, boot_volume=boot_volume, snapshot=snapshot,
             ephemeral=ephemeral, swap=swap
         )
+        self._sanatize_boot_args(kwargs)
         return self.conn.create_server(**kwargs)
 
     def show_instance(self, name):
@@ -277,7 +324,7 @@ class SaltNova(object):
         '''
         if not self.conn.volume_exists(name):
             return {'name': name, 'status': 'deleted'}
-        if not self.conn.delete_volume(name, wait=True)
+        if not self.conn.delete_volume(name, wait=True):
             raise SaltCloudSystemExit('Failed to delete {0} volume: {1}'.format(name, exc))
         return {'name': name, 'status': 'deleted'}
 
@@ -423,18 +470,14 @@ class SaltNova(object):
         Show image details and metadata
         '''
         image = self.conn.get_image(image_id)
-        links = {}
-        for link in image.links:
-            links[link['rel']] = link['href']
+        if image is None:
+            return {}
         ret = {
             'name': image.name,
             'id': image.id,
             'status': image.status,
-            'progress': image.progress,
-            'created': image.created,
-            'updated': image.updated,
-            'metadata': image.metadata,
-            'links': links,
+            'created': image.created_at,
+            'updated': image.updated_at,
         }
         if hasattr(image, 'minDisk'):
             ret['minDisk'] = image.minDisk
@@ -450,22 +493,17 @@ class SaltNova(object):
         ret = {}
         for image in self.conn.list_images():
             links = {}
-            for link in image.links:
-                links[link['rel']] = link['href']
             ret[image.name] = {
                 'name': image.name,
                 'id': image.id,
                 'status': image.status,
-                'progress': image.progress,
-                'created': image.created,
-                'updated': image.updated,
-                'metadata': image.metadata,
-                'links': links,
+                'created': image.created_at,
+                'updated': image.updated_at,
             }
-            if hasattr(image, 'minDisk'):
-                ret[image.name]['minDisk'] = image.minDisk
-            if hasattr(image, 'minRam'):
-                ret[image.name]['minRam'] = image.minRam
+            if hasattr(image, 'min_disk'):
+                ret[image.name]['minDisk'] = image.min_disk
+            if hasattr(image, 'min_ram'):
+                ret[image.name]['minRam'] = image.min_ram
         if name:
             return {name: ret[name]}
         return ret
@@ -512,11 +550,9 @@ class SaltNova(object):
                     'state': item.status,
                     'accessIPv4': item.accessIPv4,
                     'accessIPv6': item.accessIPv6,
-                    'flavor': {'id': item.flavor['id'],
-                               'links': item.flavor['links']},
-                    'image': {'id': item.image['id'] if item.image else 'Boot From Volume',
-                              'links': item.image['links'] if item.image else ''},
-                    }
+                    'flavor': {'id': item.flavor['id']},
+                    'image': {'id': item.image['id'] if item.image else 'Boot From Volume'},
+	        }
             except TypeError:
                 pass
         return ret
@@ -589,7 +625,7 @@ class SaltNova(object):
         '''
         Show details of one server
         '''
-        server = self.conn.search_servers(server_id, detailed=True)
+        server = self.conn.get_server(server_id, detailed=True)
         return {server.name: server}
 
     def secgroup_create(self, name, description):
