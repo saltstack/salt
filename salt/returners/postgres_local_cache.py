@@ -242,6 +242,7 @@ def returner(load):
     )
     _close_conn(conn)
 
+
 def event_return(events):
     '''
     Return event to a postgres server
