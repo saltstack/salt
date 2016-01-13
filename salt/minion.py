@@ -397,7 +397,7 @@ class MinionBase(object):
         (possibly failed) master will then be removed from the list of masters.
         '''
         # check if master_type was altered from its default
-        if opts['master_type'] != 'str' and opts['__role'] != 'syndic':
+        if opts.get('master_type', 'str') != 'str' and opts['__role'] != 'syndic':
             # check for a valid keyword
             if opts['master_type'] == 'func':
                 # split module and function and try loading the module
@@ -2066,17 +2066,17 @@ class Syndic(Minion):
             self.sync_connect_master()
 
         # Instantiate the local client
-        self.local = salt.client.get_local_client(
-            self.opts['_minion_conf_file'], io_loop=self.io_loop)
-        self.local.event.subscribe('')
-        self.local.opts['interface'] = self._syndic_interface
+        #self.local = salt.client.get_local_client(
+            #self.opts['_minion_conf_file'], io_loop=self.io_loop)
+        #self.local.event.subscribe('')
+        #self.local.opts['interface'] = self._syndic_interface
 
         # add handler to subscriber
         self.pub_channel.on_recv(self._process_cmd_socket)
 
         # register the event sub to the poller
-        self._reset_event_aggregation()
-        self.local.event.set_event_handler(self._process_event)
+        #self._reset_event_aggregation()
+        #self.local.event.set_event_handler(self._process_event)
 
         # forward events every syndic_event_forward_timeout
         self.forward_events = tornado.ioloop.PeriodicCallback(self._forward_events,
@@ -2090,8 +2090,8 @@ class Syndic(Minion):
         # Make sure to gracefully handle SIGUSR1
         enable_sigusr1_handler()
 
-        if start:
-            self.io_loop.start()
+        #if start:
+            #self.io_loop.start()
 
     # TODO: clean up docs
     def tune_in_no_block(self):
@@ -2101,8 +2101,8 @@ class Syndic(Minion):
         the tune_in sequence
         '''
         # Instantiate the local client
-        self.local = salt.client.get_local_client(
-                self.opts['_minion_conf_file'], io_loop=self.io_loop)
+        #self.local = salt.client.get_local_client(
+                #self.opts['_minion_conf_file'], io_loop=self.io_loop)
 
         # add handler to subscriber
         self.pub_channel.on_recv(self._process_cmd_socket)
@@ -2119,9 +2119,9 @@ class Syndic(Minion):
         self.jids = {}
         self.raw_events = []
 
-    def _process_event(self, raw):
+    def process_event(self, key, load):
         # TODO: cleanup: Move down into event class
-        mtag, data = self.local.event.unpack(raw, self.local.event.serial)
+        #mtag, data = self.local.event.unpack(raw, self.local.event.serial)
         event = {'data': data, 'tag': mtag}
         log.trace('Got event {0}'.format(event['tag']))  # pylint: disable=no-member
         tag_parts = event['tag'].split('/')
@@ -2177,8 +2177,8 @@ class Syndic(Minion):
         # We borrowed the local clients poller so give it back before
         # it's destroyed. Reset the local poller reference.
         super(Syndic, self).destroy()
-        if hasattr(self, 'local'):
-            del self.local
+        #if hasattr(self, 'local'):
+            #del self.local
 
         if hasattr(self, 'forward_events'):
             self.forward_events.stop()

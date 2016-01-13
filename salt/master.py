@@ -25,6 +25,7 @@ from Crypto.PublicKey import RSA
 import salt.ext.six as six
 from salt.ext.six.moves import range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
+from salt.config import syndic_config
 
 try:
     import zmq
@@ -691,6 +692,13 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
                 log.warning("TCP transport is currently supporting the only 1 worker on Windows.")
                 self.opts['worker_threads'] = 1
 
+        self.syndic = None
+        if self.opts.get('syndic_master'):
+            sopts = syndic_config(self.opts['conf_file'],
+                                  os.path.join(self.opts['config_dir'], 'minion'))
+            self.syndic = salt.minion.Syndic(sopts)
+            self.syndic.tune_in()
+
         for ind in range(int(self.opts['worker_threads'])):
             name = 'MWorker-{0}'.format(ind)
             self.process_manager.add_process(MWorker,
@@ -698,7 +706,8 @@ class ReqServer(SignalHandlingMultiprocessingProcess):
                                                 self.master_key,
                                                 self.key,
                                                 req_channels,
-                                                name
+                                                name,
+                                                self.syndic
                                                 ),
                                             kwargs=kwargs,
                                             name=name
@@ -743,6 +752,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
                  key,
                  req_channels,
                  name,
+                 syndic,
                  **kwargs):
         '''
         Create a salt master worker process
@@ -763,6 +773,8 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         self.key = key
         self.k_mtime = 0
 
+        self.syndic = syndic
+
     # We need __setstate__ and __getstate__ to also pickle 'SMaster.secrets'.
     # Otherwise, 'SMaster.secrets' won't be copied over to the spawned process
     # on Windows since spawning processes on Windows requires pickling.
@@ -777,6 +789,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         self.key = state['key']
         self.k_mtime = state['k_mtime']
         SMaster.secrets = state['secrets']
+        self.syndic = state['syndic']
 
     def __getstate__(self):
         return {'opts': self.opts,
@@ -785,7 +798,8 @@ class MWorker(SignalHandlingMultiprocessingProcess):
                 'key': self.key,
                 'k_mtime': self.k_mtime,
                 'log_queue': self.log_queue,
-                'secrets': SMaster.secrets}
+                'secrets': SMaster.secrets,
+                'syndic': self.syndic}
 
     def _handle_signals(self, signum, sigframe):
         for channel in getattr(self, 'req_channels', ()):
@@ -830,6 +844,8 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         load = payload['load']
         ret = {'aes': self._handle_aes,
                'clear': self._handle_clear}[key](load)
+        if self.syndic:
+            self.syndic.process_event(key, load)
         raise tornado.gen.Return(ret)
 
     def _handle_clear(self, load):
