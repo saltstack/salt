@@ -134,20 +134,6 @@ except ImportError:
 # Get logging started
 log = logging.getLogger(__name__)
 
-SIZE_MAP = {
-    'Micro Instance': 't2.micro',
-    'Small Instance': 't2.small',
-    'Medium Instance': 'm3.medium',
-    'Large Instance': 'm4.large',
-    'Extra Large Instance': 'm4.xlarge',
-    'High-CPU Medium Instance': 'c4.large',
-    'High-CPU Extra Large Instance': 'c4.xlarge',
-    'High-Memory Extra Large Instance': 'r3.xlarge',
-    'High-Memory Double Extra Large Instance': 'r3.2xlarge',
-    'High-Memory Quadruple Extra Large Instance': 'r3.4xlarge',
-    'Cluster GPU Quadruple Extra Large Instance': 'g2.8xlarge'
-}
-
 
 EC2_LOCATIONS = {
     'ap-northeast-1': 'ec2_ap_northeast',
