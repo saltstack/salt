@@ -48,14 +48,12 @@ Connection module for Amazon CloudTrail
 # Import Python libs
 from __future__ import absolute_import
 import logging
-import json
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 
 # Import Salt libs
 import salt.utils.boto3
 import salt.utils.compat
 import salt.utils
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -98,7 +96,7 @@ def __init__(opts):
         __utils__['boto3.assign_funcs'](__name__, 'cloudtrail')
 
 
-def exists(Name, 
+def exists(Name,
            region=None, key=None, keyid=None, profile=None):
     '''
     Given a trail name, check to see if the given trail exists.
@@ -151,13 +149,13 @@ def create(Name,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        kwargs={}
+        kwargs = {}
         for arg in ('S3KeyPrefix', 'SnsTopicName', 'IncludeGlobalServiceEvents',
                     #'IsMultiRegionTrail',
                     'EnableLogFileValidation', 'CloudWatchLogsLogGroupArn',
                     'CloudWatchLogsRoleArn', 'KmsKeyId'):
             if locals()[arg] is not None:
-               kwargs[arg] = locals()[arg]
+                kwargs[arg] = locals()[arg]
         trail = conn.create_trail(Name=Name,
                                   S3BucketName=S3BucketName,
                                   **kwargs)
@@ -214,7 +212,7 @@ def describe(Name,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         trails = conn.describe_trails(trailNameList=[Name])
-        if trails and len(trails.get('trailList',[])) > 0:
+        if trails and len(trails.get('trailList', [])) > 0:
             keys = ('Name', 'S3BucketName', 'S3KeyPrefix',
                     'SnsTopicName', 'IncludeGlobalServiceEvents',
                     #'IsMultiRegionTrail',
@@ -293,7 +291,7 @@ def list(region=None, key=None, keyid=None, profile=None):
         trails = conn.describe_trails()
         if not bool(trails.get('trailList')):
             log.warning('No trails found')
-        return {'trails': trails.get('trailList',[])}
+        return {'trails': trails.get('trailList', [])}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}
 
@@ -324,13 +322,13 @@ def update(Name,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        kwargs={}
+        kwargs = {}
         for arg in ('S3KeyPrefix', 'SnsTopicName', 'IncludeGlobalServiceEvents',
                     #'IsMultiRegionTrail',
                     'EnableLogFileValidation', 'CloudWatchLogsLogGroupArn',
                     'CloudWatchLogsRoleArn', 'KmsKeyId'):
             if locals()[arg] is not None:
-               kwargs[arg] = locals()[arg]
+                kwargs[arg] = locals()[arg]
         trail = conn.update_trail(Name=Name,
                                   S3BucketName=S3BucketName,
                                   **kwargs)
@@ -364,7 +362,7 @@ def start_logging(Name,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.start_logging(Name=Name)
-        return {'started': True }
+        return {'started': True}
     except ClientError as e:
         return {'started': False, 'error': salt.utils.boto3.get_error(e)}
 
@@ -388,7 +386,7 @@ def stop_logging(Name,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         conn.stop_logging(Name=Name)
-        return {'stopped': True }
+        return {'stopped': True}
     except ClientError as e:
         return {'stopped': False, 'error': salt.utils.boto3.get_error(e)}
 
@@ -407,7 +405,7 @@ def _get_trail_arn(name, region=None, key=None, keyid=None, profile=None):
     return 'arn:aws:cloudtrail:{0}:{1}:trail/{2}'.format(region, account_id, name)
 
 
-def add_tags(Name, 
+def add_tags(Name,
            region=None, key=None, keyid=None, profile=None, **kwargs):
     '''
     Add tags to a trail
@@ -431,11 +429,11 @@ def add_tags(Name,
                 continue
             tagslist.append({'Key': str(k), 'Value': str(v)})
         conn.add_tags(ResourceId=_get_trail_arn(Name), TagsList=tagslist)
-        return {'tagged': True }
+        return {'tagged': True}
     except ClientError as e:
         return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
 
-def remove_tags(Name, 
+def remove_tags(Name,
            region=None, key=None, keyid=None, profile=None, **kwargs):
     '''
     Remove tags from a trail
@@ -459,12 +457,12 @@ def remove_tags(Name,
                 continue
             tagslist.append({'Key': str(k), 'Value': str(v)})
         conn.remove_tags(ResourceId=_get_trail_arn(Name), TagsList=tagslist)
-        return {'tagged': True }
+        return {'tagged': True}
     except ClientError as e:
         return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
 
 
-def list_tags(Name, 
+def list_tags(Name,
            region=None, key=None, keyid=None, profile=None):
     '''
     List tags of a trail
@@ -486,10 +484,10 @@ def list_tags(Name,
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         rid = _get_trail_arn(Name)
         ret = conn.list_tags(ResourceIdList=[rid])
-        tlist = ret.get('ResourceTagList',[]).pop().get('TagsList')
+        tlist = ret.get('ResourceTagList', []).pop().get('TagsList')
         tagdict = {}
         for tag in tlist:
-           tagdict[tag.get('Key')] = tag.get('Value')
-        return {'tags': tagdict }
+            tagdict[tag.get('Key')] = tag.get('Value')
+        return {'tags': tagdict}
     except ClientError as e:
         return {'error': salt.utils.boto3.get_error(e)}

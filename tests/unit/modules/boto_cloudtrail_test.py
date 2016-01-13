@@ -371,7 +371,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             result = boto_cloudtrail.list_tags(Name=trail_ret['Name'], **conn_parameters)
 
-        self.assertEqual(result['tags'],{})
+        self.assertEqual(result['tags'], {})
 
     def test_that_when_listing_tags_fails_the_list_tags_method_returns_false(self):
         '''
