@@ -203,7 +203,7 @@ class SaltNova(object):
                     if not isinstance(value, novaclient.base.Manager):
                         continue
                     if value.__class__.__name__ == attr:
-                        setattr(self.conn.nova_client, key, getattr(self.conn.nova_client, extension.name))
+                        setattr(self.conn.nova_client, key, extension.manager_class(self.conn.nova_client))
 
     def get_catalog(self):
         '''
