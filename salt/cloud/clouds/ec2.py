@@ -1625,7 +1625,7 @@ def request_instance(vm_=None, call=None):
                 userdata = fh_.read()
 
     if userdata is not None:
-        params['UserData'] = base64.b64encode(userdata)
+        params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
 
     vm_size = config.get_cloud_config_value(
         'size', vm_, __opts__, search_global=False
