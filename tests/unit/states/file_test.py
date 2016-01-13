@@ -584,8 +584,8 @@ class FileTestCase(TestCase):
                                                            group=group,
                                                            defaults=True), ret)
 
-                    comt = ('Only one of contents, contents_pillar, '
-                            'and contents_grains is permitted')
+                    comt = ('Only one of \'contents\', \'contents_pillar\', '
+                            'and \'contents_grains\' is permitted')
                     ret.update({'comment': comt})
                     self.assertDictEqual(filestate.managed
                                          (name, user=user, group=group,
