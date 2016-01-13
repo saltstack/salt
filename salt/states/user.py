@@ -31,10 +31,10 @@ import logging
 
 # Import salt libs
 import salt.utils
-import salt.utils.locales
+from salt.utils.locales import sdecode
 
 # Import 3rd-party libs
-import salt.ext.six as six
+from salt.ext.six import string_types, iteritems
 
 log = logging.getLogger(__name__)
 
@@ -143,6 +143,10 @@ def _changes(name,
         if expire and expire is not -1 and lshad['expire'] != expire:
             change['expire'] = expire
     # GECOS fields
+    if isinstance(fullname, string_types):
+        fullname = sdecode(fullname)
+    if isinstance(lusr['fullname'], string_types):
+        lusr['fullname'] = sdecode(lusr['fullname'])
     if fullname is not None and lusr['fullname'] != fullname:
         change['fullname'] = fullname
     if win_homedrive and lusr['homedrive'] != win_homedrive:
@@ -361,13 +365,13 @@ def present(name,
         .. versionchanged:: 2015.8.0
     '''
     if fullname is not None:
-        fullname = salt.utils.locales.sdecode(fullname)
+        fullname = sdecode(fullname)
     if roomnumber is not None:
-        roomnumber = salt.utils.locales.sdecode(roomnumber)
+        roomnumber = sdecode(roomnumber)
     if workphone is not None:
-        workphone = salt.utils.locales.sdecode(workphone)
+        workphone = sdecode(workphone)
     if homephone is not None:
-        homephone = salt.utils.locales.sdecode(homephone)
+        homephone = sdecode(homephone)
 
     ret = {'name': name,
            'changes': {},
@@ -377,7 +381,7 @@ def present(name,
     # the comma is used to separate field in GECOS, thus resulting into
     # salt adding the end of fullname each time this function is called
     for gecos_field in ['fullname', 'roomnumber', 'workphone', 'homephone']:
-        if isinstance(gecos_field, six.string_types) and ',' in gecos_field:
+        if isinstance(gecos_field, string_types) and ',' in gecos_field:
             ret['comment'] = "Unsupported char ',' in {0}".format(gecos_field)
             ret['result'] = False
             return ret
@@ -446,7 +450,7 @@ def present(name,
             ret['result'] = None
             ret['comment'] = ('The following user attributes are set to be '
                               'changed:\n')
-            for key, val in six.iteritems(changes):
+            for key, val in iteritems(changes):
                 if key == 'password':
                     val = 'XXX-REDACTED-XXX'
                 ret['comment'] += '{0}: {1}\n'.format(key, val)
@@ -457,7 +461,7 @@ def present(name,
         if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
             lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
-        for key, val in six.iteritems(changes):
+        for key, val in iteritems(changes):
             if key == 'passwd' and not empty_password:
                 __salt__['shadow.set_password'](name, password)
                 continue
@@ -611,7 +615,9 @@ def present(name,
             if not createhome:
                 # pwd incorrectly reports presence of home
                 ret['changes']['home'] = ''
-            if 'shadow.info' in __salt__ and not salt.utils.is_windows():
+            if 'shadow.info' in __salt__ \
+                and not salt.utils.is_windows()\
+                and not salt.utils.is_darwin():
                 if password and not empty_password:
                     __salt__['shadow.set_password'](name, password)
                     spost = __salt__['shadow.info'](name)
@@ -677,6 +683,13 @@ def present(name,
                     ret['changes']['expire'] = expire
             elif salt.utils.is_windows() and password and not empty_password:
                 if not __salt__['user.setpassword'](name, password):
+                    ret['comment'] = 'User {0} created but failed to set' \
+                                     ' password to' \
+                                     ' {1}'.format(name, 'XXX-REDACTED-XXX')
+                    ret['result'] = False
+                ret['changes']['passwd'] = 'XXX-REDACTED-XXX'
+            elif salt.utils.is_darwin() and password and not empty_password:
+                if not __salt__['shadow.set_password'](name, password):
                     ret['comment'] = 'User {0} created but failed to set' \
                                      ' password to' \
                                      ' {1}'.format(name, 'XXX-REDACTED-XXX')
