@@ -760,6 +760,12 @@ def avail_sizes(call=None):
             },
         },
         'General Purpose': {
+            't2.nano': {
+                'id': 't2.nano',
+                'cores': '1',
+                'disk': 'EBS',
+                'ram': '512 MiB'
+            },
             't2.micro': {
                 'id': 't2.micro',
                 'cores': '1',
