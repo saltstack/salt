@@ -184,6 +184,7 @@ def present(name, entry=None, family='ipv4', **kwargs):
            'changes': {},
            'result': None,
            'comment': ''}
+    test_flag = False
 
     if not entry:
         ret['result'] = False
@@ -198,19 +199,25 @@ def present(name, entry=None, family='ipv4', **kwargs):
 
     for entry in entries:
         _entry = '{0}'.format(entry)
-        if 'comment' in kwargs:
-            _entry = '{0} comment "{1}"'.format(entry, kwargs['comment'])
+        if 'timeout' in kwargs:
+            if 'comment' in _entry:
+                _entry = '{0} timeout {1} {2} {3}'.format(entry.split()[0], kwargs['timeout'], entry.split()[1], entry.split()[2])
+            else:
+                _entry = '{0} timeout {1}'.format(entry.split()[0], kwargs['timeout'])
 
         if __salt__['ipset.check'](kwargs['set_name'],
                                    _entry,
                                    family) is True:
-            ret['result'] = True
+            if test_flag is False:
+                ret['result'] = True
             ret['comment'] += 'entry for {0} already in set ({1}) for {2}\n'.format(
                 entry,
                 kwargs['set_name'],
                 family)
         else:
             if __opts__['test']:
+                test_flag = True
+                ret['result'] = None
                 ret['comment'] += 'entry {0} needs to be added to set {1} for family {2}\n'.format(
                     entry,
                     kwargs['set_name'],
