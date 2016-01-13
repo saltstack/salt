@@ -31,6 +31,19 @@ from salt.exceptions import SaltCloudSystemExit
 
 # Get logging started
 log = logging.getLogger(__name__)
+# dict for block_device_mapping_v2
+CLIENT_BDM2_KEYS = {
+    'id': 'uuid',
+    'source': 'source_type',
+    'dest': 'destination_type',
+    'bus': 'disk_bus',
+    'device': 'device_name',
+    'size': 'volume_size',
+    'format': 'guest_format',
+    'bootindex': 'boot_index',
+    'type': 'device_type',
+    'shutdown': 'delete_on_termination',
+}
 
 
 def check_nova():
@@ -209,7 +222,7 @@ class SaltNova(object):
 
         return ret
 
-    def _sanatize_boot_args(kwargs):
+    def _sanatize_boot_args(self, old_kwargs):
         allowed_boot_args = [
             'name', 'image', 'flavor', 'auto_ip', 'ips', 'ip_pool', 'root_volume', 'terminate_volume', 'wait',
             'timeout', 'reuse_ips', 'network', 'boot_from_volume', 'volume_size', 'boot_volume', 'volumes',
@@ -217,14 +230,17 @@ class SaltNova(object):
             'key_name', 'availability_zone', 'block_device_mapping', 'block_device_mapping_v2', 'nics',
             'scheduler_hints', 'config_drive', 'admin_pass', 'disk_config',
         ]
-        for variable in six.iterkeys(kwargs):  # iterate over a copy, we might delete some
-            if variable not in allowed_boot_args:
-                del kwargs[variable]
+        kwargs = copy.deepcopy(old_kwargs)
+        for key in six.iterkeys(old_kwargs.copy()):  # iterate over a copy, we might delete some
+            if key not in allowed_boot_args:
+                del kwargs[key]
+        return kwargs
 
     def boot(self, name, flavor_id=0, image_id=0, timeout=300, **kwargs):
         '''
         Boot a cloud server.
         '''
+        kwargs = kwargs.copy()
         kwargs['name'] = name
         kwargs['flavor'] = flavor_id
         kwargs['image'] = image_id or None
@@ -238,17 +254,17 @@ class SaltNova(object):
             block_device=block_device, boot_volume=boot_volume, snapshot=snapshot,
             ephemeral=ephemeral, swap=swap
         )
-        self._sanatize_boot_args(kwargs)
-        return self.conn.create_server(**kwargs)
+        kwargs = self._sanatize_boot_args(kwargs)
+        return NovaServer(self.conn.create_server(**kwargs))
 
     def show_instance(self, name):
         '''
         Find a server by its name (libcloud)
         '''
-        servers = self.conn.get_server(name)
-        if not servers:
+        server = self.conn.get_server(name)
+        if not server:
             return {'name': name, 'status': 'DELETED'}
-        return NovaServer(servers[0])
+        return NovaServer(server)
 
     def root_password(self, server_id, password):
         '''
