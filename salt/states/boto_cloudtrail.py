@@ -53,11 +53,9 @@ from __future__ import absolute_import
 import logging
 import os
 import os.path
-import json
 
 # Import Salt Libs
 import salt.utils
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
