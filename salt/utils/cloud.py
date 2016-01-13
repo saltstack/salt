@@ -3100,3 +3100,18 @@ def check_key_path_and_mode(provider, key_path):
         return False
 
     return True
+
+
+def valid_uuid(uuid):
+    '''
+    validate that the 'uuid' is a uuid4
+    '''
+    regex = re.compile((
+        r'^[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-'
+        r'?[89ab][a-f0-9]{3}-?[a-f0-9]{12}\Z'
+    ), re.I)
+    match = regex.match(str(uuid))
+
+    if match:
+        return uuid
+    return False

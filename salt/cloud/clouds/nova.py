@@ -315,6 +315,8 @@ def get_image(conn, vm_):
 
     try:
         image = conn.image_show(vm_image)
+        if not image and salt.utils.cloud.valid_uuid(vm_image):
+            return vm_image
         return image['id']
     except novaclient.exceptions.NotFound as exc:
         raise SaltCloudNotFound(
@@ -584,7 +586,7 @@ def request_instance(vm_=None, call=None):
         kwargs['availability_zone'] = avz
 
     kwargs['nics'] = config.get_cloud_config_value(
-        'networks', vm_, __opts__, search_global=False, default=None
+        'networks', vm_, __opts__, search_global=False, default=[]
     )
 
     files = config.get_cloud_config_value(
@@ -710,25 +712,7 @@ def create(vm_):
         vm_['instance_id'] = data.id
 
     def __query_node_data(vm_, data):
-        try:
-            node = show_instance(vm_['name'], 'action')
-            log.debug(
-                'Loaded node data for {0}:\n{1}'.format(
-                    vm_['name'],
-                    pprint.pformat(node)
-                )
-            )
-        except Exception as err:
-            log.error(
-                'Failed to get nodes list: {0}'.format(
-                    err
-                ),
-                # Show the traceback if the debug logging level is enabled
-                exc_info_on_loglevel=logging.DEBUG
-            )
-            # Trigger a failure in the wait for IP function
-            return False
-
+        node = show_instance(vm_['name'], 'action')
         running = node['state'] == 'ACTIVE'
         if not running:
             # Still not running, trigger another iteration
@@ -966,7 +950,7 @@ def list_nodes(call=None, **kwargs):
             'id': server_tmp['id'],
             'image': server_tmp['image']['id'],
             'size': server_tmp['flavor']['id'],
-            'state': server_tmp['state'],
+            'state': server_tmp['status'],
             'private_ips': private,
             'public_ips': public,
         }
