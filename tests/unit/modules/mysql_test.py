@@ -149,9 +149,9 @@ class MySQLTestCase(TestCase):
         self._test_call(
             mysql.db_exists,
             {'sql': 'SHOW DATABASES LIKE %(dbname)s;',
-             'sql_args': {'dbname': r'''test\%\_`'" db'''}
+             'sql_args': {'dbname': r'''test%_`" db'''}
              },
-            'test%_`\'" db'
+            'test%_`" db'
         )
 
     def test_db_create(self):
