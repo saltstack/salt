@@ -424,29 +424,50 @@ def info(*packages, **attr):
     '''
 
     cmd = packages and "rpm -q {0}".format(' '.join(packages)) or "rpm -qa"
-    filter_attrs = attr.get('attr', None) and attr['attr'].split(",") or None
 
-    # Locale needs to be en_US instead of C, because RPM otherwise will yank the timezone from the timestamps
-    call = __salt__['cmd.run_all'](cmd + (" --queryformat 'Name: %{NAME}\n"
-                                                          "Relocations: %|PREFIXES?{[%{PREFIXES} ]}:{(not relocatable)}|\n"
-                                                          "Version: %{VERSION}\n"
-                                                          "Vendor: %{VENDOR}\n"
-                                                          "Release: %{RELEASE}\n"
-                                                          "%|EPOCH?{Epoch: %{EPOCH}\n}|"
-                                                          "Build Date: %{BUILDTIME}\n"
-                                                          "Install Date: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\n"
-                                                          "Build Host: %{BUILDHOST}\n"
-                                                          "Group: %{GROUP}\n"
-                                                          "Source RPM: %{SOURCERPM}\n"
-                                                          "Size: %{LONGSIZE}\n"
-                                                          "Arch: %{ARCH}\n"
-                                                          "%|LICENSE?{License: %{LICENSE}\n}|"
-                                                          "Signature: %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:{%|SIGGPG?{%{SIGGPG:pgpsig}}:{%|SIGPGP?{%{SIGPGP:pgpsig}}:{(none)}|}|}|}|\n"
-                                                          "%|PACKAGER?{Packager: %{PACKAGER}\n}|"
-                                                          "%|URL?{URL: %{URL}\n}|"
-                                                          "Summary: %{SUMMARY}\n"
-                                                          "Description:\n%{DESCRIPTION}\n"
-                                                          "-----\n'"),
+    # Construct query format
+    attr_map = {
+        "name": "name: %{NAME}\\n",
+        "relocations": "relocations: %|PREFIXES?{[%{PREFIXES} ]}:{(not relocatable)}|\\n",
+        "version": "version: %{VERSION}\\n",
+        "vendor": "vendor: %{VENDOR}\\n",
+        "release": "release: %{RELEASE}\\n",
+        "epoch": "%|EPOCH?{epoch: %{EPOCH}\\n}|",
+        "build_date": "build_date: %{BUILDTIME}\\n",
+        "install_date": "install_date: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n",
+        "build_host": "build_host: %{BUILDHOST}\\n",
+        "group": "group: %{GROUP}\\n",
+        "source_rpm": "source_rpm: %{SOURCERPM}\\n",
+        "size": "size: %{LONGSIZE}\\n",
+        "arch": "arch: %{ARCH}\\n",
+        "license": "%|LICENSE?{license: %{LICENSE}\\n}|",
+        "signature": "signature: %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:"
+                     "{%|SIGGPG?{%{SIGGPG:pgpsig}}:{%|SIGPGP?{%{SIGPGP:pgpsig}}:{(none)}|}|}|}|\\n",
+        "packager": "%|PACKAGER?{packager: %{PACKAGER}\\n}|",
+        "url": "%|URL?{url: %{URL}\\n}|",
+        "summary": "summary: %{SUMMARY}\\n",
+        "description": "description:\\n%{DESCRIPTION}\\n",
+    }
+
+    attr = attr.get('attr', None) and attr['attr'].split(",") or None
+    query = list()
+    if attr:
+        for attr_k in attr:
+            if attr_k in attr_map and attr_k != 'description':
+                query.append(attr_map[attr_k])
+        if not query:
+            raise CommandExecutionError('No valid attributes found.')
+        if 'name' not in attr:
+            attr.append('name')
+    else:
+        for attr_k, attr_v in attr_map.iteritems():
+            if attr_k != 'description':
+                query.append(attr_v)
+    if attr and 'description' in attr or not attr:
+        query.append(attr_map['description'])
+    query.append("-----\\n")
+
+    call = __salt__['cmd.run_all'](cmd + (" --queryformat '{0}'".format(''.join(query))),
                                    output_loglevel='trace', env={'TZ': 'UTC'}, clean_env=True)
     if call['retcode'] != 0:
         comment = ''
