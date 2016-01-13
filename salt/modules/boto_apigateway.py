@@ -793,9 +793,10 @@ def overwrite_api_stage_variables(restApiId, stageName, variables, region=None, 
                                       path='/variables/{0}'.format(old_var),
                                       value=''))
         for var, val in variables.iteritems():
-            patch_ops.append(dict(op='replace',
-                                  path='/variables/{0}'.format(var),
-                                  value=val))
+            if var not in old_vars or old_vars[var] != val:
+                patch_ops.append(dict(op='replace',
+                                      path='/variables/{0}'.format(var),
+                                      value=val))
 
         if patch_ops:
             stage = conn.update_stage(restApiId=restApiId, stageName=stageName,
