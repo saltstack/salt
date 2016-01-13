@@ -14,6 +14,60 @@ Dependencies
 - ESXCLI: This dependency is only needed to use the ``esxcli`` function. No other
   functions in this module rely on ESXCLI.
 
+pyVmomi
+-------
+
+PyVmomi can be installed via pip:
+
+.. code-block:: bash
+
+    pip install pyVmomi
+
+.. note::
+
+    Version 6.0 of pyVmomi has some problems with SSL error handling on certain
+    versions of Python. If using version 6.0 of pyVmomi, Python 2.6,
+    Python 2.7.9, or newer must be present. This is due to an upstream dependency
+    in pyVmomi 6.0 that is not supported in Python versions 2.7 to 2.7.8. If the
+    version of Python is not in the supported range, you will need to install an
+    earlier version of pyVmomi. See `Issue #29537`_ for more information.
+
+.. _Issue #29537: https://github.com/saltstack/salt/issues/29537
+
+Based on the note above, to install an earlier version of pyVmomi than the
+version currently listed in PyPi, run the following:
+
+.. code-block:: bash
+
+    pip install pyVmomi==5.5.0.2014.1.1
+
+The 5.5.0.2014.1.1 is a known stable version that this original VMware utils file
+was developed against.
+
+ESXCLI
+------
+
+This dependency is only needed to use the ``esxcli`` function. At the time of this
+writing, no other functions in this module rely on ESXCLI.
+
+The ESXCLI package is also referred to as the VMware vSphere CLI, or vCLI. VMware
+provides vCLI package installation instructions for `vSphere 5.5`_ and
+`vSphere 6.0`_.
+
+.. _vSphere 5.5: http://pubs.vmware.com/vsphere-55/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
+.. _vSphere 6.0: http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
+
+Once all of the required dependencies are in place and the vCLI package is
+installed, you can check to see if you can connect to your ESXi host or vCenter
+server by running the following command:
+
+.. code-block:: bash
+
+    esxcli -s <host-location> -u <username> -p <password> system syslog config get
+
+If the connection was successful, ESXCLI was successfully installed on your system.
+You should see output related to the ESXi host's syslog configuration.
+
 '''
 
 # Import Python Libs
@@ -139,8 +193,8 @@ def get_service_instance(host, username, password, protocol=None, port=None):
     except Exception as exc:
         default_msg = 'Could not connect to host \'{0}\'. ' \
                       'Please check the debug log for more information.'.format(host)
-        if isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg:
-            try:
+        try:
+            if (isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or '[SSL: CERTIFICATE_VERIFY_FAILED]' in str(exc):
                 import ssl
                 default_context = ssl._create_default_https_context
                 ssl._create_default_https_context = ssl._create_unverified_context
@@ -152,14 +206,28 @@ def get_service_instance(host, username, password, protocol=None, port=None):
                     port=port
                 )
                 ssl._create_default_https_context = default_context
-            except Exception as exc:
+            else:
                 err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
                 log.debug(exc)
                 raise SaltSystemExit(err_msg)
-        else:
-            err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
-            log.debug(exc)
-            raise SaltSystemExit(err_msg)
+
+        except Exception as exc:
+            if 'certificate verify failed' in str(exc):
+                import ssl
+                context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+                context.verify_mode = ssl.CERT_NONE
+                service_instance = SmartConnect(
+                    host=host,
+                    user=username,
+                    pwd=password,
+                    protocol=protocol,
+                    port=port,
+                    sslContext=context
+                )
+            else:
+                err_msg = exc.msg if hasattr(exc, 'msg') else default_msg
+                log.debug(exc)
+                raise SaltSystemExit(err_msg)
 
     atexit.register(Disconnect, service_instance)
 
