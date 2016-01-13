@@ -493,7 +493,7 @@ def info(*packages, **attr):
                     continue
             if key not in ['description', 'name'] and value:
                 pkg_data[key] = value
-        if filter_attrs and 'description' in filter_attrs or not filter_attrs:
+        if attr and 'description' in attr or not attr:
             pkg_data['description'] = os.linesep.join(descr)
         if pkg_name:
             ret[pkg_name] = pkg_data
