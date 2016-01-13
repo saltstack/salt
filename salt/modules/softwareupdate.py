@@ -20,8 +20,8 @@ def __virtual__():
     Only for MacOS
     '''
     if not salt.utils.is_darwin():
-        return False, 'The softwareupdate module could not be loaded: ' \
-                      'module only works on MacOS systems.'
+        return (False, 'The softwareupdate module could not be loaded: '
+                       'module only works on MacOS systems.')
 
     return __virtualname__
 
@@ -62,6 +62,8 @@ def _get_upgradable(rec=False, restart=False):
         ret[name] = version_num
 
     if not salt.utils.is_true(restart):
+        if not ret:
+            ret = None
         return ret
 
     # rexp parses lines that look like the following:
@@ -75,6 +77,9 @@ def _get_upgradable(rec=False, restart=False):
     for update in ret:
         if update in restart_upgrades:
             ret_restart[update] = ret[update]
+
+    if not ret_restart:
+        ret_restart = None
 
     return ret_restart
 
@@ -176,7 +181,7 @@ def reset_ignored():
     ignored_updates = list_ignored()
 
     if ignored_updates:
-        __salt__['cmd.run_stdout'](cmd, python_shell=False)
+        __salt__['cmd.run_stdout'](cmd)
         ret = ignored_updates
     else:
         ret = None
@@ -403,3 +408,64 @@ def download_all(rec=False, restart=True):
         __salt__['cmd.run_stdout'](cmd, python_shell=False)
 
     return list_downloads()
+
+
+def get_catalog():
+    '''
+    Get the current catalog being used for update lookups. Will return a url if
+    a custom catalog has been specified. Otherwise the word 'Default' will be
+    returned
+
+    :return: The catalog being used for update lookups
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' updates.get_catalog
+    '''
+    cmd = 'defaults read /Library/Preferences/com.apple.SoftwareUpdate.plist'
+    out = __salt__['cmd.run_stdout'](cmd)
+
+    if 'CatalogURL' in out:
+        cmd = '{0} CatalogURL'.format(cmd)
+        out = __salt__['cmd.run_stdout'](cmd)
+        return out
+    else:
+        return 'Default'
+
+
+def set_catalog(url):
+    '''
+    Set the Software Update Catalog to the URL specified
+
+    :param str url: The url to the update catalog
+
+    :return: True if successfult, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' updates.set_url http://swupd.local:8888/index.sucatalog
+    '''
+    cmd = '/usr/sbin/softwareupdate --set-catalog {0}'.format(url)
+    out = __salt__['cmd.run'](cmd)
+    if url in out:
+        return True
+    else:
+        return False
+
+
+def reset_catalog():
+    '''
+    Reset the Software Update Catalog to the default.
+
+    :return: True if successful, False if not
+    :rtype: bool
+    '''
+    cmd = '/usr/sbin/softwareupdate --clear-catalog'
+    out = __salt__['cmd.run'](cmd)
+    return 'Default' == get_catalog()
