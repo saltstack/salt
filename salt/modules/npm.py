@@ -103,7 +103,7 @@ def install(pkg=None,
         .. versionadded:: 2014.7.0
 
     dry_run
-        Wether or not to run NPM install with --dry-run flag.
+        Whether or not to run NPM install with --dry-run flag.
 
         .. versionadded::2015.8.4
 
