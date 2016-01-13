@@ -761,6 +761,50 @@ def delete_api_deployment(restApiId, deploymentId, region=None, key=None, keyid=
 
 # API Stages
 
+def overwrite_api_stage_variables(restApiId, stageName, variables, region=None, key=None, keyid=None, profile=None):
+    '''
+    Overwrite the stage variables for the given restApiId and stage name with the given variables,
+    variables must be in the form of a dictionary.  Overwrite will always remove all the existing
+    stage variables associated with the given restApiId and stage name, follow by the adding of all the
+    variables specified in the variables dictionary
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_apigateway.overwrite_api_stage_variables restApiId stageName variables='{"name": "value"}'
+
+    '''
+    try:
+        res = describe_api_stage(restApiId, stageName, region=region, key=key, keyid=keyid, profile=profile)
+        if res.get('error'):
+            return {'overwrite': False, 'error': res.get('error')}
+
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+
+        # remove all existing variables that are not in the given variables, 
+        # followed by adding of the variables
+        stage = res.get('stage')
+        old_vars = stage.get('variables', {})
+        patch_ops = []
+        for old_var in old_vars:
+            if old_var not in variables:
+                patch_ops.append(dict(op='remove',
+                                      path='/variables/{0}'.format(old_var),
+                                      value=''))
+        for var, val in variables.iteritems():
+            patch_ops.append(dict(op='replace',
+                                  path='/variables/{0}'.format(var),
+                                  value=val))
+
+        if patch_ops:
+            stage = conn.update_stage(restApiId=restApiId, stageName=stageName,
+                                      patchOperations=patch_ops)
+
+        return {'overwrite': True, 'stage': _convert_datetime_str(stage)}
+    except ClientError as e:
+        return {'overwrite': False, 'error': salt.utils.boto3.get_error(e)}
+
 def describe_api_stage(restApiId, stageName, region=None, key=None, keyid=None, profile=None):
     '''
     Get API stage for a given apiID and stage name
