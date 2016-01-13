@@ -876,7 +876,7 @@ def db_get(name, **connection_args):
     cur = dbc.cursor()
     qry = ('SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM '
            'INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME=%(dbname)s;')
-    args = {"dbname": name.replace('%', r'\%').replace('_', r'\_')}
+    args = {"dbname": name}
     _execute(cur, qry, args)
     if cur.rowcount:
         rows = cur.fetchall()
@@ -939,7 +939,7 @@ def db_exists(name, **connection_args):
     # Warn: here db identifier is not backtyped but should be
     #  escaped as a string value. Note also that LIKE special characters
     # '_' and '%' should also be escaped.
-    args = {"dbname": name.replace('%', r'\%').replace('_', r'\_')}
+    args = {"dbname": name}
     qry = "SHOW DATABASES LIKE %(dbname)s;"
     try:
         _execute(cur, qry, args)
