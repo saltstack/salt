@@ -469,6 +469,8 @@ def download_all(rec=False, restart=True):
 
 def get_catalog():
     '''
+    .. versionadded:: 2016.3.0
+
     Get the current catalog being used for update lookups. Will return a url if
     a custom catalog has been specified. Otherwise the word 'Default' will be
     returned
@@ -495,6 +497,8 @@ def get_catalog():
 
 def set_catalog(url):
     '''
+    .. versionadded:: 2016.3.0
+
     Set the Software Update Catalog to the URL specified
 
     :param str url: The url to the update catalog
@@ -518,6 +522,8 @@ def set_catalog(url):
 
 def reset_catalog():
     '''
+    .. versionadded:: 2016.3.0
+
     Reset the Software Update Catalog to the default.
 
     :return: True if successful, False if not
