@@ -19,10 +19,11 @@ def __virtual__():
     '''
     Only for MacOS
     '''
-    if __grains__['os'] == 'MacOS':
-        return __virtualname__
-    return (False, 'The softwareupdate module could not be loaded: '
-            'module only works on MacOS systems.')
+    if not salt.utils.is_darwin():
+        return False, 'The softwareupdate module could not be loaded: ' \
+                      'module only works on MacOS systems.'
+
+    return __virtualname__
 
 
 def _get_upgradable(rec=False, restart=False):
