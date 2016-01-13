@@ -10,7 +10,42 @@ The VMware cloud module allows you to manage VMware ESX, ESXi, and vCenter.
 See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
 
 :codeauthor: Nitin Madhok <nmadhok@clemson.edu>
-:depends: pyVmomi Python module
+
+
+Dependencies
+============
+
+- pyVmomi Python Module
+
+pyVmomi
+-------
+
+PyVmomi can be installed via pip:
+
+.. code-block:: bash
+
+    pip install pyVmomi
+
+.. note::
+
+    Version 6.0 of pyVmomi has some problems with SSL error handling on certain
+    versions of Python. If using version 6.0 of pyVmomi, Python 2.6,
+    Python 2.7.9, or newer must be present. This is due to an upstream dependency
+    in pyVmomi 6.0 that is not supported in Python versions 2.7 to 2.7.8. If the
+    version of Python is not in the supported range, you will need to install an
+    earlier version of pyVmomi. See `Issue #29537`_ for more information.
+
+.. _Issue #29537: https://github.com/saltstack/salt/issues/29537
+
+Based on the note above, to install an earlier version of pyVmomi than the
+version currently listed in PyPi, run the following:
+
+.. code-block:: bash
+
+    pip install pyVmomi==5.5.0.2014.1.1
+
+The 5.5.0.2014.1.1 is a known stable version that this original VMware cloud
+driver was developed against.
 
 .. note::
     Ensure python pyVmomi module is installed by running following one-liner
@@ -19,6 +54,10 @@ See :doc:`Getting started with VMware </topics/cloud/vmware>` to get started.
     .. code-block:: bash
 
        python -c "import pyVmomi" ; echo $?
+
+
+Configuration
+=============
 
 To use this module, set up the vCenter URL, username and password in the
 cloud configuration at
