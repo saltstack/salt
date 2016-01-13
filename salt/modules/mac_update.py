@@ -150,6 +150,19 @@ def cancel_download(name):
     return out
 
 
+def _install_command(cmd):
+    out = __salt__['cmd.run'](cmd)
+
+    if 'Done' in out:
+        return True
+    elif 'No such' in out:
+        return 'No update named {0}'.format(name)
+    elif 'No updates' in out:
+        return 'No updates are available'
+    else:
+        return False
+
+
 def install(name):
     '''
     Install the update specified in the name
@@ -168,8 +181,7 @@ def install(name):
         salt '*' updates.install 'iTunesXPatch-12.1.2'
     '''
     cmd = '/usr/sbin/softwareupdate -i {0}'.format(name)
-    out = __salt__['cmd.run'](cmd)
-    return out
+    return _install_command(cmd)
 
 
 def install_all():
@@ -187,8 +199,7 @@ def install_all():
         salt '*' updates.install_all
     '''
     cmd = '/usr/sbin/softwareupdate -i -a'
-    out = __salt__['cmd.run'](cmd)
-    return out
+    return _install_command(cmd)
 
 
 def install_recommended():
@@ -206,8 +217,16 @@ def install_recommended():
         salt '*' updates.install_recommended
     '''
     cmd = '/usr/sbin/softwareupdate -i -r'
-    out = __salt__['cmd.run'](cmd)
-    return out
+    return _install_command(cmd)
+
+
+def _parse_ignored(ignored_string):
+    ignored = []
+    for line in ignored_string.splitlines():
+        if re.search('^\s{4}(.*)', line):
+            ignored.append(re.match('^\s{4}(.*)', line).group(1).rstrip(','))
+
+    return ignored
 
 
 def list_ignored():
@@ -226,12 +245,7 @@ def list_ignored():
     cmd = '/usr/sbin/softwareupdate --ignore'
     out = __salt__['cmd.run'](cmd)
 
-    ignored = []
-    for line in out.splitlines():
-        if re.search('^\s{4}"(.*)"', line):
-            ignored.append(re.match('^\s{4}"(.*)"', line).group(1))
-
-    return ignored
+    return _parse_ignored(out)
 
 
 def clear_ignored():
@@ -249,7 +263,8 @@ def clear_ignored():
     '''
     cmd = '/usr/sbin/softwareupdate --reset-ignored'
     out = __salt__['cmd.run'](cmd)
-    return out
+
+    return _parse_ignored(out)
 
 
 def ignore(name):
@@ -269,7 +284,7 @@ def ignore(name):
     '''
     cmd = '/usr/sbin/softwareupdate --ignore {0}'.format(name)
     out = __salt__['cmd.run'](cmd)
-    return out
+    return _parse_ignored(out)
 
 
 def get_catalog():
@@ -287,12 +302,15 @@ def get_catalog():
 
         salt '*' updates.get_catalog
     '''
-    cmd = 'defaults read /Library/Preferences/com.apple.SoftwareUpdate.plist ' \
-          'CatalogURL'
-    out = __salt__['cmd.run'](cmd)
-    if 'does not exist' in out:
+    cmd = 'defaults read /Library/Preferences/com.apple.SoftwareUpdate.plist'
+    out = __salt__['cmd.run_stdout'](cmd)
+
+    if 'CatalogURL' in out:
+        cmd = '{0} CatalogURL'.format(cmd)
+        out = __salt__['cmd.run_stdout'](cmd)
+        return out
+    else:
         return 'Default'
-    return out
 
 
 def set_catalog(url):
