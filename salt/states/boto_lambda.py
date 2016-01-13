@@ -539,6 +539,10 @@ def _get_function_arn(name, region=None, key=None, keyid=None, profile=None):
     account_id = __salt__['boto_iam.get_account_id'](
         region=region, key=key, keyid=keyid, profile=profile
     )
+    if profile and 'region' in profile:
+        region = profile['region']
+    if region is None:
+        region = 'us-east-1'
     return 'arn:aws:lambda:{0}:{1}:function:{2}'.format(region, account_id, name)
 
 
