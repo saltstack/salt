@@ -19,7 +19,7 @@ __virtualname__ = 'updates'
 
 
 def __virtual__():
-    if salt.utils.is_darwin():
+    if not salt.utils.is_darwin():
         return False
 
     return __virtualname__
@@ -38,15 +38,21 @@ def _parse_packages(output):
 
 def scheduled():
     '''
-    Determine whether the automatic checking schedule is on.
-    Returns True or False
-    CLI Example:
-    .. code-block:: bash
-        salt '*' swupd.scheduled
-    '''
-    out = __salt__['cmd.run']('/usr/sbin/softwareupdate --schedule')
+    Determine the status of the automatic checking schedule
 
-    if re.search('on', out):
+    :return: True if automatic checking is on, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' updates.scheduled
+    '''
+    cmd = '/usr/sbin/softwareupdate --schedule'
+    out = __salt__['cmd.run'](cmd)
+
+    if 'on' in out:
         return True
     else:
         return False
@@ -55,76 +61,172 @@ def scheduled():
 def schedule(enabled):
     '''
     Enable/Disable the automatic checking schedule.
+
+    :param bool enabled: True to enable automatic checking, False to disable
+
+    :return: True if successful, False if not
+    :rtype: bool
+
     CLI Example:
+
     .. code-block:: bash
-        salt '*' swupd.schedule True
+
+        salt '*' updates.schedule True
     '''
     if enabled:
-        out = __salt__['cmd.run']('/usr/sbin/softwareupdate --schedule on')
+        cmd = '/usr/sbin/softwareupdate --schedule on'
+        out = __salt__['cmd.run'](cmd)
     else:
-        out = __salt__['cmd.run']('/usr/sbin/softwareupdate --schedule off')
+        cmd = '/usr/sbin/softwareupdate --schedule off'
+        out = __salt__['cmd.run'](cmd)
 
-    return out
+    return enabled == scheduled()
 
 
 def list():
     '''
     List available software updates. (Warning: can take a while to execute)
+
+    :return: A dictionary containing a list of available updates
+    :rtype: dict
+
     CLI Example:
+
     .. code-block:: bash
-        salt '*' swupd.list
+
+        salt '*' updates.list
     '''
     log.debug('Fetching available updates, this may take some time')
-    out = __salt__['cmd.run']('/usr/sbin/softwareupdate -l')
+    cmd = '/usr/sbin/softwareupdate -l'
+    out = __salt__['cmd.run'](cmd)
 
     packages = _parse_packages(out)
+
+    if not packages:
+        return 'No new software available'
 
     return packages
 
 
-def install(label):
+def download(name):
     '''
-    Install a specific update by its label.
+    Download the update specified in the name. Get the name from ``update.list``
+    . (Warning: can take a while to execute depending on the size of the
+    download)
+
+    :param str name: The name of the update to download
+
+    :return: The results of the command
+    :rtype: str
+
     CLI Example:
+
     .. code-block:: bash
-        salt '*' swupd.install 'iTunesXPatch-12.1.2'
+
+        salt '*' updates.download 'OS X El Capitan Update 10.11.2'
     '''
-    out = __salt__['cmd.run']('/usr/sbin/softwareupdate -i {0}'.format(label))
+    cmd = '/usr/sbin/softwareupdate -d {0}'.format(name)
+    out = __salt__['cmd.run'](cmd)
+    return out
+
+
+def cancel_download(name):
+    '''
+    Cancel the download of the update specified in the name.
+
+    :param str name: The name of the update to stop downloading
+
+    :return: The results of the command
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' updates.cancel_download 'OS X El Capitan Update 10.11.2'
+    '''
+    cmd = '/usr/sbin/softwareupdate -e {0}'.format(name)
+    out = __salt__['cmd.run'](cmd)
+    return out
+
+
+def install(name):
+    '''
+    Install the update specified in the name
+
+    :param str name: The name of the update to install. Get the name using
+    ``updates.list``.(Warning: this can take some time. The update must be
+    downloaded and installed.)
+
+    :return: The results of the command
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' updates.install 'iTunesXPatch-12.1.2'
+    '''
+    cmd = '/usr/sbin/softwareupdate -i {0}'.format(name)
+    out = __salt__['cmd.run'](cmd)
     return out
 
 
 def install_all():
     '''
-    Install all pending software updates
+    Install all pending software updates (Warning: this can take some time. Each
+    update must be downloaded and installed.)
+
+    :return: The results of the command
+    :rtype: str
+
     CLI Example:
+
     .. code-block:: bash
-        salt '*' swupd.install_all
+
+        salt '*' updates.install_all
     '''
-    out = __salt__['cmd.run']('/usr/sbin/softwareupdate -i -a')
+    cmd = '/usr/sbin/softwareupdate -i -a'
+    out = __salt__['cmd.run'](cmd)
     return out
 
 
 def install_recommended():
     '''
-    Install recommended software updates
+    Install all recommended software updates (Warning: this can take some time.
+    Each update must be downloaded and installed.)
+
+    :return: The results of the command
+    :rtype: str
+
     CLI Example:
+
     .. code-block:: bash
-        salt '*' swupd.install_all
+
+        salt '*' updates.install_recommended
     '''
-    out = __salt__['cmd.run']('/usr/sbin/softwareupdate -i -r')
+    cmd = '/usr/sbin/softwareupdate -i -r'
+    out = __salt__['cmd.run'](cmd)
     return out
 
 
 def list_ignored():
     '''
     List updates which have been ignored
-    CLI Example:
-    .. code-block:: bash
-        salt '*' swupd.list_ignored
-    '''
-    out = __salt__['cmd.run']('/usr/sbin/softwareupdate --ignore')
-    ignored = []
 
+    :return: A list of ignored updates
+    :rtype: list
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' updates.list_ignored
+    '''
+    cmd = '/usr/sbin/softwareupdate --ignore'
+    out = __salt__['cmd.run'](cmd)
+
+    ignored = []
     for line in out.splitlines():
         if re.search('^\s{4}"(.*)"', line):
             ignored.append(re.match('^\s{4}"(.*)"', line).group(1))
@@ -135,31 +237,94 @@ def list_ignored():
 def clear_ignored():
     '''
     Clear the list of ignored updates
+
+    :return: The results of the command
+    :rtype: str
+
     CLI Example:
+
     .. code-block:: bash
-        salt '*' swupd.clear_ignored
+
+        salt '*' updates.clear_ignored
     '''
-    out = __salt__['cmd.run']('/usr/sbin/softwareupdate --reset-ignored')
+    cmd = '/usr/sbin/softwareupdate --reset-ignored'
+    out = __salt__['cmd.run'](cmd)
     return out
 
 
-def ignore(label):
+def ignore(name):
     '''
-    Ignore a specific update by label
+    Ignore the update specified in the name
+
+    :param str name: The name of the update to place on the ignore list
+
+    :return: The results of the command
+    :rtype: str
+
     CLI Example:
+
     .. code-block:: bash
-        salt '*' swupd.ignore iTunesXPatch-12.1.2
+
+        salt '*' updates.ignore iTunesXPatch-12.1.2
     '''
-    out = __salt__['cmd.run']('/usr/sbin/softwareupdate --ignore {0}'.format(label))
+    cmd = '/usr/sbin/softwareupdate --ignore {0}'.format(name)
+    out = __salt__['cmd.run'](cmd)
     return out
 
 
-def set_catalog_url(catalog_url):
+def get_catalog():
     '''
-    Set the Software Update Catalog URL
+    Get the current catalog being used for update lookups. Will return a url if
+    a custom catalog has been specified. Otherwise the word 'Default' will be
+    returned
+
+    :return: The catalog being used for update lookups
+    :rtype: str
+
     CLI Example:
+
     .. code-block:: bash
-        salt '*' swupd.set_url http://swupd.local:8888/index.sucatalog
+
+        salt '*' updates.get_catalog
     '''
-    out = __salt__['cmd.run']('/usr/sbin/softwareupdate --set-catalog {0}'.format(catalog_url))
+    cmd = 'defaults read /Library/Preferences/com.apple.SoftwareUpdate.plist ' \
+          'CatalogURL'
+    out = __salt__['cmd.run'](cmd)
+    if 'does not exist' in out:
+        return 'Default'
     return out
+
+
+def set_catalog(url):
+    '''
+    Set the Software Update Catalog to the URL specified
+
+    :param str url: The url to the update catalog
+
+    :return: True if successfult, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' updates.set_url http://swupd.local:8888/index.sucatalog
+    '''
+    cmd = '/usr/sbin/softwareupdate --set-catalog {0}'.format(url)
+    out = __salt__['cmd.run'](cmd)
+    if url in out:
+        return True
+    else:
+        return False
+
+
+def reset_catalog():
+    '''
+    Reset the Software Update Catalog to the default.
+
+    :return: True if successful, False if not
+    :rtype: bool
+    '''
+    cmd = '/usr/sbin/softwareupdate --clear-catalog'
+    out = __salt__['cmd.run'](cmd)
+    return 'Default' == get_catalog()
