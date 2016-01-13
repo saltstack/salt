@@ -433,7 +433,9 @@ def info(*packages, **attr):
         "vendor": "vendor: %{VENDOR}\\n",
         "release": "release: %{RELEASE}\\n",
         "epoch": "%|EPOCH?{epoch: %{EPOCH}\\n}|",
+        "build_date_time_t": "build_date_time_t: %{BUILDTIME}\\n",
         "build_date": "build_date: %{BUILDTIME}\\n",
+        "install_date_time_t": "install_date_time_t: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n",
         "install_date": "install_date: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n",
         "build_host": "build_host: %{BUILDHOST}\\n",
         "group": "group: %{GROUP}\\n",
@@ -459,6 +461,7 @@ def info(*packages, **attr):
             raise CommandExecutionError('No valid attributes found.')
         if 'name' not in attr:
             attr.append('name')
+            query.append(attr_map['name'])
     else:
         for attr_k, attr_v in attr_map.iteritems():
             if attr_k != 'description':
@@ -503,14 +506,22 @@ def info(*packages, **attr):
                 continue
             if key == 'name':
                 pkg_name = value
+
+            # Convert Unix ticks into ISO time format
             if key in ['build_date', 'install_date']:
                 try:
-                    value = int(value)
-                    pkg_data['{0}_time_t'.format(key)] = value
-                    value = datetime.datetime.fromtimestamp(value).isoformat() + "Z"
+                    pkg_data[key] = datetime.datetime.fromtimestamp(int(value)).isoformat() + "Z"
                 except ValueError:
                     log.warning('Could not convert "{0}" into Unix time'.format(value))
-                    continue
+                continue
+
+            # Convert Unix ticks into an Integer
+            if key in ['build_date_time_t', 'install_date_time_t']:
+                try:
+                    pkg_data[key] = int(value)
+                except ValueError:
+                    log.warning('Could not convert "{0}" into Unix time'.format(value))
+                continue
             if key not in ['description', 'name'] and value:
                 pkg_data[key] = value
         if attr and 'description' in attr or not attr:
