@@ -27,31 +27,6 @@
 # modified files cause conflicts, set verify_env to False.
 #user: root
 
-# Max open files
-#
-# Each minion connecting to the master uses AT LEAST one file descriptor, the
-# master subscription connection. If enough minions connect you might start
-# seeing on the console (and then salt-master crashes):
-#   Too many open files (tcp_listener.cpp:335)
-#   Aborted (core dumped)
-#
-# By default this value will be the one of `ulimit -Hn`, ie, the hard limit for
-# max open files.
-#
-# If you wish to set a different value than the default one, uncomment and
-# configure this setting. Remember that this value CANNOT be higher than the
-# hard limit. Raising the hard limit depends on your OS and/or distribution,
-# a good way to find the limit is to search the internet. For example:
-#   raise max open files hard limit debian
-#
-#max_open_files: 100000
-
-# The number of worker threads to start. These threads are used to manage
-# return calls made from minions to the master. If the master seems to be
-# running slowly, increase the number of threads. This setting can not be
-# set lower than 3.
-#worker_threads: 5
-
 # The port used by the communication interface. The ret (return) port is the
 # interface used for the file server, authentication, job returns, etc.
 #ret_port: 4506
@@ -202,6 +177,59 @@
 # Include config from several files and directories:
 # include:
 #   - /etc/salt/extra_config
+
+
+#####  Large-scale tuning settings   #####
+##########################################
+# Max open files
+#
+# Each minion connecting to the master uses AT LEAST one file descriptor, the
+# master subscription connection. If enough minions connect you might start
+# seeing on the console (and then salt-master crashes):
+#   Too many open files (tcp_listener.cpp:335)
+#   Aborted (core dumped)
+#
+# By default this value will be the one of `ulimit -Hn`, ie, the hard limit for
+# max open files.
+#
+# If you wish to set a different value than the default one, uncomment and
+# configure this setting. Remember that this value CANNOT be higher than the
+# hard limit. Raising the hard limit depends on your OS and/or distribution,
+# a good way to find the limit is to search the internet. For example:
+#   raise max open files hard limit debian
+#
+#max_open_files: 100000
+
+# The number of worker threads to start. These threads are used to manage
+# return calls made from minions to the master. If the master seems to be
+# running slowly, increase the number of threads. This setting can not be
+# set lower than 3.
+#worker_threads: 5
+
+# Set the ZeroMQ high water marks
+# http://api.zeromq.org/3-2:zmq-setsockopt
+
+# The publisher interface ZeroMQPubServerChannel
+#pub_hwm: 1000
+
+# These two ZMQ HWM settings, salt_event_pub_hwm and event_publisher_pub_hwm
+# are significant for masters with thousands of minions.  When these are
+# insufficiently high it will manifest in random responses missing in the CLI
+# and even missing from the job cache.  Masters that have fast CPUs and many
+# cores with appropriate worker_threads will not need these set as high.
+
+# On deployment with 8,000 minions, 2.4GHz CPUs, 24 cores, 32GiB memory has
+# these settings:
+#
+#   salt_event_pub_hwm: 128000
+#   event_publisher_pub_hwm: 64000
+
+# ZMQ high-water-mark for SaltEvent pub socket
+#salt_event_pub_hwm: 20000
+
+# ZMQ high-water-mark for EventPublisher pub socket
+#event_publisher_pub_hwm: 10000
+
 
 
 #####        Security settings       #####

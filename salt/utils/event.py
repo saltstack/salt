@@ -296,6 +296,11 @@ class SaltEvent(object):
         Establish the publish connection
         '''
         self.sub = self.context.socket(zmq.SUB)
+        try:
+            self.sub.setsockopt(zmq.HWM, self.opts.get('salt_event_pub_hwm'))
+        except AttributeError:
+            self.sub.setsockopt(zmq.SNDHWM, self.opts.get('salt_event_pub_hwm'))
+            self.sub.setsockopt(zmq.RCVHWM, self.opts.get('salt_event_pub_hwm'))
         self.sub.connect(self.puburi)
         self.poller.register(self.sub, zmq.POLLIN)
         self.sub.setsockopt_string(zmq.SUBSCRIBE, u'')
@@ -867,6 +872,11 @@ class EventPublisher(multiprocessing.Process):
         self.context = zmq.Context(1)
         # Prepare the master event publisher
         self.epub_sock = self.context.socket(zmq.PUB)
+        try:
+            self.epub_sock.setsockopt(zmq.HWM, self.opts.get('event_publisher_pub_hwm'))
+        except AttributeError:
+            self.epub_sock.setsockopt(zmq.SNDHWM, self.opts.get('event_publisher_pub_hwm'))
+            self.epub_sock.setsockopt(zmq.RCVHWM, self.opts.get('event_publisher_pub_hwm'))
         # Prepare master event pull socket
         self.epull_sock = self.context.socket(zmq.PULL)
         if self.opts.get('ipc_mode', '') == 'tcp':
