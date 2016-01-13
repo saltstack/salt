@@ -1069,9 +1069,6 @@ def set_known_host(user=None,
             os.chown(ssh_dir, uinfo['uid'], uinfo['gid'])
             os.chmod(ssh_dir, 0o700)
 
-    if key and hash_known_hosts:
-        cmd_result = __salt__['ssh.hash_known_hosts'](user=user, config=full)
-
     # write line to known_hosts file
     try:
         with salt.utils.fopen(full, 'a') as ofile:
@@ -1084,6 +1081,9 @@ def set_known_host(user=None,
     if os.geteuid() == 0 and user:
         os.chown(full, uinfo['uid'], uinfo['gid'])
     os.chmod(full, 0o644)
+
+    if key and hash_known_hosts:
+        cmd_result = __salt__['ssh.hash_known_hosts'](user=user, config=full)
 
     return {'status': 'updated', 'old': stored_host, 'new': remote_host}
 
