@@ -478,8 +478,6 @@ def info(*packages, **attr):
             if len(line) != 2:
                 continue
             key, value = line
-            if key != 'name' and filter_attrs and key not in filter_attrs:
-                continue
             if key == 'description':
                 descr_marker = True
                 continue
