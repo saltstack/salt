@@ -34,7 +34,7 @@ def _get_upgradable(rec=False, restart=False):
     { 'updatename': '1.2.3-45', ... }
     '''
     cmd = 'softwareupdate --list'
-    out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
+    out = __salt__['cmd.run_stdout'](cmd)
     # rexp parses lines that look like the following:
     #    * Safari6.1.2MountainLion-6.1.2
     #         Safari (6.1.2), 51679K [recommended]
@@ -137,7 +137,7 @@ def ignore(*updates):
 
     for name in to_ignore:
         cmd = ['softwareupdate', '--ignore', name]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False)
+        __salt__['cmd.run_stdout'](cmd)
 
     return list_ignored()
 
@@ -158,7 +158,7 @@ def list_ignored():
        salt '*' softwareupdate.list_ignored
     '''
     cmd = 'softwareupdate --list --ignore'
-    out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
+    out = __salt__['cmd.run_stdout'](cmd)
 
     # rep parses lines that look like the following:
     #     "Safari6.1.2MountainLion-6.1.2",
@@ -328,7 +328,7 @@ def install(*updates):
 
     for name in updates:
         cmd = ['softwareupdate', '--install', name]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False)
+        __salt__['cmd.run_stdout'](cmd)
 
     upgrades_left = _get_upgradable()
 
@@ -423,7 +423,7 @@ def download(*updates):
     '''
     for name in updates:
         cmd = ['softwareupdate', '--download', name]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False)
+        __salt__['cmd.run_stdout'](cmd)
 
     return list_downloads()
 
@@ -462,7 +462,7 @@ def download_all(rec=False, restart=True):
 
     for name in to_download:
         cmd = ['softwareupdate', '--download', name]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False)
+        __salt__['cmd.run_stdout'](cmd)
 
     return list_downloads()
 
