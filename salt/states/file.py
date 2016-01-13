@@ -3574,7 +3574,7 @@ def patch(name,
           env=None,
           **kwargs):
     '''
-    Apply a patch to a file.
+    Apply a patch to a file or directory.
 
     .. note::
 
@@ -3582,7 +3582,7 @@ def patch(name,
         using this state function.
 
     name
-        The file to which the patch will be applied.
+        The file or directory to which the patch will be applied.
 
     source
         The source patch to download to the minion, this source file must be
@@ -3630,7 +3630,7 @@ def patch(name,
     if hash is None:
         return _error(ret, 'Hash is required')
 
-    if __salt__['file.check_hash'](name, hash):
+    if hash and __salt__['file.check_hash'](name, hash):
         ret.update(result=True, comment='Patch is already applied')
         return ret
 
@@ -3673,7 +3673,7 @@ def patch(name,
         name, cached_source_path, options=options
     )
     ret['result'] = not ret['changes']['retcode']
-    if ret['result'] and not __salt__['file.check_hash'](name, hash):
+    if ret['result'] and hash and not __salt__['file.check_hash'](name, hash):
         ret.update(
             result=False,
             comment='File {0} hash mismatch after patch was applied'.format(
