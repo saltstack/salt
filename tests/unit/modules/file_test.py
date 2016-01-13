@@ -524,7 +524,7 @@ class FileModuleTestCase(TestCase):
         with patch.dict(filemod.__salt__, {'cmd.run_all': cmd_mock}):
             ret = filemod.patch('/path/to/file', '/path/to/patch')
         cmd = ['/bin/patch', '--forward', '--reject-file=-',
-            '-i "/path/to/patch"', '"/path/to/file"']
+            '-i', '/path/to/patch', '/path/to/file']
         cmd_mock.assert_called_once_with(cmd, python_shell=False)
         self.assertEqual('test_retval', ret)
 
@@ -535,7 +535,7 @@ class FileModuleTestCase(TestCase):
         with patch.dict(filemod.__salt__, {'cmd.run_all': cmd_mock}):
             ret = filemod.patch('/path/to/file', '/path/to/patch', dry_run=True)
         cmd = ['/bin/patch', '--dry-run', '--forward', '--reject-file=-',
-            '-i "/path/to/patch"', '"/path/to/file"']
+            '-i', '/path/to/patch', '/path/to/file']
         cmd_mock.assert_called_once_with(cmd, python_shell=False)
         self.assertEqual('test_retval', ret)
 
@@ -546,7 +546,7 @@ class FileModuleTestCase(TestCase):
         with patch.dict(filemod.__salt__, {'cmd.run_all': cmd_mock}):
             ret = filemod.patch('/path/to/dir', '/path/to/patch')
         cmd = ['/bin/patch', '--forward', '--reject-file=-',
-            '-i "/path/to/patch"', '-d "/path/to/dir"', '--strip=0']
+            '-i', '/path/to/patch', '-d', '/path/to/dir', '--strip=0']
         cmd_mock.assert_called_once_with(cmd, python_shell=False)
         self.assertEqual('test_retval', ret)
 

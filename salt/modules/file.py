@@ -2296,10 +2296,10 @@ def patch(originalfile, patchfile, options='', dry_run=False):
     if not has_rejectfile_option:
         cmd.append('--reject-file=-')
 
-    cmd.append('-i "{0}"'.format(patchfile))
+    cmd.extend(['-i', patchfile])
 
     if os.path.isdir(originalfile):
-        cmd.append('-d "{0}"'.format(originalfile))
+        cmd.extend(['-d', originalfile])
 
         has_strip_option = False
         for option in cmd:
@@ -2310,7 +2310,7 @@ def patch(originalfile, patchfile, options='', dry_run=False):
         if not has_strip_option:
             cmd.append('--strip=0')
     else:
-        cmd.append('"{0}"'.format(originalfile))
+        cmd.append(originalfile)
 
     return __salt__['cmd.run_all'](cmd, python_shell=False)
 
