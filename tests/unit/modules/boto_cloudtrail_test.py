@@ -328,6 +328,60 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         result = boto_cloudtrail.stop_logging(Name=trail_ret['Name'], **conn_parameters)
         self.assertFalse(result['stopped'])
 
+    def test_that_when_adding_tags_succeeds_the_add_tags_method_returns_true(self):
+        '''
+        tests True tags added.
+        '''
+        with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            result = boto_cloudtrail.add_tags(Name=trail_ret['Name'], a='b', **conn_parameters)
+
+        self.assertTrue(result['tagged'])
+
+    def test_that_when_adding_tags_fails_the_add_tags_method_returns_false(self):
+        '''
+        tests False tags not added.
+        '''
+        self.conn.add_tags.side_effect = ClientError(error_content, 'add_tags')
+        with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            result = boto_cloudtrail.add_tags(Name=trail_ret['Name'], a='b', **conn_parameters)
+        self.assertFalse(result['tagged'])
+
+    def test_that_when_removing_tags_succeeds_the_remove_tags_method_returns_true(self):
+        '''
+        tests True tags removed.
+        '''
+        with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            result = boto_cloudtrail.remove_tags(Name=trail_ret['Name'], a='b', **conn_parameters)
+
+        self.assertTrue(result['tagged'])
+
+    def test_that_when_removing_tags_fails_the_remove_tags_method_returns_false(self):
+        '''
+        tests False tags not removed.
+        '''
+        self.conn.remove_tags.side_effect = ClientError(error_content, 'remove_tags')
+        with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            result = boto_cloudtrail.remove_tags(Name=trail_ret['Name'], a='b', **conn_parameters)
+        self.assertFalse(result['tagged'])
+
+    def test_that_when_listing_tags_succeeds_the_list_tags_method_returns_true(self):
+        '''
+        tests True tags listed.
+        '''
+        with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            result = boto_cloudtrail.list_tags(Name=trail_ret['Name'], **conn_parameters)
+
+        self.assertEqual(result['tags'],{})
+
+    def test_that_when_listing_tags_fails_the_list_tags_method_returns_false(self):
+        '''
+        tests False tags not listed.
+        '''
+        self.conn.list_tags.side_effect = ClientError(error_content, 'list_tags')
+        with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            result = boto_cloudtrail.list_tags(Name=trail_ret['Name'], **conn_parameters)
+        self.assertTrue(result['error'])
+
 
 if __name__ == '__main__':
     from integration import run_tests  # pylint: disable=import-error

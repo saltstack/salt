@@ -132,7 +132,8 @@ class BotoCloudTrailTestCase(BotoCloudTrailStateTestCaseBase, BotoCloudTrailTest
         self.conn.get_trail_status.side_effect = [not_found_error, status_ret]
         self.conn.create_trail.return_value = trail_ret
         self.conn.describe_trails.return_value = {'trailList': [trail_ret]}
-        result = salt_states['boto_cloudtrail.present'](
+        with patch.dict(funcs, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            result = salt_states['boto_cloudtrail.present'](
                          'trail present',
                          Name=trail_ret['Name'],
                          S3BucketName=trail_ret['S3BucketName'])
@@ -145,7 +146,8 @@ class BotoCloudTrailTestCase(BotoCloudTrailStateTestCaseBase, BotoCloudTrailTest
         self.conn.get_trail_status.return_value = status_ret
         self.conn.create_trail.return_value = trail_ret
         self.conn.describe_trails.return_value = {'trailList': [trail_ret]}
-        result = salt_states['boto_cloudtrail.present'](
+        with patch.dict(funcs, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            result = salt_states['boto_cloudtrail.present'](
                          'trail present',
                          Name=trail_ret['Name'],
                          S3BucketName=trail_ret['S3BucketName'],
@@ -156,7 +158,8 @@ class BotoCloudTrailTestCase(BotoCloudTrailStateTestCaseBase, BotoCloudTrailTest
     def test_present_with_failure(self):
         self.conn.get_trail_status.side_effect = [not_found_error, status_ret]
         self.conn.create_trail.side_effect = ClientError(error_content, 'create_trail')
-        result = salt_states['boto_cloudtrail.present'](
+        with patch.dict(funcs, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
+            result = salt_states['boto_cloudtrail.present'](
                          'trail present',
                          Name=trail_ret['Name'],
                          S3BucketName=trail_ret['S3BucketName'],

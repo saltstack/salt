@@ -391,3 +391,105 @@ def stop_logging(Name,
         return {'stopped': True }
     except ClientError as e:
         return {'stopped': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def _get_trail_arn(name, region=None, key=None, keyid=None, profile=None):
+    if name.startswith('arn:aws:cloudtrail:'):
+        return name
+
+    account_id = __salt__['boto_iam.get_account_id'](
+        region=region, key=key, keyid=keyid, profile=profile
+    )
+    if profile and 'region' in profile:
+        region = profile['region']
+    if region is None:
+        region = 'us-east-1'
+    return 'arn:aws:cloudtrail:{0}:{1}:trail/{2}'.format(region, account_id, name)
+
+
+def add_tags(Name, 
+           region=None, key=None, keyid=None, profile=None, **kwargs):
+    '''
+    Add tags to a trail
+
+    Returns {tagged: true} if the trail was tagged and returns
+    {tagged: False} if the trail was not tagged.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudtrail.add_tags my_trail tag_a=tag_value tag_b=tag_value
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        tagslist = []
+        for k, v in kwargs.iteritems():
+            if str(k).startswith('__'):
+                continue
+            tagslist.append({'Key': str(k), 'Value': str(v)})
+        conn.add_tags(ResourceId=_get_trail_arn(Name), TagsList=tagslist)
+        return {'tagged': True }
+    except ClientError as e:
+        return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
+
+def remove_tags(Name, 
+           region=None, key=None, keyid=None, profile=None, **kwargs):
+    '''
+    Remove tags from a trail
+
+    Returns {tagged: true} if the trail was tagged and returns
+    {tagged: False} if the trail was not tagged.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudtrail.remove_tags my_trail tag_a=tag_value tag_b=tag_value
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        tagslist = []
+        for k, v in kwargs.iteritems():
+            if str(k).startswith('__'):
+                continue
+            tagslist.append({'Key': str(k), 'Value': str(v)})
+        conn.remove_tags(ResourceId=_get_trail_arn(Name), TagsList=tagslist)
+        return {'tagged': True }
+    except ClientError as e:
+        return {'tagged': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def list_tags(Name, 
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    List tags of a trail
+
+    Returns:
+        tags:
+          - {...}
+          - {...}
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_cloudtrail.list_tags my_trail
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        rid = _get_trail_arn(Name)
+        ret = conn.list_tags(ResourceIdList=[rid])
+        tlist = ret.get('ResourceTagList',[]).pop().get('TagsList')
+        tagdict = {}
+        for tag in tlist:
+           tagdict[tag.get('Key')] = tag.get('Value')
+        return {'tags': tagdict }
+    except ClientError as e:
+        return {'error': salt.utils.boto3.get_error(e)}

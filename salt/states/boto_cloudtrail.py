@@ -79,6 +79,7 @@ def present(name, Name,
            CloudWatchLogsRoleArn=None,
            KmsKeyId=None,
            LoggingEnabled=True,
+           Tags={},
            region=None, key=None, keyid=None, profile=None):
     '''
     Ensure trail exists.
@@ -126,6 +127,9 @@ def present(name, Name,
 
     LoggingEnabled
         Whether logging should be enabled for the trail
+
+    Tags
+        A dictionary of tags that should be set on the trail
 
     region
         Region to connect to.
@@ -186,6 +190,11 @@ def present(name, Name,
             ret['changes']['new']['trail']['LoggingEnabled'] = True
         else:
             ret['changes']['new']['trail']['LoggingEnabled'] = False
+
+        if bool(Tags):
+            r = __salt__['boto_cloudtrail.add_tags'](Name=Name,
+                   region=region, key=key, keyid=keyid, profile=profile, **Tags)
+            ret['changes']['new']['trail']['Tags'] = Tags
         return ret
 
     ret['comment'] = os.linesep.join([ret['comment'], 'CloudTrail {0} is present.'.format(Name)])
@@ -196,7 +205,6 @@ def present(name, Name,
 
     r = __salt__['boto_cloudtrail.status'](Name=Name,
                    region=region, key=key, keyid=keyid, profile=profile)
-    log.info(r)
     _describe['LoggingEnabled'] = r.get('trail',{}).get('IsLogging',False)
 
     need_update = False
@@ -214,6 +222,16 @@ def present(name, Name,
             need_update = True
             ret['changes'].setdefault('new', {})[invar] = locals()[invar]
             ret['changes'].setdefault('old', {})[invar] = _describe[outvar]
+
+    r = __salt__['boto_cloudtrail.list_tags'](Name=Name,
+                   region=region, key=key, keyid=keyid, profile=profile)
+    _describe['Tags'] = r.get('tags',{})
+    tagchange = salt.utils.compare_dicts(_describe['Tags'], Tags)
+    if bool(tagchange):
+        need_update = True
+        ret['changes'].setdefault('new', {})['Tags'] = Tags
+        ret['changes'].setdefault('old', {})['Tags'] = _describe['Tags']
+
     if need_update:
         if __opts__['test']:
             msg = 'CloudTrail {0} set to be modified.'.format(Name)
@@ -255,6 +273,23 @@ def present(name, Name,
                 ret['comment'] = 'Failed to update trail: {0}.'.format(r['error']['message'])
                 ret['changes'] = {}
                 return ret
+
+        if bool(tagchange):
+            adds = {}
+            removes = {}
+            for k, diff in tagchange.iteritems():
+                if diff.get('new','') != '':
+                    # there's an update for this key
+                    adds[k] = Tags[k]
+                elif diff.get('old','') != '':
+                    removes[k] = _describe[k]
+            if bool(adds):
+                r = __salt__['boto_cloudtrail.add_tags'](Name=Name,
+                   region=region, key=key, keyid=keyid, profile=profile, **adds)
+            if bool(removes):
+                r = __salt__['boto_cloudtrail.remove_tags'](Name=Name,
+                   region=region, key=key, keyid=keyid, profile=profile,
+                   **removes)
 
     return ret
 
