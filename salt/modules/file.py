@@ -2237,13 +2237,19 @@ def patch(originalfile, patchfile, options='', dry_run=False):
     '''
     .. versionadded:: 0.10.4
 
-    Apply a patch to a file
+    Apply a patch to a file or directory.
 
     Equivalent to:
 
     .. code-block:: bash
 
-        patch <options> <originalfile> <patchfile>
+        patch <options> -i <patchfile> <originalfile>
+
+    Or, when a directory is patched:
+
+    .. code-block:: bash
+
+        patch <options> -i <patchfile> -d <originalfile> -p0
 
     originalfile
         The full path to the file or directory to be patched
@@ -2272,7 +2278,39 @@ def patch(originalfile, patchfile, options='', dry_run=False):
             cmd.append('-C')
         else:
             cmd.append('--dry-run')
-    cmd.extend([originalfile, patchfile])
+
+    # this argument prevents interactive prompts when the patch fails to apply.
+    # the exit code will still be greater than 0 if that is the case.
+    if '-N' not in cmd and '--forward' not in cmd:
+        cmd.append('--forward')
+
+    has_rejectfile_option = False
+    for option in cmd:
+        if option == '-r' or option.startswith('-r ') \
+                or option.startswith('--reject-file'):
+            has_rejectfile_option = True
+            break
+
+    # by default, patch will write rejected patch files to <filename>.rej.
+    # this option prevents that.
+    if not has_rejectfile_option:
+        cmd.append('--reject-file=-')
+
+    cmd.extend(['-i', patchfile])
+
+    if os.path.isdir(originalfile):
+        cmd.extend(['-d', originalfile])
+
+        has_strip_option = False
+        for option in cmd:
+            if option.startswith('-p') or option.startswith('--strip='):
+                has_strip_option = True
+                break
+
+        if not has_strip_option:
+            cmd.append('--strip=0')
+    else:
+        cmd.append(originalfile)
 
     return __salt__['cmd.run_all'](cmd, python_shell=False)
 
