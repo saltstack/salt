@@ -859,13 +859,14 @@ def shutdown_multiprocessing_logging():
         logging._releaseLock()
 
 
-def shutdown_multiprocessing_logging_listener():
+def shutdown_multiprocessing_logging_listener(daemonizing=False):
     global __MP_LOGGING_QUEUE
     global __MP_LOGGING_QUEUE_PROCESS
     global __MP_LOGGING_LISTENER_CONFIGURED
 
-    if __MP_IN_MAINPROCESS is True:
-        # We're in the MainProcess, return! No multiprocessing logging listener shutdown shall happen
+    if daemonizing is False and __MP_IN_MAINPROCESS is True:
+        # We're in the MainProcess and we're not daemonizing, return!
+        # No multiprocessing logging listener shutdown shall happen
         return
     if __MP_LOGGING_QUEUE_PROCESS is None:
         return
