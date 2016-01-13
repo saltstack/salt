@@ -442,19 +442,19 @@ class _Swagger(object):
     REQUEST_TEMPLATE = {'application/json':
                             '#set($inputRoot = $input.path(\'$\'))\n'
                             '{\n'
-                            '"header-params" : {\n'
+                            '"header_params" : {\n'
                             '#set ($map = $input.params().header)\n'
                             '#foreach( $param in $map.entrySet() )\n'
                             '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
                             '#end\n'
                             '},\n'
-                            '"query-params" : {\n'
+                            '"query_params" : {\n'
                             '#set ($map = $input.params().querystring)\n'
                             '#foreach( $param in $map.entrySet() )\n'
                             '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
                             '#end\n'
                             '},\n'
-                            '"path-params" : {\n'
+                            '"path_params" : {\n'
                             '#set ($map = $input.params().path)\n'
                             '#foreach( $param in $map.entrySet() )\n'
                             '"$param.key" : "$param.value" #if( $foreach.hasNext ), #end\n'
@@ -474,8 +474,8 @@ class _Swagger(object):
                             '#end\n'
                             '}\n'
                             '},\n'
-                            '"body-params" : $input.json(\'$\'),\n'
-                            '"stage-variables" : "$stageVariables"\n'
+                            '"body_params" : $input.json(\'$\'),\n'
+                            '"stage_variables" : "$stageVariables"\n'
                             '}'}
     REQUEST_OPTION_TEMPLATE = {'application/json': '{"statusCode": 200}'}
 
@@ -1276,13 +1276,15 @@ class _Swagger(object):
             lambda_uri = self._lambda_uri(ret,
                                           self._lambda_name(resource_path, method_name),
                                           lambda_region=lambda_region)
-
+    
+        # NOTE: integration method is set to POST always, as otherwise AWS makes wrong assumptions
+        # about the intent of the call. HTTP method will be passed to lambda as part of the API gateway context
         integration = (
             __salt__['boto_apigateway.create_api_integration'](self.restApiId,
                                                                resource_path,
                                                                method_name.upper(),
                                                                method.get('integration_type'),
-                                                               method_name.upper(),
+                                                               'POST', 
                                                                lambda_uri,
                                                                lambda_integration_role,
                                                                requestTemplates=method.get('request_templates'),
