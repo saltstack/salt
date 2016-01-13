@@ -758,6 +758,59 @@ class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseM
         result = boto_apigateway.describe_api_stage(restApiId='rm06h9oac4', stageName='no_such_stage', **conn_parameters)
         self.assertEqual(result.get('error').get('message'), error_message.format('get_stage'))
 
+    def test_that_when_overwriting_stage_variables_to_an_existing_stage_the_overwrite_api_stage_variables_method_returns_the_updated_stage(self):
+        '''
+        Test True for the returned stage
+        '''
+        self.conn.get_stage.return_value = {u'cacheClusterEnabled': False,
+                                            u'cacheClusterStatus': 'NOT_AVAILABLE',
+                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                            u'deploymentId': u'n05smo',
+                                            u'description': u'test',
+                                            u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                            u'stageName': u'test',
+                                            u'variables': {'key1': 'val1'},
+                                            'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
+        self.conn.update_stage.return_value = {u'cacheClusterEnabled': False,
+                                               u'cacheClusterStatus': 'NOT_AVAILABLE',
+                                               u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                               u'deploymentId': u'n05smo',
+                                               u'description': u'test',
+                                               u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                               u'stageName': u'test',
+                                               u'variables': {'key1': 'val2'},
+                                               'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
+        result = boto_apigateway.overwrite_api_stage_variables(restApiId='rm06h9oac4', stageName='test',
+                                                               variables=dict(key1='val2'), **conn_parameters)
+        self.assertTrue(result.get('stage').get('variables').get('key1') == 'val2')
+
+    def test_that_when_overwriting_stage_variables_to_a_nonexisting_stage_the_overwrite_api_stage_variables_method_returns_error(self):
+        '''
+        Test Equality of error returned
+        '''
+        self.conn.get_stage.side_effect = ClientError(error_content, 'get_stage')
+        result = boto_apigateway.overwrite_api_stage_variables(restApiId='rm06h9oac4', stageName='no_such_stage',
+                                                               variables=dict(key1="val1", key2="val2"), **conn_parameters)
+        self.assertEqual(result.get('error').get('message'), error_message.format('get_stage'))
+
+    def test_that_when_overwriting_stage_variables_to_an_existing_stage_the_overwrite_api_stage_variables_method_returns_error(self):
+        '''
+        Test Equality of error returned due to update_stage
+        '''
+        self.conn.get_stage.return_value = {u'cacheClusterEnabled': False,
+                                            u'cacheClusterStatus': 'NOT_AVAILABLE',
+                                            u'createdDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                            u'deploymentId': u'n05smo',
+                                            u'description': u'test',
+                                            u'lastUpdatedDate': datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                            u'stageName': u'test',
+                                            u'variables': {'key1': 'val1'},
+                                            'ResponseMetadata': {'HTTPStatusCode': 200, 'RequestId': '2d31072c-9d15-11e5-9977-6d9fcfda9c0a'}}
+        self.conn.update_stage.side_effect = ClientError(error_content, 'update_stage')
+        result = boto_apigateway.overwrite_api_stage_variables(restApiId='rm06h9oac4', stageName='test',
+                                                               variables=dict(key1='val2'), **conn_parameters)
+        self.assertEqual(result.get('error').get('message'), error_message.format('update_stage'))
+
     def test_that_when_creating_an_api_stage_succeeds_the_create_api_stage_method_returns_true(self):
         '''
         tests that we can successfully create an api stage and the createDate is
