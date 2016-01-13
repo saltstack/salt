@@ -10,17 +10,16 @@ try:
 except ImportError:
     pass
 import logging
-import random
-import string
 import time
 
 # Import 3rdp-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six import string_types
 
 # Import salt libs
 import salt.utils
+from salt.utils.locales import sdecode
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from salt.ext.six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -102,7 +101,6 @@ def add(name,
         shell = '/bin/bash'
     if fullname is None:
         fullname = ''
-    # TODO: do createhome as well
 
     if not isinstance(uid, int):
         raise SaltInvocationError('uid must be an integer')
@@ -116,13 +114,8 @@ def add(name,
     _dscl([name_path, 'NFSHomeDirectory', home])
     _dscl([name_path, 'RealName', fullname])
 
-    # Set random password, since without a password the account will not be
-    # available. TODO: add shadow module
-    randpass = ''.join(
-        random.SystemRandom().choice(string.letters + string.digits)
-        for x in range(20)
-    )
-    _dscl([name_path, randpass], ctype='passwd')
+    # Make sure home directory exists
+    __salt__['file.mkdir'](name)
 
     # dscl buffers changes, sleep before setting group membership
     time.sleep(1)
@@ -289,10 +282,13 @@ def chfullname(name, fullname):
 
         salt '*' user.chfullname foo 'Foo Bar'
     '''
-    fullname = str(fullname)
+    if isinstance(fullname, string_types):
+        fullname = sdecode(fullname)
     pre_info = info(name)
     if not pre_info:
         raise CommandExecutionError('User \'{0}\' does not exist'.format(name))
+    if isinstance(pre_info['fullname'], string_types):
+        pre_info['fullname'] = sdecode(pre_info['fullname'])
     if fullname == pre_info['fullname']:
         return True
     _dscl(
@@ -305,7 +301,11 @@ def chfullname(name, fullname):
     # dscl buffers changes, sleep 1 second before checking if new value
     # matches desired value
     time.sleep(1)
-    return info(name).get('fullname') == fullname
+
+    current = info(name).get('fullname')
+    if isinstance(current, string_types):
+        current = sdecode(current)
+    return current == fullname
 
 
 def chgroups(name, groups, append=False):
