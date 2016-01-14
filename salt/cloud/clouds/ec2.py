@@ -3741,6 +3741,21 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
                      provider=get_provider(),
                      opts=__opts__,
                      sigver='4')
+    while data[0]:
+        log.warn(
+            ('Error attaching volume {0} '
+            'to instance {1}. Retrying!').format(kwargs['volume_id'],
+                                                 instance_id))
+        # Instance isn't running yet, so cannot attach this volume to it
+        # wait for instance to run and try again
+        time.sleep(10)
+        data = aws.query(params,
+                         return_url=True,
+                         location=get_location(),
+                         provider=get_provider(),
+                         opts=__opts__,
+                         sigver='4')
+
     return data
 
 
