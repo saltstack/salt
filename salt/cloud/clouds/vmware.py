@@ -285,11 +285,22 @@ def _edit_existing_network_adapter(network_adapter, new_network_name, adapter_ty
         if isinstance(network_adapter, type(edited_network_adapter)):
             edited_network_adapter = network_adapter
         else:
-            log.debug("Changing type of '{0}' from '{1}' to '{2}'".format(network_adapter.deviceInfo.label, type(network_adapter).__name__.rsplit(".", 1)[1][7:].lower(), adapter_type))
+            log.debug(
+                six.u('Changing type of \'{0}\' from \'{1}\' to \'{2}\'').format(
+                    network_adapter.deviceInfo.label,
+                    type(network_adapter).__name__.rsplit(".", 1)[1][7:].lower(),
+                    adapter_type
+                )
+            )
     else:
         # If type not specified or does not match, don't change adapter type
         if adapter_type:
-            log.error("Cannot change type of '{0}' to '{1}'. Not changing type".format(network_adapter.deviceInfo.label, adapter_type))
+            log.error(
+                six.u('Cannot change type of \'{0}\' to \'{1}\'. Not changing type').format(
+                    network_adapter.deviceInfo.label,
+                    adapter_type
+                )
+            )
         edited_network_adapter = network_adapter
 
     if switch_type == 'standard':
@@ -342,9 +353,19 @@ def _add_new_network_adapter_helper(network_adapter_label, network_name, adapter
     else:
         # If type not specified or does not match, create adapter of type vmxnet3
         if not adapter_type:
-            log.debug("The type of '{0}' has not been specified. Creating of default type 'vmxnet3'".format(network_adapter_label))
+            log.debug(
+                six.u('The type of \'{0}\' has not been specified. Creating of default type \'vmxnet3\'').format(
+                    network_adapter_label
+                )
+            )
         else:
-            log.error("Cannot create network adapter of type '{0}'. Creating '{1}' of default type 'vmxnet3'".format(adapter_type, network_adapter_label))
+            log.error(
+                six.u('Cannot create network adapter of type \'{0}\'. '
+                      'Creating \'{1}\' of default type \'vmxnet3\'').format(
+                    adapter_type,
+                    network_adapter_label
+                )
+            )
         network_spec.device = vim.vm.device.VirtualVmxnet3()
 
     network_spec.operation = vim.vm.device.VirtualDeviceSpec.Operation.add
@@ -494,9 +515,20 @@ def _add_new_cd_or_dvd_drive_helper(drive_label, controller_key, device_type, mo
     else:
         # If device_type not specified or does not match, create drive of Client type with Passthough mode
         if not device_type:
-            log.debug("The 'device_type' of '{0}' has not been specified. Creating of default type 'client_device'".format(drive_label))
+            log.debug(
+                six.u('The device_type of \'{0}\' has not been specified. '
+                      'Creating of default type \'client_device\'').format(
+                    drive_label
+                )
+            )
         else:
-            log.error("Cannot create CD/DVD drive of type '{0}'. Creating '{1}' of default type 'client_device'".format(device_type, drive_label))
+            log.error(
+                six.u('Cannot create CD/DVD drive of type \'{0}\'. '
+                      'Creating \'{1}\' of default type \'client_device\'').format(
+                    device_type,
+                    drive_label
+                )
+            )
         drive_spec.device.backing = vim.vm.device.VirtualCdrom.RemotePassthroughBackingInfo()
         drive_spec.device.deviceInfo.summary = 'Remote Device'
 
@@ -609,7 +641,11 @@ def _manage_devices(devices, vm, container_ref=None):
     if 'disk' in list(devices.keys()):
         disks_to_create = list(set(devices['disk'].keys()) - set(existing_disks_label))
         disks_to_create.sort()
-        log.debug("Hard disks to create: {0}".format(disks_to_create))
+        log.debug(
+            six.u('Hard disks to create: {0}').format(
+                disks_to_create
+            )
+        )
         for disk_label in disks_to_create:
             # create the disk
             size_gb = float(devices['disk'][disk_label]['size'])
@@ -620,7 +656,11 @@ def _manage_devices(devices, vm, container_ref=None):
     if 'network' in list(devices.keys()):
         network_adapters_to_create = list(set(devices['network'].keys()) - set(existing_network_adapters_label))
         network_adapters_to_create.sort()
-        log.debug("Networks adapters to create: {0}".format(network_adapters_to_create))
+        log.debug(
+            six.u('Networks adapters to create: {0}').format(
+                network_adapters_to_create
+            )
+        )
         for network_adapter_label in network_adapters_to_create:
             network_name = devices['network'][network_adapter_label]['name']
             adapter_type = devices['network'][network_adapter_label]['adapter_type'] if 'adapter_type' in devices['network'][network_adapter_label] else ''
@@ -634,7 +674,11 @@ def _manage_devices(devices, vm, container_ref=None):
     if 'scsi' in list(devices.keys()):
         scsi_adapters_to_create = list(set(devices['scsi'].keys()) - set(existing_scsi_adapters_label))
         scsi_adapters_to_create.sort()
-        log.debug("SCSI devices to create: {0}".format(scsi_adapters_to_create))
+        log.debug(
+            six.u('SCSI devices to create: {0}').format(
+                scsi_adapters_to_create
+            )
+        )
         for scsi_adapter_label in scsi_adapters_to_create:
             # create the scsi adapter
             scsi_adapter_properties = devices['scsi'][scsi_adapter_label]
@@ -645,7 +689,11 @@ def _manage_devices(devices, vm, container_ref=None):
     if 'cd' in list(devices.keys()):
         cd_drives_to_create = list(set(devices['cd'].keys()) - set(existing_cd_drives_label))
         cd_drives_to_create.sort()
-        log.debug("CD/DVD drives to create: {0}".format(cd_drives_to_create))
+        log.debug(
+            six.u('CD/DVD drives to create: {0}').format(
+                cd_drives_to_create
+            )
+        )
         for cd_drive_label in cd_drives_to_create:
             # create the CD/DVD drive
             device_type = devices['cd'][cd_drive_label]['device_type'] if 'device_type' in devices['cd'][cd_drive_label] else ''
@@ -658,7 +706,12 @@ def _manage_devices(devices, vm, container_ref=None):
                 else:
                     controller_key = None
             if not controller_key:
-                log.error("No more available controllers for '{0}'. All IDE controllers are currently in use".format(cd_drive_label))
+                log.error(
+                    six.u('No more available controllers for \'{0}\'. '
+                          'All IDE controllers are currently in use').format(
+                        cd_drive_label
+                    )
+                )
             else:
                 cd_drive_spec = _add_new_cd_or_dvd_drive_helper(cd_drive_label, controller_key, device_type, mode, iso_path)
                 device_specs.append(cd_drive_spec)
@@ -677,14 +730,29 @@ def _wait_for_vmware_tools(vm_ref, max_wait):
     starttime = time.time()
     while time_counter < max_wait:
         if time_counter % 5 == 0:
-            log.info("[ {0} ] Waiting for VMware tools to be running [{1} s]".format(vm_ref.name, time_counter))
+            log.info(
+                six.u('[ {0} ] Waiting for VMware tools to be running [{1} s]').format(
+                    vm_ref.name,
+                    time_counter
+                )
+            )
         if str(vm_ref.summary.guest.toolsRunningStatus) == "guestToolsRunning":
-            log.info("[ {0} ] Successfully got VMware tools running on the guest in {1} seconds".format(vm_ref.name, time_counter))
+            log.info(
+                six.u('[ {0} ] Successfully got VMware tools running on the guest in {1} seconds').format(
+                    vm_ref.name,
+                    time_counter
+                )
+            )
             return True
 
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
-    log.warning("[ {0} ] Timeout Reached. VMware tools still not running after waiting for {1} seconds".format(vm_ref.name, max_wait))
+    log.warning(
+        six.u('[ {0} ] Timeout Reached. VMware tools still not running after waiting for {1} seconds').format(
+            vm_ref.name,
+            max_wait
+        )
+    )
     return False
 
 
@@ -699,21 +767,41 @@ def _wait_for_ip(vm_ref, max_wait):
     starttime = time.time()
     while time_counter < max_wait_ip:
         if time_counter % 5 == 0:
-            log.info("[ {0} ] Waiting to retrieve IPv4 information [{1} s]".format(vm_ref.name, time_counter))
+            log.info(
+                six.u('[ {0} ] Waiting to retrieve IPv4 information [{1} s]').format(
+                    vm_ref.name,
+                    time_counter
+                )
+            )
 
         if vm_ref.summary.guest.ipAddress and match(IP_RE, vm_ref.summary.guest.ipAddress) and vm_ref.summary.guest.ipAddress != '127.0.0.1':
-            log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
+            log.info(
+                six.u('[ {0} ] Successfully retrieved IPv4 information in {1} seconds').format(
+                    vm_ref.name,
+                    time_counter
+                )
+            )
             return vm_ref.summary.guest.ipAddress
 
         for net in vm_ref.guest.net:
             if net.ipConfig.ipAddress:
                 for current_ip in net.ipConfig.ipAddress:
                     if match(IP_RE, current_ip.ipAddress) and current_ip.ipAddress != '127.0.0.1':
-                        log.info("[ {0} ] Successfully retrieved IPv4 information in {1} seconds".format(vm_ref.name, time_counter))
+                        log.info(
+                            six.u('[ {0} ] Successfully retrieved IPv4 information in {1} seconds').format(
+                                vm_ref.name,
+                                time_counter
+                            )
+                        )
                         return current_ip.ipAddress
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
-    log.warning("[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} seconds".format(vm_ref.name, max_wait_ip))
+    log.warning(
+        six.u('[ {0} ] Timeout Reached. Unable to retrieve IPv4 information after waiting for {1} seconds').format(
+            vm_ref.name,
+            max_wait_ip
+        )
+    )
     return False
 
 
@@ -722,7 +810,9 @@ def _wait_for_host(host_ref, task_type, sleep_seconds=5, log_level='debug'):
     starttime = time.time()
     while host_ref.runtime.connectionState != 'notResponding':
         if time_counter % sleep_seconds == 0:
-            message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
+            message = six.u('[ {0} ] Waiting for host {1} to finish [{2} s]').format(host_ref.name,
+                                                                                     task_type,
+                                                                                     time_counter)
             if log_level == 'info':
                 log.info(message)
             else:
@@ -731,7 +821,9 @@ def _wait_for_host(host_ref, task_type, sleep_seconds=5, log_level='debug'):
         time_counter += 1
     while host_ref.runtime.connectionState != 'connected':
         if time_counter % sleep_seconds == 0:
-            message = "[ {0} ] Waiting for host {1} to finish [{2} s]".format(host_ref.name, task_type, time_counter)
+            message = six.u('[ {0} ] Waiting for host {1} to finish [{2} s]').format(host_ref.name,
+                                                                                     task_type,
+                                                                                     time_counter)
             if log_level == 'info':
                 log.info(message)
             else:
@@ -739,7 +831,9 @@ def _wait_for_host(host_ref, task_type, sleep_seconds=5, log_level='debug'):
         time.sleep(1.0 - ((time.time() - starttime) % 1.0))
         time_counter += 1
     if host_ref.runtime.connectionState == 'connected':
-        message = "[ {0} ] Successfully completed host {1} in {2} seconds".format(host_ref.name, task_type, time_counter)
+        message = six.u('[ {0} ] Successfully completed host {1} in {2} seconds').format(host_ref.name,
+                                                                                         task_type,
+                                                                                         time_counter)
         if log_level == 'info':
             log.info(message)
         else:
@@ -1014,10 +1108,14 @@ def _upg_tools_helper(vm, reboot=False):
     # If vmware tools is out of date, check major OS family
     # Upgrade tools on Linux and Windows guests
     if vm.guest.toolsStatus == "toolsOld":
-        log.info('Upgrading VMware tools on {0}'.format(vm.name))
+        log.info(
+            six.u('Upgrading VMware tools on {0}').format(vm.name)
+        )
         try:
             if vm.guest.guestFamily == "windowsGuest" and not reboot:
-                log.info('Reboot suppressed on {0}'.format(vm.name))
+                log.info(
+                    six.u('Reboot suppressed on {0}').format(vm.name)
+                )
                 task = vm.UpgradeTools('/S /v"/qn REBOOT=R"')
             elif vm.guest.guestFamily in ["linuxGuest", "windowsGuest"]:
                 task = vm.UpgradeTools()
@@ -1031,7 +1129,7 @@ def _upg_tools_helper(vm, reboot=False):
                                             log_level='info')
         except Exception as exc:
             log.error(
-                'Error while upgrading VMware tools on VM {0}: {1}'.format(
+                six.u('Error while upgrading VMware tools on VM {0}: {1}').format(
                     vm.name,
                     exc
                 ),
@@ -1698,15 +1796,19 @@ def start(name, call=None):
         if vm["name"] == name:
             if vm["summary.runtime.powerState"] == "poweredOn":
                 ret = 'already powered on'
-                log.info('VM {0} {1}'.format(name, ret))
+                log.info(
+                    six.u('VM {0} {1}').format(name, ret)
+                )
                 return ret
             try:
-                log.info('Starting VM {0}'.format(name))
+                log.info(
+                    six.u('Starting VM {0}').format(name)
+                )
                 task = vm["object"].PowerOn()
                 salt.utils.vmware.wait_for_task(task, name, 'power on')
             except Exception as exc:
                 log.error(
-                    'Error while powering on VM {0}: {1}'.format(
+                    six.u('Error while powering on VM {0}: {1}').format(
                         name,
                         exc
                     ),
@@ -1745,15 +1847,19 @@ def stop(name, call=None):
         if vm["name"] == name:
             if vm["summary.runtime.powerState"] == "poweredOff":
                 ret = 'already powered off'
-                log.info('VM {0} {1}'.format(name, ret))
+                log.info(
+                    six.u('VM {0} {1}').format(name, ret)
+                )
                 return ret
             try:
-                log.info('Stopping VM {0}'.format(name))
+                log.info(
+                    six.u('Stopping VM {0}').format(name)
+                )
                 task = vm["object"].PowerOff()
                 salt.utils.vmware.wait_for_task(task, name, 'power off')
             except Exception as exc:
                 log.error(
-                    'Error while powering off VM {0}: {1}'.format(
+                    six.u('Error while powering off VM {0}: {1}').format(
                         name,
                         exc
                     ),
@@ -1792,19 +1898,25 @@ def suspend(name, call=None):
         if vm["name"] == name:
             if vm["summary.runtime.powerState"] == "poweredOff":
                 ret = 'cannot suspend in powered off state'
-                log.info('VM {0} {1}'.format(name, ret))
+                log.info(
+                    six.u('VM {0} {1}').format(name, ret)
+                )
                 return ret
             elif vm["summary.runtime.powerState"] == "suspended":
                 ret = 'already suspended'
-                log.info('VM {0} {1}'.format(name, ret))
+                log.info(
+                    six.u('VM {0} {1}').format(name, ret)
+                )
                 return ret
             try:
-                log.info('Suspending VM {0}'.format(name))
+                log.info(
+                    six.u('Suspending VM {0}').format(name)
+                )
                 task = vm["object"].Suspend()
                 salt.utils.vmware.wait_for_task(task, name, 'suspend')
             except Exception as exc:
                 log.error(
-                    'Error while suspending VM {0}: {1}'.format(
+                    six.u('Error while suspending VM {0}: {1}').format(
                         name,
                         exc
                     ),
@@ -1843,15 +1955,19 @@ def reset(name, call=None):
         if vm["name"] == name:
             if vm["summary.runtime.powerState"] == "suspended" or vm["summary.runtime.powerState"] == "poweredOff":
                 ret = 'cannot reset in suspended/powered off state'
-                log.info('VM {0} {1}'.format(name, ret))
+                log.info(
+                    six.u('VM {0} {1}').format(name, ret)
+                )
                 return ret
             try:
-                log.info('Resetting VM {0}'.format(name))
+                log.info(
+                    six.u('Resetting VM {0}').format(name)
+                )
                 task = vm["object"].Reset()
                 salt.utils.vmware.wait_for_task(task, name, 'reset')
             except Exception as exc:
                 log.error(
-                    'Error while resetting VM {0}: {1}'.format(
+                    six.u('Error while resetting VM {0}: {1}').format(
                         name,
                         exc
                     ),
@@ -1891,14 +2007,18 @@ def terminate(name, call=None):
         if vm["name"] == name:
             if vm["summary.runtime.powerState"] == "poweredOff":
                 ret = 'already powered off'
-                log.info('VM {0} {1}'.format(name, ret))
+                log.info(
+                    six.u('VM {0} {1}').format(name, ret)
+                )
                 return ret
             try:
-                log.info('Terminating VM {0}'.format(name))
+                log.info(
+                    six.u('Terminating VM {0}').format(name)
+                )
                 vm["object"].Terminate()
             except Exception as exc:
                 log.error(
-                    'Error while terminating VM {0}: {1}'.format(
+                    six.u('Error while terminating VM {0}: {1}').format(
                         name,
                         exc
                     ),
@@ -1948,12 +2068,14 @@ def destroy(name, call=None):
             if vm["summary.runtime.powerState"] != "poweredOff":
                 # Power off the vm first
                 try:
-                    log.info('Powering Off VM {0}'.format(name))
+                    log.info(
+                        six.u('Powering Off VM {0}').format(name)
+                    )
                     task = vm["object"].PowerOff()
                     salt.utils.vmware.wait_for_task(task, name, 'power off')
                 except Exception as exc:
                     log.error(
-                        'Error while powering off VM {0}: {1}'.format(
+                        six.u('Error while powering off VM {0}: {1}').format(
                             name,
                             exc
                         ),
@@ -1962,12 +2084,14 @@ def destroy(name, call=None):
                     )
                     return 'failed to destroy'
             try:
-                log.info('Destroying VM {0}'.format(name))
+                log.info(
+                    six.u('Destroying VM {0}').format(name)
+                )
                 task = vm["object"].Destroy_Task()
                 salt.utils.vmware.wait_for_task(task, name, 'destroy')
             except Exception as exc:
                 log.error(
-                    'Error while destroying VM {0}: {1}'.format(
+                    six.u('Error while destroying VM {0}: {1}').format(
                         name,
                         exc
                     ),
@@ -2106,13 +2230,17 @@ def create(vm_):
         if resourcepool:
             resourcepool_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ResourcePool, resourcepool, container_ref=container_ref)
             if not resourcepool_ref:
-                log.error("Specified resource pool: '{0}' does not exist".format(resourcepool))
+                log.error(
+                    six.u('Specified resource pool: \'{0}\' does not exist').format(resourcepool)
+                )
                 if clone_type == "template":
                     raise SaltCloudSystemExit('You must specify a resource pool that exists.')
         elif cluster:
             cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.ClusterComputeResource, cluster, container_ref=container_ref)
             if not cluster_ref:
-                log.error("Specified cluster: '{0}' does not exist".format(cluster))
+                log.error(
+                    six.u('Specified cluster: \'{0}\' does not exist').format(cluster)
+                )
                 if clone_type == "template":
                     raise SaltCloudSystemExit('You must specify a cluster that exists.')
             else:
@@ -2122,25 +2250,45 @@ def create(vm_):
                 'You must either specify a cluster or a resource pool when cloning from a template.'
             )
         else:
-            log.debug("Using resource pool used by the {0} {1}".format(clone_type, vm_['clonefrom']))
+            log.debug(
+                six.u('Using resource pool used by the {0} {1}').format(
+                    clone_type,
+                    vm_['clonefrom']
+                )
+            )
 
         # Either a datacenter or a folder can be optionally specified
         # If not specified, the existing VM/template\'s parent folder is used.
         if folder:
             folder_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.Folder, folder, container_ref=container_ref)
             if not folder_ref:
-                log.error("Specified folder: '{0}' does not exist".format(folder))
-                log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
+                log.error(
+                    six.u('Specified folder: \'{0}\' does not exist').format(folder)
+                )
+                log.debug(
+                    six.u('Using folder in which {0} {1} is present').format(clone_type,
+                                                                             vm_['clonefrom'])
+                )
                 folder_ref = object_ref.parent
         elif datacenter:
             if not datacenter_ref:
-                log.error("Specified datacenter: '{0}' does not exist".format(datacenter))
-                log.debug("Using datacenter folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
+                log.error(
+                    six.u('Specified datacenter: \'{0}\' does not exist').format(datacenter)
+                )
+                log.debug(
+                    six.u('Using datacenter folder in which {0} {1} is present').format(
+                        clone_type,
+                        vm_['clonefrom']
+                    )
+                )
                 folder_ref = object_ref.parent
             else:
                 folder_ref = datacenter_ref.vmFolder
         else:
-            log.debug("Using folder in which {0} {1} is present".format(clone_type, vm_['clonefrom']))
+            log.debug(
+                six.u('Using folder in which {0} {1} is present').format(clone_type,
+                                                                         vm_['clonefrom'])
+            )
             folder_ref = object_ref.parent
 
         # Create the relocation specs
@@ -2159,18 +2307,26 @@ def create(vm_):
             else:
                 datastore_cluster_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.StoragePod, datastore, container_ref=container_ref)
                 if not datastore_cluster_ref:
-                    log.error("Specified datastore/datastore cluster: '{0}' does not exist".format(datastore))
-                    log.debug("Using datastore used by the {0} {1}".format(clone_type, vm_['clonefrom']))
+                    log.error(
+                        six.u('Specified datastore/datastore cluster: \'{0}\' does not exist').format(datastore)
+                    )
+                    log.debug(
+                        six.u('Using datastore used by the {0} {1}').format(clone_type, vm_['clonefrom'])
+                    )
         else:
             log.debug("No datastore/datastore cluster specified")
-            log.debug("Using datastore used by the {0} {1}".format(clone_type, vm_['clonefrom']))
+            log.debug(
+                six.u('Using datastore used by the {0} {1}').format(clone_type, vm_['clonefrom'])
+            )
 
         if host:
             host_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.HostSystem, host, container_ref=container_ref)
             if host_ref:
                 reloc_spec.host = host_ref
             else:
-                log.error("Specified host: '{0}' does not exist".format(host))
+                log.error(
+                    six.u('Specified host: \'{0}\' does not exist').format(host)
+                )
 
         # Create the config specs
         config_spec = vim.vm.ConfigSpec()
@@ -2180,16 +2336,25 @@ def create(vm_):
         if hardware_version:
             hardware_version = "vmx-{0}".format(str(hardware_version).zfill(2))
             if hardware_version != object_ref.config.version:
-                log.debug("Scheduling hardware version upgrade from {0} to {1}".format(object_ref.config.version, hardware_version))
+                log.debug(
+                    six.u('Scheduling hardware version upgrade from {0} to {1}').format(
+                        object_ref.config.version,
+                        hardware_version
+                    )
+                )
                 scheduled_hardware_upgrade = vim.vm.ScheduledHardwareUpgradeInfo()
                 scheduled_hardware_upgrade.upgradePolicy = 'always'
                 scheduled_hardware_upgrade.versionKey = hardware_version
                 config_spec.scheduledHardwareUpgradeInfo = scheduled_hardware_upgrade
             else:
-                log.debug("Virtual hardware version already set to {0}".format(hardware_version))
+                log.debug(
+                    six.u('Virtual hardware version already set to {0}').format(hardware_version)
+                )
 
         if num_cpus:
-            log.debug("Setting cpu to: {0}".format(num_cpus))
+            log.debug(
+                six.u('Setting cpu to: {0}').format(num_cpus)
+            )
             config_spec.numCPUs = int(num_cpus)
 
         if memory:
@@ -2200,12 +2365,14 @@ def create(vm_):
                 elif memory_unit.lower() == "gb":
                     memory_mb = int(float(memory_num)*1024.0)
                 else:
-                    err_msg = "Invalid memory type specified: '{0}'".format(memory_unit)
+                    err_msg = six.u('Invalid memory type specified: \'{0}\'').format(memory_unit)
                     log.error(err_msg)
                     return {'Error': err_msg}
             except (TypeError, ValueError):
                 memory_mb = int(memory)
-            log.debug("Setting memory to: {0} MB".format(memory_mb))
+            log.debug(
+                six.u('Setting memory to: {0} MB').format(memory_mb)
+            )
             config_spec.memoryMB = memory_mb
 
         if devices:
@@ -2246,12 +2413,18 @@ def create(vm_):
         if not template:
             clone_spec.powerOn = power
 
-        log.debug('clone_spec set to:\n{0}'.format(
-            pprint.pformat(clone_spec))
+        log.debug(
+            six.u('clone_spec set to:\n{0}').format(pprint.pformat(clone_spec))
         )
 
         try:
-            log.info("Creating {0} from {1}({2})".format(vm_['name'], clone_type, vm_['clonefrom']))
+            log.info(
+                six.u('Creating {0} from {1}({2})').format(
+                    vm_['name'],
+                    clone_type,
+                    vm_['clonefrom']
+                )
+            )
             salt.utils.cloud.fire_event(
                 'event',
                 'requesting instance',
@@ -2287,7 +2460,7 @@ def create(vm_):
                 task = object_ref.Clone(folder_ref, vm_name, clone_spec)
                 salt.utils.vmware.wait_for_task(task, vm_name, 'clone', 5, 'info')
         except Exception as exc:
-            err_msg = 'Error creating {0}: {1}'.format(vm_['name'], exc)
+            err_msg = six.u('Error creating {0}: {1}').format(vm_['name'], exc)
             log.error(
                 err_msg,
                 # Show the traceback if the debug logging level is enabled
@@ -2301,7 +2474,9 @@ def create(vm_):
         if not template and power:
             ip = _wait_for_ip(new_vm_ref, wait_for_ip_timeout)
             if ip:
-                log.info("[ {0} ] IPv4 is: {1}".format(vm_name, ip))
+                log.info(
+                    six.u('[ {0} ] IPv4 is: {1}').format(vm_name, ip)
+                )
                 # ssh or smb using ip and install salt only if deploy is True
                 if deploy:
                     vm_['key_filename'] = key_filename
@@ -2374,7 +2549,7 @@ def create_datacenter(kwargs=None, call=None):
             folder.CreateDatacenter(name=datacenter_name)
         except Exception as exc:
             log.error(
-                'Error creating datacenter {0}: {1}'.format(
+                six.u('Error creating datacenter {0}: {1}').format(
                     datacenter_name,
                     exc
                 ),
@@ -2383,7 +2558,9 @@ def create_datacenter(kwargs=None, call=None):
             )
             return False
 
-        log.debug("Created datacenter {0}".format(datacenter_name))
+        log.debug(
+            six.u('Created datacenter {0}').format(datacenter_name)
+        )
         return {datacenter_name: 'created'}
 
     return False
@@ -2439,7 +2616,7 @@ def create_cluster(kwargs=None, call=None):
             folder.CreateClusterEx(name=cluster_name, spec=cluster_spec)
         except Exception as exc:
             log.error(
-                'Error creating cluster {0}: {1}'.format(
+                six.u('Error creating cluster {0}: {1}').format(
                     cluster_name,
                     exc
                 ),
@@ -2448,7 +2625,12 @@ def create_cluster(kwargs=None, call=None):
             )
             return False
 
-        log.debug("Created cluster {0} under datacenter {1}".format(cluster_name, datacenter.name))
+        log.debug(
+            six.u('Created cluster {0} under datacenter {1}').format(
+                cluster_name,
+                datacenter.name
+            )
+        )
         return {cluster_name: 'created'}
 
     return False
@@ -2483,16 +2665,20 @@ def rescan_hba(kwargs=None, call=None):
 
     try:
         if hba:
-            log.info('Rescanning HBA {0} on host {1}'.format(hba, host_name))
+            log.info(
+                six.u('Rescanning HBA {0} on host {1}').format(hba, host_name)
+            )
             host_ref.configManager.storageSystem.RescanHba(hba)
             ret = 'rescanned HBA {0}'.format(hba)
         else:
-            log.info('Rescanning all HBAs on host {0}'.format(host_name))
+            log.info(
+                six.u('Rescanning all HBAs on host {0}').format(host_name)
+            )
             host_ref.configManager.storageSystem.RescanAllHba()
             ret = 'rescanned all HBAs'
     except Exception as exc:
         log.error(
-            'Error while rescaning HBA on host {0}: {1}'.format(
+            six.u('Error while rescaning HBA on host {0}: {1}').format(
                 host_name,
                 exc
             ),
@@ -2862,7 +3048,7 @@ def enter_maintenance_mode(kwargs=None, call=None):
         salt.utils.vmware.wait_for_task(task, host_name, 'enter maintenance mode')
     except Exception as exc:
         log.error(
-            'Error while moving host system {0} in maintenance mode: {1}'.format(
+            six.u('Error while moving host system {0} in maintenance mode: {1}').format(
                 host_name,
                 exc
             ),
@@ -2907,7 +3093,7 @@ def exit_maintenance_mode(kwargs=None, call=None):
         salt.utils.vmware.wait_for_task(task, host_name, 'exit maintenance mode')
     except Exception as exc:
         log.error(
-            'Error while moving host system {0} out of maintenance mode: {1}'.format(
+            six.u('Error while moving host system {0} out of maintenance mode: {1}').format(
                 host_name,
                 exc
             ),
@@ -2973,21 +3159,29 @@ def create_folder(kwargs=None, call=None):
         folder_ref = si.content.searchIndex.FindByInventoryPath(inventoryPath=inventory_path)
         if isinstance(folder_ref, vim.Folder):
             # This is a folder that exists so just append and skip it
-            log.debug("Path {0}/ exists in the inventory".format(inventory_path))
+            log.debug(
+                six.u('Path {0}/ exists in the inventory').format(inventory_path)
+            )
             folder_refs.append(folder_ref)
         elif isinstance(folder_ref, vim.Datacenter):
             # This is a datacenter that exists so just append and skip it
-            log.debug("Path {0}/ exists in the inventory".format(inventory_path))
+            log.debug(
+                six.u('Path {0}/ exists in the inventory').format(inventory_path)
+            )
             folder_refs.append(folder_ref)
         else:
             path_exists = False
             if not folder_refs:
                 # If this is the first folder, create it under the rootFolder
-                log.debug("Creating folder {0} under rootFolder in the inventory".format(folder_name))
+                log.debug(
+                    six.u('Creating folder {0} under rootFolder in the inventory').format(folder_name)
+                )
                 folder_refs.append(si.content.rootFolder.CreateFolder(folder_name))
             else:
                 # Create the folder under the parent folder
-                log.debug("Creating path {0}/ in the inventory".format(inventory_path))
+                log.debug(
+                    six.u('Creating path {0}/ in the inventory').format(inventory_path)
+                )
                 folder_refs.append(folder_refs[index-1].CreateFolder(folder_name))
 
     if path_exists:
@@ -3047,7 +3241,9 @@ def create_snapshot(name, kwargs=None, call=None):
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
     if vm_ref.summary.runtime.powerState != "poweredOn":
-        log.debug('VM {0} is not powered on. Setting both memdump and quiesce to False'.format(name))
+        log.debug(
+            six.u('VM {0} is not powered on. Setting both memdump and quiesce to False').format(name)
+        )
         memdump = False
         quiesce = False
 
@@ -3063,7 +3259,7 @@ def create_snapshot(name, kwargs=None, call=None):
         salt.utils.vmware.wait_for_task(task, name, 'create snapshot', 5, 'info')
     except Exception as exc:
         log.error(
-            'Error while creating snapshot of {0}: {1}'.format(
+            six.u('Error while creating snapshot of {0}: {1}').format(
                 name,
                 exc
             ),
@@ -3112,7 +3308,9 @@ def revert_to_snapshot(name, kwargs=None, call=None):
     vm_ref = salt.utils.vmware.get_mor_by_property(_get_si(), vim.VirtualMachine, name)
 
     if not vm_ref.rootSnapshot:
-        log.error('VM {0} does not contain any current snapshots'.format(name))
+        log.error(
+            six.u('VM {0} does not contain any current snapshots').format(name)
+        )
         return 'revert failed'
 
     try:
@@ -3121,7 +3319,7 @@ def revert_to_snapshot(name, kwargs=None, call=None):
 
     except Exception as exc:
         log.error(
-            'Error while reverting VM {0} to snapshot: {1}'.format(
+            six.u('Error while reverting VM {0} to snapshot: {1}').format(
                 name,
                 exc
             ),
@@ -3164,7 +3362,7 @@ def remove_all_snapshots(name, kwargs=None, call=None):
         salt.utils.vmware.wait_for_task(task, name, 'remove snapshots', 5, 'info')
     except Exception as exc:
         log.error(
-            'Error while removing snapshots on VM {0}: {1}'.format(
+            six.u('Error while removing snapshots on VM {0}: {1}').format(
                 name,
                 exc
             ),
@@ -3287,11 +3485,13 @@ def add_host(kwargs=None, call=None):
             p3 = subprocess.Popen(('openssl', 'x509', '-noout', '-fingerprint', '-sha1'), stdin=p2.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out = salt.utils.to_str(p3.stdout.read())
             ssl_thumbprint = out.split('=')[-1].strip()
-            log.debug('SSL thumbprint received from the host system: {0}'.format(ssl_thumbprint))
+            log.debug(
+                six.u('SSL thumbprint received from the host system: {0}').format(ssl_thumbprint)
+            )
             spec.sslThumbprint = ssl_thumbprint
         except Exception as exc:
             log.error(
-                'Error while trying to get SSL thumbprint of host {0}: {1}'.format(
+                six.u('Error while trying to get SSL thumbprint of host {0}: {1}').format(
                     host_name,
                     exc
                 ),
@@ -3311,9 +3511,12 @@ def add_host(kwargs=None, call=None):
     except Exception as exc:
         if isinstance(exc, vim.fault.SSLVerifyFault):
             log.error('Authenticity of the host\'s SSL certificate is not verified')
-            log.info('Try again after setting the esxi_host_ssl_thumbprint to {0} in provider configuration'.format(exc.thumbprint))
+            log.info(
+                six.u('Try again after setting the esxi_host_ssl_thumbprint to '
+                      '{0} in provider configuration').format(exc.thumbprint)
+            )
         log.error(
-            'Error while adding host {0}: {1}'.format(
+            six.u('Error while adding host {0}: {1}').format(
                 host_name,
                 exc
             ),
@@ -3364,7 +3567,7 @@ def remove_host(kwargs=None, call=None):
         salt.utils.vmware.wait_for_task(task, host_name, 'remove host', log_level='info')
     except Exception as exc:
         log.error(
-            'Error while removing host {0}: {1}'.format(
+            six.u('Error while removing host {0}: {1}').format(
                 host_name,
                 exc
             ),
@@ -3413,7 +3616,7 @@ def connect_host(kwargs=None, call=None):
         salt.utils.vmware.wait_for_task(task, host_name, 'connect host', 5, 'info')
     except Exception as exc:
         log.error(
-            'Error while connecting host {0}: {1}'.format(
+            six.u('Error while connecting host {0}: {1}').format(
                 host_name,
                 exc
             ),
@@ -3462,7 +3665,7 @@ def disconnect_host(kwargs=None, call=None):
         salt.utils.vmware.wait_for_task(task, host_name, 'disconnect host', log_level='info')
     except Exception as exc:
         log.error(
-            'Error while disconnecting host {0}: {1}'.format(
+            six.u('Error while disconnecting host {0}: {1}').format(
                 host_name,
                 exc
             ),
@@ -3532,7 +3735,7 @@ def reboot_host(kwargs=None, call=None):
         _wait_for_host(host_ref, "reboot", 10, 'info')
     except Exception as exc:
         log.error(
-            'Error while rebooting host {0}: {1}'.format(
+            six.u('Error while rebooting host {0}: {1}').format(
                 host_name,
                 exc
             ),
@@ -3593,7 +3796,7 @@ def create_datastore_cluster(kwargs=None, call=None):
         datacenter_ref.datastoreFolder.CreateStoragePod(name=datastore_cluster_name)
     except Exception as exc:
         log.error(
-            'Error creating datastore cluster {0}: {1}'.format(
+            six.u('Error creating datastore cluster {0}: {1}').format(
                 datastore_cluster_name,
                 exc
             ),
