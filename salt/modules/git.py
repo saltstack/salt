@@ -3322,9 +3322,9 @@ def submodule(cwd,
         )
     if not isinstance(command, six.string_types):
         command = str(command)
-    command = ['git', 'submodule', command]
-    command.extend(_format_opts(opts))
-    return _git_run(command,
+    cmd = ['git', 'submodule', command]
+    cmd.extend(_format_opts(opts))
+    return _git_run(cmd,
                     cwd=cwd,
                     runas=user,
                     identity=identity,
