@@ -195,19 +195,23 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
             if __opts__['test']:
                 ret['comment'] = ('[stage: {0}] will be reassociated to an already available '
                                   'deployment that matched the given [api_name: {1}] '
-                                  'and [swagger_file: {2}].'.format(stage_name, api_name, swagger_file))
+                                  'and [swagger_file: {2}].\n'
+                                  'Stage variables will be set '
+                                  'to {3}.'.format(stage_name, api_name, swagger_file, stage_vars))
                 ret['result'] = None
                 return ret
             return swagger.publish_api(ret, stage_name, stage_vars)
 
-        if ret.get('abort'):
+        if ret.get('current'):
             # already at desired state for the stage, swagger_file, and api_name
             if __opts__['test']:
                 ret['comment'] = ('[stage: {0}] is already at desired state with an associated '
                                   'deployment matching the given [api_name: {1}] '
-                                  'and [swagger_file: {2}].'.format(stage_name, api_name, swagger_file))
+                                  'and [swagger_file: {2}].\n'
+                                  'Stage variables will be set '
+                                  'to {3}.'.format(stage_name, api_name, swagger_file, stage_vars))
                 ret['result'] = None
-            return ret
+            return swagger.overwrite_stage_variables(ret, stage_name, stage_vars)
 
         # there doesn't exist any previous deployments for the given swagger_file, we need
         # to redeploy the content of the swagger file to the api, models, and resources object
@@ -216,7 +220,9 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
             ret['comment'] = ('There is no deployment matching the given [api_name: {0}] '
                               'and [swagger_file: {1}].  A new deployment will be '
                               'created and the [stage_name: {2}] will then be associated '
-                              'to the newly created deployment.'.format(api_name, swagger_file, stage_name))
+                              'to the newly created deployment.\n'
+                              'Stage variables will be set '
+                              'to {3}.'.format(api_name, swagger_file, stage_name, stage_vars))
             ret['result'] = None
             return ret
 
@@ -797,6 +803,25 @@ class _Swagger(object):
                     return deployment.get('id')
         return ''
 
+    def overwrite_stage_variables(self, ret, stage_name, stage_variables):
+        '''
+        overwrite the given stage_name's stage variables with the given stage_variables
+        '''
+        res = __salt__['boto_apigateway.overwrite_api_stage_variables'](restApiId=self.restApiId,
+                                                                        stageName=stage_name,
+                                                                        variables=stage_variables,
+                                                                        **self._common_aws_args)
+
+        if not res.get('overwrite'):
+            ret['result'] = False
+            ret['abort'] = True
+            ret['common'] = res.get('error')
+        else:
+            ret = _log_changes(ret,
+                               'overwrite_stge_variables',
+                               res.get('stage'))
+        return ret
+
     def _set_current_deployment(self, stage_name, stage_desc_json, stage_variables):
         '''
         Helper method to associate the stage_name to the given deploymentId and make this current
@@ -812,6 +837,14 @@ class _Swagger(object):
                                                                  **self._common_aws_args)
             if not stage.get('stage'):
                 return {'set': False, 'error': stage.get('error')}
+        else:
+            # overwrite the stage variables
+            overwrite = __salt__['boto_apigateway.overwrite_api_stage_variables'](restApiId=self.restApiId,
+                                                                                  stageName=stage_name,
+                                                                                  variables=stage_variables,
+                                                                                  **self._common_aws_args)
+            if not overwrite.get('stage'):
+                return {'set': False, 'error': overwrite.get('error')}
 
         return __salt__['boto_apigateway.activate_api_deployment'](self.restApiId,
                                                                   stage_name,
@@ -883,7 +916,7 @@ class _Swagger(object):
             if deployed_label_json == self.deployment_label_json:
                 ret['comment'] = ('Already at desired state, the stage {0} is already at the desired '
                                   'deployment label:\n{1}'.format(stage_name, deployed_label_json))
-                ret['abort'] = True
+                ret['current'] = True
                 return ret
             else:
                 self._deploymentId = self._get_desired_deployment_id()
@@ -904,9 +937,12 @@ class _Swagger(object):
             res = self._set_current_deployment(stage_name, stage_desc_json, stage_variables)
             if not res.get('set'):
                 ret['abort'] = True
+                ret['result'] = False
                 ret['common'] = res.get('error')
             else:
-                ret = _log_changes(ret, 'publish_api (reassociate deployment)', res.get('response'))
+                ret = _log_changes(ret,
+                                   'publish_api (reassociate deployment, set stage_variables)',
+                                   res.get('response'))
         else:
             # no deployment existed for the given swagger_file for this Swagger object
             res = __salt__['boto_apigateway.create_api_deployment'](self.restApiId,
@@ -917,6 +953,7 @@ class _Swagger(object):
                                                                     **self._common_aws_args)
             if not res.get('created'):
                 ret['abort'] = True
+                ret['result'] = False
                 ret['common'] = res.get('error')
             else:
                 ret = _log_changes(ret, 'publish_api (new deployment)', res.get('deployment'))
