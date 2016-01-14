@@ -835,6 +835,26 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                         not result.get('result', True) and
                         result.get('comment', '').find('put_integration_response') != -1)
 
+    def test_absent_when_rest_api_does_not_exist(self):
+        '''
+        Tests scenario where the given api_name does not exist, absent state should return True
+        with no changes.
+        '''
+        self.conn.get_rest_apis.return_value = apis_ret
+        self.conn.get_stage.side_effect = ClientError(error_content, 'get_stage should not be called')
+
+        result = salt_states['boto_apigateway.absent'](
+                    'api present',
+                    'no_such_rest_api',
+                    'no_such_stage',
+                    nuke_api=False,
+                    **conn_parameters)
+
+        self.assertTrue(result.get('result', False) and 
+                        result.get('comment', '').find('get_stage should not be called') == -1 and
+                        result.get('changes') == {})
+
+   
     def test_absent_when_stage_is_invalid(self):
         '''
         Tests scenario where the stagename doesn't exist
