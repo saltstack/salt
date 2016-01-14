@@ -357,7 +357,6 @@ def do(cmdline=None, runas=None, env=None):
     env['PATH'] = '{0}/shims:{1}'.format(path, os.environ['PATH'])
     cmdline = ' '.join([_cmd_quote(cmd) for cmd in _shlex_split(cmdline)])
 
-
     result = __salt__['cmd.run_all'](
         cmdline,
         runas=runas,
