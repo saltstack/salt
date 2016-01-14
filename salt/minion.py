@@ -1377,8 +1377,8 @@ class Minion(MinionBase):
 
             # Proxies have a chicken-and-egg problem.  Usually we load grains early
             # in the setup process, but we can't load grains for proxies until
-            # we talk to the device we are proxying for.  So reload the grains
-            # functions here, and then force a grains sync here
+            # we talk to the device we are proxying for.  So force a grains
+            # sync here.
             self.functions['saltutil.sync_grains'](saltenv='base')
         else:
             self.functions, self.returners, _ = self._load_modules(force_refresh, notify=notify)
