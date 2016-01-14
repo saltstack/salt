@@ -36,6 +36,7 @@ try:
 except ImportError:
     pass
 
+__proxyenabled__ = ['*']
 # Define the module's virtual name
 __virtualname__ = 'cmd'
 

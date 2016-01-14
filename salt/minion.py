@@ -1374,6 +1374,12 @@ class Minion(MinionBase):
         log.debug('Refreshing modules. Notify={0}'.format(notify))
         if hasattr(self, 'proxy'):
             self.functions, self.returners, _ = self._load_modules(force_refresh, notify=notify, proxy=self.proxy)
+
+            # Proxies have a chicken-and-egg problem.  Usually we load grains early
+            # in the setup process, but we can't load grains for proxies until
+            # we talk to the device we are proxying for.  So force a grains
+            # sync here.
+            self.functions['saltutil.sync_grains'](saltenv='base')
         else:
             self.functions, self.returners, _ = self._load_modules(force_refresh, notify=notify)
 
@@ -2583,6 +2589,7 @@ class ProxyMinion(Minion):
         self.functions.pack['__proxy__'] = self.proxy
         self.proxy.pack['__salt__'] = self.functions
         self.proxy.pack['__ret__'] = self.returners
+        self.proxy.pack['__pillar__'] = self.opts['pillar']
 
         if ('{0}.init'.format(fq_proxyname) not in self.proxy
             or '{0}.shutdown'.format(fq_proxyname) not in self.proxy):
@@ -2597,9 +2604,8 @@ class ProxyMinion(Minion):
         # Proxies have a chicken-and-egg problem.  Usually we load grains early
         # in the setup process, but we can't load grains for proxies until
         # we talk to the device we are proxying for.  So reload the grains
-        # functions here, and then force a grains sync.
+        # functions here, and then force a grains sync in modules_refresh
         self.opts['grains'] = salt.loader.grains(self.opts, force_refresh=True)
-        self.functions['saltutil.sync_grains'](saltenv='base')
 
         # Check config 'add_proxymodule_to_opts'  Remove this in Boron.
         if self.opts['add_proxymodule_to_opts']:
