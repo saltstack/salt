@@ -272,7 +272,7 @@ def endpoint_get(service, profile=None, interface=None, **connection_args):
     if not service:
         return {'Error': 'Could not find the specified service'}
     ret = kstone.search_endpoints(
-        {'service_id': service.id, 'interface': interface} if interface else {'service_id': service.id}
+        filters={'service_id': service.id, 'interface': interface} if interface else {'service_id': service.id}
     )
     if not ret:
         return {'Error': 'Could not find endpoint for the specified service'}
@@ -294,7 +294,7 @@ def endpoint_list(profile=None, interface=None, **connection_args):
     '''
     kstone = auth(profile, **connection_args)
     ret = {}
-    for endpoint in kstone.search_endpoints({'interface': interface} if interface else {}):
+    for endpoint in kstone.search_endpoints(filters={'interface': interface} if interface else {}):
         ret[endpoint.id] = endpoint
     return ret
 
@@ -336,12 +336,12 @@ def endpoint_delete(service, profile=None, **connection_args):
     '''
     kstone = auth(profile, **connection_args)
     service = kstone.get_service(service)
-    endpoints = kstone.search_endpoints({'service_id': service.id})
+    endpoints = kstone.search_endpoints(filters={'service_id': service.id})
     if not endpoints:
         return {'Error': 'Could not find any endpoints for the service'}
     for endpoint in endpoints:
         kstone.delete_endpoint(endpoint.id)
-    endpoints = kstone.search_endpoints({'service_id': service.id})
+    endpoints = kstone.search_endpoints(filters={'service_id': service.id})
     if not endpoints:
         return True
     return False
@@ -430,9 +430,9 @@ def service_create(name, service_type, description=None, profile=None,
         salt '*' keystone.service_create nova compute \
 'OpenStack Compute Service'
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    service = kstone.services.create(name, service_type, description)
-    return service_get(service.id, profile=profile, **connection_args)
+    kstone = auth(profile, **connection_args)
+    service = kstone.create_service(name, service_type, description)
+    return kstone.get_service(service.id)
 
 
 def service_delete(service_id=None, name=None, profile=None, **connection_args):
@@ -446,12 +446,8 @@ def service_delete(service_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.service_delete c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.service_delete name=nova
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    if name:
-        service_id = service_get(name=name, profile=profile,
-                                 **connection_args)[name]['id']
-    service = kstone.services.delete(service_id)
-    return 'Keystone service ID "{0}" deleted'.format(service_id)
+    kstone = auth(profile, **connection_args)
+    return kstone.delete_service(service_id or name)
 
 
 def service_get(service_id=None, name=None, profile=None, **connection_args):
@@ -466,21 +462,11 @@ def service_get(service_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.service_get service_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.service_get name=nova
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    ret = {}
-    if name:
-        for service in kstone.services.list():
-            if service.name == name:
-                service_id = service.id
-                break
-    if not service_id:
+    kstone = auth(profile, **connection_args)
+    service = kstone.get_service(service_id or name)
+    if not service:
         return {'Error': 'Unable to resolve service id'}
-    service = kstone.services.get(service_id)
-    ret[service.name] = {'id': service.id,
-                         'name': service.name,
-                         'type': service.type,
-                         'description': service.description}
-    return ret
+    return {service.name: service}
 
 
 def service_list(profile=None, **connection_args):
@@ -493,13 +479,10 @@ def service_list(profile=None, **connection_args):
 
         salt '*' keystone.service_list
     '''
-    kstone = auth(profile, **connection_args).keystone_client
+    kstone = auth(profile, **connection_args)
     ret = {}
-    for service in kstone.services.list():
-        ret[service.name] = {'id': service.id,
-                             'name': service.name,
-                             'description': service.description,
-                             'type': service.type}
+    for service in kstone.list_services():
+        ret[service.name] = service
     return ret
 
 
