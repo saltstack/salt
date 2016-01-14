@@ -7,6 +7,8 @@ Connection library for VMWare
 This is a base library used by a number of VMWare services such as VMWare
 ESX, ESXi, and vCenter servers.
 
+:codeauthor: Nitin Madhok <nmadhok@clemson.edu>
+
 Dependencies
 ~~~~~~~~~~~~
 
