@@ -515,7 +515,7 @@ def join_domain(domain,
 
     :param str domain:
         The domain to which the computer should be joined, e.g.
-        ``my-company.com``
+        ``example.com``
 
     :param str username:
         Username of an account which is authorized to join computers to the

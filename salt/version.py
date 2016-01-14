@@ -556,6 +556,7 @@ def dependency_information(include_salt_cloud=False):
         ('timelib', 'timelib', 'version'),
         ('dateutil', 'dateutil', '__version__'),
         ('pygit2', 'pygit2', '__version__'),
+        ('libgit2', 'pygit2', 'LIBGIT2_VERSION'),
         ('smmap', 'smmap', '__version__'),
         ('cffi', 'cffi', '__version__'),
         ('pycparser', 'pycparser', '__version__'),

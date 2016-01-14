@@ -70,9 +70,10 @@ dhcp_options_parameters.update(conn_parameters)
 
 opts = salt.config.DEFAULT_MINION_OPTS
 utils = salt.loader.utils(opts, whitelist=['boto'])
+mods = salt.loader.minion_mods(opts)
 
 boto_vpc.__utils__ = utils
-boto_vpc.__init__(opts)
+boto_vpc.__init__(opts, pack=mods)
 
 
 def _has_required_boto():
