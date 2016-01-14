@@ -2559,11 +2559,11 @@ class ProxyMinion(Minion):
         self.opts['master'] = master
 
         self.opts['pillar'] = yield salt.pillar.get_async_pillar(
-                self.opts,
-                self.opts['grains'],
-                self.opts['id'],
-                self.opts['environment'],
-                pillarenv=self.opts.get('pillarenv'),
+            self.opts,
+            self.opts['grains'],
+            self.opts['id'],
+            self.opts['environment'],
+            pillarenv=self.opts.get('pillarenv'),
         ).compile_pillar()
 
         if 'proxy' not in self.opts['pillar']:
