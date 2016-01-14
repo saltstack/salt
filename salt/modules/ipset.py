@@ -425,8 +425,8 @@ def check(set=None, entry=None, family='ipv4'):
     else:
         _entry = entry.split()[0]
         _entry_extra = entry.split()[1:]
-        if entry.find('-') != -1 and entry.count('-') == 1:
-            start, end = entry.split('-')
+        if _entry.find('-') != -1 and _entry.count('-') == 1:
+            start, end = _entry.split('-')
 
             if settype == 'hash:ip':
                 if _entry_extra:
