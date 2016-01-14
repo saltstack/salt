@@ -3225,19 +3225,6 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
     return ret
 
 
-def get_dvs_portgroup_assignment(service_instance, host, dvs_name,
-                                 portgroup_name, host_names):
-    '''
-
-    :param service_instance: Reference to the vSphere server
-    :param dvs_name: Name of the DVS
-    :param portgroup_name: Portgroup to examine
-    :param host_names: Names of hosts
-    :return:
-    '''
-    host_refs = _check_hosts(service_instance, host, host_names)
-
-
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
