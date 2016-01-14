@@ -58,7 +58,7 @@ def _find_credentials():
                 __opts__['proxy']['admin_password'] = pwd
                 return (user, pwd)
 
-    log.debug('grains fx2.find_credentials found no valid credentials, using Dell default')
+    logger.debug('grains fx2.find_credentials found no valid credentials, using Dell default')
     return ('root', 'calvin')
 
 
