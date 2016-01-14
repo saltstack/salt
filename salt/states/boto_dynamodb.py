@@ -270,7 +270,7 @@ def present(name=None,
     if not table_exists:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'DynamoDB table {} is set to be created.'.format(name)
+            ret['comment'] = 'DynamoDB table {0} is set to be created.'.format(name)
             return ret
 
         is_created = __salt__['boto_dynamodb.create_table'](
@@ -290,10 +290,10 @@ def present(name=None,
         )
         if not is_created:
             ret['result'] = False
-            ret['comment'] = 'Failed to create table {}'.format(name)
+            ret['comment'] = 'Failed to create table {0}'.format(name)
             return ret
 
-        comments.append('DynamoDB table {} was successfully created'.format(name))
+        comments.append('DynamoDB table {0} was successfully created'.format(name))
         changes_new['table'] = name
         changes_new['read_capacity_units'] = read_capacity_units
         changes_new['write_capacity_units'] = write_capacity_units
@@ -304,7 +304,7 @@ def present(name=None,
         changes_new['local_indexes'] = local_indexes
         changes_new['global_indexes'] = global_indexes
     else:
-        comments.append('DynamoDB table {} exists'.format(name))
+        comments.append('DynamoDB table {0} exists'.format(name))
 
     # Ensure DynamoDB table provisioned throughput matches
     description = __salt__['boto_dynamodb.describe'](
@@ -322,7 +322,7 @@ def present(name=None,
     if not throughput_matches:
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'DynamoDB table {} is set to be updated.'.format(name)
+            ret['comment'] = 'DynamoDB table {0} is set to be updated.'.format(name)
             return ret
 
         is_updated = __salt__['boto_dynamodb.update'](
@@ -338,16 +338,16 @@ def present(name=None,
         )
         if not is_updated:
             ret['result'] = False
-            ret['comment'] = 'Failed to update table {}'.format(name)
+            ret['comment'] = 'Failed to update table {0}'.format(name)
             return ret
 
-        comments.append('DynamoDB table {} was successfully updated'.format(name))
+        comments.append('DynamoDB table {0} was successfully updated'.format(name))
         changes_old['read_capacity_units'] = current_read_capacity_units,
         changes_old['write_capacity_units'] = current_write_capacity_units,
         changes_new['read_capacity_units'] = read_capacity_units,
         changes_new['write_capacity_units'] = write_capacity_units,
     else:
-        comments.append('DynamoDB table {} throughput matches'.format(name))
+        comments.append('DynamoDB table {0} throughput matches'.format(name))
 
     _ret = _alarms_present(name, alarms, alarms_from_pillar,
                            write_capacity_units, read_capacity_units,
@@ -374,7 +374,7 @@ def present(name=None,
         if datapipeline_ret['result']:
             comments.append(datapipeline_ret['comment'])
             if datapipeline_ret.get('changes'):
-                ret['changes']['backup_datapipeline_{}'.format(config['name'])] = \
+                ret['changes']['backup_datapipeline_{0}'.format(config['name'])] = \
                     datapipeline_ret.get('changes'),
         else:
             ret['comment'] = datapipeline_ret['comment']
@@ -446,7 +446,7 @@ def _ensure_backup_datapipeline_present(name, schedule_name, period,
                                         utc_hour, s3_base_location):
 
     kwargs = {
-        'name': '{}-{}-backup'.format(name, schedule_name),
+        'name': '{0}-{1}-backup'.format(name, schedule_name),
         'pipeline_objects': {
             'DefaultSchedule': {
                 'name': schedule_name,
@@ -459,7 +459,7 @@ def _ensure_backup_datapipeline_present(name, schedule_name, period,
         },
         'parameter_values': {
             'myDDBTableName': name,
-            'myOutputS3Loc': '{}/{}/'.format(s3_base_location, name),
+            'myOutputS3Loc': '{0}/{1}/'.format(s3_base_location, name),
         }
     }
     return __states__['boto_datapipeline.present'](**kwargs)
