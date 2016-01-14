@@ -323,6 +323,10 @@ def absent(name, api_name, stage_name, nuke_api=False, region=None, key=None, ke
 
         swagger = _Swagger(api_name, None, common_args)
 
+        if not swagger.restApiId:
+            ret['comment'] = '[Rest API: {0}] does not exist.'.format(api_name)
+            return ret
+
         if __opts__['test']:
             if nuke_api:
                 ret['comment'] = ('[stage: {0}] will be deleted, if there are no other '
