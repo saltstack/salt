@@ -2651,4 +2651,3 @@ class ProxyMinion(Minion):
             }, persist=True)
 
         self.grains_cache = self.opts['grains']
-

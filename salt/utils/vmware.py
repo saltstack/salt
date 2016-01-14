@@ -306,6 +306,7 @@ def _get_dvs_uplink_portgroup(dvs, portgroup_name):
 
     return None
 
+
 def get_inventory(service_instance):
     '''
     Return the inventory of a Service Instance Object.
