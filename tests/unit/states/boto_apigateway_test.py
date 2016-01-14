@@ -158,6 +158,28 @@ stage1_deployment1_ret = dict(cacheClusterEnabled=False,
                               stageName='test',
                               variables=dict())
 
+stage1_deployment1_vars_ret = dict(cacheClusterEnabled=False,
+                                   cacheClusterSize=0.5,
+                                   cacheClusterStatus='NOT_AVAILABLE',
+                                   createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                   deploymentId=u'kobnrb',
+                                   description=(u'{\n'
+                                                u'    "current_deployment_label": {\n'
+                                                u'        "api_name": "unit test api",\n'
+                                                u'        "swagger_file": "temp-swagger-sample.yaml",\n'
+                                                u'        "swagger_file_md5sum": "4fb17e43bab3a96e7f2410a1597cd0a5",\n'
+                                                u'        "swagger_info_object": {\n'
+                                                u'            "description": "salt boto apigateway unit test service",\n'
+                                                u'            "title": "salt boto apigateway unit test service",\n'
+                                                u'            "version": "0.0.0"\n'
+                                                u'        }\n'
+                                                u'    }\n'
+                                                u'}'),
+                                   lastUpdatedDate=datetime.datetime(2015, 11, 17, 16, 33, 50, tzinfo=tzlocal()),
+                                   methodSettings=dict(),
+                                   stageName='test',
+                                   variables={'var1':'val1'})
+
 stage1_deployment2_ret = dict(cacheClusterEnabled=False,
                               cacheClusterSize=0.5,
                               cacheClusterStatus='NOT_AVAILABLE',
@@ -410,6 +432,8 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
         '''
         self.conn.get_rest_apis.return_value = apis_ret
         self.conn.get_deployment.return_value = deployment1_ret
+        self.conn.get_stage.return_value = stage1_deployment1_ret
+        self.conn.update_stage.side_effect = ClientError(error_content, 'update_stage should not be called')
         result = {}
         with TempSwaggerFile() as swagger_file:
             result = salt_states['boto_apigateway.present'](
@@ -420,8 +444,35 @@ class BotoApiGatewayFunctionTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGat
                         False,
                         'arn:aws:iam::1234:role/apigatewayrole',
                         **conn_parameters)
-        
-        self.assertTrue(result.get('abort', False) and result.get('result', False))
+        self.assertTrue(not result.get('abort', False) and
+                        result.get('current', False) and
+                        result.get('result', False) and
+                        result.get('comment', '').find('update_stage should not be called') == -1)
+
+    def test_present_when_stage_is_already_at_desired_deployment_and_needs_stage_variables_update(self):
+        '''
+        Tests scenario where the deployment is current except for the need to update stage variables
+        from {} to {'var1':'val1'}
+        '''
+        self.conn.get_rest_apis.return_value = apis_ret
+        self.conn.get_deployment.return_value = deployment1_ret
+        self.conn.get_stage.return_value = stage1_deployment1_ret
+        self.conn.update_stage.return_value = stage1_deployment1_vars_ret
+        result = {}
+        with TempSwaggerFile() as swagger_file:
+            result = salt_states['boto_apigateway.present'](
+                        'api present',
+                        'unit test api',
+                        swagger_file,
+                        'test',
+                        False,
+                        'arn:aws:iam::1234:role/apigatewayrole',
+                        stage_variables={'var1':'val1'},
+                        **conn_parameters)
+
+        self.assertTrue(not result.get('abort', False) and
+                        result.get('current', False) and
+                        result.get('result', False))
 
     def test_present_when_stage_exists_and_is_to_associate_to_existing_deployment(self):
         '''
