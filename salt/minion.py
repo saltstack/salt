@@ -1939,9 +1939,12 @@ class Syndic(Minion):
         self.pub_channel.on_recv(self._process_cmd_socket)
 
     def _process_cmd_socket(self, payload):
-        if payload is not None:
+        if payload is not None and payload['enc'] == 'aes':
             log.trace('Handling payload')
             self._handle_decoded_payload(payload['load'])
+        # If it's not AES, and thus has not been verified, we do nothing.
+        # In the future, we could add support for some clearfuncs, but
+        # the syndic currently has no need.
 
     def _reset_event_aggregation(self):
         self.jids = {}
