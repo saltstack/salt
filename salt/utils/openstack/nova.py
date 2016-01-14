@@ -163,15 +163,15 @@ class SaltNova(object):
     '''
     Class for all novaclient functions
     '''
+    extensions = []
+
     def __init__(self, **kwargs):
         '''
         Set up nova credentials
         '''
         self.kwargs = kwargs.copy()
-        import pprint
-        log.debug('KWARGS: %s', pprint.pformat(self.kwargs))
 
-        if not novaclient.base.Manager._hooks_map:
+        if not self.extensions:
             if hasattr(OpenStackComputeShell, '_discover_extensions'):
                 self.extensions = OpenStackComputeShell()._discover_extensions('2.0')
             else:
@@ -179,11 +179,8 @@ class SaltNova(object):
             for extension in self.extensions:
                 extension.run_hooks('__pre_parse_args__')
             self.kwargs['extensions'] = self.extensions
-
-        # needs an object, not a dictionary
-        if hasattr(self, 'extensions'):
             self.kwargstruct = KwargsStruct(**self.kwargs)
-            for extension in self.kwargs['extensions']:
+            for extension in self.extensions:
                 extension.run_hooks('__post_parse_args__', self.kwargstruct)
             self.kwargs = self.kwargstruct.__dict__
 
@@ -277,10 +274,10 @@ class SaltNova(object):
         '''
         Find a server by its name
         '''
-        servers = self.conn.get_server(name)
-        if not servers:
+        server = self.conn.get_server(name)
+        if not server:
             return {'name': name, 'status': 'DELETED'}
-        return NovaServer(servers[0])
+        return NovaServer(server)
 
     def _get_volume(self, name):
         if not self.conn.volume_exists(name):
