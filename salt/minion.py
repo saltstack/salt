@@ -519,7 +519,9 @@ class SMinion(MinionBase):
         # Clean out the proc directory (default /var/cache/salt/minion/proc)
         if (self.opts.get('file_client', 'remote') == 'remote'
                 or self.opts.get('use_master_when_local', False)):
-            self.eval_master(self.opts, failed=True)
+            eval_future = self.eval_master(self.opts, failed=True)
+            if eval_future.exception():
+                raise SaltClientError(eval_future.exception())
         self.gen_modules(initial_load=True)
 
     def gen_modules(self, initial_load=False):
