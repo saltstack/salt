@@ -659,7 +659,7 @@ def _manage_devices(devices, vm=None):
             adapter_type = devices['network'][network_adapter_label]['adapter_type'] if 'adapter_type' in devices['network'][network_adapter_label] else ''
             switch_type = devices['network'][network_adapter_label]['switch_type'] if 'switch_type' in devices['network'][network_adapter_label] else ''
             # create the network adapter
-            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type, container_ref)
+            network_spec = _add_new_network_adapter_helper(network_adapter_label, network_name, adapter_type, switch_type)
             adapter_mapping = _set_network_adapter_mapping(devices['network'][network_adapter_label])
             device_specs.append(network_spec)
             nics_map.append(adapter_mapping)
