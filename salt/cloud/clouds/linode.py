@@ -7,17 +7,63 @@ The Linode cloud module is used to control access to the Linode VPS system
 
 Use of this module only requires the ``apikey`` parameter.
 
-:depends: linode-python >= 1.1.1
 
-OR
+Dependencies
+~~~~~~~~~~~~
 
-:depends: apache-libcloud >= 0.13.2
+linode-python OR apache-libcloud
+
+linode-python
+-------------
+
+linode-python >= 1.1.1
+
+SaltStack recommends installing ``linode-python`` if you're using a version
+of Python less than 2.7.9. You can install linode-python via pip:
+
+.. code-block:: bash
+
+    pip install linode-python
 
 .. note::
 
     The linode-python driver will work with earlier versions of linode-python,
     but it is highly recommended to use a minimum version of 1.1.1. Earlier
     versions leak sensitive information into the debug logs.
+
+** OR **
+
+apache-libcloud
+---------------
+
+apache-libcloud >= 0.13.2
+
+If your salt-cloud server runs on Python version 2.7.9 or Python >= 3.4, you
+can  use the ``libcloud`` library to connect to Linode. For security reasons,
+Linode recently dropped support for TLSv1.0 and only supports TLS >= v1.1.
+Because of this reason, libcloud won't work for servers running older versions
+of Python or older versions of OpenSSL.
+
+If your sever meets these requirements, you can install libcloud either via
+system packages or using pip:
+
+.. code-block:: bash
+
+    pip install apache-libcloud
+
+.. note::
+
+    RedHat/CentOS 7 backported the ssl stack from Python 2.7.9 to Python 2.7.5,
+    so the libcloud library should work appropriately for those operating
+    systems.
+
+See `Issue #30341`_ for more information.
+
+.. _Issue #30341: https://github.com/saltstack/salt/issues/30341
+
+
+Configuration
+~~~~~~~~~~~~~
 
 Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
 ``/etc/salt/cloud.providers.d/linode.conf``:
@@ -65,18 +111,31 @@ log = logging.getLogger(__name__)
 
 HAS_LIBCLOUD = False
 HAS_LINODEPY = False
+HAS_TLS = False
 
 try:
     import linode
     import linode.api
     HAS_LINODEPY = True
 except ImportError:
-    HAS_LINODEPY = False
     try:
+        import ssl
+        import libcloud.security
         from libcloud.compute.base import NodeAuthPassword
         HAS_LIBCLOUD = True
     except ImportError:
         HAS_LIBCLOUD = False
+
+    if HAS_LIBCLOUD:
+        try:
+            libcloud.security.SSL_VERSION = ssl.PROTOCOL_TLSv1_2
+            HAS_TLS = True
+        except AttributeError:
+            try:
+                libcloud.security.SSL_VERSION = ssl.PROTOCOL_TLSv1_1
+                HAS_TLS = True
+            except AttributeError:
+                HAS_TLS = False
 
 # Human-readable status fields
 LINODE_STATUS = {
@@ -183,7 +242,12 @@ def __virtual__():
     Set up the libcloud functions and check for Linode configurations.
     '''
     if not HAS_LINODEPY and not HAS_LIBCLOUD:
-        return False
+        return False, 'Missing dependency: Either \'linode-python\' or \'apache-libcloud\' must be installed.'
+
+    if not HAS_LINODEPY and not HAS_TLS:
+        return (False, 'Unsupported configuration: A recent version of OpenSSL and either Python >= 3.4 or '
+                       'Python 2.7.9 needs to be present when using libcloud. Either upgrade your system to '
+                       'meet these dependencies, or install linode-python.')
 
     if get_configured_provider() is False:
         return False
