@@ -436,7 +436,7 @@ def check(set=None, entry=None, family='ipv4'):
             start, end = _entry.split('-')
 
             if settype == 'hash:ip':
-                entries = [' '.join([str(ipaddress.ip_address(ip)), ' '.join(_entry_extra)]) for ip in range(
+                entries = [' '.join([str(ipaddress.ip_address(ip)), ' '.join(_entry_extra)]) for ip in long_range(
                     ipaddress.ip_address(start),
                     ipaddress.ip_address(end) + 1
                 )]
