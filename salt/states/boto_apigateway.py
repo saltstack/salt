@@ -384,11 +384,13 @@ def _name_matches(name, matches):
 def _object_reducer(o, names=('id', 'name', 'path', 'httpMethod',
                               'statusCode', 'Created', 'Deleted',
                               'Updated', 'Flushed', 'Associated', 'Disassociated')):
+    log.info('object_reducer')
+    log.info(_dict_to_json_pretty(o))
     result = {}
     if isinstance(o, dict):
         for k, v in o.iteritems():
             if isinstance(v, dict):
-                reduced = _object_reducer(v, names)
+                reduced = v if k == 'variables' else _object_reducer(v, names)
                 if reduced or _name_matches(k, names):
                     result[k] = reduced
             elif isinstance(v, list):
