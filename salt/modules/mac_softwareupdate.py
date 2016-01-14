@@ -19,10 +19,11 @@ def __virtual__():
     '''
     Only for MacOS
     '''
-    if __grains__['os'] == 'MacOS':
-        return __virtualname__
-    return (False, 'The softwareupdate module could not be loaded: '
-            'module only works on MacOS systems.')
+    if not salt.utils.is_darwin():
+        return (False, 'The softwareupdate module could not be loaded: '
+                       'module only works on MacOS systems.')
+
+    return __virtualname__
 
 
 def _get_upgradable(rec=False, restart=False):
@@ -33,7 +34,7 @@ def _get_upgradable(rec=False, restart=False):
     { 'updatename': '1.2.3-45', ... }
     '''
     cmd = 'softwareupdate --list'
-    out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
+    out = __salt__['cmd.run_stdout'](cmd)
     # rexp parses lines that look like the following:
     #    * Safari6.1.2MountainLion-6.1.2
     #         Safari (6.1.2), 51679K [recommended]
@@ -82,11 +83,12 @@ def list_upgrades(rec=False, restart=False):
     '''
     List all available updates.
 
-    rec
-       Return only the recommended updates.
+    :param bool rec: Show only recommended updates.
 
-    restart
-       Return only the updates that require a restart.
+    :param bool restart: Show only updatest that require a restart.
+
+    :return: Returns a dictionary containing the updates
+    :rtype: dict
 
     CLI Example:
 
@@ -95,7 +97,12 @@ def list_upgrades(rec=False, restart=False):
        salt '*' softwareupdate.list_upgrades
     '''
 
-    return _get_upgradable(rec, restart)
+    ret = _get_upgradable(rec, restart)
+
+    if not ret:
+        ret = None
+
+    return ret
 
 
 def ignore(*updates):
@@ -104,6 +111,12 @@ def ignore(*updates):
     version number at the end will be omitted, so "SecUpd2014-001-1.0" becomes
     "SecUpd2014-001". It will be removed automatically if present. An update
     is successfully ignored when it no longer shows up after list_upgrades.
+
+    :param updates: The single or list of updates to add to the ignore list.
+    :ptype: str list
+
+    :return: The list of ignored updates
+    :rtype: list
 
     CLI Example:
 
@@ -124,7 +137,7 @@ def ignore(*updates):
 
     for name in to_ignore:
         cmd = ['softwareupdate', '--ignore', name]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False)
+        __salt__['cmd.run_stdout'](cmd)
 
     return list_ignored()
 
@@ -135,6 +148,9 @@ def list_ignored():
     without the '-' and version number at the end, this is how the
     softwareupdate command works.
 
+    :return: The list of ignored updates. None if the list is empty
+    :rtype: list
+
     CLI Example:
 
     .. code-block:: bash
@@ -142,7 +158,7 @@ def list_ignored():
        salt '*' softwareupdate.list_ignored
     '''
     cmd = 'softwareupdate --list --ignore'
-    out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
+    out = __salt__['cmd.run_stdout'](cmd)
 
     # rep parses lines that look like the following:
     #     "Safari6.1.2MountainLion-6.1.2",
@@ -157,6 +173,7 @@ def list_ignored():
         ret = ignored_updates
     else:
         ret = None
+
     return ret
 
 
@@ -164,6 +181,9 @@ def reset_ignored():
     '''
     Make sure the ignored updates are not ignored anymore,
     returns a list of the updates that are no longer ignored.
+
+    :return: The list of updates that were removed from the ignore list.
+    :rtype: list
 
     CLI Example:
 
@@ -175,7 +195,7 @@ def reset_ignored():
     ignored_updates = list_ignored()
 
     if ignored_updates:
-        __salt__['cmd.run_stdout'](cmd, python_shell=False)
+        __salt__['cmd.run_stdout'](cmd)
         ret = ignored_updates
     else:
         ret = None
@@ -189,7 +209,12 @@ def schedule(*status):
     If no arguments are given it will return the current status.
     Append on or off to change the status.
 
-    Return values:
+    :param bool status: True to turn on automatic updates. False to turn off
+    automatic updates. If this value is empty, the current status will be
+    returned.
+
+    :return: A value representing the automatic update status
+    :rtype: bool
     - ``True``: Automatic checking is now on,
     - ``False``: Automatic checking is now off,
     - ``None``: Invalid argument.
@@ -210,7 +235,7 @@ def schedule(*status):
     else:
         return None
 
-    out = __salt__['cmd.run_stdout'](cmd, python_shell=False)
+    out = __salt__['cmd.run_stdout'](cmd)
 
     current_status = out.split()[-1]
     if current_status == 'off':
@@ -224,16 +249,17 @@ def upgrade(rec=False, restart=True):
     Install all available upgrades. Returns a dictionary containing the name
     of the update and the status of its installation.
 
-    Return values:
+    :param bool rec: If set to True, only install the recommended updates. If
+    set to False (default) all updates are installed.
+
+    :param bool restart: Set this to False if you do not want to install updates
+    that require a restart. Default is True
+
+    :return: A dictionary containing the updates that were installed and the
+    status of its installation. Returns None if no updates were installed.
+    :rtype: dict
     - ``True``: The update was installed.
     - ``False``: The update was not installed.
-
-    rec
-       If set to True, only install all the recommended updates.
-
-    restart
-       Set this to False if you do not want to install updates
-       that require a restart.
 
     CLI Example:
 
@@ -254,7 +280,7 @@ def upgrade(rec=False, restart=True):
 
     for update in to_upgrade:
         cmd = ['softwareupdate', '--install', update]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False)
+        __salt__['cmd.run_stdout'](cmd)
 
     ret = {}
     upgrades_left = _get_upgradable()
@@ -264,6 +290,9 @@ def upgrade(rec=False, restart=True):
         else:
             ret[update] = False
 
+    if not ret:
+        ret = None
+
     return ret
 
 
@@ -272,7 +301,12 @@ def install(*updates):
     Install a named upgrade. Returns a dictionary containing the name
     of the update and the status of its installation.
 
-    Return values:
+    :param updates: The single or list of updates to install.
+    :ptype: str list
+
+    :return: A dictionary containing the name of the update and the status of
+    its installation.
+    :rtype: dict
     - ``True``: The update was installed.
     - ``False``: The update was not installed.
     - ``None``: There is no update available with that name.
@@ -294,7 +328,7 @@ def install(*updates):
 
     for name in updates:
         cmd = ['softwareupdate', '--install', name]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False)
+        __salt__['cmd.run_stdout'](cmd)
 
     upgrades_left = _get_upgradable()
 
@@ -306,12 +340,20 @@ def install(*updates):
         else:
             ret[name] = False
 
+    if not ret:
+        ret = None
+
     return ret
 
 
 def upgrade_available(update):
     '''
     Check whether or not an upgrade is available with a given name.
+
+    :param str update: The name of the update to look for
+
+    :return: True if available, False if not
+    :rtype: bool
 
     CLI Example:
 
@@ -326,6 +368,9 @@ def upgrade_available(update):
 def list_downloads():
     '''
     Return a list of all updates that have been downloaded locally.
+
+    :return: A list of updates that have been downloaded
+    :rtype: list
 
     CLI Example:
 
@@ -350,14 +395,23 @@ def list_downloads():
                 if update.rsplit('-', 1)[0] in fhr.read():
                     ret.append(update)
 
+    if not ret:
+        ret = None
+
     return ret
 
 
 def download(*updates):
     '''
-    Download a named update so that it can be installed later with
-    the install or upgrade function. It returns a list of all updates
-    that are now downloaded.
+    Download a named update so that it can be installed later with the install
+    or upgrade function. It returns a list of all updates that are now
+    downloaded.
+
+    :param updates: The single or list of updates to download.
+    :ptype: str list
+
+    :return: A list of downloaded updates.
+    :rtype: list
 
     CLI Example:
 
@@ -369,16 +423,25 @@ def download(*updates):
     '''
     for name in updates:
         cmd = ['softwareupdate', '--download', name]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False)
+        __salt__['cmd.run_stdout'](cmd)
 
     return list_downloads()
 
 
 def download_all(rec=False, restart=True):
     '''
-    Download all available updates so that they can be installed later
-    with the install or upgrade function. It returns a list of updates
-    that are now downloaded.
+    Download all available updates so that they can be installed later with the
+    install or upgrade function. It returns a list of updates that are now
+    downloaded.
+
+    :param bool rec: If set to True, only install the recommended updates. If
+    set to False (default) all updates are installed.
+
+    :param bool restart: Set this to False if you do not want to install updates
+    that require a restart. Default is True
+
+    :return: A list containing all downloaded updates on the systesm.
+    :rtype: list
 
     CLI Example:
 
@@ -399,6 +462,79 @@ def download_all(rec=False, restart=True):
 
     for name in to_download:
         cmd = ['softwareupdate', '--download', name]
-        __salt__['cmd.run_stdout'](cmd, python_shell=False)
+        __salt__['cmd.run_stdout'](cmd)
 
     return list_downloads()
+
+
+def get_catalog():
+    '''
+    .. versionadded:: 2016.3.0
+
+    Get the current catalog being used for update lookups. Will return a url if
+    a custom catalog has been specified. Otherwise the word 'Default' will be
+    returned
+
+    :return: The catalog being used for update lookups
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' softwareupdates.get_catalog
+    '''
+    cmd = 'defaults read /Library/Preferences/com.apple.SoftwareUpdate.plist'
+    out = __salt__['cmd.run_stdout'](cmd)
+
+    if 'CatalogURL' in out:
+        cmd = '{0} CatalogURL'.format(cmd)
+        out = __salt__['cmd.run_stdout'](cmd)
+        return out
+    else:
+        return 'Default'
+
+
+def set_catalog(url):
+    '''
+    .. versionadded:: 2016.3.0
+
+    Set the Software Update Catalog to the URL specified
+
+    :param str url: The url to the update catalog
+
+    :return: True if successfult, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' softwareupdates.set_catalog http://swupd.local:8888/index.sucatalog
+    '''
+    cmd = '/usr/sbin/softwareupdate --set-catalog {0}'.format(url)
+    out = __salt__['cmd.run'](cmd)
+    if url in out:
+        return True
+    else:
+        return False
+
+
+def reset_catalog():
+    '''
+    .. versionadded:: 2016.3.0
+
+    Reset the Software Update Catalog to the default.
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' softwareupdates.reset_catalog
+    '''
+    cmd = '/usr/sbin/softwareupdate --clear-catalog'
+    out = __salt__['cmd.run'](cmd)
+    return 'Default' == get_catalog()
