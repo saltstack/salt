@@ -57,13 +57,14 @@ import logging
 import salt.ext.six as six
 
 # Import third party libs
-HAS_KEYSTONE = False
+HAS_SHADE = False
 try:
     # pylint: disable=import-error
-    from keystoneclient.v2_0 import client
+    import shade
+    from shade import meta
     import keystoneclient.exceptions
     # pylint: enable=import-error
-    HAS_KEYSTONE = True
+    HAS_SHADE = True
 except ImportError:
     pass
 
@@ -75,9 +76,9 @@ def __virtual__():
     Only load this module if keystone
     is installed on this minion.
     '''
-    if HAS_KEYSTONE:
+    if HAS_SHADE:
         return 'keystone'
-    return (False, 'keystone execution module cannot be loaded: keystoneclient python library not available.')
+    return (False, 'keystone execution module cannot be loaded: shade python library not available.')
 
 __opts__ = {}
 
@@ -111,22 +112,25 @@ def auth(profile=None, **connection_args):
     insecure = get('insecure', False)
     token = get('token')
     endpoint = get('endpoint', 'http://127.0.0.1:35357/v2.0')
+    auth_type = get('auth_type', None)
 
     if token:
         kwargs = {'token': token,
-                  'endpoint': endpoint}
+                  'endpoint': endpoint,
+                  'auth_type': auth_type or 'admin_token'}
     else:
-        kwargs = {'username': user,
+        kwargs = {'profile': profile,
+                  'username': user,
                   'password': password,
                   'tenant_name': tenant,
                   'tenant_id': tenant_id,
-                  'auth_url': auth_url}
+                  'auth_url': auth_url,
+                  'auth_type': auth_type or 'password'}
         # 'insecure' keyword not supported by all v2.0 keystone clients
         #   this ensures it's only passed in when defined
         if insecure:
             kwargs['insecure'] = True
-
-    return client.Client(**kwargs)
+    return shade.operator_cloud(**kwargs)
 
 
 def ec2_credentials_create(user_id=None, name=None,
@@ -144,7 +148,7 @@ def ec2_credentials_create(user_id=None, name=None,
 user_id=c965f79c4f864eaaa9c3b41904e67082 \
 tenant_id=722787eb540849158668370dc627ec5f
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
 
     if name:
         user_id = user_get(name=name, profile=profile,
@@ -179,7 +183,7 @@ def ec2_credentials_delete(user_id=None, name=None, access_key=None,
         salt '*' keystone.ec2_credentials_delete name=admin \
 access_key=5f66d2f24f604b8bb9cd28886106f442
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
 
     if name:
         user_id = user_get(name=name, profile=None, **connection_args)[name]['id']
@@ -203,7 +207,7 @@ def ec2_credentials_get(user_id=None, name=None, access=None,
         salt '*' keystone.ec2_credentials_get user_id=c965f79c4f864eaaa9c3b41904e67082 access=722787eb540849158668370dc627ec5f
         salt '*' keystone.ec2_credentials_get name=nova access=722787eb540849158668370dc627ec5f
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     ret = {}
     if name:
         for user in kstone.users.list():
@@ -236,7 +240,7 @@ def ec2_credentials_list(user_id=None, name=None, profile=None,
         salt '*' keystone.ec2_credentials_list user_id=298ce377245c4ec9b70e1c639c89e654
         salt '*' keystone.ec2_credentials_list name=jack
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     ret = {}
     if name:
         for user in kstone.users.list():
@@ -253,7 +257,7 @@ def ec2_credentials_list(user_id=None, name=None, profile=None,
     return ret
 
 
-def endpoint_get(service, profile=None, **connection_args):
+def endpoint_get(service, profile=None, interface=None, **connection_args):
     '''
     Return a specific endpoint (keystone endpoint-get)
 
@@ -264,18 +268,21 @@ def endpoint_get(service, profile=None, **connection_args):
         salt '*' keystone.endpoint_get nova
     '''
     kstone = auth(profile, **connection_args)
-    services = service_list(profile, **connection_args)
-    if service not in services:
+    service = kstone.get_service(service)
+    if not service:
         return {'Error': 'Could not find the specified service'}
-    service_id = services[service]['id']
-    endpoints = endpoint_list(profile, **connection_args)
-    for endpoint in endpoints:
-        if endpoints[endpoint]['service_id'] == service_id:
-            return endpoints[endpoint]
-    return {'Error': 'Could not find endpoint for the specified service'}
+    ret = kstone.search_endpoints(
+        {'service_id': service.id, 'interface': interface} if interface else {'service_id': service.id}
+    )
+    if not ret:
+        return {'Error': 'Could not find endpoint for the specified service'}
+    elif len(ret) == 1:
+        return ret[0]
+    else:
+        return ret
 
 
-def endpoint_list(profile=None, **connection_args):
+def endpoint_list(profile=None, interface=None, **connection_args):
     '''
     Return a list of available endpoints (keystone endpoints-list)
 
@@ -287,18 +294,13 @@ def endpoint_list(profile=None, **connection_args):
     '''
     kstone = auth(profile, **connection_args)
     ret = {}
-    for endpoint in kstone.endpoints.list():
-        ret[endpoint.id] = {'id': endpoint.id,
-                            'region': endpoint.region,
-                            'adminurl': endpoint.adminurl,
-                            'internalurl': endpoint.internalurl,
-                            'publicurl': endpoint.publicurl,
-                            'service_id': endpoint.service_id}
+    for endpoint in kstone.search_endpoints({'interface': interface} if interface else {}):
+        ret[endpoint.id] = endpoint
     return ret
 
 
 def endpoint_create(service, publicurl=None, internalurl=None, adminurl=None,
-                    region=None, profile=None, **connection_args):
+                    region=None, enabled=True, profile=None, **connection_args):
     '''
     Create an endpoint for an Openstack service
 
@@ -310,15 +312,15 @@ def endpoint_create(service, publicurl=None, internalurl=None, adminurl=None,
             'http://internal/url' 'http://adminurl/url' region
     '''
     kstone = auth(profile, **connection_args)
-    keystone_service = service_get(name=service, profile=profile,
-                                   **connection_args)
-    if not keystone_service or 'Error' in keystone_service:
+    keystone_service = kstone.get_service(service)
+    if not keystone_service:
         return {'Error': 'Could not find the specified service'}
-    kstone.endpoints.create(region=region,
-                            service_id=keystone_service[service]['id'],
-                            publicurl=publicurl,
-                            adminurl=adminurl,
-                            internalurl=internalurl)
+    kstone.create_endpoint(keystone_service.id,
+                           region=region,
+                           public_url=publicurl,
+                           admin_url=adminurl,
+                           internal_url=internalurl,
+                           enabled=enabled)
     return endpoint_get(service, profile, **connection_args)
 
 
@@ -333,13 +335,16 @@ def endpoint_delete(service, profile=None, **connection_args):
         salt '*' keystone.endpoint_delete nova
     '''
     kstone = auth(profile, **connection_args)
-    endpoint = endpoint_get(service, profile, **connection_args)
-    if not endpoint or 'Error' in endpoint:
+    service = kstone.get_service(service)
+    endpoints = kstone.search_endpoints({'service_id': service.id})
+    if not endpoints:
         return {'Error': 'Could not find any endpoints for the service'}
-    kstone.endpoints.delete(endpoint['id'])
-    endpoint = endpoint_get(service, profile, **connection_args)
-    if not endpoint or 'Error' in endpoint:
+    for endpoint in endpoints:
+        kstone.delete_endpoint(endpoint.id)
+    endpoints = kstone.search_endpoints({'service_id': service.id})
+    if not endpoints:
         return True
+    return False
 
 
 def role_create(name, profile=None, **connection_args):
@@ -353,7 +358,7 @@ def role_create(name, profile=None, **connection_args):
         salt '*' keystone.role_create admin
     '''
 
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     if 'Error' not in role_get(name=name, profile=profile, **connection_args):
         return {'Error': 'Role "{0}" already exists'.format(name)}
     role = kstone.roles.create(name)
@@ -373,7 +378,7 @@ def role_delete(role_id=None, name=None, profile=None,
         salt '*' keystone.role_delete role_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.role_delete name=admin
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
 
     if name:
         for role in kstone.roles.list():
@@ -402,7 +407,7 @@ def role_get(role_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.role_get role_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.role_get name=nova
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     ret = {}
     if name:
         for role in kstone.roles.list():
@@ -427,7 +432,7 @@ def role_list(profile=None, **connection_args):
 
         salt '*' keystone.role_list
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     ret = {}
     for role in kstone.roles.list():
         ret[role.name] = {'id': role.id,
@@ -447,7 +452,7 @@ def service_create(name, service_type, description=None, profile=None,
         salt '*' keystone.service_create nova compute \
 'OpenStack Compute Service'
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     service = kstone.services.create(name, service_type, description)
     return service_get(service.id, profile=profile, **connection_args)
 
@@ -463,7 +468,7 @@ def service_delete(service_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.service_delete c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.service_delete name=nova
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     if name:
         service_id = service_get(name=name, profile=profile,
                                  **connection_args)[name]['id']
@@ -483,7 +488,7 @@ def service_get(service_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.service_get service_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.service_get name=nova
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     ret = {}
     if name:
         for service in kstone.services.list():
@@ -510,7 +515,7 @@ def service_list(profile=None, **connection_args):
 
         salt '*' keystone.service_list
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     ret = {}
     for service in kstone.services.list():
         ret[service.name] = {'id': service.id,
@@ -532,7 +537,7 @@ def tenant_create(name, description=None, enabled=True, profile=None,
         salt '*' keystone.tenant_create nova description='nova tenant'
         salt '*' keystone.tenant_create test enabled=False
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     new = kstone.tenants.create(name, description, enabled)
     return tenant_get(new.id, profile=profile, **connection_args)
 
@@ -549,7 +554,7 @@ def tenant_delete(tenant_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.tenant_delete tenant_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.tenant_delete name=demo
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     if name:
         for tenant in kstone.tenants.list():
             if tenant.name == name:
@@ -578,7 +583,7 @@ def tenant_get(tenant_id=None, name=None, profile=None,
         salt '*' keystone.tenant_get tenant_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.tenant_get name=nova
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     ret = {}
     if name:
         for tenant in kstone.tenants.list():
@@ -605,7 +610,7 @@ def tenant_list(profile=None, **connection_args):
 
         salt '*' keystone.tenant_list
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     ret = {}
     for tenant in kstone.tenants.list():
         ret[tenant.name] = {'id': tenant.id,
@@ -629,7 +634,7 @@ def tenant_update(tenant_id=None, name=None, description=None,
         salt '*' keystone.tenant_update name=admin enabled=True
         salt '*' keystone.tenant_update c965f79c4f864eaaa9c3b41904e67082 name=admin email=admin@domain.com
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     if not tenant_id:
         for tenant in kstone.tenants.list():
             if tenant.name == name:
@@ -658,7 +663,7 @@ def token_get(profile=None, **connection_args):
 
         salt '*' keystone.token_get c965f79c4f864eaaa9c3b41904e67082
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     token = kstone.service_catalog.get_token()
     return {'id': token['id'],
             'expires': token['expires'],
@@ -676,7 +681,7 @@ def user_list(profile=None, **connection_args):
 
         salt '*' keystone.user_list
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     ret = {}
     for user in kstone.users.list():
         ret[user.name] = {'id': user.id,
@@ -701,7 +706,7 @@ def user_get(user_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.user_get user_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.user_get name=nova
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     ret = {}
     if name:
         for user in kstone.users.list():
@@ -738,7 +743,7 @@ def user_create(name, password, email, tenant_id=None,
 
         salt '*' keystone.user_create name=jack password=zero email=jack@halloweentown.org tenant_id=a28a7b5a999a455f84b1f5210264375e enabled=True
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     item = kstone.users.create(name=name,
                                password=password,
                                email=email,
@@ -759,7 +764,7 @@ def user_delete(user_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.user_delete user_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.user_delete name=nova
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     if name:
         for user in kstone.users.list():
             if user.name == name:
@@ -789,7 +794,7 @@ def user_update(user_id=None, name=None, email=None, enabled=None,
         salt '*' keystone.user_update user_id=c965f79c4f864eaaa9c3b41904e67082 name=newname
         salt '*' keystone.user_update c965f79c4f864eaaa9c3b41904e67082 name=newname email=newemail@domain.com
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     if not user_id:
         for user in kstone.users.list():
             if user.name == name:
@@ -828,7 +833,7 @@ def user_verify_password(user_id=None, name=None, password=None,
         salt '*' keystone.user_verify_password name=test password=foobar
         salt '*' keystone.user_verify_password user_id=c965f79c4f864eaaa9c3b41904e67082 password=foobar
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     if 'connection_endpoint' in connection_args:
         auth_url = connection_args.get('connection_endpoint')
     else:
@@ -846,7 +851,7 @@ def user_verify_password(user_id=None, name=None, password=None,
               'password': password,
               'auth_url': auth_url}
     try:
-        userauth = client.Client(**kwargs)
+        userauth = auth(**kwargs)
     except (keystoneclient.exceptions.Unauthorized,
             keystoneclient.exceptions.AuthorizationFailure):
         return False
@@ -866,7 +871,7 @@ def user_password_update(user_id=None, name=None, password=None,
         salt '*' keystone.user_password_update user_id=c965f79c4f864eaaa9c3b41904e67082 password=12345
         salt '*' keystone.user_password_update name=nova password=12345
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     if name:
         for user in kstone.users.list():
             if user.name == name:
@@ -897,7 +902,7 @@ tenant_id=7167a092ece84bae8cead4bf9d15bb3b \
 role_id=ce377245c4ec9b70e1c639c89e8cead4
         salt '*' keystone.user_role_add user=admin tenant=admin role=admin
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     if user:
         user_id = user_get(name=user, profile=profile,
                            **connection_args)[user]['id']
@@ -946,7 +951,7 @@ tenant_id=7167a092ece84bae8cead4bf9d15bb3b \
 role_id=ce377245c4ec9b70e1c639c89e8cead4
         salt '*' keystone.user_role_remove user=admin tenant=admin role=admin
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     if user:
         user_id = user_get(name=user, profile=profile,
                            **connection_args)[user]['id']
@@ -992,7 +997,7 @@ user_id=298ce377245c4ec9b70e1c639c89e654 \
 tenant_id=7167a092ece84bae8cead4bf9d15bb3b
         salt '*' keystone.user_role_list user_name=admin tenant_name=admin
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     ret = {}
     if user_name:
         for user in kstone.users.list():
@@ -1025,7 +1030,7 @@ def _item_list(profile=None, **connection_args):
 
         salt '*' keystone.item_list
     '''
-    kstone = auth(profile, **connection_args)
+    kstone = auth(profile, **connection_args).keystone_client
     ret = []
     for item in kstone.items.list():
         ret.append(item.__dict__)
