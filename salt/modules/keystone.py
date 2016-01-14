@@ -358,11 +358,11 @@ def role_create(name, profile=None, **connection_args):
         salt '*' keystone.role_create admin
     '''
 
-    kstone = auth(profile, **connection_args).keystone_client
-    if 'Error' not in role_get(name=name, profile=profile, **connection_args):
+    kstone = auth(profile, **connection_args)
+    if kstone.get_role(name=name):
         return {'Error': 'Role "{0}" already exists'.format(name)}
-    role = kstone.roles.create(name)
-    return role_get(name=name, profile=profile, **connection_args)
+    role = kstone.create_role(name)
+    return kstone.get_role(name)
 
 
 def role_delete(role_id=None, name=None, profile=None,
@@ -378,21 +378,8 @@ def role_delete(role_id=None, name=None, profile=None,
         salt '*' keystone.role_delete role_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.role_delete name=admin
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-
-    if name:
-        for role in kstone.roles.list():
-            if role.name == name:
-                role_id = role.id
-                break
-    if not role_id:
-        return {'Error': 'Unable to resolve role id'}
-    role = role_get(role_id, profile=profile, **connection_args)
-    kstone.roles.delete(role)
-    ret = 'Role ID {0} deleted'.format(role_id)
-    if name:
-        ret += ' ({0})'.format(name)
-    return ret
+    kstone = auth(profile, **connection_args)
+    return kstone.delete_role(role_id or name)
 
 
 def role_get(role_id=None, name=None, profile=None, **connection_args):
@@ -407,19 +394,11 @@ def role_get(role_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.role_get role_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.role_get name=nova
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    ret = {}
-    if name:
-        for role in kstone.roles.list():
-            if role.name == name:
-                role_id = role.id
-                break
-    if not role_id:
+    kstone = auth(profile, **connection_args)
+    role = kstone.get_role(role_id or name)
+    if not role:
         return {'Error': 'Unable to resolve role id'}
-    role = kstone.roles.get(role_id)
-    ret[role.name] = {'id': role.id,
-                      'name': role.name}
-    return ret
+    return {role.name: role}
 
 
 def role_list(profile=None, **connection_args):
@@ -432,11 +411,10 @@ def role_list(profile=None, **connection_args):
 
         salt '*' keystone.role_list
     '''
-    kstone = auth(profile, **connection_args).keystone_client
+    kstone = auth(profile, **connection_args)
     ret = {}
-    for role in kstone.roles.list():
-        ret[role.name] = {'id': role.id,
-                          'name': role.name}
+    for role in kstone.list_roles():
+        ret[role.name] = role
     return ret
 
 
