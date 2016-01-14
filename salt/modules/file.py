@@ -3088,7 +3088,8 @@ def rmdir(path):
 
 def remove(path):
     '''
-    Remove the named file
+    Remove the named file. If a directory is supplied, it will be recursively
+    deleted.
 
     CLI Example:
 

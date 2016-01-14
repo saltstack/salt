@@ -962,7 +962,7 @@ def absent(name):
     '''
     Make sure that the named file or directory is absent. If it exists, it will
     be deleted. This will work to reverse any of the functions in the file
-    state module.
+    state module. If a directory is supplied, it will be recursively deleted.
 
     name
         The path which should be deleted
