@@ -25,7 +25,7 @@ Example of application deployment:
      application_deployed:
       jboss7.deployed:
        - artifact:
-           artifactory_url: http://artifactory.intranet.company.com/artifactory
+           artifactory_url: http://artifactory.intranet.example.com/artifactory
            repository: 'ext-release-local'
            artifact_id: 'webcomponent'
            group_id: 'com.company.application'
@@ -62,7 +62,7 @@ Configuration in pillars:
 .. code-block:: yaml
 
    artifactory:
-      url: 'http://artifactory.intranet.company.com/artifactory'
+      url: 'http://artifactory.intranet.example.com/artifactory'
       repository: 'libs-snapshots-local'
 
    webcomponent-artifact:
@@ -317,7 +317,7 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
         Dict with connection properties (see state description)
     artifact:
         If set, the artifact will be fetched from artifactory. This is a Dict object with the following properties:
-           - artifactory_url: Full url to artifactory instance, for example: http://artifactory.intranet.company.com/artifactory
+           - artifactory_url: Full url to artifactory instance, for example: http://artifactory.intranet.example.com/artifactory
            - repository: One of the repositories, for example: libs-snapshots, ext-release-local, etc..
            - artifact_id: Artifact ID of the artifact
            - group_id: Group ID of the artifact
@@ -366,7 +366,7 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
             application_deployed:
               jboss7.deployed:
                - artifact:
-                   artifactory_url: http://artifactory.intranet.company.com/artifactory
+                   artifactory_url: http://artifactory.intranet.example.com/artifactory
                    repository: 'ext-release-local'
                    artifact_id: 'webcomponent'
                    group_id: 'com.company.application'
@@ -377,7 +377,7 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
 
     This performs the following operations:
 
-    * Download artifact from artifactory. In the example above the artifact will be fetched from: http://artifactory.intranet.company.com/artifactory/ext-release-local/com/company/application/webcomponent/0.1/webcomponent-0.1.war
+    * Download artifact from artifactory. In the example above the artifact will be fetched from: http://artifactory.intranet.example.com/artifactory/ext-release-local/com/company/application/webcomponent/0.1/webcomponent-0.1.war
       As a rule, for released versions the artifacts are downloaded from: artifactory_url/repository/group_id_with_slashed_instead_of_dots/artifact_id/version/artifact_id-version.packaging'
       This follows artifactory convention for artifact resolution. By default the artifact will be downloaded to /tmp directory on minion.
     * Connect to JBoss via controller (defined in jboss_config dict) and check if the artifact is not deployed already. In case of artifactory
@@ -391,7 +391,7 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
         application_deployed:
           jboss7.deployed:
            - artifact:
-               artifactory_url: http://artifactory.intranet.company.com/artifactory
+               artifactory_url: http://artifactory.intranet.example.com/artifactory
                repository: 'ext-snapshot-local'
                artifact_id: 'webcomponent'
                group_id: 'com.company.application'
@@ -402,9 +402,9 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
     Deploying snapshot version involves an additional step of resolving the exact version of the artifact (including the timestamp), which
     is not necessary when deploying a release.
     In the example above first a request will be made to retrieve the update timestamp from:
-    http://artifactory.intranet.company.com/artifactory/ext-snapshot-local/com/company/application/webcomponent/0.1-SNAPSHOT/maven-metadata.xml
+    http://artifactory.intranet.example.com/artifactory/ext-snapshot-local/com/company/application/webcomponent/0.1-SNAPSHOT/maven-metadata.xml
     Then the artifact will be fetched from
-    http://artifactory.intranet.company.com/artifactory/ext-snapshot-local/com/company/application/webcomponent/0.1-SNAPSHOT/webcomponent-RESOLVED_SNAPSHOT_VERSION.war
+    http://artifactory.intranet.example.com/artifactory/ext-snapshot-local/com/company/application/webcomponent/0.1-SNAPSHOT/webcomponent-RESOLVED_SNAPSHOT_VERSION.war
 
     .. note:: In order to perform a snapshot deployment you have to:
 
@@ -421,7 +421,7 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
         application_deployed:
           jboss7.deployed:
            - artifact:
-               artifactory_url: http://artifactory.intranet.company.com/artifactory
+               artifactory_url: http://artifactory.intranet.example.com/artifactory
                repository: 'ext-snapshot-local'
                artifact_id: 'webcomponent'
                group_id: 'com.company.application'
@@ -432,7 +432,7 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
 
 
     In this example the artifact will be retrieved from:
-    http://artifactory.intranet.company.com/artifactory/ext-snapshot-local/com/company/application/webcomponent/0.1-SNAPSHOT/webcomponent-0.1-20141023.131756-19.war
+    http://artifactory.intranet.example.com/artifactory/ext-snapshot-local/com/company/application/webcomponent/0.1-SNAPSHOT/webcomponent-0.1-20141023.131756-19.war
 
     4) Deployment of latest snapshot of artifact from Artifactory.
 
@@ -441,7 +441,7 @@ def deployed(name, jboss_config, artifact=None, salt_source=None):
         application_deployed:
           jboss7.deployed:
            - artifact:
-               artifactory_url: http://artifactory.intranet.company.com/artifactory
+               artifactory_url: http://artifactory.intranet.example.com/artifactory
                repository: 'ext-snapshot-local'
                artifact_id: 'webcomponent'
                group_id: 'com.company.application'

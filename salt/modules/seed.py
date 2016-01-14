@@ -57,7 +57,8 @@ def prep_bootstrap(mpt):
     fp_ = os.path.join(fpd_, os.path.basename(bs_))
     # Copy script into tmp
     shutil.copy(bs_, fp_)
-    return fp_
+    tmppath = fpd_.replace(mpt, '')
+    return fp_, tmppath
 
 
 def _mount(path, ftype):
@@ -237,11 +238,11 @@ def _install(mpt):
     '''
 
     _check_resolv(mpt)
-    boot_ = (prep_bootstrap(mpt)
+    boot_, tmppath = (prep_bootstrap(mpt)
              or salt.syspaths.BOOTSTRAP)
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
-    cmd += 'else sh {0} -c /tmp; fi'.format(salt.syspaths.BOOTSTRAP)
+    cmd += 'else sh {0} -c /tmp; fi'.format(os.path.join(tmppath, 'bootstrap-salt.sh'))
     return not __salt__['cmd.run_chroot'](mpt, cmd, python_shell=True)['retcode']
 
 

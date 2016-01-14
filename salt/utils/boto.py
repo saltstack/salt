@@ -88,13 +88,11 @@ def _get_profile(service, region, key, keyid, profile):
         key = _profile.get('key', None)
         keyid = _profile.get('keyid', None)
         region = _profile.get('region', None)
-
     if not region and __salt__['config.option'](service + '.region'):
         region = __salt__['config.option'](service + '.region')
 
     if not region:
         region = 'us-east-1'
-
     if not key and __salt__['config.option'](service + '.key'):
         key = __salt__['config.option'](service + '.key')
     if not keyid and __salt__['config.option'](service + '.keyid'):
@@ -247,7 +245,7 @@ def exactly_one(l):
     return exactly_n(l)
 
 
-def assign_funcs(modname, service, module=None):
+def assign_funcs(modname, service, module=None, pack=None):
     '''
     Assign _get_conn and _cache_id functions to the named module.
 
@@ -255,6 +253,9 @@ def assign_funcs(modname, service, module=None):
 
         _utils__['boto.assign_partials'](__name__, 'ec2')
     '''
+    if pack:
+        global __salt__  # pylint: disable=W0601
+        __salt__ = pack
     mod = sys.modules[modname]
     setattr(mod, '_get_conn', get_connection_func(service, module=module))
     setattr(mod, '_cache_id', cache_id_func(service))
