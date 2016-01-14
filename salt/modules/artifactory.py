@@ -321,7 +321,7 @@ def __get_artifact_metadata(artifactory_url, repository, group_id, artifact_id, 
 
 # functions for handling snapshots
 def __get_snapshot_version_metadata_url(artifactory_url, repository, group_id, artifact_id, version):
-    group_url = ___get_group_id_subpath(group_id)
+    group_url = __get_group_id_subpath(group_id)
     # for released versions the suffix for the file is same as version
     snapshot_version_metadata_url = '{artifactory_url}/{repository}/{group_url}/{artifact_id}/{version}/maven-metadata.xml'.format(
                                          artifactory_url=artifactory_url,
