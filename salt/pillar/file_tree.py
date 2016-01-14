@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-
 '''
-Recursively iterate over directories and add all files as Pillar data.
+Recursively iterate over directories and add all files as Pillar data
 
-Example configuration:
+.. versionadded:: 2015.5.0
+
+Example Configuration
+---------------------
 
 .. code-block:: yaml
 
@@ -11,24 +13,54 @@ Example configuration:
       - file_tree:
           root_dir: /path/to/root/directory
           follow_dir_links: False
-          raw_data: False
+          keep_newline: True
 
 The ``root_dir`` parameter is required and points to the directory where files
-for each host are stored. The ``follow_dir_links`` parameter is optional
-and defaults to False. If ``follow_dir_links`` is set to True, file_tree will
-follow symbolic links to other directories. Be careful when using
-``follow_dir_links``, the current implementation is dumb and will run into
-infinite recursion if a recursive symlink chain exists in the root_dir!
+for each host are stored. The ``follow_dir_links`` parameter is optional and
+defaults to False. If ``follow_dir_links`` is set to True, this external pillar
+will follow symbolic links to other directories.
 
-If ``raw_data`` is set to True, it will revert the behavior of the python
-open() function, which adds a line break character at the end of the file,
-in this case, the pillar data.
+.. warning::
+    Be careful when using ``follow_dir_links``, as a recursive symlink chain
+    will result in unexpected results.
 
-To fill pillar data for each host, file_tree recursively iterates over
-``root_dir``/hosts/``id`` (where ``id`` is a minion ID), and constructs
-the same directory tree with contents of all the files inside the pillar tree.
+If ``keep_newline`` is set to ``True``, then the pillar values for files ending
+in newlines will keep that newline. The default behavior is to remove the
+end-of-file newline. ``keep_newline`` should be turned on if the pillar data is
+intended to be used to deploy a file using ``contents_pillar`` with a
+:py:func:`file.managed <salt.states.file.managed>` state.
 
-For example, the following ``root_dir`` tree::
+.. versionchanged:: 2015.8.4
+    The ``raw_data`` parameter has been renamed to ``keep_newline``. In earlier
+    releases, ``raw_data`` must be used. Also, this parameter can now be a list
+    of globs, allowing for more granular control over which pillar values keep
+    their end-of-file newline. The globs match paths relative to the
+    directories named for minion IDs and nodegroups underneath the ``root_dir``
+    (see the layout examples in the below sections).
+
+    .. code-block:: yaml
+
+        ext_pillar:
+          - file_tree:
+              root_dir: /path/to/root/directory
+              keep_newlines:
+                - files/testdir/*
+
+.. note::
+    Binary files are not affected by the ``keep_newlines`` configuration.
+
+
+Assigning Pillar Data to Individual Hosts
+-----------------------------------------
+
+To configure pillar data for each host, this external pillar will recursively
+iterate over ``root_dir``/hosts/``id`` (where ``id`` is a minion ID), and
+compile pillar data with each subdirectory as a dictionary key and each file
+as a value.
+
+For example, the following ``root_dir`` tree:
+
+.. code-block:: text
 
     ./hosts/
     ./hosts/test-host/
@@ -39,7 +71,9 @@ For example, the following ``root_dir`` tree::
     ./hosts/test-host/files/another-testdir/
     ./hosts/test-host/files/another-testdir/symlink-to-file1.txt
 
-will result in the following pillar tree for minion with ID "test-host"::
+will result in the following pillar tree for minion with ID ``test-host``:
+
+.. code-block:: text
 
     test-host:
         ----------
@@ -58,13 +92,28 @@ will result in the following pillar tree for minion with ID "test-host"::
                 file2.txt:
                     Contents of file #2.
 
-To fill pillar data for minion in a node group, file_tree recursively
-iterates over ``root_dir``/nodegroups/``nodegroup`` (where ``nodegroup`` is a
-minion node group), and constructs the same directory tree with contents of all
-the files inside the pillar tree.
-**IMPORTANT**: The host data take precedence over the node group data
+.. note::
+    Subdirectories underneath ``root_dir``/hosts/``id`` become nested
+    dictionaries, as shown above.
 
-For example, the following ``root_dir`` tree::
+
+Assigning Pillar Data to Entire Nodegroups
+------------------------------------------
+
+To assign Pillar data to all minions in a given nodegroup, this external pillar
+recursively iterates over ``root_dir``/nodegroups/``nodegroup`` (where
+``nodegroup`` is the name of a nodegroup), and like for individual hosts,
+compiles pillar data with each subdirectory as a dictionary key and each file
+as a value.
+
+.. important::
+    If the same Pillar key is set for a minion both by nodegroup and by
+    individual host, then the value set for the individual host will take
+    precedence.
+
+For example, the following ``root_dir`` tree:
+
+.. code-block:: text
 
     ./nodegroups/
     ./nodegroups/test-group/
@@ -75,8 +124,10 @@ For example, the following ``root_dir`` tree::
     ./nodegroups/test-group/files/another-testdir/
     ./nodegroups/test-group/files/another-testdir/symlink-to-file1.txt
 
-will result in the following pillar tree for minion in the node group
-"test-group"::
+will result in the following pillar data for minions in the node group
+``test-group``:
+
+.. code-block:: text
 
     test-host:
         ----------
@@ -98,15 +149,14 @@ will result in the following pillar tree for minion in the node group
 from __future__ import absolute_import
 
 # Import python libs
+import fnmatch
 import logging
 import os
-import os.path
-from copy import deepcopy
 
 # Import salt libs
 import salt.utils
+import salt.utils.dictupdate
 import salt.utils.minions
-import salt.ext.six as six
 
 # Set up logging
 log = logging.getLogger(__name__)
@@ -116,30 +166,31 @@ def _on_walk_error(err):
     '''
     Log os.walk() error.
     '''
-    log.error('"%s": %s', err.filename, err.strerror)
+    log.error('%s: %s', err.filename, err.strerror)
 
 
-# Thanks to Ross McFarland for the dict_merge function
-# (Source: https://www.xormedia.com/recursively-merge-dictionaries-in-python/)
-def _dict_merge(dict_a, dict_b):
+def _check_newline(prefix, file_name, keep_newline):
     '''
-    recursively merges dict's. not just simple dict_a['key'] = dict_b['key'],
-    if both dict_a and dict_b have a key who's value is a dict then
-    _dict_merge is called on both values and the result stored in the returned
-     dictionary.
+    Return a boolean stating whether or not a file's trailing newline should be
+    removed. To figure this out, first check if keep_newline is a boolean and
+    if so, return its opposite. Otherwise, iterate over keep_newline and check
+    if any of the patterns match the file path. If a match is found, return
+    False, otherwise return True.
     '''
-    if not isinstance(dict_b, dict):
-        return dict_b
-    result = deepcopy(dict_a)
-    for key, value in six.iteritems(dict_b):
-        if key in result and isinstance(result[key], dict):
-            result[key] = _dict_merge(result[key], value)
-        else:
-            result[key] = deepcopy(value)
-    return result
+    if isinstance(keep_newline, bool):
+        return not keep_newline
+    full_path = os.path.join(prefix, file_name)
+    for pattern in keep_newline:
+        try:
+            if fnmatch.fnmatch(full_path, pattern):
+                return False
+        except TypeError:
+            if fnmatch.fnmatch(full_path, str(pattern)):
+                return False
+    return True
 
 
-def _construct_pillar(top_dir, follow_dir_links, raw_data=False):
+def _construct_pillar(top_dir, follow_dir_links, keep_newline=False):
     '''
     Construct pillar from file tree.
     '''
@@ -149,11 +200,11 @@ def _construct_pillar(top_dir, follow_dir_links, raw_data=False):
     for dir_path, dir_names, file_names in os.walk(
             top_dir, topdown=True, onerror=_on_walk_error,
             followlinks=follow_dir_links):
-        # Find current path in pillar tree.
+        # Find current path in pillar tree
         pillar_node = pillar
         norm_dir_path = os.path.normpath(dir_path)
         if norm_dir_path != norm_top_dir:
-            rel_path = os.path.relpath(norm_dir_path, norm_top_dir)
+            prefix = rel_path = os.path.relpath(norm_dir_path, norm_top_dir)
             path_parts = []
             while rel_path:
                 rel_path, tail = os.path.split(rel_path)
@@ -161,42 +212,77 @@ def _construct_pillar(top_dir, follow_dir_links, raw_data=False):
             while path_parts:
                 pillar_node = pillar_node[path_parts.pop(0)]
 
-        # Create dicts for subdirectories.
+        # Create dicts for subdirectories
         for dir_name in dir_names:
             pillar_node[dir_name] = {}
 
-        # Add files.
+        # Add files
         for file_name in file_names:
             file_path = os.path.join(dir_path, file_name)
             if not os.path.isfile(file_path):
-                log.error('"%s": Not a regular file', file_path)
+                log.error('file_tree: %s: not a regular file', file_path)
                 continue
 
+            contents = ''
             try:
                 with salt.utils.fopen(file_path, 'rb') as fhr:
-                    pillar_node[file_name] = fhr.read()
-                    if raw_data is False and pillar_node[file_name].endswith('\n'):
-                        pillar_node[file_name] = pillar_node[file_name][:-1]
-            except IOError as err:
-                log.error('%s', str(err))
+                    buf = fhr.read(__opts__['file_buffer_size'])
+                    while buf:
+                        contents += buf
+                        buf = fhr.read(__opts__['file_buffer_size'])
+                    if contents.endswith('\n') \
+                            and _check_newline(prefix,
+                                               file_name,
+                                               keep_newline):
+                        contents = contents[:-1]
+            except (IOError, OSError) as exc:
+                log.error('file_tree: Error reading %s: %s',
+                          file_path,
+                          exc.strerror)
+            else:
+                pillar_node[file_name] = contents
 
     return pillar
 
 
-def ext_pillar(
-        minion_id, pillar, root_dir=None,
-        follow_dir_links=False, debug=False, raw_data=False):
+def ext_pillar(minion_id,
+               pillar,
+               root_dir=None,
+               follow_dir_links=False,
+               debug=False,
+               raw_data=None,
+               keep_newline=False):
     '''
-    Find pillar data for specified ID.
+    Compile pillar data for the specified minion ID
     '''
-    # Not used.
+    # Not used
     del pillar
 
+    if raw_data is not None:
+        salt.utils.warn_until(
+            'Nitrogen',
+            'The \'raw_data\' argument for the file_tree ext_pillar has been '
+            'deprecated, please use \'keep_newline\' instead'
+        )
+        keep_newline = raw_data
+
     if not root_dir:
-        log.error('No root_dir specified for file_tree pillar')
+        log.error('file_tree: no root_dir specified')
         return {}
+
     if not os.path.isdir(root_dir):
-        log.error('"%s" does not exist or not a directory', root_dir)
+        log.error(
+            'file_tree: root_dir %s does not exist or is not a directory',
+            root_dir
+        )
+        return {}
+
+    if not isinstance(keep_newline, (bool, list)):
+        log.error(
+            'file_tree: keep_newline must be either True/False or a list '
+            'of file globs. Skipping this ext_pillar for root_dir %s',
+            root_dir
+        )
         return {}
 
     ngroup_pillar = {}
@@ -216,24 +302,30 @@ def ext_pillar(
                         ngroup_dir = os.path.join(
                             nodegroups_dir, str(nodegroup))
                         ngroup_pillar.update(
-                            _construct_pillar(ngroup_dir, follow_dir_links))
+                            _construct_pillar(ngroup_dir,
+                                              follow_dir_links,
+                                              keep_newline)
+                        )
         else:
             if debug is True:
-                log.debug('File tree - No nodegroups found in file tree \
-                            directory ext_pillar_dirs, skipping...')
+                log.debug(
+                    'file_tree: no nodegroups found in file tree directory '
+                    'ext_pillar_dirs, skipping...'
+                )
     else:
         if debug is True:
-            log.debug('File tree - No nodegroups found in master \
-                      configuration, skipping nodegroups pillar function...')
+            log.debug('file_tree: no nodegroups found in master configuration')
 
     host_dir = os.path.join(root_dir, 'hosts', minion_id)
     if not os.path.exists(host_dir):
-        # No data for host with this ID.
+        # No data for host with this ID
         return ngroup_pillar
 
     if not os.path.isdir(host_dir):
-        log.error('"%s" exists, but not a directory', host_dir)
+        log.error('file_tree: %s exists, but is not a directory', host_dir)
         return ngroup_pillar
 
-    host_pillar = _construct_pillar(host_dir, follow_dir_links, raw_data)
-    return _dict_merge(ngroup_pillar, host_pillar)
+    host_pillar = _construct_pillar(host_dir, follow_dir_links, keep_newline)
+    return salt.utils.dictupdate.merge(ngroup_pillar,
+                                       host_pillar,
+                                       strategy='recurse')

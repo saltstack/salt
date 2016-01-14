@@ -695,6 +695,10 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
             replication_column = 'pg_roles.rolreplication'
         else:
             replication_column = 'NULL'
+        if ver >= distutils.version.LooseVersion('9.5'):
+            rolcatupdate_column = 'NULL'
+        else:
+            rolcatupdate_column = 'pg_roles.rolcatupdate'
     else:
         log.error('Could not retrieve Postgres version. Is Postgresql server running?')
         return False
@@ -709,9 +713,9 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         'pg_roles.rolinherit as "inherits privileges", '
         'pg_roles.rolcreaterole as "can create roles", '
         'pg_roles.rolcreatedb as "can create databases", '
-        'pg_roles.rolcatupdate as "can update system catalogs", '
+        '{0} as "can update system catalogs", '
         'pg_roles.rolcanlogin as "can login", '
-        '{0} as "replication", '
+        '{1} as "replication", '
         'pg_roles.rolconnlimit as "connections", '
         'pg_roles.rolvaliduntil::timestamp(0) as "expiry time", '
         'pg_roles.rolconfig  as "defaults variables" '
@@ -719,7 +723,7 @@ def user_list(user=None, host=None, port=None, maintenance_db=None,
         'FROM pg_roles '
         , _x('LEFT JOIN pg_authid ON pg_roles.oid = pg_authid.oid ')
         , _x('LEFT JOIN pg_shadow ON pg_roles.oid = pg_shadow.usesysid')
-    ]).format(replication_column))
+    ]).format(rolcatupdate_column, replication_column))
 
     rows = psql_query(query,
                       runas=runas,

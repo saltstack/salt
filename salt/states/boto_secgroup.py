@@ -81,6 +81,15 @@ passed in as a dict, or as a string to pull from pillars or minion config:
                 keyid: GKTADJGHEIQSXMKKRBJ08H
                 key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
                 region: us-east-1
+
+.. note::
+
+    When using the ``profile`` parameter and ``region`` is set outside of
+    the profile group, region is ignored and a default region will be used.
+
+    If ``region`` is missing from the ``profile`` data set, ``us-east-1``
+    will be used as the default region.
+
 '''
 from __future__ import absolute_import
 

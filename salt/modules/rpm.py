@@ -8,7 +8,6 @@ from __future__ import absolute_import
 import logging
 import os
 import re
-import time
 import datetime
 
 # Import Salt libs
@@ -403,24 +402,20 @@ def diff(package, path):
     return res
 
 
-def _pkg_time_to_iso(pkg_time):
-    '''
-    Convert package time to ISO 8601.
-
-    :param pkg_time:
-    :return:
-    '''
-    ptime = time.strptime(pkg_time, '%a %d %b %Y %H:%M:%S %p %Z')
-    return datetime.datetime(ptime.tm_year, ptime.tm_mon, ptime.tm_mday,
-                             ptime.tm_hour, ptime.tm_min, ptime.tm_sec).isoformat() + "Z"
-
-
-def info(*packages):
+def info(*packages, **attr):
     '''
     Return a detailed package(s) summary information.
     If no packages specified, all packages will be returned.
 
     :param packages:
+
+    :param attr:
+        Comma-separated package attributes. If no 'attr' is specified, all available attributes returned.
+
+        Valid attributes are:
+            version, vendor, release, build_date, build_date_time_t, install_date, install_date_time_t,
+            build_host, group, source_rpm, arch, epoch, size, license, signature, packager, url, summary, description.
+
     :return:
 
     CLI example:
@@ -428,32 +423,59 @@ def info(*packages):
     .. code-block:: bash
 
         salt '*' lowpkg.info apache2 bash
+        salt '*' lowpkg.info apache2 bash attr=version
+        salt '*' lowpkg.info apache2 bash attr=version,build_date_iso,size
     '''
 
     cmd = packages and "rpm -q {0}".format(' '.join(packages)) or "rpm -qa"
 
-    # Locale needs to be en_US instead of C, because RPM otherwise will yank the timezone from the timestamps
-    call = __salt__['cmd.run_all'](cmd + (" --queryformat 'Name: %{NAME}\n"
-                                                          "Relocations: %|PREFIXES?{[%{PREFIXES} ]}:{(not relocatable)}|\n"
-                                                          "%|EPOCH?{Epoch: %{EPOCH}\n}|"
-                                                          "Version: %{VERSION}\n"
-                                                          "Vendor: %{VENDOR}\n"
-                                                          "Release: %{RELEASE}\n"
-                                                          "Architecture: %{ARCH}\n"
-                                                          "Build Date: %{BUILDTIME:date}\n"
-                                                          "Install Date: %|INSTALLTIME?{%{INSTALLTIME:date}}:{(not installed)}|\n"
-                                                          "Build Host: %{BUILDHOST}\n"
-                                                          "Group: %{GROUP}\n"
-                                                          "Source RPM: %{SOURCERPM}\n"
-                                                          "Size: %{LONGSIZE}\n"
-                                                          "%|LICENSE?{License: %{LICENSE}\n}|"
-                                                          "Signature: %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:{%|SIGGPG?{%{SIGGPG:pgpsig}}:{%|SIGPGP?{%{SIGPGP:pgpsig}}:{(none)}|}|}|}|\n"
-                                                          "%|PACKAGER?{Packager: %{PACKAGER}\n}|"
-                                                          "%|URL?{URL: %{URL}\n}|"
-                                                          "Summary: %{SUMMARY}\n"
-                                                          "Description:\n%{DESCRIPTION}\n"
-                                                          "-----\n'"),
-                                   output_loglevel='trace', env={'LC_ALL': 'en_US', 'TZ': 'UTC'}, clean_env=True)
+    # Construct query format
+    attr_map = {
+        "name": "name: %{NAME}\\n",
+        "relocations": "relocations: %|PREFIXES?{[%{PREFIXES} ]}:{(not relocatable)}|\\n",
+        "version": "version: %{VERSION}\\n",
+        "vendor": "vendor: %{VENDOR}\\n",
+        "release": "release: %{RELEASE}\\n",
+        "epoch": "%|EPOCH?{epoch: %{EPOCH}\\n}|",
+        "build_date_time_t": "build_date_time_t: %{BUILDTIME}\\n",
+        "build_date": "build_date: %{BUILDTIME}\\n",
+        "install_date_time_t": "install_date_time_t: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n",
+        "install_date": "install_date: %|INSTALLTIME?{%{INSTALLTIME}}:{(not installed)}|\\n",
+        "build_host": "build_host: %{BUILDHOST}\\n",
+        "group": "group: %{GROUP}\\n",
+        "source_rpm": "source_rpm: %{SOURCERPM}\\n",
+        "size": "size: %{LONGSIZE}\\n",
+        "arch": "arch: %{ARCH}\\n",
+        "license": "%|LICENSE?{license: %{LICENSE}\\n}|",
+        "signature": "signature: %|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:"
+                     "{%|SIGGPG?{%{SIGGPG:pgpsig}}:{%|SIGPGP?{%{SIGPGP:pgpsig}}:{(none)}|}|}|}|\\n",
+        "packager": "%|PACKAGER?{packager: %{PACKAGER}\\n}|",
+        "url": "%|URL?{url: %{URL}\\n}|",
+        "summary": "summary: %{SUMMARY}\\n",
+        "description": "description:\\n%{DESCRIPTION}\\n",
+    }
+
+    attr = attr.get('attr', None) and attr['attr'].split(",") or None
+    query = list()
+    if attr:
+        for attr_k in attr:
+            if attr_k in attr_map and attr_k != 'description':
+                query.append(attr_map[attr_k])
+        if not query:
+            raise CommandExecutionError('No valid attributes found.')
+        if 'name' not in attr:
+            attr.append('name')
+            query.append(attr_map['name'])
+    else:
+        for attr_k, attr_v in attr_map.iteritems():
+            if attr_k != 'description':
+                query.append(attr_v)
+    if attr and 'description' in attr or not attr:
+        query.append(attr_map['description'])
+    query.append("-----\\n")
+
+    call = __salt__['cmd.run_all'](cmd + (" --queryformat '{0}'".format(''.join(query))),
+                                   output_loglevel='trace', env={'TZ': 'UTC'}, clean_env=True)
     if call['retcode'] != 0:
         comment = ''
         if 'stderr' in call:
@@ -483,17 +505,31 @@ def info(*packages):
             if len(line) != 2:
                 continue
             key, value = line
-            key = key.replace(' ', '_').lower()
             if key == 'description':
                 descr_marker = True
                 continue
             if key == 'name':
                 pkg_name = value
+
+            # Convert Unix ticks into ISO time format
             if key in ['build_date', 'install_date']:
-                value = _pkg_time_to_iso(value)
-            if key != 'description' and value:
+                try:
+                    pkg_data[key] = datetime.datetime.fromtimestamp(int(value)).isoformat() + "Z"
+                except ValueError:
+                    log.warning('Could not convert "{0}" into Unix time'.format(value))
+                continue
+
+            # Convert Unix ticks into an Integer
+            if key in ['build_date_time_t', 'install_date_time_t']:
+                try:
+                    pkg_data[key] = int(value)
+                except ValueError:
+                    log.warning('Could not convert "{0}" into Unix time'.format(value))
+                continue
+            if key not in ['description', 'name'] and value:
                 pkg_data[key] = value
-        pkg_data['description'] = os.linesep.join(descr)
+        if attr and 'description' in attr or not attr:
+            pkg_data['description'] = os.linesep.join(descr)
         if pkg_name:
             ret[pkg_name] = pkg_data
 
