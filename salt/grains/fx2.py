@@ -40,21 +40,25 @@ def _find_credentials():
     if 'fallback_admin_username' in __pillar__.get('proxy'):
         usernames.append(__pillar__['proxy'].get('fallback_admin_username'))
 
-    for u in usernames:
-        for p in __pillar__['proxy']['passwords']:
-            r = salt.modules.dracr.get_chassis_name(host=__pillar__['proxy']['host'],
-                                                    admin_username=u,
-                                                    admin_password=p)
+    for user in usernames:
+        for pwd in __pillar__['proxy']['passwords']:
+            r = __salt__['dracr.get_chassis_name'](host=__pillar__['proxy']['host'],
+                                                   admin_username=user,
+                                                   admin_password=pwd)
             # Retcode will be present if the chassis_name call failed
             try:
                 if r.get('retcode', None) is None:
-                    return (u, p)
+                    __opts__['proxy']['admin_username'] = user
+                    __opts__['proxy']['admin_password'] = pwd
+                    return (user, pwd)
             except AttributeError:
                 # Then the above was a string, and we can return the username
                 # and password
-                return (u, p)
+                __opts__['proxy']['admin_username'] = user
+                __opts__['proxy']['admin_password'] = pwd
+                return (user, pwd)
 
-    logger.debug('grains fx2._find_credentials found no valid credentials, using Dell default')
+    log.debug('grains fx2.find_credentials found no valid credentials, using Dell default')
     return ('root', 'calvin')
 
 
