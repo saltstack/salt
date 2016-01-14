@@ -3224,19 +3224,6 @@ def vsan_enable(host, username, password, protocol=None, port=None, host_names=N
     return ret
 
 
-def get_dvs_portgroup_assignment(service_instance, host, dvs_name,
-                                 portgroup_name, host_names):
-    '''
-
-    :param service_instance: Reference to the vSphere server
-    :param dvs_name: Name of the DVS
-    :param portgroup_name: Portgroup to examine
-    :param host_names: Names of hosts
-    :return:
-    '''
-    host_refs = _check_hosts(service_instance, host, host_names)
-
-
 def _check_hosts(service_instance, host, host_names):
     '''
     Helper function that checks to see if the host provided is a vCenter Server or
@@ -3532,36 +3519,6 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
         ret_dict.update({'syslog_restart': {'success': response['retcode'] == 0}})
 
     return ret_dict
-
-
-def add_host_to_vsphere(host, username, password, vsphere_protocol=None,
-                        vsphere_port=None, host_names=None, host_username=None,
-                        host_password=None):
-    '''
-    Add an ESX host to vSphere.
-    :param host: vSphere hostname or IP
-    :param username: Login to vSphere with this username
-    :param password: Login to vSphere with this password
-    :param vsphere_protocol:
-    :param vsphere_port:
-    :param host_names:
-    :param host_username:
-    :param host_password:
-    :return:
-    '''
-
-    service_instance = salt.utils.vmware.get_service_instance(host=host,
-                                                              username=username,
-                                                              password=password,
-                                                              protocol=protocol,
-                                                              port=port)
-
-    for host_name in host_names:
-        # try:
-        ret[host_name] = {}
-
-        ret[host_name].update({'status': False})
-        host_ref = _get_host_ref(service_instance, host, host_name)
 
 
 def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
