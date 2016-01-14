@@ -3598,6 +3598,8 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
                                         sleep_seconds=3)
 
         ret[host_name].update({'status': True})
+
+    return ret
         # # host_network_config.proxySwitch[0].spec.backing.pnicSpec = dvs_pnic_spec
         #
         # network_system = host_ref.configManager.networkSystem
