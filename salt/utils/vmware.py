@@ -196,7 +196,7 @@ def get_service_instance(host, username, password, protocol=None, port=None):
         default_msg = 'Could not connect to host \'{0}\'. ' \
                       'Please check the debug log for more information.'.format(host)
         try:
-            if (isinstance(exc, vim.fault.HostConnectFault) and 'certificate verify failed' in exc.msg.lower()) or 'certificate verify failed' in str(exc).lower():
+            if (isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg) or '[SSL: CERTIFICATE_VERIFY_FAILED]' in str(exc):
                 import ssl
                 default_context = ssl._create_default_https_context
                 ssl._create_default_https_context = ssl._create_unverified_context
