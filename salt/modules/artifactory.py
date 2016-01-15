@@ -145,7 +145,7 @@ def get_latest_release(artifactory_url, repository, group_id, artifact_id, packa
     if username and password:
         headers['Authorization'] = 'Basic {0}'.format(base64.encodestring('{0}:{1}'.format(username, password)).replace('\n', ''))
     version = __find_latest_version(artifactory_url=artifactory_url, repository=repository, group_id=group_id, artifact_id=artifact_id, headers=headers)
-    release_url, file_name = __get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url, classifier)
+    release_url, file_name = _get_release_url(repository, group_id, artifact_id, packaging, version, artifactory_url, classifier)
     target_file = __resolve_target_file(file_name, target_dir, target_file)
 
     return __save_artifact(release_url, target_file, headers)
