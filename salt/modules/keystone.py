@@ -384,7 +384,7 @@ def role_create(name, profile=None, **connection_args):
     '''
 
     kstone = auth(profile, **connection_args)
-    if kstone.get_role(name=name):
+    if kstone.get_role(name):
         return {'Error': 'Role "{0}" already exists'.format(name)}
     role = kstone.create_role(name)
     return kstone.get_role(name)
@@ -456,7 +456,7 @@ def service_create(name, service_type, description=None, profile=None,
 'OpenStack Compute Service'
     '''
     kstone = auth(profile, **connection_args)
-    service = kstone.create_service(name, service_type, description)
+    service = kstone.create_service(name, service_type=service_type, description=description)
     return kstone.get_service(service.id)
 
 
