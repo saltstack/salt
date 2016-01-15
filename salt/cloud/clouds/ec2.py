@@ -3752,6 +3752,8 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
 
     log.debug(params)
 
+    vm_ = get_configured_provider()
+
     data = salt.utils.cloud.wait_for_ip(
         __attach_vol_to_instance,
         update_args=(params, kwargs, instance_id),
