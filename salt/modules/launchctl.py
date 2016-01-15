@@ -69,19 +69,23 @@ def _available_services():
                     continue
 
                 try:
-                    # This assumes most of the plist files will be already in XML format
+                    # This assumes most of the plist files
+                    # will be already in XML format
                     with salt.utils.fopen(file_path):
                         plist = plistlib.readPlist(true_path)
 
                 except Exception:
                     # If plistlib is unable to read the file we'll need to use
                     # the system provided plutil program to do the conversion
-                    cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(true_path)
-                    plist_xml = __salt__['cmd.run_all'](cmd, python_shell=False)['stdout']
+                    cmd = '/usr/bin/plutil -convert xml1 -o - -- "{0}"'.format(
+                        true_path)
+                    plist_xml = __salt__['cmd.run_all'](
+                        cmd, python_shell=False)['stdout']
                     if six.PY2:
                         plist = plistlib.readPlistFromString(plist_xml)
                     else:
-                        plist = plistlib.readPlistFromBytes(salt.utils.to_bytes(plist_xml))
+                        plist = plistlib.readPlistFromBytes(
+                            salt.utils.to_bytes(plist_xml))
 
                 available_services[plist.Label.lower()] = {
                     'filename': filename,
@@ -226,7 +230,8 @@ def stop(job_label, runas=None):
     '''
     service = _service_by_name(job_label)
     if service:
-        cmd = 'launchctl unload -w {0}'.format(service['file_path'], runas=runas)
+        cmd = 'launchctl unload -w {0}'.format(service['file_path'],
+                                               runas=runas)
         return not __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False)
 
     return False
