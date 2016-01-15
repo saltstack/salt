@@ -136,15 +136,18 @@ def get_using_network_time():
     cmd = 'systemsetup -getusingnetworktime'
     ret = _execute_return_result(cmd)
 
-    return _parse_return(ret)
+    if _parse_return(ret) == 'On':
+        return True
+    else:
+        return False
 
 
 def set_using_network_time(enable):
-    if not isinstance(enable, bool):
+    if enable not in ['On', 'on', 'Off', 'off', True, False]:
         msg = 'Must pass a boolean value. Passed: {0}'.format(enable)
         raise CommandExecutionError(msg)
 
-    if enable:
+    if enable in ['On', 'on', True]:
         enable = 'on'
     else:
         enable = 'off'
