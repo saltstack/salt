@@ -8,9 +8,9 @@ Example:
 .. code-block:: yaml
 
     rabbit@rabbit.example.com:
-        rabbitmq_cluster.join:
-          - user: rabbit
-          - host: rabbit.example.com
+      rabbitmq_cluster.join:
+        - user: rabbit
+        - host: rabbit.example.com
 '''
 from __future__ import absolute_import
 
