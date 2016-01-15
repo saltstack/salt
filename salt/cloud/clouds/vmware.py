@@ -208,7 +208,7 @@ def _get_si():
             port=port
         )
     except Exception as exc:
-        if isinstance(exc, vim.fault.HostConnectFault) and '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg:
+        if '[SSL: CERTIFICATE_VERIFY_FAILED]' in exc.msg:
             try:
                 import ssl
                 default_context = ssl._create_default_https_context
