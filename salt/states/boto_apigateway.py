@@ -541,7 +541,7 @@ class _Swagger(object):
                         schema_name = _schema.get('$ref').split('/')[-1]
                         return schema_name
                     raise ValueError(('Body parameter must have a JSON reference '
-                                      'to the schema definition: {0}'.format(self.name)))
+                                      'to the schema definition due to Amazon API restrictions: {0}'.format(self.name)))
                 raise ValueError('Body parameter must have a schema: {0}'.format(self.name))
             return None
 
