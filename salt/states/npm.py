@@ -280,7 +280,7 @@ def bootstrap(name,
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     try:
-        call = __salt__['npm.install'](dir=name, runas=user, pkg=None, , silent=silent)
+        call = __salt__['npm.install'](dir=name, runas=user, pkg=None, silent=silent)
     except (CommandNotFoundError, CommandExecutionError) as err:
         ret['result'] = False
         ret['comment'] = 'Error Bootstrapping {0!r}: {1}'.format(name, err)
