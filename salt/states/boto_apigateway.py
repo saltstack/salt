@@ -100,7 +100,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
         api_name parameter as passed in to this state function with consecutive white
         spaces replaced with '_'  +
 
-        resource_path as derived from the swagger file basePath and paths fields with
+        resource_path as derived from the swagger file's paths fields with
         '/' and consecutive whitespaces replaced with '_', and path parameters' curly
         braces replaced with '' +
 
@@ -115,7 +115,7 @@ def present(name, api_name, swagger_file, stage_name, api_key_required, lambda_i
             the derived Lambda Function Name that will be used for look up and
             integration is:
 
-            'test_service_api_a_b_c_post'
+            'test_service_a_b_c_post'
 
     name
         The name of the state definition
@@ -899,7 +899,6 @@ class _Swagger(object):
                     ret['comment'] = 'stage {0} has been deleted.\n'.format(stage_name)
         else:
             # no matching stage_name/deployment found
-            ret['abort'] = True
             ret['comment'] = 'stage {0} does not exist'.format(stage_name)
 
         return ret
@@ -1387,16 +1386,15 @@ class _Swagger(object):
         '''
 
         for path, pathData in self.paths:
-            resource_path = ''.join((self.basePath, path))
             resource = __salt__['boto_apigateway.create_api_resources'](restApiId=self.restApiId,
-                path=resource_path, **self._common_aws_args)
+                path=path, **self._common_aws_args)
             if not resource.get('created'):
                 ret = _log_error_and_abort(ret, resource)
                 return ret
             ret = _log_changes(ret, 'deploy_resources', resource)
             for method, method_data in pathData.iteritems():
                 if method in _Swagger.SWAGGER_OPERATION_NAMES:
-                    ret = self._deploy_method(ret, resource_path, method, method_data,
+                    ret = self._deploy_method(ret, path, method, method_data,
                                               api_key_required, lambda_integration_role, lambda_region)
         return ret
 

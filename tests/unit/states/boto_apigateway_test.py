@@ -124,13 +124,9 @@ root_resources_ret = {u'items': [dict(id=u'bgk0rk8rqb',
 
 resources_ret = {u'items': [dict(id=u'bgk0rk8rqb',
                                  path=u'/'),
-                            dict(id=u'hrdwo2',
-                                 parentId=u'bgk0rk8rqb',
-                                 path=u'/api',
-                                 pathPart=u'api'),
                             dict(id=u'9waiaz',
-                                 parentId=u'hrdwo2',
-                                 path=u'/api/users',
+                                 parentId=u'bgk0rk8rqb',
+                                 path=u'/users',
                                  pathPart=u'users',
                                  resourceMethods={u'POST': {}})]}
 
@@ -256,7 +252,7 @@ deployment2_ret = dict(createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50, t
 
 deployments_ret = {u'items': [deployment1_ret, deployment2_ret]}
 
-function_ret = dict(FunctionName='unit_test_api_api_users_post',
+function_ret = dict(FunctionName='unit_test_api_users_post',
                     Runtime='python2.7',
                     Role=None,
                     Handler='handler',
