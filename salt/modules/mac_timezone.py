@@ -60,6 +60,8 @@ def _parse_return(data):
 
     if ': ' in data:
         return data.split(': ')[1]
+    if ':\n' in data:
+        return data.split(':\n')[1]
     else:
         return data
 
@@ -107,7 +109,9 @@ def get_offset():
 
 def list_zones():
     cmd = 'systemsetup -listtimezones'
-    return _execute_return_result(cmd)
+    ret = _execute_return_result(cmd)
+
+    return _parse_return(ret)
 
 
 def set_zone(time_zone):
