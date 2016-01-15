@@ -1085,6 +1085,24 @@ class Minion(MinionBase):
 
     @classmethod
     def _target(cls, minion_instance, opts, data):
+        if not minion_instance:
+            minion_instance = cls(opts)
+            if not hasattr(minion_instance, 'functions'):
+                functions, returners, function_errors, executors = (
+                    minion_instance._load_modules()
+                    )
+                minion_instance.functions = functions
+                minion_instance.returners = returners
+                minion_instance.function_errors = function_errors
+                minion_instance.executors = executors
+            if not hasattr(minion_instance, 'serial'):
+                minion_instance.serial = salt.payload.Serial(opts)
+            if not hasattr(minion_instance, 'proc_dir'):
+                uid = salt.utils.get_uid(user=opts.get('user', None))
+                minion_instance.proc_dir = (
+                    get_proc_dir(opts['cachedir'], uid=uid)
+                    )
+
         with tornado.stack_context.StackContext(minion_instance.ctx):
             if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
                 Minion._thread_multi_return(minion_instance, opts, data)
@@ -1106,24 +1124,6 @@ class Minion(MinionBase):
             salt.log.setup.setup_console_logger(log_level=opts.get('log_level', 'info'))
             if opts.get('log_file'):
                 salt.log.setup.setup_logfile_logger(opts['log_file'], opts.get('log_level_logfile', 'info'))
-        if not minion_instance:
-            minion_instance = cls(opts)
-            if not hasattr(minion_instance, 'functions'):
-                functions, returners, function_errors, executors = (
-                    minion_instance._load_modules()
-                    )
-                minion_instance.functions = functions
-                minion_instance.returners = returners
-                minion_instance.function_errors = function_errors
-                minion_instance.executors = executors
-            if not hasattr(minion_instance, 'serial'):
-                minion_instance.serial = salt.payload.Serial(opts)
-            if not hasattr(minion_instance, 'proc_dir'):
-                uid = salt.utils.get_uid(user=opts.get('user', None))
-                minion_instance.proc_dir = (
-                    get_proc_dir(opts['cachedir'], uid=uid)
-                    )
-
         fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
 
         if opts['multiprocessing'] and not salt.utils.is_windows():
@@ -1303,8 +1303,6 @@ class Minion(MinionBase):
             salt.log.setup_console_logger(log_level=opts.get('log_level', 'info'))
             if opts.get('log_file'):
                 salt.log.setup_logfile_logger(opts['log_file'], opts.get('log_level_logfile', 'info'))
-        if not minion_instance:
-            minion_instance = cls(opts)
         ret = {
             'return': {},
             'success': {},
