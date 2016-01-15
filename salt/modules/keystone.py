@@ -624,12 +624,10 @@ def token_get(profile=None, **connection_args):
 
         salt '*' keystone.token_get c965f79c4f864eaaa9c3b41904e67082
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    token = kstone.service_catalog.get_token()
-    return {'id': token['id'],
-            'expires': token['expires'],
-            'user_id': token['user_id'],
-            'tenant_id': token['tenant_id']}
+    kstone = auth(profile, **connection_args)
+    return {'id': kstone.get_token(),
+            'user_id': kstone.get_user_id(),
+            'tenant_id': kstone.get_project_id()}
 
 
 def user_list(profile=None, **connection_args):
@@ -642,16 +640,10 @@ def user_list(profile=None, **connection_args):
 
         salt '*' keystone.user_list
     '''
-    kstone = auth(profile, **connection_args).keystone_client
+    kstone = auth(profile, **connection_args)
     ret = {}
-    for user in kstone.users.list():
-        ret[user.name] = {'id': user.id,
-                          'name': user.name,
-                          'email': user.email,
-                          'enabled': user.enabled}
-        tenant_id = getattr(user, 'tenantId', None)
-        if tenant_id:
-            ret[user.name]['tenant_id'] = tenant_id
+    for user in kstone.list_users():
+        ret[user.name] = user
     return ret
 
 
@@ -667,34 +659,15 @@ def user_get(user_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.user_get user_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.user_get name=nova
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    ret = {}
-    if name:
-        for user in kstone.users.list():
-            if user.name == name:
-                user_id = user.id
-                break
-    if not user_id:
+    kstone = auth(profile, **connection_args)
+    user = kstone.get_user(user_id or name)
+    if not user:
         return {'Error': 'Unable to resolve user id'}
-    try:
-        user = kstone.users.get(user_id)
-    except keystoneclient.exceptions.NotFound:
-        msg = 'Could not find user \'{0}\''.format(user_id)
-        log.error(msg)
-        return {'Error': msg}
-
-    ret[user.name] = {'id': user.id,
-                      'name': user.name,
-                      'email': user.email,
-                      'enabled': user.enabled}
-    tenant_id = getattr(user, 'tenantId', None)
-    if tenant_id:
-        ret[user.name]['tenant_id'] = tenant_id
-    return ret
+    return {user.name: user}
 
 
-def user_create(name, password, email, tenant_id=None,
-                enabled=True, profile=None, **connection_args):
+def user_create(name, password=None, email=None, tenant_id=None,
+                enabled=True, domain_id=None, profile=None, **connection_args):
     '''
     Create a user (keystone user-create)
 
@@ -704,13 +677,14 @@ def user_create(name, password, email, tenant_id=None,
 
         salt '*' keystone.user_create name=jack password=zero email=jack@halloweentown.org tenant_id=a28a7b5a999a455f84b1f5210264375e enabled=True
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    item = kstone.users.create(name=name,
-                               password=password,
-                               email=email,
-                               tenant_id=tenant_id,
-                               enabled=enabled)
-    return user_get(item.id, profile=profile, **connection_args)
+    kstone = auth(profile, **connection_args)
+    kstone.create_user(name=name,
+                       password=password,
+                       email=email,
+                       default_project=tenant_id,
+                       enabled=enabled,
+                       domain_id=domain_id)
+    return kstone.get_user(name)
 
 
 def user_delete(user_id=None, name=None, profile=None, **connection_args):
@@ -725,24 +699,12 @@ def user_delete(user_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.user_delete user_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.user_delete name=nova
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    if name:
-        for user in kstone.users.list():
-            if user.name == name:
-                user_id = user.id
-                break
-    if not user_id:
-        return {'Error': 'Unable to resolve user id'}
-    kstone.users.delete(user_id)
-    ret = 'User ID {0} deleted'.format(user_id)
-    if name:
-
-        ret += ' ({0})'.format(name)
-    return ret
+    kstone = auth(profile, **connection_args)
+    return kstone.delete_user(user_id or name)
 
 
 def user_update(user_id=None, name=None, email=None, enabled=None,
-                tenant=None, profile=None, **connection_args):
+                tenant_id=None, profile=None, **connection_args):
     '''
     Update a user's information (keystone user-update)
     The following fields may be updated: name, email, enabled, tenant.
@@ -756,30 +718,8 @@ def user_update(user_id=None, name=None, email=None, enabled=None,
         salt '*' keystone.user_update c965f79c4f864eaaa9c3b41904e67082 name=newname email=newemail@domain.com
     '''
     kstone = auth(profile, **connection_args).keystone_client
-    if not user_id:
-        for user in kstone.users.list():
-            if user.name == name:
-                user_id = user.id
-                break
-        if not user_id:
-            return {'Error': 'Unable to resolve user id'}
-    user = kstone.users.get(user_id)
-    # Keep previous settings if not updating them
-    if not name:
-        name = user.name
-    if not email:
-        email = user.email
-    if enabled is None:
-        enabled = user.enabled
-    kstone.users.update(user=user_id, name=name, email=email, enabled=enabled)
-    if tenant:
-        for tnt in kstone.tenants.list():
-            if tnt.name == tenant:
-                tenant_id = tnt.id
-                break
-        kstone.users.update_tenant(user_id, tenant_id)
-    ret = 'Info updated for user ID {0}'.format(user_id)
-    return ret
+    return kstone.update_user(user=user_id or name, name=name, email=email,
+                              enabled=enabled, default_project_id=tenant_id)
 
 
 def user_verify_password(user_id=None, name=None, password=None,
