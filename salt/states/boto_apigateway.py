@@ -748,8 +748,9 @@ class _Swagger(object):
         '''
         Helper function to find whether there are other stages still associated with a deployment
         '''
-        stages = __salt__['boto_apigateway.describe_api_stages'](self.restApiId, deploymentId,
-                                                                   **self._common_aws_args).get('stages')
+        stages = __salt__['boto_apigateway.describe_api_stages'](restApiId=self.restApiId,
+                                                                 deploymentId=deploymentId,
+                                                                 **self._common_aws_args).get('stages')
         return bool(stages)
 
     def no_more_deployments_remain(self):
@@ -757,13 +758,13 @@ class _Swagger(object):
         Helper function to find whether there are deployments left with stages associated
         '''
         no_more_deployments = True
-        deployments = __salt__['boto_apigateway.describe_api_deployments'](self.restApiId,
+        deployments = __salt__['boto_apigateway.describe_api_deployments'](restApiId=self.restApiId,
                                                                            **self._common_aws_args).get('deployments')
         if deployments:
             for deployment in deployments:
                 deploymentId = deployment.get('id')
-                stages = __salt__['boto_apigateway.describe_api_stages'](self.restApiId,
-                                                                         deploymentId,
+                stages = __salt__['boto_apigateway.describe_api_stages'](restApiId=self.restApiId,
+                                                                         deploymentId=deploymentId,
                                                                          **self._common_aws_args).get('stages')
                 if stages:
                     no_more_deployments = False
@@ -776,7 +777,8 @@ class _Swagger(object):
         Helper method to find the deployment id that the stage name is currently assocaited with.
         '''
         deploymentId = ''
-        stage = __salt__['boto_apigateway.describe_api_stage'](self.restApiId, stage_name,
+        stage = __salt__['boto_apigateway.describe_api_stage'](restApiId=self.restApiId,
+                                                               stageName=stage_name,
                                                                **self._common_aws_args).get('stage')
         if stage:
             deploymentId = stage.get('deploymentId')
@@ -787,8 +789,8 @@ class _Swagger(object):
         Helper method to find the deployment label that the stage_name is currently associated with.
         '''
         deploymentId = self._get_current_deployment_id(stage_name)
-        deployment = __salt__['boto_apigateway.describe_api_deployment'](self.restApiId,
-                                                                         deploymentId,
+        deployment = __salt__['boto_apigateway.describe_api_deployment'](restApiId=self.restApiId,
+                                                                         deploymentId=deploymentId,
                                                                          **self._common_aws_args).get('deployment')
         if deployment:
             return deployment.get('description')
@@ -799,7 +801,7 @@ class _Swagger(object):
         Helper method to return the deployment id matching the desired deployment label for
         this Swagger object based on the given api_name, swagger_file
         '''
-        deployments = __salt__['boto_apigateway.describe_api_deployments'](self.restApiId,
+        deployments = __salt__['boto_apigateway.describe_api_deployments'](restApiId=self.restApiId,
                                                                            **self._common_aws_args).get('deployments')
         if deployments:
             for deployment in deployments:
@@ -830,7 +832,8 @@ class _Swagger(object):
         '''
         Helper method to associate the stage_name to the given deploymentId and make this current
         '''
-        stage = __salt__['boto_apigateway.describe_api_stage'](self.restApiId, stage_name,
+        stage = __salt__['boto_apigateway.describe_api_stage'](restApiId=self.restApiId,
+                                                               stageName=stage_name,
                                                                **self._common_aws_args).get('stage')
         if not stage:
             stage = __salt__['boto_apigateway.create_api_stage'](restApiId=self.restApiId,
@@ -850,10 +853,10 @@ class _Swagger(object):
             if not overwrite.get('stage'):
                 return {'set': False, 'error': overwrite.get('error')}
 
-        return __salt__['boto_apigateway.activate_api_deployment'](self.restApiId,
-                                                                  stage_name,
-                                                                  self._deploymentId,
-                                                                  **self._common_aws_args)
+        return __salt__['boto_apigateway.activate_api_deployment'](restApiId=self.restApiId,
+                                                                   stageName=stage_name,
+                                                                   deploymentId=self._deploymentId,
+                                                                   **self._common_aws_args)
 
     def _resolve_api_id(self):
         '''
@@ -878,8 +881,8 @@ class _Swagger(object):
         '''
         deploymentId = self._get_current_deployment_id(stage_name)
         if deploymentId:
-            result = __salt__['boto_apigateway.delete_api_stage'](self.restApiId,
-                                                                  stage_name,
+            result = __salt__['boto_apigateway.delete_api_stage'](restApiId=self.restApiId,
+                                                                  stageName=stage_name,
                                                                   **self._common_aws_args)
             if not result.get('deleted'):
                 ret['abort'] = True
@@ -888,8 +891,8 @@ class _Swagger(object):
             else:
                 # check if it is safe to delete the deployment as well.
                 if not self._one_or_more_stages_remain(deploymentId):
-                    result = __salt__['boto_apigateway.delete_api_deployment'](self.restApiId,
-                                                                               deploymentId,
+                    result = __salt__['boto_apigateway.delete_api_deployment'](restApiId=self.restApiId,
+                                                                               deploymentId=deploymentId,
                                                                                **self._common_aws_args)
                     if not result.get('deleted'):
                         ret['abort'] = True
@@ -948,8 +951,8 @@ class _Swagger(object):
                                    res.get('response'))
         else:
             # no deployment existed for the given swagger_file for this Swagger object
-            res = __salt__['boto_apigateway.create_api_deployment'](self.restApiId,
-                                                                    stage_name,
+            res = __salt__['boto_apigateway.create_api_deployment'](restApiId=self.restApiId,
+                                                                    stageName=stage_name,
                                                                     stageDescription=stage_desc_json,
                                                                     description=self.deployment_label_json,
                                                                     variables=stage_variables,
@@ -967,22 +970,23 @@ class _Swagger(object):
         Helper method to clean up resources and models if we detected a change in the swagger file
         for a stage
         '''
-        resources = __salt__['boto_apigateway.describe_api_resources'](self.restApiId, **self._common_aws_args)
+        resources = __salt__['boto_apigateway.describe_api_resources'](restApiId=self.restApiId,
+                                                                       **self._common_aws_args)
         if resources.get('resources'):
             res = resources.get('resources')[1:]
             res.reverse()
             for resource in res:
-                delres = __salt__['boto_apigateway.delete_api_resources'](self.restApiId,
-                                                                          resource.get('path'),
+                delres = __salt__['boto_apigateway.delete_api_resources'](restApiId=self.restApiId,
+                                                                          path=resource.get('path'),
                                                                           **self._common_aws_args)
                 if not delres.get('deleted'):
                     return delres
 
-        models = __salt__['boto_apigateway.describe_api_models'](self.restApiId, **self._common_aws_args)
+        models = __salt__['boto_apigateway.describe_api_models'](restApiId=self.restApiId, **self._common_aws_args)
         if models.get('models'):
             for model in models.get('models'):
-                delres = __salt__['boto_apigateway.delete_api_model'](self.restApiId,
-                                                                      model.get('name'),
+                delres = __salt__['boto_apigateway.delete_api_model'](restApiId=self.restApiId,
+                                                                      modelName=model.get('name'),
                                                                       **self._common_aws_args)
                 if not delres.get('deleted'):
                     return delres
@@ -1298,9 +1302,11 @@ class _Swagger(object):
         '''
         method = self._parse_method_data(method_name.lower(), method_data)
 
-        # TODO: 'NONE' ??
-        m = __salt__['boto_apigateway.create_api_method'](self.restApiId, resource_path,
-                                                          method_name.upper(), 'NONE',
+        # authorizationType is hard coded to 'NONE' for now.
+        m = __salt__['boto_apigateway.create_api_method'](restApiId=self.restApiId,
+                                                          resourcePath=resource_path,
+                                                          httpMethod=method_name.upper(),
+                                                          authorizationType='NONE',
                                                           apiKeyRequired=api_key_required,
                                                           requestParameters=method.get('params'),
                                                           requestModels=method.get('models'),
@@ -1320,13 +1326,13 @@ class _Swagger(object):
         # NOTE: integration method is set to POST always, as otherwise AWS makes wrong assumptions
         # about the intent of the call. HTTP method will be passed to lambda as part of the API gateway context
         integration = (
-            __salt__['boto_apigateway.create_api_integration'](self.restApiId,
-                                                               resource_path,
-                                                               method_name.upper(),
-                                                               method.get('integration_type'),
-                                                               'POST', 
-                                                               lambda_uri,
-                                                               lambda_integration_role,
+            __salt__['boto_apigateway.create_api_integration'](restApiId=self.restApiId,
+                                                               resourcePath=resource_path,
+                                                               httpMethod=method_name.upper(),
+                                                               integrationType=method.get('integration_type'),
+                                                               integrationHttpMethod='POST', 
+                                                               uri=lambda_uri,
+                                                               credentials=lambda_integration_role,
                                                                requestTemplates=method.get('request_templates'),
                                                                **self._common_aws_args))
         if not integration.get('created'):
@@ -1341,10 +1347,10 @@ class _Swagger(object):
                                                              _Swagger.SwaggerMethodResponse(response_data))
 
                 mr = __salt__['boto_apigateway.create_api_method_response'](
-                                                                self.restApiId,
-                                                                resource_path,
-                                                                method_name.upper(),
-                                                                httpStatus,
+                                                                restApiId=self.restApiId,
+                                                                resourcePath=resource_path,
+                                                                httpMethod=method_name.upper(),
+                                                                statusCode=httpStatus,
                                                                 responseParameters=method_response.get('params'),
                                                                 responseModels=method_response.get('models'),
                                                                 **self._common_aws_args)
@@ -1354,9 +1360,13 @@ class _Swagger(object):
                 ret = _log_changes(ret, '_deploy_method.create_api_method_response', mr)
 
                 mir = __salt__['boto_apigateway.create_api_integration_response'](
-                        self.restApiId, resource_path, method_name.upper(), httpStatus, '.*',
-                        responseParameters=method_response.get('integration_params'),
-                        **self._common_aws_args)
+                                                restApiId=self.restApiId,
+                                                resourcePath=resource_path,
+                                                httpMethod=method_name.upper(),
+                                                statusCode=httpStatus,
+                                                selectionPattern='.*',
+                                                responseParameters=method_response.get('integration_params'),
+                                                **self._common_aws_args)
                 if not mir.get('created'):
                     ret = _log_error_and_abort(ret, mir)
                     return ret
@@ -1387,7 +1397,8 @@ class _Swagger(object):
 
         for path, pathData in self.paths:
             resource = __salt__['boto_apigateway.create_api_resources'](restApiId=self.restApiId,
-                path=path, **self._common_aws_args)
+                                                                        path=path,
+                                                                        **self._common_aws_args)
             if not resource.get('created'):
                 ret = _log_error_and_abort(ret, resource)
                 return ret
