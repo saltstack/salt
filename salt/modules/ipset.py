@@ -464,7 +464,7 @@ def check(set=None, entry=None, family='ipv4'):
             if settype == 'hash:ip':
                 if _entry_extra:
                     entries = [' '.join([str(ip), ' '.join(_entry_extra)]) for ip in ipaddress.ip_network(_entry)]
-                else: 
+                else:
                     entries = [' '.join([str(ip)]) for ip in ipaddress.ip_network(_entry)]
             elif settype == 'hash:net':
                 _entries = [str(ip) for ip in ipaddress.ip_network(_entry)]
