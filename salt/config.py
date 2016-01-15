@@ -59,8 +59,8 @@ else:
     _DFLT_MULTIPROCESSING_MODE = True
 
 FLO_DIR = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
-            'daemons', 'flo')
+        os.path.dirname(__file__),
+        'daemons', 'flo')
 
 VALID_OPTS = {
     # The address of the salt master. May be specified as IP address or hostname
