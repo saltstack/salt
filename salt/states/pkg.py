@@ -1544,31 +1544,31 @@ def latest(
             up_to_date = [x for x in pkgs if x not in targets]
 
         if __opts__['test']:
-            to_be_upgraded = ', '.join(sorted(targets))
-            comment = 'The following packages are set to be ' \
-                      'installed/upgraded: ' \
-                      '{0}'.format(to_be_upgraded)
+            comments = []
+            comments.append(
+                'The following packages would be installed/upgraded: ' +
+                ', '.join(sorted(targets))
+            )
             if up_to_date:
-                up_to_date_nb = len(up_to_date)
-                if up_to_date_nb <= 10:
-                    up_to_date_sorted = sorted(up_to_date)
-                    up_to_date_details = ', '.join(
-                        '{0} ({1})'.format(name, cur[name])
-                        for name in up_to_date_sorted
+                up_to_date_count = len(up_to_date)
+                if up_to_date_count <= 10:
+                    comments.append(
+                        'The following packages are already up-to-date: ' +
+                        ', '.join(
+                            ['{0} ({1})'.format(x, cur[x])
+                             for x in sorted(up_to_date)]
+                        )
                     )
-                    comment += (
-                        ' The following packages are already '
-                        'up-to-date: {0}'
-                    ).format(up_to_date_details)
                 else:
-                    comment += ' {0} packages are already up-to-date'.format(
-                        up_to_date_nb
+                    comments.append(
+                        '{0} packages are already up-to-date'
+                        .format(up_to_date_count)
                     )
 
             return {'name': name,
                     'changes': {},
                     'result': None,
-                    'comment': comment}
+                    'comment': '\n'.join(comments)}
 
         # Build updated list of pkgs to exclude non-targeted ones
         targeted_pkgs = list(targets.keys()) if pkgs else None
