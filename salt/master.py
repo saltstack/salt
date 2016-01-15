@@ -74,6 +74,7 @@ from salt.exceptions import FileserverConfigError
 from salt.utils.debug import (
     enable_sigusr1_handler, enable_sigusr2_handler, inspect_stack
 )
+from salt.utils.decorators import log_exceptions
 from salt.utils.event import tagify
 from salt.utils.master import ConnectedCache
 from salt.utils.process import default_signals, SignalHandlingMultiprocessingProcess
@@ -194,6 +195,7 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
         # Set up search object
         self.search = salt.search.Search(self.opts)
 
+    @log_exceptions(log, 'Maintenance.run')
     def run(self):
         '''
         This is the general passive maintenance process controller for the Salt

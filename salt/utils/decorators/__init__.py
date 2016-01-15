@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import inspect
 import logging
 import time
+import sys
 from functools import wraps
 from collections import defaultdict
 
@@ -247,3 +248,33 @@ def memoize(func):
             cache[args] = func(*args)
         return cache[args]
     return _memoize
+
+
+def log_exceptions(log_object, where):
+    '''
+    Log any exceptions that happen inside the wrapped function.
+    Particularly useful for logging fatal exceptions that happen
+    inside subprocesses.
+
+    Example usage::
+
+        class SomeRunner(multiprocessing.Process):
+            @log_exceptions(log, 'SomeRunner.run')
+            def run(self):
+                ...
+    '''
+    def wrapper(function):
+        @wraps(function)
+        def wrapped(*args, **kwargs):
+            try:
+                return function(*args, **kwargs)
+            except:
+                exc = sys.exc_info()
+                try:
+                    log_object.exception(
+                        'Got exception inside {}'.format(where))
+                except:
+                    pass
+                raise exc[0], exc[1], exc[2]
+        return wrapped
+    return wrapper
