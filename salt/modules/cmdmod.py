@@ -42,6 +42,7 @@ if salt.utils.is_windows():
 else:
     HAS_WIN_RUNAS = False
 
+__proxyenabled__ = ['*']
 # Define the module's virtual name
 __virtualname__ = 'cmd'
 
