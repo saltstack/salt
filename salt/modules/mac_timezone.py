@@ -48,9 +48,27 @@ def _execute_return_result(cmd):
     return ret['stdout']
 
 
+def _parse_return(data):
+    '''
+    Parse a return in the format:
+    ``Time Zone: America/Denver``
+    to return only:
+    ``America/Denver``
+
+    Returns: The value portion of a return
+    '''
+
+    if ': ' in data:
+        return data.split(': ')[1]
+    else:
+        return data
+
+
 def get_date():
     cmd = 'systemsetup -getdate'
-    return _execute_return_result(cmd)
+    ret = _execute_return_result(cmd)
+
+    return _parse_return(ret)
 
 
 def set_date(date):
@@ -60,7 +78,9 @@ def set_date(date):
 
 def get_time():
     cmd = 'systemsetup -gettime'
-    return _execute_return_result(cmd)
+    ret = _execute_return_result(cmd)
+
+    return _parse_return(ret)
 
 
 def set_time(time):
@@ -70,10 +90,9 @@ def set_time(time):
 
 def get_zone():
     cmd = 'systemsetup -gettimezone'
-
     ret = _execute_return_result(cmd)
 
-    return ret.split(': ')[1]
+    return _parse_return(ret)
 
 
 def get_zonecode():
