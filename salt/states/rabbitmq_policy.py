@@ -12,10 +12,10 @@ Example:
 .. code-block:: yaml
 
     rabbit_policy:
-        rabbitmq_policy.present:
-            - name: HA
-            - pattern: '.*'
-            - definition: '{"ha-mode":"all"}'
+      rabbitmq_policy.present:
+        - name: HA
+        - pattern: '.*'
+        - definition: '{"ha-mode": "all"}'
 '''
 from __future__ import absolute_import
 
