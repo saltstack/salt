@@ -545,24 +545,47 @@ def endpoint_present(name,
            'changes': {},
            'result': True,
            'comment': 'endpoint for service "{0}" already exists'.format(name)}
-    endpoint = __salt__['keystone.endpoint_get'](name,
-                                                 profile=profile,
-                                                 **connection_args)
-    cur_endpoint = dict(region=region,
-                        publicurl=publicurl,
-                        adminurl=adminurl,
-                        internalurl=internalurl)
-    if endpoint and 'Error' not in endpoint:
-        endpoint.pop('id')
-        endpoint.pop('service_id')
-        if endpoint == cur_endpoint:
+    import logging
+    log = logging.getLogger(__name__)
+    endpoints_good = True
+    if __salt__['keystone.version']() == 'v2.0':
+        cur_endpoint = dict(region=region,
+                            publicurl=publicurl,
+                            adminurl=adminurl,
+                            internalurl=internalurl)
+        endpoints = __salt__['keystone.endpoint_search'](name,
+                                                         filters=cur_endpoint,
+                                                         profile=profile,
+                                                         **connection_args)
+        if endpoints:
+            return ret
+
+        # create endpoints with smaller filter this time
+        endpoints = __salt__['keystone.endpoint_search'](name, profile=profile, **connection_args)
+    else:
+        endpoints = {}
+        count = 0
+        for interface, url in (('admin', adminurl), ('public', publicurl), ('internal', internalurl)):
+            if url is None:
+                continue
+            filters = {'url': url,
+                       'interface': interface,
+                       'region': region}
+            endpoint = __salt__['keystone.endpoint_search'](name, filters=filters)
+            if len(endpoint) < 1:
+                endpoints[interface] = False
+            else:
+                endpoints[interface] = endpoint
+        if endpoints and all(endpoints.values()):
+            return ret
+
+    if endpoints:
+        if __opts__['test']:
+            ret['result'] = None
+            ret['comment'] = 'Endpoint for service "{0}" will be updated'.format(name)
+            ret['changes']['endpoint'] = 'Will be updated'
             return ret
         else:
-            if __opts__['test']:
-                ret['result'] = None
-                ret['comment'] = 'Endpoint for service "{0}" will be updated'.format(name)
-                ret['changes']['endpoint'] = 'Will be updated'
-                return ret
             __salt__['keystone.endpoint_delete'](name,
                                                  profile=profile,
                                                  **connection_args)
@@ -575,15 +598,15 @@ def endpoint_present(name,
             return ret
         ret['comment'] = 'Endpoint for service "{0}" has been added'.format(name)
 
-    if not __opts__['test']:
-        ret['changes'] = __salt__['keystone.endpoint_create'](
-            name,
-            region=region,
-            publicurl=publicurl,
-            adminurl=adminurl,
-            internalurl=internalurl,
-            profile=profile,
-            **connection_args)
+    ret['changes'] = __salt__['keystone.endpoint_create'](
+        name,
+        region=region,
+        publicurl=publicurl,
+        adminurl=adminurl,
+        internalurl=internalurl,
+        profile=profile,
+        **connection_args
+    )
     return ret
 
 
