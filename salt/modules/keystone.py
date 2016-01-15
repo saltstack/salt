@@ -61,8 +61,7 @@ HAS_SHADE = False
 try:
     # pylint: disable=import-error
     import shade
-    from shade import meta
-    import keystoneclient.exceptions
+    import keystoneauth1.exceptions
     # pylint: enable=import-error
     HAS_SHADE = True
 except ImportError:
@@ -734,27 +733,23 @@ def user_verify_password(user_id=None, name=None, password=None,
         salt '*' keystone.user_verify_password name=test password=foobar
         salt '*' keystone.user_verify_password user_id=c965f79c4f864eaaa9c3b41904e67082 password=foobar
     '''
-    kstone = auth(profile, **connection_args).keystone_client
+    kstone = auth(profile, **connection_args)
     if 'connection_endpoint' in connection_args:
         auth_url = connection_args.get('connection_endpoint')
     else:
         auth_url = __salt__['config.option']('keystone.endpoint',
                                          'http://127.0.0.1:35357/v2.0')
 
-    if user_id:
-        for user in kstone.users.list():
-            if user.id == user_id:
-                name = user.name
-                break
-    if not name:
-        return {'Error': 'Unable to resolve user name'}
-    kwargs = {'username': name,
+    user = kstone.get_user(user_id or name)
+    if not user:
+        return None
+    kwargs = {'username': user.name,
               'password': password,
               'auth_url': auth_url}
     try:
-        userauth = auth(**kwargs)
-    except (keystoneclient.exceptions.Unauthorized,
-            keystoneclient.exceptions.AuthorizationFailure):
+        userauth = auth(**kwargs).auth_token
+    except (keystoneauth1.exceptions.http.Unauthorized,
+            keystoneauth1.exceptions.AuthorizationFailure):
         return False
     return True
 
@@ -772,19 +767,12 @@ def user_password_update(user_id=None, name=None, password=None,
         salt '*' keystone.user_password_update user_id=c965f79c4f864eaaa9c3b41904e67082 password=12345
         salt '*' keystone.user_password_update name=nova password=12345
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    if name:
-        for user in kstone.users.list():
-            if user.name == name:
-                user_id = user.id
-                break
-    if not user_id:
-        return {'Error': 'Unable to resolve user id'}
-    kstone.users.update_password(user=user_id, password=password)
-    ret = 'Password updated for user ID {0}'.format(user_id)
-    if name:
-        ret += ' ({0})'.format(name)
-    return ret
+    kstone = auth(profile, **connection_args)
+    user = kstone.get_user(user_id or name)
+    if not user:
+        return None
+    kstone.keystone_client.users.update_password(user=user.user_id, password=password)
+    return True
 
 
 def user_role_add(user_id=None, user=None, tenant_id=None,
@@ -918,35 +906,3 @@ tenant_id=7167a092ece84bae8cead4bf9d15bb3b
                           'user_id': user_id,
                           'tenant_id': tenant_id}
     return ret
-
-
-def _item_list(profile=None, **connection_args):
-    '''
-    Template for writing list functions
-    Return a list of available items (keystone items-list)
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' keystone.item_list
-    '''
-    kstone = auth(profile, **connection_args).keystone_client
-    ret = []
-    for item in kstone.items.list():
-        ret.append(item.__dict__)
-        #ret[item.name] = {
-        #        'id': item.id,
-        #        'name': item.name,
-        #        }
-    return ret
-
-    # The following is a list of functions that need to be incorporated in the
-    # keystone module. This list should be updated as functions are added.
-    #
-    # endpoint-create     Create a new endpoint associated with a service
-    # endpoint-delete     Delete a service endpoint
-    # discover            Discover Keystone servers and show authentication
-    #                     protocols and
-    # bootstrap           Grants a new role to a new user on a new tenant, after
-    #                     creating each.
