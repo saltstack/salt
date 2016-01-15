@@ -5,18 +5,26 @@ Module for the management of MacOS systems that use launchd/launchctl
 :depends:   - plistlib Python module
 '''
 from __future__ import absolute_import
+from distutils.version import LooseVersion
 
 # Import python libs
+import logging
 import os
 import plistlib
+import re
 
 # Import salt libs
 import salt.utils
 import salt.utils.decorators as decorators
 import salt.ext.six as six
 
+# Set up logging
+log = logging.getLogger(__name__)
+
 # Define the module's virtual name
 __virtualname__ = 'service'
+
+BEFORE_YOSEMITE = True
 
 
 def __virtual__():
@@ -24,8 +32,12 @@ def __virtual__():
     Only work on MacOS
     '''
     if __grains__['os'] == 'MacOS':
+        if LooseVersion(__grains__['osmajorrelease']) >= '10.10':
+            global BEFORE_YOSEMITE
+            BEFORE_YOSEMITE = False
         return __virtualname__
-    return (False, 'launchctl execution module cannot be loaded: only available on MacOS.')
+    return (False, 'launchctl execution module cannot be loaded: '
+                   'only available on MacOS.')
 
 
 def _launchd_paths():
@@ -129,17 +141,22 @@ def get_all():
 
 
 def _get_launchctl_data(job_label, runas=None):
-    cmd = 'launchctl list -x {0}'.format(job_label)
+    if BEFORE_YOSEMITE:
+        cmd = 'launchctl list -x {0}'.format(job_label)
+    else:
+        cmd = 'launchctl list {0}'.format(job_label)
 
-    launchctl_xml = __salt__['cmd.run_all'](cmd, python_shell=False, runas=runas)
+    launchctl_data = __salt__['cmd.run_all'](cmd,
+                                             python_shell=False,
+                                             runas=runas)
 
-    if launchctl_xml['stderr'] == 'launchctl list returned unknown response':
+    if launchctl_data['stderr']:
         # The service is not loaded, further, it might not even exist
         # in either case we didn't get XML to parse, so return an empty
         # dict
-        return dict()
+        return None
 
-    return dict(plistlib.readPlistFromString(launchctl_xml['stdout']))
+    return launchctl_data['stdout']
 
 
 def available(job_label):
@@ -185,7 +202,14 @@ def status(job_label, runas=None):
     lookup_name = service['plist']['Label'] if service else job_label
     launchctl_data = _get_launchctl_data(lookup_name, runas=runas)
 
-    return 'PID' in launchctl_data
+    if launchctl_data:
+        if BEFORE_YOSEMITE:
+            return 'PID' in dict(plistlib.readPlistFromString(launchctl_data))
+        else:
+            pattern = '"PID" = [0-9]+;'
+            return True if re.search(pattern, launchctl_data) else False
+    else:
+        return False
 
 
 def stop(job_label, runas=None):
