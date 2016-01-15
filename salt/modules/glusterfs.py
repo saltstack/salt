@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+import sys
 import xml.etree.ElementTree as ET
 
 # Import 3rd-party libs
@@ -76,6 +77,16 @@ def _etree_to_dict(t):
     return d
 
 
+def _iter(root, term):
+    '''
+    Checks for python2.6 or python2.7
+    '''
+    if sys.version_info < (2, 7):
+        return root.getiterator(term)
+    else:
+        return root.iter(term)
+
+
 def list_peers():
     '''
     Return a list of gluster peers
@@ -106,7 +117,7 @@ def list_peers():
 
     '''
     root = _gluster_xml('peer status')
-    result = [x.find('hostname').text for x in root.iter('peer')]
+    result = [x.find('hostname').text for x in _iter(root, 'peer')]
     if len(result) == 0:
         return None
     else:
@@ -252,7 +263,7 @@ def list_volumes():
 
     get_volume_list = 'gluster --xml volume list'
     root = _gluster_xml('volume list')
-    results = [x.text for x in root.iter('volume')]
+    results = [x.text for x in _iter(root, 'volume')]
     return results
 
 
@@ -282,13 +293,13 @@ def status(name):
 
     # Build a hash to map hostname to peerid
     hostref = {}
-    for node in root.iter('node'):
+    for node in _iter(root, 'node'):
         peerid = node.find('peerid').text
         hostname = node.find('hostname').text
         if hostname not in ('NFS Server', 'Self-heal Daemon'):
             hostref[peerid] = hostname
 
-    for node in root.iter('node'):
+    for node in _iter(root, 'node'):
         hostname = node.find('hostname').text
         if hostname not in ('NFS Server', 'Self-heal Daemon'):
             path = node.find('path').text
@@ -325,12 +336,12 @@ def info(name):
     cmd = 'volume info {0}'.format(name)
     root = _gluster_xml(cmd)
 
-    volume = [x for x in root.iter('volume')][0]
+    volume = [x for x in _iter(root, 'volume')][0]
 
     ret = {name: _etree_to_dict(volume)}
 
     bricks = {}
-    for i, brick in enumerate(volume.iter('brick'), start=1):
+    for i, brick in enumerate(_iter(volume, 'brick'), start=1):
         brickkey = 'brick{0}'.format(i)
         bricks[brickkey] = {'path': brick.text}
         for child in brick.getchildren():
@@ -341,7 +352,7 @@ def info(name):
     ret[name]['bricks'] = bricks
 
     options = {}
-    for option in volume.iter('option'):
+    for option in _iter(volume, 'option'):
         options[option.find('name').text] = option.find('value').text
     ret[name]['options'] = options
 
