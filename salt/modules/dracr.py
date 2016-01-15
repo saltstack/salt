@@ -23,6 +23,8 @@ from salt.ext.six.moves import map
 
 log = logging.getLogger(__name__)
 
+__proxyenabled__ = ['fx2']
+
 try:
     run_all = __salt__['cmd.run_all']
 except NameError:
