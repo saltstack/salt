@@ -127,7 +127,7 @@ def user_present(name,
         tenantdata = __salt__['keystone.tenant_get'](name=tenant,
                                                      profile=profile,
                                                      **connection_args)
-        if 'Error' in tenantdata:
+        if tenantdata is not None:
             ret['result'] = False
             ret['comment'] = 'Tenant "{0}" does not exist'.format(tenant)
             return ret
@@ -309,7 +309,7 @@ def tenant_present(name, description=None, enabled=True, profile=None,
                                              profile=profile,
                                              **connection_args)
 
-    if 'Error' not in tenant:
+    if tenant:
         if tenant[name]['description'] != description:
             if __opts__['test']:
                 ret['result'] = None
@@ -367,7 +367,7 @@ def tenant_absent(name, profile=None, **connection_args):
     tenant = __salt__['keystone.tenant_get'](name=name,
                                              profile=profile,
                                              **connection_args)
-    if 'Error' not in tenant:
+    if tenant:
         if __opts__['test']:
             ret['result'] = None
             ret['comment'] = 'Tenant "{0}" will be deleted'.format(name)
