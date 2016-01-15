@@ -6,6 +6,9 @@ Module for editing date/time settings on Mac OS X
 '''
 from __future__ import absolute_import
 
+# Import python libs
+from datetime import datetime
+
 # Import salt libs
 import salt.utils
 from salt.exceptions import CommandExecutionError
@@ -22,6 +25,36 @@ def __virtual__():
                        'module only works on MacOS systems.')
 
     return __virtualname__
+
+
+def _get_date_time_format(dt_string):
+    '''
+    Copied from win_system.py (_get_date_time_format)
+
+    Function that detects the date/time format for the string passed.
+
+    :param str dt_string:
+        A date/time string
+
+    :return: The format of the passed dt_string
+    :rtype: str
+    '''
+    valid_formats = [
+        '%H:%M',
+        '%H:%M:%S',
+        '%m:%d:%y',
+        '%m:%d:%Y',
+        '%m/%d/%y',
+        '%m/%d/%Y'
+    ]
+    for dt_format in valid_formats:
+        try:
+            datetime.strptime(dt_string, dt_format)
+            return dt_format
+        except ValueError:
+            continue
+    msg = 'Invalid Date/Time Format: {0}'.format(dt_string)
+    raise CommandExecutionError(msg)
 
 
 def _execute_return_success(cmd):
@@ -74,8 +107,17 @@ def get_date():
 
 
 def set_date(date):
-    cmd = 'systemsetup -setdate {0}'.format(date)
-    return _execute_return_success(cmd)
+    date_format = _get_date_time_format(date)
+    dt_obj = datetime.strptime(date, date_format)
+
+    cmd = 'systemsetup -setdate {0}'.format(dt_obj.strftime('%m:%d:%Y'))
+    _execute_return_success(cmd)
+
+    new_date = get_date()
+    date_format = _get_date_time_format(new_date)
+    new_dt_obj = datetime.strptime(new_date, date_format)
+
+    return dt_obj.strftime('%m:%d:%Y') == new_dt_obj.strftime('%m:%d:%Y')
 
 
 def get_time():
@@ -86,8 +128,17 @@ def get_time():
 
 
 def set_time(time):
-    cmd = 'systemsetup -settime {0}'.format(time)
-    return _execute_return_success(cmd)
+    time_format = _get_date_time_format(time)
+    dt_obj = datetime.strptime(time, time_format)
+
+    cmd = 'systemsetup -settime {0}'.format(dt_obj.strftime('%H:%M:%S'))
+    _execute_return_success(cmd)
+
+    new_time = get_time()
+    time_format = _get_date_time_format(new_time)
+    new_dt_obj = datetime.strptime(new_time, time_format)
+
+    return dt_obj.strftime('%H:%M:%S') == new_dt_obj.strftime('%H:%M:%S')
 
 
 def get_zone():
@@ -120,7 +171,9 @@ def set_zone(time_zone):
                        'Use list_time_zones to find a valid time zone.')
     cmd = 'systemsetup -settimezone {0}'.format(time_zone)
 
-    return _execute_return_success(cmd)
+    _execute_return_success(cmd)
+
+    return time_zone in get_zone()
 
 
 def zone_compare(time_zone):
@@ -149,11 +202,15 @@ def set_using_network_time(enable):
 
     if enable in ['On', 'on', True]:
         enable = 'on'
+        expect = True
     else:
         enable = 'off'
+        expect = False
     cmd = 'systemsetup -setusingnetworktime {0}'.format(enable)
 
-    return _execute_return_success(cmd)
+    _execute_return_success(cmd)
+
+    return expect == get_using_network_time()
 
 
 def get_time_server():
@@ -164,8 +221,12 @@ def get_time_server():
 
 
 def set_time_server(time_server):
+    if time_server.lower() == 'default':
+        time_server = 'time.apple.com'
     cmd = 'systemsetup -setnetworktimeserver {0}'.format(time_server)
-    return _execute_return_success(cmd)
+    _execute_return_success(cmd)
+
+    return time_server in get_time_server()
 
 
 def get_hwclock():
