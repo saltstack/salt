@@ -436,10 +436,16 @@ def check(set=None, entry=None, family='ipv4'):
             start, end = _entry.split('-')
 
             if settype == 'hash:ip':
-                entries = [' '.join([str(ipaddress.ip_address(ip)), ' '.join(_entry_extra)]) for ip in long_range(
-                    ipaddress.ip_address(start),
-                    ipaddress.ip_address(end) + 1
-                )]
+                if _entry_extra:
+                    entries = [' '.join([str(ipaddress.ip_address(ip)), ' '.join(_entry_extra)]) for ip in long_range(
+                        ipaddress.ip_address(start),
+                        ipaddress.ip_address(end) + 1
+                    )]
+                else:
+                    entries = [' '.join([str(ipaddress.ip_address(ip))]) for ip in long_range(
+                        ipaddress.ip_address(start),
+                        ipaddress.ip_address(end) + 1
+                    )]
 
             elif settype == 'hash:net':
                 networks = ipaddress.summarize_address_range(ipaddress.ip_address(start),
@@ -448,20 +454,32 @@ def check(set=None, entry=None, family='ipv4'):
                 for network in networks:
                     _network = [str(ip) for ip in ipaddress.ip_network(network)]
                     if len(_network) == 1:
-                        __network = ' '.join([str(_network[0]), ' '.join(_entry_extra)])
+                        if _entry_extra:
+                            __network = ' '.join([str(_network[0]), ' '.join(_entry_extra)])
+                        else:
+                            __network = ' '.join([str(_network[0])])
                     else:
-                        __network = ' '.join([str(network), ' '.join(_entry_extra)])
+                        if _entry_extra:
+                            __network = ' '.join([str(network), ' '.join(_entry_extra)])
+                        else:
+                            __network = ' '.join([str(network)])
                     entries.append(__network)
             else:
                 entries = [entry]
 
         elif _entry.find('/') != -1 and _entry.count('/') == 1:
             if settype == 'hash:ip':
-                entries = [' '.join([str(ip), ' '.join(_entry_extra)]) for ip in ipaddress.ip_network(_entry)]
+                if _entry_extra:
+                    entries = [' '.join([str(ip), ' '.join(_entry_extra)]) for ip in ipaddress.ip_network(_entry)]
+                else:
+                    entries = [' '.join([str(ip)]) for ip in ipaddress.ip_network(_entry)]
             elif settype == 'hash:net':
                 _entries = [str(ip) for ip in ipaddress.ip_network(_entry)]
                 if len(_entries) == 1:
-                    entries = [' '.join([_entries[0], ' '.join(_entry_extra)])]
+                    if _entry_extra:
+                        entries = [' '.join([_entries[0], ' '.join(_entry_extra)])]
+                    else:
+                        entries = [' '.join([_entries[0]])]
                 else:
                     entries = [entry]
             else:
