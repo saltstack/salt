@@ -87,7 +87,6 @@ def _iter(root, term):
         return root.iter(term)
 
 
-
 def list_peers():
     '''
     Return a list of gluster peers
