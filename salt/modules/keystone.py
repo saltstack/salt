@@ -133,6 +133,11 @@ def auth(profile=None, **connection_args):
     return shade.operator_cloud(**kwargs)
 
 
+def version(profile=None, **connection_args):
+    kstone = auth(profile, **connection_args)
+    return kstone.keystone_client.version
+
+
 def ec2_credentials_create(user_id=None, name=None,
                            tenant_id=None, tenant=None,
                            profile=None, **connection_args):
@@ -254,6 +259,26 @@ def ec2_credentials_list(user_id=None, name=None, profile=None,
                                        'tenant_id': ec2_credential.tenant_id,
                                        'access': ec2_credential.access,
                                        'secret': ec2_credential.secret}
+    return ret
+
+
+def endpoint_search(service, filters=None, profile=None, **connection_args):
+    '''
+    Return a specific endpoint (keystone endpoint-get)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' keystone.endpoint_search keystone '{"interface": "public"}'
+    '''
+    filters = filters or {}
+    kstone = auth(profile, **connection_args)
+    service = kstone.get_service(service)
+    if not service:
+        return {'Error': 'Could not find the specified service'}
+    filters['service_id'] = service.id
+    ret = kstone.search_endpoints(filters=filters)
     return ret
 
 
