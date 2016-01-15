@@ -3697,6 +3697,23 @@ def create_volume(kwargs=None, call=None, wait_to_finish=False):
     return r_data
 
 
+def __attach_vol_to_instance(params, kws, instance_id):
+    data = aws.query(params,
+                     return_url=True,
+                     location=get_location(),
+                     provider=get_provider(),
+                     opts=__opts__,
+                     sigver='4')
+    if data[0]:
+        log.warn(
+            ('Error attaching volume {0} '
+            'to instance {1}. Retrying!').format(kws['volume_id'],
+                                                 instance_id))
+        return False
+
+    return data
+
+
 def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
     '''
     Attach a volume to an instance
@@ -3735,26 +3752,18 @@ def attach_volume(name=None, kwargs=None, instance_id=None, call=None):
 
     log.debug(params)
 
-    data = aws.query(params,
-                     return_url=True,
-                     location=get_location(),
-                     provider=get_provider(),
-                     opts=__opts__,
-                     sigver='4')
-    while data[0]:
-        log.warn(
-            ('Error attaching volume {0} '
-            'to instance {1}. Retrying!').format(kwargs['volume_id'],
-                                                 instance_id))
-        # Instance isn't running yet, so cannot attach this volume to it
-        # wait for instance to run and try again
-        time.sleep(10)
-        data = aws.query(params,
-                         return_url=True,
-                         location=get_location(),
-                         provider=get_provider(),
-                         opts=__opts__,
-                         sigver='4')
+    vm_ = get_configured_provider()
+
+    data = salt.utils.cloud.wait_for_ip(
+        __attach_vol_to_instance,
+        update_args=(params, kwargs, instance_id),
+        timeout=config.get_cloud_config_value(
+            'wait_for_ip_timeout', vm_, __opts__, default=10 * 60),
+        interval=config.get_cloud_config_value(
+            'wait_for_ip_interval', vm_, __opts__, default=10),
+        interval_multiplier=config.get_cloud_config_value(
+            'wait_for_ip_interval_multiplier', vm_, __opts__, default=1),
+    )
 
     return data
 
