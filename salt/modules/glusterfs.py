@@ -6,6 +6,7 @@ from __future__ import absolute_import
 
 # Import python libs
 import logging
+import sys
 import xml.etree.ElementTree as ET
 
 # Import 3rd-party libs
@@ -106,7 +107,11 @@ def list_peers():
 
     '''
     root = _gluster_xml('peer status')
-    result = [x.find('hostname').text for x in root.iter('peer')]
+    
+    if sys.version_info < (2, 7):
+        result = [x.find('hostname').text for x in root.getiterator('peer')]
+    else:
+        result = [x.find('hostname').text for x in root.iter('peer')]
     if len(result) == 0:
         return None
     else:
