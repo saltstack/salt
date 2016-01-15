@@ -164,12 +164,14 @@ def info_available(*names, **kwargs):
     # Run in batches
     while batch:
         cmd = 'zypper info -t package {0}'.format(' '.join(batch[:batch_size]))
-        pkg_info.extend(re.split(r"----*", __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')))
+        pkg_info.extend(re.split(r"Information for package*", __salt__['cmd.run_stdout'](cmd, output_loglevel='trace')))
         batch = batch[batch_size:]
 
     for pkg_data in pkg_info:
         nfo = {}
         for line in [data for data in pkg_data.split("\n") if ":" in data]:
+            if line.startswith("-----"):
+                continue
             kw = [data.strip() for data in line.split(":", 1)]
             if len(kw) == 2 and kw[1]:
                 nfo[kw[0].lower()] = kw[1]
