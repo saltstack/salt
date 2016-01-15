@@ -822,7 +822,7 @@ class _Swagger(object):
             ret['common'] = res.get('error')
         else:
             ret = _log_changes(ret,
-                               'overwrite_stge_variables',
+                               'overwrite_stage_variables',
                                res.get('stage'))
         return ret
 
