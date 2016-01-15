@@ -60,11 +60,11 @@ def dropfile(cachedir, user=None):
     try:
         log.info('Rotating AES key')
 
-        if (salt.utils.is_windows() and os.path.isfile(dfn) and
-                not os.access(dfn, os.W_OK)):
-            os.chmod(dfn, stat.S_IWUSR)
+        if os.path.isfile(dfn) and not os.access(dfn, os.W_OK):
+            os.chmod(dfn, stat.S_IRUSR | stat.S_IWUSR)
         with salt.utils.fopen(dfn, 'wb+') as fp_:
             fp_.write('')
+        os.chmod(dfn, stat.S_IRUSR)
         if user:
             try:
                 import pwd
