@@ -269,3 +269,47 @@ def restart(job_label, runas=None):
     '''
     stop(job_label, runas=runas)
     return start(job_label, runas=runas)
+
+
+def enabled(job_label, runas=None):
+    '''
+    Return True if the named service is enabled, false otherwise
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.enabled <service label>
+    '''
+    overrides_data = dict(plistlib.readPlist(
+        '/var/db/launchd.db/com.apple.launchd/overrides.plist'
+    ))
+    if overrides_data.get(job_label, False):
+        if overrides_data[job_label]['Disabled']:
+            return False
+        else:
+            return True
+    else:
+        return False
+
+
+def disabled(job_label, runas=None):
+    '''
+    Return True if the named service is disabled, false otherwise
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' service.disabled <service label>
+    '''
+    overrides_data = dict(plistlib.readPlist(
+        '/var/db/launchd.db/com.apple.launchd/overrides.plist'
+    ))
+    if overrides_data.get(job_label, False):
+        if overrides_data[job_label]['Disabled']:
+            return True
+        else:
+            return False
+    else:
+        return True
