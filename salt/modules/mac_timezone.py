@@ -134,7 +134,9 @@ def zone_compare(time_zone):
 
 def get_using_network_time():
     cmd = 'systemsetup -getusingnetworktime'
-    return _execute_return_result(cmd)
+    ret = _execute_return_result(cmd)
+
+    return _parse_return(ret)
 
 
 def set_using_network_time(enable):
@@ -153,7 +155,9 @@ def set_using_network_time(enable):
 
 def get_time_server():
     cmd = 'systemsetup -getnetworktimeserver'
-    return _execute_return_result(cmd)
+    ret = _execute_return_result(cmd)
+
+    return _parse_return(ret)
 
 
 def set_time_server(time_server):
