@@ -511,7 +511,7 @@ def service_list(profile=None, **connection_args):
     return ret
 
 
-def tenant_create(name, description=None, enabled=True, profile=None,
+def tenant_create(name, description=None, enabled=True, domain_id=None, profile=None,
                   **connection_args):
     '''
     Create a keystone tenant
@@ -523,9 +523,12 @@ def tenant_create(name, description=None, enabled=True, profile=None,
         salt '*' keystone.tenant_create nova description='nova tenant'
         salt '*' keystone.tenant_create test enabled=False
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    new = kstone.tenants.create(name, description, enabled)
-    return tenant_get(new.id, profile=profile, **connection_args)
+    kstone = auth(profile, **connection_args)
+    kstone.create_project(name, description=description, enabled=enabled, domain_id=domain_id or 'default')
+    return kstone.get_project(name)
+
+
+project_create = tenant_create
 
 
 def tenant_delete(tenant_id=None, name=None, profile=None, **connection_args):
@@ -540,20 +543,11 @@ def tenant_delete(tenant_id=None, name=None, profile=None, **connection_args):
         salt '*' keystone.tenant_delete tenant_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.tenant_delete name=demo
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    if name:
-        for tenant in kstone.tenants.list():
-            if tenant.name == name:
-                tenant_id = tenant.id
-                break
-    if not tenant_id:
-        return {'Error': 'Unable to resolve tenant id'}
-    kstone.tenants.delete(tenant_id)
-    ret = 'Tenant ID {0} deleted'.format(tenant_id)
-    if name:
+    kstone = auth(profile, **connection_args)
+    return kstone.delete_project(tenant_id or name)
 
-        ret += ' ({0})'.format(name)
-    return ret
+
+project_delete = tenant_delete
 
 
 def tenant_get(tenant_id=None, name=None, profile=None,
@@ -569,21 +563,14 @@ def tenant_get(tenant_id=None, name=None, profile=None,
         salt '*' keystone.tenant_get tenant_id=c965f79c4f864eaaa9c3b41904e67082
         salt '*' keystone.tenant_get name=nova
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    ret = {}
-    if name:
-        for tenant in kstone.tenants.list():
-            if tenant.name == name:
-                tenant_id = tenant.id
-                break
-    if not tenant_id:
-        return {'Error': 'Unable to resolve tenant id'}
-    tenant = kstone.tenants.get(tenant_id)
-    ret[tenant.name] = {'id': tenant.id,
-                        'name': tenant.name,
-                        'description': tenant.description,
-                        'enabled': tenant.enabled}
-    return ret
+    kstone = auth(profile, **connection_args)
+    tenant = kstone.get_project(tenant_id or name)
+    if not tenant:
+        return False
+    return {tenant.name: tenant}
+
+
+project_get = tenant_get
 
 
 def tenant_list(profile=None, **connection_args):
@@ -596,14 +583,14 @@ def tenant_list(profile=None, **connection_args):
 
         salt '*' keystone.tenant_list
     '''
-    kstone = auth(profile, **connection_args).keystone_client
+    kstone = auth(profile, **connection_args)
     ret = {}
-    for tenant in kstone.tenants.list():
-        ret[tenant.name] = {'id': tenant.id,
-                            'name': tenant.name,
-                            'description': tenant.description,
-                            'enabled': tenant.enabled}
+    for tenant in kstone.list_projects():
+        ret[tenant.name] = tenant
     return ret
+
+
+project_list = tenant_list
 
 
 def tenant_update(tenant_id=None, name=None, description=None,
@@ -620,23 +607,11 @@ def tenant_update(tenant_id=None, name=None, description=None,
         salt '*' keystone.tenant_update name=admin enabled=True
         salt '*' keystone.tenant_update c965f79c4f864eaaa9c3b41904e67082 name=admin email=admin@domain.com
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    if not tenant_id:
-        for tenant in kstone.tenants.list():
-            if tenant.name == name:
-                tenant_id = tenant.id
-                break
-    if not tenant_id:
-        return {'Error': 'Unable to resolve tenant id'}
+    kstone = auth(profile, **connection_args)
+    return kstone.update_project(tenant_id or name, description, enabled)
 
-    tenant = kstone.tenants.get(tenant_id)
-    if not name:
-        name = tenant.name
-    if not description:
-        description = tenant.description
-    if enabled is None:
-        enabled = tenant.enabled
-    kstone.tenants.update(tenant_id, name, description, enabled)
+
+project_update = tenant_update
 
 
 def token_get(profile=None, **connection_args):
