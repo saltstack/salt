@@ -44,6 +44,7 @@ from __future__ import absolute_import
 
 # Import Python libs
 import logging
+from time import strftime, strptime, gmtime
 
 log = logging.getLogger(__name__)
 
@@ -703,6 +704,182 @@ def promoted(name):
         else:  # we don't have the dataset
             ret['result'] = False
             ret['comment'] = 'dataset {0} does not exist'.format(name)
+
+    return ret
+
+
+def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
+    '''
+    create snapshots based on a schedule
+
+    name : string
+        name of filesystem or volume
+    prefix : string
+        prefix for the snapshots
+        e.g. 'test' will result in snapshots being named 'test-YYYYMMDD_HHMM'
+    recursive : boolean
+        create snapshots for all children also
+    schedule : dict
+        dict holding the schedule, the following keys are available (minute, hour,
+        day, month, and year) by default all are set to 0 the value indicated the
+        number of snapshots of that type to keep around.
+
+    ..warning::
+
+        snapshots will only be created and pruned every time the state runs.
+        a schedule must be setup to automatically run the state. this means that if
+        you run the state daily the hourly snapshot will only be made ones per day!
+
+    ..note::
+
+        because we are dependant on the scheduler on were to run snapshot are not
+        made at absolute times. times will be rounded down.
+
+        e.g. schedule runs every 10 minutes the hourly snapshot 'example-20160115_2100'
+        will be made during the first scheduled run of that hour. for exmaple if the state
+        gets execute at 21:03, 21:13, 21:23, 21:33, 21:43, and 21:53 the snapshot will be
+        taken at 21:03.
+
+    '''
+    name = name.lower()
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': ''}
+
+    ## parse parameters
+    # update default schedule
+    state_schedule = schedule if schedule else {}
+    schedule = {
+        'minute': 0,
+        'hour': 0,
+        'day': 0,
+        'month': 0,
+        'year': 0,
+    }
+    for hold in state_schedule.keys():
+        if hold not in schedule:
+            del state_schedule[hold]
+    schedule.update(state_schedule)
+    # check name
+    if name not in __salt__['zfs.list'](name, **{'type': 'filesystem'}) and name not in __salt__['zfs.list'](name, **{'type': 'volume'}):
+        ret['comment'] = '{0} is not a filesystem or a volume or does not exist'.format(name)
+        ret['result'] = False
+    # check prefix
+    if not prefix or len(prefix) < 4:
+        ret['comment'] = 'prefix ({0}) must be at least 4 long'.format(prefix)
+        ret['result'] = False
+    # check schedule
+    snap_count = 0
+    for hold in schedule.keys():
+        if not isinstance(schedule[hold], int):
+            ret['comment'] = 'schedule values must be integers'
+            ret['result'] = False
+            break
+        snap_count += schedule[hold]
+    if ret['result'] and snap_count == 0:
+        ret['comment'] = 'at least one snapshot must be schedule'
+        ret['result'] = False
+
+    # print debug info
+    log.debug('zfs.scheduled_snapshot::{0}::config::recursive = {1}'.format(name, recursive))
+    log.debug('zfs.scheduled_snapshot::{0}::config::prefix = {1}'.format(name, prefix))
+    log.debug('zfs.scheduled_snapshot::{0}::config::schedule = {1}'.format(name, schedule))
+
+    ## manage snapshots
+    if ret['result']:
+        # retreive snapshots
+        snapshots = {}
+        for key in schedule.keys():
+            snapshots[key] = []
+
+        for snap in sorted(__salt__['zfs.list'](name, **{'recursive': True, 'depth': 1, 'type': 'snapshot'}).keys()):
+            if '@' not in snap:
+                continue
+
+            snap_name = snap[snap.index('@')+1:]
+            if snap_name.startswith('{0}-'.format(prefix)):
+                holds = __salt__['zfs.holds'](snap)
+                if snap not in holds or holds[snap] == 'no holds':
+                    continue
+                for hold in holds[snap].keys():
+                    if hold not in snapshots:
+                        continue
+                    snapshots[hold].append(snap)
+
+        # create snapshot
+        needed_holds = []
+        current_timestamp = gmtime()
+        for hold in snapshots.keys():
+            # check if we need need to consider hold
+            if schedule[hold] == 0:
+                continue
+
+            # check we need a new snapshot for hold
+            if len(snapshots[hold]) > 0:
+                snapshots[hold].sort()
+                timestamp = strptime(snapshots[hold][-1], '{0}@{1}-%Y%m%d_%H%M%S'.format(name, prefix))
+                if hold == 'minute':
+                    if current_timestamp.tm_min == timestamp.tm_min and \
+                       current_timestamp.tm_hour == timestamp.tm_hour and \
+                       current_timestamp.tm_mday == timestamp.tm_mday and \
+                       current_timestamp.tm_mon == timestamp.tm_mon and \
+                       current_timestamp.tm_year == current_timestamp.tm_year:
+                        continue
+                elif hold == 'hour':
+                    if current_timestamp.tm_hour == timestamp.tm_hour and \
+                       current_timestamp.tm_mday == timestamp.tm_mday and \
+                       current_timestamp.tm_mon == timestamp.tm_mon and \
+                       current_timestamp.tm_year == current_timestamp.tm_year:
+                        continue
+                elif hold == 'day':
+                    if current_timestamp.tm_mday == timestamp.tm_mday and \
+                       current_timestamp.tm_mon == timestamp.tm_mon and \
+                       current_timestamp.tm_year == current_timestamp.tm_year:
+                        continue
+                elif hold == 'month':
+                    if current_timestamp.tm_mon == timestamp.tm_mon and \
+                       current_timestamp.tm_year == current_timestamp.tm_year:
+                        continue
+                elif hold == 'year':
+                    if current_timestamp.tm_year == current_timestamp.tm_year:
+                        continue
+                else:
+                    log.debug('zfs.scheduled_snapshot::{0}::hold_unknown = {1}'.format(name, hold))
+
+            # mark snapshot for hold as needed
+            needed_holds.append(hold)
+
+        snap_name = '{prefix}-{timestamp}'.format(
+            prefix=prefix,
+            timestamp=strftime('%Y%m%d_%H%M%S')
+        )
+        if len(needed_holds) > 0:
+            snap = '{dataset}@{snapshot}'.format(dataset=name, snapshot=snap_name)
+            res = __salt__['zfs.snapshot'](snap, **{'recursive': recursive})
+            if snap not in res or res[snap] != 'snapshotted':  # something went wrong!
+                ret['comment'] = 'error creating snapshot ({0})'.format(snap)
+                ret['result'] = False
+
+            for hold in needed_holds:
+                if not ret['result']:
+                    continue  # skip if snapshot failed
+                res = __salt__['zfs.hold'](hold, snap, **{'recursive': recursive})
+                if snap not in res or hold not in res[snap] or res[snap][hold] != 'held':
+                    ret['comment'] = 'error adding hold ({0}) to snapshot ({1})'.format(hold, snap)
+                    ret['result'] = False
+
+            if ret['result']:
+                ret['comment'] = 'scheduled snapshots were updated'
+                ret['changes']['created'] = snap
+                ret['changes']['pruned'] = []
+
+        # prune snapshots
+        ## TODO
+        ## !!!! new snapshot is NOT counted!
+
+    if ret['result'] and ret['comment'] == '':
+        ret['comment'] = 'scheduled snapshots are up to date'
 
     return ret
 
