@@ -789,6 +789,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
     ## manage snapshots
     if ret['result']:
         # retreive snapshots
+        prunable = []
         snapshots = {}
         for key in schedule.keys():
             snapshots[key] = []
@@ -801,6 +802,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
             if snap_name.startswith('{0}-'.format(prefix)):
                 holds = __salt__['zfs.holds'](snap)
                 if snap not in holds or holds[snap] == 'no holds':
+                    prunable.append(snap)
                     continue
                 for hold in holds[snap].keys():
                     hold = hold.strip()
@@ -869,17 +871,49 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
                     continue  # skip if snapshot failed
                 res = __salt__['zfs.hold'](hold, snap, **{'recursive': recursive})
                 if snap not in res or hold not in res[snap] or res[snap][hold] != 'held':
-                    ret['comment'] = 'error adding hold ({0}) to snapshot ({1})'.format(hold, snap)
+                    ret['comment'] = "{0}error adding hold ({1}) to snapshot ({2})".format(
+                        "{0}\n".format(ret['comment']) if not ret['result'] else '',
+                        hold,
+                        snap
+                    )
                     ret['result'] = False
+                else:  # add new snapshot to lists (for pruning)
+                    snapshots[hold].append(snap)
 
             if ret['result']:
                 ret['comment'] = 'scheduled snapshots were updated'
-                ret['changes']['created'] = snap
+                ret['changes']['created'] = [snap]
                 ret['changes']['pruned'] = []
 
         # prune snapshots
-        ## TODO
-        ## !!!! new snapshot is NOT counted!
+        for hold in schedule.keys():
+            if hold not in snapshots.keys():
+                continue
+            while len(snapshots[hold]) > schedule[hold]:
+                # pop oldest snapshot and release hold
+                snap = snapshots[hold].pop(0)
+                __salt__['zfs.release'](hold, snap, **{'recursive': recursive})
+                # check if snapshot is prunable
+                holds = __salt__['zfs.holds'](snap)
+                if snap not in holds or holds[snap] == 'no holds':
+                    prunable.append(snap)
+
+        if len(prunable) > 0:
+            for snap in prunable:  # destroy if hold free
+                res = __salt__['zfs.destroy'](snap, **{'recursive': recursive})
+                if snap not in res or res[snap] != 'destroyed':
+                    ret['comment'] = "{0}error prunding snapshot ({1})".format(
+                        "{0}\n".format(ret['comment']) if not ret['result'] else '',
+                        snap
+                    )
+                    ret['result'] = False
+                else:
+                    ret['comment'] = 'scheduled snapshots were updated'
+                    if 'created' not in ret['changes']:
+                        ret['changes']['created'] = []
+                    if 'pruned' not in ret['changes']:
+                        ret['changes']['pruned'] = []
+                    ret['changes']['pruned'].append(snap)
 
     if ret['result'] and ret['comment'] == '':
         ret['comment'] = 'scheduled snapshots are up to date'
