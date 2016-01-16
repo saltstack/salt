@@ -728,7 +728,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
 
         snapshots will only be created and pruned every time the state runs.
         a schedule must be setup to automatically run the state. this means that if
-        you run the state daily the hourly snapshot will only be made ones per day!
+        you run the state daily the hourly snapshot will only be made once per day!
 
     ..note::
 
@@ -820,29 +820,29 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
                 snapshots[hold].sort()
                 timestamp = strptime(snapshots[hold][-1], '{0}@{1}-%Y%m%d_%H%M%S'.format(name, prefix))
                 if hold == 'minute':
-                    if current_timestamp.tm_min == timestamp.tm_min and \
-                       current_timestamp.tm_hour == timestamp.tm_hour and \
-                       current_timestamp.tm_mday == timestamp.tm_mday and \
-                       current_timestamp.tm_mon == timestamp.tm_mon and \
-                       current_timestamp.tm_year == current_timestamp.tm_year:
+                    if current_timestamp.tm_min <= timestamp.tm_min and \
+                       current_timestamp.tm_hour <= timestamp.tm_hour and \
+                       current_timestamp.tm_mday <= timestamp.tm_mday and \
+                       current_timestamp.tm_mon <= timestamp.tm_mon and \
+                       current_timestamp.tm_year <= timestamp.tm_year:
                         continue
                 elif hold == 'hour':
-                    if current_timestamp.tm_hour == timestamp.tm_hour and \
-                       current_timestamp.tm_mday == timestamp.tm_mday and \
-                       current_timestamp.tm_mon == timestamp.tm_mon and \
-                       current_timestamp.tm_year == current_timestamp.tm_year:
+                    if current_timestamp.tm_hour <= timestamp.tm_hour and \
+                       current_timestamp.tm_mday <= timestamp.tm_mday and \
+                       current_timestamp.tm_mon <= timestamp.tm_mon and \
+                       current_timestamp.tm_year <= timestamp.tm_year:
                         continue
                 elif hold == 'day':
-                    if current_timestamp.tm_mday == timestamp.tm_mday and \
-                       current_timestamp.tm_mon == timestamp.tm_mon and \
-                       current_timestamp.tm_year == current_timestamp.tm_year:
+                    if current_timestamp.tm_mday <= timestamp.tm_mday and \
+                       current_timestamp.tm_mon <= timestamp.tm_mon and \
+                       current_timestamp.tm_year <= timestamp.tm_year:
                         continue
                 elif hold == 'month':
-                    if current_timestamp.tm_mon == timestamp.tm_mon and \
-                       current_timestamp.tm_year == current_timestamp.tm_year:
+                    if current_timestamp.tm_mon <= timestamp.tm_mon and \
+                       current_timestamp.tm_year <= timestamp.tm_year:
                         continue
                 elif hold == 'year':
-                    if current_timestamp.tm_year == current_timestamp.tm_year:
+                    if current_timestamp.tm_year <= timestamp.tm_year:
                         continue
                 else:
                     log.debug('zfs.scheduled_snapshot::{0}::hold_unknown = {1}'.format(name, hold))
