@@ -771,13 +771,12 @@ def user_password_update(user_id=None, name=None, password=None,
     user = kstone.get_user(user_id or name)
     if not user:
         return None
-    kstone.keystone_client.users.update_password(user=user.user_id, password=password)
+    kstone.update_password(user.user_id, password=password)
     return True
 
 
-def user_role_add(user_id=None, user=None, tenant_id=None,
-                  tenant=None, role_id=None, role=None, profile=None,
-                  **connection_args):
+def user_role_add(user_id=None, user=None, tenant_id=None, tenant=None, role_id=None, role=None,
+                  domain_id=None, domain=None, profile=None, **connection_args):
     '''
     Add role for user in tenant (keystone user-role-add)
 
@@ -792,41 +791,31 @@ role_id=ce377245c4ec9b70e1c639c89e8cead4
         salt '*' keystone.user_role_add user=admin tenant=admin role=admin
     '''
     kstone = auth(profile, **connection_args).keystone_client
-    if user:
-        user_id = user_get(name=user, profile=profile,
-                           **connection_args)[user]['id']
+    user = kstone.get_user(user_id or user)
+    role = kstone.get_role(role_id or role)
+    if not user or not role:
+        return {'Error': 'must specify `user` and `role`'}
+
+    tenant = kstone.get_project(tenant_id or tenant)
+
+    if kstone.cloud_config.get_api_version('identity') == '2':
+        kstone.keystone_client.roles.add_user_role(user=user.id, role=role.id, tenant=tenant_id)
     else:
-        user = next(six.iterkeys(user_get(user_id, profile=profile,
-                                          **connection_args)))['name']
-    if not user_id:
-        return {'Error': 'Unable to resolve user id'}
-
-    if tenant:
-        tenant_id = tenant_get(name=tenant, profile=profile,
-                               **connection_args)[tenant]['id']
-    else:
-        tenant = next(six.iterkeys(tenant_get(tenant_id, profile=profile,
-                                              **connection_args)))['name']
-    if not tenant_id:
-        return {'Error': 'Unable to resolve tenant id'}
-
-    if role:
-        role_id = role_get(name=role, profile=profile,
-                           **connection_args)[role]['id']
-    else:
-        role = next(six.iterkeys(role_get(role_id, profile=profile,
-                                          **connection_args)))['name']
-    if not role_id:
-        return {'Error': 'Unable to resolve role id'}
-
-    kstone.roles.add_user_role(user_id, role_id, tenant_id)
-    ret_msg = '"{0}" role added for user "{1}" for "{2}" tenant'
-    return ret_msg.format(role, user, tenant)
+        domain = kstone.get_domain(domain_id or domain)
+        if domain and tenant:
+            return {'Error': 'only specify one of `domain` or `tenant`'}
+        elif not domain and not tenant:
+            return {'Error': 'must specify one of `domain` or `tenant`'}
+        kstone.keystone_client.roles.grant(
+            user=user.id, role=role.id,
+            project=tenant.id if tenant else None,
+            domain=domain.id if domain else None
+        )
+    return True
 
 
-def user_role_remove(user_id=None, user=None, tenant_id=None,
-                     tenant=None, role_id=None, role=None,
-                     profile=None, **connection_args):
+def user_role_remove(user_id=None, user=None, tenant_id=None, tenant=None, role_id=None, role=None,
+                     domain_id=None, domain=None, profile=None, **connection_args):
     '''
     Remove role for user in tenant (keystone user-role-remove)
 
@@ -840,40 +829,36 @@ tenant_id=7167a092ece84bae8cead4bf9d15bb3b \
 role_id=ce377245c4ec9b70e1c639c89e8cead4
         salt '*' keystone.user_role_remove user=admin tenant=admin role=admin
     '''
-    kstone = auth(profile, **connection_args).keystone_client
-    if user:
-        user_id = user_get(name=user, profile=profile,
-                           **connection_args)[user]['id']
-    else:
-        user = next(six.iterkeys(user_get(user_id, profile=profile,
-                                          **connection_args)))['name']
-    if not user_id:
-        return {'Error': 'Unable to resolve user id'}
+    kstone = auth(profile, **connection_args)
+    user = kstone.get_user(user_id or user)
+    tenant = kstone.get_tenant(tenant_id or tenant)
+    role = kstone.get_role(role_id or role)
 
-    if tenant:
-        tenant_id = tenant_get(name=tenant, profile=profile,
-                               **connection_args)[tenant]['id']
-    else:
-        tenant = next(six.iterkeys(tenant_get(tenant_id, profile=profile,
-                                              **connection_args)))['name']
-    if not tenant_id:
-        return {'Error': 'Unable to resolve tenant id'}
+    if not user or not role:
+        return None
 
-    if role:
-        role_id = role_get(name=role, profile=profile,
-                           **connection_args)[role]['id']
+    if kstone.cloud_config.get_api_version('identity') == '2':
+        if not tenant:
+            return None
+        kstone.keystone_client.roles.remove_user_role(user_id, role_id, tenant_id)
     else:
-        role = next(six.iterkeys(role_get(role_id)))['name']
-    if not role_id:
-        return {'Error': 'Unable to resolve role id'}
+        domain = kstone.get_domain(domain_id or domain)
+        if domain and tenant:
+            return {'Error': 'only specify one of `domain` or `tenant`'}
+        elif not domain and not tenant:
+            return {'Error': 'must specify one of `domain` or `tenant`'}
+        kstone.keystone_client.roles.revoke(
+            role=role.id, user=user.id,
+            domain=domain.id if domain else None,
+            project=project.id if project else None
+        )
 
-    kstone.roles.remove_user_role(user_id, role_id, tenant_id)
     ret_msg = '"{0}" role removed for user "{1}" under "{2}" tenant'
     return ret_msg.format(role, user, tenant)
 
 
-def user_role_list(user_id=None, tenant_id=None, user_name=None,
-                   tenant_name=None, profile=None, **connection_args):
+def user_role_list(user_id=None, user_name=None, tenant_id=None, tenant_name=None,
+                   domain_id=None, domain=None, profile=None, **connection_args):
     '''
     Return a list of available user_roles (keystone user-roles-list)
 
@@ -886,23 +871,35 @@ user_id=298ce377245c4ec9b70e1c639c89e654 \
 tenant_id=7167a092ece84bae8cead4bf9d15bb3b
         salt '*' keystone.user_role_list user_name=admin tenant_name=admin
     '''
-    kstone = auth(profile, **connection_args).keystone_client
+    kstone = auth(profile, **connection_args)
     ret = {}
-    if user_name:
-        for user in kstone.users.list():
-            if user.name == user_name:
-                user_id = user.id
-                break
-    if tenant_name:
-        for tenant in kstone.tenants.list():
-            if tenant.name == tenant_name:
-                tenant_id = tenant.id
-                break
-    if not user_id or not tenant_id:
-        return {'Error': 'Unable to resolve user or tenant id'}
-    for role in kstone.roles.roles_for_user(user=user_id, tenant=tenant_id):
-        ret[role.name] = {'id': role.id,
-                          'name': role.name,
-                          'user_id': user_id,
-                          'tenant_id': tenant_id}
+    user = kstone.get_user(user_id or user_name)
+    tenant = kstone.get_project(tenant_id or tenant_name)
+    if not user:
+        return None
+    if kstone.cloud_config.get_api_version('identity') == '2':
+        if not tenant:
+            return None
+        for role in kstone.keystone_client.roles.roles_for_user(user=user_id, tenant=tenant_id):
+            ret[role.name] = {'id': role.id,
+                              'name': role.name,
+                              'user_id': user.id,
+                              'tenant_id': tenant.id}
+    else:
+        domain = kstone.get_domain(domain_id or domain)
+        if domain and tenant:
+            return {'Error': 'only specify one of `domain` or `tenant`'}
+        elif not domain and not tenant:
+            return {'Error': 'must specify one of `domain` or `tenant`'}
+        filters = {'user': user.id}
+        if domain:
+            filters['domain'] = domain.id
+        elif tenant:
+            filters['project'] = tenant.id
+        for assignment in kstone.list_role_assignments(filters):
+            role = kstone.get_role(assignment.id)
+            ret[role.name] = {'id': role.id,
+                              'name': role.name,
+                              'user_id': user.id,
+                              'project_id': tenant.id}
     return ret
