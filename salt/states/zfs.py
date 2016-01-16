@@ -803,7 +803,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
                 if snap not in holds or holds[snap] == 'no holds':
                     continue
                 for hold in holds[snap].keys():
-                    if hold not in snapshots:
+                    if hold not in snapshots.keys():
                         continue
                     snapshots[hold].append(snap)
 
@@ -854,6 +854,7 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
             prefix=prefix,
             timestamp=strftime('%Y%m%d_%H%M%S')
         )
+        log.debug('zfs.scheduled_snapshot::{0}::needed_holds = {1}'.format(name, needed_holds))
         if len(needed_holds) > 0:
             snap = '{dataset}@{snapshot}'.format(dataset=name, snapshot=snap_name)
             res = __salt__['zfs.snapshot'](snap, **{'recursive': recursive})
