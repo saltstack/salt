@@ -556,6 +556,23 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
 
     def __setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+        if not hasattr(self, '_original_run'):
+            # Patch the run method at runtime because decorating the run method
+            # with a function with a similar behavior would be ignored once this
+            # class'es run method is overridden.
+            self._original_run = self.run
+            self.run = self._run
+
+    def _run(self):
+        try:
+            return self._original_run()
+        except SystemExit:
+            # These are handled by multiprocessing.Process._bootstrap()
+            raise
+        except Exception as exc:
+            log.error(
+                'An un-handled exception from the multiprocessing process '
+                '\'%s\' was caught:\n', self.name, exc_info=True)
 
 
 class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
