@@ -18,19 +18,17 @@ __virtualname__ = 'timezone'
 
 def __virtual__():
     '''
-    Only for MacOS
+    Only for Mac OS X
     '''
     if not salt.utils.is_darwin():
         return (False, 'The mac_timezone module could not be loaded: '
-                       'module only works on MacOS systems.')
+                       'module only works on Mac OS X systems.')
 
     return __virtualname__
 
 
 def _get_date_time_format(dt_string):
     '''
-    Copied from win_system.py (_get_date_time_format)
-
     Function that detects the date/time format for the string passed.
 
     :param str dt_string:
@@ -100,6 +98,17 @@ def _parse_return(data):
 
 
 def get_date():
+    '''
+    Displays the current date
+
+    Returns: the system date
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.get_date
+    '''
     cmd = 'systemsetup -getdate'
     ret = _execute_return_result(cmd)
 
@@ -107,6 +116,24 @@ def get_date():
 
 
 def set_date(date):
+    '''
+    Set the current month, day, and year
+
+    :param str date: The date to set. Valid date formats are:
+    - %m:%d:%y
+    - %m:%d:%Y
+    - %m/%d/%y
+    - %m/%d/%Y
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.set_date 1/13/2016
+    '''
     date_format = _get_date_time_format(date)
     dt_obj = datetime.strptime(date, date_format)
 
@@ -121,6 +148,18 @@ def set_date(date):
 
 
 def get_time():
+    '''
+    Get the current system time.
+
+    :return: The current time in 24 hour format
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.get_time
+    '''
     cmd = 'systemsetup -gettime'
     ret = _execute_return_result(cmd)
 
@@ -128,6 +167,22 @@ def get_time():
 
 
 def set_time(time):
+    '''
+    Sets the current time. Must be in 24 hour format.
+
+    :param str time: The time to set in 24 hour format.
+    The value must be double quoted.
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.set_time '"17:34"'
+    '''
+    # time must be double quoted '"17:46"'
     time_format = _get_date_time_format(time)
     dt_obj = datetime.strptime(time, time_format)
 
@@ -142,6 +197,18 @@ def set_time(time):
 
 
 def get_zone():
+    '''
+    Displays the current time zone
+
+    :return: The current time zone
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.get_zone
+    '''
     cmd = 'systemsetup -gettimezone'
     ret = _execute_return_result(cmd)
 
@@ -149,16 +216,53 @@ def get_zone():
 
 
 def get_zonecode():
+    '''
+    Displays the current time zone abbreviated code
+
+    :return: The current time zone code
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.get_zonecode
+    '''
     cmd = 'date +%Z'
     return _execute_return_result(cmd)
 
 
 def get_offset():
+    '''
+    Displays the current time zone offset
+
+    :return: The current time zone offset
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.get_offset
+    '''
     cmd = 'date +%z'
     return _execute_return_result(cmd)
 
 
 def list_zones():
+    '''
+    Displays a list of available time zones. Use this list when setting a
+    time zone using ``timezone.set_zone``
+
+    :return: a string containing a list of time zones
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.list_zones
+    '''
     cmd = 'systemsetup -listtimezones'
     ret = _execute_return_result(cmd)
 
@@ -166,6 +270,21 @@ def list_zones():
 
 
 def set_zone(time_zone):
+    '''
+    Set the local time zone. Use ``timezone.list_zones`` to list valid time_zone
+    arguments
+
+    :param str time_zone: The time zone to apply
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.set_zone America/Denver
+    '''
     if time_zone not in list_zones():
         return (False, 'Not a valid timezone. '
                        'Use list_time_zones to find a valid time zone.')
@@ -177,6 +296,18 @@ def set_zone(time_zone):
 
 
 def zone_compare(time_zone):
+    '''
+    Compares the given timezone name with the system timezone name.
+
+    :return: True if they are the same, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.zone_compare America/Boise
+    '''
     current = get_zone()
 
     if current != time_zone:
@@ -186,6 +317,18 @@ def zone_compare(time_zone):
 
 
 def get_using_network_time():
+    '''
+    Display whether network time is on or off
+
+    :return: True if network time is on, False if off
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.get_using_network_time
+    '''
     cmd = 'systemsetup -getusingnetworktime'
     ret = _execute_return_result(cmd)
 
@@ -196,6 +339,21 @@ def get_using_network_time():
 
 
 def set_using_network_time(enable):
+    '''
+    Set whether network time is on or off.
+
+    :param enable: True to enable, False to disable. Can also use 'on' or 'off'
+    :type: str bool
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.set_using_network_time True
+    '''
     if enable not in ['On', 'on', 'Off', 'off', True, False]:
         msg = 'Must pass a boolean value. Passed: {0}'.format(enable)
         raise CommandExecutionError(msg)
@@ -214,6 +372,18 @@ def set_using_network_time(enable):
 
 
 def get_time_server():
+    '''
+    Display the currently set network time server.
+
+    :return: the network time server
+    :rtype: str
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.get_time_server
+    '''
     cmd = 'systemsetup -getnetworktimeserver'
     ret = _execute_return_result(cmd)
 
@@ -221,6 +391,23 @@ def get_time_server():
 
 
 def set_time_server(time_server):
+    '''
+    Designates a network time server. Enter the IP address or DNS name for the
+    network time server.
+
+    :param time_server: IP or DNS name of the network time server. 'Default'
+    will set it back to 'time.apple.com'
+    :type: str
+
+    :return: True if successful, False if not
+    :rtype: bool
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.set_time_server time.acme.com
+    '''
     if time_server.lower() == 'default':
         time_server = 'time.apple.com'
     cmd = 'systemsetup -setnetworktimeserver {0}'.format(time_server)
@@ -232,6 +419,12 @@ def set_time_server(time_server):
 def get_hwclock():
     '''
     Returns: Always returns 'UTC' because OS X Hardware clock is always UTC
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' timezone.get_hwclock
     '''
     return 'UTC'
 
