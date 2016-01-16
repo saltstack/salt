@@ -803,9 +803,11 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
                 if snap not in holds or holds[snap] == 'no holds':
                     continue
                 for hold in holds[snap].keys():
+                    hold = hold.strip()
                     if hold not in snapshots.keys():
                         continue
                     snapshots[hold].append(snap)
+        log.debug('zfs.scheduled_snapshot::{0}::snapshots = {1}'.format(name, snapshots))
 
         # create snapshot
         needed_holds = []
