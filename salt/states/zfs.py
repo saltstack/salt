@@ -305,7 +305,6 @@ def hold_present(name, snapshot, recursive=False):
                 if not __opts__['test']:
                     result = __salt__['zfs.hold'](name, snapshot, **{'recursive': recursive})
 
-                log.warning(result)
                 ret['result'] = snapshot in result and name in result[snapshot]
                 if ret['result']:
                     ret['changes'] = result[snapshot]
