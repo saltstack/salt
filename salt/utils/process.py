@@ -573,6 +573,10 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
             log.error(
                 'An un-handled exception from the multiprocessing process '
                 '\'%s\' was caught:\n', self.name, exc_info=True)
+            # Re-raise the exception. multiprocessing.Process will write it to
+            # sys.stderr and set the proper exitcode and we have already logged
+            # it above.
+            raise
 
 
 class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
