@@ -139,7 +139,7 @@ def _parse_openssl_req(csr_filename):
     '''
     cmd = ('openssl req -text -noout -in {0}'.format(csr_filename))
 
-    output = __salt__['cmd.run_stderr'](cmd)
+    output = __salt__['cmd.run_stdout'](cmd)
 
     output = re.sub(r': rsaEncryption', ':', output)
     output = re.sub(r'[0-9a-f]{2}:', '', output)
@@ -159,11 +159,12 @@ def _get_csr_extensions(csr):
     csrtempfile.flush()
     csryaml = _parse_openssl_req(csrtempfile.name)
     csrtempfile.close()
-    csrexts = csryaml['Certificate Request']['Data']['Requested Extensions']
+    if csryaml and 'Requested Extensions' in csryaml['Certificate Request']['Data']:
+        csrexts = csryaml['Certificate Request']['Data']['Requested Extensions']
 
-    for short_name, long_name in six.iteritems(EXT_NAME_MAPPINGS):
-        if long_name in csrexts:
-            ret[short_name] = csrexts[long_name]
+        for short_name, long_name in six.iteritems(EXT_NAME_MAPPINGS):
+            if long_name in csrexts:
+                ret[short_name] = csrexts[long_name]
 
     return ret
 
@@ -176,7 +177,7 @@ def _parse_openssl_crl(crl_filename):
     '''
     cmd = ('openssl crl -text -noout -in {0}'.format(crl_filename))
 
-    output = __salt__['cmd.run_stderr'](cmd)
+    output = __salt__['cmd.run_stdout'](cmd)
 
     crl = {}
     for line in output.split('\n'):
@@ -1114,7 +1115,6 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
             kwargs[prop] = default
 
     cert = M2Crypto.X509.X509()
-    subject = cert.get_subject()
 
     # X509 Version 3 has a value of 2 in the field.
     # Version 2 has a value of 1.
@@ -1142,10 +1142,12 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
     if 'csr' in kwargs:
         kwargs['public_key'] = kwargs['csr']
         csr = _get_request_obj(kwargs['csr'])
-        subject = csr.get_subject()
+        cert.set_subject(csr.get_subject())
         csrexts = read_csr(kwargs['csr'])['X509v3 Extensions']
 
     cert.set_pubkey(get_public_key(kwargs['public_key'], asObj=True))
+
+    subject = cert.get_subject()
 
     for entry, num in six.iteritems(subject.nid):                  # pylint: disable=unused-variable
         if entry in kwargs:
@@ -1353,7 +1355,7 @@ def verify_crl(crl, cert):
 
     cmd = ('openssl crl -noout -in {0} -CAfile {1}'.format(crltempfile.name, certtempfile.name))
 
-    output = __salt__['cmd.run_stderr'](cmd)
+    output = __salt__['cmd.run_stdout'](cmd)
 
     crltempfile.close()
     certtempfile.close()
