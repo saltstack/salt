@@ -125,6 +125,12 @@ def info_installed(*names, **attr):
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
+            if type(value) == str:
+                # Check, if string is encoded in a proper UTF-8
+                value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
+                if value != value_:
+                    value = value_
+                    log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
             if key == 'source_rpm':
                 t_nfo['source'] = value
             else:
