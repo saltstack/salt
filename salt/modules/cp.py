@@ -725,6 +725,14 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
             load['loc'] = fp_.tell()
             load['data'] = fp_.read(__opts__['file_buffer_size'])
             if not load['data'] and init_send:
+                if remove_source:
+                    try:
+                        salt.utils.rm_rf(path)
+                        log.debug('Removing source file \'{0}\''.format(path))
+                    except IOError:
+                        log.error('cp.push failed to remove file \
+                                  \'{0}\''.format(path))
+                        return False
                 return True
             ret = channel.send(load)
             if not ret:
@@ -734,12 +742,6 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
                           'setting on the master.')
                 return ret
             init_send = True
-    if remove_source:
-        try:
-            salt.utils.rm_rf(path)
-            log.debug('Removing source file \'{0}\'').format(path)
-        except IOError:
-            log.error('cp.push failed to remove file \'{0}\'').format(path)
 
 
 def push_dir(path, glob=None, upload_path=None):
