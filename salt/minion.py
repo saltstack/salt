@@ -533,6 +533,24 @@ class SMinion(MinionBase):
             self.eval_master(self.opts, failed=True)
         self.gen_modules(initial_load=True)
 
+        # If configured, cache pillar data on the minion
+        if self.opts['file_client'] == 'remote' and self.opts.get('pillar_cache', False):
+            import yaml
+            pdir = os.path.join(self.opts['cachedir'], 'pillar')
+            if not os.path.isdir(pdir):
+                os.makedirs(pdir, 0700)
+            ptop = os.path.join(pdir, 'top.sls')
+            if self.opts['environment'] is not None:
+                penv = self.opts['environment']
+            else:
+                penv = 'base'
+            cache_top = {penv: {self.opts['id']: ['cache']}}
+            with salt.utils.fopen(ptop, 'wb') as fp_:
+                fp_.write(yaml.dump(cache_top))
+            cache_sls = os.path.join(pdir, 'cache.sls')
+            with salt.utils.fopen(cache_sls, 'wb') as fp_:
+                fp_.write(yaml.dump(self.opts['pillar']))
+
     def gen_modules(self, initial_load=False):
         '''
         Load all of the modules for the minion

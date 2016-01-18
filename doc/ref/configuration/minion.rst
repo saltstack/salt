@@ -352,6 +352,22 @@ executed. By default this feature is disabled, to enable set cache_jobs to
 
     cache_jobs: False
 
+.. conf_minion:: pillar_cache
+
+``pillar_cache``
+----------------
+
+Default: ``False``
+
+The minion can locally cache rendered pillar data under 
+:conf_minion:`cachedir`/pillar. This allows a temporarily disconnected minion 
+to access last-know-good pillar data when :conf_minion:`file_client` is local. 
+By default this feature is disabled, to enable set pillar_cache to ``True``.
+
+.. code-block:: yaml
+
+    pillar_cache: False
+
 .. conf_minion:: grains_cache
 
 ``grains_cache``
