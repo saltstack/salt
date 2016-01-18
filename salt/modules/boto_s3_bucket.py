@@ -368,7 +368,7 @@ def put_lifecycle_configuration(Bucket,
 
     .. code-block:: bash
 
-        salt myminion boto_s3_bucket.put_lifecycle_config my_bucket '[{\\
+        salt myminion boto_s3_bucket.put_lifecycle_configuration my_bucket '[{\\
               "Expiration": {...},\\
               "ID": "idstring",\\
               "Prefix": "prefixstring",\\
@@ -668,3 +668,145 @@ def put_website(Bucket, ErrorDocument=None, IndexDocument=None,
         return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
 
 
+def delete_cors(Bucket,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete the CORS configuration for the given bucket
+
+    Returns {deleted: true} if CORS was deleted and returns
+    {deleted: False} if CORS was not deleted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_s3_bucket.delete_cors my_bucket
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.delete_bucket_cors(Bucket=Bucket)
+        return {'deleted': True, 'name': Bucket}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def delete_lifecycle_configuration(Bucket,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete the lifecycle configuration for the given bucket
+
+    Returns {deleted: true} if Lifecycle was deleted and returns
+    {deleted: False} if Lifecycle was not deleted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_s3_bucket.delete_lifecycle_configuration my_bucket
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.delete_bucket_lifecycle(Bucket=Bucket)
+        return {'deleted': True, 'name': Bucket}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def delete_policy(Bucket,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete the policy from the given bucket
+
+    Returns {deleted: true} if policy was deleted and returns
+    {deleted: False} if policy was not deleted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_s3_bucket.delete_policy my_bucket
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.delete_bucket_policy(Bucket=Bucket)
+        return {'deleted': True, 'name': Bucket}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def delete_replication(Bucket,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete the replication config from the given bucket
+
+    Returns {deleted: true} if replication configuration was deleted and returns
+    {deleted: False} if replication configuration was not deleted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_s3_bucket.delete_replication my_bucket
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.delete_bucket_replication(Bucket=Bucket)
+        return {'deleted': True, 'name': Bucket}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def delete_tagging(Bucket,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Delete the tags from the given bucket
+
+    Returns {deleted: true} if tags were deleted and returns
+    {deleted: False} if tags were not deleted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_s3_bucket.delete_tagging my_bucket
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.delete_bucket_tagging(Bucket=Bucket)
+        return {'deleted': True, 'name': Bucket}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
+
+
+def delete_website(Bucket,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Remove the website configuration from the given bucket
+
+    Returns {deleted: true} if website configuration was deleted and returns
+    {deleted: False} if website configuration was not deleted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion boto_s3_bucket.delete_website my_bucket
+
+    '''
+
+    try:
+        conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        conn.delete_bucket_website(Bucket=Bucket)
+        return {'deleted': True, 'name': Bucket}
+    except ClientError as e:
+        return {'deleted': False, 'error': salt.utils.boto3.get_error(e)}
