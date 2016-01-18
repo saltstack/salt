@@ -527,7 +527,8 @@ def _virtual(osdata):
                 if salt.log.is_logging_configured():
                     # systemd-detect-virt always returns > 0 on non-virtualized
                     # systems
-                    if salt.utils.is_windows() or 'systemd-detect-virt' in cmd:
+                    # prtdiag only works in the global zone, skip if it fails
+                    if salt.utils.is_windows() or 'systemd-detect-virt' in cmd or 'prtdiag' in cmd:
                         continue
                     failed_commands.add(command)
                 continue
