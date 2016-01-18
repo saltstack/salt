@@ -7,9 +7,15 @@ Utility functions for SMB connections
 
 from __future__ import absolute_import
 
+# Import python libs
+import logging
+
+log = logging.getLogger(__name__)
+
 try:
     import impacket.smbconnection
-    from impacket.smb3 import SessionError
+    from impacket.smbconnection import SessionError as smbSessionError
+    from impacket.smb3 import SessionError as smb3SessionError
     HAS_IMPACKET = True
 except ImportError:
     HAS_IMPACKET = False
@@ -71,7 +77,8 @@ def mkdirs(path, share='C$', conn=None, host=None, username=None, password=None)
         cwd = '\\'.join(comps[0:pos])
         try:
             conn.listPath(share, cwd)
-        except SessionError:
+        except (smbSessionError, smb3SessionError) as exc:
+            log.debug('Exception: {0}'.format(exc))
             conn.createDirectory(share, cwd)
         pos += 1
 
