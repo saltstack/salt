@@ -242,7 +242,8 @@ def describe(Bucket,
                             ):
                     continue
                 raise
-            del(data['ResponseMetadata'])
+            if 'ResponseMetadata' in data:
+                del(data['ResponseMetadata'])
             result[key] = data
         return {'bucket': result}
     except ClientError as e:
