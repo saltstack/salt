@@ -709,7 +709,7 @@ def promoted(name):
 
 def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
     '''
-    create snapshots based on a schedule
+    maintain a set of snapshots based on a schedule
 
     name : string
         name of filesystem or volume
@@ -728,16 +728,6 @@ def scheduled_snapshot(name, prefix, recursive=True, schedule=None):
         snapshots will only be created and pruned every time the state runs.
         a schedule must be setup to automatically run the state. this means that if
         you run the state daily the hourly snapshot will only be made once per day!
-
-    ..note::
-
-        because we are dependant on the scheduler on were to run snapshot are not
-        made at absolute times. times will be rounded down.
-
-        e.g. schedule runs every 10 minutes the hourly snapshot 'example-20160115_2100'
-        will be made during the first scheduled run of that hour. for exmaple if the state
-        gets execute at 21:03, 21:13, 21:23, 21:33, 21:43, and 21:53 the snapshot will be
-        taken at 21:03.
 
     '''
     name = name.lower()
