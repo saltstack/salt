@@ -441,7 +441,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase):
         describe_vpc = boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
 
         vpc_properties = dict(cidr_block=unicode(cidr_block),
-                              is_default=None,
+                              is_default=False,
                               state=u'available',
                               tags={'Name': 'test', 'test': 'testvalue'},
                               dhcp_options_id=u'dopt-7a8b9c2d',
