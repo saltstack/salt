@@ -107,7 +107,6 @@ Full list of builtin execution modules
     freebsdpkg
     freebsdports
     freebsdservice
-    fsutils
     gem
     genesis
     gentoo_service
