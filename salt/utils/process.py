@@ -6,6 +6,7 @@ import copy
 import os
 import sys
 import time
+import errno
 import types
 import signal
 import logging
@@ -20,6 +21,7 @@ import multiprocessing.util
 import salt.defaults.exitcodes
 import salt.utils
 import salt.log.setup
+import salt.defaults.exitcodes
 from salt.log.mixins import NewStyleClassMixIn
 
 # Import 3rd-party libs
@@ -291,17 +293,6 @@ class ProcessManager(object):
                     kwargs['log_queue'] = (
                             salt.log.setup.get_multiprocessing_logging_queue())
 
-        if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
-            process = tgt(*args, **kwargs)
-        else:
-            process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs)
-
-        if isinstance(process, SignalHandlingMultiprocessingProcess):
-            with default_signals(signal.SIGINT, signal.SIGTERM):
-                process.start()
-        else:
-            process.start()
-
         # create a nicer name for the debug log
         if name is None:
             if isinstance(tgt, types.FunctionType):
@@ -315,6 +306,17 @@ class ProcessManager(object):
                     '.{0}'.format(tgt.__class__) if str(tgt.__class__) != "<type 'type'>" else '',
                     tgt.__name__,
                 )
+
+        if type(multiprocessing.Process) is type(tgt) and issubclass(tgt, multiprocessing.Process):
+            process = tgt(*args, **kwargs)
+        else:
+            process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs, name=name)
+
+        if isinstance(process, SignalHandlingMultiprocessingProcess):
+            with default_signals(signal.SIGINT, signal.SIGTERM):
+                process.start()
+        else:
+            process.start()
         log.debug("Started '{0}' with pid {1}".format(name, process.pid))
         self._process_map[process.pid] = {'tgt': tgt,
                                           'args': args,
@@ -343,8 +345,15 @@ class ProcessManager(object):
         self._restart_processes = False
 
     def send_signal_to_processes(self, signal):
-        for pid in self._process_map:
-            os.kill(pid, signal)
+        for pid in six.iterkeys(self._process_map.copy()):
+            try:
+                os.kill(pid, signal)
+            except OSError as exc:
+                if exc.errno != errno.ESRCH:
+                    # If it's not a "No such process" error, raise it
+                    raise
+                # Otherwise, it's a dead process, remove it from the process map
+                del self._process_map[pid]
 
     @gen.coroutine
     def run(self, async=False):
@@ -418,33 +427,48 @@ class ProcessManager(object):
                     p_map['Process'].terminate()
         else:
             for pid, p_map in six.iteritems(self._process_map.copy()):
+                log.trace('Terminating pid {0}: {1}'.format(pid, p_map['Process']))
                 if args:
                     # escalate the signal to the process
                     os.kill(pid, args[0])
                 try:
                     p_map['Process'].terminate()
                 except OSError as exc:
-                    if exc.errno != 3:
+                    if exc.errno != errno.ESRCH:
                         raise
-                    del self._process_map[pid]
+                if not p_map['Process'].is_alive():
+                    try:
+                        del self._process_map[pid]
+                    except KeyError:
+                        # Race condition
+                        pass
 
         end_time = time.time() + self.wait_for_kill  # when to die
 
+        log.trace('Waiting to kill process manager children')
         while self._process_map and time.time() < end_time:
             for pid, p_map in six.iteritems(self._process_map.copy()):
+                log.trace('Joining pid {0}: {1}'.format(pid, p_map['Process']))
                 p_map['Process'].join(0)
 
-                # This is a race condition if a signal was passed to all children
-                try:
-                    del self._process_map[pid]
-                except KeyError:
-                    pass
-        # if anyone is done after
-        for pid in self._process_map:
+                if not p_map['Process'].is_alive():
+                    # The process is no longer alive, remove it from the process map dictionary
+                    try:
+                        del self._process_map[pid]
+                    except KeyError:
+                        # This is a race condition if a signal was passed to all children
+                        pass
+
+        # if any managed processes still remain to be handled, let's kill them
+        for pid, p_map in six.iteritems(self._process_map):
+            if not p_map['Process'].is_alive():
+                # If the process is no longer alive, carry on
+                continue
+            log.trace('Killing pid {0}: {1}'.format(pid, p_map['Process']))
             try:
                 os.kill(signal.SIGKILL, pid)
-            # in case the process has since decided to die, os.kill returns OSError
             except OSError:
+                # in case the process has since decided to die, os.kill returns OSError
                 pass
 
 
@@ -562,7 +586,7 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
             msg += 'SIGTERM'
         msg += '. Exiting'
         log.debug(msg)
-        exit(0)
+        exit(salt.defaults.exitcodes.EX_OK)
 
     def start(self):
         with default_signals(signal.SIGINT, signal.SIGTERM):
