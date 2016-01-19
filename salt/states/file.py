@@ -1362,6 +1362,21 @@ def managed(name,
         The specified command will be run with the managed file as an argument.
         If the command exits with a nonzero exit code, the state will fail and
         no changes will be made to the file.
+
+        For example, the following could be used to verify sudoers before making
+        changes:
+
+        .. code-block:: yaml
+
+            /etc/sudoers:
+              file.managed:
+                - user: root
+                - group: root
+                - mode: 0440
+                - source: salt://sudoers/files/sudoers.jinja
+                - template: jinja
+                - check_cmd: /usr/sbin/visudo -c -f
+
     '''
     name = os.path.expanduser(name)
 
