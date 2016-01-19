@@ -96,7 +96,7 @@ def list_upgrades(refresh=True):
 list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
 
 
-def info_installed(*names, **attr):
+def info_installed(*names, **kwargs):
     '''
     Return the information of the named package(s), installed on the system.
 
@@ -121,7 +121,7 @@ def info_installed(*names, **attr):
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor
     '''
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **attr).items():
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
