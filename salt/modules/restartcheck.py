@@ -368,7 +368,11 @@ def restartcheck(ignorelist=None, blacklist=None, excludepid=None, verbose=True)
         name, pid, path = deleted_file[0], deleted_file[1], deleted_file[2]
         if path in blacklist or pid in excludepid:
             continue
-        readlink = os.readlink('/proc/{0}/exe'.format(pid))
+        try:
+            readlink = os.readlink('/proc/{0}/exe'.format(pid))
+        except OSError:
+            excludepid.append(pid)
+            continue
         try:
             packagename = owners_cache[readlink]
         except KeyError:
