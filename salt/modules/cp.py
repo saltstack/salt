@@ -777,7 +777,7 @@ def push_dir(path, glob=None, upload_path=None):
         return push(path, upload_path=upload_path)
     else:
         filelist = []
-        for root, files in os.walk(path):
+        for root, _, files in os.walk(path):
             filelist += [os.path.join(root, tmpfile) for tmpfile in files]
         if glob is not None:
             filelist = [fi for fi in filelist if fnmatch.fnmatch(os.path.basename(fi), glob)]
