@@ -226,7 +226,6 @@ def describe(Bucket,
                 'Policy': conn.get_bucket_policy,
                 'Replication': conn.get_bucket_replication,
                 'RequestPayment': conn.get_bucket_request_payment,
-                'Tagging': conn.get_bucket_tagging,
                 'Versioning': conn.get_bucket_versioning,
                 'Website': conn.get_bucket_website}.iteritems():
             try:
@@ -245,6 +244,15 @@ def describe(Bucket,
             if 'ResponseMetadata' in data:
                 del(data['ResponseMetadata'])
             result[key] = data
+
+        result['Tagging'] = {}
+        try:
+            data = conn.get_bucket_tagging(Bucket=Bucket)
+            for tagdef in data.get('TagSet'):
+                result['Tagging'][tagdef.get('Key')] = tagdef.get('Value')
+        except ClientError as e:
+            if not e.response.get('Error', {}).get('Code') == 'NoSuchTagSet':
+                raise
         return {'bucket': result}
     except ClientError as e:
         err = salt.utils.boto3.get_error(e)
