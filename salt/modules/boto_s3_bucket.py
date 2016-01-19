@@ -400,7 +400,7 @@ def put_lifecycle_configuration(Bucket,
 
 
 def put_logging(Bucket,
-           TargetBucket, TargetPrefix, TargetGrants,
+           TargetBucket, TargetPrefix, TargetGrants=None,
            region=None, key=None, keyid=None, profile=None):
     '''
     Given a valid config, update the logging parameters for a bucket.
@@ -418,15 +418,21 @@ def put_logging(Bucket,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+        logstate = {}
+        for key, val in {
+                'TargetBucket': TargetBucket,
+                'TargetGrants': TargetGrants,
+                'TargetPrefix': TargetPrefix,
+        }.iteritems():
+            if val is not None:
+                logstate[key] = val
+        if logstate:
+            logstatus = {'LoggingEnabled': logstate}
+        else:
+            logstatus = {}
         if TargetGrants is not None and isinstance(TargetGrants, string_types):
             TargetGrants = json.loads(TargetGrants)
-        conn.put_bucket_logging(Bucket=Bucket, BucketLoggingStatus={
-                'LoggingEnabled': {
-                    'TargetBucket': TargetBucket,
-                    'TargetGrants': TargetGrants,
-                    'TargetPrefix': TargetPrefix,
-                }
-        })
+        conn.put_bucket_logging(Bucket=Bucket, BucketLoggingStatus=logstatus)
         return {'updated': True, 'name': Bucket}
     except ClientError as e:
         return {'updated': False, 'error': salt.utils.boto3.get_error(e)}
