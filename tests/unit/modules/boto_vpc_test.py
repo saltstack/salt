@@ -493,7 +493,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_properties = dict(id=vpc.id,
                               cidr_block=six.text_type(cidr_block),
-                              is_default=None,
+                              is_default=False,
                               state=u'available',
                               tags={u'Name': u'test', u'test': u'testvalue'},
                               dhcp_options_id=u'dopt-7a8b9c2d',
