@@ -28,6 +28,11 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
         - classifier: Classifier
           .. versionadded:: 2015.8.0
         - version: Version
+            One of the following:
+            - Version to download
+            - ``latest`` - Download the latest release of this artifact
+            - ``latest_snapshot`` - Download the latest snapshot for this artifact
+
         - username: Artifactory username
           .. versionadded:: 2015.8.0
         - password: Artifactory password
@@ -95,12 +100,12 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None):
 
 
 def __fetch_from_artifactory(artifact, target_dir, target_file):
-    if 'latest_snapshot' in artifact and artifact['latest_snapshot']:
+    if ('latest_snapshot' in artifact and artifact['latest_snapshot']) or artifact['version'] == 'latest_snapshot':
         fetch_result = __salt__['artifactory.get_latest_snapshot'](artifactory_url=artifact['artifactory_url'],
                                                                    repository=artifact['repository'],
                                                                    group_id=artifact['group_id'],
                                                                    artifact_id=artifact['artifact_id'],
-                                                                   packaging=artifact['packaging'],
+                                                                   packaging=artifact['packaging'] if 'packaging' in artifact else 'jar',
                                                                    classifier=artifact['classifier'] if 'classifier' in artifact else None,
                                                                    target_dir=target_dir,
                                                                    target_file=target_file,
@@ -111,19 +116,30 @@ def __fetch_from_artifactory(artifact, target_dir, target_file):
                                                             repository=artifact['repository'],
                                                             group_id=artifact['group_id'],
                                                             artifact_id=artifact['artifact_id'],
-                                                            packaging=artifact['packaging'],
+                                                            packaging=artifact['packaging'] if 'packaging' in artifact else 'jar',
                                                             classifier=artifact['classifier'] if 'classifier' in artifact else None,
                                                             version=artifact['version'],
                                                             target_dir=target_dir,
                                                             target_file=target_file,
                                                             username=artifact['username'] if 'username' in artifact else None,
                                                             password=artifact['password'] if 'password' in artifact else None)
+    elif artifact['version'] == 'latest':
+        fetch_result = __salt__['artifactory.get_latest_release'](artifactory_url=artifact['artifactory_url'],
+                                                                   repository=artifact['repository'],
+                                                                   group_id=artifact['group_id'],
+                                                                   artifact_id=artifact['artifact_id'],
+                                                                   packaging=artifact['packaging'] if 'packaging' in artifact else 'jar',
+                                                                   classifier=artifact['classifier'] if 'classifier' in artifact else None,
+                                                                   target_dir=target_dir,
+                                                                   target_file=target_file,
+                                                                   username=artifact['username'] if 'username' in artifact else None,
+                                                                   password=artifact['password'] if 'password' in artifact else None)
     else:
         fetch_result = __salt__['artifactory.get_release'](artifactory_url=artifact['artifactory_url'],
                                                            repository=artifact['repository'],
                                                            group_id=artifact['group_id'],
                                                            artifact_id=artifact['artifact_id'],
-                                                           packaging=artifact['packaging'],
+                                                           packaging=artifact['packaging'] if 'packaging' in artifact else 'jar',
                                                            classifier=artifact['classifier'] if 'classifier' in artifact else None,
                                                            version=artifact['version'],
                                                            target_dir=target_dir,
