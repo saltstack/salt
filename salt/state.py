@@ -380,7 +380,7 @@ class Compiler(object):
                     continue
                 if not isinstance(body[state], list):
                     errors.append(
-                        'State {0!r} in SLS {1!r} is not formed as a list'
+                        'State \'{0}\' in SLS \'{1}\' is not formed as a list'
                         .format(name, body['__sls__'])
                     )
                 else:
@@ -409,7 +409,7 @@ class Compiler(object):
                             if argfirst in ('require', 'watch', 'prereq', 'onchanges'):
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(('The {0}'
-                                    ' statement in state {1!r} in SLS {2!r} '
+                                    ' statement in state \'{1}\' in SLS \'{2}\' '
                                     'needs to be formed as a list').format(
                                         argfirst,
                                         name,
@@ -991,7 +991,7 @@ class State(object):
                     continue
                 if not isinstance(body[state], list):
                     errors.append(
-                        'State {0!r} in SLS {1!r} is not formed as a list'
+                        'State \'{0}\' in SLS \'{1}\' is not formed as a list'
                         .format(name, body['__sls__'])
                     )
                 else:
@@ -1028,8 +1028,8 @@ class State(object):
                             if argfirst in ('require', 'watch', 'prereq', 'onchanges'):
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(
-                                        'The {0} statement in state {1!r} in '
-                                        'SLS {2!r} needs to be formed as a '
+                                        'The {0} statement in state \'{1}\' in '
+                                        'SLS \'{2}\' needs to be formed as a '
                                         'list'.format(argfirst,
                                                       name,
                                                       body['__sls__'])
@@ -2240,7 +2240,7 @@ class State(object):
                     #     - regex: ^requirepass
                     if comps[0] in skeys:
                         errors.append(
-                            'ID {0!r} in template {1!r} contains multiple '
+                            'ID \'{0}\' in template \'{1}\' contains multiple '
                             'state declarations of the same type'
                             .format(name, template)
                         )
@@ -2892,7 +2892,7 @@ class BaseHighState(object):
                     #           - regex: ^requirepass
                     if comps[0] in skeys:
                         errors.append(
-                            'ID {0!r} in SLS {1!r} contains multiple state '
+                            'ID \'{0}\' in SLS \'{1}\' contains multiple state '
                             'declarations of the same type'.format(name, sls)
                         )
                         continue
