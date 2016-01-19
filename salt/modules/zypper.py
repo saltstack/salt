@@ -129,7 +129,7 @@ def info_installed(*names, **kwargs):
                 # Check, if string is encoded in a proper UTF-8
                 value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
                 if value != value_:
-                    value = value_
+                    value = kwargs.get('errors', 'ignore') == 'ignore' and value_ or 'N/A (broken)'
                     log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
             if key == 'source_rpm':
                 t_nfo['source'] = value
