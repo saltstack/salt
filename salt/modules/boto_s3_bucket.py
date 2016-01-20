@@ -316,10 +316,12 @@ def put_acl(Bucket,
 
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-        if AccessControlPolicy is not None and not isinstance(AccessControlPolicy, string_types):
-                    AccessControlPolicy = json.dumps(AccessControlPolicy)
         kwargs = {}
-        for arg in ('ACL', 'AccessControlPolicy',
+        if AccessControlPolicy is not None:
+            if isinstance(AccessControlPolicy, string_types):
+            	AccessControlPolicy = json.loads(AccessControlPolicy)
+            kwargs['AccessControlPolicy'] = AccessControlPolicy
+        for arg in ('ACL',
                     'GrantFullControl',
                     'GrantRead', 'GrantReadACP',
                     'GrantWrite', 'GrantWriteACP'):

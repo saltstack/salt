@@ -141,6 +141,7 @@ from __future__ import absolute_import
 import logging
 import os
 import os.path
+from copy import deepcopy
 
 # Import Salt Libs
 import salt.utils
@@ -153,6 +154,98 @@ def __virtual__():
     Only load if boto is available.
     '''
     return 'boto_s3_bucket' if 'boto_s3_bucket.exists' in __salt__ else False
+
+
+def _get_canonical_id(region, key, keyid, profile):
+    return __salt__['boto_s3_bucket.list'](
+        region=region, key=key, keyid=keyid, profile=profile
+    ).get('Owner')
+
+
+def _acl_to_grant(ACL, owner_canonical_id):
+    if 'AccessControlPolicy' in ACL:
+       ret = deepcopy(ACL['AccessControlPolicy'])
+       # Type is required as input, but is not returned as output
+       for item in ret.get('Grants'):
+           if 'Type' in item.get('Grantee',()):
+               del item['Grantee']['Type']
+       return ret
+    ret = {
+        'Grants': [{
+            'Grantee': owner_canonical_id,
+            'Permission': 'FULL_CONTROL'
+        }],
+        'Owner': owner_canonical_id
+    }
+    if 'ACL' in ACL:
+        # This is syntactic sugar; expand it out
+        acl = ACL['ACL']
+        if acl in ('public-read', 'public-read-write'):
+            ret['Grants'].append({
+                'Grantee': {
+                    'URI': 'http://acs.amazonaws.com/groups/global/AllUsers'
+                },
+                'Permission': 'READ'
+            })
+        if  acl == 'public-read-write':
+            ret['Grants'].append({
+                'Grantee': {
+                    'URI': 'http://acs.amazonaws.com/groups/global/AllUsers'
+                },
+                'Permission': 'WRITE'
+            })
+        if acl == 'aws-exec-read':
+            ret['Grants'].append({
+                'Grantee': {
+                    'DisplayName': 'za-team',
+                    'ID': '6aa5a366c34c1cbe25dc49211496e913e0351eb0e8c37aa3477e40942ec6b97c'
+                },
+                'Permission': 'READ'
+            })
+        if acl == 'authenticated-read':
+            ret['Grants'].append({
+                'Grantee': {
+                    'URI': 'http://acs.amazonaws.com/groups/global/AuthenticatedUsers'
+                },
+                'Permission': 'READ'
+            })
+        if acl == 'log-delivery-write':
+            for permission in ('WRITE', 'READ_ACP'):
+                ret['Grants'].append({
+                    'Grantee': {
+                        'URI': 'http://acs.amazonaws.com/groups/s3/LogDelivery'
+                    },
+                    'Permission': permission
+                })
+    for key, permission in (
+        ('GrantFullControl', 'FULL_CONTROL'),
+        ('GrantRead', 'READ'),
+        ('GrantReadACP', 'READ_ACP'),
+        ('GrantWrite', 'WRITE'),
+        ('GrantWriteACP', 'WRITE_ACP'),
+    ):
+        if key in ACL:
+            for item in ACL[key].split(','):
+                kind, val = item.split('=')
+                if kind == 'uri':
+                    grantee = {
+                        'URI': val,
+                    }
+                elif kind == 'id':
+                    grantee = {
+                        # 'DisplayName': ???,
+                        'ID': val
+                    }
+                else:
+                    grantee = {
+                        # 'DisplayName': ???,
+                        # 'ID': ???
+                    }
+                ret['Grants'].append({
+                    'Grantee': grantee,
+                    'Permission': permission
+                })
+    return ret
 
 
 def present(name, Bucket,
@@ -319,31 +412,34 @@ def present(name, Bucket,
     if not bool(Versioning) and _describe.get('Versioning') is not None:
         Versioning = {'Status': 'Suspended'}
 
-    for varname, func, current, desired, deleter in (
-            ('ACL', 'put_acl', _describe.get('ACL'), ACL, None),
-            ('CORS', 'put_cors', _describe.get('CORS'), {"CORSRules": CORSRules} if CORSRules else None,
+    ocid = _get_canonical_id(region, key, keyid, profile)
+    for varname, func, current, compare, desired, deleter in (
+            ('ACL', 'put_acl', _describe.get('ACL'), _acl_to_grant(ACL, ocid), ACL, None),
+            ('CORS', 'put_cors', _describe.get('CORS'), None, {"CORSRules": CORSRules} if CORSRules else None,
                                                 'delete_cors'),
             ('LifecycleConfiguration', 'put_lifecycle_configuration', _describe.get('LifecycleConfiguration'), 
+                                            None,
                                             {"Rules": LifecycleConfiguration} if LifecycleConfiguration else None,
                                             'delete_lifecycle_configuration'),
-            ('Logging', 'put_logging', _describe.get('Logging',{}).get('LoggingEnabled'), Logging, None),
-            ('NotificationConfiguration', 'put_notification_configuration', _describe.get('NotificationConfiguration'), NotificationConfiguration, None),
-            ('Policy', 'put_policy', _describe.get('Policy',{}).get('Policy'), Policy, 'delete_policy'),
+            ('Logging', 'put_logging', _describe.get('Logging',{}).get('LoggingEnabled'), None, Logging, None),
+            ('NotificationConfiguration', 'put_notification_configuration', _describe.get('NotificationConfiguration'), None, NotificationConfiguration, None),
+            ('Policy', 'put_policy', _describe.get('Policy',{}).get('Policy'), None, Policy, 'delete_policy'),
             # versioning must be set before replication
-            ('Versioning', 'put_versioning', _describe.get('Versioning'), Versioning, None),
-            ('Replication', 'put_replication', _describe.get('Replication',{}).get('ReplicationConfiguration'), Replication, 'delete_replication'),
-            ('RequestPayment', 'put_request_payment', _describe.get('RequestPayment'), RequestPayment, None),
-            ('Tagging', 'put_tagging', Tagging, Tagging, 'delete_tagging'),
-            ('Website', 'put_website', Website, Website, 'delete_website'),
+            ('Versioning', 'put_versioning', _describe.get('Versioning'), None, Versioning, None),
+            ('Replication', 'put_replication',
+            _describe.get('Replication',{}).get('ReplicationConfiguration'), None, Replication, 'delete_replication'),
+            ('RequestPayment', 'put_request_payment', _describe.get('RequestPayment'), None, RequestPayment, None),
+            ('Tagging', 'put_tagging', Tagging, None, Tagging, 'delete_tagging'),
+            ('Website', 'put_website', Website, None, Website, 'delete_website'),
     ):
-        diffs = salt.utils.compare_dicts(current or {}, desired or {})
+        diffs = salt.utils.compare_dicts(current or {}, compare or desired or {})
         if bool(diffs):
             if __opts__['test']:
                 msg = 'S3 bucket {0} set to be modified.'.format(Bucket)
                 ret['comment'] = msg
                 ret['result'] = None
                 return ret
-            ret['changes'].setdefault('new', {})[varname] = desired
+            ret['changes'].setdefault('new', {})[varname] = compare or desired
             ret['changes'].setdefault('old', {})[varname] = current
 
             log.info("#####!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
