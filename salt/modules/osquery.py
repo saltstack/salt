@@ -440,7 +440,7 @@ def listening_ports(attrs=None, where=None):
 
 
 def logged_in_users(attrs=None, where=None):
-    '''
+    r'''
     Return logged_in_users\_ information from osquery
 
     CLI Example:
@@ -453,7 +453,7 @@ def logged_in_users(attrs=None, where=None):
 
 
 def mounts(attrs=None, where=None):
-    '''
+    r'''
     Return mounts\_ information from osquery
 
     CLI Example:
