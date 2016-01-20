@@ -475,7 +475,7 @@ class ProcessManager(object):
 class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
 
     def __new__(cls, *args, **kwargs):
-        instance = super(MultiprocessingProcess, cls).__new__(cls, *args, **kwargs)
+        instance = super(MultiprocessingProcess, cls).__new__(cls)
         # Patch the run method at runtime because decorating the run method
         # with a function with a similar behavior would be ignored once this
         # class'es run method is overridden.
