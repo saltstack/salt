@@ -653,7 +653,7 @@ def create_swap_disk(vm_, linode_id, swap_size=None):
 
 
 def create_data_disk(vm_=None, linode_id=None, data_size=None):
-    '''
+    r'''
     Create a data disk for the linode (type is hardcoded to ext4 at the moment)
 
     .. versionadded:: Boron
