@@ -139,7 +139,7 @@ def _check_pkg_version_format(pkg):
                         break
             else:
                 install_req = pip.req.InstallRequirement.from_line(pkg)
-    except ValueError as exc:
+    except (ValueError, InstallationError) as exc:
         ret['result'] = False
         if not from_vcs and '=' in pkg and '==' not in pkg:
             ret['comment'] = (
