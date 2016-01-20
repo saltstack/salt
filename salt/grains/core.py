@@ -796,7 +796,7 @@ def _virtual(osdata):
             zone = __salt__['cmd.run']('{0}'.format(zonename))
             if zone != 'global':
                 grains['virtual'] = 'zone'
-                if osdata['os'] == 'SmartOS':
+                if salt.utils.is_smartos_zone():
                     grains.update(_smartos_zone_data())
         # Check if it's a branded zone (i.e. Solaris 8/9 zone)
         if isdir('/.SUNWnative'):
@@ -1355,10 +1355,10 @@ def os_data():
         grains['os_family'] = 'Solaris'
         if salt.utils.is_smartos():
             # See https://github.com/joyent/smartos-live/issues/224
-            uname_v = __salt__['cmd.run']('uname -v')
+            uname_v = os.uname()[3]
             grains['os'] = grains['osfullname'] = 'SmartOS'
             grains['osrelease'] = uname_v[uname_v.index('_')+1:]
-        if salt.utils.is_smartos_globalzone():
+        elif salt.utils.is_smartos_globalzone():
             grains.update(_smartos_computenode_data())
         elif os.path.isfile('/etc/release'):
             with salt.utils.fopen('/etc/release', 'r') as fp_:
@@ -2025,9 +2025,16 @@ def _smartos_zone_data():
     grains['zonename'] = __salt__['cmd.run']('zonename')
     grains['zoneid'] = __salt__['cmd.run']('zoneadm list -p | awk -F: \'{ print $1 }\'', python_shell=True)
     grains['hypervisor_uuid'] = __salt__['cmd.run']('mdata-get sdc:server_uuid')
+    if "FAILURE" in grains['hypervisor_uuid'] or "No metadata" in grains['hypervisor_uuid']:
+        grains['hypervisor_uuid'] = "Unknown"
     grains['datacenter'] = __salt__['cmd.run']('mdata-get sdc:datacenter_name')
     if "FAILURE" in grains['datacenter'] or "No metadata" in grains['datacenter']:
         grains['datacenter'] = "Unknown"
+
+    # allow roles to be defined in vmadm metadata
+    for mdata_grain in __salt__['cmd.run']('mdata-list').splitlines():
+        grain_name = 'mdata_{0}'.format(mdata_grain) if mdata_grain != 'salt:role' else 'role'
+        grains[grain_name] = __salt__['cmd.run']('mdata-get {0}'.format(mdata_grain))
 
     return grains
 
