@@ -176,12 +176,13 @@ class Pillar(object):
     '''
     Read over the pillar top files and render the pillar data
     '''
-    def __init__(self, opts, grains, id_, saltenv, ext=None, functions=None,
+    def __init__(self, opts, grains, minion_id, saltenv, ext=None, functions=None,
                  pillar=None, pillarenv=None):
+        self.minion_id = minion_id
         # Store the file_roots path so we can restore later. Issue 5449
         self.actual_file_roots = opts['file_roots']
         # use the local file client
-        self.opts = self.__gen_opts(opts, grains, id_, saltenv=saltenv, ext=ext, pillarenv=pillarenv)
+        self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, ext=ext, pillarenv=pillarenv)
         self.client = salt.fileclient.get_file_client(self.opts, True)
 
         if opts.get('file_client', '') == 'local':
@@ -227,7 +228,7 @@ class Pillar(object):
             return {}
         return ext
 
-    def __gen_opts(self, opts_in, grains, id_, saltenv=None, ext=None, env=None, pillarenv=None):
+    def __gen_opts(self, opts_in, grains, saltenv=None, ext=None, env=None, pillarenv=None):
         '''
         The options need to be altered to conform to the file client
         '''
@@ -316,7 +317,7 @@ class Pillar(object):
             errors.append(
                     ('Rendering Primary Top file failed, render error:\n{0}'
                         .format(exc)))
-            log.error('Pillar rendering failed for minion {0}: '.format(self.opts['id']),
+            log.error('Pillar rendering failed for minion {0}: '.format(self.minion_id),
                     exc_info=True)
 
         # Search initial top files for includes
@@ -590,26 +591,24 @@ class Pillar(object):
         '''
         ext = None
 
-        # try the new interface, which includes the minion ID
-        # as first argument
         if isinstance(val, dict):
-            ext = self.ext_pillars[key](self.opts['id'], pillar, **val)
+            ext = self.ext_pillars[key](self.minion_id, pillar, **val)
         elif isinstance(val, list):
             if key == 'git':
-                ext = self.ext_pillars[key](self.opts['id'],
+                ext = self.ext_pillars[key](self.minion_id,
                                             val,
                                             pillar_dirs)
             else:
-                ext = self.ext_pillars[key](self.opts['id'],
+                ext = self.ext_pillars[key](self.minion_id,
                                             pillar,
                                             *val)
         else:
             if key == 'git':
-                ext = self.ext_pillars[key](self.opts['id'],
+                ext = self.ext_pillars[key](self.minion_id,
                                             val,
                                             pillar_dirs)
             else:
-                ext = self.ext_pillars[key](self.opts['id'],
+                ext = self.ext_pillars[key](self.minion_id,
                                             pillar,
                                             val)
         return ext
