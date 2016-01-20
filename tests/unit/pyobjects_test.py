@@ -82,6 +82,18 @@ import salt://map.sls
 Pkg.removed("samba-imported", names=[Samba.server, Samba.client])
 '''
 
+recursive_map_template = '''#!pyobjects
+from salt://map.sls import Samba
+
+class CustomSamba(Samba):
+    pass
+'''
+
+recursive_import_template = '''#!pyobjects
+from salt://recursive_map.sls import CustomSamba
+
+Pkg.removed("samba-imported", names=[CustomSamba.server, CustomSamba.client])'''
+
 from_import_template = '''#!pyobjects
 # this spacing is like this on purpose to ensure it's stripped properly
 from   salt://map.sls  import     Samba
@@ -315,6 +327,9 @@ class RendererTests(RendererMixin, StateTests):
         self.write_template_file("map.sls", map_template)
         render_and_assert(import_template)
         render_and_assert(from_import_template)
+
+        self.write_template_file("recursive_map.sls", recursive_map_template)
+        render_and_assert(recursive_import_template)
 
     def test_random_password(self):
         '''Test for https://github.com/saltstack/salt/issues/21796'''
