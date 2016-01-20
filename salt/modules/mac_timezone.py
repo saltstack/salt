@@ -398,23 +398,3 @@ def set_time_server(time_server='time.apple.com'):
     _execute_return_success(cmd)
 
     return time_server in get_time_server()
-
-
-def get_hwclock():
-    '''
-    Returns: Always returns 'UTC' because OS X Hardware clock is always UTC
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' timezone.get_hwclock
-    '''
-    return 'UTC'
-
-
-def set_hwclock():
-    '''
-    Setting not editable in Mac
-    '''
-    pass
