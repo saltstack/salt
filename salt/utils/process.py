@@ -473,6 +473,16 @@ class ProcessManager(object):
 
 
 class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
+
+    def __new__(cls, *args, **kwargs):
+        instance = super(MultiprocessingProcess, cls).__new__(cls, *args, **kwargs)
+        # Patch the run method at runtime because decorating the run method
+        # with a function with a similar behavior would be ignored once this
+        # class'es run method is overridden.
+        instance._original_run = instance.run
+        instance.run = instance._run
+        return instance
+
     def __init__(self, *args, **kwargs):
         if (salt.utils.is_windows() and
                 not hasattr(self, '_is_child') and
@@ -556,12 +566,6 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
 
     def __setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
-        if not hasattr(self, '_original_run'):
-            # Patch the run method at runtime because decorating the run method
-            # with a function with a similar behavior would be ignored once this
-            # class'es run method is overridden.
-            self._original_run = self.run
-            self.run = self._run
 
     def _run(self):
         try:
