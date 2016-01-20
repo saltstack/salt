@@ -427,7 +427,7 @@ def last(attrs=None, where=None):
 
 
 def listening_ports(attrs=None, where=None):
-    '''
+    r'''
     Return listening_ports\_ information from osquery
 
     CLI Example:
