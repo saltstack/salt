@@ -109,9 +109,7 @@ def get_date():
 
         salt '*' timezone.get_date
     '''
-    cmd = 'systemsetup -getdate'
-    ret = _execute_return_result(cmd)
-
+    ret = _execute_return_result('systemsetup -getdate')
     return _parse_return(ret)
 
 
@@ -160,9 +158,7 @@ def get_time():
 
         salt '*' timezone.get_time
     '''
-    cmd = 'systemsetup -gettime'
-    ret = _execute_return_result(cmd)
-
+    ret = _execute_return_result('systemsetup -gettime')
     return _parse_return(ret)
 
 
@@ -209,9 +205,7 @@ def get_zone():
 
         salt '*' timezone.get_zone
     '''
-    cmd = 'systemsetup -gettimezone'
-    ret = _execute_return_result(cmd)
-
+    ret = _execute_return_result('systemsetup -gettimezone')
     return _parse_return(ret)
 
 
@@ -228,8 +222,7 @@ def get_zonecode():
 
         salt '*' timezone.get_zonecode
     '''
-    cmd = 'date +%Z'
-    return _execute_return_result(cmd)
+    return _execute_return_result('date +%Z')
 
 
 def get_offset():
@@ -245,8 +238,7 @@ def get_offset():
 
         salt '*' timezone.get_offset
     '''
-    cmd = 'date +%z'
-    return _execute_return_result(cmd)
+    return _execute_return_result('date +%z')
 
 
 def list_zones():
@@ -263,9 +255,7 @@ def list_zones():
 
         salt '*' timezone.list_zones
     '''
-    cmd = 'systemsetup -listtimezones'
-    ret = _execute_return_result(cmd)
-
+    ret = _execute_return_result('systemsetup -listtimezones')
     return _parse_return(ret)
 
 
@@ -288,9 +278,8 @@ def set_zone(time_zone):
     if time_zone not in list_zones():
         return (False, 'Not a valid timezone. '
                        'Use list_time_zones to find a valid time zone.')
-    cmd = 'systemsetup -settimezone {0}'.format(time_zone)
 
-    _execute_return_success(cmd)
+    _execute_return_success('systemsetup -settimezone {0}'.format(time_zone))
 
     return time_zone in get_zone()
 
@@ -329,8 +318,7 @@ def get_using_network_time():
 
         salt '*' timezone.get_using_network_time
     '''
-    cmd = 'systemsetup -getusingnetworktime'
-    ret = _execute_return_result(cmd)
+    ret = _execute_return_result('systemsetup -getusingnetworktime')
 
     if _parse_return(ret) == 'On':
         return True
@@ -384,19 +372,17 @@ def get_time_server():
 
         salt '*' timezone.get_time_server
     '''
-    cmd = 'systemsetup -getnetworktimeserver'
-    ret = _execute_return_result(cmd)
-
+    ret = _execute_return_result('systemsetup -getnetworktimeserver')
     return _parse_return(ret)
 
 
-def set_time_server(time_server):
+def set_time_server(time_server='time.apple.com'):
     '''
     Designates a network time server. Enter the IP address or DNS name for the
     network time server.
 
-    :param time_server: IP or DNS name of the network time server. 'Default'
-    will set it back to 'time.apple.com'
+    :param time_server: IP or DNS name of the network time server. If nothing is
+    passed the time server will be set to the OS X default of 'time.apple.com'
     :type: str
 
     :return: True if successful, False if not
@@ -408,8 +394,6 @@ def set_time_server(time_server):
 
         salt '*' timezone.set_time_server time.acme.com
     '''
-    if time_server.lower() == 'default':
-        time_server = 'time.apple.com'
     cmd = 'systemsetup -setnetworktimeserver {0}'.format(time_server)
     _execute_return_success(cmd)
 
