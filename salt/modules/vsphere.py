@@ -210,8 +210,8 @@ def esxcli_cmd(host, username, password, cmd_str, protocol=None, port=None, esxi
     cmd_str
         The ESXCLI command to run. Note: This should not include the ``-s``, ``-u``,
         ``-p``, ``-h``, ``--protocol``, or ``--portnumber`` arguments that are
-         frequently passed when using a bare ESXCLI command from the command line.
-         Those arguments are handled by this function via the other args and kwargs.
+        frequently passed when using a bare ESXCLI command from the command line.
+        Those arguments are handled by this function via the other args and kwargs.
 
     protocol
         Optionally set to alternate protocol if the host is not using the default
