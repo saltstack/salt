@@ -308,3 +308,17 @@ def get_role_arn(name, region=None, key=None, keyid=None, profile=None):
         region=region, key=key, keyid=keyid, profile=profile
     )
     return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
+
+
+def _ordered(obj):
+    if isinstance(obj, (list, tuple)):
+        return sorted(_ordered(x) for x in obj)
+    elif isinstance(obj, dict):
+        return dict((k, _ordered(v)) for k, v in obj.items())
+    return obj
+
+
+def json_objs_equal(left, right):
+    """ Compare two parsed JSON objects, given non-ordering in JSON objects
+    """
+    return _ordered(left) == _ordered(right)

@@ -402,7 +402,7 @@ def put_lifecycle_configuration(Bucket,
 
 
 def put_logging(Bucket,
-           TargetBucket, TargetPrefix, TargetGrants=None,
+           TargetBucket=None, TargetPrefix=None, TargetGrants=None,
            region=None, key=None, keyid=None, profile=None):
     '''
     Given a valid config, update the logging parameters for a bucket.
