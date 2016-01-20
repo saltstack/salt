@@ -45,6 +45,7 @@ import datetime
 
 # Import Salt Libs
 import salt.config as config
+import salt.ext.six as six
 from salt.ext.six.moves import range
 from salt.exceptions import (
     SaltCloudConfigError,
@@ -801,7 +802,7 @@ def get_ips(linode_id=None):
         ips = _query('linode', 'ip.list')
 
     ips = ips['DATA']
-    all_ips = []
+    ret = {}
 
     for item in ips:
         node_id = str(item['LINODEID'])
@@ -810,20 +811,22 @@ def get_ips(linode_id=None):
         else:
             key = 'private_ips'
 
-        data = {node_id: {'public_ips': [], 'private_ips': []}}
-        data[node_id][key].append(item['IPADDRESS'])
-        all_ips.append(data)
+        if ret.get(node_id) is None:
+            ret.update({node_id: {'public_ips': [], 'private_ips': []}})
+        ret[node_id][key].append(item['IPADDRESS'])
 
     # If linode_id was specified, only return the ips, and not the
     # dictionary based on the linode ID as a key.
     if linode_id:
         _all_ips = {'public_ips': [], 'private_ips': []}
-        for item in all_ips:
-            for addr_type, addr_list in item.popitem()[1].items():
-                _all_ips[addr_type].extend(addr_list)
-        all_ips = _all_ips
+        matching_id = ret.get(str(linode_id))
+        if matching_id:
+            _all_ips['private_ips'] = matching_id['private_ips']
+            _all_ips['public_ips'] = matching_id['public_ips']
 
-    return all_ips
+        ret = _all_ips
+
+    return ret
 
 
 def get_linode(kwargs=None, call=None):
@@ -1334,13 +1337,10 @@ def _list_linodes(full=False):
         state = int(node['STATUS'])
         this_node['state'] = _get_status_descr_by_id(state)
 
-        key = ''
-        for item in ips:
-            for id_ in item:
-                key = id_
+        for key, val in six.iteritems(ips):
             if key == linode_id:
-                this_node['private_ips'] = item[key]['private_ips']
-                this_node['public_ips'] = item[key]['public_ips']
+                this_node['private_ips'] = val['private_ips']
+                this_node['public_ips'] = val['public_ips']
 
         if full:
             this_node['extra'] = node
