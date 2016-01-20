@@ -658,7 +658,7 @@ def create_data_disk(vm_=None, linode_id=None, data_size=None):
 
     .. versionadded:: Boron
 
-    vm_
+    vm\_
         The VM profile to create the data disk for.
 
     linode_id

@@ -1187,7 +1187,7 @@ def get(*dataset, **kwargs):
     *dataset : string
         name of snapshot(s), filesystem(s), or volume(s)
     properties : string
-        comma-seperated list of properties to list, defaults to all
+        comma-separated list of properties to list, defaults to all
     recursive : boolean
         recursively list children
     depth : int

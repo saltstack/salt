@@ -241,28 +241,28 @@ def update(name,
         The path to the user's profile directory.
 
     :param date expiration_date: The date and time when the account expires. Can
-    be a valid date/time string. To set to never expire pass the string 'Never'.
+        be a valid date/time string. To set to never expire pass the string 'Never'.
 
     :param bool expired: Pass `True` to expire the account. The user will be
-    prompted to change their password at the next logon. Pass `False` to mark
-    the account as 'not expired'. You can't use this to negate the expiration if
-    the expiration was caused by the account expiring. You'll have to change
-    the `expiration_date` as well.
+        prompted to change their password at the next logon. Pass `False` to mark
+        the account as 'not expired'. You can't use this to negate the expiration if
+        the expiration was caused by the account expiring. You'll have to change
+        the `expiration_date` as well.
 
     :param bool account_disabled: True disables the account. False enables the
-    account.
+        account.
 
     :param bool unlock_account: True unlocks a locked user account. False is
-    ignored.
+        ignored.
 
     :param bool password_never_expires: True sets the password to never expire.
-    False allows the password to expire.
+        False allows the password to expire.
 
     :param bool disallow_change_password: True blocks the user from changing
-    the password. False allows the user to change the password.
+        the password. False allows the user to change the password.
 
-    :return:
-        True if successful. False is unsuccessful.
+    :return: True if successful. False is unsuccessful.
+
     :rtype: bool
 
     CLI Example:
@@ -630,8 +630,8 @@ def chprofile(name, profile):
     :param str profile:
         new location of the profile
 
-    :return:
-    True if successful. False is unsuccessful.
+    :return: True if successful. False is unsuccessful.
+
     :rtype: bool
 
     CLI Example:
