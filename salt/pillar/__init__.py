@@ -247,7 +247,6 @@ class Pillar(object):
             opts['grains'] = {}
         else:
             opts['grains'] = grains
-        opts['id'] = id_
         if 'environment' not in opts:
             opts['environment'] = saltenv
         if 'pillarenv' not in opts:
@@ -635,35 +634,23 @@ class Pillar(object):
                 return {}
             for key, val in six.iteritems(run):
                 if key not in self.ext_pillars:
-                    err = ('Specified ext_pillar interface {0} is '
-                           'unavailable').format(key)
-                    log.critical(err)
+                    log.critical(
+                        'Specified ext_pillar interface {0} is '
+                        'unavailable'.format(key)
+                    )
                     continue
                 try:
-                    try:
-                        ext = self._external_pillar_data(pillar,
-                                                         val,
-                                                         pillar_dirs,
-                                                         key)
-                    except TypeError as exc:
-                        if str(exc).startswith('ext_pillar() takes exactly '):
-                            log.warning('Deprecation warning: ext_pillar "{0}"'
-                                        ' needs to accept minion_id as first'
-                                        ' argument'.format(key))
-                        else:
-                            raise
-
-                        ext = self._external_pillar_data(pillar,
-                                                         val,
-                                                         pillar_dirs,
-                                                         key)
-                except Exception as exc:
+                    ext = self._external_pillar_data(pillar,
+                                                        val,
+                                                        pillar_dirs,
+                                                        key)
+                except Exception as exc:  # pylint: disable=broad-except
                     log.exception(
-                            'Failed to load ext_pillar {0}: {1}'.format(
-                                key,
-                                exc
-                                )
-                            )
+                        'Failed to load ext_pillar {0}: {1}'.format(
+                            key,
+                            exc
+                        )
+                    )
             if ext:
                 pillar = merge(
                     pillar,
