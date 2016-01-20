@@ -201,20 +201,21 @@ def remove(name):
     return name not in list_modules()
 
 
-def run_config(path, source=None, saltenv='base'):
+def run_config(path, source=None, salt_env='base'):
     r'''
     Run an existing DSC configuration
 
-    :param str path: Path to the directory that contains the .mof configuration
-    file to apply. Required.
+    :param str path: Path (local) to the script that will create the .mof
+    configuration file. If no source is passed, the file must exist locally.
+    Required.
 
-    :param str source: Path to the directory that contains the .mof file on the
-    ``file_roots``. The directory source and path directories must be the same.
-    The source directory will be copied to the path directory and then executed.
-    If source is not passed, the config located at 'path' will be applied.
+    :param str source: Path to the script on ``file_roots`` to cache at the
+    location specified in ``path``. The source file will be cached locally and
+    then executed. If source is not passed, the config script located at 'path'
+    will be applied.
     Optional.
 
-    :param str saltenv: The salt environment to use when copying your source.
+    :param str salt_env: The salt environment to use when copying your source.
     Default is 'base'
 
     :return: True if successful, otherwise False
@@ -222,33 +223,29 @@ def run_config(path, source=None, saltenv='base'):
 
     CLI Example:
 
-    To apply a config that already exists on the the system
+    To execute a config script that already exists on the the system
 
     .. code-block:: bash
 
-        salt '*' dsc.run_config C:\DSC\WebSiteConfiguration
+        salt '*' dsc.run_config C:\DSC\WebSiteConfiguration.ps1
 
     To cache a configuration for the master and apply it:
 
     .. code-block:: bash
 
-        salt '*' dsc.run_config C:\DSC\WebSiteConfiguration salt://dsc/configs/WebSiteConfiguration
+        salt '*' dsc.run_config C:\DSC\WebSiteConfiguration.ps1 salt://dsc/configs/WebSiteConfiguration.ps1
     '''
-    if source:
-        # Make sure the folder names match
-        pathname = os.path.basename(os.path.normpath(path))
-        sourcename = os.path.basename(os.path.normpath(source))
-        if pathname.lower() != sourcename.lower():
-            error = 'Path and Source folder names must match.'
-            log.error(error)
-            raise CommandExecutionError(error)
+    # Destination path minus the basename
+    dest_path = os.path.dirname(os.path.normpath(path))
 
-        # Destination path minus the basename
-        dest_path = os.path.dirname(os.path.normpath(path))
+    if source:
         log.info('Caching {0}'.format(source))
-        cached_files = __salt__['cp.get_dir'](source, dest_path, saltenv)
+        cached_files = __salt__['cp.get_file'](path=source,
+                                               dest=path,
+                                               saltenv=salt_env,
+                                               makedirs=True)
         if not cached_files:
-            error = 'Failed to copy {0}'.format(source)
+            error = 'Failed to cache {0}'.format(source)
             log.error(error)
             raise CommandExecutionError(error)
 
@@ -258,9 +255,11 @@ def run_config(path, source=None, saltenv='base'):
         log.error(error)
         raise CommandExecutionError(error)
 
+    return True
+
     # Run the DSC Configuration
     # Putting quotes around the parameter protects against command injection
-    cmd = '$job = Start-DscConfiguration -Path "{0}";'.format(path)
+    cmd = '$job = Start-DscConfiguration -Path "{0}"; '.format(path)
     cmd += 'Do{ } While ($job.State -notin \'Completed\', \'Failed\'); ' \
            'return $job.State'
     ret = _pshell(cmd)
