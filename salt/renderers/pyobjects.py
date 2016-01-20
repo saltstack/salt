@@ -286,12 +286,14 @@ except NameError:
 
 
 class PyobjectsModule(object):
-    '''This projects a wrapper for bare imports.'''
+    '''This provides a wrapper for bare imports.'''
+
     def __init__(self, name, attrs):
         self.name = name
         self.__dict__ = attrs
+
     def __repr__(self):
-        return "<module '%s' (pyobjects)>" % self.name
+        return "<module '{0!s}' (pyobjects)>".format(self.name)
 
 
 def load_states():
