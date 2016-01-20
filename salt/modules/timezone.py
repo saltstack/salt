@@ -27,11 +27,13 @@ def __virtual__():
     '''
     if salt.utils.is_windows():
         return (False, 'The timezone execution module failed to load: '
-                       'not available on Windows systems.')
+                       'win_timezone.py should replace this module on Windows.'
+                       'There was a problem loading win_timezone.py.')
 
     if salt.utils.is_darwin():
         return (False, 'The timezone execution module failed to load: '
-                       'not available on MacOS systems.')
+                       'mac_timezone.py should replace this module on OS X.'
+                       'There was a problem loading mac_timezone.py.')
 
     return __virtualname__
 
