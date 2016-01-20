@@ -598,7 +598,7 @@ def get_image(vm_):
     '''
     Return the image object to use.
 
-    vm_
+    vm\_
         The VM dictionary for which to obtain an image.
     '''
     images = avail_images()
@@ -653,7 +653,7 @@ def get_location(vm_):
     '''
     Return the VM's location.
 
-    vm_
+    vm\_
         The VM dictionary for which to obtain a location.
     '''
     locations = avail_locations()
@@ -823,7 +823,7 @@ def create(vm_):
     '''
     Create a single VM from a data dict.
 
-    vm_
+    vm\_
         The dictionary use to create a VM.
 
     CLI Example:
