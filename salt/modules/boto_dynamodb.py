@@ -30,7 +30,7 @@ Connection module for Amazon DynamoDB
     If a region is not specified, the default is us-east-1.
 
     It's also possible to specify key, keyid and region via a profile, either
-    as a passed in dict, or as a string to pull from pillars or minion config::
+    as a passed in dict, or as a string to pull from pillars or minion config:
 
     .. code-block:: yaml
 
@@ -121,10 +121,6 @@ def create_table(table_name, region=None, key=None, keyid=None, profile=None,
     }
     local_table_indexes = []
     if local_indexes:
-        # Add the table's key
-        local_table_indexes.append(
-            AllIndex(primary_index_name, parts=primary_index_fields)
-        )
         for index in local_indexes:
             local_table_indexes.append(_extract_index(index))
     global_table_indexes = []
@@ -179,6 +175,7 @@ def exists(table_name, region=None, key=None, keyid=None, profile=None):
         if e.error_code == 'ResourceNotFoundException':
             return False
         raise
+
     return True
 
 
@@ -206,6 +203,33 @@ def delete(table_name, region=None, key=None, keyid=None, profile=None):
         else:
             time.sleep(1)   # sleep for one second and try again
     return False
+
+
+def update(table_name, throughput=None, global_indexes=None,
+           region=None, key=None, keyid=None, profile=None):
+    '''
+    Update a DynamoDB table.
+
+    CLI example::
+
+        salt myminion boto_dynamodb.update table_name region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    table = Table(table_name, connection=conn)
+    return table.update(throughput=throughput, global_indexes=global_indexes)
+
+
+def describe(table_name, region=None, key=None, keyid=None, profile=None):
+    '''
+    Describe a DynamoDB table.
+
+    CLI example::
+
+        salt myminion boto_dynamodb.describe table_name region=us-east-1
+    '''
+    conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
+    table = Table(table_name, connection=conn)
+    return table.describe()
 
 
 def _extract_index(index_data, global_index=False):
