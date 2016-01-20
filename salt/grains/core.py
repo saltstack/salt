@@ -2033,10 +2033,19 @@ def _smartos_zone_data():
 
     # allow roles to be defined in vmadm metadata
     for mdata_grain in __salt__['cmd.run']('mdata-list').splitlines():
-        grain_name = 'mdata_{0}'.format(mdata_grain) if mdata_grain != 'salt:role' else 'role'
-        grain_name = grain_name.replace(':', '_')
-        grain_name = grain_name.replace('-', '_')
-        grains[grain_name] = __salt__['cmd.run']('mdata-get {0}'.format(mdata_grain))
+        grain_data = __salt__['cmd.run']('mdata-get {0}'.format(mdata_grain))
+
+        if mdata_grain == 'salt:roles':  # parse salt:roles as roles grain
+            grain_data = grain_data.split(',')
+            grains['roles'] = grain_data
+        else:  # parse other grains into mdata
+            if not mdata_grain.startswith('sdc:'):
+                if 'mdata' not in grains:
+                    grains['mdata'] = {}
+
+                mdata_grain = mdata_grain.replace('-', '_')
+                mdata_grain = mdata_grain.replace(':', '_')
+                grains['mdata'][mdata_grain] = grain_data
 
     return grains
 
