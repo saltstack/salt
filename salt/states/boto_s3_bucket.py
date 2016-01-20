@@ -145,6 +145,7 @@ from copy import deepcopy
 
 # Import Salt Libs
 import salt.utils
+from salt.utils.boto3 import json_objs_equal
 
 log = logging.getLogger(__name__)
 
@@ -333,8 +334,6 @@ def present(name, Bucket,
 
     if ACL is None:
         ACL = {'ACL': 'private'}
-    if Logging is None:
-        Logging = {}
     if NotificationConfiguration is None:
         NotificationConfiguration = {}
     if RequestPayment is None:
@@ -432,8 +431,7 @@ def present(name, Bucket,
             ('Tagging', 'put_tagging', Tagging, None, Tagging, 'delete_tagging'),
             ('Website', 'put_website', Website, None, Website, 'delete_website'),
     ):
-        diffs = salt.utils.compare_dicts(current or {}, compare or desired or {})
-        if bool(diffs):
+        if not json_objs_equal(current,(compare or desired)):
             if __opts__['test']:
                 msg = 'S3 bucket {0} set to be modified.'.format(Bucket)
                 ret['comment'] = msg
