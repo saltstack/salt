@@ -83,7 +83,7 @@ with Pkg.installed("samba", names=[Samba.server, Samba.client]):
 import_template = '''#!pyobjects
 import salt://map.sls
 
-Pkg.removed("samba-imported", names=[Samba.server, Samba.client])
+Pkg.removed("samba-imported", names=[map.Samba.server, map.Samba.client])
 '''
 
 recursive_map_template = '''#!pyobjects
@@ -97,6 +97,12 @@ recursive_import_template = '''#!pyobjects
 from salt://recursive_map.sls import CustomSamba
 
 Pkg.removed("samba-imported", names=[CustomSamba.server, CustomSamba.client])'''
+
+scope_test_import_template = '''#!pyobjects
+from salt://recursive_map.sls import CustomSamba
+
+# since we import CustomSamba we should shouldn't be able to see Samba
+Pkg.removed("samba-imported", names=[Samba.server, Samba.client])'''
 
 from_import_template = '''#!pyobjects
 # this spacing is like this on purpose to ensure it's stripped properly
@@ -340,6 +346,19 @@ class RendererTests(RendererMixin, StateTests):
 
         self.write_template_file("recursive_map.sls", recursive_map_template)
         render_and_assert(recursive_import_template)
+
+    def test_import_scope(self):
+        self.write_template_file("map.sls", map_template)
+        self.write_template_file("recursive_map.sls", recursive_map_template)
+
+        def do_render():
+            ret = self.render(scope_test_import_template,
+                              {'grains': {
+                                  'os_family': 'Debian',
+                                  'os': 'Debian'
+                              }})
+
+        self.assertRaises(NameError, do_render)
 
     def test_random_password(self):
         '''Test for https://github.com/saltstack/salt/issues/21796'''
