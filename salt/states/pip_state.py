@@ -47,6 +47,12 @@ if HAS_PIP is True:
         if 'pip' in sys.modules:
             del sys.modules['pip']
 
+    pip_ver = tuple(pip.__version__.split('.'))
+    if pip_ver >= (8, 0, 0):
+        from pip.exceptions import InstallationError
+    else:
+        InstallationError = ValueError
+
 logger = logging.getLogger(__name__)
 
 # Define the module's virtual name
