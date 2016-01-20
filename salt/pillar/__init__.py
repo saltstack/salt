@@ -532,7 +532,8 @@ class Pillar(object):
                                         state,
                                         nstate,
                                         self.merge_strategy,
-                                        self.opts.get('renderer', 'yaml'))
+                                        self.opts.get('renderer', 'yaml'),
+                                        self.opts.get('pillar_merge_lists', 'False'))
 
                                 if err:
                                     errors += err
@@ -569,7 +570,8 @@ class Pillar(object):
                         pillar,
                         pstate,
                         self.merge_strategy,
-                        self.opts.get('renderer', 'yaml'))
+                        self.opts.get('renderer', 'yaml'),
+                        self.opts.get('pillar_merge_lists', 'False'))
 
         return pillar, errors
 
@@ -655,7 +657,8 @@ class Pillar(object):
                     pillar,
                     ext,
                     self.merge_strategy,
-                    self.opts.get('renderer', 'yaml'))
+                    self.opts.get('renderer', 'yaml'),
+                    self.opts.get('pillar_merge_lists', 'False'))
                 ext = None
         return pillar
 
@@ -672,7 +675,8 @@ class Pillar(object):
                 pillar = merge(pillar,
                                self.opts['pillar'],
                                self.merge_strategy,
-                               self.opts.get('renderer', 'yaml'))
+                               self.opts.get('renderer', 'yaml'),
+                               self.opts.get('pillar_merge_lists', 'False'))
             else:
                 matches = self.top_matches(top)
                 pillar, errors = self.render_pillar(matches)

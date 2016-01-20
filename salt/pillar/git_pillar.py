@@ -260,6 +260,10 @@ def ext_pillar(minion_id, repo, pillar_dirs):
             'pillar_source_merging_strategy',
             'smart'
         )
+        merge_lists = __opts__.get(
+            'pillar_merge_lists',
+            'False'
+        )
         for pillar_dir, env in six.iteritems(pillar.pillar_dirs):
             log.debug(
                 'git_pillar is processing pillar SLS from {0} for pillar '
@@ -273,7 +277,8 @@ def ext_pillar(minion_id, repo, pillar_dirs):
             ret = salt.utils.dictupdate.merge(
                 ret,
                 local_pillar.compile_pillar(ext=False),
-                strategy=merge_strategy
+                strategy=merge_strategy,
+                merge_lists=merge_lists
             )
         return ret
 
