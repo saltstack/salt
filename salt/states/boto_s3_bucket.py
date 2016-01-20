@@ -42,8 +42,7 @@ config:
             - Bucket: mybucket
             - LocationConstraint: EU
             - ACL: 
-              - ACL: private
-                GrantRead: "uri=http://acs.amazonaws.com/groups/global/AllUsers"
+              - GrantRead: "uri=http://acs.amazonaws.com/groups/global/AllUsers"
             - CORSRules:
               - AllowedHeaders: []
                 AllowedMethods: ["GET"]
@@ -56,6 +55,7 @@ config:
                 ID: "idstring"
                 Prefix: "prefixstring"
                 Status: "enabled",
+                ID: "lc1"
                 Transitions:
                   - Days: 123
                     StorageClass: "GLACIER"
@@ -89,14 +89,12 @@ config:
             - Policy:
                 Version: "2012-10-17"
                 Statement:
-                  - Effect: "Allow"
+                  - Sid: "String"
+                    Effect: "Allow"
                     Principal:
-                      AWS:
-                        - "arn:aws:iam::133434421342:root"
-                    Action:
-                      - "s3:PutObject"
-                    Resource:
-                      - "arn:aws:s3:::my-bucket/*"
+                      AWS: "arn:aws:iam::133434421342:root"
+                    Action: "s3:PutObject"
+                    Resource: "arn:aws:s3:::my-bucket/*"
             - Replication:
                 Role: myrole
                 Rules:
@@ -142,9 +140,11 @@ import logging
 import os
 import os.path
 from copy import deepcopy
+import json
 
 # Import Salt Libs
 import salt.utils
+from salt.ext.six import string_types  # pylint: disable=import-error
 from salt.utils.boto3 import json_objs_equal
 
 log = logging.getLogger(__name__)
@@ -247,6 +247,20 @@ def _acl_to_grant(ACL, owner_canonical_id):
                     'Permission': permission
                 })
     return ret
+
+
+def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
+    if name.startswith('arn:aws:iam:'):
+        return name
+
+    account_id = __salt__['boto_iam.get_account_id'](
+        region=region, key=key, keyid=keyid, profile=profile
+    )
+    if profile and 'region' in profile:
+        region = profile['region']
+    if region is None:
+        region = 'us-east-1'
+    return 'arn:aws:iam::{0}:role/{1}'.format(account_id, name)
 
 
 def present(name, Bucket,
@@ -375,9 +389,6 @@ def present(name, Bucket,
                 ('put_website', Website, Website),
         ):
             if testval is not None:
-                log.info("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                log.info(func)
-                log.info(funcargs)
                 r = __salt__['boto_s3_bucket.{0}'.format(func)](Bucket=Bucket,
                                    region=region, key=key, keyid=keyid, profile=profile,
                                    **funcargs)
@@ -394,9 +405,9 @@ def present(name, Bucket,
 
         return ret
 
+    # bucket exists, ensure config matches
     ret['comment'] = os.linesep.join([ret['comment'], 'S3 bucket {0} is present.'.format(Bucket)])
     ret['changes'] = {}
-    # bucket exists, ensure config matches
     _describe = __salt__['boto_s3_bucket.describe'](Bucket=Bucket,
                                  region=region, key=key, keyid=keyid, profile=profile)
     if 'error' in _describe:
@@ -411,40 +422,94 @@ def present(name, Bucket,
     if not bool(Versioning) and _describe.get('Versioning') is not None:
         Versioning = {'Status': 'Suspended'}
 
+    # Policy discription is always returned as a JSON string, but may be input
+    # as a loaded JSON object
+    if isinstance(Policy, string_types):
+        policy_compare = None
+    else:
+        policy_compare = _describe.get('Policy',{}).get('Policy')
+        if isinstance(policy_compare, string_types):
+            policy_compare = {'Policy': json.loads(policy_compare)}
+        else:
+            policy_compare = None
+
+    # Replication accepts a non-ARN role name, but always returns an ARN
+    replication_compare = None
+    if Replication is not None and Replication.get('Role'):
+        replication_compare = deepcopy(Replication)
+        replication_compare['Role'] = _get_role_arn(replication_compare['Role'],
+                                 region=region, key=key, keyid=keyid, profile=profile)
+
     ocid = _get_canonical_id(region, key, keyid, profile)
-    for varname, func, current, compare, desired, deleter in (
-            ('ACL', 'put_acl', _describe.get('ACL'), _acl_to_grant(ACL, ocid), ACL, None),
-            ('CORS', 'put_cors', _describe.get('CORS'), None, {"CORSRules": CORSRules} if CORSRules else None,
-                                                'delete_cors'),
+    config_items = [
+            # ACLs can be specified using macro-style names that get expanded to
+            # something more complex. There's no predictable way to reverse it.
+            # So expand our input, and compare against that rather than the
+            # input itself. Also, ACL can't be deleted, only updated
+            ('ACL', 'put_acl', _describe.get('ACL'),
+                               None,
+                               _acl_to_grant(ACL, ocid),
+                               ACL,
+                               None),
+            ('CORS', 'put_cors', _describe.get('CORS'),
+                               None,
+                               None,
+                               {"CORSRules": CORSRules} if CORSRules else None,
+                               'delete_cors'),
             ('LifecycleConfiguration', 'put_lifecycle_configuration', _describe.get('LifecycleConfiguration'), 
+                                            None,
                                             None,
                                             {"Rules": LifecycleConfiguration} if LifecycleConfiguration else None,
                                             'delete_lifecycle_configuration'),
-            ('Logging', 'put_logging', _describe.get('Logging',{}).get('LoggingEnabled'), None, Logging, None),
-            ('NotificationConfiguration', 'put_notification_configuration', _describe.get('NotificationConfiguration'), None, NotificationConfiguration, None),
-            ('Policy', 'put_policy', _describe.get('Policy',{}).get('Policy'), None, Policy, 'delete_policy'),
-            # versioning must be set before replication
-            ('Versioning', 'put_versioning', _describe.get('Versioning'), None, Versioning, None),
-            ('Replication', 'put_replication',
-            _describe.get('Replication',{}).get('ReplicationConfiguration'), None, Replication, 'delete_replication'),
-            ('RequestPayment', 'put_request_payment', _describe.get('RequestPayment'), None, RequestPayment, None),
-            ('Tagging', 'put_tagging', Tagging, None, Tagging, 'delete_tagging'),
-            ('Website', 'put_website', Website, None, Website, 'delete_website'),
-    ):
-        if not json_objs_equal(current,(compare or desired)):
+            ('Logging', 'put_logging', _describe.get('Logging',{}).get('LoggingEnabled'),
+                                            None,
+                                            None,
+                                            Logging,
+                                            None),
+            ('NotificationConfiguration', 'put_notification_configuration', _describe.get('NotificationConfiguration'),
+                                            None,
+                                            None,
+                                            NotificationConfiguration,
+                                            None),
+            # Load JSON returned value to an object before comparing to desired
+            # state
+            ('Policy', 'put_policy', _describe.get('Policy'),
+                                             policy_compare,
+                                             None,
+                                             {"Policy": Policy} if Policy else None,
+                                             'delete_policy'),
+            ('RequestPayment', 'put_request_payment', _describe.get('RequestPayment'), None, None, RequestPayment, None),
+            ('Tagging', 'put_tagging', Tagging, None, None, Tagging, 'delete_tagging'),
+            ('Website', 'put_website', Website, None, None, Website, 'delete_website'),
+    ]
+    versioning_item = ('Versioning', 'put_versioning', _describe.get('Versioning'), None, None, Versioning, None)
+    # Substitute full ARN into desired state for comparison
+    replication_item = ('Replication', 'put_replication', _describe.get('Replication',{}).get('ReplicationConfiguration'), None, replication_compare, Replication, 'delete_replication')
+
+    # versioning must be turned on before replication can be on, but replication
+    # must be turned off before versioning can be off
+    if Replication is not None:
+        # replication will be on, must deal with versioning first
+        config_items.append(versioning_item)
+        config_items.append(replication_item)
+    else:
+        # replication will be off, deal with it first
+        config_items.append(replication_item)
+        config_items.append(versioning_item)
+
+    for varname, func, current, modded, compare, desired, deleter in config_items:
+        if not json_objs_equal(modded or current, compare or desired):
+            # current state and desired state differ
             if __opts__['test']:
                 msg = 'S3 bucket {0} set to be modified.'.format(Bucket)
                 ret['comment'] = msg
                 ret['result'] = None
                 return ret
-            ret['changes'].setdefault('new', {})[varname] = compare or desired
+            ret['changes'].setdefault('new', {})[varname] = desired
             ret['changes'].setdefault('old', {})[varname] = current
 
-            log.info("#####!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            log.info(current)
-            log.info(func)
-            log.info(desired)
             if deleter and desired is None:
+                # Setting can be deleted, so use that to unset it
                 r = __salt__['boto_s3_bucket.{0}'.format(deleter)](Bucket=Bucket,
                    region=region, key=key, keyid=keyid, profile=profile)
                 if not r.get('deleted'):
@@ -462,6 +527,9 @@ def present(name, Bucket,
                     ret['changes'] = {}
                     return ret
 
+    # Since location can't be changed, try that last so at least the rest of
+    # the things are correct by the time we fail here. Fail so the user will
+    # notice something mismatches their desired state.
     if _describe.get('Location',{}).get('LocationConstraint') != LocationConstraint:
         msg = 'Bucket {0} location does not match desired configuration, but cannot be changed'.format(LocationConstraint)
         log.warn(msg)
