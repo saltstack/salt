@@ -349,6 +349,7 @@ class SerializerExtension(Extension, object):
         super(SerializerExtension, self).__init__(environment)
         self.environment.filters.update({
             'yaml': self.format_yaml,
+            'yaml_safe': self.format_yaml_safe,
             'json': self.format_json,
             'python': self.format_python,
             'load_yaml': self.load_yaml,
@@ -386,6 +387,13 @@ class SerializerExtension(Extension, object):
     def format_yaml(self, value, flow_style=True):
         yaml_txt = yaml.dump(value, default_flow_style=flow_style,
                              Dumper=OrderedDictDumper).strip()
+        if yaml_txt.endswith('\n...\n'):
+            yaml_txt = yaml_txt[:len(yaml_txt-5)]
+        return Markup(yaml_txt)
+
+    def format_yaml_safe(self, value, flow_style=True):
+        yaml_txt = yaml.safe_dump(value, default_flow_style=flow_style,
+                                  Dumper=OrderedDictDumper).strip()
         if yaml_txt.endswith('\n...\n'):
             yaml_txt = yaml_txt[:len(yaml_txt-5)]
         return Markup(yaml_txt)
