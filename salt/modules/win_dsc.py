@@ -201,12 +201,64 @@ def remove(name):
     return name not in list_modules()
 
 
-def compile_apply_config():
-    pass
+def compile_apply_config(path, source=None, config=None, salt_env='base'):
+    r'''
+    Compile a DSC Configuration in the form of a powershell script (.ps1) and
+    apply it. The powershell script can be cached from the master using the
+    ``source`` option. If there is more than one config within the powershell
+    script, the desired configuration can be applied by passing the name in the
+    ``config`` option.
+
+    This command would be the equivalent of running ``dsc.compile_config`` and
+    ``dsc.apply_config`` separately.
+
+    :param str path: The local path to the powershell script that contains the
+    DSC Configuration.
+    Required.
+
+    :param str source: The path to the script on ``file_roots`` to cache at the
+    location specified by ``path``. The source file will be cached locally and
+    then executed. If source is not passed, the config script located at
+    ``path`` will be compiled.
+    Optional.
+
+    :param str config: The name of the Configuration within the script to apply.
+    If the script contains multiple configurations within the file a config
+    must be specified. If the config is not specified, the name of the file will
+    be used as the config to run.
+    Optional.
+
+    :param str salt_env: The salt environment to use when copying the source.
+    Default is 'base'
+
+    :return: True if successfully compiled and applied, False if not
+    :rtype: bool
+
+    CLI Example
+
+    To compile a config from a script that already exists on the system:
+
+    .. code-block:: bash
+
+        salt '*' dsc.compile_apply_config C:\\DSC\\WebsiteConfig.ps1
+
+    To cache a config script to the system from the master and compile it:
+
+    .. code-block:: bash
+
+        salt '*' dsc.compile_apply_config C:\\DSC\\WebsiteConfig.ps1 salt://dsc/configs/WebsiteConfig.ps1
+    '''
+    ret = compile_config(path, source, config, salt_env)['Exists']
+
+    if 'Exists' in ret and ret['Exists']:
+        config_path = os.path.dirname(ret['FullName'])
+        return apply_config(config_path)
+    else:
+        return False
 
 
 def compile_config(path, source=None, config=None, salt_env='base'):
-    '''
+    r'''
     Compile a config from a powershell script (``.ps1``)
 
     :param str path: Path (local) to the script that will create the ``.mof``
@@ -220,7 +272,7 @@ def compile_config(path, source=None, config=None, salt_env='base'):
     Optional.
 
     :param str config: The name of the Configuration within the script to apply.
-    Since a script can contain multiple configurations within the file a config
+    If the script contains multiple configurations within the file a config
     must be specified. If the config is not specified, the name of the file will
     be used as the config to run.
     Optional.
@@ -228,7 +280,8 @@ def compile_config(path, source=None, config=None, salt_env='base'):
     :param str salt_env: The salt environment to use when copying the source.
     Default is 'base'
 
-    Returns:
+    :return: A dictionary containing the results of the compilation
+    :rtype: dict
 
     CLI Example:
 
@@ -257,7 +310,7 @@ def compile_config(path, source=None, config=None, salt_env='base'):
 
     # Make sure the path exists
     if not os.path.exists(path):
-        error = '"{0} not found.'
+        error = '"{0} not found.'.format(path)
         log.error(error)
         raise CommandExecutionError(error)
 
@@ -276,14 +329,27 @@ def compile_config(path, source=None, config=None, salt_env='base'):
 
     if ret:
         # Script compiled, return results
-        return ret
-    else:
-        # Run the script and run the compile command
-        cmd = '. {0} ; {1} '.format(path, config)
-        cmd += '| Select-Object -Property FullName, Extension, Exists, ' \
-               '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) -Format g}}'
+        if 'Exists' in ret and ret['Exists']:
+            log.info('DSC Compile Config: {0}'.format(ret))
+            return ret
 
-        return _pshell(cmd, cwd)
+    # Run the script and run the compile command
+    cmd = '. {0} ; {1} '.format(path, config)
+    cmd += '| Select-Object -Property FullName, Extension, Exists, ' \
+           '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) -Format g}}'
+
+    ret = _pshell(cmd, cwd)
+
+    if ret:
+        # Script compiled, return results
+        if 'Exists' in ret and ret['Exists']:
+            log.info('DSC Compile Config: {0}'.format(ret))
+            return ret
+
+    error = 'Failed to compile config: {0}'.format(path)
+    error += '\nReturned: {0}'.format(ret)
+    log.error('DSC Compile Config: {0}'.format(error))
+    raise CommandExecutionError(error)
 
 
 def apply_config(path, source=None, salt_env='base'):
@@ -299,7 +365,7 @@ def apply_config(path, source=None, salt_env='base'):
     If source is not passed, the config located at 'path' will be applied.
     Optional.
 
-    :param str saltenv: The salt environment to use when copying your source.
+    :param str salt_env: The salt environment to use when copying your source.
     Default is 'base'
 
     :return: True if successful, otherwise False
@@ -311,13 +377,13 @@ def apply_config(path, source=None, salt_env='base'):
 
     .. code-block:: bash
 
-        salt '*' dsc.run_config C:\DSC\WebSiteConfiguration
+        salt '*' dsc.run_config C:\\DSC\\WebSiteConfiguration
 
     To cache a configuration from the master and apply it:
 
     .. code-block:: bash
 
-        salt '*' dsc.run_config C:\DSC\WebSiteConfiguration salt://dsc/configs/WebSiteConfiguration
+        salt '*' dsc.run_config C:\\DSC\\WebSiteConfiguration salt://dsc/configs/WebSiteConfiguration
 
     '''
     if source:
@@ -350,11 +416,11 @@ def apply_config(path, source=None, salt_env='base'):
     cmd += 'Do{ } While ($job.State -notin \'Completed\', \'Failed\'); ' \
            'return $job.State'
     ret = _pshell(cmd)
+    log.info('DSC Apply Config: {0}'.format(ret))
+
     if ret == 'Completed':
-        log.info('DSC Run Config: {0}'.format(ret))
         return True
     else:
-        log.info('DSC Run Config: {0}'.format(ret))
         return False
 
 
@@ -412,7 +478,7 @@ def get_config_status():
         salt '*' dsc.get_config_status
     '''
     cmd = 'Get-DscConfigurationStatus | ' \
-          'Select-Object -Property HostName, Status, ' \
+          'Select-Object -Property HostName, Status, MetaData, ' \
           '@{Name="StartDate";Expression={Get-Date ($_.StartDate) -Format g}}, ' \
           'Type, Mode, RebootRequested, NumberofResources'
     return _pshell(cmd)
