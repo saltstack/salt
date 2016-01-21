@@ -186,7 +186,7 @@ def _options_browser(cfg, ret_config, defaults, virtualname, options):
                 continue
 
         # fallback (implicit else for all ifs)
-        yield option, ''
+        continue
 
 
 def _fetch_profile_opts(
