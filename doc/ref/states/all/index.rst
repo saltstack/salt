@@ -13,7 +13,9 @@ Full list of builtin state modules
     alias
     alternatives
     apache
+    apache_conf
     apache_module
+    apache_site
     aptpkg
     archive
     artifactory
@@ -25,14 +27,18 @@ Full list of builtin state modules
     blockdev
     boto_asg
     boto_cfn
+    boto_cloudtrail
     boto_cloudwatch_alarm
+    boto_datapipeline
     boto_dynamodb
     boto_ec2
     boto_elasticache
     boto_elb
     boto_iam
     boto_iam_role
+    boto_iot
     boto_kms
+    boto_lamda
     boto_lc
     boto_rds
     boto_route53
@@ -43,6 +49,8 @@ Full list of builtin state modules
     bower
     cabal
     chef
+    chocolatey
+    chronos_job
     cloud
     cmd
     composer
@@ -63,12 +71,17 @@ Full list of builtin state modules
     esxi
     event
     file
+    firewall
     firewalld
     gem
     git
+    github
     glusterfs
     gnomedesktop
+    gpg
     grafana
+    grafana_dashboard
+    grafana_datasource
     grains
     group
     hg
@@ -80,11 +93,13 @@ Full list of builtin state modules
     incron
     influxdb_database
     influxdb_user
+    infoblox
     ini_manage
     ipmi
     ipset
     iptables
     jboss7
+    jenkins
     keyboard
     keystone
     kmod
@@ -98,6 +113,7 @@ Full list of builtin state modules
     lvs_service
     lxc
     makeconf
+    marathon_app
     mdadm
     memcached
     modjk
@@ -116,6 +132,8 @@ Full list of builtin state modules
     npm
     ntp
     openstack_config
+    openvswitch_bridge
+    openvswitch_port
     pagerduty
     pagerduty_escalation_policy
     pagerduty_schedule
@@ -129,9 +147,12 @@ Full list of builtin state modules
     pkgrepo
     portage_config
     ports
+    postgres_cluster
     postgres_database
     postgres_extension
     postgres_group
+    postgres_language
+    postgres_privileges
     postgres_schema
     postgres_tablespace
     postgres_user
@@ -152,6 +173,7 @@ Full list of builtin state modules
     reg
     rsync
     rvm
+    salt_proxy
     saltmod
     schedule
     selinux
@@ -184,6 +206,7 @@ Full list of builtin state modules
     user
     vbox_guest
     victorops
+    virt
     virtualenv_mod
     win_dacl
     win_dns_client
@@ -197,7 +220,12 @@ Full list of builtin state modules
     winrepo
     x509
     xmpp
+    zabbix_host
+    zabbix_hostgroup
+    zabbix_user
+    zabbix_usergroup
     zcbuildout
     zenoss
     zk_concurrency
+    zfs
     zpool

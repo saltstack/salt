@@ -142,18 +142,29 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
     A generalized maintenance process which performances maintenance
     routines.
     '''
-    def __init__(self, opts, **kwargs):
+    def __init__(self, opts, log_queue=None):
         '''
         Create a maintenance instance
 
         :param dict opts: The salt options
         '''
-        super(Maintenance, self).__init__(**kwargs)
+        super(Maintenance, self).__init__(log_queue=log_queue)
         self.opts = opts
         # How often do we perform the maintenance tasks
         self.loop_interval = int(self.opts['loop_interval'])
         # Track key rotation intervals
         self.rotate = int(time.time())
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self._is_child = True
+        self.__init__(state['opts'], log_queue=state['log_queue'])
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'log_queue': self.log_queue}
 
     def _post_fork_init(self):
         '''
@@ -304,7 +315,9 @@ class Maintenance(SignalHandlingMultiprocessingProcess):
                         'lost': list(lost)}
                 self.event.fire_event(data, tagify('change', 'presence'))
             data = {'present': list(present)}
-            self.event.fire_event(data, tagify('present', 'presence'))
+            # On the first run it may need more time for the EventPublisher
+            # to come up and be ready. Set the timeout to account for this.
+            self.event.fire_event(data, tagify('present', 'presence'), timeout=3)
             old_present.clear()
             old_present.update(present)
 
@@ -445,12 +458,13 @@ class Master(SMaster):
     # run_reqserver cannot be defined within a class method in order for it
     # to be picklable.
     def run_reqserver(self, **kwargs):
-        reqserv = ReqServer(
-            self.opts,
-            self.key,
-            self.master_key,
-            **kwargs)
-        reqserv.run()
+        with default_signals(signal.SIGINT, signal.SIGTERM):
+            reqserv = ReqServer(
+                self.opts,
+                self.key,
+                self.master_key,
+                **kwargs)
+            reqserv.run()
 
     def start(self):
         '''
@@ -475,8 +489,8 @@ class Master(SMaster):
 
             log.info('Creating master process manager')
             self.process_manager = salt.utils.process.ProcessManager()
-            log.info('Creating master maintenance process')
             pub_channels = []
+            log.info('Creating master publisher process')
             for transport, opts in iter_transport_opts(self.opts):
                 chan = salt.transport.server.PubServerChannel.factory(opts)
                 chan.pre_fork(self.process_manager)
@@ -487,8 +501,8 @@ class Master(SMaster):
             salt.engines.start_engines(self.opts, self.process_manager)
 
             # must be after channels
+            log.info('Creating master maintenance process')
             self.process_manager.add_process(Maintenance, args=(self.opts,))
-            log.info('Creating master publisher process')
 
             if 'reactor' in self.opts:
                 log.info('Creating master reactor process')
@@ -523,12 +537,14 @@ class Master(SMaster):
                 log.debug('Sleeping for two seconds to let concache rest')
                 time.sleep(2)
 
-            log.info('Creating master request server process')
-            kwargs = {}
-            if salt.utils.is_windows():
-                kwargs['log_queue'] = (
-                        salt.log.setup.get_multiprocessing_logging_queue())
-            self.process_manager.add_process(self.run_reqserver, kwargs=kwargs)
+        log.info('Creating master request server process')
+        kwargs = {}
+        if salt.utils.is_windows():
+            kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
+
+        # No need to call this one under default_signals because that's invoked when
+        # actually starting the ReqServer
+        self.process_manager.add_process(self.run_reqserver, kwargs=kwargs, name='ReqServer')
 
         # Install the SIGINT/SIGTERM handlers if not done so far
         if signal.getsignal(signal.SIGINT) is signal.SIG_DFL:
@@ -553,14 +569,25 @@ class Halite(SignalHandlingMultiprocessingProcess):
     '''
     Manage the Halite server
     '''
-    def __init__(self, hopts, **kwargs):
+    def __init__(self, hopts, log_queue=None):
         '''
         Create a halite instance
 
         :param dict hopts: The halite options
         '''
-        super(Halite, self).__init__(**kwargs)
+        super(Halite, self).__init__(log_queue=log_queue)
         self.hopts = hopts
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process so that a register_after_fork() equivalent will work on Windows.
+    def __setstate__(self, state):
+        self._is_child = True
+        self.__init__(state['hopts'], log_queue=state['log_queue'])
+
+    def __getstate__(self):
+        return {'hopts': self.hopts,
+                'log_queue': self.log_queue}
 
     def run(self):
         '''
@@ -588,7 +615,7 @@ def iter_transport_opts(opts):
         yield opts['transport'], opts
 
 
-class ReqServer(object):
+class ReqServer(SignalHandlingMultiprocessingProcess):
     '''
     Starts up the master request server, minions send results to this
     interface.
@@ -604,16 +631,24 @@ class ReqServer(object):
         :rtype: ReqServer
         :returns: Request server
         '''
+        super(ReqServer, self).__init__(log_queue=log_queue)
         self.opts = opts
         self.master_key = mkey
         # Prepare the AES key
         self.key = key
-        self.log_queue = log_queue
+
+    def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
+        self.destroy(signum)
+        super(ReqServer, self)._handle_signals(signum, sigframe)
 
     def __bind(self):
         '''
         Binds the reply server
         '''
+        if self.log_queue is not None:
+            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
+        salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+
         dfn = os.path.join(self.opts['cachedir'], '.dfn')
         if os.path.isfile(dfn):
             try:
@@ -621,48 +656,38 @@ class ReqServer(object):
             except os.error:
                 pass
 
-        # Reset signals to default ones before adding processes to the process
-        # manager. We don't want the processes being started to inherit those
-        # signal handlers
-        with default_signals(signal.SIGINT, signal.SIGTERM):
-            self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
+        self.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
-            req_channels = []
-            tcp_only = True
-            for transport, opts in iter_transport_opts(self.opts):
-                chan = salt.transport.server.ReqServerChannel.factory(opts)
-                chan.pre_fork(self.process_manager)
-                req_channels.append(chan)
-                if transport != 'tcp':
-                    tcp_only = False
+        req_channels = []
+        tcp_only = True
+        for transport, opts in iter_transport_opts(self.opts):
+            chan = salt.transport.server.ReqServerChannel.factory(opts)
+            chan.pre_fork(self.process_manager)
+            req_channels.append(chan)
+            if transport != 'tcp':
+                tcp_only = False
 
-            kwargs = {}
-            if salt.utils.is_windows():
-                kwargs['log_queue'] = self.log_queue
-                # Use one worker thread if the only TCP transport is set up on Windows. See #27188.
-                if tcp_only:
-                    log.warning("TCP transport is currently supporting the only 1 worker on Windows.")
-                    self.opts['worker_threads'] = 1
+        kwargs = {}
+        if salt.utils.is_windows():
+            kwargs['log_queue'] = self.log_queue
+            # Use one worker thread if the only TCP transport is set up on Windows. See #27188.
+            if tcp_only:
+                log.warning("TCP transport is currently supporting the only 1 worker on Windows.")
+                self.opts['worker_threads'] = 1
 
-            for ind in range(int(self.opts['worker_threads'])):
-                self.process_manager.add_process(MWorker,
-                                                args=(self.opts,
-                                                    self.master_key,
-                                                    self.key,
-                                                    req_channels,
-                                                    ),
-                                                kwargs=kwargs
-                                                )
-        try:
-            self.process_manager.run()
-        except (KeyboardInterrupt, SystemExit) as exc:
-            self.process_manager.stop_restarting()
-            if isinstance(exc, KeyboardInterrupt):
-                self.process_manager.send_signal_to_processes(signal.SIGINT)
-            else:
-                self.process_manager.send_signal_to_processes(signal.SIGTERM)
-            # kill any remaining processes
-            self.process_manager.kill_children()
+        for ind in range(int(self.opts['worker_threads'])):
+            name = 'MWorker-{0}'.format(ind)
+            self.process_manager.add_process(MWorker,
+                                            args=(self.opts,
+                                                self.master_key,
+                                                self.key,
+                                                req_channels,
+                                                name
+                                                ),
+                                            kwargs=kwargs,
+                                            name=name
+                                            )
+        self.process_manager.run()
 
     def run(self):
         '''
@@ -670,7 +695,7 @@ class ReqServer(object):
         '''
         self.__bind()
 
-    def destroy(self):
+    def destroy(self, signum=signal.SIGTERM):
         if hasattr(self, 'clients') and self.clients.closed is False:
             if HAS_ZMQ:
                 self.clients.setsockopt(zmq.LINGER, 1)
@@ -684,7 +709,7 @@ class ReqServer(object):
         # Also stop the workers
         if hasattr(self, 'process_manager'):
             self.process_manager.stop_restarting()
-            self.process_manager.send_signal_to_processes(signal.SIGTERM)
+            self.process_manager.send_signal_to_processes(signum)
             self.process_manager.kill_children()
 
     def __del__(self):
@@ -701,6 +726,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
                  mkey,
                  key,
                  req_channels,
+                 name,
                  **kwargs):
         '''
         Create a salt master worker process
@@ -712,6 +738,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         :rtype: MWorker
         :return: Master worker
         '''
+        kwargs['name'] = name
         SignalHandlingMultiprocessingProcess.__init__(self, **kwargs)
         self.opts = opts
         self.req_channels = req_channels
@@ -726,6 +753,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
+        self._is_child = True
         SignalHandlingMultiprocessingProcess.__init__(self, log_queue=state['log_queue'])
         self.opts = state['opts']
         self.req_channels = state['req_channels']
@@ -742,6 +770,11 @@ class MWorker(SignalHandlingMultiprocessingProcess):
                 'k_mtime': self.k_mtime,
                 'log_queue': self.log_queue,
                 'secrets': SMaster.secrets}
+
+    def _handle_signals(self, signum, sigframe):
+        for channel in getattr(self, 'req_channels', ()):
+            channel.close()
+        super(MWorker, self)._handle_signals(signum, sigframe)
 
     def __bind(self):
         '''
@@ -816,7 +849,7 @@ class MWorker(SignalHandlingMultiprocessingProcess):
         '''
         Start a Master Worker
         '''
-        salt.utils.appendproctitle(self.__class__.__name__)
+        salt.utils.appendproctitle(self.name)
         self.clear_funcs = ClearFuncs(
             self.opts,
             self.key,
@@ -1280,8 +1313,8 @@ class AESFuncs(object):
             path_name = os.path.split(syndic_cache_path)[0]
             if not os.path.exists(path_name):
                 os.makedirs(path_name)
-            with salt.utils.fopen(syndic_cache_path, 'w') as f:
-                f.write('')
+            with salt.utils.fopen(syndic_cache_path, 'w') as wfh:
+                wfh.write('')
 
         # Format individual return loads
         for key, item in six.iteritems(load['return']):
@@ -1918,9 +1951,10 @@ class ClearFuncs(object):
                 # in the configuration file.
 
                 external_auth_in_db = False
-                for d in self.opts['external_auth'][extra['eauth']]:
-                    if d.startswith('^'):
+                for entry in self.opts['external_auth'][extra['eauth']]:
+                    if entry.startswith('^'):
                         external_auth_in_db = True
+                        break
 
                 # If neither a catchall, a named membership or a group
                 # membership is found, there is no need to continue. Simply
@@ -1965,7 +1999,10 @@ class ClearFuncs(object):
             if name in self.opts['external_auth'][extra['eauth']]:
                 auth_list = self.opts['external_auth'][extra['eauth']][name]
             if group_auth_match:
-                auth_list = self.ckminions.fill_auth_list_from_groups(self.opts['external_auth'][extra['eauth']], groups, auth_list)
+                auth_list = self.ckminions.fill_auth_list_from_groups(
+                        self.opts['external_auth'][extra['eauth']],
+                        groups,
+                        auth_list)
 
             good = self.ckminions.auth_check(
                 auth_list,

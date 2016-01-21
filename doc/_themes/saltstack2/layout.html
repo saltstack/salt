@@ -212,7 +212,7 @@
 
                             <div class="col-sm-6">
 
-                                 <a href="http://saltstack.com/events/" target="_blank"><img class="nolightbox footer-banner center" src="{{ pathto('_static/images/webinars-banner.png', 1) }}"/></a>
+                                 <a href="http://saltstack.com/support" target="_blank"><img class="nolightbox footer-banner center" src="{{ pathto('_static/images/footer-support.png', 1) }}"/></a>
 
 
                             </div>
@@ -231,7 +231,11 @@
 
                 {% if on_saltstack %}
 
-                <a href="http://saltconf.com" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/sc16-banner.png', 1) }}"/></a>
+                {% if [True, False]|random %}
+                <a href="http://saltconf.com/register" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-saltconf.png', 1) }}"/></a>
+                {% else %}
+                <a href="http://saltstack.com/support" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-support.png', 1) }}"/></a>
+                {% endif %}
 
                 <div class="releaselinks versions {{ build_type }}">
 

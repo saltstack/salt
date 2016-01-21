@@ -90,7 +90,7 @@ data like so:
       -----END PGP MESSAGE-----
 
 
-.. _encrypted-cli-pillar-data
+.. _encrypted-cli-pillar-data:
 
 Encrypted CLI Pillar Data
 -------------------------

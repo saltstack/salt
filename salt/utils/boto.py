@@ -79,39 +79,24 @@ def __virtual__():
         return True
 
 
-def _option(value):
-    '''
-    Look up the value for an option.
-    '''
-    if value in __opts__:
-        return __opts__[value]
-    master_opts = __pillar__.get('master', {})
-    if value in master_opts:
-        return master_opts[value]
-    if value in __pillar__:
-        return __pillar__[value]
-
-
 def _get_profile(service, region, key, keyid, profile):
     if profile:
         if isinstance(profile, string_types):
-            _profile = _option(profile)
+            _profile = __salt__['config.option'](profile)
         elif isinstance(profile, dict):
             _profile = profile
         key = _profile.get('key', None)
         keyid = _profile.get('keyid', None)
         region = _profile.get('region', None)
-
-    if not region and _option(service + '.region'):
-        region = _option(service + '.region')
+    if not region and __salt__['config.option'](service + '.region'):
+        region = __salt__['config.option'](service + '.region')
 
     if not region:
         region = 'us-east-1'
-
-    if not key and _option(service + '.key'):
-        key = _option(service + '.key')
-    if not keyid and _option(service + '.keyid'):
-        keyid = _option(service + '.keyid')
+    if not key and __salt__['config.option'](service + '.key'):
+        key = __salt__['config.option'](service + '.key')
+    if not keyid and __salt__['config.option'](service + '.keyid'):
+        keyid = __salt__['config.option'](service + '.keyid')
 
     label = 'boto_{0}:'.format(service)
     if keyid:
@@ -260,7 +245,7 @@ def exactly_one(l):
     return exactly_n(l)
 
 
-def assign_funcs(modname, service, module=None):
+def assign_funcs(modname, service, module=None, pack=None):
     '''
     Assign _get_conn and _cache_id functions to the named module.
 
@@ -268,6 +253,9 @@ def assign_funcs(modname, service, module=None):
 
         _utils__['boto.assign_partials'](__name__, 'ec2')
     '''
+    if pack:
+        global __salt__  # pylint: disable=W0601
+        __salt__ = pack
     mod = sys.modules[modname]
     setattr(mod, '_get_conn', get_connection_func(service, module=module))
     setattr(mod, '_cache_id', cache_id_func(service))

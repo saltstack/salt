@@ -60,8 +60,8 @@ else:
     _DFLT_MULTIPROCESSING_MODE = True
 
 FLO_DIR = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)),
-            'daemons', 'flo')
+        os.path.dirname(__file__),
+        'daemons', 'flo')
 
 VALID_OPTS = {
     # The address of the salt master. May be specified as IP address or hostname
@@ -511,6 +511,9 @@ VALID_OPTS = {
     # When creating a pillar, there are several strategies to choose from when
     # encountering duplicate values
     'pillar_source_merging_strategy': str,
+
+    # Recursively merge lists by aggregating them instead of replacing them.
+    'pillar_merge_lists': bool,
 
     # How to merge multiple top files from multiple salt environments
     # (saltenvs); can be 'merge' or 'same'
@@ -1067,6 +1070,7 @@ DEFAULT_MASTER_OPTS = {
     'pillar_opts': False,
     'pillar_safe_render_error': True,
     'pillar_source_merging_strategy': 'smart',
+    'pillar_merge_lists': False,
     'ping_on_rotate': False,
     'peer': {},
     'preserve_minion_cache': False,

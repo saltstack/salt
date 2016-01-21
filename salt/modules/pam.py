@@ -10,14 +10,18 @@ import os
 # Import salt libs
 import salt.utils
 
+# Define the module's virtual name
+__virtualname__ = 'pam'
+
 
 def __virtual__():
     '''
-    Only load the module if iptables is installed
+    Only load the module if pam is installed
     '''
     if os.path.exists('/usr/lib/libpam.so'):
-        return 'pam'
-    return False
+        return __virtualname__
+    return (False, 'The pam execution module failed to load: '
+            'pam is not installed.')
 
 
 def _parse(contents=None, file_name=None):

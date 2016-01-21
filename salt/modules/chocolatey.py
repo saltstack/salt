@@ -322,6 +322,7 @@ def install(name,
             version=None,
             source=None,
             force=False,
+            pre_versions=False,
             install_args=None,
             override_args=False,
             force_x86=False,
@@ -341,6 +342,9 @@ def install(name,
 
     force
         Reinstall the current version of an existing package.
+
+    pre_versions
+        Include pre-release packages. Defaults to False.
 
     install_args
         A list of install arguments you want to pass to the installation process
@@ -374,6 +378,8 @@ def install(name,
         cmd.extend(['-Source', source])
     if salt.utils.is_true(force):
         cmd.extend(['-Force'])
+    if salt.utils.is_true(pre_versions):
+        cmd.extend(['-PreRelease'])
     if install_args:
         cmd.extend(['-InstallArguments', install_args])
     if override_args:
@@ -811,3 +817,99 @@ def version(name, check_remote=False, source=None, pre_versions=False):
                 ret[key] = value
 
     return ret
+
+
+def add_source(name, source_location, username=None, password=None):
+    '''
+    Instructs Chocolatey to add a source.
+
+    name
+        The name of the source to be added as a chocolatey repository.
+
+    source
+        Location of the source you want to work with.
+
+    username
+        Provide username for chocolatey sources that need authentification credentials.
+
+    password
+        Provide password for chocolatey sources that need authentification credentials.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' chocolatey.add_source <source name> <source_location>
+        salt '*' chocolatey.add_source <source name> <source_location> user=<user> password=<password>
+
+    '''
+    choc_path = _find_chocolatey(__context__, __salt__)
+    cmd = [choc_path, 'sources', 'Add', '-Name', name, "-Source", source_location]
+    if username:
+        cmd.extend(['-u', username])
+    if password:
+        cmd.extend(['-p', password])
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+
+    if result['retcode'] != 0:
+        err = 'Running chocolatey failed: {0}'.format(result['stderr'])
+        log.error(err)
+        raise CommandExecutionError(err)
+
+    return result['stdout']
+
+
+def _change_source_state(name, state):
+    '''
+    Instructs Chocolatey to change the state of a source.
+
+    name
+        Name of the repository to affect.
+
+    state
+        State in which you want the chocolatey repository.
+
+    '''
+    choc_path = _find_chocolatey(__context__, __salt__)
+    cmd = [choc_path, 'source', state, "-Name", name]
+    result = __salt__['cmd.run_all'](cmd, python_shell=False)
+
+    if result['retcode'] != 0:
+        err = 'Running chocolatey failed: {0}'.format(result['stderr'])
+        log.error(err)
+        raise CommandExecutionError(err)
+
+    return result['stdout']
+
+
+def enable_source(name):
+    '''
+    Instructs Chocolatey to enable a source.
+
+    name
+        Name of the source repository to enable.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' chocolatey.enable_source <name>
+
+    '''
+    return _change_source_state(name, "enable")
+
+
+def disable_source(name):
+    '''
+    Instructs Chocolatey to disable a source.
+
+    name
+        Name of the source repository to disable.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' chocolatey.disable_source <name>
+    '''
+    return _change_source_state(name, "disable")

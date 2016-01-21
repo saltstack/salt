@@ -586,7 +586,7 @@ def query(url,
             for item in items:
                 ret['dict'].append(xml.to_dict(item))
         elif decode_type == 'yaml':
-            ret['dict'] = yaml.load(result_text)
+            ret['dict'] = yaml.safe_load(result_text)
         else:
             text = True
 

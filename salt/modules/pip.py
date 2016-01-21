@@ -79,11 +79,12 @@ from __future__ import absolute_import
 # Import python libs
 import os
 import re
-import logging
 import shutil
+import logging
 
 # Import salt libs
 import salt.utils
+import tempfile
 import salt.utils.locales
 import salt.utils.url
 from salt.ext.six import string_types
@@ -98,6 +99,8 @@ __func_alias__ = {
 }
 
 VALID_PROTOS = ['http', 'https', 'ftp', 'file']
+
+rex_pip_chain_read = re.compile(r'-r\s(.*)\n?', re.MULTILINE)
 
 
 def __virtual__():
@@ -189,17 +192,53 @@ def _get_env_activate(bin_env):
     raise CommandNotFoundError('Could not find a `activate` binary')
 
 
-def _process_requirements(requirements, cmd, saltenv, user, no_chown):
+def _find_req(link):
+
+    logger.info('_find_req -- link = %s', str(link))
+
+    with salt.utils.fopen(link) as fh_link:
+        child_links = rex_pip_chain_read.findall(fh_link.read())
+
+    base_path = os.path.dirname(link)
+    child_links = [os.path.join(base_path, d) for d in child_links]
+
+    return child_links
+
+
+def _resolve_requirements_chain(requirements):
+    '''
+    Return an array of requirements file paths that can be used to complete
+    the no_chown==False && user != None conundrum
+    '''
+
+    chain = []
+
+    if isinstance(requirements, string_types):
+        requirements = [requirements]
+
+    for req_file in requirements:
+        chain.append(req_file)
+        chain.extend(_resolve_requirements_chain(_find_req(req_file)))
+
+    return chain
+
+
+def _process_requirements(requirements, cmd, cwd, saltenv, user):
     '''
     Process the requirements argument
     '''
     cleanup_requirements = []
+
     if requirements is not None:
         if isinstance(requirements, string_types):
             requirements = [r.strip() for r in requirements.split(',')]
+        elif not isinstance(requirements, list):
+            raise TypeError('requirements must be a string or list')
+
+        treq = None
 
         for requirement in requirements:
-            treq = None
+            logger.debug('TREQ IS: %s', str(treq))
             if requirement.startswith('salt://'):
                 cached_requirements = _get_cached_requirements(
                     requirement, saltenv
@@ -211,18 +250,80 @@ def _process_requirements(requirements, cmd, saltenv, user, no_chown):
                     return None, ret
                 requirement = cached_requirements
 
-            if user and not no_chown:
+            if user:
                 # Need to make a temporary copy since the user will, most
                 # likely, not have the right permissions to read the file
-                treq = salt.utils.mkstemp()
-                shutil.copyfile(requirement, treq)
-                logger.debug(
-                    'Changing ownership of requirements file \'{0}\' to '
-                    'user \'{1}\''.format(treq, user)
-                )
+
+                if not treq:
+                    treq = tempfile.mkdtemp()
+
                 __salt__['file.chown'](treq, user, None)
-                cleanup_requirements.append(treq)
-            cmd.extend(['--requirement', treq or requirement])
+
+                current_directory = None
+
+                if not current_directory:
+                    current_directory = os.path.abspath(os.curdir)
+
+                logger.info('_process_requirements from directory,' +
+                            '%s -- requirement: %s', cwd, requirement
+                            )
+
+                if cwd is None:
+                    r = requirement
+                    c = cwd
+
+                    requirement_abspath = os.path.abspath(requirement)
+                    cwd = os.path.dirname(requirement_abspath)
+                    requirement = os.path.basename(requirement)
+
+                    logger.debug('\n\tcwd: %s -> %s\n\trequirement: %s -> %s\n',
+                                 c, cwd, r, requirement
+                                 )
+
+                os.chdir(cwd)
+
+                reqs = _resolve_requirements_chain(requirement)
+
+                os.chdir(current_directory)
+
+                logger.info('request files: {0}'.format(str(reqs)))
+
+                for req_file in reqs:
+
+                    req_filename = os.path.basename(req_file)
+
+                    logger.debug('TREQ N CWD: %s -- %s -- for %s', str(treq), str(cwd), str(req_filename))
+                    source_path = os.path.join(cwd, req_filename)
+                    target_path = os.path.join(treq, req_filename)
+
+                    logger.debug('S: %s', source_path)
+                    logger.debug('T: %s', target_path)
+
+                    target_base = os.path.dirname(target_path)
+
+                    if not os.path.exists(target_base):
+                        os.makedirs(target_base, mode=0o755)
+                        __salt__['file.chown'](target_base, user, None)
+
+                    if not os.path.exists(target_path):
+                        logger.debug(
+                            'Copying %s to %s', source_path, target_path
+                        )
+                        __salt__['file.copy'](source_path, target_path)
+
+                    logger.debug(
+                        'Changing ownership of requirements file \'{0}\' to '
+                        'user \'{1}\''.format(target_path, user)
+                    )
+
+                    __salt__['file.chown'](target_path, user, None)
+
+            req_args = os.path.join(treq, requirement) if treq else requirement
+            cmd.extend(['--requirement', req_args])
+
+        cleanup_requirements.append(treq)
+
+    logger.debug('CLEANUP_REQUIREMENTS: %s', str(cleanup_requirements))
     return cleanup_requirements, None
 
 
@@ -492,9 +593,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     cleanup_requirements, error = _process_requirements(
         requirements=requirements,
         cmd=cmd,
+        cwd=cwd,
         saltenv=saltenv,
-        user=user,
-        no_chown=no_chown)
+        user=user
+    )
 
     if error:
         return error
@@ -722,18 +824,26 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         cmd.extend(['--trusted-host', trusted_host])
 
     try:
-        cmd_kwargs = dict(cwd=cwd, saltenv=saltenv, use_vt=use_vt, runas=user)
+        cmd_kwargs = dict(saltenv=saltenv, use_vt=use_vt, runas=user)
+
+        if cwd:
+            cmd_kwargs['cwd'] = cwd
+
         if bin_env and os.path.isdir(bin_env):
             cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
+
+        logger.debug(
+            'TRY BLOCK: end of pip.install -- cmd: %s, cmd_kwargs: %s',
+            str(cmd), str(cmd_kwargs)
+        )
+
         return __salt__['cmd.run_all'](cmd,
                                        python_shell=False,
                                        **cmd_kwargs)
     finally:
-        for requirement in cleanup_requirements:
-            try:
-                os.remove(requirement)
-            except OSError:
-                pass
+        for tempdir in [cr for cr in cleanup_requirements if cr is not None]:
+            if os.path.isdir(tempdir):
+                shutil.rmtree(tempdir)
 
 
 def uninstall(pkgs=None,
@@ -811,9 +921,11 @@ def uninstall(pkgs=None,
         # Backwards compatibility
         saltenv = __env__
 
-    cleanup_requirements, error = _process_requirements(requirements=requirements, cmd=cmd,
-                                                        saltenv=saltenv, user=user,
-                                                        no_chown=no_chown)
+    cleanup_requirements, error = _process_requirements(
+        requirements=requirements, cmd=cmd, saltenv=saltenv, user=user,
+        cwd=cwd
+    )
+
     if error:
         return error
 
@@ -867,10 +979,11 @@ def uninstall(pkgs=None,
         return __salt__['cmd.run_all'](cmd, **cmd_kwargs)
     finally:
         for requirement in cleanup_requirements:
-            try:
-                os.remove(requirement)
-            except OSError:
-                pass
+            if requirement:
+                try:
+                    os.remove(requirement)
+                except OSError:
+                    pass
 
 
 def freeze(bin_env=None,

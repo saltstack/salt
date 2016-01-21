@@ -57,7 +57,8 @@ def prep_bootstrap(mpt):
     fp_ = os.path.join(fpd_, os.path.basename(bs_))
     # Copy script into tmp
     shutil.copy(bs_, fp_)
-    return fp_
+    tmppath = fpd_.replace(mpt, '')
+    return fp_, tmppath
 
 
 def _mount(path, ftype):
@@ -145,6 +146,10 @@ def apply_(path, id_=None, config=None, approve_key=True, install=True,
                  'configuring as {0}'.format(id_))
         minion_config = salt.config.minion_config(cfg_files['config'])
         pki_dir = minion_config['pki_dir']
+        if not os.path.isdir(os.path.join(mpt, pki_dir.lstrip('/'))):
+            __salt__['file.makedirs'](
+                os.path.join(mpt, pki_dir.lstrip('/'), '')
+            )
         os.rename(cfg_files['privkey'], os.path.join(
             mpt, pki_dir.lstrip('/'), 'minion.pem'))
         os.rename(cfg_files['pubkey'], os.path.join(
@@ -233,11 +238,11 @@ def _install(mpt):
     '''
 
     _check_resolv(mpt)
-    boot_ = (prep_bootstrap(mpt)
+    boot_, tmppath = (prep_bootstrap(mpt)
              or salt.syspaths.BOOTSTRAP)
     # Exec the chroot command
     cmd = 'if type salt-minion; then exit 0; '
-    cmd += 'else sh {0} -c /tmp; fi'.format(salt.syspaths.BOOTSTRAP)
+    cmd += 'else sh {0} -c /tmp; fi'.format(os.path.join(tmppath, 'bootstrap-salt.sh'))
     return not __salt__['cmd.run_chroot'](mpt, cmd, python_shell=True)['retcode']
 
 

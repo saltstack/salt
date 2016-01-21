@@ -871,7 +871,7 @@ def pem_finger(path=None, key=None, sum_type='md5'):
             return ''
 
         with fopen(path, 'rb') as fp_:
-            key = ''.join(fp_.readlines()[1:-1])
+            key = ''.join([x for x in fp_.readlines() if x.strip()][1:-1])
 
     pre = getattr(hashlib, sum_type)(key).hexdigest()
     finger = ''

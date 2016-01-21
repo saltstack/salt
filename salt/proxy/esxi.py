@@ -4,9 +4,6 @@ Proxy Minion interface module for managing VMWare ESXi hosts.
 
 .. versionadded:: 2015.8.4
 
-:depends: pyVmomi
-:depends: ESXCLI
-
 **Special Note: SaltStack thanks** `Adobe Corporation <http://adobe.com/>`_
 **for their support in creating this Proxy Minion integration.**
 
@@ -22,6 +19,68 @@ does not know nor care that the target is not a "real" Salt Minion.
 More in-depth conceptual reading on Proxy Minions can be found in the
 :doc:`Proxy Minion </topics/proxyminion/index>` section of Salt's
 documentation.
+
+
+Dependencies
+============
+
+- pyVmomi Python Module
+- ESXCLI
+
+
+pyVmomi
+-------
+
+PyVmomi can be installed via pip:
+
+.. code-block:: bash
+
+    pip install pyVmomi
+
+.. note::
+
+    Version 6.0 of pyVmomi has some problems with SSL error handling on certain
+    versions of Python. If using version 6.0 of pyVmomi, Python 2.6,
+    Python 2.7.9, or newer must be present. This is due to an upstream dependency
+    in pyVmomi 6.0 that is not supported in Python versions 2.7 to 2.7.8. If the
+    version of Python is not in the supported range, you will need to install an
+    earlier version of pyVmomi. See `Issue #29537`_ for more information.
+
+.. _Issue #29537: https://github.com/saltstack/salt/issues/29537
+
+Based on the note above, to install an earlier version of pyVmomi than the
+version currently listed in PyPi, run the following:
+
+.. code-block:: bash
+
+    pip install pyVmomi==5.5.0.2014.1.1
+
+The 5.5.0.2014.1.1 is a known stable version that this original ESXi State
+Module was developed against.
+
+ESXCLI
+------
+
+Currently, about a third of the functions used in the vSphere Execution Module require
+the ESXCLI package be installed on the machine running the Proxy Minion process.
+
+The ESXCLI package is also referred to as the VMware vSphere CLI, or vCLI. VMware
+provides vCLI package installation instructions for `vSphere 5.5`_ and
+`vSphere 6.0`_.
+
+.. _vSphere 5.5: http://pubs.vmware.com/vsphere-55/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
+.. _vSphere 6.0: http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
+
+Once all of the required dependencies are in place and the vCLI package is
+installed, you can check to see if you can connect to your ESXi host or vCenter
+server by running the following command:
+
+.. code-block:: bash
+
+    esxcli -s <host-location> -u <username> -p <password> system syslog config get
+
+If the connection was successful, ESXCLI was successfully installed on your system.
+You should see output related to the ESXi host's syslog configuration.
 
 
 Configuration
@@ -192,9 +251,9 @@ States
 ------
 
 Associated states are thoroughly documented in
-:doc:`salt.states.vsphere </ref/states/all/salt.states.vsphere>`. Look there
-to find an example structure for Pillar as well as an example ``.sls`` file f
-or standing up an ESXi host from scratch.
+:doc:`salt.states.esxi </ref/states/all/salt.states.esxi>`. Look there
+to find an example structure for Pillar as well as an example ``.sls`` file
+for standing up an ESXi host from scratch.
 
 '''
 
@@ -288,7 +347,7 @@ def ping():
     Check to see if the host is responding. Returns False if the host didn't
     respond, True otherwise.
 
-    CLI Example::
+    CLI Example:
 
     .. code-block:: bash
 

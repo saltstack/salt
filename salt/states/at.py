@@ -67,7 +67,7 @@ def present(name, timespec, tag=None, user=None, job=None):
         return ret
 
     if tag:
-        stdin = '### SALT: {0}\n{1}'.format(tag, job)
+        stdin = '### SALT: {0}\n{1}'.format(tag, name)
     else:
         stdin = name
     cmd = '{0} {1}'.format(binary, timespec)

@@ -109,6 +109,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, env=None, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -175,6 +176,7 @@ def low(data, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -239,6 +241,7 @@ def high(data, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -332,6 +335,7 @@ def highstate(test=None, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -403,6 +407,7 @@ def top(topfn, test=None, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
     single.shell.send(
             trans_tar,
@@ -627,6 +632,7 @@ def single(fun, name, test=None, **kwargs):
             __opts__,
             cmd,
             fsclient=__context__['fileclient'],
+            minion_opts=__salt__.minion_opts,
             **st_kwargs)
 
     # Copy the tar down

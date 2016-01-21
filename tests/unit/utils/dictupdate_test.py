@@ -29,7 +29,8 @@ class UtilDictupdateTestCase(TestCase):
         # level 1 value changes (list replacement)
         mdict = copy.deepcopy(self.dict1)
         mdict['A'] = [1, 2]
-        res = dictupdate.update(copy.deepcopy(mdict), {'A': [2, 3]})
+        res = dictupdate.update(copy.deepcopy(mdict), {'A': [2, 3]},
+                                merge_lists=False)
         mdict['A'] = [2, 3]
         self.assertEqual(res, mdict)
 
@@ -50,7 +51,8 @@ class UtilDictupdateTestCase(TestCase):
         # level 2 value changes (list replacement)
         mdict = copy.deepcopy(self.dict1)
         mdict['C']['D'] = ['a', 'b']
-        res = dictupdate.update(copy.deepcopy(mdict), {'C': {'D': ['c', 'd']}})
+        res = dictupdate.update(copy.deepcopy(mdict), {'C': {'D': ['c', 'd']}},
+                                merge_lists=False)
         mdict['C']['D'] = ['c', 'd']
         self.assertEqual(res, mdict)
 
@@ -75,7 +77,7 @@ class UtilDictupdateTestCase(TestCase):
         mdict = copy.deepcopy(self.dict1)
         mdict['C']['F']['G'] = ['a', 'b']
         res = dictupdate.update(copy.deepcopy(mdict),
-            {'C': {'F': {'G': ['c', 'd']}}})
+            {'C': {'F': {'G': ['c', 'd']}}}, merge_lists=False)
         mdict['C']['F']['G'] = ['c', 'd']
         self.assertEqual(res, mdict)
 

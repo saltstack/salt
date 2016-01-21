@@ -5,10 +5,64 @@ Manage VMware vCenter servers and ESXi hosts.
 .. versionadded:: 2015.8.4
 
 Dependencies
-------------
+============
 
 - pyVmomi Python Module
 - ESXCLI
+
+pyVmomi
+-------
+
+PyVmomi can be installed via pip:
+
+.. code-block:: bash
+
+    pip install pyVmomi
+
+.. note::
+
+    Version 6.0 of pyVmomi has some problems with SSL error handling on certain
+    versions of Python. If using version 6.0 of pyVmomi, Python 2.6,
+    Python 2.7.9, or newer must be present. This is due to an upstream dependency
+    in pyVmomi 6.0 that is not supported in Python versions 2.7 to 2.7.8. If the
+    version of Python is not in the supported range, you will need to install an
+    earlier version of pyVmomi. See `Issue #29537`_ for more information.
+
+.. _Issue #29537: https://github.com/saltstack/salt/issues/29537
+
+Based on the note above, to install an earlier version of pyVmomi than the
+version currently listed in PyPi, run the following:
+
+.. code-block:: bash
+
+    pip install pyVmomi==5.5.0.2014.1.1
+
+The 5.5.0.2014.1.1 is a known stable version that this original vSphere Execution
+Module was developed against.
+
+ESXCLI
+------
+
+Currently, about a third of the functions used in the vSphere Execution Module require
+the ESXCLI package be installed on the machine running the Proxy Minion process.
+
+The ESXCLI package is also referred to as the VMware vSphere CLI, or vCLI. VMware
+provides vCLI package installation instructions for `vSphere 5.5`_ and
+`vSphere 6.0`_.
+
+.. _vSphere 5.5: http://pubs.vmware.com/vsphere-55/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
+.. _vSphere 6.0: http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
+
+Once all of the required dependencies are in place and the vCLI package is
+installed, you can check to see if you can connect to your ESXi host or vCenter
+server by running the following command:
+
+.. code-block:: bash
+
+    esxcli -s <host-location> -u <username> -p <password> system syslog config get
+
+If the connection was successful, ESXCLI was successfully installed on your system.
+You should see output related to the ESXi host's syslog configuration.
 
 .. note::
 
@@ -27,7 +81,7 @@ Dependencies
 
 
 About
------
+=====
 
 This execution module was designed to be able to handle connections both to a
 vCenter Server, as well as to an ESXi host. It utilizes the pyVmomi Python
@@ -126,6 +180,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 __virtualname__ = 'vsphere'
+__proxyenabled__ = ['esxi']
 
 
 def __virtual__():
@@ -137,6 +192,74 @@ def __virtual__():
         return False, 'Missing dependency: The vSphere module requires ESXCLI.'
 
     return __virtualname__
+
+
+def esxcli_cmd(host, username, password, cmd_str, protocol=None, port=None, esxi_hosts=None):
+    '''
+    Run an ESXCLI command directly on the host or list of hosts.
+
+    host
+        The location of the host.
+
+    username
+        The username used to login to the host, such as ``root``.
+
+    password
+        The password used to login to the host.
+
+    cmd_str
+        The ESXCLI command to run. Note: This should not include the ``-s``, ``-u``,
+        ``-p``, ``-h``, ``--protocol``, or ``--portnumber`` arguments that are
+        frequently passed when using a bare ESXCLI command from the command line.
+        Those arguments are handled by this function via the other args and kwargs.
+
+    protocol
+        Optionally set to alternate protocol if the host is not using the default
+        protocol. Default protocol is ``https``.
+
+    port
+        Optionally set to alternate port if the host is not using the default
+        port. Default port is ``443``.
+
+    esxi_hosts
+        If ``host`` is a vCenter host, then use esxi_hosts to execute this function
+        on a list of one or more ESXi machines.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Used for ESXi host connection information
+        salt '*' vsphere.esxcli_cmd my.esxi.host root bad-password \
+            'system coredump network get'
+
+        # Used for connecting to a vCenter Server
+        salt '*' vsphere.esxcli_cmd my.vcenter.location root bad-password \
+            'system coredump network get' esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
+    '''
+    ret = {}
+    if esxi_hosts:
+        if not isinstance(esxi_hosts, list):
+            raise CommandExecutionError('\'esxi_hosts\' must be a list.')
+
+        for esxi_host in esxi_hosts:
+            response = salt.utils.vmware.esxcli(host, username, password, cmd_str,
+                                                protocol=protocol, port=port,
+                                                esxi_host=esxi_host)
+            if response['retcode'] != 0:
+                ret.update({esxi_host: {'Error': response.get('stdout')}})
+            else:
+                ret.update({esxi_host: response})
+    else:
+        # Handles a single host or a vCenter connection when no esxi_hosts are provided.
+        response = salt.utils.vmware.esxcli(host, username, password, cmd_str,
+                                            protocol=protocol, port=port)
+        if response['retcode'] != 0:
+            ret.update({host: {'Error': response.get('stdout')}})
+        else:
+            ret.update({host: response})
+
+    return ret
 
 
 def get_coredump_network_config(host, username, password, protocol=None, port=None, esxi_hosts=None):
@@ -807,7 +930,8 @@ def reset_syslog_config(host,
         port. Default port is ``443``.
 
     syslog_config
-        List of parameters to reset, or 'all' to reset everything.
+        List of parameters to reset, provided as a comma-delimited string, or 'all' to
+        reset all syslog configuration parameters. Required.
 
     esxi_hosts
         If ``host`` is a vCenter host, then use esxi_hosts to execute this function
@@ -831,6 +955,10 @@ def reset_syslog_config(host,
         salt '*' vsphere.reset_syslog_config my.vcenter.location root bad-password \
             syslog_config='logdir,loghost' esxi_hosts='[esxi-1.host.com, esxi-2.host.com]'
     '''
+    if not syslog_config:
+        raise CommandExecutionError('The \'reset_syslog_config\' function requires a '
+                                    '\'syslog_config\' setting.')
+
     valid_resets = ['logdir', 'loghost', 'default-rotate',
                     'default-size', 'default-timeout', 'logdir-unique']
     cmd = 'system syslog config set --reset='
@@ -3268,8 +3396,8 @@ def _get_service_manager(host_reference):
 def _get_vsan_eligible_disks(service_instance, host, host_names):
     '''
     Helper function that returns a dictionary of host_name keys with either a list of eligible
-    disks that can be added to VSAN or either and 'Error' message or a message saying no
-    eligible disks were found. Possible keys/values look like so:
+    disks that can be added to VSAN or either an 'Error' message or a message saying no
+    eligible disks were found. Possible keys/values look like:
 
     return = {'host_1': {'Error': 'VSAN System Config Manager is unset ...'},
               'host_2': {'Eligible': 'The host xxx does not have any VSAN eligible disks.'},
@@ -3328,6 +3456,9 @@ def _reset_syslog_config_params(host, username, password, cmd, resets, valid_res
     ret_dict = {}
     all_success = True
 
+    if not isinstance(resets, list):
+        resets = [resets]
+
     for reset_param in resets:
         if reset_param in valid_resets:
             ret = salt.utils.vmware.esxcli(host, username, password, cmd + reset_param,
@@ -3361,8 +3492,9 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
     valid_resets = ['logdir', 'loghost', 'default-rotate',
                     'default-size', 'default-timeout', 'logdir-unique']
     if syslog_config not in valid_resets:
-        return ret_dict.update({'success': False,
-                                'message': '\'{0}\' is not a valid config variable.'.format(syslog_config)})
+        ret_dict.update({'success': False,
+                         'message': '\'{0}\' is not a valid config variable.'.format(syslog_config)})
+        return ret_dict
 
     response = salt.utils.vmware.esxcli(host, username, password, cmd,
                                         protocol=protocol, port=port,
@@ -3388,3 +3520,109 @@ def _set_syslog_config_helper(host, username, password, syslog_config, config_va
         ret_dict.update({'syslog_restart': {'success': response['retcode'] == 0}})
 
     return ret_dict
+
+
+def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
+                    dvs_name, portgroup_name, protocol=None, port=None,
+                    host_names=None):
+    '''
+    Adds an ESXi host to a vSphere Distributed Virtual Switch
+    DOES NOT migrate the ESXi's physical and virtual NICs to the switch (yet)
+    (please don't remove the commented code)
+    '''
+    service_instance = salt.utils.vmware.get_service_instance(host=host,
+                                                              username=username,
+                                                              password=password,
+                                                              protocol=protocol,
+                                                              port=port)
+    dvs = salt.utils.vmware._get_dvs(service_instance, dvs_name)
+    target_portgroup = salt.utils.vmware._get_dvs_portgroup(dvs,
+                                                            portgroup_name)
+    uplink_portgroup = salt.utils.vmware._get_dvs_uplink_portgroup(dvs,
+                                                                   'DSwitch-DVUplinks-34')
+    dvs_uuid = dvs.config.uuid
+    host_names = _check_hosts(service_instance, host, host_names)
+
+    ret = {}
+    for host_name in host_names:
+        # try:
+        ret[host_name] = {}
+
+        ret[host_name].update({'status': False,
+                               'portgroup': portgroup_name,
+                               'dvs': dvs_name})
+        host_ref = _get_host_ref(service_instance, host, host_name)
+
+        dvs_hostmember_config = vim.dvs.HostMember.ConfigInfo(
+            host=host_ref
+        )
+        dvs_hostmember = vim.dvs.HostMember(
+            config=dvs_hostmember_config
+        )
+        p_nics = salt.utils.vmware._get_pnics(host_ref)
+        p_nic = [x for x in p_nics if x.device == 'vmnic0']
+        v_nics = salt.utils.vmware._get_vnics(host_ref)
+        v_nic = [x for x in v_nics if x.device == vmknic_name]
+        v_nic_mgr = salt.utils.vmware._get_vnic_manager(host_ref)
+
+        dvs_pnic_spec = vim.dvs.HostMember.PnicSpec(
+            pnicDevice=vmnic_name,
+            uplinkPortgroupKey=uplink_portgroup.key
+        )
+        pnic_backing = vim.dvs.HostMember.PnicBacking(
+            pnicSpec=[dvs_pnic_spec]
+        )
+        dvs_hostmember_config_spec = vim.dvs.HostMember.ConfigSpec(
+            host=host_ref,
+            operation='add',
+        )
+        dvs_config = vim.DVSConfigSpec(
+                configVersion=dvs.config.configVersion,
+                host=[dvs_hostmember_config_spec])
+        task = dvs.ReconfigureDvs_Task(spec=dvs_config)
+        salt.utils.vmware.wait_for_task(task, host_name,
+                                        'Adding host to the DVS',
+                                        sleep_seconds=3)
+
+        ret[host_name].update({'status': True})
+
+    return ret
+        # # host_network_config.proxySwitch[0].spec.backing.pnicSpec = dvs_pnic_spec
+        #
+        # network_system = host_ref.configManager.networkSystem
+        #
+        # host_network_config = network_system.networkConfig
+        #
+        #
+        # orig_portgroup = network_system.networkInfo.portgroup[0]
+        # host_portgroup_config = []
+        # host_portgroup_config.append(vim.HostPortGroupConfig(
+        #     changeOperation='remove',
+        #     spec=orig_portgroup.spec
+        # ))
+        # # host_portgroup_config.append(vim.HostPortGroupConfig(
+        # #     changeOperation='add',
+        # #     spec=target_portgroup
+        # #
+        # # ))
+        # dvs_port_connection = vim.DistributedVirtualSwitchPortConnection(
+        #     portgroupKey=target_portgroup.key, switchUuid=dvs_uuid
+        # )
+        # host_vnic_spec = vim.HostVirtualNicSpec(
+        #         distributedVirtualPort=dvs_port_connection
+        # )
+        # host_vnic_config = vim.HostVirtualNicConfig(
+        #     changeOperation='add',
+        #     device=vmknic_name,
+        #     portgroup=target_portgroup.key,
+        #     spec=host_vnic_spec
+        # )
+        # host_network_config.proxySwitch[0].spec.backing = pnic_backing
+        # host_network_config.portgroup = host_portgroup_config
+        # host_network_config.vnic = [host_vnic_config]
+        # # host_network_config = vim.HostNetworkConfig(
+        # #     portgroup=[host_portgroup_config],
+        # #     vnic=[host_vnic_config]
+        # # )
+        # network_system.UpdateNetworkConfig(changeMode='modify',
+        #                                    config=host_network_config)

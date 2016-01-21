@@ -249,6 +249,7 @@ a key named "changes". Here are two examples of state return dictionaries,
 shown in json for clarity:
 
 .. code-block:: json
+
     {
         "local": {
             "file_|-/tmp/foo_|-/tmp/foo_|-directory": {
@@ -529,6 +530,12 @@ exactly how it was expected to, or to make 100% sure that a state only runs
 under certain conditions. The use of unless or onlyif options help make states
 even more stateful. The ``check_cmd`` option helps ensure that the result of a
 state is evaluated correctly.
+
+Reload
+------
+
+``reload_modules`` is a boolean option that forces salt to reload its modules
+after a state finishes. See :ref:`Reloading Modules <reloading-modules>`.
 
 Unless
 ------

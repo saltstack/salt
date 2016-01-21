@@ -25,9 +25,15 @@ __func_alias__ = {
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'pecl'
+
 
 def __virtual__():
-    return True if salt.utils.which('pecl') else False
+    if salt.utils.which('pecl'):
+        return __virtualname__
+    return (False, 'The pecl execution module not loaded: '
+            'pecl binary is not in the path.')
 
 
 def _pecl(command, defaults=False):

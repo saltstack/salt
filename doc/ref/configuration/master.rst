@@ -2255,35 +2255,6 @@ strategy between different sources. It accepts 4 values:
           element2: True
       baz: quux
 
-* recurse_list:
-
-  it will merge recursively mapping of data similar to ``recurse`` but merge
-  lists by aggregating them instead of replacing them.
-
-  .. code-block:: yaml
-
-      foo: 43
-      bar:
-         - 1
-         - 2
-
-  .. code-block:: yaml
-
-      bar:
-         - 3
-      baz: quux
-
-  will be merged as:
-
-  .. code-block:: yaml
-
-      foo: 42
-      bar:
-         - 1
-         - 2
-         - 3
-      baz: quux
-
 * aggregate:
 
   instructs aggregation of elements between sources that use the #!yamlex renderer.
@@ -2352,6 +2323,21 @@ strategy between different sources. It accepts 4 values:
 * smart (default):
 
   Guesses the best strategy based on the "renderer" setting.
+
+.. conf_master:: pillar_merge_lists
+
+``pillar_merge_lists``
+----------------------
+
+.. versionadded:: 2015.8.0
+
+Default: ``True``
+
+Recursively merge lists by aggregating them instead of replacing them.
+
+.. code-block:: yaml
+
+    pillar_merge_lists: False
 
 
 Syndic Server Settings
@@ -2669,7 +2655,6 @@ Default: ``{}``
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
-
 Node Groups
 ===========
 
@@ -2796,7 +2781,7 @@ for pre-2015.8.0 minions. 2015.8.0 and later minions use
 .. conf_master:: winrepo_dir_ng
 
 ``winrepo_dir_ng``
----------------
+------------------
 
 .. versionadded:: 2015.8.0
     A new :ref:`ng <windows-package-manager>` repo was added.
@@ -2867,7 +2852,7 @@ event that an error is introduced in the latest revision of the repo.
 .. conf_master:: winrepo_remotes_ng
 
 ``winrepo_remotes_ng``
--------------------
+----------------------
 
 .. versionadded:: 2015.8.0
     A new :ref:`ng <windows-package-manager>` repo was added.

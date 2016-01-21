@@ -99,9 +99,20 @@ def list_upgrades(refresh=True):
 list_updates = salt.utils.alias_function(list_upgrades, 'list_updates')
 
 
-def info_installed(*names):
+def info_installed(*names, **attr):
     '''
     Return the information of the named package(s), installed on the system.
+
+    :param names:
+        Names of the packages to get information about.
+
+    :param attr:
+        Comma-separated package attributes. If no 'attr' is specified, all available attributes returned.
+
+        Valid attributes are:
+            version, vendor, release, build_date, build_date_time_t, install_date, install_date_time_t,
+            build_host, group, source_rpm, arch, epoch, size, license, signature, packager, url,
+            summary, description.
 
     CLI example:
 
@@ -109,9 +120,11 @@ def info_installed(*names):
 
         salt '*' pkg.info_installed <package1>
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
+        salt '*' pkg.info_installed <package1> attr=version,vendor
+        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor
     '''
     ret = dict()
-    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names).items():
+    for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **attr).items():
         t_nfo = dict()
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
@@ -157,7 +170,7 @@ def info_available(*names, **kwargs):
         cmd.extend(batch[:batch_size])
         pkg_info.extend(
             re.split(
-                '----*',
+                'Information for package*',
                 __salt__['cmd.run_stdout'](
                     cmd,
                     output_loglevel='trace',
@@ -170,6 +183,8 @@ def info_available(*names, **kwargs):
     for pkg_data in pkg_info:
         nfo = {}
         for line in [data for data in pkg_data.split('\n') if ':' in data]:
+            if line.startswith('-----'):
+                continue
             kw = [data.strip() for data in line.split(':', 1)]
             if len(kw) == 2 and kw[1]:
                 nfo[kw[0].lower()] = kw[1]

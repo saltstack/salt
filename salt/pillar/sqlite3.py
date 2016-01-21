@@ -4,7 +4,8 @@ Retrieve Pillar data by doing a SQLite3 query
 
 sqlite3 is included in the stdlib since python2.5.
 
-This module is a concrete implementation of the sql_base ext_pillar for SQLite3.
+This module is a concrete implementation of the sql_base ext_pillar for
+SQLite3.
 
 :maturity: new
 :platform: all
@@ -21,8 +22,22 @@ Note, timeout is in seconds.
 
 .. code-block:: yaml
 
+    sqlite3.database: /var/lib/salt/pillar.db
+    sqlite3.timeout: 5.0
+
+Legacy compatibility
+====================
+
+SQLite3 database connection configuration previouly had keys under
+pillar.
+
+.. code-block:: yaml
+
     pillar.sqlite3.database: /var/lib/salt/pillar.db
     pillar.sqlite3.timeout: 5.0
+
+This has been depreciated in salt Boran and will be removed in salt
+Nitrogen.
 
 
 Complete example
@@ -30,10 +45,9 @@ Complete example
 
 .. code-block:: yaml
 
-    pillar:
-      sqlite3:
-        database: '/var/lib/salt/pillar.db'
-        timeout: 5.0
+    sqlite3:
+      database: '/var/lib/salt/pillar.db'
+      timeout: 5.0
 
     ext_pillar:
       - sqlite3:
@@ -53,6 +67,7 @@ import logging
 import sqlite3
 
 # Import Salt libs
+import salt.utils
 from salt.pillar.sql_base import SqlBaseExtPillar
 
 # Set up logging
@@ -78,12 +93,23 @@ class SQLite3ExtPillar(SqlBaseExtPillar):
         defaults = {'database': '/var/lib/salt/pillar.db',
                     'timeout': 5.0}
         _options = {}
-        _opts = __opts__.get('pillar', {}).get('sqlite3', {})
-        if 'database' not in _opts:
-            _sqlite3_opts = __opts__.get('pillar', {}).get('master', {})\
-                .get('pillar', {}).get('sqlite3')
-            if _sqlite3_opts is not None:
-                _opts = _sqlite3_opts
+        if 'sqlite3' in __opts__ and 'database' in __opts__['sqlite3']:
+            # new configuration
+            _opts = __opts__.get('sqlite3', {})
+        else:
+            # legacy configuration
+            salt.utils.warn_until(
+                'Nitrogen',
+                'Configurations under the pillar key are deprecated.'
+                'See the docs for the new style of configuration.'
+                'This functionality will be removed in Salt Nitro­gen.'
+            )
+            _opts = __opts__.get('pillar', {}).get('sqlite3', {})
+            if 'database' not in _opts:
+                _sqlite3_opts = __opts__.get('pillar', {}).get('master', {})\
+                    .get('pillar', {}).get('sqlite3')
+                if _sqlite3_opts is not None:
+                    _opts = _sqlite3_opts
         for attr in defaults:
             if attr not in _opts:
                 log.debug('Using default for SQLite3 pillar {0}'.format(attr))

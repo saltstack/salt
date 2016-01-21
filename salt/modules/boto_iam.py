@@ -522,8 +522,8 @@ def remove_user_from_group(group_name, user_name, region=None, key=None, keyid=N
         msg = 'Username : {0} does not exist.'
         log.error(msg.format(user_name, group_name))
         return False
-    if not user_exists_in_group(user_name, group_name, region=None, key=None, keyid=None,
-                                profile=None):
+    if not user_exists_in_group(user_name, group_name, region=region, key=key,
+                                keyid=keyid, profile=profile):
         return True
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
@@ -697,7 +697,7 @@ def delete_login_profile(user_name, region=None, key=None, keyid=None,
     '''
     Deletes a login profile for the specified user.
 
-    .. versionadded::
+    .. versionadded:: Boron
 
     CLI Example:
 
@@ -730,7 +730,7 @@ def get_all_mfa_devices(user_name, region=None, key=None, keyid=None,
     '''
     Get all MFA devices associated with an IAM user.
 
-    .. versionadded::
+    .. versionadded:: Boron
 
     CLI Example:
 
@@ -764,7 +764,7 @@ def deactivate_mfa_device(user_name, serial, region=None, key=None, keyid=None,
     Deactivates the specified MFA device and removes it from association with
     the user.
 
-    .. versionadded::
+    .. versionadded:: Boron
 
     CLI Example:
 

@@ -386,18 +386,19 @@ def latest_version(*names, **kwargs):
                         out['stderr']
                     )
                 )
-        return []
-    # Find end of first line so we can skip it
-    header_end = out['stdout'].find('\n')
-    if header_end == -1:
-        return []
-
-    # Sort by version number (highest to lowest) for loop below
-    updates = sorted(
-        _yum_pkginfo(out['stdout'][header_end + 1:]),
-        key=lambda pkginfo: _LooseVersion(pkginfo.version),
-        reverse=True
-    )
+        updates = []
+    else:
+        # Find end of first line so we can skip it
+        header_end = out['stdout'].find('\n')
+        if header_end == -1:
+            updates = []
+        else:
+            # Sort by version number (highest to lowest) for loop below
+            updates = sorted(
+                _yum_pkginfo(out['stdout'][header_end + 1:]),
+                key=lambda pkginfo: _LooseVersion(pkginfo.version),
+                reverse=True
+            )
 
     for name in names:
         for pkg in (x for x in updates if x.name == name):
@@ -406,6 +407,8 @@ def latest_version(*names, **kwargs):
                 ret[name] = pkg.version
                 # no need to check another match, if there was one
                 break
+        else:
+            ret['name'] = ''
 
     # Return a string if only one package name passed
     if len(names) == 1:

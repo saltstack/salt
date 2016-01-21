@@ -327,7 +327,7 @@ def function(
         The list of arguments to pass into the function
 
     kwarg
-        The list of keyword arguments to pass into the function
+        The dict (not a list) of keyword arguments to pass into the function
 
     ret
         Optionally set a single or a list of returners to use

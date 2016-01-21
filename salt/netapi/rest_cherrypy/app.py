@@ -131,24 +131,24 @@ The token may be sent in one of two ways:
 
   For example, using curl:
 
-    .. code-block:: bash
+  .. code-block:: bash
 
-        curl -sSk https://localhost:8000/login \\
-            -H 'Accept: application/x-yaml' \\
-            -d username=saltdev \\
-            -d password=saltdev \\
-            -d eauth=auto
+      curl -sSk https://localhost:8000/login \\
+          -H 'Accept: application/x-yaml' \\
+          -d username=saltdev \\
+          -d password=saltdev \\
+          -d eauth=auto
 
-Copy the ``token`` value from the output and include it in subsequent requests:
+  Copy the ``token`` value from the output and include it in subsequent requests:
 
-    .. code-block:: bash
+  .. code-block:: bash
 
-        curl -sSk https://localhost:8000 \\
-            -H 'Accept: application/x-yaml' \\
-            -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\\
-            -d client=local \\
-            -d tgt='*' \\
-            -d fun=test.ping
+      curl -sSk https://localhost:8000 \\
+          -H 'Accept: application/x-yaml' \\
+          -H 'X-Auth-Token: 697adbdc8fe971d09ae4c2a3add7248859c87079'\\
+          -d client=local \\
+          -d tgt='*' \\
+          -d fun=test.ping
 
 * Sent via a cookie. This option is a convenience for HTTP clients that
   automatically handle cookie support (such as browsers).
@@ -1641,7 +1641,7 @@ class Run(LowDataAdapter):
 
         All SSH client requests are synchronous.
 
-        ** Example SSH client request:**
+        **Example SSH client request:**
 
         .. code-block:: bash
 
@@ -1690,6 +1690,7 @@ class Events(object):
     Salt infrastructure.
 
     .. seealso:: :ref:`events`
+
     '''
     exposed = True
 
@@ -1930,7 +1931,7 @@ class WebsocketEndpoint(object):
         :status 401: |401|
         :status 406: |406|
 
-        **Example request:**
+        **Example request:** ::
 
             curl -NsSk \\
                 -H 'X-Auth-Token: ffedf49d' \\

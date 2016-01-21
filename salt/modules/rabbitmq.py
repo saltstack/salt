@@ -281,6 +281,42 @@ def clear_password(name, runas=None):
     return _format_response(res, msg)
 
 
+def check_password(name, password, runas=None):
+    '''
+    .. versionadded:: Boron
+
+    Checks if a user's password is valid.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' rabbitmq.check_password rabbit_user password
+    '''
+    if runas is None:
+        runas = salt.utils.get_user()
+
+    cmd = ('rabbit_auth_backend_internal:check_user_login'
+        '(<<"{0}">>, [{{password, <<"{1}">>}}]).').format(
+        name.replace('"', '\\"'),
+        password.replace('"', '\\"'))
+
+    res = __salt__['cmd.run'](
+        ['rabbitmqctl', 'eval', cmd],
+        runas=runas,
+        output_loglevel='quiet',
+        python_shell=False)
+    msg = 'password-check'
+
+    _response = _format_response(res, msg)
+    _key = _response.keys()[0]
+
+    if 'invalid credentials' in _response[_key]:
+        return False
+
+    return True
+
+
 def add_vhost(vhost, runas=None):
     '''
     Adds a vhost via rabbitmqctl add_vhost.

@@ -260,6 +260,7 @@ from salt.ext.six.moves import zip_longest
 log = logging.getLogger(__name__)
 
 COMMENT_REGEX = r'^([[:space:]]*){0}[[:space:]]?'
+__NOT_FOUND = object()
 
 
 def _get_accumulator_filepath():
@@ -970,7 +971,7 @@ def absent(name):
     '''
     Make sure that the named file or directory is absent. If it exists, it will
     be deleted. This will work to reverse any of the functions in the file
-    state module.
+    state module. If a directory is supplied, it will be recursively deleted.
 
     name
         The path which should be deleted
@@ -1086,12 +1087,15 @@ def managed(name,
             defaults=None,
             env=None,
             backup='',
-            show_diff=True,
+            show_diff=None,
+            show_changes=True,
             create=True,
             contents=None,
             contents_pillar=None,
             contents_grains=None,
             contents_newline=True,
+            contents_delimiter=':',
+            allow_empty=True,
             follow_symlinks=True,
             check_cmd=None,
             **kwargs):
@@ -1226,21 +1230,20 @@ def managed(name,
         used to render the downloaded file, currently jinja, mako, and wempy
         are supported
 
-    makedirs
-        If the file is located in a path without a parent directory, then
-        the state will fail. If makedirs is set to True, then the parent
-        directories will be created to facilitate the creation of the named
-        file.
+    makedirs : False
+        If set to ``True``, then the parent directories will be created to
+        facilitate the creation of the named file. If ``False``, and the parent
+        directory of the destination file doesn't exist, the state will fail.
 
     dir_mode
         If directories are to be created, passing this option specifies the
         permissions for those directories. If this is not set, directories
         will be assigned permissions from the 'mode' argument.
 
-    replace
-        If this file should be replaced.  If false, this command will
-        not overwrite file contents but will enforce permissions if the file
-        exists already.  Default is True.
+    replace : True
+        If set to ``False`` and the file already exists, the file will not be
+        modified even if changes would otherwise be made. Permissions and
+        ownership will still be enforced, however.
 
     context
         Overrides default context variables passed to the template.
@@ -1252,16 +1255,42 @@ def managed(name,
         Overrides the default backup mode for this specific file.
 
     show_diff
-        If set to False, the diff will not be shown.
+        DEPRECATED: Please use show_changes.
 
-    create
-        Default is True, if create is set to False then the file will only be
-        managed if the file already exists on the system.
+        If set to ``False``, the diff will not be shown in the return data if
+        changes are made.
+
+    show_changes
+        Output a unified diff of the old file and the new file. If ``False``
+        return a boolean if any changes were made.
+
+    create : True
+        If set to ``False``, then the file will only be managed if the file
+        already exists on the system.
 
     contents
-        Default is None.  If specified, will use the given string as the
-        contents of the file.  Should not be used in conjunction with a source
-        file of any kind.  Ignores hashes and does not use a templating engine.
+        Specify the contents of the file. Cannot be used in combination with
+        ``source``. Ignores hashes and does not use a templating engine.
+
+        This value can be either a single string, a multiline YAML string or a
+        list of strings.  If a list of strings, then the strings will be joined
+        together with newlines in the resulting file. For example, the below
+        two example states would result in identical file contents:
+
+        .. code-block:: yaml
+
+            /path/to/file1:
+              file.managed:
+                - contents:
+                  - This is line 1
+                  - This is line 2
+
+            /path/to/file2:
+              file.managed:
+                - contents: |
+                  This is line 1
+                  This is line 2
+
 
     contents_pillar
         .. versionadded:: 0.17.0
@@ -1307,18 +1336,40 @@ def managed(name,
             pipe character, and the mutliline string is indented two more
             spaces.
 
+            To avoid the hassle of creating an indented multiline YAML string,
+            the :mod:`file_tree external pillar <salt.pillar.file_tree>` can
+            be used instead. However, this will not work for binary files in
+            Salt releases before 2015.8.4.
+
     contents_grains
         .. versionadded:: 2014.7.0
 
-        Same as contents_pillar, but with grains
+        Same as ``contents_pillar``, but with grains
 
-    contents_newline
+    contents_newline : True
         .. versionadded:: 2014.7.0
+        .. versionchanged:: 2015.8.4
+            This option is now ignored if the contents being deployed contain
+            binary data.
 
-        When using contents, contents_pillar, or contents_grains, this option
-        ensures the file will have a newline at the end.
-        When loading some data this newline is better left off. Setting
-        contents_newline to False will omit this final newline.
+        If ``True``, files managed using ``contents``, ``contents_pillar``, or
+        ``contents_grains`` will have a newline added to the end of the file if
+        one is not present. Setting this option to ``False`` will omit this
+        final newline.
+
+    contents_delimiter
+        .. versionadded:: 2015.8.4
+
+        Can be used to specify an alternate delimiter for ``contents_pillar``
+        or ``contents_grains``. This delimiter will be passed through to
+        :py:func:`pillar.get <salt.modules.pillar.get>` or :py:func:`grains.get
+        <salt.modules.grains.get>` when retrieving the contents.
+
+    allow_empty : True
+        .. versionadded:: 2015.8.4
+
+        If set to ``False``, then the state will fail if the contents specified
+        by ``contents_pillar`` or ``contents_grains`` are empty.
 
     follow_symlinks : True
         .. versionadded:: 2014.7.0
@@ -1346,42 +1397,97 @@ def managed(name,
            'name': name,
            'result': True}
 
-    # If no source is specified, set replace to False, as there is nothing
-    # to replace the file with.
-    src_defined = source or contents is not None or contents_pillar or contents_grains
-    if not src_defined and replace:
-        replace = False
-        log.warning(
-            'Neither \'source\' nor \'contents\' nor \'contents_pillar\' nor \'contents_grains\' '
-            'was defined, yet \'replace\' was set to \'True\'. As there is '
-            'no source to replace the file with, \'replace\' has been set '
-            'to \'False\' to avoid reading the file unnecessarily'
+    contents_count = len(
+        [x for x in (contents, contents_pillar, contents_grains) if x]
+    )
+
+    if source and contents_count > 0:
+        return _error(
+            ret,
+            '\'source\' cannot be used in combination with \'contents\', '
+            '\'contents_pillar\', or \'contents_grains\''
+        )
+    elif contents_count > 1:
+        return _error(
+            ret,
+            'Only one of \'contents\', \'contents_pillar\', and '
+            '\'contents_grains\' is permitted'
         )
 
-    if len([_f for _f in [contents, contents_pillar, contents_grains] if _f]) > 1:
-        return _error(
-            ret, 'Only one of contents, contents_pillar, and contents_grains is permitted')
+    # If no source is specified, set replace to False, as there is nothing
+    # with which to replace the file.
+    if not source and contents_count == 0 and replace:
+        replace = False
+        log.warning(
+            'Neither \'source\' nor \'contents\' nor \'contents_pillar\' nor '
+            '\'contents_grains\' was defined, yet \'replace\' was set to '
+            '\'True\'. As there is no source to replace the file with, '
+            '\'replace\' has been set to \'False\' to avoid reading the file '
+            'unnecessarily.'
+        )
 
+    # Use this below to avoid multiple '\0' checks and save some CPU cycles
+    contents_are_binary = False
     if contents_pillar:
-        contents = __salt__['pillar.get'](contents_pillar)
-        if not contents:
-            return _error(ret, 'contents_pillar {0} results in empty contents'.format(contents_pillar))
-    if contents_grains:
-        contents = __salt__['grains.get'](contents_grains)
-        if not contents:
-            return _error(ret, 'contents_grain {0} results in empty contents'.format(contents_grains))
+        contents = __salt__['pillar.get'](contents_pillar, __NOT_FOUND)
+        if contents is __NOT_FOUND:
+            return _error(
+                ret,
+                'Pillar {0} does not exist'.format(contents_pillar)
+            )
+        try:
+            if '\0' in contents:
+                contents_are_binary = True
+        except TypeError:
+            contents = str(contents)
+        if not allow_empty and not contents:
+            return _error(
+                ret,
+                'contents_pillar {0} results in empty contents'
+                .format(contents_pillar)
+            )
 
-    # ensure contents is a string
-    if contents:
-        validated_contents = _validate_str_list(contents)
-        if not validated_contents:
-            return _error(ret, '"contents" is not a string or list of strings')
-        if isinstance(validated_contents, list):
+    elif contents_grains:
+        contents = __salt__['grains.get'](contents_grains, __NOT_FOUND)
+        if contents is __NOT_FOUND:
+            return _error(
+                ret,
+                'Grain {0} does not exist'.format(contents_grains)
+            )
+        try:
+            if '\0' in contents:
+                contents_are_binary = True
+        except TypeError:
+            contents = str(contents)
+        if not allow_empty and not contents:
+            return _error(
+                ret,
+                'contents_grains {0} results in empty contents'
+                .format(contents_grains)
+            )
+
+    elif contents:
+        try:
+            if '\0' in contents:
+                contents_are_binary = True
+        except TypeError:
+            pass
+        if not contents_are_binary:
+            validated_contents = _validate_str_list(contents)
+            if not validated_contents:
+                return _error(
+                    ret,
+                    '\'contents\' is not a string or list of strings'
+                )
             contents = os.linesep.join(validated_contents)
-        if contents_newline:
-            # Make sure file ends in newline
-            if contents and not contents.endswith(os.linesep):
-                contents += os.linesep
+
+    # If either contents_pillar or contents_grains were used, the contents
+    # variable now contains the value loaded from pillar/grains.
+    if contents \
+            and not contents_are_binary \
+            and contents_newline \
+            and not contents.endswith(os.linesep):
+        contents += os.linesep
 
     # Make sure that leading zeros stripped by YAML loader are added back
     mode = __salt__['config.manage_mode'](mode)
@@ -1469,15 +1575,23 @@ def managed(name,
     else:
         ret['pchanges'] = {}
 
+    if show_diff is not None:
+        show_changes = show_diff
+        msg = (
+            'The \'show_diff\' argument to the file.managed state has been '
+            'deprecated, please use \'show_changes\' instead.'
+        )
+        salt.utils.warn_until('Boron', msg)
+
     try:
         if __opts__['test']:
             if ret['pchanges']:
                 ret['result'] = None
                 ret['comment'] = 'The file {0} is set to be changed'.format(name)
-                if show_diff and 'diff' in ret['pchanges']:
+                if show_changes and 'diff' in ret['pchanges']:
                     ret['changes']['diff'] = ret['pchanges']['diff']
-                if not show_diff:
-                    ret['changes']['diff'] = '<show_diff=False>'
+                if not show_changes:
+                    ret['changes']['diff'] = '<show_changes=False>'
             else:
                 ret['result'] = True
                 ret['comment'] = 'The file {0} is in the correct state'.format(name)
@@ -1525,7 +1639,12 @@ def managed(name,
             try:
                 __salt__['file.copy'](name, tmp_filename)
             except Exception as exc:
-                return _error(ret, 'Unable to copy file {0} to {1}: {2}'.format(name, tmp_filename, exc))
+                return _error(
+                    ret,
+                    'Unable to copy file {0} to {1}: {2}'.format(
+                        name, tmp_filename, exc
+                    )
+                )
 
         try:
             ret = __salt__['file.manage_file'](
@@ -2467,14 +2586,15 @@ def line(name, content, match=None, mode=None, location=None,
     if not check_res:
         return _error(ret, check_msg)
 
-    changes = __salt__['file.line'](name, content, match=match, mode=mode, location=location,
-                                    before=before, after=after, show_changes=show_changes,
-                                    backup=backup, quiet=quiet, indent=indent)
+    changes = __salt__['file.line'](
+        name, content, match=match, mode=mode, location=location,
+        before=before, after=after, show_changes=show_changes,
+        backup=backup, quiet=quiet, indent=indent)
     if changes:
         ret['pchanges']['diff'] = changes
         if __opts__['test']:
             ret['result'] = None
-            ret['comment'] = 'Changes would have been made:\ndiff:\n{0}'.format(changes)
+            ret['comment'] = 'Changes would be made:\ndiff:\n{0}'.format(changes)
         else:
             ret['result'] = True
             ret['comment'] = 'Changes were made'
@@ -2506,10 +2626,11 @@ def replace(name,
         Filesystem path to the file to be edited.
 
     pattern
-        Python's `regular expression search <https://docs.python.org/2/library/re.html>`_.
+        A regular expression, to be matched using Python's
+        :py:func:`~re.search`.
 
     repl
-        The replacement text.
+        The replacement text
 
     count
         Maximum number of pattern occurrences to be replaced.  Defaults to 0.
@@ -2530,36 +2651,43 @@ def replace(name,
         specified which will read the entire file into memory before
         processing.
 
-    append_if_not_found
-        If pattern is not found and set to ``True`` then, the content will be appended to the file.
+    append_if_not_found : False
+        If set to ``True``, and pattern is not found, then the content will be
+        appended to the file.
 
         .. versionadded:: 2014.7.0
 
-    prepend_if_not_found
-        If pattern is not found and set to ``True`` then, the content will be prepended to the file.
+    prepend_if_not_found : False
+        If set to ``True`` and pattern is not found, then the content will be
+        prepended to the file.
 
         .. versionadded:: 2014.7.0
 
     not_found_content
-        Content to use for append/prepend if not found. If ``None`` (default), uses ``repl``. Useful
-        when ``repl``  uses references to group in pattern.
+        Content to use for append/prepend if not found. If ``None`` (default),
+        uses ``repl``. Useful when ``repl`` uses references to group in
+        pattern.
 
         .. versionadded:: 2014.7.0
 
     backup
-        The file extension to use for a backup of the file before editing. Set to ``False`` to skip
-        making a backup.
+        The file extension to use for a backup of the file before editing. Set
+        to ``False`` to skip making a backup.
 
-    show_changes
-        Output a unified diff of the old file and the new file. If ``False`` return a boolean if any
-        changes were made. Returns a boolean or a string.
+    show_changes : True
+        Output a unified diff of the old file and the new file. If ``False``
+        return a boolean if any changes were made. Returns a boolean or a
+        string.
 
         .. note:
-            Using this option will store two copies of the file in-memory (the original version and
-            the edited version) in order to generate the diff.
+            Using this option will store two copies of the file in memory (the
+            original version and the edited version) in order to generate the
+            diff. This may not normally be a concern, but could impact
+            performance if used with large files.
 
-    For complex regex patterns it can be useful to avoid the need for complex quoting and escape
-    sequences by making use of YAML's multiline string syntax.
+    For complex regex patterns, it can be useful to avoid the need for complex
+    quoting and escape sequences by making use of YAML's multiline string
+    syntax.
 
     .. code-block:: yaml
 
@@ -3121,7 +3249,8 @@ def append(name,
            sources=None,
            source_hashes=None,
            defaults=None,
-           context=None):
+           context=None,
+           ignore_whitespace=True):
     '''
     Ensure that some text appears at the end of a file.
 
@@ -3224,6 +3353,13 @@ def append(name,
     context
         Overrides default context variables passed to the template.
 
+    ignore_whitespace
+        .. versionadded:: 2015.8.4
+
+        Spaces and Tabs in text are ignored by default, when searching for the
+        appending content, one space or multiple tabs are the same for salt.
+        Set this option to ``False`` if you want to change this behavior.
+
     Multi-line example:
 
     .. code-block:: yaml
@@ -3325,10 +3461,15 @@ def append(name,
 
     try:
         for chunk in text:
-
-            if __salt__['file.search'](
+            if ignore_whitespace:
+                if __salt__['file.search'](
                     name,
                     salt.utils.build_whitespace_split_regex(chunk),
+                    multiline=True):
+                    continue
+            elif __salt__['file.search'](
+                    name,
+                    chunk,
                     multiline=True):
                 continue
 
@@ -3561,7 +3702,7 @@ def patch(name,
           env=None,
           **kwargs):
     '''
-    Apply a patch to a file.
+    Apply a patch to a file or directory.
 
     .. note::
 
@@ -3569,7 +3710,7 @@ def patch(name,
         using this state function.
 
     name
-        The file to which the patch will be applied.
+        The file or directory to which the patch will be applied.
 
     source
         The source patch to download to the minion, this source file must be
@@ -3617,7 +3758,7 @@ def patch(name,
     if hash is None:
         return _error(ret, 'Hash is required')
 
-    if __salt__['file.check_hash'](name, hash):
+    if hash and __salt__['file.check_hash'](name, hash):
         ret.update(result=True, comment='Patch is already applied')
         return ret
 
@@ -3660,7 +3801,7 @@ def patch(name,
         name, cached_source_path, options=options
     )
     ret['result'] = not ret['changes']['retcode']
-    if ret['result'] and not __salt__['file.check_hash'](name, hash):
+    if ret['result'] and hash and not __salt__['file.check_hash'](name, hash):
         ret.update(
             result=False,
             comment='File {0} hash mismatch after patch was applied'.format(
@@ -4287,7 +4428,7 @@ def serialize(name,
 
     formatter = kwargs.pop('formatter', 'yaml').lower()
 
-    if len([_f for _f in [dataset, dataset_pillar] if _f]) > 1:
+    if len([x for x in (dataset, dataset_pillar) if x]) > 1:
         return _error(
             ret, 'Only one of \'dataset\' and \'dataset_pillar\' is permitted')
 
@@ -4297,6 +4438,14 @@ def serialize(name,
     if dataset is None:
         return _error(
             ret, 'Neither \'dataset\' nor \'dataset_pillar\' was defined')
+
+    if salt.utils.is_windows():
+        if group is not None:
+            log.warning(
+                'The group argument for {0} has been ignored as this '
+                'is a Windows system.'.format(name)
+            )
+        group = user
 
     serializer_name = '{0}.serialize'.format(formatter)
     if serializer_name in __serializers__:

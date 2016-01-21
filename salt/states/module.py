@@ -74,20 +74,20 @@ arguments. For example:
 
 .. code-block:: yaml
 
-cloud.create:
-  module.run:
-  - func: cloud.create
-  - provider: test-provider
-  - m_names:
-    - test-vlad
-  - kwargs: {
-        ssh_username: 'ubuntu',
-        image: 'ami-8d6d9daa',
-        securitygroup: 'default',
-        size: 'c3.large',
-        location: 'ap-northeast-1',
-        delvol_on_destroy: 'True'
-    }
+    cloud.create:
+      module.run:
+        - func: cloud.create
+        - provider: test-provider
+        - m_names:
+          - test-vlad
+        - kwargs: {
+              ssh_username: 'ubuntu',
+              image: 'ami-8d6d9daa',
+              securitygroup: 'default',
+              size: 'c3.large',
+              location: 'ap-northeast-1',
+              delvol_on_destroy: 'True'
+          }
 
 '''
 from __future__ import absolute_import

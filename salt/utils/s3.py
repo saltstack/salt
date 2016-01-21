@@ -125,17 +125,15 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not data:
         data = None
 
-    try:
-        result = requests.request(method, requesturl, headers=headers,
-                                  data=data,
-                                  verify=verify_ssl)
-        response = result.content
-    except requests.exceptions.HTTPError as exc:
-        log.error('Failed to {0} {1}::'.format(method, requesturl))
-        log.error('    Exception: {0}'.format(exc))
-        if exc.response:
-            log.error('    Response content: {0}'.format(exc.response.content))
-        return False
+    result = requests.request(method,
+                              requesturl,
+                              headers=headers,
+                              data=data,
+                              verify=verify_ssl)
+    response = result.content
+    if result.status_code >= 400:
+        # On error the S3 API response should contain error message
+        log.debug('    Response content: {0}'.format(response))
 
     log.debug('S3 Response Status Code: {0}'.format(result.status_code))
 

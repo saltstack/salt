@@ -311,7 +311,10 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
     # lot of custom init script wont or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name, sig)
-    before_toggle_enable_status = __salt__['service.enabled'](name)
+    if 'service.enabled' in __salt__:
+        before_toggle_enable_status = __salt__['service.enabled'](name)
+    else:
+        before_toggle_enable_status = True
 
     # See if the service is already running
     if before_toggle_status:
@@ -346,7 +349,10 @@ def running(name, enable=None, sig=None, init_delay=None, **kwargs):
 
     # only force a change state if we have explicitly detected them
     after_toggle_status = __salt__['service.status'](name)
-    after_toggle_enable_status = __salt__['service.enabled'](name)
+    if 'service.enabled' in __salt__:
+        after_toggle_enable_status = __salt__['service.enabled'](name)
+    else:
+        after_toggle_enable_status = True
     if (
         (before_toggle_enable_status != after_toggle_enable_status) or
         (before_toggle_status != after_toggle_status)
@@ -399,7 +405,10 @@ def dead(name, enable=None, sig=None, **kwargs):
     # lot of custom init script wont or mis implement the status
     # command, so it is just an indicator but can not be fully trusted
     before_toggle_status = __salt__['service.status'](name, sig)
-    before_toggle_enable_status = __salt__['service.enabled'](name)
+    if 'service.enabled' in __salt__:
+        before_toggle_enable_status = __salt__['service.enabled'](name)
+    else:
+        before_toggle_enable_status = True
     if not before_toggle_status:
         ret['comment'] = 'The service {0} is already dead'.format(name)
         if enable is True and not before_toggle_enable_status:
@@ -430,7 +439,10 @@ def dead(name, enable=None, sig=None, **kwargs):
             ret.update(_disable(name, False, **kwargs))
     # only force a change state if we have explicitly detected them
     after_toggle_status = __salt__['service.status'](name)
-    after_toggle_enable_status = __salt__['service.enabled'](name)
+    if 'service.enabled' in __salt__:
+        after_toggle_enable_status = __salt__['service.enabled'](name)
+    else:
+        after_toggle_enable_status = True
     if (
         (before_toggle_enable_status != after_toggle_enable_status) or
         (before_toggle_status != after_toggle_status)

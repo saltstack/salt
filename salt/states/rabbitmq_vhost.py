@@ -8,11 +8,11 @@ Example:
 .. code-block:: yaml
 
     virtual_host:
-        rabbitmq_vhost.present:
-            - user: rabbit_user
-            - conf: .*
-            - write: .*
-            - read: .*
+      rabbitmq_vhost.present:
+        - user: rabbit_user
+        - conf: .*
+        - write: .*
+        - read: .*
 '''
 from __future__ import absolute_import
 

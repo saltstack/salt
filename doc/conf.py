@@ -88,7 +88,10 @@ MOCK_MODULES = [
     'tornado.httpserver',
     'tornado.httputil',
     'tornado.ioloop',
+    'tornado.iostream',
+    'tornado.netutil',
     'tornado.simple_httpclient',
+    'tornado.stack_context',
     'tornado.web',
     'tornado.websocket',
 
@@ -161,11 +164,11 @@ intersphinx_mapping = {
 # -- General Configuration -----------------------------------------------------
 
 project = 'Salt'
-copyright = '2015 SaltStack, Inc.'
+copyright = '2016 SaltStack, Inc.'
 
 version = salt.version.__version__
 latest_release = '2015.8.3'  # latest release
-previous_release = '2015.5.8'  # latest release from previous branch
+previous_release = '2015.5.9'  # latest release from previous branch
 previous_release_dir = '2015.5'  # path on web server for previous branch
 build_type = 'develop'  # latest, previous, develop
 

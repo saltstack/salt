@@ -898,7 +898,7 @@ class DaemonMixIn(six.with_metaclass(MixInMeta, object)):
             if self._setup_mp_logging_listener_ is True:
                 # Stop the logging queue listener for the current process
                 # We'll restart it once forked
-                log.shutdown_multiprocessing_logging_listener()
+                log.shutdown_multiprocessing_logging_listener(daemonizing=True)
 
             # Late import so logging works correctly
             salt.utils.daemonize()
@@ -2918,7 +2918,8 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
                                    OptionParser,
                                    ConfigDirMixIn,
                                    LogLevelMixIn,
-                                   MergeConfigMixIn)):
+                                   MergeConfigMixIn,
+                                   SaltfileMixIn)):
     '''
     The cli parser object used to fire up the salt spm system.
     '''

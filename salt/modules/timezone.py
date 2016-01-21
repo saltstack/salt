@@ -18,14 +18,24 @@ from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 log = logging.getLogger(__name__)
 
+__virtualname__ = 'timezone'
+
 
 def __virtual__():
     '''
     Only work on POSIX-like systems
     '''
     if salt.utils.is_windows():
-        return (False, 'The timezone execution module failed to load: not available on Windows systems.')
-    return True
+        return (False, 'The timezone execution module failed to load: '
+                       'win_timezone.py should replace this module on Windows.'
+                       'There was a problem loading win_timezone.py.')
+
+    if salt.utils.is_darwin():
+        return (False, 'The timezone execution module failed to load: '
+                       'mac_timezone.py should replace this module on OS X.'
+                       'There was a problem loading mac_timezone.py.')
+
+    return __virtualname__
 
 
 def _timedatectl():

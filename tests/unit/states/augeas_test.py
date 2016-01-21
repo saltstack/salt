@@ -67,6 +67,16 @@ class AugeasTestCase(TestCase):
 
         self.assertDictEqual(augeas.change(self.name), self.ret)
 
+    def test_change_non_list_load_path(self):
+        '''
+        Test if none list load_path is handled correctly
+        '''
+        comt = ('\'load_path\' must be specified as a list')
+        self.ret.update({'comment': comt})
+
+        self.assertDictEqual(augeas.change(
+            self.name, self.context, self.changes, load_path='x'), self.ret)
+
     def test_change_in_test_mode(self):
         '''
         Test test mode handling

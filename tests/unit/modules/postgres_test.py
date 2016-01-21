@@ -41,6 +41,18 @@ test_list_language_csv = (
     'plpgsql\n'
 )
 
+test_privileges_list_table_csv = (
+    'name\n'
+    '"{baruwatest=arwdDxt/baruwatest,bayestest=arwd/baruwatest,baruwa=a*r*w*d*D*x*t*/baruwatest}"\n'
+)
+
+test_privileges_list_group_csv = (
+    'rolname,admin_option\n'
+    'baruwa,f\n'
+    'baruwatest2,t\n'
+    'baruwatest,f\n'
+)
+
 
 if NO_MOCK is False:
     SALT_STUB = {
@@ -988,6 +1000,400 @@ class PostgresTestCase(TestCase):
             password='testpassword'
         )
         self.assertFalse(ret)
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0,
+                              'stdout': test_privileges_list_table_csv}))
+    def test_privileges_list_table(self):
+        '''
+        Test privilege listing on a table
+        '''
+        ret = postgres.privileges_list(
+            'awl',
+            'table',
+            maintenance_db='db_name',
+            runas='user',
+            host='testhost',
+            port='testport',
+            user='testuser',
+            password='testpassword'
+        )
+        expected = {
+            "bayestest": {
+                "INSERT": False,
+                "UPDATE": False,
+                "SELECT": False,
+                "DELETE": False,
+            },
+            "baruwa": {
+                "INSERT": True,
+                "TRUNCATE": True,
+                "UPDATE": True,
+                "TRIGGER": True,
+                "REFERENCES": True,
+                "SELECT": True,
+                "DELETE": True,
+            },
+            "baruwatest": {
+                "INSERT": False,
+                "TRUNCATE": False,
+                "UPDATE": False,
+                "TRIGGER": False,
+                "REFERENCES": False,
+                "SELECT": False,
+                "DELETE": False,
+            },
+        }
+
+        self.assertDictEqual(ret, expected)
+
+        query = ("COPY (SELECT relacl AS name FROM pg_catalog.pg_class c "
+        "JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace "
+        "WHERE nspname = 'public' AND relname = 'awl' AND relkind = 'r' "
+        "ORDER BY relname) TO STDOUT WITH CSV HEADER")
+
+        postgres._run_psql.assert_called_once_with(
+            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+             '--no-password', '--username', 'testuser', '--host',
+             'testhost', '--port', 'testport', '--dbname', 'db_name',
+             '-v', 'datestyle=ISO,MDY', '-c', query],
+            host='testhost', port='testport',
+            password='testpassword', user='testuser', runas='user')
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0,
+                              'stdout': test_privileges_list_group_csv}))
+    def test_privileges_list_group(self):
+        '''
+        Test privilege listing on a group
+        '''
+        ret = postgres.privileges_list(
+            'admin',
+            'group',
+            maintenance_db='db_name',
+            runas='user',
+            host='testhost',
+            port='testport',
+            user='testuser',
+            password='testpassword'
+        )
+        expected = {
+            'baruwa': False,
+            'baruwatest': False,
+            'baruwatest2': True,
+        }
+
+        self.assertDictEqual(ret, expected)
+
+        query = ("COPY (SELECT rolname, admin_option "
+        "FROM pg_catalog.pg_auth_members m JOIN pg_catalog.pg_roles r "
+        "ON m.member=r.oid WHERE m.roleid IN (SELECT oid FROM "
+        "pg_catalog.pg_roles WHERE rolname='admin') ORDER BY rolname) "
+        "TO STDOUT WITH CSV HEADER")
+
+        postgres._run_psql.assert_called_once_with(
+            ['/usr/bin/pgsql', '--no-align', '--no-readline',
+             '--no-password', '--username', 'testuser', '--host',
+             'testhost', '--port', 'testport', '--dbname', 'db_name',
+             '-v', 'datestyle=ISO,MDY', '-c', query],
+            host='testhost', port='testport',
+            password='testpassword', user='testuser', runas='user')
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0,
+                              'stdout': test_privileges_list_table_csv}))
+    def test_has_privileges_on_table(self):
+        '''
+        Test privilege checks on table
+        '''
+        ret = postgres.has_privileges(
+            'baruwa',
+            'awl',
+            'table',
+            'SELECT,INSERT',
+            grant_option=True,
+            maintenance_db='db_name',
+            runas='user',
+            host='testhost',
+            port='testport',
+            user='testuser',
+            password='testpassword'
+        )
+
+        self.assertTrue(ret)
+
+        ret = postgres.has_privileges(
+            'baruwa',
+            'awl',
+            'table',
+            'ALL',
+            grant_option=True,
+            maintenance_db='db_name',
+            runas='user',
+            host='testhost',
+            port='testport',
+            user='testuser',
+            password='testpassword'
+        )
+
+        self.assertTrue(ret)
+
+        ret = postgres.has_privileges(
+            'bayestest',
+            'awl',
+            'table',
+            'SELECT,INSERT,TRUNCATE',
+            maintenance_db='db_name',
+            runas='user',
+            host='testhost',
+            port='testport',
+            user='testuser',
+            password='testpassword'
+        )
+
+        self.assertFalse(ret)
+
+        ret = postgres.has_privileges(
+            'bayestest',
+            'awl',
+            'table',
+            'SELECT,INSERT',
+            maintenance_db='db_name',
+            runas='user',
+            host='testhost',
+            port='testport',
+            user='testuser',
+            password='testpassword'
+        )
+
+        self.assertTrue(ret)
+
+    @patch('salt.modules.postgres._run_psql',
+           Mock(return_value={'retcode': 0,
+                              'stdout': test_privileges_list_group_csv}))
+    def test_has_privileges_on_group(self):
+        '''
+        Test privilege checks on group
+        '''
+        ret = postgres.has_privileges(
+            'baruwa',
+            'admin',
+            'group',
+            maintenance_db='db_name',
+            runas='user',
+            host='testhost',
+            port='testport',
+            user='testuser',
+            password='testpassword'
+        )
+
+        self.assertTrue(ret)
+
+        ret = postgres.has_privileges(
+            'baruwa',
+            'admin',
+            'group',
+            grant_option=True,
+            maintenance_db='db_name',
+            runas='user',
+            host='testhost',
+            port='testport',
+            user='testuser',
+            password='testpassword'
+        )
+
+        self.assertFalse(ret)
+
+        ret = postgres.has_privileges(
+            'tony',
+            'admin',
+            'group',
+            maintenance_db='db_name',
+            runas='user',
+            host='testhost',
+            port='testport',
+            user='testuser',
+            password='testpassword'
+        )
+
+        self.assertFalse(ret)
+
+    def test_privileges_grant_table(self):
+        '''
+        Test granting privileges on table
+        '''
+        with patch('salt.modules.postgres._run_psql',
+            Mock(return_value={'retcode': 0})):
+            with patch('salt.modules.postgres.has_privileges',
+                    Mock(return_value=False)):
+                ret = postgres.privileges_grant(
+                   'baruwa',
+                   'awl',
+                   'table',
+                   'ALL',
+                   grant_option=True,
+                   maintenance_db='db_name',
+                   runas='user',
+                   host='testhost',
+                   port='testport',
+                   user='testuser',
+                   password='testpassword'
+                )
+
+                query = 'GRANT ALL ON TABLE public.awl TO baruwa WITH GRANT OPTION'
+
+                postgres._run_psql.assert_called_once_with(
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                     '--no-password', '--username', 'testuser', '--host',
+                     'testhost', '--port', 'testport', '--dbname', 'db_name',
+                     '-c', query],
+                    host='testhost', port='testport',
+                    password='testpassword', user='testuser', runas='user')
+
+        with patch('salt.modules.postgres._run_psql',
+            Mock(return_value={'retcode': 0})):
+            with patch('salt.modules.postgres.has_privileges',
+                    Mock(return_value=False)):
+                ret = postgres.privileges_grant(
+                   'baruwa',
+                   'awl',
+                   'table',
+                   'ALL',
+                   maintenance_db='db_name',
+                   runas='user',
+                   host='testhost',
+                   port='testport',
+                   user='testuser',
+                   password='testpassword'
+                )
+
+                query = 'GRANT ALL ON TABLE public.awl TO baruwa'
+
+                postgres._run_psql.assert_called_once_with(
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                     '--no-password', '--username', 'testuser', '--host',
+                     'testhost', '--port', 'testport', '--dbname', 'db_name',
+                     '-c', query],
+                    host='testhost', port='testport',
+                    password='testpassword', user='testuser', runas='user')
+
+    def test_privileges_grant_group(self):
+        '''
+        Test granting privileges on group
+        '''
+        with patch('salt.modules.postgres._run_psql',
+            Mock(return_value={'retcode': 0})):
+            with patch('salt.modules.postgres.has_privileges',
+                    Mock(return_value=False)):
+                ret = postgres.privileges_grant(
+                   'baruwa',
+                   'admins',
+                   'group',
+                   grant_option=True,
+                   maintenance_db='db_name',
+                   runas='user',
+                   host='testhost',
+                   port='testport',
+                   user='testuser',
+                   password='testpassword'
+                )
+
+                query = 'GRANT admins TO baruwa WITH ADMIN OPTION'
+
+                postgres._run_psql.assert_called_once_with(
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                     '--no-password', '--username', 'testuser', '--host',
+                     'testhost', '--port', 'testport', '--dbname', 'db_name',
+                     '-c', query],
+                    host='testhost', port='testport',
+                    password='testpassword', user='testuser', runas='user')
+
+        with patch('salt.modules.postgres._run_psql',
+            Mock(return_value={'retcode': 0})):
+            with patch('salt.modules.postgres.has_privileges',
+                    Mock(return_value=False)):
+                ret = postgres.privileges_grant(
+                   'baruwa',
+                   'admins',
+                   'group',
+                   maintenance_db='db_name',
+                   runas='user',
+                   host='testhost',
+                   port='testport',
+                   user='testuser',
+                   password='testpassword'
+                )
+
+                query = 'GRANT admins TO baruwa'
+
+                postgres._run_psql.assert_called_once_with(
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                     '--no-password', '--username', 'testuser', '--host',
+                     'testhost', '--port', 'testport', '--dbname', 'db_name',
+                     '-c', query],
+                    host='testhost', port='testport',
+                    password='testpassword', user='testuser', runas='user')
+
+    def test_privileges_revoke_table(self):
+        '''
+        Test revoking privileges on table
+        '''
+        with patch('salt.modules.postgres._run_psql',
+            Mock(return_value={'retcode': 0})):
+            with patch('salt.modules.postgres.has_privileges',
+                    Mock(return_value=True)):
+                ret = postgres.privileges_revoke(
+                   'baruwa',
+                   'awl',
+                   'table',
+                   'ALL',
+                   maintenance_db='db_name',
+                   runas='user',
+                   host='testhost',
+                   port='testport',
+                   user='testuser',
+                   password='testpassword'
+                )
+
+                query = 'REVOKE ALL ON TABLE public.awl FROM baruwa'
+
+                postgres._run_psql.assert_called_once_with(
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                     '--no-password', '--username', 'testuser', '--host',
+                     'testhost', '--port', 'testport', '--dbname', 'db_name',
+                     '-c', query],
+                    host='testhost', port='testport',
+                    password='testpassword', user='testuser', runas='user')
+
+    def test_privileges_revoke_group(self):
+        '''
+        Test revoking privileges on group
+        '''
+        with patch('salt.modules.postgres._run_psql',
+            Mock(return_value={'retcode': 0})):
+            with patch('salt.modules.postgres.has_privileges',
+                    Mock(return_value=True)):
+                ret = postgres.privileges_revoke(
+                   'baruwa',
+                   'admins',
+                   'group',
+                   maintenance_db='db_name',
+                   runas='user',
+                   host='testhost',
+                   port='testport',
+                   user='testuser',
+                   password='testpassword'
+                )
+
+                query = 'REVOKE admins FROM baruwa'
+
+                postgres._run_psql.assert_called_once_with(
+                    ['/usr/bin/pgsql', '--no-align', '--no-readline',
+                     '--no-password', '--username', 'testuser', '--host',
+                     'testhost', '--port', 'testport', '--dbname', 'db_name',
+                     '-c', query],
+                    host='testhost', port='testport',
+                    password='testpassword', user='testuser', runas='user')
 
 if __name__ == '__main__':
     from integration import run_tests
