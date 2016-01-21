@@ -47,6 +47,13 @@ if HAS_PIP is True:
         if 'pip' in sys.modules:
             del sys.modules['pip']
 
+    ver = pip.__version__.split('.')
+    pip_ver = tuple([int(x) for x in ver if x.isdigit()])
+    if pip_ver >= (8, 0, 0):
+        from pip.exceptions import InstallationError
+    else:
+        InstallationError = ValueError
+
 logger = logging.getLogger(__name__)
 
 # Define the module's virtual name
@@ -133,7 +140,7 @@ def _check_pkg_version_format(pkg):
                         break
             else:
                 install_req = pip.req.InstallRequirement.from_line(pkg)
-    except ValueError as exc:
+    except (ValueError, InstallationError) as exc:
         ret['result'] = False
         if not from_vcs and '=' in pkg and '==' not in pkg:
             ret['comment'] = (
