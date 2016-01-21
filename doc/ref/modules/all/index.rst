@@ -297,6 +297,7 @@ Full list of builtin execution modules
     solaris_fmadm
     solaris_group
     solaris_shadow
+    solaris_system
     solaris_user
     solarisips
     solarispkg
