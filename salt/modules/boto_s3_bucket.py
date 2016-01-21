@@ -242,7 +242,7 @@ def describe(Bucket,
                     continue
                 raise
             if 'ResponseMetadata' in data:
-                del(data['ResponseMetadata'])
+                del data['ResponseMetadata']
             result[key] = data
 
         tags = {}
@@ -321,7 +321,7 @@ def put_acl(Bucket,
         kwargs = {}
         if AccessControlPolicy is not None:
             if isinstance(AccessControlPolicy, string_types):
-            	AccessControlPolicy = json.loads(AccessControlPolicy)
+                AccessControlPolicy = json.loads(AccessControlPolicy)
             kwargs['AccessControlPolicy'] = AccessControlPolicy
         for arg in ('ACL',
                     'GrantFullControl',

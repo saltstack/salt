@@ -143,7 +143,6 @@ from copy import deepcopy
 import json
 
 # Import Salt Libs
-import salt.utils
 from salt.ext.six import string_types  # pylint: disable=import-error
 from salt.utils.boto3 import json_objs_equal
 
@@ -189,7 +188,7 @@ def _acl_to_grant(ACL, owner_canonical_id):
                 },
                 'Permission': 'READ'
             })
-        if  acl == 'public-read-write':
+        if acl == 'public-read-write':
             ret['Grants'].append({
                 'Grantee': {
                     'URI': 'http://acs.amazonaws.com/groups/global/AllUsers'
@@ -272,6 +271,7 @@ def _get_role_arn(name, region=None, key=None, keyid=None, profile=None):
 
 def _compare_json(current, desired, region, key, keyid, profile):
     return json_objs_equal(current, desired)
+
 
 def _compare_acl(current, desired, region, key, keyid, profile):
     '''
@@ -426,7 +426,7 @@ def present(name, Bucket,
         for setter, testval, funcargs in (
                 ('put_acl', ACL, ACL),
                 ('put_cors', CORSRules, {"CORSRules": CORSRules}),
-                ('put_lifecycle_configuration', LifecycleConfiguration, {"Rules":LifecycleConfiguration}),
+                ('put_lifecycle_configuration', LifecycleConfiguration, {"Rules": LifecycleConfiguration}),
                 ('put_logging', Logging, Logging),
                 ('put_notification_configuration', NotificationConfiguration, NotificationConfiguration),
                 ('put_policy', Policy, {"Policy": Policy}),

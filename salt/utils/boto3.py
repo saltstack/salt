@@ -41,7 +41,6 @@ import logging
 import sys
 from distutils.version import LooseVersion as _LooseVersion  # pylint: disable=import-error,no-name-in-module
 from functools import partial
-from collections import OrderedDict
 
 # Import salt libs
 from salt.ext.six import string_types  # pylint: disable=import-error
@@ -314,7 +313,7 @@ def get_role_arn(name, region=None, key=None, keyid=None, profile=None):
 def _ordered(obj):
     if isinstance(obj, (list, tuple)):
         return sorted(_ordered(x) for x in obj)
-    elif isinstance(obj, (dict, OrderedDict)):
+    elif isinstance(obj, dict):
         return dict((unicode(k) if isinstance(k, string_types) else k, _ordered(v)) for k, v in obj.items())
     elif isinstance(obj, string_types):
         return unicode(obj)
