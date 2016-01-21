@@ -1885,7 +1885,6 @@ class Minion(MinionBase):
             # In the filtering enabled case, we'd like to know when minion sees something it shouldnt
             log.debug('Broadcast message received not for this minion')
 
-
     def _target_load(self, load):
         # Verify that the publication is valid
         if 'tgt' not in load or 'jid' not in load or 'fun' not in load \
