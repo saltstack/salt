@@ -353,7 +353,7 @@ def file_exists(path, saltenv=None):
     for env in pillar_roots:
         for pillar_dir in pillar_roots[env]:
             full_path = os.path.join(pillar_dir, path)
-            if __salt__['file.exists'](full_path):
+            if __salt__['file.file_exists'](full_path):
                 return True
 
     return False
