@@ -887,7 +887,8 @@ class Minion(MinionBase):
             self.schedule.delete_job('__mine_interval', persist=True)
 
         # add master_alive job if enabled
-        if self.opts['master_alive_interval'] > 0:
+        if (self.opts['transport'] != 'tcp' and
+                self.opts['master_alive_interval'] > 0):
             self.schedule.add_job({
                 '__master_alive':
                 {
@@ -899,6 +900,8 @@ class Minion(MinionBase):
                                'connected': True}
                 }
             }, persist=True)
+        else:
+            self.schedule.delete_job('__master_alive', persist=True)
 
         self.grains_cache = self.opts['grains']
 
@@ -1692,7 +1695,6 @@ class Minion(MinionBase):
             log.debug('Forwarding master event tag={tag}'.format(tag=data['tag']))
             self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
         elif package.startswith('__master_disconnected'):
-            tag, data = salt.utils.event.MinionEvent.unpack(tag, data)
             # if the master disconnect event is for a different master, raise an exception
             if data['master'] != self.opts['master']:
                 raise Exception()
@@ -1700,16 +1702,17 @@ class Minion(MinionBase):
                 # we are not connected anymore
                 self.connected = False
                 # modify the scheduled job to fire only on reconnect
-                schedule = {
-                   'function': 'status.master',
-                   'seconds': self.opts['master_alive_interval'],
-                   'jid_include': True,
-                   'maxrunning': 2,
-                   'kwargs': {'master': self.opts['master'],
-                              'connected': False}
-                }
-                self.schedule.modify_job(name='__master_alive',
-                                         schedule=schedule)
+                if self.opts['transport'] != 'tcp':
+                    schedule = {
+                       'function': 'status.master',
+                       'seconds': self.opts['master_alive_interval'],
+                       'jid_include': True,
+                       'maxrunning': 2,
+                       'kwargs': {'master': self.opts['master'],
+                                  'connected': False}
+                    }
+                    self.schedule.modify_job(name='__master_alive',
+                                             schedule=schedule)
 
                 log.info('Connection to master {0} lost'.format(self.opts['master']))
 
@@ -1732,16 +1735,17 @@ class Minion(MinionBase):
                         log.info('Minion is ready to receive requests!')
 
                         # update scheduled job to run with the new master addr
-                        schedule = {
-                           'function': 'status.master',
-                           'seconds': self.opts['master_alive_interval'],
-                           'jid_include': True,
-                           'maxrunning': 2,
-                           'kwargs': {'master': self.opts['master'],
-                                      'connected': True}
-                        }
-                        self.schedule.modify_job(name='__master_alive',
-                                                 schedule=schedule)
+                        if self.opts['transport'] != 'tcp':
+                            schedule = {
+                               'function': 'status.master',
+                               'seconds': self.opts['master_alive_interval'],
+                               'jid_include': True,
+                               'maxrunning': 2,
+                               'kwargs': {'master': self.opts['master'],
+                                          'connected': True}
+                            }
+                            self.schedule.modify_job(name='__master_alive',
+                                                     schedule=schedule)
 
         elif package.startswith('__master_connected'):
             # handle this event only once. otherwise it will pollute the log
@@ -1750,17 +1754,18 @@ class Minion(MinionBase):
                 self.connected = True
                 # modify the __master_alive job to only fire,
                 # if the connection is lost again
-                schedule = {
-                   'function': 'status.master',
-                   'seconds': self.opts['master_alive_interval'],
-                   'jid_include': True,
-                   'maxrunning': 2,
-                   'kwargs': {'master': self.opts['master'],
-                              'connected': True}
-                }
+                if self.opts['transport'] != 'tcp':
+                    schedule = {
+                       'function': 'status.master',
+                       'seconds': self.opts['master_alive_interval'],
+                       'jid_include': True,
+                       'maxrunning': 2,
+                       'kwargs': {'master': self.opts['master'],
+                                  'connected': True}
+                    }
 
-                self.schedule.modify_job(name='__master_alive',
-                                         schedule=schedule)
+                    self.schedule.modify_job(name='__master_alive',
+                                             schedule=schedule)
         elif package.startswith('_salt_error'):
             log.debug('Forwarding salt error event tag={tag}'.format(tag=tag))
             self._fire_master(data, tag)
@@ -2768,7 +2773,8 @@ class ProxyMinion(Minion):
             self.schedule.delete_job('__mine_interval', persist=True)
 
         # add master_alive job if enabled
-        if self.opts['master_alive_interval'] > 0:
+        if (self.opts['transport'] != 'tcp' and
+                self.opts['master_alive_interval'] > 0):
             self.schedule.add_job({
                 '__master_alive':
                     {
@@ -2780,5 +2786,7 @@ class ProxyMinion(Minion):
                                    'connected': True}
                     }
             }, persist=True)
+        else:
+            self.schedule.delete_job('__master_alive', persist=True)
 
         self.grains_cache = self.opts['grains']
