@@ -650,11 +650,11 @@ class BotoS3BucketTestCase(BotoS3BucketTestCaseBase, BotoS3BucketTestCaseMixin):
         self.assertEqual(result.get('error', {}).get('message'),
                         error_message.format('delete_bucket_policy'))
 
-    def test_that_when_deleting_policy_succeeds_the_delete_policy_method_returns_true(self):
+    def test_that_when_deleting_replication_succeeds_the_delete_replication_method_returns_true(self):
         '''
         tests True bucket attribute deleted.
         '''
-        result = boto_s3_bucket.delete_policy(Bucket='mybucket',
+        result = boto_s3_bucket.delete_replication(Bucket='mybucket',
                                         **conn_parameters)
 
         self.assertTrue(result['deleted'])
