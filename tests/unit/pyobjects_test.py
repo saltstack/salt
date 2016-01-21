@@ -360,6 +360,22 @@ class RendererTests(RendererMixin, StateTests):
 
         self.assertRaises(NameError, do_render)
 
+        self.write_template_file("recursive_map.sls", recursive_map_template)
+        render_and_assert(recursive_import_template)
+
+    def test_import_scope(self):
+        self.write_template_file("map.sls", map_template)
+        self.write_template_file("recursive_map.sls", recursive_map_template)
+
+        def do_render():
+            ret = self.render(scope_test_import_template,
+                              {'grains': {
+                                  'os_family': 'Debian',
+                                  'os': 'Debian'
+                              }})
+
+        self.assertRaises(NameError, do_render)
+
     def test_random_password(self):
         '''Test for https://github.com/saltstack/salt/issues/21796'''
         ret = self.render(random_password_template)
