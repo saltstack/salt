@@ -112,9 +112,9 @@ def info_installed(*names, **kwargs):
             summary, description.
 
     :param errors:
-        Handle RPM field errors. If 'ignore' is chosen, then various mistakes are simply ignored and omitted
-        from the texts or strings. If 'report' is chonen, then a field with a mistake is not returned, instead
-        a 'N/A (broken)' (not available, broken) text is placed.
+        Handle RPM field errors (true|false). By default, various mistakes in the textual fields are simply ignored and
+        omitted from the data. Otherwise a field with a mistake is not returned, instead a 'N/A (bad UTF-8)'
+        (not available, broken) text is returned.
 
         Valid attributes are:
             ignore, report
@@ -127,8 +127,7 @@ def info_installed(*names, **kwargs):
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
         salt '*' pkg.info_installed <package1> attr=version,vendor
         salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor
-        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=ignore
-        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=report
+        salt '*' pkg.info_installed <package1> <package2> <package3> ... attr=version,vendor errors=true
     '''
     ret = dict()
     for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, **kwargs).items():
@@ -139,7 +138,7 @@ def info_installed(*names, **kwargs):
                 # Check, if string is encoded in a proper UTF-8
                 value_ = value.decode('UTF-8', 'ignore').encode('UTF-8', 'ignore')
                 if value != value_:
-                    value = kwargs.get('errors', 'ignore') == 'ignore' and value_ or 'N/A (invalid UTF-8)'
+                    value = kwargs.get('errors') and value_ or 'N/A (invalid UTF-8)'
                     log.error('Package {0} has bad UTF-8 code in {1}: {2}'.format(pkg_name, key, value))
             if key == 'source_rpm':
                 t_nfo['source'] = value
