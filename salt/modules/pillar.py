@@ -8,6 +8,7 @@ from __future__ import absolute_import
 import collections
 
 # Import third party libs
+import os
 import yaml
 import salt.ext.six as six
 
