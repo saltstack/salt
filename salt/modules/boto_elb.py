@@ -815,7 +815,7 @@ def set_listener_policy(name, port, policies=None, region=None, key=None,
 
     CLI example:
 
-    .. code-block:: Boron
+    .. code-block:: Bash
 
         salt myminion boto_elb.set_listener_policy myelb 443 "[policy1,policy2]"
     '''
