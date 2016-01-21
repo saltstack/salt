@@ -11,7 +11,9 @@ def __virtual__():
     '''
     Only supported on POSIX-like systems
     '''
-    if salt.utils.is_windows() or not salt.utils.which('shutdown'):
+    if salt.utils.is_windows() or \
+        salt.utils.is_sunos() or \
+        not salt.utils.which('shutdown'):
         return (False, 'The system execution module failed to load: '
                 'only available on Linux systems with shutdown command.')
     return True
