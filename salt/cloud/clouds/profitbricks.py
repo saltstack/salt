@@ -31,44 +31,68 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       ssh_private_key: /path/to/private.key
       # SSH public key filename
       ssh_public_key: /path/to/public.key
-      # Assign node to a specified public LAN.
+
+.. code-block:: yaml
+
+    my-profitbricks-profile:
+      provider: my-profitbricks-config
+      # Name of a predefined instance size.
+      size: Micro Instance
+      # Name or UUID of the HDD image to use.
+      image: <UUID>
+      # Size of the node disk in GB (overrides instance size).
+      disk_size: 40
+      # Number of CPU cores to allocate to node (overrides instance size).
+      cores: 4
+      # Amount of RAM in multiples of 256 MB (overrides instance size).
+      ram: 4096
+      # Assign the node to the specified public LAN.
       public_lan: <ID>
-      # Assign node to a specified proviate LAN.
+      # Assign the node to the specified private LAN.
       private_lan: <ID>
 
 To use a private IP for connecting and bootstrapping node:
 
 .. code-block:: yaml
 
-    my-profitbricks-config:
+    my-profitbricks-profile:
       ssh_interface: private_lan
 
+Set ``deploy`` to False if Salt should not be installed on the node.
+
+.. code-block:: yaml
+
+    my-profitbricks-profile:
+      deploy: False
 '''
 
 # Import python libs
 from __future__ import absolute_import
-import copy
 import logging
+import os
 import pprint
 import time
 
 # Import salt libs
 import salt.utils
 import salt.config as config
-from salt.utils import namespaced_function
 from salt.exceptions import (
-    SaltCloudSystemExit,
+    SaltCloudConfigError,
+    SaltCloudNotFound,
     SaltCloudExecutionFailure,
-    SaltCloudExecutionTimeout
+    SaltCloudExecutionTimeout,
+    SaltCloudSystemExit
 )
+from salt.ext.six import string_types
 
 # Import salt.cloud libs
-from salt.cloud.libcloudfuncs import *
 import salt.utils.cloud
 
 try:
-    from profitbricks.client import ProfitBricksService
-    from profitbricks.client import Server, NIC, Volume
+    from profitbricks.client import (
+        ProfitBricksService,
+        Server, NIC, Volume
+    )
     HAS_PROFITBRICKS = True
 except ImportError:
     HAS_PROFITBRICKS = False
@@ -79,33 +103,18 @@ log = logging.getLogger(__name__)
 __virtualname__ = 'profitbricks'
 
 
-# Some of the libcloud functions need to be in the same namespace as the
-# functions defined in the module, so we create new function objects inside
-# this module namespace
-get_size = namespaced_function(get_size, globals())
-get_image = namespaced_function(get_image, globals())
-avail_locations = namespaced_function(avail_locations, globals())
-avail_images = namespaced_function(avail_images, globals())
-avail_sizes = namespaced_function(avail_sizes, globals())
-script = namespaced_function(script, globals())
-destroy = namespaced_function(destroy, globals())
-list_nodes = namespaced_function(list_nodes, globals())
-list_nodes_full = namespaced_function(list_nodes_full, globals())
-list_nodes_select = namespaced_function(list_nodes_select, globals())
-show_instance = namespaced_function(show_instance, globals())
-
-
-# Only load in this module if the PROFITBRICKS configurations are in place
+# Only load in this module if the ProfitBricks configurations are in place
 def __virtual__():
     '''
-    Set up the libcloud functions and check for ProfitBricks configuration.
+    Check for ProfitBricks configurations.
     '''
     if get_configured_provider() is False:
         return False
+
     if get_dependencies() is False:
         return False
 
-    return True
+    return __virtualname__
 
 
 def get_configured_provider():
@@ -384,11 +393,11 @@ def list_nodes_full(conn=None, call=None):
         node['private_ips'] = []
         if item['entities']['nics']['items'] > 0:
             for nic in item['entities']['nics']['items']:
-                ip = nic['properties']['ips'][0]
-                if salt.utils.cloud.is_public_ip(ip):
-                    node['public_ips'].append(ip)
+                ip_address = nic['properties']['ips'][0]
+                if salt.utils.cloud.is_public_ip(ip_address):
+                    node['public_ips'].append(ip_address)
                 else:
-                    node['private_ips'].append(ip)
+                    node['private_ips'].append(ip_address)
 
         ret[node['name']] = node
 
@@ -399,6 +408,20 @@ def list_nodes_full(conn=None, call=None):
     )
 
     return ret
+
+
+def show_instance(name, call=None):
+    '''
+    Show the details from the provider concerning an instance
+    '''
+    if call != 'action':
+        raise SaltCloudSystemExit(
+            'The show_instance action must be called with -a or --action.'
+        )
+
+    nodes = list_nodes_full()
+    salt.utils.cloud.cache_node(nodes[name], __active_provider_name__, __opts__)
+    return nodes[name]
 
 
 def get_node(conn, name):
@@ -609,6 +632,9 @@ def create(vm_):
     set_public_lan(conn, vm_)
 
     def __query_node_data(vm_, data):
+        '''
+        Query node data until node becomes available.
+        '''
         running = False
         try:
             data = show_instance(vm_['name'], 'action')
@@ -689,7 +715,7 @@ def create(vm_):
         ret.update(data)
         return ret
     else:
-        return data
+        raise SaltCloudSystemExit('A valid IP address was not found.')
 
 
 def destroy(name, call=None):
@@ -814,6 +840,9 @@ def start(name, call=None):
 
 
 def _wait_for_completion(conn, promise, wait_timeout, msg):
+    '''
+    Poll request status until resource is provisioned.
+    '''
     if not promise:
         return
     wait_timeout = time.time() + wait_timeout

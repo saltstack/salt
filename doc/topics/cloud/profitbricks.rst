@@ -1,6 +1,6 @@
-==============================
+=================================
 Getting Started With ProfitBricks
-==============================
+=================================
 
 ProfitBricks provides an enterprise-grade Infrastructure as a Service (IaaS)
 solution that can be managed through a browser-based "Data Center Designer"
@@ -8,14 +8,14 @@ solution that can be managed through a browser-based "Data Center Designer"
 platform is that it allows you to define your own settings for cores, memory,
 and disk size without being tied to a particular instance size.
 
-
 Dependencies
 ============
-* profitbricks >= 2.3.0
 
+* profitbricks >= 2.3.0
 
 Configuration
 =============
+
 * Using the new format, set up the cloud configuration at
   ``/etc/salt/cloud.providers`` or
   ``/etc/salt/cloud.providers.d/profitbricks.conf``:
@@ -53,7 +53,7 @@ Configuration
 
 
 Virtual Data Center
-==============
+===================
 
 ProfitBricks uses the concept of Virtual Data Centers. These are logically
 separated from one another and allow you to have a self-contained environment
@@ -61,15 +61,15 @@ for all servers, volumes, networking, snapshots, and so forth.
 
 A list of existing virtual data centers can be retrieved with the following command:
 
-# salt-cloud -f list_datacenters my-profitbricks-config
+.. code-block:: bash
 
+    salt-cloud -f list_datacenters my-profitbricks-config
 
 Authentication
 ==============
 
 The ``username`` and ``password`` are the same as those used to log into the
 ProfitBricks "Data Center Designer".
-
 
 Profiles
 ========
@@ -96,12 +96,16 @@ The following list explains some of the important properties.
 size
     Can be one of the options listed in the output of the following command:
 
-    # salt-cloud --list-sizes my-profitbricks
+.. code-block:: bash
+
+    salt-cloud --list-sizes my-profitbricks
 
 image
     Can be one of the options listed in the output of the following command:
 
-    # salt-cloud --list-images my-profitbricks
+.. code-block:: bash
+
+    salt-cloud --list-images my-profitbricks
 
 disk_size
     This option allows you to override the size of the disk as defined by the
@@ -136,6 +140,9 @@ ssh_interface
     This option will use the private LAN IP for node connections (such as
     as bootstrapping the node) instead of the public LAN IP. The value accepts
     'private_lan'.
+
+deploy
+    Set to False if Salt should not be installed on the node.
 
 For more information concerning cloud profiles, see :doc:`here
 </topics/cloud/profiles>`.

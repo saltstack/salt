@@ -22,10 +22,11 @@ from salt.ext.six.moves import range
 
 # Import Third-Party Libs
 try:
-    import libcloud # pylint: disable=unused-import
-    HAS_LIBCLOUD = True
+    from profitbricks.client import ProfitBricksService  # pylint: disable=unused-import
+    HAS_PROFITBRICKS = True
 except ImportError:
-    HAS_LIBCLOUD = False
+    HAS_PROFITBRICKS = False
+
 
 def __random_name(size=6):
     '''
@@ -41,7 +42,8 @@ INSTANCE_NAME = __random_name()
 PROVIDER_NAME = 'profitbricks'
 DRIVER_NAME = 'profitbricks'
 
-@skipIf(HAS_LIBCLOUD is False, 'salt-cloud requires >= libcloud 0.13.2')
+
+@skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 2.3.0')
 class ProfitBricksTest(integration.ShellCase):
     '''
     Integration tests for the ProfitBricks cloud provider
@@ -59,12 +61,12 @@ class ProfitBricksTest(integration.ShellCase):
         providers = self.run_cloud('--list-providers')
         if profile_str + ':' not in providers:
             self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(PROVIDER_NAME)
+                'Configuration file for {0} was not found. Check {0}.conf '
+                'files in tests/integration/files/conf/cloud.*.d/ to run '
+                'these tests.'.format(PROVIDER_NAME)
             )
 
-        # check if personal credentials, ssh_key_file, and ssh_key_names are present
+        # check if credentials and datacenter_id present
         config = cloud_providers_config(
             os.path.join(
                 integration.FILES,
@@ -79,8 +81,9 @@ class ProfitBricksTest(integration.ShellCase):
         datacenter_id = config[profile_str][DRIVER_NAME]['datacenter_id']
         if username == '' or password == '' or datacenter_id == '':
             self.skipTest(
-                'A username, password, and an datacenter must be provided to run these '
-                'tests. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
+                'A username, password, and an datacenter must be provided to '
+                'run these tests. Check '
+                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
                 .format(PROVIDER_NAME)
             )
 
@@ -92,7 +95,9 @@ class ProfitBricksTest(integration.ShellCase):
         try:
             self.assertIn(
                 INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p profitbricks-test {0}'.format(INSTANCE_NAME))]
+                [i.strip() for i in self.run_cloud(
+                    '-p profitbricks-test {0}'.format(INSTANCE_NAME)
+                )]
             )
         except AssertionError:
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))
@@ -102,7 +107,9 @@ class ProfitBricksTest(integration.ShellCase):
         try:
             self.assertIn(
                 INSTANCE_NAME + ':',
-                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME))]
+                [i.strip() for i in self.run_cloud(
+                    '-d {0} --assume-yes'.format(INSTANCE_NAME)
+                )]
             )
         except AssertionError:
             raise
