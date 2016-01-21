@@ -183,10 +183,7 @@ class Pillar(object):
         self.actual_file_roots = opts['file_roots']
         # use the local file client
         self.opts = self.__gen_opts(opts, grains, saltenv=saltenv, ext=ext, pillarenv=pillarenv)
-        minion_opts = copy.deepcopy(self.opts)
-        minion_opts['id'] = minion_id
-        self.minion_opts = minion_opts
-        self.client = salt.fileclient.get_file_client(self.minion_opts, True)
+        self.client = salt.fileclient.get_file_client(self.opts, True)
 
         if opts.get('file_client', '') == 'local':
             opts['grains'] = grains
@@ -197,16 +194,18 @@ class Pillar(object):
             if opts.get('file_client', '') == 'local':
                 self.functions = salt.loader.minion_mods(opts, utils=utils)
             else:
-                self.functions = salt.loader.minion_mods(self.minion_opts, utils=utils)
+                self.functions = salt.loader.minion_mods(self.opts, utils=utils)
         else:
             self.functions = functions
 
-        self.matcher = salt.minion.Matcher(self.minion_opts, self.functions)
-        self.rend = salt.loader.render(self.minion_opts, self.functions)
+        self.matcher = salt.minion.Matcher(self.opts, self.functions)
+        self.rend = salt.loader.render(self.opts, self.functions)
+        ext_pillar_opts = copy.deepcopy(self.opts)
         # Fix self.opts['file_roots'] so that ext_pillars know the real
         # location of file_roots. Issue 5951
-        ext_pillar_opts = dict(self.opts)
         ext_pillar_opts['file_roots'] = self.actual_file_roots
+        # Keep the incoming opts ID intact, ie, the master id
+        ext_pillar_opts['id'] = opts['id']
         self.merge_strategy = 'smart'
         if opts.get('pillar_source_merging_strategy'):
             self.merge_strategy = opts['pillar_source_merging_strategy']
@@ -244,7 +243,7 @@ class Pillar(object):
             )
             # Backwards compatibility
             saltenv = env
-        opts = dict(opts_in)
+        opts = copy.deepcopy(opts_in)
         opts['file_roots'] = opts['pillar_roots']
         opts['file_client'] = 'local'
         if not grains:
@@ -253,6 +252,7 @@ class Pillar(object):
             opts['grains'] = grains
         if 'environment' not in opts:
             opts['environment'] = saltenv
+        opts['id'] = self.minion_id
         if 'pillarenv' not in opts:
             opts['pillarenv'] = pillarenv
         if opts['state_top'].startswith('salt://'):
