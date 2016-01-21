@@ -682,7 +682,8 @@ def _virtual(osdata):
                     if ':/lxc/' in fhr.read():
                         grains['virtual_subtype'] = 'LXC'
                 with salt.utils.fopen('/proc/1/cgroup', 'r') as fhr:
-                    if ':/docker/' in fhr.read():
+                    fhr_contents = fhr.read()
+                    if ':/docker/' in fhr_contents or ':/system.slice/docker' in fhr_contents:
                         grains['virtual_subtype'] = 'Docker'
             except IOError:
                 pass
