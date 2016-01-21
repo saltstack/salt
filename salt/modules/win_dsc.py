@@ -362,9 +362,10 @@ def apply_config(path, source=None, salt_env='base'):
     Required.
 
     :param str source: Path to the directory that contains the .mof file on the
-    ``file_roots``. The directory source and path directories must be the same.
-    The source directory will be copied to the path directory and then executed.
-    If source is not passed, the config located at 'path' will be applied.
+    ``file_roots``. The source directory will be copied to the path directory
+    and then executed. If the path and source directories differ, the source
+    directory will be applied. If source is not passed, the config located at
+    ``path`` will be applied.
     Optional.
 
     :param str salt_env: The salt environment to use when copying your source.
