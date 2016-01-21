@@ -205,6 +205,22 @@ all interfaces are ignored unless specified.
           - require_reboot: True
           - apply_hostname: True
 
+    lo:
+      network.managed:
+        - name: lo
+        - type: eth
+        - onboot: yes
+        - userctl: no
+        - ipv6_autoconf: no
+        - enable_ipv6: true
+        - ipaddrs:
+          - 127.0.0.1/8
+          - 10.1.0.4/32
+          - 10.1.0.12/32
+        - ipv6addrs:
+          - fc00::1/128
+          - fc00::100/128
+
     .. note::
         Apply changes to hostname immediately.
 
