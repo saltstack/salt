@@ -473,6 +473,16 @@ class ProcessManager(object):
 
 
 class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
+
+    def __new__(cls, *args, **kwargs):
+        instance = super(MultiprocessingProcess, cls).__new__(cls)
+        # Patch the run method at runtime because decorating the run method
+        # with a function with a similar behavior would be ignored once this
+        # class'es run method is overridden.
+        instance._original_run = instance.run
+        instance.run = instance._run
+        return instance
+
     def __init__(self, *args, **kwargs):
         if (salt.utils.is_windows() and
                 not hasattr(self, '_is_child') and
@@ -556,6 +566,21 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
 
     def __setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+
+    def _run(self):
+        try:
+            return self._original_run()
+        except SystemExit:
+            # These are handled by multiprocessing.Process._bootstrap()
+            raise
+        except Exception as exc:
+            log.error(
+                'An un-handled exception from the multiprocessing process '
+                '\'%s\' was caught:\n', self.name, exc_info=True)
+            # Re-raise the exception. multiprocessing.Process will write it to
+            # sys.stderr and set the proper exitcode and we have already logged
+            # it above.
+            raise
 
 
 class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
