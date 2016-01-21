@@ -69,7 +69,7 @@ def reboot(at_time=None):
     Reboot the system
 
     at_time
-        The wait time in minutes before the system will be shutdown.
+        The wait time in minutes before the system will be rebooted.
 
     CLI Example:
 
