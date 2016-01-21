@@ -2324,8 +2324,10 @@ strategy between different sources. It accepts 4 values:
 
   Guesses the best strategy based on the "renderer" setting.
 
+.. conf_master:: pillar_merge_lists
+
 ``pillar_merge_lists``
-----------------------------------
+----------------------
 
 .. versionadded:: 2015.8.0
 
@@ -2336,8 +2338,6 @@ Recursively merge lists by aggregating them instead of replacing them.
 .. code-block:: yaml
 
     pillar_merge_lists: False
-
-.. conf_master:: pillar_source_merging_strategy
 
 
 Syndic Server Settings

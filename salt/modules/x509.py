@@ -952,7 +952,7 @@ def create_certificate(path=None, text=False, ca_server=None, **kwargs):
 
     extensions:
         The following arguments set X509v3 Extension values. If the value starts with ``critical ``,
-        the extension will be marked as critical
+        the extension will be marked as critical.
 
         Some special extensions are ``subjectKeyIdentifier`` and ``authorityKeyIdentifier``.
 

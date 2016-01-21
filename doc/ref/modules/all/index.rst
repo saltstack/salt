@@ -26,19 +26,24 @@ Full list of builtin execution modules
     augeas_cfg
     aws_sqs
     bamboohr
+    bcache
     beacons
     bigip
     blockdev
     bluez
     boto_asg
     boto_cfn
+    boto_cloudtrail
     boto_cloudwatch
+    boto_datapipeline
     boto_dynamodb
     boto_ec2
     boto_elasticache
     boto_elb
     boto_iam
+    boto_iot
     boto_kms
+    boto_lamda
     boto_rds
     boto_route53
     boto_secgroup
@@ -56,6 +61,7 @@ Full list of builtin execution modules
     chassis
     chef
     chocolatey
+    chronos
     cloud
     cmdmod
     composer
@@ -66,6 +72,7 @@ Full list of builtin execution modules
     cpan
     cron
     cyg
+    cytest
     daemontools
     darwin_pkgutil
     darwin_sysctl
@@ -84,12 +91,14 @@ Full list of builtin execution modules
     djangomod
     dnsmasq
     dnsutil
+    dockercompose
     dockerio
     dockerng
     dpkg
     drac
     dracr
     drbd
+    dsc
     ebuild
     eix
     elasticsearch
@@ -97,6 +106,7 @@ Full list of builtin execution modules
     eselect
     esxi
     etcd_mod
+    ethtool
     event
     extfs
     file
@@ -107,12 +117,12 @@ Full list of builtin execution modules
     freebsdpkg
     freebsdports
     freebsdservice
-    fsutils
     gem
     genesis
     gentoo_service
     gentoolkitmod
     git
+    github
     glance
     glusterfs
     gnomedesktop
@@ -140,8 +150,10 @@ Full list of builtin execution modules
     ipmi
     ipset
     iptables
+    iwtools
     jboss7
     jboss7_cli
+    jenkins
     junos
     kerberos
     key
@@ -153,6 +165,7 @@ Full list of builtin execution modules
     ldap3
     ldapmod
     linux_acl
+    linux_ip
     linux_lvm
     linux_sysctl
     localemod
@@ -162,13 +175,17 @@ Full list of builtin execution modules
     lvs
     lxc
     mac_group
+    mac_shadow
+    mac_softwareupdate
     mac_user
     macports
     makeconf
+    marathon
     match
     mdadm
     memcached
     mine
+    minion
     mod_random
     modjk
     mongodb
@@ -200,6 +217,8 @@ Full list of builtin execution modules
     openbsdrcctl
     openbsdservice
     openstack_config
+    openswitch
+    opkg
     oracle
     osquery
     osxdesktop
@@ -209,6 +228,7 @@ Full list of builtin execution modules
     pam
     parted
     pecl
+    phillips_hue
     pillar
     pip
     pkg_resource
@@ -223,6 +243,7 @@ Full list of builtin execution modules
     ps
     publish
     puppet
+    pushbullet
     pushover_notify
     pw_group
     pw_user
@@ -241,6 +262,7 @@ Full list of builtin execution modules
     rest_package
     rest_sample
     rest_service
+    restartcheck
     ret
     rh_ip
     rh_service
@@ -251,6 +273,8 @@ Full list of builtin execution modules
     runit
     rvm
     s3
+    s6
+    salt_proxy
     saltcloudmod
     saltutil
     schedule
@@ -282,6 +306,8 @@ Full list of builtin execution modules
     splunk_search
     sqlite3
     ssh
+    ssh_package
+    ssh_service
     state
     status
     stormpath
@@ -290,12 +316,12 @@ Full list of builtin execution modules
     svn
     swift
     sysbench
+    sysfs
     syslog_ng
     sysmod
     sysrc
     system
     system_profiler
-    system_rest_sample
     systemd
     telemetry
     temp
@@ -314,6 +340,7 @@ Full list of builtin execution modules
     uwsgi
     varnish
     vbox_guest
+    vboxmanage
     victorops
     virt
     virtualenv_mod
@@ -325,6 +352,7 @@ Full list of builtin execution modules
     win_file
     win_firewall
     win_groupadd
+    win_iis
     win_ip
     win_network
     win_ntp
@@ -337,6 +365,7 @@ Full list of builtin execution modules
     win_shadow
     win_status
     win_system
+    win_task
     win_timezone
     win_update
     win_useradd
@@ -346,6 +375,7 @@ Full list of builtin execution modules
     xfs
     xmpp
     yumpkg
+    zabbix
     zcbuildout
     zenoss
     zfs

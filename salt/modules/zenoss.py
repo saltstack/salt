@@ -7,7 +7,9 @@ Module for working with the Zenoss API
 :configuration: This module requires a 'zenoss' entry in the master/minion config.
 
     For example:
+
     .. code-block:: yaml
+
         zenoss:
           hostname: https://zenoss.example.com
           username: admin

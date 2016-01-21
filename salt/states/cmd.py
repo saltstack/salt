@@ -994,12 +994,12 @@ def script(name,
         This is experimental.
 
     context
-        .. version_added:: Boron
+        .. versionadded:: Boron
 
         Overrides default context variables passed to the template.
 
     defaults
-        .. version_added:: Boron
+        .. versionadded:: Boron
 
         Default context passed to the template.
 
