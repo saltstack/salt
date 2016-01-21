@@ -41,7 +41,7 @@ config:
         boto_s3_bucket.present:
             - Bucket: mybucket
             - LocationConstraint: EU
-            - ACL: 
+            - ACL:
               - GrantRead: "uri=http://acs.amazonaws.com/groups/global/AllUsers"
             - CORSRules:
               - AllowedHeaders: []
@@ -165,13 +165,13 @@ def _get_canonical_id(region, key, keyid, profile):
 
 def _acl_to_grant(ACL, owner_canonical_id):
     if 'AccessControlPolicy' in ACL:
-       ret = deepcopy(ACL['AccessControlPolicy'])
-       # Type is required as input, but is not returned as output
-       for item in ret.get('Grants'):
-           if 'Type' in item.get('Grantee',()):
-               del item['Grantee']['Type']
-       # If AccessControlPolicy is set, other options are not allowed
-       return ret
+        ret = deepcopy(ACL['AccessControlPolicy'])
+        # Type is required as input, but is not returned as output
+        for item in ret.get('Grants'):
+            if 'Type' in item.get('Grantee', ()):
+                del item['Grantee']['Type']
+        # If AccessControlPolicy is set, other options are not allowed
+        return ret
     ret = {
         'Grants': [{
             'Grantee': owner_canonical_id,
@@ -285,12 +285,12 @@ def _compare_acl(current, desired, region, key, keyid, profile):
 
 
 def _compare_policy(current, desired, region, key, keyid, profile):
-    ''' 
+    '''
     Policy discription is always returned as a JSON string. Comparison
     should be object-to-object, since order is not significant in JSON
     '''
     if isinstance(desired, string_types):
-        desired = json.loads(desired) 
+        desired = json.loads(desired)
 
     if current is not None:
         temp = current.get('Policy')
@@ -302,7 +302,7 @@ def _compare_policy(current, desired, region, key, keyid, profile):
 
 
 def _compare_replication(current, desired, region, key, keyid, profile):
-    ''' 
+    '''
     Replication accepts a non-ARN role name, but always returns an ARN
     '''
     if desired is not None and desired.get('Role'):
@@ -400,7 +400,7 @@ def present(name, Bucket,
     if NotificationConfiguration is None:
         NotificationConfiguration = {}
     if RequestPayment is None:
-        RequestPayment={'Payer': 'BucketOwner'}
+        RequestPayment = {'Payer': 'BucketOwner'}
 
     r = __salt__['boto_s3_bucket.exists'](Bucket=Bucket,
            region=region, key=key, keyid=keyid, profile=profile)
@@ -482,7 +482,7 @@ def present(name, Bucket,
                     _describe.get('LifecycleConfiguration'), _compare_json, {"Rules": LifecycleConfiguration} if LifecycleConfiguration else None,
                     'delete_lifecycle_configuration'),
             ('Logging', 'put_logging',
-                    _describe.get('Logging',{}).get('LoggingEnabled'), _compare_json, Logging,
+                    _describe.get('Logging', {}).get('LoggingEnabled'), _compare_json, Logging,
                     None),
             ('NotificationConfiguration', 'put_notification_configuration',
                     _describe.get('NotificationConfiguration'), _compare_json, NotificationConfiguration,
@@ -505,7 +505,7 @@ def present(name, Bucket,
                     None)
     # Substitute full ARN into desired state for comparison
     replication_item = ('Replication', 'put_replication',
-                    _describe.get('Replication',{}).get('ReplicationConfiguration'), _compare_replication, Replication,
+                    _describe.get('Replication', {}).get('ReplicationConfiguration'), _compare_replication, Replication,
                     'delete_replication')
 
     # versioning must be turned on before replication can be on, thus replication
@@ -552,7 +552,7 @@ def present(name, Bucket,
     # Since location can't be changed, try that last so at least the rest of
     # the things are correct by the time we fail here. Fail so the user will
     # notice something mismatches their desired state.
-    if _describe.get('Location',{}).get('LocationConstraint') != LocationConstraint:
+    if _describe.get('Location', {}).get('LocationConstraint') != LocationConstraint:
         msg = 'Bucket {0} location does not match desired configuration, but cannot be changed'.format(LocationConstraint)
         log.warn(msg)
         ret['result'] = False

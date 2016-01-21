@@ -316,7 +316,7 @@ class BotoS3BucketTestCase(BotoS3BucketStateTestCaseBase, BotoS3BucketTestCaseMi
                      )
 
         self.assertTrue(result['result'])
-        self.assertEqual(result['changes']['new']['bucket']['Location'],config_ret['get_bucket_location'])
+        self.assertEqual(result['changes']['new']['bucket']['Location'], config_ret['get_bucket_location'])
 
     def test_present_when_bucket_exists_no_mods(self):
         self.conn.list_buckets.return_value = deepcopy(list_ret)
