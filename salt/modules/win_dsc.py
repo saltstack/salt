@@ -36,7 +36,7 @@ def __virtual__():
             'with PowerShell 5 or later installed.')
 
 
-def _pshell(cmd):
+def _pshell(cmd, cwd=None):
     '''
     Execute the desired powershell command and ensure that it returns data
     in json format and load that into python
@@ -44,7 +44,7 @@ def _pshell(cmd):
     if 'convertto-json' not in cmd.lower():
         cmd = ' '.join([cmd, '| ConvertTo-Json -Depth 10'])
     log.debug('DSC: {0}'.format(cmd))
-    ret = __salt__['cmd.shell'](cmd, shell='powershell')
+    ret = __salt__['cmd.shell'](cmd, shell='powershell', cwd=cwd)
     try:
         ret = json.loads(ret, strict=False)
     except ValueError:
@@ -266,7 +266,10 @@ def compile_config(path, source=None, config=None, salt_env='base'):
         config = os.path.splitext(os.path.basename(path))[0]
 
     cmd = '. {0} ; {1}'.format(path, config)
-    return _pshell(cmd)
+
+    cwd = os.path.dirname(path)
+
+    return _pshell(cmd, cwd)
 
 
 def apply_config(path, source=None, salt_env='base'):
