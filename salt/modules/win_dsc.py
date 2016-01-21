@@ -265,16 +265,25 @@ def compile_config(path, source=None, config=None, salt_env='base'):
         # If the name of the config isn't passed, make it the name of the .ps1
         config = os.path.splitext(os.path.basename(path))[0]
 
-    cmd = '. {0} '.format(path)
-    cmd += '| Select-Object -Property FullName, Extension, Exists, ' \
-           '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) -Format g}}'
-    cmd += ' ; {0}'.format(config)
-    cmd += '| Select-Object -Property FullName, Extension, Exists, ' \
-           '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) -Format g}}'
-
     cwd = os.path.dirname(path)
 
-    return _pshell(cmd, cwd)
+    # Run the script and see if the compile command is in the script
+    cmd = '{0} '.format(path)
+    cmd += '| Select-Object -Property FullName, Extension, Exists, ' \
+           '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) -Format g}}'
+
+    ret = _pshell(cmd, cwd)
+
+    if ret:
+        # Script compiled, return results
+        return ret
+    else:
+        # Run the script and run the compile command
+        cmd = '. {0} ; {1} '.format(path, config)
+        cmd += '| Select-Object -Property FullName, Extension, Exists, ' \
+               '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) -Format g}}'
+
+        return _pshell(cmd, cwd)
 
 
 def apply_config(path, source=None, salt_env='base'):
