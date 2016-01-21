@@ -632,6 +632,10 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         if opt in opts:
             result[opt] = opts[opt]
 
+    for opt in ['ipaddrs', 'ipv6addrs']:
+        if opt in opts:
+            result[opt] = opts[opt]
+
     if 'ipv6_autoconf' in opts:
         result['ipv6_autoconf'] = opts['ipv6_autoconf']
 
