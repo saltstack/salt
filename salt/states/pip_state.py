@@ -57,6 +57,13 @@ if HAS_PIP is True:
 
 # pylint: enable=import-error
 
+    ver = pip.__version__.split('.')
+    pip_ver = tuple([int(x) for x in ver if x.isdigit()])
+    if pip_ver >= (8, 0, 0):
+        from pip.exceptions import InstallationError
+    else:
+        InstallationError = ValueError
+
 logger = logging.getLogger(__name__)
 
 # Define the module's virtual name
